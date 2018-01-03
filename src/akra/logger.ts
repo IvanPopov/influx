@@ -24,8 +24,7 @@ function warningRoutine(pLogEntity: ILoggerEntity): void {
 		var sCodeInfo: string = "%cwarning" + (pLogEntity.code != 0 ? " AE" + pLogEntity.code.toString() : "") + ":";
 		pArgs.unshift(sCodeInfo, "color: red;");
 	}
-
-	// console.warn.apply(console, pArgs);
+	console.warn.apply(console, pArgs);
 }
 
 function errorRoutine(pLogEntity: ILoggerEntity): void {
@@ -34,13 +33,9 @@ function errorRoutine(pLogEntity: ILoggerEntity): void {
 	{
 		var sMessage: string = pLogEntity.message;
 		var sCodeInfo: string = "error" + (pLogEntity.code != 0 ? " AE" + pLogEntity.code.toString() : "") + ":";
-
 		pArgs.unshift("%c " + sCodeInfo, "color: red;", sMessage);
 	}
-	// else {
-	// 	pArgs.unshift(sMessage);
-	// }
-	// console.error.apply(console, pArgs);
+	console.error.apply(console, pArgs);
 }
 
 logger.setLogRoutine(logRoutine, ELogLevel.LOG | ELogLevel.INFORMATION);
