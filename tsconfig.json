@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "module": "amd",
+    "target": "es2017",
+    "lib": ["es2017", "dom", "dom.iterable"],
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "alwaysStrict": true,
+    "allowJs": true,
+    "pretty": true,
+    "outFile": "./built/Debug/parser.js",
+    "allowSyntheticDefaultImports": true,
+    "allowUnreachableCode": true,
+    "noUnusedLocals": true,
+    "strict": false
+  },
+  "files": [
+    "src/akra/common.ts",
+    "src/akra/parser/Parser.ts"
+  ],
+  "compileOnSave": true
+}
