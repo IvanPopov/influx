@@ -4,7 +4,8 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ChunkManifestPlugin = require('chunk-manifest-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const WebpackCleanupPlugin = require('webpack-cleanup-plugin');
+const WebpackCleanupPlugin = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 
 module.exports = {
@@ -43,29 +44,30 @@ module.exports = {
   },
 
   plugins: [
-    new WebpackCleanupPlugin(),
+    new CopyWebpackPlugin([ { from: './src/sandbox/CodeMirror-2.23', to: './CodeMirror-2.23/' }]),
     new HtmlWebpackPlugin({
       filename: 'index.html',
       // favicon: './src/assets/images/favicon.ico',
       template: './src/sandbox/index.pug',
       title: 'Influx'
     }),
-    new ChunkManifestPlugin({
-      filename: 'manifest.json',
-      manifestVariable: 'webpackManifest',
-      inlineManifest: false 
-    }),
-    new webpack.optimize.CommonsChunkPlugin({
-      name: 'vendor',
-      minChunks: function (module) {
-        return module.context && module.context.indexOf('node_modules') !== -1;
-      }
-    }),
-    new webpack.optimize.CommonsChunkPlugin({
-      name: 'manifest'
-    }),
+    // new ChunkManifestPlugin({
+    //   filename: 'manifest.json',
+    //   manifestVariable: 'webpackManifest',
+    //   inlineManifest: false 
+    // }),
+    // new webpack.optimize.CommonsChunkPlugin({
+    //   name: 'vendor',
+    //   minChunks: function (module) {
+    //     return module.context && module.context.indexOf('node_modules') !== -1;
+    //   }
+    // }),
+    // new webpack.optimize.CommonsChunkPlugin({
+    //   name: 'manifest'
+    // }),
     new ExtractTextPlugin("[name].css"),
     new webpack.HotModuleReplacementPlugin(),
-    new webpack.NoEmitOnErrorsPlugin()
+    new webpack.NoEmitOnErrorsPlugin(),
+    new WebpackCleanupPlugin([ './build' ])
   ],
 };

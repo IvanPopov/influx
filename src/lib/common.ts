@@ -62,4 +62,5 @@ export var isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
 export var isTypedArray = (x: any): boolean => x !== null && typeof x === "object" && typeof x.byteOffset === "number";
 export var isBlob = (x: any): boolean => x instanceof Blob;
 export var isArray = (x: any): boolean => typeOf(x) === "array";
+export type INullable<T> = { [P in keyof T]: T[P] | null } | null;
 
