@@ -1,38 +1,36 @@
-﻿/// <reference path="../IMap.ts" />
-/// <reference path="IState.ts" />
-/// <reference path="IParser.ts" />
+﻿import { EParserType, IRule } from "./IParser"
+import { IMap } from "../IMap";
+import { IState } from "./IState";
 
-module akra.parser {
-	export interface IItem {
-		isEqual(pItem: IItem, eType?: EParserType): boolean;
-		isParentItem(pItem: IItem): boolean;
-		isChildItem(pItem: IItem): boolean;
+export interface IItem {
+	isEqual(pItem: IItem, eType?: EParserType): boolean;
+	isParentItem(pItem: IItem): boolean;
+	isChildItem(pItem: IItem): boolean;
 
-		mark(): string;
-		end(): string;
-		nextMarked(): string;
+	mark(): string;
+	end(): string;
+	nextMarked(): string;
 
-		toString(): string;
+	toString(): string;
 
-		isExpected(sSymbol: string): boolean;
-		addExpected(sSymbol: string): boolean;
+	isExpected(sSymbol: string): boolean;
+	addExpected(sSymbol: string): boolean;
 
-		getRule(): IRule;
-		setRule(pRule: IRule): void;
+	getRule(): IRule;
+	setRule(pRule: IRule): void;
 
-		getPosition(): number;
-		setPosition(iPosition: number): void;
+	getPosition(): number;
+	setPosition(iPosition: number): void;
 
-		getIndex(): number;
-		setIndex(iIndex: number): void;
+	getIndex(): number;
+	setIndex(iIndex: number): void;
 
-		getState(): IState | null;
-		setState(pState: IState | null): void;
+	getState(): IState | null;
+	setState(pState: IState | null): void;
 
-		getIsNewExpected(): boolean;
-		setIsNewExpected(isNewExpected: boolean): void;
+	getIsNewExpected(): boolean;
+	setIsNewExpected(isNewExpected: boolean): void;
 
-		getExpectedSymbols(): IMap<boolean>;		
-		getLength(): number;
-	}
+	getExpectedSymbols(): IMap<boolean>;
+	getLength(): number;
 }

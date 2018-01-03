@@ -9,14 +9,13 @@
     "alwaysStrict": true,
     "allowJs": true,
     "pretty": true,
-    "outFile": "./built/Debug/parser.js",
+    "outFile": "./build/parser.js",
     "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": true,
     "noUnusedLocals": true,
     "strict": false
   },
   "files": [
-    "src/akra/common.ts",
     "src/akra/parser/Parser.ts"
   ],
   "compileOnSave": true
