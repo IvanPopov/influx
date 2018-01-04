@@ -61,6 +61,8 @@ import { IntInstruction } from "./instructions/IntInstruction";
 import { DeclStmtInstruction } from "./instructions/DeclStmtInstruction";
 import { BreakStmtInstruction } from "./instructions/BreakStmtInstruction";
 import { WhileStmtInstruction } from "./instructions/WhileStmtInstruction";
+import { IEffectErrorInfo } from "../idl/IEffectErrorInfo";
+import { ProgramScope } from "./ProgramScope";
 
 /** @const */
 var TEMPLATE_TYPE = "template";
@@ -2605,7 +2607,7 @@ export class Effect implements IAFXEffect {
 		pExprType = this.checkOneOperandExprType(sOperator, pUnaryExprType);
 
 		if (isNull(pExprType)) {
-			this._error(EEffectErrors.BAD_UNARY_OPERATION, {
+			this._error(EEffectErrors.BAD_UNARY_OPERATION, <IEffectErrorInfo>{
 				operator: sOperator,
 				tyepName: pUnaryExprType.toString()
 			});
@@ -2676,7 +2678,7 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (!pTrueExprType._isEqual(pFalseExprType)) {
-			this._error(EEffectErrors.BAD_CONDITION_VALUE_TYPES, {
+			this._error(EEffectErrors.BAD_CONDITION_VALUE_TYPES, <IEffectErrorInfo>{
 				leftTypeName: pTrueExprType.toString(),
 				rightTypeName: pFalseExprType.toString()
 			});
@@ -2729,7 +2731,7 @@ export class Effect implements IAFXEffect {
 		pExprType = this.checkTwoOperandExprTypes(sOperator, pLeftType, pRightType);
 
 		if (isNull(pExprType)) {
-			this._error(EEffectErrors.BAD_ARITHMETIC_OPERATION, {
+			this._error(EEffectErrors.BAD_ARITHMETIC_OPERATION, <IEffectErrorInfo>{
 				operator: sOperator,
 				leftTypeName: pLeftType.toString(),
 				rightTypeName: pRightType.toString()
@@ -2768,7 +2770,7 @@ export class Effect implements IAFXEffect {
 		pExprType = this.checkTwoOperandExprTypes(sOperator, pLeftType, pRightType);
 
 		if (isNull(pExprType)) {
-			this._error(EEffectErrors.BAD_RELATIONAL_OPERATION, {
+			this._error(EEffectErrors.BAD_RELATIONAL_OPERATION, <IEffectErrorInfo>{
 				operator: sOperator,
 				leftTypeName: pLeftType._getHash(),
 				rightTypeName: pRightType._getHash()
@@ -2862,7 +2864,7 @@ export class Effect implements IAFXEffect {
 		if (sOperator !== "=") {
 			pExprType = this.checkTwoOperandExprTypes(sOperator, pLeftType, pRightType);
 			if (isNull(pExprType)) {
-				this._error(EEffectErrors.BAD_ARITHMETIC_ASSIGNMENT_OPERATION, {
+				this._error(EEffectErrors.BAD_ARITHMETIC_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
 					operator: sOperator,
 					leftTypeName: pLeftType._getHash(),
 					rightTypeName: pRightType._getHash()
@@ -2876,7 +2878,7 @@ export class Effect implements IAFXEffect {
 		pExprType = this.checkTwoOperandExprTypes("=", pLeftType, pExprType);
 
 		if (isNull(pExprType)) {
-			this._error(EEffectErrors.BAD_ASSIGNMENT_OPERATION, {
+			this._error(EEffectErrors.BAD_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
 				leftTypeName: pLeftType._getHash(),
 				rightTypeName: pRightType._getHash()
 			});
