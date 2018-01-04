@@ -20,6 +20,9 @@ module.exports = {
   devtool: "source-map",
   // devtool: "inline-source-map",
 
+  node: {
+    fs: "empty"
+  }, 
   devServer: {
     contentBase: 'build',
     // hot: true,
