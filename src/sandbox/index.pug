@@ -24,9 +24,9 @@ head
        TreeView source file 
     script(src='http://yui.yahooapis.com/2.9.0/build/treeview/treeview-min.js')
 
-    script(src='./CodeMirror-2.23/lib/codemirror.js')
-    script(src='./CodeMirror-2.23/mode/clike/clike.js')
-    link(href='./CodeMirror-2.23/lib/codemirror.css', rel='stylesheet')
+    script(src='./assets/CodeMirror-2.23/lib/codemirror.js')
+    script(src='./assets/CodeMirror-2.23/mode/clike/clike.js')
+    link(href='./assets/CodeMirror-2.23/lib/codemirror.css', rel='stylesheet')
     style(type='text/css').
       .block {
             display: inline;
@@ -253,4 +253,6 @@ body.yui-skin-sam
                   input#expand(type='button', value='Expand All')
                   input#collapse(type='button', value='Collapse All')
                 #treeview(style='margin-top: 10px; margin-left: 20px;')
+    script.
+      require('./sandbox/renderer.js');
   

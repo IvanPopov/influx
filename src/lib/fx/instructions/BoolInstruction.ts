@@ -1,10 +1,11 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IAFXLiteralInstruction, IAFXVariableTypeInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
+import { IAFXLiteralInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { Effect } from "../Effect";
 
 export class BoolInstruction extends ExprInstruction implements IAFXLiteralInstruction {
     private _bValue: boolean;
-    private static _pBoolType: IAFXVariableTypeInstruction = null;
+    // private static _pBoolType: IAFXVariableTypeInstruction = null;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */

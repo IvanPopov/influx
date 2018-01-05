@@ -1,10 +1,7 @@
-import { IParseNode } from "./parser/IParser";
-import { IMap } from "./IMap";
-import { IAFXComponent } from "./IAFXComponent";
 import { ERenderStates } from "./ERenderStates";
 import { ERenderStateValues } from "./ERenderStateValues";
-import { IAFXComposer } from "./IAFXComposer";
-import { IAFXType } from "./IAFXEffect";
+import { IMap } from "./IMap";
+import { IParseNode } from "./parser/IParser";
 
 export enum EAFXInstructionTypes {
 	k_Instruction = 0,
@@ -149,7 +146,6 @@ export enum EAFXBlendMode {
 
 export interface IAFXImportedTechniqueInfo {
 	technique: IAFXTechniqueInstruction;
-	component: IAFXComponent;
 	shift: number;
 }
 
@@ -669,22 +665,6 @@ export interface IAFXTechniqueInstruction extends IAFXDeclInstruction {
 
 	_totalOwnPasses(): number;
 	_totalPasses(): number;
-
-	_getSharedVariablesForVertex(): IAFXVariableDeclInstruction[];
-	_getSharedVariablesForPixel(): IAFXVariableDeclInstruction[];
-
-	_addTechniqueFromSameEffect(pTechnique: IAFXTechniqueInstruction, iShift: number): void;
-	_addComponent(pComponent: IAFXComponent, iShift: number): void;
-
-	_getFullComponentList(): IAFXComponent[];
-	_getFullComponentShiftList(): number[];
-
-	_checkForCorrectImports(): boolean;
-
-	_setGlobalParams(sProvideNameSpace: string,
-		pGloabalImportList: IAFXImportedTechniqueInfo[]): void;
-
-	_finalize(pComposer: IAFXComposer): void;
 }
 
 export interface IAFXVariableBlendInfo {

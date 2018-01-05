@@ -5,6 +5,7 @@ import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
 import { logger } from "../../logger"
 import { EEffectErrors } from "../../idl/EEffectErrors";
+import { Effect } from "../Effect";
 
 export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstruction {
 	private _sName: string = "";

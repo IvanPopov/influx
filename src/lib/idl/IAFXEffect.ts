@@ -1,4 +1,4 @@
-import { IAFXTypeDeclInstruction, IAFXTechniqueInstruction, IAFXVariableTypeInstruction, IAFXVariableDeclInstruction, IAFXIdInstruction } from "./IAFXInstruction";
+import { IAFXIdInstruction, IAFXTechniqueInstruction, IAFXTypeDeclInstruction, IAFXVariableDeclInstruction, IAFXVariableTypeInstruction } from "./IAFXInstruction";
 import { IParseTree } from "./parser/IParser";
 
 export interface IAFXObject {

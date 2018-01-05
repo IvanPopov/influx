@@ -2,6 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXAnalyzedInstruction, IAFXExprInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+import { Effect } from "../Effect";
 
 
 /**

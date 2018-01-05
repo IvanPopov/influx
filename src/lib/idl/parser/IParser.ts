@@ -105,6 +105,7 @@ export interface IParseTree {
 
 	getRoot(): IParseNode;
 	setRoot(pRoot: IParseNode): void;
+	toHTMLString(pNode?: IParseNode, padding?: string): string;
 }
 
 export interface ILexer {
@@ -130,7 +131,7 @@ export interface IParserState {
 	stack: number[];
 	token: IToken;
 	fnCallback: IFinishFunc;
-	caller: any;
+	caller: {};
 }
 
 export interface IParser {
@@ -142,7 +143,7 @@ export interface IParser {
 	init(sGrammar: string, eMode?: EParseMode, eType?: EParserType): boolean;
 	defaultInit(): void;
 
-	parse(sSource: string, fnFinishCallback?: IFinishFunc, pCaller?: any): EParserCode;
+	parse(sSource: string, fnFinishCallback?: IFinishFunc, pCaller?: {}): EParserCode;
 
 	setParseFileName(sFileName: string): void;
 	getParseFileName(): string;
@@ -179,4 +180,3 @@ export interface IParser {
 	//				 fnCallback: IFinishFunc,
 	//				 pCaller: any): void;
 }
-

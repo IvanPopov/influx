@@ -1,12 +1,9 @@
-import { isNull} from "../../common";
-import { EVarUsedMode, IAFXTypeUseInfoContainer, IAFXInstruction } from "../../idl/IAFXInstruction";
-import { IAFXVariableTypeInstruction } from "../../idl/IAFXInstruction";
-import { EAFXInstructionTypes, IAFXFunctionDeclInstruction } from "../../idl/IAFXInstruction";
-import { EExtractExprType, IAFXVariableDeclInstruction } from "../../idl/IAFXInstruction";
-import { isDef } from "../../common";
+import { isNull, isDef } from "../../common";
+import { EVarUsedMode, EAFXInstructionTypes, EExtractExprType, IAFXVariableDeclInstruction, IAFXFunctionDeclInstruction, IAFXTypeUseInfoContainer, IAFXInstruction, IAFXVariableTypeInstruction } from "../../idl/IAFXInstruction";
 import { ExprInstruction } from "./ExprInstruction";
 import { EEffectErrors } from "../../idl/EEffectErrors"
 import { IMap } from "../../idl/IMap";
+import { Effect } from "../Effect"
 
 
 export class ExtractExprInstruction extends ExprInstruction {

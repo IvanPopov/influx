@@ -2,6 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { IAFXInitExprInstruction, IAFXTypeInstruction, EAFXInstructionTypes, IAFXExprInstruction, IAFXVariableTypeInstruction } from "../../idl/IAFXInstruction";
 import { isNull } from "../../common";
 import { Instruction } from "./Instruction";
+import { Effect } from "../Effect";
 
 export class InitExprInstruction extends ExprInstruction implements IAFXInitExprInstruction {
 	private _pConstructorType: IAFXTypeInstruction = null;

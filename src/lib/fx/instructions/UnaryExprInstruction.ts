@@ -1,7 +1,6 @@
-import { ExprInstruction } from "./ExprInstruction";
-import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXExprInstruction } from "../../idl/IAFXInstruction";
-import { IMap } from "../../idl/IMap";
-
+import { EAFXInstructionTypes, EVarUsedMode, IAFXExprInstruction, IAFXTypeUseInfoContainer } from '../../idl/IAFXInstruction';
+import { IMap } from '../../idl/IMap';
+import { ExprInstruction } from './ExprInstruction';
 
 /**
  * Represent + - ! ++ -- expr
@@ -15,18 +14,18 @@ export class UnaryExprInstruction extends ExprInstruction {
     }
 
     _toFinalCode(): string {
-        var sCode: string = "";
+        var sCode: string = '';
         sCode += this._getOperator();
         sCode += this._getInstructions()[0]._toFinalCode();
+
         return sCode;
     }
 
     _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (this._getOperator() === "++" || this._getOperator() === "--") {
+                 eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+        if (this._getOperator() === '++' || this._getOperator() === '--') {
             (<IAFXExprInstruction>this._getInstructions()[0])._addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
-        }
-        else {
+        } else {
             (<IAFXExprInstruction>this._getInstructions()[0])._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
@@ -40,7 +39,7 @@ export class UnaryExprInstruction extends ExprInstruction {
         var pExpr: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
 
         if (!pExpr._evaluate()) {
-            return;
+            return false;
         }
 
         var pRes: any = null;
@@ -48,29 +47,28 @@ export class UnaryExprInstruction extends ExprInstruction {
         try {
             pRes = pExpr._getEvalValue();
             switch (sOperator) {
-                case "+":
+                case '+':
                     pRes = +pRes;
                     break;
-                case "-":
+                case '-':
                     pRes = -pRes;
                     break;
-                case "!":
+                case '!':
                     pRes = !pRes;
                     break;
-                case "++":
+                case '++':
                     pRes = ++pRes;
                     break;
-                case "--":
+                case '--':
                     pRes = --pRes;
                     break;
             }
-        }
-        catch (e) {
+        } catch (e) {
             return false;
         }
 
         this._pLastEvalResult = pRes;
+
         return true;
     }
 }
-

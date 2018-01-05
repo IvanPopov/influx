@@ -4,16 +4,15 @@ import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { isNull, isDef, isDefAndNotNull } from "../../common";
-import { IAFXType } from "../../idl/IAFXEffect";
 import { IdInstruction } from "./IdInstruction";
 import { FunctionDefInstruction } from "./FunctionDefInstruction";
 import { StmtBlockInstruction } from "./StmtBlockInstruction";
 import { EEffectTempErrors } from "../../idl/EEffectErrors";
 import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
-import { InstructionCollector } from "./InstructionCollector";
 import { ExtractStmtInstruction } from "./ExtractStmtInstruction";
 import { VariableDeclInstruction } from "./VariableInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
+import { Effect } from "../Effect";
 
 
 /**
@@ -249,6 +248,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
 			case EFunctionType.k_Function:
 				return this._bUsedAsFunction;
 		}
+		return false;
 	}
 
 	_isUsedAsFunction(): boolean {
@@ -826,7 +826,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
 		var pVariable: IAFXVariableDeclInstruction = <IAFXVariableDeclInstruction>pVariableType._getParentVarDecl();
 		var pMainVariable: IAFXVariableDeclInstruction = pVariableType._getMainVariable();
 		var iMainVar: number = pMainVariable._getInstructionID();
-		var iVar: number = pVariable._getInstructionID();
 
 		if (pMainVariable._getType()._isShared()) {
 			// this._pSharedVariableMap[iVar] = pVariable;
@@ -1014,24 +1013,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
 		}
 
 		return true;
-	}
-
-	private generateExtractBlockForAttribute(pAttr: IAFXVariableDeclInstruction): IAFXInstruction {
-		if (!pAttr._getType()._isPointer()) {
-			return null;
-		}
-
-		var pExtractCollector: IAFXInstruction = new InstructionCollector();
-		var pMainPointer: IAFXVariableDeclInstruction = pAttr._getType()._getMainPointer();
-
-		pAttr._setAttrExtractionBlock(pExtractCollector);
-
-		this.generateExtractStmtFromPointer(pMainPointer, null, 0, pExtractCollector);
-
-		pAttr._getType()._getSubVarDecls();
-
-		return pExtractCollector;
-
 	}
 
 	private generateExtractStmtFromPointer(pPointer: IAFXVariableDeclInstruction,

@@ -1,11 +1,12 @@
 import { Instruction } from "./Instruction";
-import { IAFXVariableTypeInstruction, IAFXTypeInstruction, IAFXExprInstruction, IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXIdInstruction, IAFXTypeDeclInstruction, IAFXIdExprInstruction, IAFXInstruction, EAFXBlendMode, EVarUsedMode } from "../../idl/IAFXInstruction";
+import { IAFXVariableTypeInstruction, IAFXTypeInstruction, IAFXExprInstruction, IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXIdInstruction, IAFXTypeDeclInstruction, IAFXIdExprInstruction, IAFXInstruction, EAFXBlendMode } from '../../idl/IAFXInstruction';
 import { IMap } from "../../idl/IMap";
-import { isNull, isNumber, isDef } from "../../common";
+import { isNull, isNumber, isDef } from '../../common';
 import { IdInstruction } from "./IdInstruction";
 import { VariableDeclInstruction } from "./VariableInstruction";
 import { IntInstruction } from "./IntInstruction";
 import { IdExprInstruction } from "./IdExprInstruction"
+import { Effect } from "../Effect"
 
 
 export class VariableTypeInstruction extends Instruction implements IAFXVariableTypeInstruction {
@@ -15,9 +16,6 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 	private _sName: string = "";
 	private _bIsWritable: boolean = null;
 	private _bIsReadable: boolean = null;
-
-	private _bUsedForWrite: boolean = false;
-	private _bUsedForRead: boolean = false;
 
 	private _sHash: string = "";
 	private _sStrongHash: string = "";
@@ -35,15 +33,12 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 
 	private _bIsFromVariableDecl: boolean = null;
 	private _bIsFromTypeDecl: boolean = null;
-	private _bIsField: boolean = false;
 
 	private _pArrayIndexExpr: IAFXExprInstruction = null;
 	private _pArrayElementType: IAFXVariableTypeInstruction = null;
 
 	private _pFieldDeclMap: IMap<IAFXVariableDeclInstruction> = null;
 	private _pFieldDeclBySemanticMap: IMap<IAFXVariableDeclInstruction> = null;
-	private _pFieldIdMap: IMap<IAFXIdExprInstruction> = null;
-	private _pUsedFieldMap: IMap<EVarUsedMode> = null;
 
 	private _pVideoBuffer: IAFXVariableDeclInstruction = null;
 	private _pMainPointIndex: IAFXVariableDeclInstruction = null;
@@ -511,18 +506,18 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 			var pFieldNameList: string[] = this._getFieldNameList();
 
 			for (var i: number = 0; i < pFieldNameList.length; i++) {
-				var pFieldType: IAFXVariableTypeInstruction = this._getFieldType(pFieldNameList[i]);
+				let pFieldType: IAFXVariableTypeInstruction = this._getFieldType(pFieldNameList[i]);
 
 				pFieldType._setVideoBufferInDepth();
 			}
 		}
 	}
 
-	_markAsUnverifiable(isUnverifiable: boolean): void {
+	public _markAsUnverifiable(isUnverifiable: boolean): void {
 		this._bUnverifiable = true;
 	}
 
-	_addAttrOffset(pOffset: IAFXVariableDeclInstruction): void {
+	public _addAttrOffset(pOffset: IAFXVariableDeclInstruction): void {
 		this._pAttrOffset = pOffset;
 	}
 
@@ -531,15 +526,15 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 	//----------------------------GET TYPE INFO------------------------//
 	//-----------------------------------------------------------------//	
 
-	_getName(): string {
+	public _getName(): string {
 		return this._sName;
 	}
 
-	_getRealName(): string {
+	public _getRealName(): string {
 		return this._getBaseType()._getRealName();
 	}
 
-	_getHash(): string {
+	public _getHash(): string {
 		if (this._sHash === "") {
 			this.calcHash();
 		}
@@ -547,7 +542,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._sHash;
 	}
 
-	_getStrongHash(): string {
+	public _getStrongHash(): string {
 		if (this._sStrongHash === "") {
 			this.calcStrongHash();
 		}
@@ -555,7 +550,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._sStrongHash;
 	}
 
-	_getSize(): number {
+	public _getSize(): number {
 		if (this._isPointer() || this._isPointIndex()) {
 			return 1;
 		}
@@ -575,11 +570,11 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getBaseType(): IAFXTypeInstruction {
+	public _getBaseType(): IAFXTypeInstruction {
 		return this._getSubType()._getBaseType();
 	}
 
-	_getLength(): number {
+	public _getLength(): number {
 		if (!this._isNotBaseArray()) {
 			this._iLength = 0;
 			return 0;
@@ -600,11 +595,11 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._iLength;
 	}
 
-	_getPadding(): number {
+	public _getPadding(): number {
 		return this._isPointIndex() ? this._getDownPointer()._getType()._getPadding() : this._iPadding;
 	}
 
-	_getArrayElementType(): IAFXVariableTypeInstruction {
+	public _getArrayElementType(): IAFXVariableTypeInstruction {
 		if (this._isUnverifiable()) {
 			return this;
 		}
@@ -627,7 +622,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._pArrayElementType;
 	}
 
-	_getTypeDecl(): IAFXTypeDeclInstruction {
+	public _getTypeDecl(): IAFXTypeDeclInstruction {
 		if (!this._isFromTypeDecl()) {
 			return null;
 		}
@@ -642,11 +637,11 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_hasField(sFieldName: string): boolean {
+	public _hasField(sFieldName: string): boolean {
 		return this._isUnverifiable() ? true : this._getSubType()._hasField(sFieldName);
 	}
 
-	_hasFieldWithSematic(sSemantic: string): boolean {
+	public _hasFieldWithSematic(sSemantic: string): boolean {
 		if (!this._isComplex()) {
 			return false;
 		}
@@ -654,7 +649,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._getSubType()._hasFieldWithSematic(sSemantic);
 	}
 
-	_hasAllUniqueSemantics(): boolean {
+	public _hasAllUniqueSemantics(): boolean {
 		if (!this._isComplex()) {
 			return false;
 		}
@@ -662,7 +657,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._getSubType()._hasAllUniqueSemantics();
 	}
 
-	_hasFieldWithoutSemantic(): boolean {
+	public _hasFieldWithoutSemantic(): boolean {
 		if (!this._isComplex()) {
 			return false;
 		}
@@ -670,7 +665,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._getSubType()._hasFieldWithoutSemantic();
 	}
 
-	_getField(sFieldName: string): IAFXVariableDeclInstruction {
+	public _getField(sFieldName: string): IAFXVariableDeclInstruction {
 		if (!this._hasField(sFieldName)) {
 			return null;
 		}
@@ -714,7 +709,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return pField;
 	}
 
-	_getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
+	public _getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
 		if (this._hasFieldWithSematic(sSemantic)) {
 			return null;
 		}
@@ -746,24 +741,24 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return pField;
 	}
 
-	_getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
+	public _getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
 		return <IAFXVariableTypeInstruction>this._getField(sFieldName)._getType();
 	}
 
-	_getFieldNameList(): string[] {
+	public _getFieldNameList(): string[] {
 		return this._getSubType()._getFieldNameList();
 	}
 
 
-	_getUsageList(): string[] {
+	public _getUsageList(): string[] {
 		return this._pUsageList;
 	}
 
-	_getSubType(): IAFXTypeInstruction {
+	public _getSubType(): IAFXTypeInstruction {
 		return this._pSubType;
 	}
 
-	_hasUsage(sUsageName: string): boolean {
+	public _hasUsage(sUsageName: string): boolean {
 		if (isNull(this._pUsageList)) {
 			return false;
 		}
@@ -781,17 +776,17 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return false;
 	}
 
-	_hasVideoBuffer(): boolean {
+	public _hasVideoBuffer(): boolean {
 		return !isNull(this._getVideoBuffer());
 	}
 
-	_getPointDim(): number {
+	public _getPointDim(): number {
 		return this._nPointDim ||
 			((this._getSubType()._getInstructionType() === EAFXInstructionTypes.k_VariableTypeInstruction) ?
 				(<IAFXVariableTypeInstruction>this._getSubType())._getPointDim() : 0);
 	}
 
-	_getPointer(): IAFXVariableDeclInstruction {
+	public _getPointer(): IAFXVariableDeclInstruction {
 		if (!this._isFromVariableDecl() ||
 			!(this._isPointer() || this._isPointIndex()) || !this._hasVideoBuffer()) {
 			return null;
@@ -810,7 +805,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._pUpPointIndex;
 	}
 
-	_getVideoBuffer(): IAFXVariableDeclInstruction {
+	public _getVideoBuffer(): IAFXVariableDeclInstruction {
 		if (this._isPointIndex()) {
 			return (<IAFXVariableDeclInstruction>this._getParent()._getParent())._getType()._getVideoBuffer();
 		}
@@ -818,7 +813,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._pVideoBuffer;
 	}
 
-	_getFieldExpr(sFieldName: string): IAFXIdExprInstruction {
+	public _getFieldExpr(sFieldName: string): IAFXIdExprInstruction {
 		if (!this._hasField(sFieldName)) {
 			return null;
 		}
@@ -830,7 +825,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return pExpr;
 	}
 
-	_getFieldIfExist(sFieldName: string): IAFXVariableDeclInstruction {
+	public _getFieldIfExist(sFieldName: string): IAFXVariableDeclInstruction {
 		if (isNull(this._pFieldDeclMap) && isDef(this._pFieldDeclMap[sFieldName])) {
 			return this._pFieldDeclMap[sFieldName];
 		}
@@ -839,7 +834,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getSubVarDecls(): IAFXVariableDeclInstruction[] {
+	public _getSubVarDecls(): IAFXVariableDeclInstruction[] {
 		if (!this.canHaveSubDecls()) {
 			return null;
 		}
@@ -850,7 +845,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._pSubDeclList;
 	}
 
-	_getFullName(): string {
+	public _getFullName(): string {
 		if (!this._isFromVariableDecl()) {
 			return "Not from variable decl";
 		}
@@ -865,7 +860,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getVarDeclName(): string {
+	public _getVarDeclName(): string {
 		if (!this._isFromVariableDecl()) {
 			return "";
 		}
@@ -880,7 +875,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getTypeDeclName(): string {
+	public _getTypeDeclName(): string {
 		if (!this._isFromVariableDecl()) {
 			return "";
 		}
@@ -895,7 +890,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getParentVarDecl(): IAFXVariableDeclInstruction {
+	public _getParentVarDecl(): IAFXVariableDeclInstruction {
 		if (!this._isFromVariableDecl()) {
 			return null;
 		}
@@ -910,7 +905,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getParentContainer(): IAFXVariableDeclInstruction {
+	public _getParentContainer(): IAFXVariableDeclInstruction {
 		if (!this._isFromVariableDecl() || !this._isTypeOfField()) {
 			return null;
 		}
@@ -923,7 +918,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return pContainerType._getParentVarDecl();
 	}
 
-	_getMainVariable(): IAFXVariableDeclInstruction {
+	public _getMainVariable(): IAFXVariableDeclInstruction {
 		if (!this._isFromVariableDecl()) {
 			return null;
 		}
@@ -936,7 +931,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_getMainPointer(): IAFXVariableDeclInstruction {
+	public _getMainPointer(): IAFXVariableDeclInstruction {
 		if (isNull(this._pMainPointIndex)) {
 			if (isNull(this._getPointer())) {
 				this._pMainPointIndex = this._getParentVarDecl();
@@ -949,15 +944,15 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return this._pMainPointIndex;
 	}
 
-	_getUpPointer(): IAFXVariableDeclInstruction {
+	public _getUpPointer(): IAFXVariableDeclInstruction {
 		return this._pUpPointIndex;
 	}
 
-	_getDownPointer(): IAFXVariableDeclInstruction {
+	public _getDownPointer(): IAFXVariableDeclInstruction {
 		return this._pDownPointIndex;
 	}
 
-	_getAttrOffset(): IAFXVariableDeclInstruction {
+	public _getAttrOffset(): IAFXVariableDeclInstruction {
 		return this._pAttrOffset;
 	}
 
@@ -965,14 +960,14 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 	//----------------------------SYSTEM-------------------------------//
 	//-----------------------------------------------------------------//		
 
-	_wrap(): IAFXVariableTypeInstruction {
+	public _wrap(): IAFXVariableTypeInstruction {
 		var pCloneType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 		pCloneType._pushType(this);
 
 		return pCloneType;
 	}
 
-	_clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXVariableTypeInstruction {
+	public _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXVariableTypeInstruction {
 		if (isDef(pRelationMap[this._getInstructionID()])) {
 			return <IAFXVariableTypeInstruction>pRelationMap[this._getInstructionID()];
 		}
@@ -984,11 +979,11 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 			return this;
 		}
 
-		var pClone: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>super._clone(pRelationMap);
+		let pClone: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>super._clone(pRelationMap);
 
 		pClone._pushType(this._pSubType._clone(pRelationMap));
 		if (!isNull(this._pUsageList)) {
-			for (var i: number = 0; i < this._pUsageList.length; i++) {
+			for (let i: number = 0; i < this._pUsageList.length; i++) {
 				pClone._addUsage(this._pUsageList[i]);
 			}
 		}
@@ -1005,12 +1000,12 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 
 		if (this._bIsPointer) {
-			var pClonePointerList: IAFXVariableDeclInstruction[] = null;
+			let pClonePointerList: IAFXVariableDeclInstruction[] = null;
 			if (!isNull(this._pPointerList)) {
 				pClonePointerList = new Array(this._pPointerList.length);
-				var pDownPointer: IAFXVariableDeclInstruction = pClone._getParentVarDecl();
+				let pDownPointer: IAFXVariableDeclInstruction = pClone._getParentVarDecl();
 
-				for (var i: number = 0; i < this._pPointerList.length; i++) {
+				for (let i: number = 0; i < this._pPointerList.length; i++) {
 					pClonePointerList[i] = this._pPointerList[i]._clone(pRelationMap);
 
 					if (i > 0) {
@@ -1029,8 +1024,8 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 
 		if (!isNull(this._pFieldDeclMap)) {
-			var sFieldName: string = "";
-			var pCloneFieldMap: IMap<IAFXVariableDeclInstruction> = <IMap<IAFXVariableDeclInstruction>>{};
+			let sFieldName: string = "";
+			let pCloneFieldMap: IMap<IAFXVariableDeclInstruction> = <IMap<IAFXVariableDeclInstruction>>{};
 
 			for (sFieldName in this._pFieldDeclMap) {
 				pCloneFieldMap[sFieldName] = this._pFieldDeclMap[sFieldName]._clone(pRelationMap);
@@ -1042,7 +1037,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		return pClone;
 	}
 
-	_blend(pType: IAFXVariableTypeInstruction, eMode: EAFXBlendMode): IAFXVariableTypeInstruction {
+	public _blend(pType: IAFXVariableTypeInstruction, eMode: EAFXBlendMode): IAFXVariableTypeInstruction {
 		if (this === pType) {
 			return this;
 		}
@@ -1062,17 +1057,17 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 			return null;
 		}
 
-		var pBlendBaseType: IAFXTypeInstruction = this._getBaseType()._blend(pType._getBaseType(), eMode);
+		let pBlendBaseType: IAFXTypeInstruction = this._getBaseType()._blend(pType._getBaseType(), eMode);
 		if (isNull(pBlendBaseType)) {
 			return null;
 		}
 
-		var pBlendType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pBlendType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 		pBlendType._pushType(pBlendBaseType);
 
 		if (this._isNotBaseArray()) {
-			var iLength: number = this._getLength();
-			var pLengthExpr: IntInstruction = new IntInstruction();
+			let iLength: number = this._getLength();
+			let pLengthExpr: IntInstruction = new IntInstruction();
 			pLengthExpr._setValue(iLength);
 			pBlendType._addArrayIndex(pLengthExpr);
 		}
@@ -1081,12 +1076,12 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 
 	}
 
-	_setCloneHash(sHash: string, sStrongHash: string): void {
+	public _setCloneHash(sHash: string, sStrongHash: string): void {
 		this._sHash = sHash;
 		this._sStrongHash = sStrongHash;
 	}
 
-	_setCloneArrayIndex(pElementType: IAFXVariableTypeInstruction,
+	public _setCloneArrayIndex(pElementType: IAFXVariableTypeInstruction,
 		pIndexExpr: IAFXExprInstruction, iLength: number): void {
 		this._bIsArray = true;
 		this._pArrayElementType = pElementType;
@@ -1094,7 +1089,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		this._iLength = iLength;
 	}
 
-	_setClonePointeIndexes(nDim: number, pPointerList: IAFXVariableDeclInstruction[]): void {
+	public _setClonePointeIndexes(nDim: number, pPointerList: IAFXVariableDeclInstruction[]): void {
 		this._bIsPointer = true;
 		this._nPointDim = nDim;
 		this._pPointerList = pPointerList;
@@ -1103,23 +1098,23 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 	}
 
-	_setCloneFields(pFieldMap: IMap<IAFXVariableDeclInstruction>): void {
+	public _setCloneFields(pFieldMap: IMap<IAFXVariableDeclInstruction>): void {
 		this._pFieldDeclMap = pFieldMap;
 	}
 
-	_setUpDownPointers(pUpPointIndex: IAFXVariableDeclInstruction,
+	public _setUpDownPointers(pUpPointIndex: IAFXVariableDeclInstruction,
 		pDownPointIndex: IAFXVariableDeclInstruction): void {
 		this._pUpPointIndex = pUpPointIndex;
 		this._pDownPointIndex = pDownPointIndex;
 	}
 
 	private calcHash(): void {
-		var sHash: string = this._getSubType()._getHash();
+		let sHash: string = this._getSubType()._getHash();
 
 		if (this._bIsArray) {
 			sHash += "[";
 
-			var iLength: number = this._getLength();
+			const iLength: number = this._getLength();
 
 			if (iLength === Instruction.UNDEFINE_LENGTH) {
 				sHash += "undef";
@@ -1135,12 +1130,12 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 	}
 
 	private calcStrongHash(): void {
-		var sStrongHash: string = this._getSubType()._getStrongHash();
+		let sStrongHash: string = this._getSubType()._getStrongHash();
 
 		if (this._bIsArray) {
 			sStrongHash += "[";
 
-			var iLength: number = this._getLength();
+			const iLength: number = this._getLength();
 
 			if (iLength === Instruction.UNDEFINE_LENGTH) {
 				sStrongHash += "undef";
@@ -1152,7 +1147,7 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 			sStrongHash += "]";
 		}
 		if (this._isPointer()) {
-			for (var i: number = 0; i < this._getPointDim(); i++) {
+			for (let i: number = 0; i < this._getPointDim(); i++) {
 				sStrongHash = "@" + sStrongHash;
 			}
 		}
@@ -1166,8 +1161,8 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 			return;
 		}
 
-		var pDeclList: IAFXVariableDeclInstruction[] = [];
-		var i: number = 0;
+		let pDeclList: IAFXVariableDeclInstruction[] = [];
+		let i: number = 0;
 
 		if (!isNull(this._pAttrOffset)) {
 			pDeclList.push(this._pAttrOffset);
@@ -1185,14 +1180,14 @@ export class VariableTypeInstruction extends Instruction implements IAFXVariable
 		}
 
 		if (this._isComplex()) {
-			var pFieldNameList: string[] = this._getFieldNameList();
+			let pFieldNameList: string[] = this._getFieldNameList();
 
 			for (i = 0; i < pFieldNameList.length; i++) {
-				var pField: IAFXVariableDeclInstruction = this._getField(pFieldNameList[i]);
-				var pFieldSubDeclList: IAFXVariableDeclInstruction[] = pField._getSubVarDecls();
+				const pField: IAFXVariableDeclInstruction = this._getField(pFieldNameList[i]);
+				const pFieldSubDeclList: IAFXVariableDeclInstruction[] = pField._getSubVarDecls();
 
 				if (!isNull(pFieldSubDeclList)) {
-					for (var j: number = 0; j < pFieldSubDeclList.length; j++) {
+					for (let j: number = 0; j < pFieldSubDeclList.length; j++) {
 						pDeclList.push(pFieldSubDeclList[j]);
 					}
 				}

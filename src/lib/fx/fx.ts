@@ -1,10 +1,12 @@
 ﻿import { EParseMode, EParserCode } from "../idl/parser/IParser";
 import { EffectParser } from "./EffectParser";
-import { INullable, isNull } from "../common"
-import * as uri from "../uri/uri"
-import * as path from "../path/path"
+import { isNull } from "../common"
 import { logger } from "../logger";
 import * as fs from "fs";
+import { IMap } from "../idl/IMap";
+import { IAFXTechniqueInstruction } from "../idl/IAFXInstruction";
+import { IAFXEffect } from "../idl/IAFXEffect";
+import { Effect } from "./Effect";
 
 /** For addComponent/delComponent/hasComponent */
 export const ALL_PASSES = 0xffffff;
@@ -15,12 +17,8 @@ export const ANY_SHIFT = 0xfffffb;
 /** For addComponent/delComponent/hasComponent  */
 export const DEFAULT_SHIFT = 0xfffffc;
 
-let parser: EffectParser = null;
-let composer: IAFXComposer = null;
-
-export function getParser(): EffectParser {
-	return parser;
-}
+export let parser: EffectParser = null;
+export let techniques: IMap<IAFXTechniqueInstruction> = {};
 
 export function initParser(gramma: string, debugMode: boolean = false): boolean {
 	let mode: number =
@@ -43,21 +41,25 @@ export function initParser(gramma: string, debugMode: boolean = false): boolean 
 }
 
 
-function _initFromParsedEffect(eCode: EParserCode, sFileName: string): void {
+function initFromParsedEffect(eCode: EParserCode, sFileName: string): boolean {
 	if (eCode === EParserCode.k_Error) {
 		logger.error(`Cannot parse effect: ${sFileName}`);
-		return;
+		return false;
 	}
 
 	let pSyntaxTree = parser.getSyntaxTree();
-
-	if (composer._loadEffectFromSyntaxTree(pSyntaxTree, sFileName)) {
-		// todo: do something
+	var pEffect: IAFXEffect = new Effect;
+	
+	pEffect.setAnalyzedFileName(sFileName);
+	if (!pEffect.analyze(pSyntaxTree)) {
+		logger.warn("Error are occured during analyze of effect file '" + sFileName + "'.");
+		return false;
 	}
+
+	return true;
 }
 
-export function loadSource(sFileName?: string): boolean {
-	// var sExt: string = path.parse(sFileName).getExt()
+export function loadSourceAsync(sFileName?: string): void {
 	fs.readFile(sFileName, (pErr, data: Buffer) => {
 		if (!isNull(pErr)) {
 			logger.error("Can not load .afx file: '" + sFileName + "'");
@@ -65,11 +67,9 @@ export function loadSource(sFileName?: string): boolean {
 		else {
 			let sData = data.toString();
 			parser.setParseFileName(sFileName);
-			parser.parse(sData, _initFromParsedEffect);
+			parser.parse(sData, initFromParsedEffect);
 		}
 	});
-
-	return true;
 }
 
 

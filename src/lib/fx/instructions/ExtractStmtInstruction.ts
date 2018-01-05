@@ -9,7 +9,7 @@ import { isNull } from "../../common";
 
 
 export class ExtractStmtInstruction extends ExprInstruction {
-    private _pExtractInVar: IAFXVariableDeclInstruction = null;
+    // private _pExtractInVar: IAFXVariableDeclInstruction = null;
     private _pExtractInExpr: IAFXExprInstruction = null;
     private _pExtactExpr: ExtractExprInstruction = null;
 
@@ -29,11 +29,6 @@ export class ExtractStmtInstruction extends ExprInstruction {
             this._setError(EEffectErrors.BAD_EXTRACTING);
             return;
         }
-
-        // var pPointer: IAFXVariableDeclInstruction = isDef(pPointer) ? pPointer : pVarType._getPointer();
-        // var pBuffer: IAFXVariableDeclInstruction = isDef(pBuffer) ?  pBuffer : pVarType._getVideoBuffer();
-        var pBufferSampler: IAFXVariableDeclInstruction = pBuffer._getVideoBufferSampler();
-        var pBufferHeader: IAFXVariableDeclInstruction = pBuffer._getVideoBufferHeader();
 
         var isArray: boolean = pVarType._isNotBaseArray();
         var iLength: number = pVarType._getLength();
@@ -95,7 +90,7 @@ export class ExtractStmtInstruction extends ExprInstruction {
         this._push(new SimpleInstruction(sCodeFragment), true);
 
         this._pExtactExpr = pExtractExpr;
-        this._pExtractInVar = pVarDecl;
+        // this._pExtractInVar = pVarDecl;
         this._pExtractInExpr = pVarNameExpr;
     }
 

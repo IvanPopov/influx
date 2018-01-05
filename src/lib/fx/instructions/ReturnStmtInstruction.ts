@@ -8,7 +8,6 @@ import { isNull } from "../../common";
  * return ExprInstruction
  */
 export class ReturnStmtInstruction extends StmtInstruction {
-	private _pPreparedCode: string = "";
 	private _isPositionReturn: boolean = false;
 	private _isColorReturn: boolean = false;
 	private _isOnlyReturn: boolean = false;

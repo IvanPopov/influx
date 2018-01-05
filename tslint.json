@@ -1,0 +1,28 @@
+{
+    "defaultSeverity": "warning",
+    "extends": [
+        "tslint-microsoft-contrib"
+    ],
+    "jsRules": {},
+    "rules": {
+        "no-bitwise": false,
+        "linebreak-style": false,
+        "missing-jsdoc": false,
+        "no-increment-decrement": false,
+        "typedef": [
+            true,
+            "call-signature",
+            "parameter",
+            "member-variable-declaration",
+            "property-declaration",
+            "variable-declaration"
+        ],
+        "no-relative-imports": false
+    },
+    "rulesDirectory": [],
+    "linterOptions": {
+        "exclude": [
+            "src/lib/**"
+        ]
+    }
+}

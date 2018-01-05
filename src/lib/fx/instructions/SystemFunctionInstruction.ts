@@ -4,7 +4,6 @@ import { IdInstruction } from "./IdInstruction";
 import { isNull } from "../../common";
 import { TypedInstruction } from "./TypedInstruction";
 import { IMap } from "../../idl/IMap";
-import { IAFXType } from "../../idl/IAFXEffect";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 

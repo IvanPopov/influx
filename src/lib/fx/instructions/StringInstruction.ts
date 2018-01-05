@@ -1,12 +1,12 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IAFXLiteralInstruction, IAFXInstruction, IAFXVariableTypeInstruction, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IAFXLiteralInstruction, IAFXInstruction, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { Effect } from "../Effect";
 
 
 
 export class StringInstruction extends ExprInstruction implements IAFXLiteralInstruction {
 	private _sValue: string;
-	private static _pStringType: IAFXVariableTypeInstruction = null;
 
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS

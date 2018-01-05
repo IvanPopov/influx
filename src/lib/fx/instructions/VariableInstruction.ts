@@ -7,7 +7,8 @@ import { IMap } from "../../idl/IMap";
 import { StringDictionary } from "../../stringUtils/StringDictionary"
 import { IdExprInstruction } from "./IdExprInstruction";
 import { ExtractExprInstruction } from "./ExtractExprInstruction";
-import { PostfixPointInstruction } from "./PostfixPointInstruction"
+import { PostfixPointInstruction } from "./PostfixPointInstruction";
+import { Effect } from "../Effect";
 
 export class VariableDeclInstruction extends DeclInstruction implements IAFXVariableDeclInstruction {
 	private _bIsVideoBuffer: boolean = null;
@@ -15,10 +16,8 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
 	private _pVideoBufferHeader: IAFXVariableDeclInstruction = null;
 	private _pFullNameExpr: IAFXExprInstruction = null;
 	private _bDefineByZero: boolean = false;
-	private _pSubDeclList: IAFXVariableDeclInstruction[] = null;
 	private _bShaderOutput: boolean = false;
 
-	private _pAttrOffset: IAFXVariableDeclInstruction = null;
 	private _pAttrExtractionBlock: IAFXInstruction = null;
 
 	private _pValue: any = null;

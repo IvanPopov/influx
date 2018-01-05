@@ -1,11 +1,10 @@
 ﻿import { EScopeType } from "../idl/IScope"
 import { IAFXEffect, IAFXEffectStats } from "../idl/IAFXEffect";
-import { IAFXComposer } from "../idl/IAFXComposer";
 import { IParseNode, IParseTree } from "../idl/parser/IParser";
-import { IAFXInstruction, IAFXFunctionDeclInstruction, IAFXPassInstruction, IAFXSimpleInstruction, IAFXVariableDeclInstruction, IAFXTechniqueInstruction, IAFXImportedTechniqueInfo, IAFXTypedInstruction, IAFXVariableTypeInstruction, IAFXIdInstruction, IAFXTypeInstruction, IAFXTypeDeclInstruction, IAFXInstructionError, IAFXExprInstruction, EFunctionType, EAFXInstructionTypes, ECheckStage, IAFXAnnotationInstruction, IAFXInitExprInstruction, IAFXIdExprInstruction, IAFXStmtInstruction, IAFXDeclInstruction, IAFXLiteralInstruction } from "../idl/IAFXInstruction";
+import { IAFXInstruction, IAFXFunctionDeclInstruction, IAFXPassInstruction, IAFXSimpleInstruction, IAFXVariableDeclInstruction, IAFXTechniqueInstruction, IAFXTypedInstruction, IAFXVariableTypeInstruction, IAFXIdInstruction, IAFXTypeInstruction, IAFXTypeDeclInstruction, IAFXInstructionError, IAFXExprInstruction, EFunctionType, EAFXInstructionTypes, ECheckStage, IAFXAnnotationInstruction, IAFXInitExprInstruction, IAFXIdExprInstruction, IAFXStmtInstruction, IAFXDeclInstruction, IAFXLiteralInstruction } from "../idl/IAFXInstruction";
 import { IMap } from "../idl/IMap";
 import { time } from "../time";
-import { isDef, isDefAndNotNull } from "../common";
+import { isDef } from "../common";
 import { isNull } from "util";
 import { SystemTypeInstruction } from "./instructions/SystemTypeInstruction";
 import { ComplexTypeInstruction } from "./instructions/ComplexTypeInstruction";
@@ -45,7 +44,6 @@ import { ForStmtInstruction } from "./instructions/ForStmtInstruction";
 import { PassInstruction } from "./instructions/PassInstruction";
 import { ERenderStates } from "../idl/ERenderStates";
 import { ERenderStateValues } from "../idl/ERenderStateValues";
-import { IAFXComponent } from "../idl/IAFXComponent";
 import { ExtractStmtInstruction } from "./instructions/ExtractStmtInstruction";
 import { TechniqueInstruction } from "./instructions/TechniqueInstruction";
 import { IfStmtInstruction } from "./instructions/IfStmtInstruction";
@@ -63,18 +61,19 @@ import { BreakStmtInstruction } from "./instructions/BreakStmtInstruction";
 import { WhileStmtInstruction } from "./instructions/WhileStmtInstruction";
 import { IEffectErrorInfo } from "../idl/IEffectErrorInfo";
 import { ProgramScope } from "./ProgramScope";
+import * as fx from "./fx";
 
 /** @const */
-var TEMPLATE_TYPE = "template";
+let TEMPLATE_TYPE = "template";
 
 export class Effect implements IAFXEffect {
-	private _pComposer: IAFXComposer = null;
+	// private _pComposer: IAFXComposer = null;
 
 	private _pParseTree: IParseTree = null;
 	private _pAnalyzedNode: IParseNode = null;
 
 	private _pEffectScope: ProgramScope = null;
-	private _pCurrentInstruction: IAFXInstruction = null;
+	// private _pCurrentInstruction: IAFXInstruction = null;
 	private _pCurrentFunction: IAFXFunctionDeclInstruction = null;
 	private _pCurrentPass: IAFXPassInstruction = null;
 	private _bHaveCurrentFunctionReturnOccur = false;
@@ -100,9 +99,9 @@ export class Effect implements IAFXEffect {
 
 	private _sProvideNameSpace: string = "";
 
-	private _pImportedGlobalTechniqueList: IAFXImportedTechniqueInfo[] = null;
+	// private _pImportedGlobalTechniqueList: IAFXImportedTechniqueInfo[] = null;
 
-	private _pAddedTechniqueList: IAFXTechniqueInstruction[] = null;
+	// private _pAddedTechniqueList: IAFXTechniqueInstruction[] = null;
 
 	static pSystemMacros: IMap<IAFXSimpleInstruction> = null;
 	static pSystemTypes: IMap<SystemTypeInstruction> = null;
@@ -110,14 +109,12 @@ export class Effect implements IAFXEffect {
 	static pSystemVariables: IMap<IAFXVariableDeclInstruction> = null;
 	static pSystemVertexOut: ComplexTypeInstruction = null;
 
-	constructor(pComposer: IAFXComposer) {
-		this._pComposer = pComposer;
-
+	constructor() {
 		this._pParseTree = null;
 		this._pAnalyzedNode = null;
 
 		this._pEffectScope = new ProgramScope();
-		this._pCurrentInstruction = null;
+		// this._pCurrentInstruction = null;
 
 		this._pStatistics = null;
 		this._sAnalyzedFileName = "";
@@ -135,8 +132,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	analyze(pTree: IParseTree): boolean {
-		var pRootNode: IParseNode = pTree.getRoot();
-		var iParseTime: number = time();
+		// let pRootNode: IParseNode = pTree.getRoot();
+		let iParseTime: number = time();
 
 		// LOG(this);
 
@@ -225,30 +222,30 @@ export class Effect implements IAFXEffect {
 
 	static findSystemFunction(sFunctionName: string,
 		pArguments: IAFXTypedInstruction[]): IAFXFunctionDeclInstruction {
-		var pSystemFunctions: SystemFunctionInstruction[] = Effect.pSystemFunctions[sFunctionName];
+		let pSystemFunctions: SystemFunctionInstruction[] = Effect.pSystemFunctions[sFunctionName];
 
 		if (!isDef(pSystemFunctions)) {
 			return null;
 		}
 
 		if (isNull(pArguments)) {
-			for (var i: number = 0; i < pSystemFunctions.length; i++) {
+			for (let i: number = 0; i < pSystemFunctions.length; i++) {
 				if (pSystemFunctions[i]._getNumNeededArguments() === 0) {
 					return <IAFXFunctionDeclInstruction>pSystemFunctions[i];
 				}
 			}
 		}
 
-		for (var i: number = 0; i < pSystemFunctions.length; i++) {
+		for (let i: number = 0; i < pSystemFunctions.length; i++) {
 			if (pArguments.length !== pSystemFunctions[i]._getNumNeededArguments()) {
 				continue;
 			}
 
-			var pTestedArguments: IAFXTypedInstruction[] = pSystemFunctions[i]._getArguments();
+			let pTestedArguments: IAFXTypedInstruction[] = pSystemFunctions[i]._getArguments();
 
-			var isOk: boolean = true;
+			let isOk: boolean = true;
 
-			for (var j: number = 0; j < pArguments.length; j++) {
+			for (let j: number = 0; j < pArguments.length; j++) {
 				isOk = false;
 
 				if (!pArguments[j]._getType()._isEqual(pTestedArguments[j]._getType())) {
@@ -262,12 +259,13 @@ export class Effect implements IAFXEffect {
 				return <IAFXFunctionDeclInstruction>pSystemFunctions[i];
 			}
 		}
+		return null;
 	}
 
 	static createVideoBufferVariable(): IAFXVariableDeclInstruction {
-		var pBuffer: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-		var pBufferType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
-		var pBufferName: IAFXIdInstruction = new IdInstruction();
+		let pBuffer: IAFXVariableDeclInstruction = new VariableDeclInstruction();
+		let pBufferType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pBufferName: IAFXIdInstruction = new IdInstruction();
 
 		pBufferType._pushType(Effect.getSystemType("video_buffer"));
 
@@ -300,11 +298,11 @@ export class Effect implements IAFXEffect {
 			pType._isEqual(Effect.getSystemType("int4"))) {
 			return "Vec4";
 		}
-		// 	else if(pType._isEqual(Effect.getSystemType("float2x2")) ||
-		// pType._isEqual(Effect.getSystemType("bool2x2")) ||
-		// pType._isEqual(Effect.getSystemType("int2x2"))){
-		// 		return "Vec2";
-		// 	}
+		else if (pType._isEqual(Effect.getSystemType("float2x2")) ||
+			pType._isEqual(Effect.getSystemType("bool2x2")) ||
+			pType._isEqual(Effect.getSystemType("int2x2"))) {
+			return "Vec2";
+		}
 		else if (pType._isEqual(Effect.getSystemType("float3x3")) ||
 			pType._isEqual(Effect.getSystemType("bool3x3")) ||
 			pType._isEqual(Effect.getSystemType("int3x3"))) {
@@ -395,17 +393,17 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (iDepth === 0) {
-			for (var i: number = 0; i < pLiterals.length; i++) {
+			for (let i: number = 0; i < pLiterals.length; i++) {
 				pOutput[pLiterals[i]] = true;
 			}
 
 			iDepth = 1;
 		}
 
-		var pOutputKeys: string[] = Object.keys(pOutput);
+		let pOutputKeys: string[] = Object.keys(pOutput);
 
-		for (var i: number = 0; i < pLiterals.length; i++) {
-			for (var j: number = 0; j < pOutputKeys.length; j++) {
+		for (let i: number = 0; i < pLiterals.length; i++) {
+			for (let j: number = 0; j < pOutputKeys.length; j++) {
 				if (pOutputKeys[j].indexOf(pLiterals[i]) !== -1) {
 					pOutput[pOutputKeys[j] + pLiterals[i]] = false;
 				}
@@ -499,9 +497,9 @@ export class Effect implements IAFXEffect {
 			return;
 		}
 
-		var pVariableDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-		var pName: IAFXIdInstruction = new IdInstruction();
-		var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pVariableDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
+		let pName: IAFXIdInstruction = new IdInstruction();
+		let pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 
 		pName._setName(sName);
 		pName._setRealName(sRealName);
@@ -524,9 +522,9 @@ export class Effect implements IAFXEffect {
 	}
 
 	private generatePassEngineVariable(): void {
-		var pVariableDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-		var pName: IAFXIdInstruction = new IdInstruction();
-		var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pVariableDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
+		let pName: IAFXIdInstruction = new IdInstruction();
+		let pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 
 		pType._canWrite(false);
 
@@ -543,14 +541,14 @@ export class Effect implements IAFXEffect {
 	private generateBaseVertexOutput(): void {
 		//TODO: fix defenition of this variables
 
-		var pOutBasetype: ComplexTypeInstruction = new ComplexTypeInstruction();
+		let pOutBasetype: ComplexTypeInstruction = new ComplexTypeInstruction();
 
-		var pPosition: VariableDeclInstruction = new VariableDeclInstruction();
-		var pPointSize: VariableDeclInstruction = new VariableDeclInstruction();
-		var pPositionType: VariableTypeInstruction = new VariableTypeInstruction();
-		var pPointSizeType: VariableTypeInstruction = new VariableTypeInstruction();
-		var pPositionId: IdInstruction = new IdInstruction();
-		var pPointSizeId: IdInstruction = new IdInstruction();
+		let pPosition: VariableDeclInstruction = new VariableDeclInstruction();
+		let pPointSize: VariableDeclInstruction = new VariableDeclInstruction();
+		let pPositionType: VariableTypeInstruction = new VariableTypeInstruction();
+		let pPointSizeType: VariableTypeInstruction = new VariableTypeInstruction();
+		let pPositionId: IdInstruction = new IdInstruction();
+		let pPointSizeId: IdInstruction = new IdInstruction();
 
 		pPositionType._pushType(Effect.getSystemType("float4"));
 		pPointSizeType._pushType(Effect.getSystemType("float"));
@@ -570,7 +568,7 @@ export class Effect implements IAFXEffect {
 		pPosition._setSemantic("POSITION");
 		pPointSize._setSemantic("PSIZE");
 
-		var pFieldCollector: IAFXInstruction = new InstructionCollector();
+		let pFieldCollector: IAFXInstruction = new InstructionCollector();
 		pFieldCollector._push(pPosition, false);
 		pFieldCollector._push(pPointSize, false);
 
@@ -838,15 +836,15 @@ export class Effect implements IAFXEffect {
 		pTemplateTypes: string[],
 		isForVertex: boolean = true, isForPixel: boolean = true): void {
 
-		var pExprTranslator: ExprTemplateTranslator = new ExprTemplateTranslator(sTranslationExpr);
-		var pSystemFunctions: IMap<SystemFunctionInstruction[]> = this._pSystemFunctionsMap;
-		var pTypes: IAFXTypeInstruction[] = null;
-		var sFunctionHash: string = "";
-		var pReturnType: IAFXTypeInstruction = null;
-		var pFunction: SystemFunctionInstruction = null;
+		let pExprTranslator: ExprTemplateTranslator = new ExprTemplateTranslator(sTranslationExpr);
+		let pSystemFunctions: IMap<SystemFunctionInstruction[]> = this._pSystemFunctionsMap;
+		let pTypes: IAFXTypeInstruction[] = null;
+		let sFunctionHash: string = "";
+		let pReturnType: IAFXTypeInstruction = null;
+		let pFunction: SystemFunctionInstruction = null;
 
 		if (!isNull(pTemplateTypes)) {
-			for (var i: number = 0; i < pTemplateTypes.length; i++) {
+			for (let i: number = 0; i < pTemplateTypes.length; i++) {
 				pTypes = [];
 				sFunctionHash = sName + "(";
 				pReturnType = (sReturnTypeName === TEMPLATE_TYPE) ?
@@ -854,7 +852,7 @@ export class Effect implements IAFXEffect {
 					Effect.getSystemType(sReturnTypeName);
 
 
-				for (var j: number = 0; j < pArgumentsTypes.length; j++) {
+				for (let j: number = 0; j < pArgumentsTypes.length; j++) {
 					if (pArgumentsTypes[j] === TEMPLATE_TYPE) {
 						pTypes.push(Effect.getSystemType(pTemplateTypes[i]));
 						sFunctionHash += pTemplateTypes[i] + ",";
@@ -894,7 +892,7 @@ export class Effect implements IAFXEffect {
 			pTypes = [];
 			sFunctionHash = sName + "(";
 
-			for (var i: number = 0; i < pArgumentsTypes.length; i++) {
+			for (let i: number = 0; i < pArgumentsTypes.length; i++) {
 				if (pArgumentsTypes[i] === TEMPLATE_TYPE) {
 					logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + sName + "'.");
 				}
@@ -930,7 +928,7 @@ export class Effect implements IAFXEffect {
 			return;
 		}
 
-		var pMacros: IAFXSimpleInstruction = new SimpleInstruction(sMacrosCode);
+		let pMacros: IAFXSimpleInstruction = new SimpleInstruction(sMacrosCode);
 
 		this._pSystemMacros[sMacrosName] = pMacros;
 	}
@@ -945,18 +943,18 @@ export class Effect implements IAFXEffect {
 			return;
 		}
 
-		var pReturnType: IAFXTypeInstruction = Effect.getSystemType(sReturnType);
-		var pFunction: SystemFunctionInstruction = new SystemFunctionInstruction(sName, pReturnType, null, null);
+		let pReturnType: IAFXTypeInstruction = Effect.getSystemType(sReturnType);
+		let pFunction: SystemFunctionInstruction = new SystemFunctionInstruction(sName, pReturnType, null, null);
 
 		pFunction.setDeclCode(sDefenition, sImplementation);
 
-		var pUsedExtSystemTypes: IAFXTypeDeclInstruction[] = [];
-		var pUsedExtSystemFunctions: IAFXFunctionDeclInstruction[] = [];
-		var pUsedExtSystemMacros: IAFXSimpleInstruction[] = [];
+		let pUsedExtSystemTypes: IAFXTypeDeclInstruction[] = [];
+		let pUsedExtSystemFunctions: IAFXFunctionDeclInstruction[] = [];
+		let pUsedExtSystemMacros: IAFXSimpleInstruction[] = [];
 
 		if (!isNull(pUsedTypes)) {
-			for (var i: number = 0; i < pUsedTypes.length; i++) {
-				var pTypeDecl: IAFXTypeDeclInstruction = <IAFXTypeDeclInstruction>Effect.getSystemType(pUsedTypes[i])._getParent();
+			for (let i: number = 0; i < pUsedTypes.length; i++) {
+				let pTypeDecl: IAFXTypeDeclInstruction = <IAFXTypeDeclInstruction>Effect.getSystemType(pUsedTypes[i])._getParent();
 				if (!isNull(pTypeDecl)) {
 					pUsedExtSystemTypes.push(pTypeDecl);
 				}
@@ -964,14 +962,14 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (!isNull(pUsedMacros)) {
-			for (var i: number = 0; i < pUsedMacros.length; i++) {
+			for (let i: number = 0; i < pUsedMacros.length; i++) {
 				pUsedExtSystemMacros.push(Effect.getSystemMacros(pUsedMacros[i]));
 			}
 		}
 
 		if (!isNull(pUsedFunctions)) {
-			for (var i: number = 0; i < pUsedFunctions.length; i++) {
-				var pFindFunction: IAFXFunctionDeclInstruction = Effect.findSystemFunction(pUsedFunctions[i], null);
+			for (let i: number = 0; i < pUsedFunctions.length; i++) {
+				let pFindFunction: IAFXFunctionDeclInstruction = Effect.findSystemFunction(pUsedFunctions[i], null);
 				pUsedExtSystemFunctions.push(pFindFunction);
 			}
 		}
@@ -992,7 +990,7 @@ export class Effect implements IAFXEffect {
 			return null;
 		}
 
-		var pSystemType: SystemTypeInstruction = new SystemTypeInstruction();
+		let pSystemType: SystemTypeInstruction = new SystemTypeInstruction();
 
 		pSystemType._setName(sName);
 		pSystemType.setRealName(sRealName);
@@ -1016,7 +1014,7 @@ export class Effect implements IAFXEffect {
 			return null;
 		}
 
-		var pSystemType: SystemTypeInstruction = new SystemTypeInstruction();
+		let pSystemType: SystemTypeInstruction = new SystemTypeInstruction();
 		pSystemType._setName(sName);
 		pSystemType.setRealName(sRealName);
 		pSystemType.setSize(iSize);
@@ -1029,7 +1027,7 @@ export class Effect implements IAFXEffect {
 		this._pSystemTypes[sName] = pSystemType;
 		pSystemType._setBuiltIn(false);
 
-		var pSystemTypeDecl: IAFXTypeDeclInstruction = new TypeDeclInstruction();
+		let pSystemTypeDecl: IAFXTypeDeclInstruction = new TypeDeclInstruction();
 		pSystemTypeDecl._push(pSystemType, true);
 		pSystemTypeDecl._setBuiltIn(false);
 
@@ -1055,17 +1053,17 @@ export class Effect implements IAFXEffect {
 	}
 
 	private addSystemTypeVector(): void {
-		var pXYSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pXYZSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pXYZWSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pXYSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pXYZSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pXYZWSuffix: IMap<boolean> = <IMap<boolean>>{};
 
-		var pRGSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pRGBSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pRGBASuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pRGSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pRGBSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pRGBASuffix: IMap<boolean> = <IMap<boolean>>{};
 
-		var pSTSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pSTPSuffix: IMap<boolean> = <IMap<boolean>>{};
-		var pSTPQSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pSTSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pSTPSuffix: IMap<boolean> = <IMap<boolean>>{};
+		let pSTPQSuffix: IMap<boolean> = <IMap<boolean>>{};
 
 		this.generateSuffixLiterals(["x", "y"], pXYSuffix);
 		this.generateSuffixLiterals(["x", "y", "z"], pXYZSuffix);
@@ -1079,21 +1077,21 @@ export class Effect implements IAFXEffect {
 		this.generateSuffixLiterals(["s", "t", "p"], pSTPSuffix);
 		this.generateSuffixLiterals(["s", "t", "p", "q"], pSTPQSuffix);
 
-		var pFloat: IAFXTypeInstruction = Effect.getSystemType("float");
-		var pInt: IAFXTypeInstruction = Effect.getSystemType("number");
-		var pBool: IAFXTypeInstruction = Effect.getSystemType("bool");
+		let pFloat: IAFXTypeInstruction = Effect.getSystemType("float");
+		let pInt: IAFXTypeInstruction = Effect.getSystemType("number");
+		let pBool: IAFXTypeInstruction = Effect.getSystemType("bool");
 
-		var pFloat2: IAFXTypeInstruction = this.generateSystemType("float2", "vec2", 0, true, pFloat, 2);
-		var pFloat3: IAFXTypeInstruction = this.generateSystemType("float3", "vec3", 0, true, pFloat, 3);
-		var pFloat4: IAFXTypeInstruction = this.generateSystemType("float4", "vec4", 0, true, pFloat, 4);
+		let pFloat2: IAFXTypeInstruction = this.generateSystemType("float2", "vec2", 0, true, pFloat, 2);
+		let pFloat3: IAFXTypeInstruction = this.generateSystemType("float3", "vec3", 0, true, pFloat, 3);
+		let pFloat4: IAFXTypeInstruction = this.generateSystemType("float4", "vec4", 0, true, pFloat, 4);
 
-		var pInt2: IAFXTypeInstruction = this.generateSystemType("int2", "ivec2", 0, true, pInt, 2);
-		var pInt3: IAFXTypeInstruction = this.generateSystemType("int3", "ivec3", 0, true, pInt, 3);
-		var pInt4: IAFXTypeInstruction = this.generateSystemType("int4", "ivec4", 0, true, pInt, 4);
+		let pInt2: IAFXTypeInstruction = this.generateSystemType("int2", "ivec2", 0, true, pInt, 2);
+		let pInt3: IAFXTypeInstruction = this.generateSystemType("int3", "ivec3", 0, true, pInt, 3);
+		let pInt4: IAFXTypeInstruction = this.generateSystemType("int4", "ivec4", 0, true, pInt, 4);
 
-		var pBool2: IAFXTypeInstruction = this.generateSystemType("bool2", "bvec2", 0, true, pBool, 2);
-		var pBool3: IAFXTypeInstruction = this.generateSystemType("bool3", "bvec3", 0, true, pBool, 3);
-		var pBool4: IAFXTypeInstruction = this.generateSystemType("bool4", "bvec4", 0, true, pBool, 4);
+		let pBool2: IAFXTypeInstruction = this.generateSystemType("bool2", "bvec2", 0, true, pBool, 2);
+		let pBool3: IAFXTypeInstruction = this.generateSystemType("bool3", "bvec3", 0, true, pBool, 3);
+		let pBool4: IAFXTypeInstruction = this.generateSystemType("bool4", "bvec4", 0, true, pBool, 4);
 
 		this.addFieldsToVectorFromSuffixObject(pXYSuffix, pFloat2, "float");
 		this.addFieldsToVectorFromSuffixObject(pRGSuffix, pFloat2, "float");
@@ -1133,17 +1131,17 @@ export class Effect implements IAFXEffect {
 	}
 
 	private addSystemTypeMatrix(): void {
-		var pFloat2: IAFXTypeInstruction = Effect.getSystemType("float2");
-		var pFloat3: IAFXTypeInstruction = Effect.getSystemType("float3");
-		var pFloat4: IAFXTypeInstruction = Effect.getSystemType("float4");
+		let pFloat2: IAFXTypeInstruction = Effect.getSystemType("float2");
+		let pFloat3: IAFXTypeInstruction = Effect.getSystemType("float3");
+		let pFloat4: IAFXTypeInstruction = Effect.getSystemType("float4");
 
-		var pInt2: IAFXTypeInstruction = Effect.getSystemType("int2");
-		var pInt3: IAFXTypeInstruction = Effect.getSystemType("int3");
-		var pInt4: IAFXTypeInstruction = Effect.getSystemType("int4");
+		let pInt2: IAFXTypeInstruction = Effect.getSystemType("int2");
+		let pInt3: IAFXTypeInstruction = Effect.getSystemType("int3");
+		let pInt4: IAFXTypeInstruction = Effect.getSystemType("int4");
 
-		var pBool2: IAFXTypeInstruction = Effect.getSystemType("bool2");
-		var pBool3: IAFXTypeInstruction = Effect.getSystemType("bool3");
-		var pBool4: IAFXTypeInstruction = Effect.getSystemType("bool4");
+		let pBool2: IAFXTypeInstruction = Effect.getSystemType("bool2");
+		let pBool3: IAFXTypeInstruction = Effect.getSystemType("bool3");
+		let pBool4: IAFXTypeInstruction = Effect.getSystemType("bool4");
 
 		this.generateSystemType("float2x2", "mat2", 0, true, pFloat2, 2);
 		this.generateSystemType("float2x3", "mat2x3", 0, true, pFloat2, 3);
@@ -1183,11 +1181,11 @@ export class Effect implements IAFXEffect {
 	}
 
 	private addFieldsToVectorFromSuffixObject(pSuffixMap: IMap<boolean>, pType: IAFXTypeInstruction, sBaseType: string) {
-		var sSuffix: string = null;
+		let sSuffix: string = null;
 
 		for (sSuffix in pSuffixMap) {
-			var sFieldTypeName: string = sBaseType + ((sSuffix.length > 1) ? sSuffix.length.toString() : "");
-			var pFieldType: IAFXTypeInstruction = Effect.getSystemType(sFieldTypeName);
+			let sFieldTypeName: string = sBaseType + ((sSuffix.length > 1) ? sSuffix.length.toString() : "");
+			let pFieldType: IAFXTypeInstruction = Effect.getSystemType(sFieldTypeName);
 
 			(<SystemTypeInstruction>pType).addField(sSuffix, pFieldType, pSuffixMap[sSuffix]);
 		}
@@ -1222,10 +1220,10 @@ export class Effect implements IAFXEffect {
 	}
 
 	private _error(eCode: number, pInfo: IEffectErrorInfo = {}): void {
-		var sFileName: string = this._sAnalyzedFileName;
+		// let sFileName: string = this._sAnalyzedFileName;
 
-		var pLocation: ISourceLocation = <ISourceLocation>{ file: this._sAnalyzedFileName, line: 0 };
-		var pLineColumn: { line: number; column: number; } = this.getNodeSourceLocation(this.getAnalyzedNode());
+		let pLocation: ISourceLocation = <ISourceLocation>{ file: this._sAnalyzedFileName, line: 0 };
+		let pLineColumn: { line: number; column: number; } = this.getNodeSourceLocation(this.getAnalyzedNode());
 
 		switch (eCode) {
 			default:
@@ -1237,7 +1235,7 @@ export class Effect implements IAFXEffect {
 				break;
 		}
 
-		var pLogEntity: ILoggerEntity = <ILoggerEntity>{
+		let pLogEntity: ILoggerEntity = <ILoggerEntity>{
 			code: eCode,
 			info: pInfo,
 			location: pLocation
@@ -1316,12 +1314,6 @@ export class Effect implements IAFXEffect {
 		this._isAnalyzeInPass = isInPass;
 	}
 
-	private setOperator(sOperator: string): void {
-		if (!isNull(this._pCurrentInstruction)) {
-			this._pCurrentInstruction._setOperator(sOperator);
-		}
-	}
-
 	private clearPointersForExtract(): void {
 		this._pPointerForExtractionList.length = 0;
 	}
@@ -1347,7 +1339,7 @@ export class Effect implements IAFXEffect {
 	private findConstructor(pType: IAFXTypeInstruction,
 		pArguments: IAFXExprInstruction[]): IAFXVariableTypeInstruction {
 
-		var pVariableType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pVariableType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 		pVariableType._pushType(pType);
 
 		return pVariableType;
@@ -1370,10 +1362,10 @@ export class Effect implements IAFXEffect {
 			this._error(EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: pVariable._getName() });
 		}
 
-		var isVarAdded: boolean = this._pEffectScope._addVariable(pVariable);
+		let isVarAdded: boolean = this._pEffectScope._addVariable(pVariable);
 
 		if (!isVarAdded) {
-			var eScopeType: EScopeType = this.getScopeType();
+			let eScopeType: EScopeType = this.getScopeType();
 
 			switch (eScopeType) {
 				case EScopeType.k_Default:
@@ -1389,7 +1381,7 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (pVariable._getName() === "Out" && !isNull(this.getCurrentAnalyzedFunction())) {
-			var isOk: boolean = this.getCurrentAnalyzedFunction()._addOutVariable(pVariable);
+			let isOk: boolean = this.getCurrentAnalyzedFunction()._addOutVariable(pVariable);
 			if (!isOk) {
 				this._error(EEffectErrors.BAD_OUT_VARIABLE_IN_FUNCTION);
 			}
@@ -1401,7 +1393,7 @@ export class Effect implements IAFXEffect {
 			this._error(EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: pType._getName() });
 		}
 
-		var isTypeAdded: boolean = this._pEffectScope._addType(pType);
+		let isTypeAdded: boolean = this._pEffectScope._addType(pType);
 
 		if (!isTypeAdded) {
 			this._error(EEffectErrors.REDEFINE_TYPE, { typeName: pType._getName() });
@@ -1413,7 +1405,7 @@ export class Effect implements IAFXEffect {
 			this._error(EEffectErrors.REDEFINE_SYSTEM_FUNCTION, { funcName: pFunction._getName() });
 		}
 
-		var isFunctionAdded: boolean = this._pEffectScope._addFunction(pFunction);
+		let isFunctionAdded: boolean = this._pEffectScope._addFunction(pFunction);
 
 		if (!isFunctionAdded) {
 			this._error(EEffectErrors.REDEFINE_FUNCTION, { funcName: pFunction._getName() });
@@ -1421,7 +1413,7 @@ export class Effect implements IAFXEffect {
 	}
 
 	private addTechnique(pTechnique: IAFXTechniqueInstruction): void {
-		var sName: string = pTechnique._getName();
+		let sName: string = pTechnique._getName();
 
 		if (isDef(this._pTechniqueMap[sName])) {
 			this._error(EEffectErrors.BAD_TECHNIQUE_REDEFINE_NAME, { techName: sName });
@@ -1432,19 +1424,10 @@ export class Effect implements IAFXEffect {
 		this._pTechniqueList.push(pTechnique);
 	}
 
-	private addExternalSharedVariable(pVariable: IAFXVariableDeclInstruction, eShaderType: EFunctionType): void {
-		var isVarAdded: boolean = this._pEffectScope._addVariable(pVariable);
-
-		if (!isVarAdded) {
-			this._error(EEffectErrors.CANNOT_ADD_SHARED_VARIABLE, { varName: pVariable._getName() });
-			return;
-		}
-	}
-
 
 	private analyzeGlobalUseDecls(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "UseDecl") {
@@ -1454,8 +1437,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeGlobalProvideDecls(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "ProvideDecl") {
@@ -1465,8 +1448,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeGlobalTypeDecls(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "TypeDecl") {
@@ -1476,8 +1459,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeFunctionDefinitions(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "FunctionDecl") {
@@ -1487,8 +1470,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeGlobalImports(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "ImportDecl") {
@@ -1498,8 +1481,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeTechniqueImports(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "TechniqueDecl") {
@@ -1509,8 +1492,8 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeVariableDecls(): void {
-		var pChildren: IParseNode[] = this._pParseTree.getRoot().children;
-		var i: number = 0;
+		let pChildren: IParseNode[] = this._pParseTree.getRoot().children;
+		let i: number = 0;
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "VariableDecl") {
@@ -1523,7 +1506,7 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeFunctionDecls(): void {
-		for (var i: number = 0; i < this._pFunctionWithImplementationList.length; i++) {
+		for (let i: number = 0; i < this._pFunctionWithImplementationList.length; i++) {
 			this.resumeFunctionAnalysis(this._pFunctionWithImplementationList[i]);
 		}
 
@@ -1534,24 +1517,24 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeTechniques(): void {
-		for (var i: number = 0; i < this._pTechniqueList.length; i++) {
+		for (let i: number = 0; i < this._pTechniqueList.length; i++) {
 			this.resumeTechniqueAnalysis(this._pTechniqueList[i]);
 		}
 	}
 
 	private checkFunctionsForRecursion(): void {
-		var pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
-		var isNewAdd: boolean = true;
-		var isNewDelete: boolean = true;
+		let pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
+		let isNewAdd: boolean = true;
+		let isNewDelete: boolean = true;
 
 		while (isNewAdd || isNewDelete) {
 			isNewAdd = false;
 			isNewDelete = false;
 
 			mainFor:
-			for (var i: number = 0; i < pFunctionList.length; i++) {
-				var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
-				var pUsedFunctionList: IAFXFunctionDeclInstruction[] = pTestedFunction._getUsedFunctionList();
+			for (let i: number = 0; i < pFunctionList.length; i++) {
+				let pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
+				let pUsedFunctionList: IAFXFunctionDeclInstruction[] = pTestedFunction._getUsedFunctionList();
 
 				if (!pTestedFunction._isUsed()) {
 					//logger.warn("Unused function '" + pTestedFunction._getStringDef() + "'.");
@@ -1565,15 +1548,15 @@ export class Effect implements IAFXEffect {
 					continue mainFor;
 				}
 
-				for (var j: number = 0; j < pUsedFunctionList.length; j++) {
-					var pAddedUsedFunctionList: IAFXFunctionDeclInstruction[] = pUsedFunctionList[j]._getUsedFunctionList();
+				for (let j: number = 0; j < pUsedFunctionList.length; j++) {
+					let pAddedUsedFunctionList: IAFXFunctionDeclInstruction[] = pUsedFunctionList[j]._getUsedFunctionList();
 
 					if (isNull(pAddedUsedFunctionList)) {
 						continue;
 					}
 
-					for (var k: number = 0; k < pAddedUsedFunctionList.length; k++) {
-						var pAddedFunction: IAFXFunctionDeclInstruction = pAddedUsedFunctionList[k];
+					for (let k: number = 0; k < pAddedUsedFunctionList.length; k++) {
+						let pAddedFunction: IAFXFunctionDeclInstruction = pAddedUsedFunctionList[k];
 
 						if (pTestedFunction === pAddedFunction) {
 							pTestedFunction._addToBlackList();
@@ -1600,18 +1583,18 @@ export class Effect implements IAFXEffect {
 	}
 
 	private checkFunctionForCorrectUsage(): void {
-		var pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
-		var isNewUsageSet: boolean = true;
-		var isNewDelete: boolean = true;
+		let pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
+		let isNewUsageSet: boolean = true;
+		let isNewDelete: boolean = true;
 
 		while (isNewUsageSet || isNewDelete) {
 			isNewUsageSet = false;
 			isNewDelete = false;
 
 			mainFor:
-			for (var i: number = 0; i < pFunctionList.length; i++) {
-				var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
-				var pUsedFunctionList: IAFXFunctionDeclInstruction[] = pTestedFunction._getUsedFunctionList();
+			for (let i: number = 0; i < pFunctionList.length; i++) {
+				let pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
+				let pUsedFunctionList: IAFXFunctionDeclInstruction[] = pTestedFunction._getUsedFunctionList();
 
 				if (!pTestedFunction._isUsed()) {
 					//logger.warn("Unused function '" + pTestedFunction._getStringDef() + "'.");
@@ -1639,8 +1622,8 @@ export class Effect implements IAFXEffect {
 					continue mainFor;
 				}
 
-				for (var j: number = 0; j < pUsedFunctionList.length; j++) {
-					var pUsedFunction: IAFXFunctionDeclInstruction = pUsedFunctionList[j];
+				for (let j: number = 0; j < pUsedFunctionList.length; j++) {
+					let pUsedFunction: IAFXFunctionDeclInstruction = pUsedFunctionList[j];
 
 					if (pTestedFunction._isUsedInVertex()) {
 						if (!pUsedFunction._isForVertex()) {
@@ -1680,24 +1663,24 @@ export class Effect implements IAFXEffect {
 	}
 
 	private generateInfoAboutUsedData(): void {
-		var pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
+		let pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
 
-		for (var i: number = 0; i < pFunctionList.length; i++) {
+		for (let i: number = 0; i < pFunctionList.length; i++) {
 			pFunctionList[i]._generateInfoAboutUsedData();
 		}
 	}
 
 	private generateShadersFromFunctions(): void {
-		var pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
+		let pFunctionList: IAFXFunctionDeclInstruction[] = this._pFunctionWithImplementationList;
 
-		for (var i: number = 0; i < pFunctionList.length; i++) {
-			var pShader: IAFXFunctionDeclInstruction = null;
+		for (let i: number = 0; i < pFunctionList.length; i++) {
+			// let pShader: IAFXFunctionDeclInstruction = null;
 
 			if (pFunctionList[i]._isUsedAsVertex()) {
-				pShader = pFunctionList[i]._convertToVertexShader();
+				// pShader = pFunctionList[i]._convertToVertexShader();
 			}
 			if (pFunctionList[i]._isUsedAsPixel()) {
-				pShader = pFunctionList[i]._convertToPixelShader();
+				// pShader = pFunctionList[i]._convertToPixelShader();
 			}
 
 			if (pFunctionList[i]._isErrorOccured()) {
@@ -1710,10 +1693,10 @@ export class Effect implements IAFXEffect {
 	private analyzeVariableDecl(pNode: IParseNode, pInstruction: IAFXInstruction = null): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pGeneralType: IAFXVariableTypeInstruction = null;
-		var pVariable: IAFXVariableDeclInstruction = null;
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pGeneralType: IAFXVariableTypeInstruction = null;
+		let pVariable: IAFXVariableDeclInstruction = null;
+		let i: number = 0;
 
 		pGeneralType = this.analyzeUsageType(pChildren[pChildren.length - 1]);
 
@@ -1724,9 +1707,9 @@ export class Effect implements IAFXEffect {
 				if (!isNull(pInstruction)) {
 					pInstruction._push(pVariable, true);
 					if (pInstruction._getInstructionType() === EAFXInstructionTypes.k_DeclStmtInstruction) {
-						var pVariableSubDecls: IAFXVariableDeclInstruction[] = pVariable._getSubVarDecls();
+						let pVariableSubDecls: IAFXVariableDeclInstruction[] = pVariable._getSubVarDecls();
 						if (!isNull(pVariableSubDecls)) {
-							for (var j: number = 0; j < pVariableSubDecls.length; j++) {
+							for (let j: number = 0; j < pVariableSubDecls.length; j++) {
 								pInstruction._push(pVariableSubDecls[j], false);
 							}
 						}
@@ -1739,17 +1722,17 @@ export class Effect implements IAFXEffect {
 	private analyzeUsageType(pNode: IParseNode): IAFXVariableTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var i: number = 0;
-		var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let i: number = 0;
+		let pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "Type") {
-				var pMainType: IAFXTypeInstruction = this.analyzeType(pChildren[i]);
+				let pMainType: IAFXTypeInstruction = this.analyzeType(pChildren[i]);
 				pType._pushType(pMainType);
 			}
 			else if (pChildren[i].name === "Usage") {
-				var sUsage: string = this.analyzeUsage(pChildren[i]);
+				let sUsage: string = this.analyzeUsage(pChildren[i]);
 				pType._addUsage(sUsage);
 			}
 		}
@@ -1762,8 +1745,8 @@ export class Effect implements IAFXEffect {
 	private analyzeType(pNode: IParseNode): IAFXTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pType: IAFXTypeInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pType: IAFXTypeInstruction = null;
 
 		switch (pNode.name) {
 			case "T_TYPE_ID":
@@ -1815,13 +1798,13 @@ export class Effect implements IAFXEffect {
 	private analyzeVariable(pNode: IParseNode, pGeneralType: IAFXVariableTypeInstruction): IAFXVariableDeclInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pVarDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-		var pVariableType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
-		var pAnnotation: IAFXAnnotationInstruction = null;
-		var sSemantic: string = "";
-		var pInitExpr: IAFXInitExprInstruction = null;
+		let pVarDecl: IAFXVariableDeclInstruction = new VariableDeclInstruction();
+		let pVariableType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pAnnotation: IAFXAnnotationInstruction = null;
+		let sSemantic: string = "";
+		let pInitExpr: IAFXInitExprInstruction = null;
 
 		pVarDecl._push(pVariableType, true);
 		pVariableType._pushType(pGeneralType);
@@ -1829,7 +1812,7 @@ export class Effect implements IAFXEffect {
 
 		this.analyzeVariableDim(pChildren[pChildren.length - 1], pVarDecl);
 
-		var i: number = 0;
+		let i: number = 0;
 		for (i = pChildren.length - 2; i >= 0; i--) {
 			if (pChildren[i].name === "Annotation") {
 				pAnnotation = this.analyzeAnnotation(pChildren[i]);
@@ -1861,11 +1844,11 @@ export class Effect implements IAFXEffect {
 	private analyzeVariableDim(pNode: IParseNode, pVariableDecl: IAFXVariableDeclInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pVariableType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pVariableDecl._getType();
+		let pChildren: IParseNode[] = pNode.children;
+		let pVariableType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pVariableDecl._getType();
 
 		if (pChildren.length === 1) {
-			var pName: IAFXIdInstruction = new IdInstruction();
+			let pName: IAFXIdInstruction = new IdInstruction();
 			pName._setName(pChildren[0].value);
 			pVariableDecl._push(pName, true);
 			return;
@@ -1878,7 +1861,7 @@ export class Effect implements IAFXEffect {
 		}
 		else if (pChildren.length === 4 && pChildren[0].name === "FromExpr") {
 
-			var pBuffer: IAFXVariableDeclInstruction = this.analyzeFromExpr(pChildren[0]);
+			let pBuffer: IAFXVariableDeclInstruction = this.analyzeFromExpr(pChildren[0]);
 			pVariableType._addPointIndex(true);
 			pVariableType._setVideoBuffer(pBuffer);
 		}
@@ -1888,7 +1871,7 @@ export class Effect implements IAFXEffect {
 				this._error(EEffectTempErrors.BAD_ARRAY_OF_POINTERS);
 			}
 
-			var pIndexExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
+			let pIndexExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
 			pVariableType._addArrayIndex(pIndexExpr);
 		}
 	}
@@ -1902,8 +1885,8 @@ export class Effect implements IAFXEffect {
 	private analyzeSemantic(pNode: IParseNode): string {
 		this.setAnalyzedNode(pNode);
 
-		var sSemantic: string = pNode.children[0].value;
-		// var pDecl: IAFXDeclInstruction = <IAFXDeclInstruction>this._pCurrentInstruction;
+		let sSemantic: string = pNode.children[0].value;
+		// let pDecl: IAFXDeclInstruction = <IAFXDeclInstruction>this._pCurrentInstruction;
 		// pDecl._setSemantic(sSemantic);	
 		return sSemantic;
 	}
@@ -1911,14 +1894,14 @@ export class Effect implements IAFXEffect {
 	private analyzeInitializer(pNode: IParseNode): IAFXInitExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pInitExpr: IAFXInitExprInstruction = new InitExprInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let pInitExpr: IAFXInitExprInstruction = new InitExprInstruction();
 
 		if (pChildren.length === 2) {
 			pInitExpr._push(this.analyzeExpr(pChildren[0]), true);
 		}
 		else {
-			for (var i: number = pChildren.length - 3; i >= 1; i--) {
+			for (let i: number = pChildren.length - 3; i >= 1; i--) {
 				if (pChildren[i].name === "InitExpr") {
 					pInitExpr._push(this.analyzeInitExpr(pChildren[i]), true);
 				}
@@ -1931,8 +1914,8 @@ export class Effect implements IAFXEffect {
 	private analyzeFromExpr(pNode: IParseNode): IAFXVariableDeclInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pBuffer: IAFXVariableDeclInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pBuffer: IAFXVariableDeclInstruction = null;
 
 		if (pChildren[1].name === "T_NON_TYPE_ID") {
 			pBuffer = this.getVariable(pChildren[1].value);
@@ -1947,14 +1930,14 @@ export class Effect implements IAFXEffect {
 	private analyzeInitExpr(pNode: IParseNode): IAFXInitExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pInitExpr: IAFXInitExprInstruction = new InitExprInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let pInitExpr: IAFXInitExprInstruction = new InitExprInstruction();
 
 		if (pChildren.length === 1) {
 			pInitExpr._push(this.analyzeExpr(pChildren[0]), true);
 		}
 		else {
-			for (var i: number = 0; i < pChildren.length; i++) {
+			for (let i: number = 0; i < pChildren.length; i++) {
 				if (pChildren[i].name === "InitExpr") {
 					pInitExpr._push(this.analyzeInitExpr(pChildren[i]), true);
 				}
@@ -1966,7 +1949,7 @@ export class Effect implements IAFXEffect {
 
 	private analyzeExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
-		var sName: string = pNode.name;
+		let sName: string = pNode.name;
 
 		switch (sName) {
 			case "ObjectExpr":
@@ -2015,7 +1998,7 @@ export class Effect implements IAFXEffect {
 	private analyzeObjectExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var sName: string = pNode.children[pNode.children.length - 1].name;
+		let sName: string = pNode.children[pNode.children.length - 1].name;
 
 		switch (sName) {
 			case "T_KW_COMPILE":
@@ -2023,23 +2006,24 @@ export class Effect implements IAFXEffect {
 			case "T_KW_SAMPLER_STATE":
 				return this.analyzeSamplerStateBlock(pNode);
 		}
+		return null;
 	}
 
 	private analyzeCompileExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: CompileExprInstruction = new CompileExprInstruction();
-		var pExprType: IAFXVariableTypeInstruction;
-		var pArguments: IAFXExprInstruction[] = null;
-		var sShaderFuncName: string = pChildren[pChildren.length - 2].value;
-		var pShaderFunc: IAFXFunctionDeclInstruction = null;
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: CompileExprInstruction = new CompileExprInstruction();
+		let pExprType: IAFXVariableTypeInstruction;
+		let pArguments: IAFXExprInstruction[] = null;
+		let sShaderFuncName: string = pChildren[pChildren.length - 2].value;
+		let pShaderFunc: IAFXFunctionDeclInstruction = null;
+		let i: number = 0;
 
 		pArguments = [];
 
 		if (pChildren.length > 4) {
-			var pArgumentExpr: IAFXExprInstruction;
+			let pArgumentExpr: IAFXExprInstruction;
 
 			for (i = pChildren.length - 3; i > 0; i--) {
 				if (pChildren[i].value !== ",") {
@@ -2077,9 +2061,9 @@ export class Effect implements IAFXEffect {
 		pNode = pNode.children[0];
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: SamplerStateBlockInstruction = new SamplerStateBlockInstruction();
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: SamplerStateBlockInstruction = new SamplerStateBlockInstruction();
+		let i: number = 0;
 
 		pExpr._setOperator("sample_state");
 
@@ -2095,32 +2079,32 @@ export class Effect implements IAFXEffect {
 	private analyzeSamplerState(pNode: IParseNode, pSamplerStates: SamplerStateBlockInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 		if (pChildren[pChildren.length - 2].name === "StateIndex") {
 			this._error(EEffectErrors.NOT_SUPPORT_STATE_INDEX);
 			return;
 		}
 
-		var pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
-		var pSubStateExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
-		var sStateType: string = pChildren[pChildren.length - 1].value.toUpperCase();
-		var sStateValue: string = "";
-		var isTexture: boolean = false;
+		let pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
+		let pSubStateExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
+		let sStateType: string = pChildren[pChildren.length - 1].value.toUpperCase();
+		let sStateValue: string = "";
+		// let isTexture: boolean = false;
 
 		if (isNull(pSubStateExprNode.value)) {
 			this._error(EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
 			return;
 		}
-		var pTexture: IAFXVariableDeclInstruction = null;
+		let pTexture: IAFXVariableDeclInstruction = null;
 
 		switch (sStateType) {
 			case "TEXTURE":
-				var pTexture: IAFXVariableDeclInstruction = null;
+				// let pTexture: IAFXVariableDeclInstruction = null;
 				if (pStateExprNode.children.length !== 3 || pSubStateExprNode.value === "{") {
 					this._error(EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
 					return;
 				}
-				var sTextureName: string = pStateExprNode.children[1].value;
+				let sTextureName: string = pStateExprNode.children[1].value;
 				if (isNull(sTextureName) || !this.hasVariable(sTextureName)) {
 					this._error(EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
 					return;
@@ -2190,8 +2174,8 @@ export class Effect implements IAFXEffect {
 	private analyzeComplexExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sFirstNodeName: string = pChildren[pChildren.length - 1].name;
+		let pChildren: IParseNode[] = pNode.children;
+		let sFirstNodeName: string = pChildren[pChildren.length - 1].name;
 
 		switch (sFirstNodeName) {
 			case "T_NON_TYPE_ID":
@@ -2207,18 +2191,18 @@ export class Effect implements IAFXEffect {
 	private analyzeFunctionCallExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: IAFXExprInstruction = null;
-		var pExprType: IAFXVariableTypeInstruction = null;
-		var pArguments: IAFXExprInstruction[] = null;
-		var sFuncName: string = pChildren[pChildren.length - 1].value;
-		var pFunction: IAFXFunctionDeclInstruction = null;
-		var pFunctionId: IAFXIdExprInstruction = null;
-		var i: number = 0;
-		var pCurrentAnalyzedFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: IAFXExprInstruction = null;
+		let pExprType: IAFXVariableTypeInstruction = null;
+		let pArguments: IAFXExprInstruction[] = null;
+		let sFuncName: string = pChildren[pChildren.length - 1].value;
+		let pFunction: IAFXFunctionDeclInstruction = null;
+		let pFunctionId: IAFXIdExprInstruction = null;
+		let i: number = 0;
+		let pCurrentAnalyzedFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
 
 		if (pChildren.length > 3) {
-			var pArgumentExpr: IAFXExprInstruction;
+			let pArgumentExpr: IAFXExprInstruction;
 
 			pArguments = [];
 
@@ -2253,7 +2237,7 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (pFunction._getInstructionType() === EAFXInstructionTypes.k_FunctionDeclInstruction) {
-			var pFunctionCallExpr: FunctionCallInstruction = new FunctionCallInstruction();
+			let pFunctionCallExpr: FunctionCallInstruction = new FunctionCallInstruction();
 
 			pFunctionId = new IdExprInstruction();
 			pFunctionId._push(pFunction._getNameId(), false);
@@ -2268,7 +2252,7 @@ export class Effect implements IAFXEffect {
 					pFunctionCallExpr._push(pArguments[i], true);
 				}
 
-				var pFunctionArguments: IAFXVariableDeclInstruction[] = (<FunctionDeclInstruction>pFunction)._getArguments();
+				let pFunctionArguments: IAFXVariableDeclInstruction[] = (<FunctionDeclInstruction>pFunction)._getArguments();
 				for (i = 0; i < pArguments.length; i++) {
 					if (pFunctionArguments[i]._getType()._hasUsage("out")) {
 						if (!pArguments[i]._getType()._isWritable()) {
@@ -2318,7 +2302,7 @@ export class Effect implements IAFXEffect {
 			pExpr = pFunctionCallExpr;
 		}
 		else {
-			var pSystemCallExpr: SystemCallInstruction = new SystemCallInstruction();
+			let pSystemCallExpr: SystemCallInstruction = new SystemCallInstruction();
 
 			pSystemCallExpr.setSystemCallFunction(pFunction);
 			pSystemCallExpr.fillByArguments(pArguments);
@@ -2347,12 +2331,12 @@ export class Effect implements IAFXEffect {
 	private analyzeConstructorCallExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: ConstructorCallInstruction = new ConstructorCallInstruction();
-		var pExprType: IAFXVariableTypeInstruction = null;
-		var pArguments: IAFXExprInstruction[] = null;
-		var pConstructorType: IAFXTypeInstruction = null;
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: ConstructorCallInstruction = new ConstructorCallInstruction();
+		let pExprType: IAFXVariableTypeInstruction = null;
+		let pArguments: IAFXExprInstruction[] = null;
+		let pConstructorType: IAFXTypeInstruction = null;
+		let i: number = 0;
 
 		pConstructorType = this.analyzeType(pChildren[pChildren.length - 1]);
 
@@ -2362,7 +2346,7 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (pChildren.length > 3) {
-			var pArgumentExpr: IAFXExprInstruction = null;
+			let pArgumentExpr: IAFXExprInstruction = null;
 
 			pArguments = [];
 
@@ -2403,10 +2387,10 @@ export class Effect implements IAFXEffect {
 	private analyzeSimpleComplexExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: ComplexExprInstruction = new ComplexExprInstruction();
-		var pComplexExpr: IAFXExprInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: ComplexExprInstruction = new ComplexExprInstruction();
+		let pComplexExpr: IAFXExprInstruction;
+		let pExprType: IAFXVariableTypeInstruction;
 
 		pComplexExpr = this.analyzeExpr(pChildren[1]);
 		pExprType = <IAFXVariableTypeInstruction>pComplexExpr._getType();
@@ -2422,11 +2406,11 @@ export class Effect implements IAFXEffect {
 	private analyzePrimaryExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: PrimaryExprInstruction = new PrimaryExprInstruction();
-		var pPrimaryExpr: IAFXExprInstruction;
-		var pPointer: IAFXVariableDeclInstruction = null;
-		var pPrimaryExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: PrimaryExprInstruction = new PrimaryExprInstruction();
+		let pPrimaryExpr: IAFXExprInstruction;
+		let pPointer: IAFXVariableDeclInstruction = null;
+		let pPrimaryExprType: IAFXVariableTypeInstruction;
 
 		pPrimaryExpr = this.analyzeExpr(pChildren[0]);
 		pPrimaryExprType = <IAFXVariableTypeInstruction>pPrimaryExpr._getType();
@@ -2438,7 +2422,7 @@ export class Effect implements IAFXEffect {
 			return null;
 		}
 
-		var pPointerVarType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pPrimaryExprType._getParent();
+		// let pPointerVarType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pPrimaryExprType._getParent();
 		if (!pPrimaryExprType._isStrictPointer()) {
 			this.getCurrentAnalyzedFunction()._setForPixel(false);
 			this.getCurrentAnalyzedFunction()._notCanUsedAsFunction();
@@ -2457,8 +2441,8 @@ export class Effect implements IAFXEffect {
 	private analyzePostfixExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sSymbol: string = pChildren[pChildren.length - 2].value;
+		let pChildren: IParseNode[] = pNode.children;
+		let sSymbol: string = pChildren[pChildren.length - 2].value;
 
 		switch (sSymbol) {
 			case "[":
@@ -2469,19 +2453,21 @@ export class Effect implements IAFXEffect {
 			case "--":
 				return this.analyzePostfixArithmetic(pNode);
 		}
+
+		return null;
 	}
 
 	private analyzePostfixIndex(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: PostfixIndexInstruction = new PostfixIndexInstruction();
-		var pPostfixExpr: IAFXExprInstruction = null;
-		var pIndexExpr: IAFXExprInstruction = null;
-		var pExprType: IAFXVariableTypeInstruction = null;
-		var pPostfixExprType: IAFXVariableTypeInstruction = null;
-		var pIndexExprType: IAFXVariableTypeInstruction = null;
-		var pIntType: IAFXTypeInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: PostfixIndexInstruction = new PostfixIndexInstruction();
+		let pPostfixExpr: IAFXExprInstruction = null;
+		let pIndexExpr: IAFXExprInstruction = null;
+		let pExprType: IAFXVariableTypeInstruction = null;
+		let pPostfixExprType: IAFXVariableTypeInstruction = null;
+		let pIndexExprType: IAFXVariableTypeInstruction = null;
+		let pIntType: IAFXTypeInstruction = null;
 
 		pPostfixExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pPostfixExprType = <IAFXVariableTypeInstruction>pPostfixExpr._getType();
@@ -2515,13 +2501,13 @@ export class Effect implements IAFXEffect {
 	private analyzePostfixPoint(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: PostfixPointInstruction = new PostfixPointInstruction();
-		var pPostfixExpr: IAFXExprInstruction = null;
-		var sFieldName: string = "";
-		var pFieldNameExpr: IAFXIdExprInstruction = null;
-		var pExprType: IAFXVariableTypeInstruction = null;
-		var pPostfixExprType: IAFXVariableTypeInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: PostfixPointInstruction = new PostfixPointInstruction();
+		let pPostfixExpr: IAFXExprInstruction = null;
+		let sFieldName: string = "";
+		let pFieldNameExpr: IAFXIdExprInstruction = null;
+		let pExprType: IAFXVariableTypeInstruction = null;
+		let pPostfixExprType: IAFXVariableTypeInstruction = null;
 
 		pPostfixExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pPostfixExprType = <IAFXVariableTypeInstruction>pPostfixExpr._getType();
@@ -2546,7 +2532,7 @@ export class Effect implements IAFXEffect {
 				return null;
 			}
 
-			var pBuffer: IAFXVariableDeclInstruction = this.analyzeFromExpr(pChildren[0]);
+			let pBuffer: IAFXVariableDeclInstruction = this.analyzeFromExpr(pChildren[0]);
 			pExprType._setVideoBuffer(pBuffer);
 		}
 
@@ -2562,12 +2548,12 @@ export class Effect implements IAFXEffect {
 	private analyzePostfixArithmetic(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pChildren[0].value;
-		var pExpr: PostfixArithmeticInstruction = new PostfixArithmeticInstruction();
-		var pPostfixExpr: IAFXExprInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
-		var pPostfixExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pChildren[0].value;
+		let pExpr: PostfixArithmeticInstruction = new PostfixArithmeticInstruction();
+		let pPostfixExpr: IAFXExprInstruction;
+		let pExprType: IAFXVariableTypeInstruction;
+		let pPostfixExprType: IAFXVariableTypeInstruction;
 
 		pPostfixExpr = this.analyzeExpr(pChildren[1]);
 		pPostfixExprType = <IAFXVariableTypeInstruction>pPostfixExpr._getType();
@@ -2594,12 +2580,12 @@ export class Effect implements IAFXEffect {
 	private analyzeUnaryExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pChildren[1].value;
-		var pExpr: UnaryExprInstruction = new UnaryExprInstruction();
-		var pUnaryExpr: IAFXExprInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
-		var pUnaryExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pChildren[1].value;
+		let pExpr: UnaryExprInstruction = new UnaryExprInstruction();
+		let pUnaryExpr: IAFXExprInstruction;
+		let pExprType: IAFXVariableTypeInstruction;
+		let pUnaryExprType: IAFXVariableTypeInstruction;
 
 		pUnaryExpr = this.analyzeExpr(pChildren[0]);
 		pUnaryExprType = <IAFXVariableTypeInstruction>pUnaryExpr._getType();
@@ -2626,10 +2612,10 @@ export class Effect implements IAFXEffect {
 	private analyzeCastExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: CastExprInstruction = new CastExprInstruction();
-		var pExprType: IAFXVariableTypeInstruction;
-		var pCastedExpr: IAFXExprInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: CastExprInstruction = new CastExprInstruction();
+		let pExprType: IAFXVariableTypeInstruction;
+		let pCastedExpr: IAFXExprInstruction;
 
 		pExprType = this.analyzeConstTypeDim(pChildren[2]);
 		pCastedExpr = this.analyzeExpr(pChildren[0]);
@@ -2651,16 +2637,16 @@ export class Effect implements IAFXEffect {
 	private analyzeConditionalExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExpr: ConditionalExprInstruction = new ConditionalExprInstruction();
-		var pConditionExpr: IAFXExprInstruction;
-		var pTrueExpr: IAFXExprInstruction;
-		var pFalseExpr: IAFXExprInstruction;
-		var pConditionType: IAFXVariableTypeInstruction;
-		var pTrueExprType: IAFXVariableTypeInstruction;
-		var pFalseExprType: IAFXVariableTypeInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
-		var pBoolType: IAFXTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let pExpr: ConditionalExprInstruction = new ConditionalExprInstruction();
+		let pConditionExpr: IAFXExprInstruction;
+		let pTrueExpr: IAFXExprInstruction;
+		let pFalseExpr: IAFXExprInstruction;
+		let pConditionType: IAFXVariableTypeInstruction;
+		let pTrueExprType: IAFXVariableTypeInstruction;
+		let pFalseExprType: IAFXVariableTypeInstruction;
+		// let pExprType: IAFXVariableTypeInstruction;
+		let pBoolType: IAFXTypeInstruction;
 
 		pConditionExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pTrueExpr = this.analyzeExpr(pChildren[pChildren.length - 3]);
@@ -2713,14 +2699,14 @@ export class Effect implements IAFXEffect {
 	private analyzeArithmeticExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pNode.children[1].value;
-		var pExpr: ArithmeticExprInstruction = new ArithmeticExprInstruction();
-		var pLeftExpr: IAFXExprInstruction = null;
-		var pRightExpr: IAFXExprInstruction = null;
-		var pLeftType: IAFXVariableTypeInstruction = null;
-		var pRightType: IAFXVariableTypeInstruction = null;
-		var pExprType: IAFXVariableTypeInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pNode.children[1].value;
+		let pExpr: ArithmeticExprInstruction = new ArithmeticExprInstruction();
+		let pLeftExpr: IAFXExprInstruction = null;
+		let pRightExpr: IAFXExprInstruction = null;
+		let pLeftType: IAFXVariableTypeInstruction = null;
+		let pRightType: IAFXVariableTypeInstruction = null;
+		let pExprType: IAFXVariableTypeInstruction = null;
 
 		pLeftExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pRightExpr = this.analyzeExpr(pChildren[0]);
@@ -2752,14 +2738,14 @@ export class Effect implements IAFXEffect {
 	private analyzeRelationExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pNode.children[1].value;
-		var pExpr: RelationalExprInstruction = new RelationalExprInstruction();
-		var pLeftExpr: IAFXExprInstruction;
-		var pRightExpr: IAFXExprInstruction;
-		var pLeftType: IAFXVariableTypeInstruction;
-		var pRightType: IAFXVariableTypeInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pNode.children[1].value;
+		let pExpr: RelationalExprInstruction = new RelationalExprInstruction();
+		let pLeftExpr: IAFXExprInstruction;
+		let pRightExpr: IAFXExprInstruction;
+		let pLeftType: IAFXVariableTypeInstruction;
+		let pRightType: IAFXVariableTypeInstruction;
+		let pExprType: IAFXVariableTypeInstruction;
 
 		pLeftExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pRightExpr = this.analyzeExpr(pChildren[0]);
@@ -2791,14 +2777,14 @@ export class Effect implements IAFXEffect {
 	private analyzeLogicalExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pNode.children[1].value;
-		var pExpr: LogicalExprInstruction = new LogicalExprInstruction();
-		var pLeftExpr: IAFXExprInstruction;
-		var pRightExpr: IAFXExprInstruction;
-		var pLeftType: IAFXVariableTypeInstruction;
-		var pRightType: IAFXVariableTypeInstruction;
-		var pBoolType: IAFXTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pNode.children[1].value;
+		let pExpr: LogicalExprInstruction = new LogicalExprInstruction();
+		let pLeftExpr: IAFXExprInstruction;
+		let pRightExpr: IAFXExprInstruction;
+		let pLeftType: IAFXVariableTypeInstruction;
+		let pRightType: IAFXVariableTypeInstruction;
+		let pBoolType: IAFXTypeInstruction;
 
 		pLeftExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pRightExpr = this.analyzeExpr(pChildren[0]);
@@ -2846,14 +2832,14 @@ export class Effect implements IAFXEffect {
 	private analyzeAssignmentExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sOperator: string = pChildren[1].value;
-		var pExpr: AssignmentExprInstruction = new AssignmentExprInstruction();
-		var pLeftExpr: IAFXExprInstruction;
-		var pRightExpr: IAFXExprInstruction;
-		var pLeftType: IAFXVariableTypeInstruction;
-		var pRightType: IAFXVariableTypeInstruction;
-		var pExprType: IAFXVariableTypeInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let sOperator: string = pChildren[1].value;
+		let pExpr: AssignmentExprInstruction = new AssignmentExprInstruction();
+		let pLeftExpr: IAFXExprInstruction;
+		let pRightExpr: IAFXExprInstruction;
+		let pLeftType: IAFXVariableTypeInstruction;
+		let pRightType: IAFXVariableTypeInstruction;
+		let pExprType: IAFXVariableTypeInstruction;
 
 		pLeftExpr = this.analyzeExpr(pChildren[pChildren.length - 1]);
 		pRightExpr = this.analyzeExpr(pChildren[0]);
@@ -2897,8 +2883,8 @@ export class Effect implements IAFXEffect {
 	private analyzeIdExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var sName: string = pNode.value;
-		var pVariable: IAFXVariableDeclInstruction = this.getVariable(sName);
+		let sName: string = pNode.value;
+		let pVariable: IAFXVariableDeclInstruction = this.getVariable(sName);
 
 		if (isNull(pVariable)) {
 			this._error(EEffectErrors.UNKNOWN_VARNAME, { varName: sName });
@@ -2923,7 +2909,7 @@ export class Effect implements IAFXEffect {
 			this.getCurrentAnalyzedPass()._addOwnUsedForignVariable(pVariable);
 		}
 
-		var pVarId: IdExprInstruction = new IdExprInstruction();
+		let pVarId: IdExprInstruction = new IdExprInstruction();
 		pVarId._push(pVariable._getNameId(), false);
 
 		this.checkInstruction(pVarId, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2934,9 +2920,9 @@ export class Effect implements IAFXEffect {
 	private analyzeSimpleExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pInstruction: IAFXLiteralInstruction = null;
-		var sName: string = pNode.name;
-		var sValue: string = pNode.value;
+		let pInstruction: IAFXLiteralInstruction = null;
+		let sName: string = pNode.name;
+		let sValue: string = pNode.value;
 
 		switch (sName) {
 			case "T_UINT":
@@ -2967,18 +2953,18 @@ export class Effect implements IAFXEffect {
 	private analyzeMemExpr(pNode: IParseNode): IAFXExprInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pMemExpr: MemExprInstruction = new MemExprInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let pMemExpr: MemExprInstruction = new MemExprInstruction();
 
-		var pPostfixExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
-		var pPostfixExprType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pPostfixExpr._getType();
+		let pPostfixExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
+		let pPostfixExprType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pPostfixExpr._getType();
 
 		if (!pPostfixExprType._isFromVariableDecl()) {
 			this._error(EEffectErrors.BAD_MEMOF_ARGUMENT);
 			return null;
 		}
 
-		var pBuffer: IAFXVariableDeclInstruction = pPostfixExprType._getVideoBuffer();
+		let pBuffer: IAFXVariableDeclInstruction = pPostfixExprType._getVideoBuffer();
 
 		if (isNull(pBuffer)) {
 			this._error(EEffectErrors.BAD_MEMOF_NO_BUFFER);
@@ -2998,14 +2984,14 @@ export class Effect implements IAFXEffect {
 	private analyzeConstTypeDim(pNode: IParseNode): IAFXVariableTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length > 1) {
 			this._error(EEffectErrors.BAD_CAST_TYPE_USAGE);
 			return null;
 		}
 
-		var pType: IAFXVariableTypeInstruction;
+		let pType: IAFXVariableTypeInstruction;
 
 		pType = <IAFXVariableTypeInstruction>(this.analyzeType(pChildren[0]));
 
@@ -3021,10 +3007,10 @@ export class Effect implements IAFXEffect {
 	private analyzeVarStructDecl(pNode: IParseNode, pInstruction: IAFXInstruction = null): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pUsageType: IAFXVariableTypeInstruction = null;
-		var pVariable: IAFXVariableDeclInstruction = null;
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pUsageType: IAFXVariableTypeInstruction = null;
+		let pVariable: IAFXVariableDeclInstruction = null;
+		let i: number = 0;
 
 		pUsageType = this.analyzeUsageStructDecl(pChildren[pChildren.length - 1]);
 
@@ -3042,22 +3028,22 @@ export class Effect implements IAFXEffect {
 	private analyzeUsageStructDecl(pNode: IParseNode): IAFXVariableTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var i: number = 0;
-		var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let i: number = 0;
+		let pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "StructDecl") {
-				var pMainType: IAFXTypeInstruction = this.analyzeStructDecl(pChildren[i]);
+				let pMainType: IAFXTypeInstruction = this.analyzeStructDecl(pChildren[i]);
 				pType._pushType(pMainType);
 
-				var pTypeDecl: IAFXTypeDeclInstruction = new TypeDeclInstruction();
+				let pTypeDecl: IAFXTypeDeclInstruction = new TypeDeclInstruction();
 				pTypeDecl._push(pMainType, true);
 
 				this.addTypeDecl(pTypeDecl);
 			}
 			else if (pChildren[i].name === "Usage") {
-				var sUsage: string = this.analyzeUsage(pChildren[i]);
+				let sUsage: string = this.analyzeUsage(pChildren[i]);
 				pType._addUsage(sUsage);
 			}
 		}
@@ -3070,12 +3056,12 @@ export class Effect implements IAFXEffect {
 	private analyzeTypeDecl(pNode: IParseNode, pParentInstruction: IAFXInstruction = null): IAFXTypeDeclInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pTypeDeclInstruction: IAFXTypeDeclInstruction = new TypeDeclInstruction();
+		let pTypeDeclInstruction: IAFXTypeDeclInstruction = new TypeDeclInstruction();
 
 		if (pChildren.length === 2) {
-			var pStructInstruction: ComplexTypeInstruction = <ComplexTypeInstruction>this.analyzeStructDecl(pChildren[1]);
+			let pStructInstruction: ComplexTypeInstruction = <ComplexTypeInstruction>this.analyzeStructDecl(pChildren[1]);
 			pTypeDeclInstruction._push(pStructInstruction, true);
 		}
 		else {
@@ -3098,18 +3084,18 @@ export class Effect implements IAFXEffect {
 	private analyzeStructDecl(pNode: IParseNode): IAFXTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pStruct: ComplexTypeInstruction = new ComplexTypeInstruction();
-		var pFieldCollector: IAFXInstruction = new InstructionCollector();
+		let pStruct: ComplexTypeInstruction = new ComplexTypeInstruction();
+		let pFieldCollector: IAFXInstruction = new InstructionCollector();
 
-		var sName: string = pChildren[pChildren.length - 2].value;
+		let sName: string = pChildren[pChildren.length - 2].value;
 
 		pStruct._setName(sName);
 
 		this.newScope(EScopeType.k_Struct);
 
-		var i: number = 0;
+		let i: number = 0;
 		for (i = pChildren.length - 4; i >= 1; i--) {
 			if (pChildren[i].name === "VariableDecl") {
 				this.analyzeVariableDecl(pChildren[i], pFieldCollector);
@@ -3128,14 +3114,14 @@ export class Effect implements IAFXEffect {
 	private analyzeStruct(pNode: IParseNode): IAFXTypeInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pStruct: ComplexTypeInstruction = new ComplexTypeInstruction();
-		var pFieldCollector: IAFXInstruction = new InstructionCollector();
+		let pStruct: ComplexTypeInstruction = new ComplexTypeInstruction();
+		let pFieldCollector: IAFXInstruction = new InstructionCollector();
 
 		this.newScope(EScopeType.k_Struct);
 
-		var i: number = 0;
+		let i: number = 0;
 		for (i = pChildren.length - 4; i >= 1; i--) {
 			if (pChildren[i].name === "VariableDecl") {
 				this.analyzeVariableDecl(pChildren[i], pFieldCollector);
@@ -3154,13 +3140,13 @@ export class Effect implements IAFXEffect {
 	private analyzeFunctionDeclOnlyDefinition(pNode: IParseNode): IAFXFunctionDeclInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pFunction: FunctionDeclInstruction = null;
-		var pFunctionDef: FunctionDefInstruction = null;
-		var pStmtBlock: StmtBlockInstruction = null;
-		var pAnnotation: IAFXAnnotationInstruction = null;
-		var sLastNodeValue: string = pChildren[0].value;
-		var bNeedAddFunction: boolean = false;
+		let pChildren: IParseNode[] = pNode.children;
+		let pFunction: FunctionDeclInstruction = null;
+		let pFunctionDef: FunctionDefInstruction = null;
+		// let pStmtBlock: StmtBlockInstruction = null;
+		let pAnnotation: IAFXAnnotationInstruction = null;
+		let sLastNodeValue: string = pChildren[0].value;
+		let bNeedAddFunction: boolean = false;
 
 		pFunctionDef = this.analyzeFunctionDef(pChildren[pChildren.length - 1]);
 
@@ -3210,17 +3196,18 @@ export class Effect implements IAFXEffect {
 			this.addFunctionDecl(pFunction);
 		}
 
+		return pFunction;
 	}
 
 	private resumeFunctionAnalysis(pAnalzedFunction: IAFXFunctionDeclInstruction): void {
-		var pFunction: FunctionDeclInstruction = <FunctionDeclInstruction>pAnalzedFunction;
-		var pNode: IParseNode = pFunction._getParseNode();
+		let pFunction: FunctionDeclInstruction = <FunctionDeclInstruction>pAnalzedFunction;
+		let pNode: IParseNode = pFunction._getParseNode();
 
 		this.setAnalyzedNode(pNode);
 		this.setScope(pFunction._getImplementationScope());
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pStmtBlock: StmtBlockInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pStmtBlock: StmtBlockInstruction = null;
 
 		this.setCurrentAnalyzedFunction(pFunction);
 
@@ -3241,12 +3228,12 @@ export class Effect implements IAFXEffect {
 	private analyzeFunctionDef(pNode: IParseNode): FunctionDefInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pFunctionDef: FunctionDefInstruction = new FunctionDefInstruction();
-		var pReturnType: IAFXVariableTypeInstruction = null;
-		var pFuncName: IAFXIdInstruction = null;
-		var pArguments: IAFXVariableDeclInstruction[] = null;
-		var sFuncName: string = pChildren[pChildren.length - 2].value;
+		let pChildren: IParseNode[] = pNode.children;
+		let pFunctionDef: FunctionDefInstruction = new FunctionDefInstruction();
+		let pReturnType: IAFXVariableTypeInstruction = null;
+		let pFuncName: IAFXIdInstruction = null;
+		// let pArguments: IAFXVariableDeclInstruction[] = null;
+		let sFuncName: string = pChildren[pChildren.length - 2].value;
 
 		pReturnType = this.analyzeUsageType(pChildren[pChildren.length - 1]);
 
@@ -3263,7 +3250,7 @@ export class Effect implements IAFXEffect {
 		pFunctionDef.setFunctionName(pFuncName);
 
 		if (pChildren.length === 4) {
-			var sSemantic: string = this.analyzeSemantic(pChildren[0]);
+			let sSemantic: string = this.analyzeSemantic(pChildren[0]);
 			pFunctionDef._setSemantic(sSemantic);
 		}
 
@@ -3281,10 +3268,10 @@ export class Effect implements IAFXEffect {
 	private analyzeParamList(pNode: IParseNode, pFunctionDef: FunctionDefInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pParameter: IAFXVariableDeclInstruction;
+		let pChildren: IParseNode[] = pNode.children;
+		let pParameter: IAFXVariableDeclInstruction;
 
-		var i: number = 0;
+		let i: number = 0;
 
 		for (i = pChildren.length - 2; i >= 1; i--) {
 			if (pChildren[i].name === "ParameterDecl") {
@@ -3298,9 +3285,9 @@ export class Effect implements IAFXEffect {
 	private analyzeParameterDecl(pNode: IParseNode): IAFXVariableDeclInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pType: IAFXVariableTypeInstruction = null;
-		var pParameter: IAFXVariableDeclInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let pType: IAFXVariableTypeInstruction = null;
+		let pParameter: IAFXVariableDeclInstruction = null;
 
 		pType = this.analyzeParamUsageType(pChildren[1]);
 		pParameter = this.analyzeVariable(pChildren[0], pType);
@@ -3309,17 +3296,17 @@ export class Effect implements IAFXEffect {
 	}
 
 	private analyzeParamUsageType(pNode: IParseNode): IAFXVariableTypeInstruction {
-		var pChildren: IParseNode[] = pNode.children;
-		var i: number = 0;
-		var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let i: number = 0;
+		let pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
 
 		for (i = pChildren.length - 1; i >= 0; i--) {
 			if (pChildren[i].name === "Type") {
-				var pMainType: IAFXTypeInstruction = this.analyzeType(pChildren[i]);
+				let pMainType: IAFXTypeInstruction = this.analyzeType(pChildren[i]);
 				pType._pushType(pMainType);
 			}
 			else if (pChildren[i].name === "ParamUsage") {
-				var sUsage: string = this.analyzeUsage(pChildren[i]);
+				let sUsage: string = this.analyzeUsage(pChildren[i]);
 				pType._addUsage(sUsage);
 			}
 		}
@@ -3332,10 +3319,10 @@ export class Effect implements IAFXEffect {
 	private analyzeStmtBlock(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pStmtBlock: StmtBlockInstruction = new StmtBlockInstruction();
-		var pStmt: IAFXStmtInstruction;
-		var i: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let pStmtBlock: StmtBlockInstruction = new StmtBlockInstruction();
+		let pStmt: IAFXStmtInstruction;
+		let i: number = 0;
 
 		pStmtBlock._setScope(this.getScope());
 
@@ -3360,8 +3347,8 @@ export class Effect implements IAFXEffect {
 	private analyzeStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sFirstNodeName: string = pChildren[pChildren.length - 1].name;
+		let pChildren: IParseNode[] = pNode.children;
+		let sFirstNodeName: string = pChildren[pChildren.length - 1].name;
 
 		switch (sFirstNodeName) {
 			case "SimpleStmt":
@@ -3376,13 +3363,14 @@ export class Effect implements IAFXEffect {
 			case "T_KW_IF":
 				return this.analyzeIfStmt(pNode);
 		}
+		return null;
 	}
 
 	private analyzeSimpleStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sFirstNodeName: string = pChildren[pChildren.length - 1].name;
+		let pChildren: IParseNode[] = pNode.children;
+		let sFirstNodeName: string = pChildren[pChildren.length - 1].name;
 
 		switch (sFirstNodeName) {
 			case "T_KW_RETURN":
@@ -3417,10 +3405,10 @@ export class Effect implements IAFXEffect {
 	private analyzeReturnStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction();
+		let pChildren: IParseNode[] = pNode.children;
+		let pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction();
 
-		var pFunctionReturnType: IAFXVariableTypeInstruction = this.getCurrentAnalyzedFunction()._getReturnType();
+		let pFunctionReturnType: IAFXVariableTypeInstruction = this.getCurrentAnalyzedFunction()._getReturnType();
 
 		this._bHaveCurrentFunctionReturnOccur = true;
 
@@ -3434,8 +3422,8 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (pChildren.length === 3) {
-			var pExprInstruction: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
-			var pOutVar: IAFXVariableDeclInstruction = this.getCurrentAnalyzedFunction()._getOutVariable();
+			let pExprInstruction: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
+			let pOutVar: IAFXVariableDeclInstruction = this.getCurrentAnalyzedFunction()._getOutVariable();
 
 			if (!isNull(pOutVar) && pOutVar._getType() !== pExprInstruction._getType()) {
 				this._error(EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
@@ -3457,9 +3445,9 @@ export class Effect implements IAFXEffect {
 	private analyzeBreakStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction();
-		var sOperatorName: string = pChildren[1].value;
+		let pChildren: IParseNode[] = pNode.children;
+		let pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction();
+		let sOperatorName: string = pChildren[1].value;
 
 		pBreakStmtInstruction._setOperator(sOperatorName);
 
@@ -3475,9 +3463,9 @@ export class Effect implements IAFXEffect {
 	private analyzeDeclStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sNodeName: string = pNode.name;
-		var pDeclStmtInstruction: DeclStmtInstruction = new DeclStmtInstruction();
+		// let pChildren: IParseNode[] = pNode.children;
+		let sNodeName: string = pNode.name;
+		let pDeclStmtInstruction: DeclStmtInstruction = new DeclStmtInstruction();
 
 		switch (sNodeName) {
 			case "TypeDecl":
@@ -3499,9 +3487,9 @@ export class Effect implements IAFXEffect {
 	private analyzeExprStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pExprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction();
-		var pExprInstruction: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
+		let pChildren: IParseNode[] = pNode.children;
+		let pExprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction();
+		let pExprInstruction: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
 
 		pExprStmtInstruction._push(pExprInstruction, true);
 
@@ -3513,15 +3501,15 @@ export class Effect implements IAFXEffect {
 	private analyzeWhileStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var isDoWhile: boolean = (pChildren[pChildren.length - 1].value === "do");
-		var isNonIfStmt: boolean = (pNode.name === "NonIfStmt") ? true : false;
+		let pChildren: IParseNode[] = pNode.children;
+		let isDoWhile: boolean = (pChildren[pChildren.length - 1].value === "do");
+		let isNonIfStmt: boolean = (pNode.name === "NonIfStmt") ? true : false;
 
-		var pWhileStmt: WhileStmtInstruction = new WhileStmtInstruction();
-		var pCondition: IAFXExprInstruction = null;
-		var pConditionType: IAFXVariableTypeInstruction = null;
-		var pBoolType: IAFXTypeInstruction = Effect.getSystemType("bool");
-		var pStmt: IAFXStmtInstruction = null;
+		let pWhileStmt: WhileStmtInstruction = new WhileStmtInstruction();
+		let pCondition: IAFXExprInstruction = null;
+		let pConditionType: IAFXVariableTypeInstruction = null;
+		let pBoolType: IAFXTypeInstruction = Effect.getSystemType("bool");
+		let pStmt: IAFXStmtInstruction = null;
 
 		if (isDoWhile) {
 			pWhileStmt._setOperator("do_while");
@@ -3564,16 +3552,16 @@ export class Effect implements IAFXEffect {
 	private analyzeIfStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var isIfElse: boolean = (pChildren.length === 7);
+		let pChildren: IParseNode[] = pNode.children;
+		let isIfElse: boolean = (pChildren.length === 7);
 
-		var pIfStmtInstruction: IfStmtInstruction = new IfStmtInstruction();
-		var pCondition: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
-		var pConditionType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pCondition._getType();
-		var pBoolType: IAFXTypeInstruction = Effect.getSystemType("bool");
+		let pIfStmtInstruction: IfStmtInstruction = new IfStmtInstruction();
+		let pCondition: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
+		let pConditionType: IAFXVariableTypeInstruction = <IAFXVariableTypeInstruction>pCondition._getType();
+		let pBoolType: IAFXTypeInstruction = Effect.getSystemType("bool");
 
-		var pIfStmt: IAFXStmtInstruction = null;
-		var pElseStmt: IAFXStmtInstruction = null;
+		let pIfStmt: IAFXStmtInstruction = null;
+		let pElseStmt: IAFXStmtInstruction = null;
 
 		if (!pConditionType._isEqual(pBoolType)) {
 			this._error(EEffectErrors.BAD_IF_CONDITION, { typeName: pConditionType.toString() });
@@ -3605,8 +3593,8 @@ export class Effect implements IAFXEffect {
 	private analyzeNonIfStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sFirstNodeName: string = pChildren[pChildren.length - 1].name;
+		let pChildren: IParseNode[] = pNode.children;
+		let sFirstNodeName: string = pChildren[pChildren.length - 1].name;
 
 		switch (sFirstNodeName) {
 			case "SimpleStmt":
@@ -3616,15 +3604,16 @@ export class Effect implements IAFXEffect {
 			case "T_KW_FOR":
 				return this.analyzeForStmt(pNode);
 		}
+		return null;
 	}
 
 	private analyzeForStmt(pNode: IParseNode): IAFXStmtInstruction {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var isNonIfStmt: boolean = (pNode.name === "NonIfStmt");
-		var pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction();
-		var pStmt: IAFXStmtInstruction = null;
+		let pChildren: IParseNode[] = pNode.children;
+		let isNonIfStmt: boolean = (pNode.name === "NonIfStmt");
+		let pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction();
+		let pStmt: IAFXStmtInstruction = null;
 
 		this.newScope();
 
@@ -3658,15 +3647,15 @@ export class Effect implements IAFXEffect {
 	private analyzeForInit(pNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sFirstNodeName: string = pChildren[pChildren.length - 1].name;
+		let pChildren: IParseNode[] = pNode.children;
+		let sFirstNodeName: string = pChildren[pChildren.length - 1].name;
 
 		switch (sFirstNodeName) {
 			case "VariableDecl":
 				this.analyzeVariableDecl(pChildren[0], pForStmtInstruction);
 				break;
 			case "Expr":
-				var pExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
+				let pExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
 				pForStmtInstruction._push(pExpr, true);
 				break;
 			default:
@@ -3681,14 +3670,14 @@ export class Effect implements IAFXEffect {
 	private analyzeForCond(pNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length === 1) {
 			pForStmtInstruction._push(null);
 			return;
 		}
 
-		var pConditionExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
+		let pConditionExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[1]);
 
 		pForStmtInstruction._push(pConditionExpr, true);
 		return;
@@ -3697,8 +3686,8 @@ export class Effect implements IAFXEffect {
 	private analyzeForStep(pNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pStepExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
+		let pChildren: IParseNode[] = pNode.children;
+		let pStepExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[0]);
 
 		pForStmtInstruction._push(pStepExpr, true);
 
@@ -3714,20 +3703,20 @@ export class Effect implements IAFXEffect {
 	private analyzeTechniqueForImport(pNode: IParseNode): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var pTechnique: IAFXTechniqueInstruction = new TechniqueInstruction();
-		var sTechniqueName: string = this.analyzeComplexName(pChildren[pChildren.length - 2]);
-		var isComplexName: boolean = pChildren[pChildren.length - 2].children.length !== 1;
+		let pChildren: IParseNode[] = pNode.children;
+		let pTechnique: IAFXTechniqueInstruction = new TechniqueInstruction();
+		let sTechniqueName: string = this.analyzeComplexName(pChildren[pChildren.length - 2]);
+		let isComplexName: boolean = pChildren[pChildren.length - 2].children.length !== 1;
 
 		pTechnique._setName(sTechniqueName, isComplexName);
 
-		for (var i: number = pChildren.length - 3; i >= 0; i--) {
+		for (let i: number = pChildren.length - 3; i >= 0; i--) {
 			if (pChildren[i].name === "Annotation") {
-				var pAnnotation: IAFXAnnotationInstruction = this.analyzeAnnotation(pChildren[i]);
+				let pAnnotation: IAFXAnnotationInstruction = this.analyzeAnnotation(pChildren[i]);
 				pTechnique._setAnnotation(pAnnotation);
 			}
 			else if (pChildren[i].name === "Semantic") {
-				var sSemantic: string = this.analyzeSemantic(pChildren[i]);
+				let sSemantic: string = this.analyzeSemantic(pChildren[i]);
 				pTechnique._setSemantic(sSemantic);
 			}
 			else {
@@ -3741,10 +3730,10 @@ export class Effect implements IAFXEffect {
 	private analyzeComplexName(pNode: IParseNode): string {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sName: string = "";
+		let pChildren: IParseNode[] = pNode.children;
+		let sName: string = "";
 
-		for (var i: number = pChildren.length - 1; i >= 0; i--) {
+		for (let i: number = pChildren.length - 1; i >= 0; i--) {
 			sName += pChildren[i].value;
 		}
 
@@ -3754,9 +3743,9 @@ export class Effect implements IAFXEffect {
 	private analyzeTechniqueBodyForImports(pNode: IParseNode, pTechnique: IAFXTechniqueInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		for (var i: number = pChildren.length - 2; i >= 1; i--) {
+		for (let i: number = pChildren.length - 2; i >= 1; i--) {
 			this.analyzePassDeclForImports(pChildren[i], pTechnique);
 		}
 	}
@@ -3764,13 +3753,13 @@ export class Effect implements IAFXEffect {
 	private analyzePassDeclForImports(pNode: IParseNode, pTechnique: IAFXTechniqueInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren[0].name === "ImportDecl") {
 			this.analyzeImportDecl(pChildren[0], pTechnique);
 		}
 		else if (pChildren.length > 1) {
-			var pPass: IAFXPassInstruction = new PassInstruction();
+			let pPass: IAFXPassInstruction = new PassInstruction();
 			//TODO: add annotation and id
 			this.analyzePassStateBlockForShaders(pChildren[0], pPass);
 
@@ -3783,9 +3772,9 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateBlockForShaders(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		for (var i: number = pChildren.length - 2; i >= 1; i--) {
+		for (let i: number = pChildren.length - 2; i >= 1; i--) {
 			this.analyzePassStateForShader(pChildren[i], pPass);
 		}
 	}
@@ -3793,7 +3782,7 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length === 1) {
 			pPass._markAsComplex(true);
@@ -3808,8 +3797,8 @@ export class Effect implements IAFXEffect {
 			return;
 		}
 
-		var sType: string = pChildren[pChildren.length - 1].value.toUpperCase();
-		var eShaderType: EFunctionType = EFunctionType.k_Vertex;
+		let sType: string = pChildren[pChildren.length - 1].value.toUpperCase();
+		let eShaderType: EFunctionType = EFunctionType.k_Vertex;
 
 		if (sType === "VERTEXSHADER") {
 			eShaderType = EFunctionType.k_Vertex
@@ -3823,10 +3812,10 @@ export class Effect implements IAFXEffect {
 
 		pNode.isAnalyzed = true;
 
-		var pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
-		var pExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
-		var pCompileExpr: CompileExprInstruction = <CompileExprInstruction>this.analyzeExpr(pExprNode);
-		var pShaderFunc: IAFXFunctionDeclInstruction = pCompileExpr.getFunction();
+		let pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
+		let pExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
+		let pCompileExpr: CompileExprInstruction = <CompileExprInstruction>this.analyzeExpr(pExprNode);
+		let pShaderFunc: IAFXFunctionDeclInstruction = pCompileExpr.getFunction();
 
 		if (eShaderType === EFunctionType.k_Vertex) {
 			if (!pShaderFunc._checkDefenitionForVertexUsage()) {
@@ -3847,7 +3836,7 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateIfForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length === 5) {
 			this.analyzePassStateBlockForShaders(pChildren[0], pPass);
@@ -3865,7 +3854,7 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateSwitchForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		this.analyzePassCaseBlockForShader(pChildren[0], pPass);
 	}
@@ -3873,9 +3862,9 @@ export class Effect implements IAFXEffect {
 	private analyzePassCaseBlockForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		for (var i: number = pChildren.length - 2; i >= 1; i--) {
+		for (let i: number = pChildren.length - 2; i >= 1; i--) {
 			if (pChildren[i].name === "CaseState") {
 				this.analyzePassCaseStateForShader(pChildren[i], pPass);
 			}
@@ -3888,9 +3877,9 @@ export class Effect implements IAFXEffect {
 	private analyzePassCaseStateForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		for (var i: number = pChildren.length - 4; i >= 0; i--) {
+		for (let i: number = pChildren.length - 4; i >= 0; i--) {
 			if (pChildren[i].name === "PassState") {
 				this.analyzePassStateForShader(pChildren[i], pPass);
 			}
@@ -3900,9 +3889,9 @@ export class Effect implements IAFXEffect {
 	private analyzePassDefaultStateForShader(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		for (var i: number = pChildren.length - 3; i >= 0; i--) {
+		for (let i: number = pChildren.length - 3; i >= 0; i--) {
 			if (pChildren[i].name === "PassState") {
 				this.analyzePassStateForShader(pChildren[i], pPass);
 			}
@@ -3910,26 +3899,19 @@ export class Effect implements IAFXEffect {
 	}
 
 	private resumeTechniqueAnalysis(pTechnique: IAFXTechniqueInstruction): void {
-		var pPassList: IAFXPassInstruction[] = pTechnique._getPassList();
+		let pPassList: IAFXPassInstruction[] = pTechnique._getPassList();
 
-		for (var i: number = 0; i < pPassList.length; i++) {
+		for (let i: number = 0; i < pPassList.length; i++) {
 			this.resumePassAnalysis(pPassList[i]);
 		}
-
-		if (!pTechnique._checkForCorrectImports()) {
-			this._error(EEffectErrors.BAD_TECHNIQUE_IMPORT, { techniqueName: pTechnique._getName() });
-			return;
-		}
-
-		pTechnique._setGlobalParams(this._sProvideNameSpace, this._pImportedGlobalTechniqueList);
 	}
 
 	private resumePassAnalysis(pPass: IAFXPassInstruction): void {
-		var pNode: IParseNode = pPass._getParseNode();
+		let pNode: IParseNode = pPass._getParseNode();
 
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		this.setCurrentAnalyzedPass(pPass);
 		this.setAnalyzeInPass(true);
@@ -3943,11 +3925,11 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateBlock(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		pPass._addCodeFragment("{");
 
-		for (var i: number = pChildren.length - 2; i >= 1; i--) {
+		for (let i: number = pChildren.length - 2; i >= 1; i--) {
 			this.analyzePassState(pChildren[i], pPass);
 		}
 
@@ -3957,7 +3939,7 @@ export class Effect implements IAFXEffect {
 	private analyzePassState(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length === 1) {
 			if (pChildren[0].name === "StateIf") {
@@ -3971,9 +3953,9 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (pNode.isAnalyzed) {
-			var pFunc: IAFXFunctionDeclInstruction = pPass._getFoundedFunction(pNode);
-			var eShaderType: EFunctionType = pPass._getFoundedFunctionType(pNode);
-			var pShader: IAFXFunctionDeclInstruction = null;
+			let pFunc: IAFXFunctionDeclInstruction = pPass._getFoundedFunction(pNode);
+			let eShaderType: EFunctionType = pPass._getFoundedFunctionType(pNode);
+			let pShader: IAFXFunctionDeclInstruction = null;
 
 			if (eShaderType === EFunctionType.k_Vertex) {
 				pShader = pFunc._getVertexShader();
@@ -3985,10 +3967,10 @@ export class Effect implements IAFXEffect {
 			pPass._addShader(pShader);
 		}
 		else {
-			var sType: string = pChildren[pChildren.length - 1].value.toUpperCase();
-			var eType: ERenderStates = this.getRenderState(sType);
-			var pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
-			var pExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
+			let sType: string = pChildren[pChildren.length - 1].value.toUpperCase();
+			let eType: ERenderStates = this.getRenderState(sType);
+			let pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
+			let pExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
 
 			if (isNull(pExprNode.value) || isNull(eType)) {
 				logger.warn("So pass state are incorrect");
@@ -3996,8 +3978,8 @@ export class Effect implements IAFXEffect {
 			}
 
 			if (pExprNode.value === "{" && pStateExprNode.children.length > 3) {
-				var pValues: ERenderStateValues[] = new Array(Math.ceil((pStateExprNode.children.length - 2) / 2));
-				for (var i: number = pStateExprNode.children.length - 2, j: number = 0; i >= 1; i -= 2, j++) {
+				let pValues: ERenderStateValues[] = new Array(Math.ceil((pStateExprNode.children.length - 2) / 2));
+				for (let i: number = pStateExprNode.children.length - 2, j: number = 0; i >= 1; i -= 2, j++) {
 					pValues[j] = this.getRenderStateValue(eType, pStateExprNode.children[i].value.toUpperCase());
 				}
 
@@ -4039,7 +4021,7 @@ export class Effect implements IAFXEffect {
 				}
 			}
 			else {
-				var sValue: string = "";
+				let sValue: string = "";
 				if (pExprNode.value === "{") {
 					sValue = pStateExprNode.children[1].value.toUpperCase();
 				}
@@ -4047,7 +4029,7 @@ export class Effect implements IAFXEffect {
 					sValue = pExprNode.value.toUpperCase();
 				}
 
-				var eValue: ERenderStateValues = this.getRenderStateValue(eType, sValue);
+				let eValue: ERenderStateValues = this.getRenderStateValue(eType, sValue);
 
 				if (eValue !== ERenderStateValues.UNDEF) {
 					switch (eType) {
@@ -4074,7 +4056,7 @@ export class Effect implements IAFXEffect {
 	}
 
 	private getRenderState(sState: string): ERenderStates {
-		var eType: ERenderStates = null;
+		let eType: ERenderStates = null;
 
 		switch (sState) {
 			case "BLENDENABLE":
@@ -4167,13 +4149,13 @@ export class Effect implements IAFXEffect {
 	}
 
 	private getRenderStateValue(eState: ERenderStates, sValue: string): ERenderStateValues {
-		var eValue: ERenderStateValues = ERenderStateValues.UNDEF;
+		let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
 
 		switch (eState) {
 			case ERenderStates.ALPHABLENDENABLE:
 			case ERenderStates.ALPHATESTENABLE:
 				logger.warn("ALPHABLENDENABLE/ALPHATESTENABLE not supported in WebGL.");
-				return;
+				return ERenderStateValues.UNDEF;
 
 			case ERenderStates.BLENDENABLE:
 			case ERenderStates.CULLFACEENABLE:
@@ -4344,9 +4326,9 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateIf(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pIfExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
+		let pIfExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
 		pIfExpr._prepareFor(EFunctionType.k_PassFunction);
 
 		pPass._addCodeFragment("if(" + pIfExpr._toFinalCode() + ")");
@@ -4369,10 +4351,10 @@ export class Effect implements IAFXEffect {
 	private analyzePassStateSwitch(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var sCodeFragment: string = "switch";
-		var pSwitchExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
+		// let sCodeFragment: string = "switch";
+		let pSwitchExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 3]);
 		pSwitchExpr._prepareFor(EFunctionType.k_PassFunction);
 
 		pPass._addCodeFragment("(" + pSwitchExpr._toFinalCode() + ")");
@@ -4383,11 +4365,11 @@ export class Effect implements IAFXEffect {
 	private analyzePassCaseBlock(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		pPass._addCodeFragment("{");
 
-		for (var i: number = pChildren.length - 2; i >= 1; i--) {
+		for (let i: number = pChildren.length - 2; i >= 1; i--) {
 			if (pChildren[i].name === "CaseState") {
 				this.analyzePassCaseState(pChildren[i], pPass);
 			}
@@ -4402,14 +4384,14 @@ export class Effect implements IAFXEffect {
 	private analyzePassCaseState(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
-		var pCaseStateExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 2]);
+		let pCaseStateExpr: IAFXExprInstruction = this.analyzeExpr(pChildren[pChildren.length - 2]);
 		pCaseStateExpr._prepareFor(EFunctionType.k_PassFunction);
 
 		pPass._addCodeFragment("case " + pCaseStateExpr._toFinalCode() + ": ");
 
-		for (var i: number = pChildren.length - 4; i >= 0; i--) {
+		for (let i: number = pChildren.length - 4; i >= 0; i--) {
 			if (pChildren[i].name === "PassState") {
 				this.analyzePassStateForShader(pChildren[i], pPass);
 			}
@@ -4422,11 +4404,11 @@ export class Effect implements IAFXEffect {
 	private analyzePassDefault(pNode: IParseNode, pPass: IAFXPassInstruction): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		pPass._addCodeFragment("default: ");
 
-		for (var i: number = pChildren.length - 3; i >= 0; i--) {
+		for (let i: number = pChildren.length - 3; i >= 0; i--) {
 			if (pChildren[i].name === "PassState") {
 				this.analyzePassStateForShader(pChildren[i], pPass);
 			}
@@ -4439,45 +4421,47 @@ export class Effect implements IAFXEffect {
 	private analyzeImportDecl(pNode: IParseNode, pTechnique: IAFXTechniqueInstruction = null): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
-		var sComponentName: string = this.analyzeComplexName(pChildren[pChildren.length - 2]);
-		var iShift: number = 0;
+		let pChildren: IParseNode[] = pNode.children;
+		let sComponentName: string = this.analyzeComplexName(pChildren[pChildren.length - 2]);
+		// let iShift: number = 0;
 
 		if (pChildren[0].name === "ExtOpt") {
 			logger.warn("We don`t suppor ext-commands for import");
 		}
 		if (pChildren.length !== 2) {
-			iShift = this.analyzeShiftOpt(pChildren[0]);
+			// iShift = this.analyzeShiftOpt(pChildren[0]);
 		}
 
 		if (!isNull(pTechnique)) {
 			//We can import techniques from the same file, but on this stage they don`t have component yet.
 			//So we need special mehanism to add them on more belated stage
-			var sShortedComponentName: string = sComponentName;
+			// let sShortedComponentName: string = sComponentName;
 			if (this._sProvideNameSpace !== "") {
-				sShortedComponentName = sComponentName.replace(this._sProvideNameSpace + ".", "");
+				// sShortedComponentName = sComponentName.replace(this._sProvideNameSpace + ".", "");
 			}
 
-			var pTechniqueFromSameEffect: IAFXTechniqueInstruction = this._pTechniqueMap[sComponentName] || this._pTechniqueMap[sShortedComponentName];
-			if (isDefAndNotNull(pTechniqueFromSameEffect)) {
-				pTechnique._addTechniqueFromSameEffect(pTechniqueFromSameEffect, iShift);
-				return;
-			}
+			throw null;
+			// let pTechniqueFromSameEffect: IAFXTechniqueInstruction = this._pTechniqueMap[sComponentName] || this._pTechniqueMap[sShortedComponentName];
+			// if (isDefAndNotNull(pTechniqueFromSameEffect)) {
+			// 	pTechnique._addTechniqueFromSameEffect(pTechniqueFromSameEffect, iShift);
+			// 	return;
+			// }
 		}
 
-		var pComponent: IAFXComponent = this._pComposer.getComponentByName(sComponentName);
-		if (!pComponent) {
+		let pSourceTechnique: IAFXTechniqueInstruction = fx.techniques[sComponentName];
+		if (!pSourceTechnique) {
 			this._error(EEffectErrors.BAD_IMPORTED_COMPONENT_NOT_EXIST, { componentName: sComponentName });
 			return;
 		}
 
-		this.addComponent(pComponent, iShift, pTechnique);
+		// this.addComponent(pSourceTechnique, iShift, pTechnique);
+		throw null;
 	}
 
 	private analyzeProvideDecl(pNode: IParseNode): void {
 		this.setAnalyzedNode(pNode);
 
-		var pChildren: IParseNode[] = pNode.children;
+		let pChildren: IParseNode[] = pNode.children;
 
 		if (pChildren.length === 2) {
 			this._sProvideNameSpace = this.analyzeComplexName(pChildren[0]);
@@ -4487,79 +4471,6 @@ export class Effect implements IAFXEffect {
 			return;
 		}
 	}
-
-	private analyzeShiftOpt(pNode: IParseNode): number {
-		this.setAnalyzedNode(pNode);
-
-		var pChildren: IParseNode[] = pNode.children;
-
-		var iShift: number = <number><any>(pChildren[0].value);
-
-		if (pChildren.length === 2) {
-			iShift *= 1;
-		}
-		else {
-			iShift *= -1;
-		}
-
-		return iShift;
-	}
-
-	private addComponent(pComponent: IAFXComponent, iShift: number, pTechnique: IAFXTechniqueInstruction): void {
-		if (!isNull(pTechnique)) {
-			pTechnique._addComponent(pComponent, iShift);
-		}
-		else {
-			if (isNull(this._pImportedGlobalTechniqueList)) {
-				this._pImportedGlobalTechniqueList = [];
-			}
-
-			this._pImportedGlobalTechniqueList.push({
-				technique: pComponent.getTechnique(),
-				component: pComponent,
-				shift: iShift
-			});
-		}
-
-		//TODO: add correct add of compnent, not global
-
-		var pComponentTechnique: IAFXTechniqueInstruction = pComponent.getTechnique();
-		if (this.isAddedTechnique(pComponentTechnique)) {
-			return;
-		}
-
-		var pSharedListV: IAFXVariableDeclInstruction[] = pComponentTechnique._getSharedVariablesForVertex();
-		var pSharedListP: IAFXVariableDeclInstruction[] = pComponentTechnique._getSharedVariablesForPixel();
-
-		for (var i: number = 0; i < pSharedListV.length; i++) {
-			this.addExternalSharedVariable(pSharedListV[i], EFunctionType.k_Vertex);
-		}
-
-		for (var i: number = 0; i < pSharedListP.length; i++) {
-			this.addExternalSharedVariable(pSharedListP[i], EFunctionType.k_Pixel);
-		}
-
-		if (isNull(this._pAddedTechniqueList)) {
-			this._pAddedTechniqueList = [];
-		}
-
-		this._pAddedTechniqueList.push(pTechnique);
-	}
-
-	private isAddedTechnique(pTechnique: IAFXTechniqueInstruction): boolean {
-		if (isNull(this._pAddedTechniqueList)) {
-			return false;
-		}
-
-		for (var i: number = 0; i < this._pAddedTechniqueList.length; i++) {
-			if (this._pAddedTechniqueList[i] === pTechnique) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 
 
 	/**
@@ -4581,10 +4492,10 @@ export class Effect implements IAFXEffect {
 			return pRightType;
 		}
 
-		var isComplex: boolean = pLeftType._isComplex() || pRightType._isComplex();
-		var isArray: boolean = pLeftType._isNotBaseArray() || pRightType._isNotBaseArray();
-		var isSampler: boolean = Effect.isSamplerType(pLeftType) || Effect.isSamplerType(pRightType);
-		var pBoolType: IAFXVariableTypeInstruction = Effect.getSystemType("bool").getVariableType();
+		let isComplex: boolean = pLeftType._isComplex() || pRightType._isComplex();
+		let isArray: boolean = pLeftType._isNotBaseArray() || pRightType._isNotBaseArray();
+		let isSampler: boolean = Effect.isSamplerType(pLeftType) || Effect.isSamplerType(pRightType);
+		let pBoolType: IAFXVariableTypeInstruction = Effect.getSystemType("bool").getVariableType();
 
 		if (isArray || isSampler) {
 			return null;
@@ -4637,9 +4548,9 @@ export class Effect implements IAFXEffect {
 			}
 		}
 
-		var pReturnType: IAFXVariableTypeInstruction = null;
-		var pLeftBaseType: IAFXVariableTypeInstruction = (<SystemTypeInstruction>pLeftType._getBaseType()).getVariableType();
-		var pRightBaseType: IAFXVariableTypeInstruction = (<SystemTypeInstruction>pRightType._getBaseType()).getVariableType();
+		// let pReturnType: IAFXVariableTypeInstruction = null;
+		let pLeftBaseType: IAFXVariableTypeInstruction = (<SystemTypeInstruction>pLeftType._getBaseType()).getVariableType();
+		let pRightBaseType: IAFXVariableTypeInstruction = (<SystemTypeInstruction>pRightType._getBaseType()).getVariableType();
 
 
 		if (pLeftType._isConst() && this.isAssignmentOperator(sOperator)) {
@@ -4726,9 +4637,9 @@ export class Effect implements IAFXEffect {
 			return pType;
 		}
 
-		var isComplex: boolean = pType._isComplex();
-		var isArray: boolean = pType._isNotBaseArray();
-		var isSampler: boolean = Effect.isSamplerType(pType);
+		let isComplex: boolean = pType._isComplex();
+		let isArray: boolean = pType._isNotBaseArray();
+		let isSampler: boolean = Effect.isSamplerType(pType);
 
 		if (isComplex || isArray || isSampler) {
 			return null;
@@ -4754,7 +4665,7 @@ export class Effect implements IAFXEffect {
 		}
 
 		if (sOperator === "!") {
-			var pBoolType: IAFXVariableTypeInstruction = Effect.getSystemType("bool").getVariableType();
+			let pBoolType: IAFXVariableTypeInstruction = Effect.getSystemType("bool").getVariableType();
 
 			if (pType._isEqual(pBoolType)) {
 				return pBoolType;
@@ -4798,9 +4709,9 @@ export class Effect implements IAFXEffect {
 	}
 
 	private addExtactionStmts(pStmt: IAFXStmtInstruction): void {
-		var pPointerList: IAFXVariableDeclInstruction[] = this.getPointerForExtractList();
+		let pPointerList: IAFXVariableDeclInstruction[] = this.getPointerForExtractList();
 
-		for (var i: number = 0; i < pPointerList.length; i++) {
+		for (let i: number = 0; i < pPointerList.length; i++) {
 			this.generateExtractStmtFromPointer(pPointerList[i], pStmt);
 		}
 
@@ -4808,17 +4719,17 @@ export class Effect implements IAFXEffect {
 	}
 
 	private generateExtractStmtFromPointer(pPointer: IAFXVariableDeclInstruction, pParentStmt: IAFXStmtInstruction): IAFXStmtInstruction {
-		var pPointerType: IAFXVariableTypeInstruction = pPointer._getType();
-		var pWhatExtracted: IAFXVariableDeclInstruction = pPointerType._getDownPointer();
-		var pWhatExtractedType: IAFXVariableTypeInstruction = null;
+		let pPointerType: IAFXVariableTypeInstruction = pPointer._getType();
+		let pWhatExtracted: IAFXVariableDeclInstruction = pPointerType._getDownPointer();
+		let pWhatExtractedType: IAFXVariableTypeInstruction = null;
 
-		var pFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
+		let pFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
 
 		while (!isNull(pWhatExtracted)) {
 			pWhatExtractedType = pWhatExtracted._getType();
 
 			if (!pWhatExtractedType._isComplex()) {
-				var pSingleExtract: ExtractStmtInstruction = new ExtractStmtInstruction();
+				let pSingleExtract: ExtractStmtInstruction = new ExtractStmtInstruction();
 				pSingleExtract.generateStmtForBaseType(
 					pWhatExtracted,
 					pWhatExtractedType._getPointer(),
@@ -4850,15 +4761,15 @@ export class Effect implements IAFXEffect {
 		pPointer: IAFXVariableDeclInstruction,
 		pBuffer: IAFXVariableDeclInstruction,
 		iPadding: number): void {
-		var pVarType: IAFXVariableTypeInstruction = pVarDecl._getType();
-		var pFieldNameList: string[] = pVarType._getFieldNameList();
-		var pField: IAFXVariableDeclInstruction = null;
-		var pFieldType: IAFXVariableTypeInstruction = null;
-		var pSingleExtract: ExtractStmtInstruction = null;
+		let pVarType: IAFXVariableTypeInstruction = pVarDecl._getType();
+		let pFieldNameList: string[] = pVarType._getFieldNameList();
+		let pField: IAFXVariableDeclInstruction = null;
+		let pFieldType: IAFXVariableTypeInstruction = null;
+		let pSingleExtract: ExtractStmtInstruction = null;
 
-		var pFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
+		let pFunction: IAFXFunctionDeclInstruction = this.getCurrentAnalyzedFunction();
 
-		for (var i: number = 0; i < pFieldNameList.length; i++) {
+		for (let i: number = 0; i < pFieldNameList.length; i++) {
 			pField = pVarType._getField(pFieldNameList[i]);
 
 			if (isNull(pField)) {
@@ -4868,7 +4779,7 @@ export class Effect implements IAFXEffect {
 			pFieldType = pField._getType();
 
 			if (pFieldType._isPointer()) {
-				var pFieldPointer: IAFXVariableDeclInstruction = pFieldType._getMainPointer();
+				let pFieldPointer: IAFXVariableDeclInstruction = pFieldType._getMainPointer();
 				pSingleExtract = new ExtractStmtInstruction();
 				pSingleExtract.generateStmtForBaseType(pFieldPointer, pPointer, pFieldType._getVideoBuffer(), iPadding + pFieldType._getPadding(), null);
 

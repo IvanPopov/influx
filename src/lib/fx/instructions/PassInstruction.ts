@@ -3,7 +3,6 @@ import { ERenderStateValues } from "../../idl/ERenderStateValues";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import { DeclInstruction } from "./DeclInstruction";
-import { IAFXType } from "../../idl/IAFXEffect";
 import { isNull } from "../../common";
 import { ERenderStates } from "../../idl/ERenderStates";
 

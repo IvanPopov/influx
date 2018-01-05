@@ -34,7 +34,7 @@ export class ProgramScope {
 	}
 
 	_newScope(eType: EScopeType): void {
-		var isFirstScope: boolean = false;
+		// var isFirstScope: boolean = false;
 		var pParentScope: IScope;
 
 		if (isNull(this._iCurrentScope)) {
@@ -457,7 +457,7 @@ export class ProgramScope {
 				var pFunctionList: IAFXFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
 
 				if (isDef(pFunctionList)) {
-					var pFunction: IAFXFunctionDeclInstruction = null;
+					// var pFunction: IAFXFunctionDeclInstruction = null;
 
 					for (var i: number = 0; i < pFunctionList.length; i++) {
 						var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];

@@ -1,6 +1,7 @@
 import { IAFXLiteralInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
+import { Effect } from "../Effect";
 
 export class IntInstruction extends ExprInstruction implements IAFXLiteralInstruction {
     private _iValue: number;
