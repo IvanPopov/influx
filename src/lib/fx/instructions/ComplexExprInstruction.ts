@@ -29,15 +29,14 @@ export class ComplexExprInstruction extends ExprInstruction {
         if ((<IAFXExprInstruction>this._getInstructions()[0])._evaluate()) {
             this._pLastEvalResult = (<IAFXExprInstruction>this._getInstructions()[0])._getEvalValue();
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
     // _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-    //				   eUsedMode?: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-    // 	var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
-    // 	pSubExpr._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+    //                   eUsedMode?: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+    //     var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
+    //     pSubExpr._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     // }
 }

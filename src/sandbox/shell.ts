@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 
+import { ipcMain as AppDispatcher } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 
@@ -29,4 +30,9 @@ app.on('activate', () => {
   if (win === null) {
     createWindow();
   }
+});
+
+AppDispatcher.on('app-rendered', (event, arg) => {
+  event.sender.send('grammar-loaded');
+  event.sender.send('source-loaded');
 });

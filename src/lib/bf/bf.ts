@@ -80,13 +80,13 @@ export var totalBits = (value: number) => 32;
  * Возвращает общее количество ненулевых бит числа @a value.
  */
 export var totalSet = (value: number): number => {
-	var count: number = 0;
-	var total: number = totalBits(value);
+    var count: number = 0;
+    var total: number = totalBits(value);
 
-	for (var i: number = total; i; --i) {
-		count += (value & 1);
-		value >>= 1;
-	}
+    for (var i: number = total; i; --i) {
+        count += (value & 1);
+        value >>= 1;
+    }
 
-	return (count);
+    return (count);
 }

@@ -1,66 +1,65 @@
-﻿export var typeOf: (x: any) => string = function (x: any): string {
-	var s: string = typeof x;
+﻿export let typeOf: (x: any) => string = (x: any): string => {
+    const s: string = typeof x;
 
-	if (s === "object") {
-		if (x) {
-			if (x instanceof Array) {
-				return "array";
-			} else if (x instanceof Object) {
-				return s;
-			}
+    if (s === 'object') {
+        if (x) {
+            if (x instanceof Array) {
+                return 'array';
+            } else if (x instanceof Object) {
+                return s;
+            }
 
-			var sClassName: string = Object.prototype.toString.call(x);
+            const sClassName: string = Object.prototype.toString.call(x);
 
-			if (sClassName === "[object Window]") {
-				return "object";
-			}
+            if (sClassName === '[object Window]') {
+                return 'object';
+            }
 
-			if ((sClassName === "[object Array]" ||
-				(typeof x.length) === "number" &&
-				(typeof x.splice) !== "undefined" &&
-				(typeof x.propertyIsEnumerable) !== "undefined" &&
-				!x.propertyIsEnumerable("splice")
+            if ((sClassName === '[object Array]' ||
+                (typeof x.length) === 'number' &&
+                (typeof x.splice) !== 'undefined' &&
+                (typeof x.propertyIsEnumerable) !== 'undefined' &&
+                !x.propertyIsEnumerable('splice')
 
-			)) {
-				return "array";
-			}
+            )) {
+                return 'array';
+            }
 
-			if ((sClassName === "[object Function]" ||
-				(typeof x.call) !== "undefined" &&
-				(typeof x.propertyIsEnumerable) !== "undefined" &&
-				!x.propertyIsEnumerable("call"))) {
-				return "function";
-			}
-		} else {
-			return "null";
-		}
-	} else if (s === "function" && (typeof x.call) === "undefined") {
-		return "object";
-	}
+            if ((sClassName === '[object Function]' ||
+                (typeof x.call) !== 'undefined' &&
+                (typeof x.propertyIsEnumerable) !== 'undefined' &&
+                !x.propertyIsEnumerable('call'))) {
+                return 'function';
+            }
+        } else {
+            return 'null';
+        }
+    } else if (s === 'function' && (typeof x.call) === 'undefined') {
+        return 'object';
+    }
 
-	return s;
+    return s;
 };
 
-export var isDef = (x: any): boolean => x !== undefined;
-export var isDefAndNotNull = (x: any): boolean => x != null;
-export var isEmpty = (x: any): boolean => x.length === 0;
-export var isNull = (x: any): boolean => x === null;
-export var isBoolean = (x: any): boolean => typeof x === "boolean";
-export var isString = (x: any): boolean => typeof x === "string";
-export var isNumber = (x: any): boolean => typeof x === "number";
-export var isFloat = isNumber;
+export let isDef = (x: any): boolean => x !== undefined;
+export let isDefAndNotNull = (x: any): boolean => x != null;
+export let isEmpty = (x: any): boolean => x.length === 0;
+export let isNull = (x: any): boolean => x === null;
+export let isBoolean = (x: any): boolean => typeof x === 'boolean';
+export let isString = (x: any): boolean => typeof x === 'string';
+export let isNumber = (x: any): boolean => typeof x === 'number';
+export let isFloat = isNumber;
 //export var isInt = isNumber;
 //export var isUint = isNumber;
-export var isInt = (x: any): boolean => isNumber(x) && (~~x === x);
-export var isUint = (x: any): boolean => isInt(x) && x > 0;
-export var isFunction = (x: any): boolean => typeOf(x) === "function";
-export var isObject = (x: any): boolean => {
-	var type = typeOf(x);
-	return type === "object" || type === "array" || type === "function";
+export let isInt = (x: any): boolean => isNumber(x) && (~~x === x);
+export let isUint = (x: any): boolean => isInt(x) && x > 0;
+export let isFunction = (x: any): boolean => typeOf(x) === 'function';
+export let isObject = (x: any): boolean => {
+    const T: string = typeOf(x);
+    return T === 'object' || T === 'array' || T === 'function';
 };
-export var isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
-export var isTypedArray = (x: any): boolean => x !== null && typeof x === "object" && typeof x.byteOffset === "number";
-export var isBlob = (x: any): boolean => x instanceof Blob;
-export var isArray = (x: any): boolean => typeOf(x) === "array";
+export let isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
+export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'object' && typeof x.byteOffset === 'number';
+export let isBlob = (x: any): boolean => x instanceof Blob;
+export let isArray = (x: any): boolean => typeOf(x) === 'array';
 export type INullable<T> = { [P in keyof T]: T[P] | null } | null;
-

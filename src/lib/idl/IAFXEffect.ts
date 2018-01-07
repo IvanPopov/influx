@@ -2,26 +2,26 @@ import { IAFXIdInstruction, IAFXTechniqueInstruction, IAFXTypeDeclInstruction, I
 import { IParseTree } from "./parser/IParser";
 
 export interface IAFXObject {
-	getName(): string;
-	getId(): IAFXIdInstruction;
+    getName(): string;
+    getId(): IAFXIdInstruction;
 }
 
 export interface IAFXVariable extends IAFXObject {
-	setName(sName: string): void;
-	setType(pType: IAFXVariableTypeInstruction): void;
-	getType(): IAFXVariableTypeInstruction;
+    setName(sName: string): void;
+    setType(pType: IAFXVariableTypeInstruction): void;
+    getType(): IAFXVariableTypeInstruction;
 
-	initializeFromInstruction(pInstruction: IAFXVariableDeclInstruction): void;
+    initializeFromInstruction(pInstruction: IAFXVariableDeclInstruction): void;
 
 }
 
 export interface IAFXType extends IAFXObject {
-	isBase(): boolean;
-	initializeFromInstruction(pInstruction: IAFXTypeDeclInstruction): boolean;
+    isBase(): boolean;
+    initializeFromInstruction(pInstruction: IAFXTypeDeclInstruction): boolean;
 }
 
 export interface IAFXFunction extends IAFXObject {
-	getHash(): string;
+    getHash(): string;
 }
 
 export interface IAFXPass extends IAFXObject {
@@ -33,16 +33,15 @@ export interface IAFXTechnique extends IAFXObject {
 }
 
 export interface IAFXEffectStats {
-	time: number;
+    time: number;
 }
 
 export interface IAFXEffect {
-	analyze(pTree: IParseTree): boolean;
-	setAnalyzedFileName(sFileName: string): void;
-	getStats(): IAFXEffectStats;
+    analyze(pTree: IParseTree): boolean;
+    setAnalyzedFileName(sFileName: string): void;
+    getStats(): IAFXEffectStats;
 
-	clear(): void;
+    clear(): void;
 
-	getTechniqueList(): IAFXTechniqueInstruction[];
+    getTechniqueList(): IAFXTechniqueInstruction[];
 }
-

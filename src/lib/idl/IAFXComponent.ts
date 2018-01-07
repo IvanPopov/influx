@@ -1,7 +1,7 @@
 export enum EPassTypes {
-	UNDEF,
-	DEFAULT,
-	POSTEFFECT
+    UNDEF,
+    DEFAULT,
+    POSTEFFECT
 };
 
 // export type IAFXComponent = IAFXTechniqueInstruction;

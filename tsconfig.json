@@ -3,6 +3,7 @@
     "module": "commonjs",
     "target": "es2017",
     "lib": [
+      "es7",
       "es2017",
       "dom",
       "dom.iterable"
@@ -12,9 +13,8 @@
     "sourceMap": true,
     "alwaysStrict": true,
     "pretty": true,
-    "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "allowUnusedLabels": false,
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
@@ -22,13 +22,16 @@
     "noEmitOnError": true,
     "noImplicitReturns": true,
     "strict": false,
+    "experimentalDecorators": true,
+    "jsx": "react",
     "rootDirs": [ "src/" ],
     "outDir": "build",
     "rootDir": "src/",
-    "baseUrl": "src/"
+    "baseUrl": "src/",
+    "allowJs": false
   },
   "files": [
     "src/sandbox/shell.ts",
-    "src/sandbox/renderer.ts"
+    "src/sandbox/app.tsx"
   ]
 }

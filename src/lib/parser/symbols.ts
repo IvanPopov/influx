@@ -1,18 +1,16 @@
-﻿export const END_POSITION = "END";            //item, parser
-export const T_EMPTY = "EMPTY";               //item, parser
-export const UNKNOWN_TOKEN = "UNNOWN";        //lexer
-export const START_SYMBOL = "S";              //parser
-export const UNUSED_SYMBOL = "##";            //parser
-export const END_SYMBOL = "$";                //lexer, parser
-export const LEXER_RULES = "--LEXER--";       //parser
-export const FLAG_RULE_CREATE_NODE = "--AN";  //parser
-export const FLAG_RULE_NOT_CREATE_NODE = "--NN"; //parser
-export const FLAG_RULE_FUNCTION = "--F";      //parser
-export const EOF = "EOF";                     //lexer
-export const T_STRING = "T_STRING";           //lexer
-export const T_FLOAT = "T_FLOAT";             //lexer
-export const T_UINT = "T_UINT";               //lexer
-export const T_TYPE_ID = "T_TYPE_ID";         //lexer
-export const T_NON_TYPE_ID = "T_NON_TYPE_ID"; //lexer
-
-
+﻿export const END_POSITION : string               = 'END';                 //item, parser
+export const T_EMPTY : string                    = 'EMPTY';               //item, parser
+export const UNKNOWN_TOKEN : string              = 'UNNOWN';              //lexer
+export const START_SYMBOL : string               = 'S';                   //parser
+export const UNUSED_SYMBOL : string              = '##';                  //parser
+export const END_SYMBOL : string                 = '$';                   //lexer, parser
+export const LEXER_RULES : string                = '--LEXER--';           //parser
+export const FLAG_RULE_CREATE_NODE : string      = '--AN';                //parser
+export const FLAG_RULE_NOT_CREATE_NODE : string  = '--NN';                //parser
+export const FLAG_RULE_FUNCTION : string         = '--F';                 //parser
+export const EOF : string                        = 'EOF';                 //lexer
+export const T_STRING : string                   = 'T_STRING';            //lexer
+export const T_FLOAT : string                    = 'T_FLOAT';             //lexer
+export const T_UINT : string                     = 'T_UINT';              //lexer
+export const T_TYPE_ID : string                  = 'T_TYPE_ID';           //lexer
+export const T_NON_TYPE_ID : string              = 'T_NON_TYPE_ID';       //lexer

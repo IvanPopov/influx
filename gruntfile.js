@@ -1,10 +1,13 @@
+const buildPath = './build';
+const sandboxPath = './src/sandbox';
+
 module.exports = function (grunt) {
     grunt.initConfig({
         ts: {
             debug: { tsconfig: 'tsconfig.json' }
         },
         clean: {
-            debug: [ './build' ]
+            debug: [ `${buildPath}` ]
         },
         pug: {
             debug: {
@@ -16,14 +19,26 @@ module.exports = function (grunt) {
                     }
                 },
                 files: {
-                    './build/index.html': './src/sandbox/index.pug'
+                    [`${buildPath}/index.html`]: `${sandboxPath}/index.pug`
                 }
             }
         },
         copy: {
             debug: {
               files: [
-                { expand: true, cwd: './src/sandbox/assets/', src: [ '**' ], dest: './build/assets' }
+                { expand: true, cwd: `${sandboxPath}/assets/`, src: [ '**' ], dest: `${buildPath}/assets` },
+                { 
+                    expand: true, 
+                    cwd: './node_modules/codemirror/lib/', 
+                    src: [ 'codemirror.css' ], 
+                    dest: `${buildPath}/assets/codemirror` 
+                },
+                { 
+                    expand: true, 
+                    cwd: './node_modules/codemirror/theme/', 
+                    src: [ '**' ], 
+                    dest: `${buildPath}/assets/codemirror/theme` 
+                }
               ]
             }
         }

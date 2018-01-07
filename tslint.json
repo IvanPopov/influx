@@ -17,7 +17,15 @@
             "property-declaration",
             "variable-declaration"
         ],
-        "no-relative-imports": false
+        "no-relative-imports": false,
+        "use-named-parameter": false,
+        "no-any": false,
+        "newline-before-return": false,
+        "variable-name": [true, "allow-pascal-case"],
+        "member-access":  [true, "no-public"],
+        "import-name": false,
+        "no-default-export": false,
+        "export-name": false
     },
     "rulesDirectory": [],
     "linterOptions": {
