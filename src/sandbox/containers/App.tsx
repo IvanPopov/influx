@@ -1,5 +1,4 @@
 import autobind from 'autobind-decorator';
-import { ipcRenderer as AppDispatcher } from 'electron';
 import * as fs from 'fs';
 import AppBar from 'material-ui/AppBar';
 import Grid from 'material-ui/Grid';
@@ -10,13 +9,17 @@ import Typography from 'material-ui/Typography';
 import * as React from 'react';
 import * as CodeMirror from 'react-codemirror';
 import { render } from 'react-dom';
+import { connect } from 'react-redux';
+import { Dispatch } from 'react-redux';
 import SwipeableViews from 'react-swipeable-views';
-import { ParserParameters, TabContainer } from './components';
+import { ParserParameters, TabContainer } from '../components';
+import { getGrammarText, getSourceCode } from '../reducers';
+import IStoreState from '../store/IStoreState';
 
 // tslint:disable-next-line:no-import-side-effect
 import 'codemirror/mode/clike/clike';
 
-process.chdir(`${__dirname}/../`); // making ./build as cwd
+process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
 const decorate = withStyles(theme => ({
     div: {
@@ -31,26 +34,14 @@ const decorate = withStyles(theme => ({
 interface IAppProps {
     readonly sourceCode: string;
     readonly grammarText: string;
+}
+
+interface IAppState {
     readonly value: number;
 }
 
-class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>> {
-    state: IAppProps = {
-        value: 0,
-        sourceCode: '',
-        grammarText: ''
-    };
-
-    componentDidMount() {
-        AppDispatcher.on('source-loaded', this.sourceLoaded);
-        AppDispatcher.on('grammar-loaded', this.grammarLoaded);
-        AppDispatcher.send('app-rendered');
-    }
-
-    componentWillUnmount() {
-        AppDispatcher.removeListener('source-loaded', this.sourceLoaded);
-        AppDispatcher.removeListener('grammar-loaded', this.grammarLoaded);
-    }
+class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, IAppState> {
+    state: IAppState = { value: 0 };
 
     render() {
         return (
@@ -76,7 +67,7 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>> {
                             onChangeIndex={ this.handleChangeIndex }
                         >
                             <TabContainer dir='ltr'>
-                                <CodeMirror value={ this.state.sourceCode }
+                                <CodeMirror value={ this.props.sourceCode || '' }
                                     options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } } />
                             </TabContainer>
                             <div>
@@ -85,7 +76,7 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>> {
                                         <ParserParameters />
                                     </Grid>
                                     <Grid item xs={ 12 } >
-                                        <CodeMirror value={ this.state.grammarText }
+                                        <CodeMirror value={ this.props.grammarText || '' }
                                             options={ { lineNumbers: true, theme: 'eclipse' } } />
                                     </Grid>
                                 </Grid>
@@ -102,20 +93,16 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>> {
         this.setState({ value });
     }
 
-    private handleChangeIndex = index => {
+    private handleChangeIndex = (index) => {
         this.setState({ value: index });
-    }
-
-    @autobind
-    private sourceLoaded() {
-        this.setState({ sourceCode: fs.readFileSync('./assets/fx/example.fx', 'utf8') });
-    }
-
-    @autobind
-    private grammarLoaded() {
-        this.setState({ grammarText: fs.readFileSync('./assets/HLSL.gr', 'utf8') });
     }
 }
 
-const AppStyled = decorate<{}>(App);
-render(<AppStyled />, document.querySelector('#app'));
+function mapStateToProps(state: IStoreState) {
+    return {
+        sourceCode: getSourceCode(state),
+        grammarText: getGrammarText(state)
+    };
+}
+
+export default decorate<{}>(connect<{}, {}, IAppProps>(mapStateToProps, {})(App));

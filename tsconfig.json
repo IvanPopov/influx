@@ -8,30 +8,33 @@
       "dom",
       "dom.iterable"
     ],
-    "removeComments": true,
-    "preserveConstEnums": false,
-    "sourceMap": true,
-    "alwaysStrict": true,
-    "pretty": true,
+    "allowJs": false,
+    "allowSyntheticDefaultImports": false,
     "allowUnreachableCode": true,
-    "noUnusedLocals": false,
     "allowUnusedLabels": false,
+    "baseUrl": "src/",
+    "alwaysStrict": true,
     "declaration": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": false,
     "noFallthroughCasesInSwitch": true,
+    "jsx": "react",
     "noEmitOnError": true,
     "noImplicitReturns": true,
-    "strict": false,
-    "experimentalDecorators": true,
-    "jsx": "react",
-    "rootDirs": [ "src/" ],
     "outDir": "build",
+    "preserveConstEnums": false,
+    "pretty": false,
+    "removeComments": true,
     "rootDir": "src/",
-    "baseUrl": "src/",
-    "allowJs": false
+    "rootDirs": [
+      "src/"
+    ],
+    "sourceMap": true,
+    "strict": false
   },
   "files": [
     "src/sandbox/shell.ts",
-    "src/sandbox/app.tsx"
+    "src/sandbox/index.tsx"
   ]
 }
