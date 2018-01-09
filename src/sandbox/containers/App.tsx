@@ -12,8 +12,11 @@ import { render } from 'react-dom';
 import { connect } from 'react-redux';
 import { Dispatch } from 'react-redux';
 import SwipeableViews from 'react-swipeable-views';
+import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
+import { setSource } from '../actions/index';
 import { ParserParameters, TabContainer } from '../components';
-import { getGrammarText, getSourceCode } from '../reducers';
+import SyntaxTreeView from '../components/SyntaxTreeView';
+import { getGrammarText, getParseMode, getParserType, getSourceCode, getSourceFilename } from '../reducers';
 import IStoreState from '../store/IStoreState';
 
 // tslint:disable-next-line:no-import-side-effect
@@ -32,8 +35,16 @@ const decorate = withStyles(theme => ({
 }));
 
 interface IAppProps {
-    readonly sourceCode: string;
-    readonly grammarText: string;
+    readonly sourceFile: {
+        readonly content: string;
+        readonly filename: string;
+    };
+    readonly parser: {
+        readonly grammarText: string;
+        readonly mode: EParseMode;
+        readonly type: EParserType;
+    };
+    readonly setSource: (content: string) => void;
 }
 
 interface IAppState {
@@ -58,7 +69,7 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, I
                             >
                                 <Tab label='Sources' />
                                 <Tab label='Grammar' />
-                                <Tab label='Debug' />
+                                <Tab label='Debug' disabled />
                             </Tabs>
                         </AppBar>
                         <SwipeableViews
@@ -67,8 +78,17 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, I
                             onChangeIndex={ this.handleChangeIndex }
                         >
                             <TabContainer dir='ltr'>
-                                <CodeMirror value={ this.props.sourceCode || '' }
-                                    options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } } />
+                                <Grid container style={ { width: 'auto', margin: 'auto' } }>
+                                    <Grid item xs={ 6 } >
+                                        <CodeMirror value={ this.props.sourceFile.content || '' }
+                                            options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } } 
+                                            onChange={ this.props.setSource } />
+                                    </Grid>
+                                    <Grid item xs={ 6 } >
+                                        <SyntaxTreeView parser={ this.props.parser } 
+                                            source={ { code: this.props.sourceFile.content, filename: this.props.sourceFile.filename } } />
+                                    </Grid>
+                                </Grid>
                             </TabContainer>
                             <div>
                                 <Grid container style={ { width: 'auto', margin: 'auto' } }>
@@ -76,7 +96,7 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, I
                                         <ParserParameters />
                                     </Grid>
                                     <Grid item xs={ 12 } >
-                                        <CodeMirror value={ this.props.grammarText || '' }
+                                        <CodeMirror value={ this.props.parser.grammarText || '' }
                                             options={ { lineNumbers: true, theme: 'eclipse' } } />
                                     </Grid>
                                 </Grid>
@@ -100,9 +120,16 @@ class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, I
 
 function mapStateToProps(state: IStoreState) {
     return {
-        sourceCode: getSourceCode(state),
-        grammarText: getGrammarText(state)
+        sourceFile: {
+            content: getSourceCode(state),
+            filename: getSourceFilename(state)
+        },
+        parser: {
+            grammarText: getGrammarText(state),
+            mode: getParseMode(state),
+            type: getParserType(state)
+        }
     };
 }
 
-export default decorate<{}>(connect<{}, {}, IAppProps>(mapStateToProps, {})(App));
+export default decorate<{}>(connect<{}, {}, IAppProps>(mapStateToProps, { setSource })(App));

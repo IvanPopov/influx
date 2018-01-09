@@ -1,4 +1,4 @@
-import { SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from '../actions/ActionTypeKeys';
+import { SOURCE_CODE_MODIFED, SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from '../actions/ActionTypeKeys';
 import { SourceFileActions } from '../actions/ActionTypes';
 import { IFileState, IStoreState } from '../store/IStoreState';
 
@@ -18,6 +18,8 @@ const sourceFile = (state: IFileState = initialState, action: SourceFileActions)
             return { ...state, content: action.payload.content, fetching: false, fetched: true };
         case SOURCE_FILE_LOADING_FAILED:
             return { ...state, error: action.payload.error, fetching: false };
+        case SOURCE_CODE_MODIFED:
+            return { ...state, content: action.payload.content };
         default:
             return state;
     }

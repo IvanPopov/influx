@@ -7,6 +7,8 @@ import sourceFile from './sourceFile';
 export default combineReducers<IStoreState>({ sourceFile, parserParams });
 
 export const getSourceCode = (state: IStoreState) => state.sourceFile.content;
+export const getSourceFilename = (state: IStoreState) => state.sourceFile.filename;
 export const getGrammarText = (state: IStoreState) => fromParserParams.getGrammarText(state.parserParams);
 export const getParseMode = (state: IStoreState): EParseMode => state.parserParams.mode;
 export const getParserType = (state: IStoreState): EParserType => state.parserParams.type;
+

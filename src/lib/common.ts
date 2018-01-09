@@ -1,4 +1,6 @@
-﻿export let typeOf: (x: any) => string = (x: any): string => {
+﻿import { isEqual } from "./bf/bf";
+
+export let typeOf: (x: any) => string = (x: any): string => {
     const s: string = typeof x;
 
     if (s === 'object') {
@@ -49,8 +51,6 @@ export let isBoolean = (x: any): boolean => typeof x === 'boolean';
 export let isString = (x: any): boolean => typeof x === 'string';
 export let isNumber = (x: any): boolean => typeof x === 'number';
 export let isFloat = isNumber;
-//export var isInt = isNumber;
-//export var isUint = isNumber;
 export let isInt = (x: any): boolean => isNumber(x) && (~~x === x);
 export let isUint = (x: any): boolean => isInt(x) && x > 0;
 export let isFunction = (x: any): boolean => typeOf(x) === 'function';
@@ -62,4 +62,4 @@ export let isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
 export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'object' && typeof x.byteOffset === 'number';
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
-export type INullable<T> = { [P in keyof T]: T[P] | null } | null;
+export type INullable<T> = {[P in keyof T]: T[P] | null } | null;

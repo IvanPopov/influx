@@ -47,6 +47,21 @@ function sourceLocationToString(pLocation: ISourceLocation): string {
     return sLocation;
 }
 
+class SyntaxError extends Error {
+    // filename: string;
+    // line: number;
+    // column: number;
+    // tokenValue: string;
+    logEntry: ILoggerEntity;
+
+    constructor(message, logEntry: ILoggerEntity) {
+        super(message);
+        this.name = 'SyntaxError';
+        this.logEntry = logEntry;
+    }
+}
+
+
 function syntaxErrorLogRoutine(pLogEntity: ILoggerEntity): void {
     var sPosition: string = sourceLocationToString(pLogEntity.location);
     var sError: string = "Code: " + pLogEntity.code.toString() + ". ";
@@ -61,8 +76,10 @@ function syntaxErrorLogRoutine(pLogEntity: ILoggerEntity): void {
 
     var sMessage = sPosition + sError + pParseMessage.join("");
 
-    console.error.call(console, sMessage);
+    // console.error.call(console, sMessage);
+    throw new SyntaxError(sMessage, pLogEntity);
 }
+
 
 logger.setCodeFamilyRoutine("ParserSyntaxErrors", syntaxErrorLogRoutine, ELogLevel.ERROR);
 
@@ -461,9 +478,9 @@ export class Parser implements IParser {
     }
 
     private _error(eCode: number, pErrorInfo: any): void {
-        var pLocation: ISourceLocation = <ISourceLocation>{};
+        const pLocation: ISourceLocation = <ISourceLocation>{};
 
-        var pInfo: any = {
+        const pInfo: any = {
             tokenValue: null,
             line: null,
             column: null,
@@ -478,20 +495,20 @@ export class Parser implements IParser {
             badKeyword: null
         };
 
-        var pLogEntity: ILoggerEntity = <ILoggerEntity>{ code: eCode, info: pInfo, location: pLocation };
+        const pLogEntity: ILoggerEntity = <ILoggerEntity>{ code: eCode, info: pInfo, location: pLocation };
 
-        var pToken: IToken;
-        var iLine: number;
-        var iColumn: number;
-        var iStateIndex: number;
-        var sSymbol: string;
-        var pOldOperation: IOperation;
-        var pNewOperation: IOperation;
-        var iOldNextStateIndex: number;
-        var iNewNextStateIndex: number;
-        var sExpectedSymbol: string;
-        // var sUnexpectedSymbol: string;
-        var sBadKeyword: string;
+        let pToken: IToken;
+        let iLine: number;
+        let iColumn: number;
+        let iStateIndex: number;
+        let sSymbol: string;
+        let pOldOperation: IOperation;
+        let pNewOperation: IOperation;
+        let iOldNextStateIndex: number;
+        let iNewNextStateIndex: number;
+        let sExpectedSymbol: string;
+        // let sUnexpectedSymbol: string;
+        let sBadKeyword: string;
 
         if (eCode === PARSER_SYNTAX_ERROR) {
             pToken = <IToken>pErrorInfo;
@@ -546,14 +563,12 @@ export class Parser implements IParser {
         }
         else if (eCode === PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME) {
             iLine = pErrorInfo.grammarLine;
-
             pLocation.file = "GRAMMAR";
             pLocation.line = iLine || 0;
         }
         else if (eCode === PARSER_GRAMMAR_BAD_KEYWORD) {
             iLine = pErrorInfo.grammarLine;
             sBadKeyword = pErrorInfo.badKeyword;
-
             pInfo.badKeyword = sBadKeyword;
 
             pLocation.file = "GRAMMAR";
@@ -1617,7 +1632,7 @@ export class Parser implements IParser {
                                 isPause = true;
                             }
                             break;
-                            default:
+                        default:
                     }
                 }
                 else {

@@ -21,15 +21,27 @@
         "use-named-parameter": false,
         "no-any": false,
         "newline-before-return": false,
-        "variable-name": [true, "allow-pascal-case"],
-        "member-access":  [true, "no-public"],
+        "variable-name": [
+            true,
+            "allow-pascal-case"
+        ],
+        "member-access": [
+            true,
+            "no-public"
+        ],
         "import-name": false,
         "no-default-export": false,
         "export-name": false,
         "no-reserved-keywords": false,
         "react-tsx-curly-spacing": false,
         "react-this-binding-issue": false,
-        "prefer-method-signature": false
+        "prefer-method-signature": false,
+        "function-name": [
+            true,
+            {
+                "private-method-regex": "^_?[a-z][\w\d]+$"
+            }
+        ]
     },
     "rulesDirectory": [],
     "linterOptions": {

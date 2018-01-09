@@ -1,7 +1,7 @@
 import autobind from 'autobind-decorator';
 import {
-    FormControl, FormControlLabel, FormGroup, FormLabel, Paper,
-    Radio, RadioGroup, StyledComponentProps, Switch, Typography, withStyles, WithStyles, Button
+    Button, FormControl, FormControlLabel, FormGroup, FormLabel,
+    Paper, Radio, RadioGroup, StyledComponentProps, Switch, Typography, withStyles, WithStyles
 } from 'material-ui';
 import * as React from 'react';
 import { connect } from 'react-redux';
@@ -18,6 +18,12 @@ const decorate = withStyles<'root'>(({ mixins }) => ({
         paddingBottom: 16
     })
 }));
+
+const customStyles = {
+    switch: {
+        height: '32px'
+    }
+};
 
 const setFlags = (dest: number, src: number, value: boolean) => {
     return value ? bf.setFlags(dest, src) : bf.clearFlags(dest, src);
@@ -51,7 +57,7 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
         const { type, mode } = this.state;
         return (
             <Paper classes={ classes } elevation={ 1 }>
-                <FormControl component='fieldset'>
+                <FormControl component='fieldset' margin='dense'>
                     <FormLabel component='legend'>Parser type:</FormLabel>
                     <FormGroup>
                         <RadioGroup
@@ -60,8 +66,9 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
                             // className={ classes.group }
                             value={ EParserType[this.state.type] }
                             onChange={ (event, value: string) => this.setState({ type: EParserType[value] }) }
+                            row
                         >
-                            <FormControlLabel value={ EParserType[EParserType.k_LR0] } control={ <Radio /> } label='LR0' />
+                            <FormControlLabel value={ EParserType[EParserType.k_LR0] } control={ <Radio /> } label='LR0' disabled />
                             <FormControlLabel value={ EParserType[EParserType.k_LR1] } control={ <Radio /> } label='LR1' />
                             <FormControlLabel value={ EParserType[EParserType.k_LALR] } control={ <Radio /> } label='LALR' />
                         </RadioGroup>
@@ -70,7 +77,7 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
                     <FormGroup>
                         <FormControlLabel
                             control={
-                                <Switch
+                                <Switch style={ customStyles.switch }
                                     checked={ !!(mode & EParseMode.k_Add) }
                                     onChange={ this.handleChangeMode.bind(this, EParseMode.k_Add) }
                                 />
@@ -79,7 +86,7 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
                         />
                         <FormControlLabel
                             control={
-                                <Switch
+                                <Switch style={ customStyles.switch }
                                     checked={ !!(mode & EParseMode.k_Negate) }
                                     onChange={ this.handleChangeMode.bind(this, EParseMode.k_Negate) }
                                 />
@@ -88,7 +95,7 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
                         />
                         <FormControlLabel
                             control={
-                                <Switch
+                                <Switch style={ customStyles.switch }
                                     checked={ !!(mode & EParseMode.k_AllNode) }
                                     onChange={ this.handleChangeMode.bind(this, EParseMode.k_AllNode) }
                                 />
@@ -97,7 +104,7 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
                         />
                         <FormControlLabel
                             control={
-                                <Switch
+                                <Switch style={ customStyles.switch }
                                     checked={ !!(mode & EParseMode.k_Optimize) }
                                     onChange={ this.handleChangeMode.bind(this, EParseMode.k_Optimize) }
                                 />

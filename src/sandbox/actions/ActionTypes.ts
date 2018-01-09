@@ -1,5 +1,5 @@
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_FILE_LOADED,
+import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, SOURCE_FILE_LOADED,
     SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from './ActionTypeKeys';
 
 // source file api
@@ -19,7 +19,12 @@ export interface ISourceFileLoadingFailed {
     readonly payload: { readonly error: Error; };
 }
 
-export type SourceFileActions = ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed;
+export interface ISourceCodeModified {
+    readonly type: typeof SOURCE_CODE_MODIFED;
+    readonly payload: { readonly content: string; };
+}
+
+export type SourceFileActions = ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceCodeModified;
 
 // grammar api (simplified)
 
