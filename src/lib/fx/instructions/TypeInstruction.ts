@@ -1,12 +1,11 @@
 import { DeclInstruction } from "./DeclInstruction";
 import { IAFXTypeDeclInstruction, EAFXInstructionTypes, IAFXTypeInstruction, IAFXInstruction, EAFXBlendMode } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class TypeDeclInstruction extends DeclInstruction implements IAFXTypeDeclInstruction {
-    // EMPTY_OPERATOR VariableTypeInstruction
-
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null];
         this._eInstructionType = EAFXInstructionTypes.k_TypeDeclInstruction;
     }

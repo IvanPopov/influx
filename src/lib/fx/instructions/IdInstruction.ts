@@ -1,6 +1,7 @@
 import { Instruction } from "./Instruction";
 import { IAFXIdInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class IdInstruction extends Instruction implements IAFXIdInstruction {
     private _sName: string;
@@ -13,8 +14,8 @@ export class IdInstruction extends Instruction implements IAFXIdInstruction {
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._sName = "";
         this._sRealName = "";
         this._eInstructionType = EAFXInstructionTypes.k_IdInstruction;

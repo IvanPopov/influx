@@ -1,6 +1,7 @@
 import { IAFXInstruction, IAFXInstructionError, EAFXInstructionTypes, IAFXInstructionRoutine, EFunctionType, ECheckStage } from "../../idl/IAFXInstruction";
 import { isNull, isDef } from "../../common";
 import { IMap } from "../../idl/IMap";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class Instruction implements IAFXInstruction {
 	protected _pParentInstruction: IAFXInstruction = null;
@@ -12,6 +13,8 @@ export class Instruction implements IAFXInstruction {
 	protected _bErrorOccured: boolean = false;
 	protected _iInstructionID: number = 0;
 	protected _iScope: number = Instruction.UNDEFINE_SCOPE;
+	protected _pSourceNode: IParseNode;
+
 	private static _nInstructionCounter: number = 0;
 
 	private _bVisible: boolean = true;
@@ -93,7 +96,7 @@ export class Instruction implements IAFXInstruction {
 		this._pInstructionList = [];
 	}
 
-	constructor() {
+	constructor(pNode: IParseNode) {
 		this._iInstructionID = Instruction._nInstructionCounter++;
 		this._pParentInstruction = null;
 		this._sOperatorName = null;
@@ -101,6 +104,7 @@ export class Instruction implements IAFXInstruction {
 		this._nInstructions = 0;
 		this._eInstructionType = EAFXInstructionTypes.k_Instruction;
 		this._pLastError = { code: 0, info: null };
+		this._pSourceNode = pNode;
 	}
 
 	_push(pInstruction: IAFXInstruction, isSetParent: boolean = false): void {
@@ -177,6 +181,10 @@ export class Instruction implements IAFXInstruction {
 		pNewInstruction._setOperator(this._getOperator());
 
 		return pNewInstruction;
+	}
+
+	_getSourceNode(): IParseNode {
+		return this._pSourceNode;
 	}
 
 	static UNDEFINE_LENGTH: number = 0xffffff;

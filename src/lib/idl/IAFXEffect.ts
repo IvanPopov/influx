@@ -32,16 +32,8 @@ export interface IAFXTechnique extends IAFXObject {
 
 }
 
-export interface IAFXEffectStats {
-    time: number;
-}
-
 export interface IAFXEffect {
     analyze(pTree: IParseTree): boolean;
     setAnalyzedFileName(sFileName: string): void;
-    getStats(): IAFXEffectStats;
-
-    clear(): void;
-
     getTechniqueList(): IAFXTechniqueInstruction[];
 }

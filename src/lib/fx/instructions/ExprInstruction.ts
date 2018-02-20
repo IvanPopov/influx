@@ -2,6 +2,7 @@ import { EAFXInstructionTypes, IAFXExprInstruction, IAFXVariableTypeInstruction,
 import { TypedInstruction } from "./TypedInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class ExprInstruction extends TypedInstruction implements IAFXExprInstruction {
     protected _pLastEvalResult: any = null;
@@ -9,8 +10,8 @@ export class ExprInstruction extends TypedInstruction implements IAFXExprInstruc
     /**
      * Respresent all kind of instruction
      */
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._eInstructionType = EAFXInstructionTypes.k_ExprInstruction;
     }
 

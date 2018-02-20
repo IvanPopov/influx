@@ -19,12 +19,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
     private _pExtSystemTypeList: IAFXTypeDeclInstruction[] = null;
     private _pExtSystemFunctionList: IAFXFunctionDeclInstruction[] = null;
-    private _pExtSystemMacrosList: IAFXSimpleInstruction[] = null;
 
     constructor(sName: string, pReturnType: IAFXTypeInstruction,
         pExprTranslator: ExprTemplateTranslator,
         pArgumentTypes: IAFXTypeInstruction[]) {
-        super();
+        super(null);
 
         this._eInstructionType = EAFXInstructionTypes.k_SystemFunctionInstruction;
 
@@ -32,7 +31,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
         this._pName._setName(sName);
         this._pName._setParent(this);
 
-        this._pReturnType = new VariableTypeInstruction();
+        this._pReturnType = new VariableTypeInstruction(null);
         this._pReturnType._pushType(pReturnType);
         this._pReturnType._setParent(this);
 
@@ -40,7 +39,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
         if (!isNull(pArgumentTypes)) {
             for (var i: number = 0; i < pArgumentTypes.length; i++) {
-                var pArgument: TypedInstruction = new TypedInstruction();
+                var pArgument: TypedInstruction = new TypedInstruction(null);
                 pArgument._setType(pArgumentTypes[i]);
                 pArgument._setParent(this);
 
@@ -68,12 +67,10 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
     }
 
     setUsedSystemData(pTypeList: IAFXTypeDeclInstruction[],
-        pFunctionList: IAFXFunctionDeclInstruction[],
-        pMacrosList: IAFXSimpleInstruction[]): void {
+        pFunctionList: IAFXFunctionDeclInstruction[]): void {
 
         this._pExtSystemTypeList = pTypeList;
         this._pExtSystemFunctionList = pFunctionList;
-        this._pExtSystemMacrosList = pMacrosList;
     }
 
     closeSystemDataInfo(): void {
@@ -81,18 +78,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
             var pFunction: IAFXFunctionDeclInstruction = this._pExtSystemFunctionList[i];
 
             var pTypes = pFunction._getExtSystemTypeList();
-            var pMacroses = pFunction._getExtSystemMacrosList();
             var pFunctions = pFunction._getExtSystemFunctionList();
 
             for (var j: number = 0; j < pTypes.length; j++) {
                 if (this._pExtSystemTypeList.indexOf(pTypes[j]) === -1) {
                     this._pExtSystemTypeList.push(pTypes[j]);
-                }
-            }
-
-            for (var j: number = 0; j < pMacroses.length; j++) {
-                if (this._pExtSystemMacrosList.indexOf(pMacroses[j]) === -1) {
-                    this._pExtSystemMacrosList.push(pMacroses[j]);
                 }
             }
 
@@ -336,10 +326,6 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
     _getExtSystemFunctionList(): IAFXFunctionDeclInstruction[] {
         return this._pExtSystemFunctionList;
-    }
-
-    _getExtSystemMacrosList(): IAFXSimpleInstruction[] {
-        return this._pExtSystemMacrosList;
     }
 
     _getExtSystemTypeList(): IAFXTypeDeclInstruction[] {

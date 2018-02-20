@@ -11,11 +11,9 @@ import { IMap } from '../../idl/IMap';
 import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { PostfixPointInstruction } from './PostfixPointInstruction';
 import { VariableTypeInstruction } from './VariableTypeInstruction';
+import { IParseNode } from '../../idl/parser/IParser';
 
 export class VariableDeclInstruction extends DeclInstruction implements IAFXVariableDeclInstruction {
-    private _bIsVideoBuffer: boolean = null;
-    private _pVideoBufferSampler: IAFXVariableDeclInstruction = null;
-    private _pVideoBufferHeader: IAFXVariableDeclInstruction = null;
     private _pFullNameExpr: IAFXExprInstruction = null;
     private _bDefineByZero: boolean = false;
     private _bShaderOutput: boolean = false;
@@ -37,8 +35,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
      * Represent type var_name [= init_expr]
      * EMPTY_OPERATOR VariableTypeInstruction IdInstruction InitExprInstruction
      */
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
+        this._pSourceNode = pNode;
         this._pInstructionList = [null, null, null];
         this._eInstructionType = EAFXInstructionTypes.k_VariableDeclInstruction;
     }
@@ -78,10 +77,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
 
     _setValue(pValue: any): any {
         this._pValue = pValue;
-
-        if (this._getType()._isForeign()) {
-            this._setRealName(pValue);
-        }
     }
 
     _getType(): IAFXVariableTypeInstruction {
@@ -111,15 +106,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
 
     _setRealName(sRealName: string): void {
         this._getNameId()._setRealName(sRealName);
-    }
-
-    _setVideoBufferRealName(sSampler: string, sHeader: string): void {
-        if (!this._isVideoBuffer()) {
-            return;
-        }
-
-        this._getVideoBufferSampler()._setRealName(sSampler);
-        this._getVideoBufferHeader()._setRealName(sHeader);
     }
 
     _getName(): string {
@@ -157,14 +143,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         return this._getType()._isPointer();
     }
 
-    _isVideoBuffer(): boolean {
-        if (isNull(this._bIsVideoBuffer)) {
-            this._bIsVideoBuffer = this._getType()._isStrongEqual(Effect.getSystemType('video_buffer'));
-        }
-
-        return this._bIsVideoBuffer;
-    }
-
     _isSampler(): boolean {
         return this._getType()._isSampler();
     }
@@ -187,16 +165,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         }
         var sCode: string = '';
 
-        if (this._isVideoBuffer()) {
-            this._getVideoBufferHeader()._lockInitializer();
-
-            sCode = this._getVideoBufferHeader()._toFinalCode();
-            sCode += ';\n';
-            sCode += this._getVideoBufferSampler()._toFinalCode();
-
-            this._getVideoBufferHeader()._unlockInitializer();
-        }
-        else {
+        {
             sCode = this._getType()._toFinalCode();
             sCode += ' ' + this._getNameId()._toFinalCode();
 
@@ -293,59 +262,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         }
     }
 
-    _getVideoBufferSampler(): IAFXVariableDeclInstruction {
-        if (!this._isVideoBuffer()) {
-            return null;
-        }
-
-        if (isNull(this._pVideoBufferSampler)) {
-            this._pVideoBufferSampler = new VariableDeclInstruction();
-            var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
-            var pId: IAFXIdInstruction = new IdInstruction();
-
-            pType._pushType(Effect.getSystemType('sampler2D'));
-            pType._addUsage('uniform');
-            pId._setName(this._getName() + '_sampler');
-
-            this._pVideoBufferSampler._push(pType, true);
-            this._pVideoBufferSampler._push(pId, true);
-        }
-
-        return this._pVideoBufferSampler;
-    }
-
-    _getVideoBufferHeader(): IAFXVariableDeclInstruction {
-        if (!this._isVideoBuffer()) {
-            return null;
-        }
-
-        if (isNull(this._pVideoBufferHeader)) {
-            this._pVideoBufferHeader = new VariableDeclInstruction();
-            var pType: IAFXVariableTypeInstruction = new VariableTypeInstruction();
-            var pId: IAFXIdInstruction = new IdInstruction();
-            var pExtarctExpr: ExtractExprInstruction = new ExtractExprInstruction();
-
-            pType._pushType(Effect.getSystemType('video_buffer_header'));
-            pId._setName(this._getName() + '_header');
-
-            this._pVideoBufferHeader._push(pType, true);
-            this._pVideoBufferHeader._push(pId, true);
-            this._pVideoBufferHeader._push(pExtarctExpr, true);
-
-            pExtarctExpr.initExtractExpr(pType, null, this, '', null);
-        }
-
-        return this._pVideoBufferHeader;
-    }
-
-    _getVideoBufferInitExpr(): IAFXInitExprInstruction {
-        if (!this._isVideoBuffer()) {
-            return null;
-        }
-
-        return this._getVideoBufferHeader()._getInitializeExpr();
-    }
-
     _setCollapsed(bValue: boolean): void {
         this._getType()._setCollapsed(bValue);
     }
@@ -356,26 +272,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
 
     _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableDeclInstruction {
         return <IAFXVariableDeclInstruction>super._clone(pRelationMap);
-    }
-
-    _blend(pVariableDecl: IAFXVariableDeclInstruction, eMode: EAFXBlendMode): IAFXVariableDeclInstruction {
-        var pBlendType: IAFXVariableTypeInstruction = this._getType()._blend(pVariableDecl._getType(), eMode);
-
-        if (isNull(pBlendType)) {
-            return null;
-        }
-
-        var pBlendVar: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-        var pId: IAFXIdInstruction = new IdInstruction();
-
-        pId._setName(this._getNameId()._getName());
-        pId._setRealName(this._getNameId()._getRealName());
-
-        pBlendVar._setSemantic(this._getSemantic());
-        pBlendVar._push(pBlendType, true);
-        pBlendVar._push(pId, true);
-
-        return pBlendVar;
     }
 }
 

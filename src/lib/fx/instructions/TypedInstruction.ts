@@ -2,12 +2,13 @@ import { Instruction } from "./Instruction";
 import { IAFXTypedInstruction, IAFXTypeInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class TypedInstruction extends Instruction implements IAFXTypedInstruction {
     protected _pType: IAFXTypeInstruction;
 
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pType = null;
         this._eInstructionType = EAFXInstructionTypes.k_TypedInstruction;
     }

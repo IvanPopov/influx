@@ -2,15 +2,16 @@ import { ExprInstruction } from "./ExprInstruction";
 import { IAFXInitExprInstruction, IAFXTypeInstruction, EAFXInstructionTypes, IAFXExprInstruction, IAFXVariableTypeInstruction } from "../../idl/IAFXInstruction";
 import { isNull } from "../../common";
 import { Instruction } from "./Instruction";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class InitExprInstruction extends ExprInstruction implements IAFXInitExprInstruction {
 	private _pConstructorType: IAFXTypeInstruction = null;
 	private _bIsConst: boolean = null;
 	private _isArray: boolean = false;
 
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = [];
 		this._eInstructionType = EAFXInstructionTypes.k_InitExprInstruction;
 	}

@@ -1,6 +1,7 @@
 import { TypedInstruction } from "./TypedInstruction";
 import { IAFXDeclInstruction, IAFXAnnotationInstruction, EAFXInstructionTypes, IAFXIdInstruction, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruction {
     protected _sSemantic: string = "";
@@ -9,8 +10,8 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
     protected _bForVertex: boolean = true;
     protected _bIsBuiltIn: boolean = false;
 
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._eInstructionType = EAFXInstructionTypes.k_DeclInstruction;
     }
 

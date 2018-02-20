@@ -54,8 +54,8 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
 
 	private _pComplexPassEvaluateOutput: IEvaluateOutput = { "fragment": null, "vertex": null };
 
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = null;
 		this._eInstructionType = EAFXInstructionTypes.k_PassInstruction;
 	}

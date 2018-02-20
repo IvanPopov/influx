@@ -202,6 +202,8 @@ export interface IAFXInstruction {
 	_toFinalCode(): string;
 
 	_clone(pRelationMap?: IMap<IAFXInstruction>): IAFXInstruction;
+
+	_getSourceNode(): IParseNode | null;
 }
 
 export interface IAFXSimpleInstruction extends IAFXInstruction {
@@ -293,10 +295,7 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 	_isFromTypeDecl(): boolean;
 
 	_isUniform(): boolean;
-	_isGlobal(): boolean;
 	_isConst(): boolean;
-	_isShared(): boolean;
-	_isForeign(): boolean;
 
 	_isTypeOfField(): boolean;
 	_isUnverifiable(): boolean;
@@ -318,12 +317,10 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 	_addUsage(sUsage: string): void;
 	_addArrayIndex(pExpr: IAFXExprInstruction): void;
 	_addPointIndex(isStrict?: boolean): void;
-	_setVideoBuffer(pBuffer: IAFXVariableDeclInstruction): void;
 	_initializePointers(): void;
 
 	_setPointerToStrict(): void;
 	_addPointIndexInDepth(): void;
-	_setVideoBufferInDepth(): void;
 	_markAsUnverifiable(isUnverifiable: boolean): void;
 	_addAttrOffset(pOffset: IAFXVariableDeclInstruction): void;
 
@@ -337,11 +334,9 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 	_getSubType(): IAFXTypeInstruction;
 
 	_hasUsage(sUsageName: string): boolean;
-	_hasVideoBuffer(): boolean;
 
 	_getPointDim(): number;
 	_getPointer(): IAFXVariableDeclInstruction;
-	_getVideoBuffer(): IAFXVariableDeclInstruction;
 	_getFieldExpr(sFieldName: string): IAFXIdExprInstruction;
 	_getFieldIfExist(sFieldName: string): IAFXVariableDeclInstruction;
 
@@ -431,7 +426,6 @@ export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
 	_isUniform(): boolean;
 	_isField(): boolean;
 	_isPointer(): boolean;
-	_isVideoBuffer(): boolean;
 	_isSampler(): boolean;
 
 	_getSubVarDecls(): IAFXVariableDeclInstruction[];
@@ -449,19 +443,14 @@ export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
 	_getNameIndex(): number;
 	_getFullNameExpr(): IAFXExprInstruction;
 	_getFullName(): string;
-	_getVideoBufferSampler(): IAFXVariableDeclInstruction;
-	_getVideoBufferHeader(): IAFXVariableDeclInstruction;
-	_getVideoBufferInitExpr(): IAFXInitExprInstruction;
 
 	_setName(sName: string): void;
 	_setRealName(sName: string): void;
-	_setVideoBufferRealName(sSampler: string, sHeader: string): void;
 
 	_setCollapsed(bValue: boolean): void;
 	_isCollapsed(): boolean;
 
 	_clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableDeclInstruction;
-	_blend(pVariableDecl: IAFXVariableDeclInstruction, eMode: EAFXBlendMode): IAFXVariableDeclInstruction;
 }
 
 export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
@@ -545,7 +534,6 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
 	_getUsedComplexTypeKeys(): number[];
 
 	_getExtSystemFunctionList(): IAFXFunctionDeclInstruction[];
-	_getExtSystemMacrosList(): IAFXSimpleInstruction[];
 	_getExtSystemTypeList(): IAFXTypeDeclInstruction[];
 }
 
@@ -614,8 +602,6 @@ export interface IAFXPassInstruction extends IAFXDeclInstruction {
 	_addFoundFunction(pNode: IParseNode, pShader: IAFXFunctionDeclInstruction, eType: EFunctionType): void;
 	_getFoundedFunction(pNode: IParseNode): IAFXFunctionDeclInstruction;
 	_getFoundedFunctionType(pNode: IParseNode): EFunctionType;
-	_setParseNode(pNode: IParseNode): void;
-	_getParseNode(): IParseNode;
 	_markAsComplex(isComplex: boolean): void;
 	_addCodeFragment(sCode: string): void;
 

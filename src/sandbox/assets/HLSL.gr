@@ -17,13 +17,7 @@ Decl : IncludeDecl
 
 IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
 
-ImportDecl : T_KW_IMPORT ComplexNameOpt ShiftOpt ExtOpt
-ShiftOpt :
-ShiftOpt : T_KW_SHIFT Uint
-ShiftOpt : T_KW_SHIFT '-' Uint
-
-ExtOpt :
-ExtOpt : T_KW_TO T_KW_ALL_PASSES
+ImportDecl : T_KW_IMPORT ComplexNameOpt
 
 ProvideDecl : T_KW_PROVIDE ComplexNameOpt
 ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt
@@ -38,9 +32,6 @@ Usage : T_KW_UNIFORM
 Usage : T_KW_EXTERN
 Usage : T_KW_VOLATILE
 Usage : T_KW_INLINE
-Usage : T_KW_SHARED
-Usage : T_KW_GLOBAL
-Usage : T_KW_FOREIGN
 Usage : ConstUsage
 
 ConstUsages : ConstUsage --NN
@@ -105,8 +96,6 @@ ObjectType : T_KW_VERTEXSHADER
 ObjectType : T_KW_PIXELFRAGMENT
 ObjectType : T_KW_VERTEXFRAGMENT
 ObjectType : T_KW_STATEBLOCK
-ObjectType : T_KW_VIDEOBUFFER
-ObjectType : T_KW_PTR
 
 Struct : T_KW_STRUCT StructBegin StructEnd --AN
 Struct : T_KW_STRUCT StructBegin StructDecls StructEnd
@@ -147,9 +136,6 @@ Initializer : '=' '{' InitExprs ',' '}'
 InitializerOpt :
 InitializerOpt : Initializer
 
-AddressOpt :
-AddressOpt : FromExpr
-
 VariableDecl : UsageType Variables ';' --AN
 VarStructDecl : UsageStructDecl Variables ';' --AN
 Variables : Variable --NN
@@ -157,7 +143,6 @@ Variables : Variables ',' Variable
 Variable : VariableDim SemanticsOpt AnnotationOpt InitializerOpt --AN
 VariableDim : Id --AN
 VariableDim : VariableDim '[' ConstantExpr ']'
-VariableDim : VariableDim '[' ']' AddressOpt
 
 FunctionDecl : FunctionDef ';' --AN
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
@@ -316,10 +301,9 @@ ObjectExpr : T_KW_STATEBLOCK_STATE StateBlock
 
 PrimaryExpr : ComplexExpr
 PrimaryExpr : SimpleExpr
-PrimaryExpr : '@' PrimaryExpr
 PostfixExpr : PrimaryExpr
 PostfixExpr : PostfixExpr '[' Expr ']'
-PostfixExpr : PostfixExpr '.' Id AddressOpt
+PostfixExpr : PostfixExpr '.' Id
 PostfixExpr : PostfixExpr T_OP_INC
 PostfixExpr : PostfixExpr T_OP_DEC
 
@@ -360,17 +344,12 @@ ConditionalExpr : OrExpr
 ConditionalExpr : OrExpr '?' AssignmentExpr ':' ConditionalExpr
 
 AssignmentExpr : ConditionalExpr
-AssignmentExpr : MemExpr
 AssignmentExpr : CastExpr '=' AssignmentExpr
 AssignmentExpr : CastExpr T_OP_ME AssignmentExpr
 AssignmentExpr : CastExpr T_OP_DE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_RE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
-
-MemExpr : T_KW_MEMOF PostfixExpr
-FromExpr : '(' MemExpr ')'
-FromExpr : '(' NonTypeId ')'
 
 Arguments : AssignmentExpr --NN
 Arguments : Arguments ',' AssignmentExpr
@@ -432,9 +411,6 @@ T_KW_UNIFORM : "uniform"
 T_KW_EXTERN : "extern"
 T_KW_VOLATILE : "volatile"
 T_KW_INLINE : "inline"
-T_KW_SHARED : "shared"
-T_KW_GLOBAL : "global"
-T_KW_FOREIGN : "foreign"
 T_KW_CONST : "const"
 T_KW_ROW_MAJOR : "row_major"
 T_KW_COLUMN_MAJOR : "column_major"
@@ -486,8 +462,6 @@ T_KW_STATEBLOCK_STATE : "stateblock_state"
 T_KW_DECL : "decl"
 T_KW_ASM : "asm"
 T_KW_ASM_FRAGMENT : "asm_fragment"
-T_KW_MEMOF : "memof"
-T_KW_VIDEOBUFFER : "video_buffer"
 T_KW_USE : "use"
 T_KW_STRICT : "strict"
 T_KW_IMPORT : "import"
@@ -498,11 +472,7 @@ T_KW_DEFAULT : "default"
 T_KW_BREAK : "break"
 T_KW_CONTINUE : "continue"
 T_KW_AS : "as"
-T_KW_PTR : "ptr"
-T_KW_SHIFT : "shift"
 T_KW_INCLUDE : "include"
-T_KW_TO : "to"
-T_KW_ALL_PASSES : "ALL_PASSES"
 T_OP_INC : "++"
 T_OP_DEC : "--"
 T_OP_LE : ">="
