@@ -38,7 +38,9 @@
     "tslint-microsoft-contrib": "^5.0.1",
     "typescript": "^2.6.2"
   },
-  "scripts": {},
+  "scripts": {
+    "preinstall": "npm install -g grunt-cli"
+  },
   "dependencies": {
     "tslint": "^5.8.0"
   }
