@@ -3,6 +3,7 @@ import { IAFXVariableDeclInstruction, EAFXInstructionTypes } from "../../idl/IAF
 import { isNull, isDef } from "../../common";
 import { IAFXSamplerState } from "../../idl/IAFXSamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -12,8 +13,8 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
     private _pTexture: IAFXVariableDeclInstruction = null;
     private _pSamplerParams: any = null;
 
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = null;
         this._eInstructionType = EAFXInstructionTypes.k_SamplerStateBlockInstruction;
     }
@@ -27,19 +28,19 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
         return;
     }
 
-    setTexture(pTexture: IAFXVariableDeclInstruction): void {
+    set texture(pTexture: IAFXVariableDeclInstruction) {
         this._pTexture = pTexture;
     }
 
-    getTexture(): IAFXVariableDeclInstruction {
+    get texture(): IAFXVariableDeclInstruction {
         return this._pTexture;
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         return true;
     }
 
-    _evaluate(): boolean {
+    evaluate(): boolean {
         var pSamplerState: IAFXSamplerState = {
             // texture: null,
             textureName: "",

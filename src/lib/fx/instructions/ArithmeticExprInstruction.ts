@@ -1,4 +1,5 @@
 import { EAFXInstructionTypes, IAFXTypeUseInfoContainer, EVarUsedMode, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { IParseNode } from "./../../idl/parser/IParser";
 import { ExprInstruction } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
@@ -8,28 +9,28 @@ import { isNull } from "../../common";
  * (+|-|*|/|%) Instruction Instruction
  */
 export class ArithmeticExprInstruction extends ExprInstruction {
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null, null];
         this._eInstructionType = EAFXInstructionTypes.k_ArithmeticExprInstruction;
     }
 
     _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        super._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+        super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
     _evaluate(): boolean {
-        var pOperands: IAFXExprInstruction[] = <IAFXExprInstruction[]>this._getInstructions();
-        var pValL: any = pOperands[0]._evaluate() ? pOperands[0]._getEvalValue() : null;
-        var pValR: any = pOperands[1]._evaluate() ? pOperands[1]._getEvalValue() : null;
+        var pOperands: IAFXExprInstruction[] = <IAFXExprInstruction[]>this.instructions;
+        var pValL: any = pOperands[0].evaluate() ? pOperands[0].getEvalValue() : null;
+        var pValR: any = pOperands[1].evaluate() ? pOperands[1].getEvalValue() : null;
 
         if (isNull(pValL) || isNull(pValR)) {
             return false;
         }
 
         try {
-            switch (this._getOperator()) {
+            switch (this.operator) {
                 case "+":
                     this._pLastEvalResult = pValL + pValR;
                     break;
@@ -55,15 +56,15 @@ export class ArithmeticExprInstruction extends ExprInstruction {
 
     _toFinalCode(): string {
         var sCode: string = "";
-        sCode += this._getInstructions()[0]._toFinalCode();
-        sCode += this._getOperator();
-        sCode += this._getInstructions()[1]._toFinalCode();
+        sCode += this.instructions[0]._toFinalCode();
+        sCode += this.operator;
+        sCode += this.instructions[1]._toFinalCode();
         return sCode;
     }
 
-    _isConst(): boolean {
-        var pOperands: IAFXExprInstruction[] = <IAFXExprInstruction[]>this._getInstructions();
-        return pOperands[0]._isConst() && pOperands[1]._isConst();
+    isConst(): boolean {
+        var pOperands: IAFXExprInstruction[] = <IAFXExprInstruction[]>this.instructions;
+        return pOperands[0].isConst() && pOperands[1].isConst();
     }
 }
 

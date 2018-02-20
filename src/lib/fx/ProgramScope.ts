@@ -11,11 +11,11 @@ export class ProgramScope {
 
     constructor() {
         this._pScopeMap = <IScopeMap>{};
-        this._iCurrentScope = null;
+        this._iCurrentScope = -1;
         this._nScope = 0;
     }
 
-    _isStrictMode(iScope: number = this._iCurrentScope): boolean {
+    isStrictMode(iScope: number = this._iCurrentScope): boolean {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
@@ -29,15 +29,15 @@ export class ProgramScope {
         return false;
     }
 
-    _setStrictModeOn(iScope: number = this._iCurrentScope): void {
+    useStrictMode(iScope: number = this._iCurrentScope): void {
         this._pScopeMap[iScope].isStrictMode = true;
     }
 
-    _newScope(eType: EScopeType): void {
-        // var isFirstScope: boolean = false;
+
+    pushScope(eType: EScopeType): void {
         var pParentScope: IScope;
 
-        if (isNull(this._iCurrentScope)) {
+        if (this._iCurrentScope == -1) {
             pParentScope = null;
         }
         else {
@@ -59,7 +59,8 @@ export class ProgramScope {
         this._pScopeMap[this._iCurrentScope] = pNewScope;
     }
 
-    _resumeScope(): void {
+    // _resumeScope
+    restoreScope(): void {
         if (this._nScope === 0) {
             return;
         }
@@ -67,16 +68,19 @@ export class ProgramScope {
         this._iCurrentScope = this._nScope - 1;
     }
 
-    _setScope(iScope: number): void {
+    // setScope
+    set current(iScope: number) {
         this._iCurrentScope = iScope;
     }
 
-    _getScope(): number {
+    // getScope
+    get current(): number {
         return this._iCurrentScope;
     }
 
-    _endScope(): void {
-        if (isNull(this._iCurrentScope)) {
+    popScope(): void {
+        console.assert(this._iCurrentScope != -1);
+        if (this._iCurrentScope == -1) {
             return;
         }
 
@@ -84,19 +88,20 @@ export class ProgramScope {
         var pNewScope: IScope = pOldScope.parent;
 
         if (isNull(pNewScope)) {
-            this._iCurrentScope = null;
+            this._iCurrentScope = -1;
         }
         else {
             this._iCurrentScope = pNewScope.index;
         }
     }
 
-    _getScopeType(): EScopeType {
+    get type(): EScopeType {
         return this._pScopeMap[this._iCurrentScope].type;
     }
 
-    _getVariable(sVariableName: string, iScope: number = this._iCurrentScope): IAFXVariableDeclInstruction {
-        if (isNull(iScope)) {
+    getVariable(sVariableName: string, iScope: number = this._iCurrentScope): IAFXVariableDeclInstruction {
+        console.assert(iScope != -1);
+        if (iScope == -1) {
             return null;
         }
 
@@ -119,8 +124,9 @@ export class ProgramScope {
         return null;
     }
 
-    _getType(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeInstruction {
-        var pTypeDecl: IAFXTypeDeclInstruction = this._getTypeDecl(sTypeName, iScope);
+
+    getType(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeInstruction {
+        var pTypeDecl: IAFXTypeDeclInstruction = this.getTypeDecl(sTypeName, iScope);
 
         if (!isNull(pTypeDecl)) {
             return pTypeDecl._getType();
@@ -130,8 +136,9 @@ export class ProgramScope {
         }
     }
 
-    _getTypeDecl(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeDeclInstruction {
-        if (isNull(iScope)) {
+
+    getTypeDecl(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeDeclInstruction {
+        if (iScope == -1) {
             return null;
         }
 
@@ -158,8 +165,8 @@ export class ProgramScope {
      * get function by name and list of types
      * return null - if threre are not function; undefined - if there more then one function; function - if all ok
      */
-    _getFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
-        if (isNull(iScope)) {
+    getFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
+        if (iScope == -1) {
             return null;
         }
 
@@ -228,8 +235,8 @@ export class ProgramScope {
      * get shader function by name and list of types
      * return null - if threre are not function; undefined - if there more then one function; function - if all ok
      */
-    _getShaderFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
-        if (isNull(iScope)) {
+    getShaderFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
+        if (iScope == -1) {
             return null;
         }
 
@@ -303,8 +310,9 @@ export class ProgramScope {
         return pFunction;
     }
 
-    public _addVariable(pVariable: IAFXVariableDeclInstruction, iScope: number = this._iCurrentScope): boolean {
-        if (isNull(iScope)) {
+
+    addVariable(pVariable: IAFXVariableDeclInstruction, iScope: number = this._iCurrentScope): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -317,34 +325,22 @@ export class ProgramScope {
 
         var sVariableName: string = pVariable._getName();
 
-        if (!pVariable._getType()._isShared()) {
-            if (this.hasVariableInScope(sVariableName, iScope)) {
-                return false;
-            }
-
-            pVariableMap[sVariableName] = pVariable;
-            pVariable._setScope(iScope);
-        }
-        else {
+        {
             if (!this.hasVariableInScope(sVariableName, iScope)) {
                 pVariableMap[sVariableName] = pVariable;
-                pVariable._setScope(iScope);
+                pVariable.scope = (iScope);
             }
             else {
-                var pBlendVariable: IAFXVariableDeclInstruction = pVariableMap[sVariableName]._blend(pVariable, EAFXBlendMode.k_Shared);
-                if (isNull(pBlendVariable)) {
-                    return false;
-                }
-                pVariableMap[sVariableName] = pBlendVariable;
-                pBlendVariable._setScope(iScope);
+                console.error(`variable '${sVariableName}' already exists in scope ${iScope}`);
             }
         }
 
         return true;
     }
 
-    public _addType(pType: IAFXTypeDeclInstruction, iScope: number = this._iCurrentScope): boolean {
-        if (isNull(iScope)) {
+
+    addType(pType: IAFXTypeDeclInstruction, iScope: number = this._iCurrentScope): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -362,13 +358,14 @@ export class ProgramScope {
         }
 
         pTypeMap[sTypeName] = pType;
-        pType._setScope(iScope);
+        pType.scope = (iScope);
 
         return true;
     }
 
-    public _addFunction(pFunction: IAFXFunctionDeclInstruction, iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
-        if (isNull(iScope)) {
+
+    addFunction(pFunction: IAFXFunctionDeclInstruction, iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -390,13 +387,14 @@ export class ProgramScope {
         }
 
         pFunctionMap[sFuncName].push(pFunction);
-        pFunction._setScope(iScope);
+        pFunction.scope = (iScope);
 
         return true;
     }
 
-    public _hasVariable(sVariableName: string, iScope: number = this._iCurrentScope): boolean {
-        if (isNull(iScope)) {
+
+    hasVariable(sVariableName: string, iScope: number = this._iCurrentScope): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -419,8 +417,9 @@ export class ProgramScope {
         return false;
     }
 
-    public _hasType(sTypeName: string, iScope: number = this._iCurrentScope): boolean {
-        if (isNull(iScope)) {
+
+    hasType(sTypeName: string, iScope: number = this._iCurrentScope): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -443,8 +442,9 @@ export class ProgramScope {
         return false;
     }
 
-    public _hasFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
-        if (isNull(iScope)) {
+
+    hasFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
+        if (iScope == -1) {
             return false;
         }
 
@@ -494,16 +494,19 @@ export class ProgramScope {
         return false;
     }
 
-    private hasVariableInScope(sVariableName: string, iScope: number): boolean {
+
+    hasVariableInScope(sVariableName: string, iScope: number): boolean {
         return isDef(this._pScopeMap[iScope].variableMap[sVariableName]);
     }
 
-    private hasTypeInScope(sTypeName: string, iScope: number): boolean {
+
+    hasTypeInScope(sTypeName: string, iScope: number): boolean {
         return isDef(this._pScopeMap[iScope].typeMap[sTypeName]);
     }
 
-    private hasFunctionInScope(pFunction: IAFXFunctionDeclInstruction, iScope: number): boolean {
-        if (isNull(iScope)) {
+
+    hasFunctionInScope(pFunction: IAFXFunctionDeclInstruction, iScope: number): boolean {
+        if (iScope == -1) {
             return false;
         }
 

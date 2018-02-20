@@ -15,40 +15,44 @@ export class ExprInstruction extends TypedInstruction implements IAFXExprInstruc
         this._eInstructionType = EAFXInstructionTypes.k_ExprInstruction;
     }
 
-    _evaluate(): boolean {
+    evaluate(): boolean {
         return false;
     }
 
-    _simplify(): boolean {
+    simplify(): boolean {
         return false;
     }
 
-    _getEvalValue(): any {
+    getEvalValue(): any {
         return this._pLastEvalResult;
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         return false;
     }
 
-    _getType(): IAFXVariableTypeInstruction {
-        return <IAFXVariableTypeInstruction>super._getType();
+    get type(): IAFXVariableTypeInstruction {
+        return <IAFXVariableTypeInstruction>super.type;
+    }
+
+    set type(pType: IAFXVariableTypeInstruction) {
+        super.type = pType;
     }
 
     _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXExprInstruction {
         return <IAFXExprInstruction>super._clone(pRelationMap);
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this._getInstructions();
+        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this.instructions;
 
         if (isNull(pInstructionList)) {
             return;
         }
 
         for (var i: number = 0; i < this._nInstructions; i++) {
-            pInstructionList[i]._addUsedData(pUsedDataCollector, eUsedMode);
+            pInstructionList[i].addUsedData(pUsedDataCollector, eUsedMode);
         }
     }
 }

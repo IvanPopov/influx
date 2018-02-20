@@ -1,5 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { EAFXInstructionTypes, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -7,8 +8,8 @@ import { EAFXInstructionTypes, IAFXExprInstruction } from "../../idl/IAFXInstruc
  * EMPTY_OPERATOR ExprInstruction
  */
 export class ComplexExprInstruction extends ExprInstruction {
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null];
         this._eInstructionType = EAFXInstructionTypes.k_ComplexExprInstruction;
     }
@@ -16,27 +17,21 @@ export class ComplexExprInstruction extends ExprInstruction {
     _toFinalCode(): string {
         var sCode: string = "";
 
-        sCode += "(" + this._getInstructions()[0]._toFinalCode() + ")";
+        sCode += "(" + this.instructions[0]._toFinalCode() + ")";
 
         return sCode;
     }
 
-    _isConst(): boolean {
-        return (<IAFXExprInstruction>this._getInstructions()[0])._isConst();
+    isConst(): boolean {
+        return (<IAFXExprInstruction>this.instructions[0]).isConst();
     }
 
-    _evaluate(): boolean {
-        if ((<IAFXExprInstruction>this._getInstructions()[0])._evaluate()) {
-            this._pLastEvalResult = (<IAFXExprInstruction>this._getInstructions()[0])._getEvalValue();
+    evaluate(): boolean {
+        if ((<IAFXExprInstruction>this.instructions[0]).evaluate()) {
+            this._pLastEvalResult = (<IAFXExprInstruction>this.instructions[0]).getEvalValue();
             return true;
         } else {
             return false;
         }
     }
-
-    // _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-    //                   eUsedMode?: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-    //     var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
-    //     pSubExpr._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    // }
 }

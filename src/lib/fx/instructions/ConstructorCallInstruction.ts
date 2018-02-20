@@ -2,7 +2,8 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXAnalyzedInstruction, IAFXExprInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -10,8 +11,8 @@ import { Effect } from "../Effect";
  * EMPTY_OPERATOR IdInstruction ExprInstruction ... ExprInstruction 
  */
 export class ConstructorCallInstruction extends ExprInstruction {
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null];
         this._eInstructionType = EAFXInstructionTypes.k_ConstructorCallInstruction;
     }
@@ -20,11 +21,11 @@ export class ConstructorCallInstruction extends ExprInstruction {
     _toFinalCode(): string {
         var sCode: string = "";
 
-        sCode += this._getInstructions()[0]._toFinalCode();
+        sCode += this.instructions[0]._toFinalCode();
         sCode += "(";
 
         for (var i: number = 1; i < this._nInstructions; i++) {
-            sCode += this._getInstructions()[i]._toFinalCode();
+            sCode += this.instructions[i]._toFinalCode();
 
             if (i !== this._nInstructions - 1) {
                 sCode += ",";
@@ -36,17 +37,17 @@ export class ConstructorCallInstruction extends ExprInstruction {
         return sCode;
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this._getInstructions();
+        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this.instructions;
         for (var i: number = 1; i < this._nInstructions; i++) {
-            pInstructionList[i]._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+            pInstructionList[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         for (var i: number = 1; i < this._nInstructions; i++) {
-            if (!(<IAFXExprInstruction>this._getInstructions()[i])._isConst()) {
+            if (!(<IAFXExprInstruction>this.instructions[i]).isConst()) {
                 return false;
             }
         }
@@ -54,13 +55,13 @@ export class ConstructorCallInstruction extends ExprInstruction {
         return true;
     }
 
-    _evaluate(): boolean {
-        if (!this._isConst()) {
+    evaluate(): boolean {
+        if (!this.isConst()) {
             return false;
         }
 
         var pRes: any = null;
-        var pJSTypeCtor: any = Effect.getExternalType(this._getType());
+        var pJSTypeCtor: any = Effect.getExternalType(this.type);
         var pArguments: any[] = new Array(this._nInstructions - 1);
 
         if (isNull(pJSTypeCtor)) {
@@ -68,20 +69,20 @@ export class ConstructorCallInstruction extends ExprInstruction {
         }
 
         try {
-            if (Effect.isScalarType(this._getType())) {
-                var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[1];
-                if (this._nInstructions > 2 || !pTestedInstruction._evaluate()) {
+            if (Effect.isScalarType(this.type)) {
+                var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
+                if (this._nInstructions > 2 || !pTestedInstruction.evaluate()) {
                     return false;
                 }
 
-                pRes = pJSTypeCtor(pTestedInstruction._getEvalValue());
+                pRes = pJSTypeCtor(pTestedInstruction.getEvalValue());
             }
             else {
                 for (var i: number = 1; i < this._nInstructions; i++) {
-                    var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[i];
+                    var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[i];
 
-                    if (pTestedInstruction._evaluate()) {
-                        pArguments[i - 1] = pTestedInstruction._getEvalValue();
+                    if (pTestedInstruction.evaluate()) {
+                        pArguments[i - 1] = pTestedInstruction.getEvalValue();
                     }
                     else {
                         return false;

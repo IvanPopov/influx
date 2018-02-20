@@ -1,4 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IParseNode } from "./../../idl/parser/IParser";
 import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXExprInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 
@@ -7,30 +8,30 @@ import { IMap } from "../../idl/IMap";
  * EMPTY_OPERATOR Instruction Instruction Instruction 
  */
 export class ConditionalExprInstruction extends ExprInstruction {
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null, null, null];
         this._eInstructionType = EAFXInstructionTypes.k_ConditionalExprInstruction;
     }
 
     _toFinalCode(): string {
         var sCode: string = "";
-        sCode += this._getInstructions()[0]._toFinalCode();
+        sCode += this.instructions[0]._toFinalCode();
         sCode += "?";
-        sCode += this._getInstructions()[1]._toFinalCode();
+        sCode += this.instructions[1]._toFinalCode();
         sCode += ":";
-        sCode += this._getInstructions()[2]._toFinalCode();
+        sCode += this.instructions[2]._toFinalCode();
         return sCode;
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        super._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+        super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
-    _isConst(): boolean {
-        return (<IAFXExprInstruction>this._getInstructions()[0])._isConst() &&
-            (<IAFXExprInstruction>this._getInstructions()[1])._isConst();
+    isConst(): boolean {
+        return (<IAFXExprInstruction>this.instructions[0]).isConst() &&
+            (<IAFXExprInstruction>this.instructions[1]).isConst();
     }
 }
 

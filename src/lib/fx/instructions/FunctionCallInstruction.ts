@@ -1,4 +1,5 @@
 import { EAFXInstructionTypes, IAFXFunctionDeclInstruction, IAFXIdExprInstruction, IAFXTypeUseInfoContainer, EVarUsedMode, IAFXExprInstruction, IAFXVariableDeclInstruction } from "../../idl/IAFXInstruction";
+import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { IdExprInstruction } from "./IdExprInstruction";
 
@@ -8,8 +9,8 @@ import { IdExprInstruction } from "./IdExprInstruction";
  * EMPTY_OPERATOR IdExprInstruction ExprInstruction ... ExprInstruction 
  */
 export class FunctionCallInstruction extends IdExprInstruction {
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = [null];
 		this._eInstructionType = EAFXInstructionTypes.k_FunctionCallInstruction;
 	}
@@ -17,10 +18,10 @@ export class FunctionCallInstruction extends IdExprInstruction {
 	_toFinalCode(): string {
 		var sCode: string = "";
 
-		sCode += this._getInstructions()[0]._toFinalCode();
+		sCode += this.instructions[0]._toFinalCode();
 		sCode += "(";
 		for (var i: number = 1; i < this._nInstructions; i++) {
-			sCode += this._getInstructions()[i]._toFinalCode();
+			sCode += this.instructions[i]._toFinalCode();
 			if (i !== this._nInstructions - 1) {
 				sCode += ","
 			}
@@ -30,27 +31,27 @@ export class FunctionCallInstruction extends IdExprInstruction {
 		return sCode;
 	}
 
-	getFunction(): IAFXFunctionDeclInstruction {
-		return <IAFXFunctionDeclInstruction>(<IAFXIdExprInstruction>this._pInstructionList[0])._getType()._getParent()._getParent();
+	get function(): IAFXFunctionDeclInstruction {
+		return <IAFXFunctionDeclInstruction>(<IAFXIdExprInstruction>this._pInstructionList[0]).type.parent.parent;
 	}
 
-	_addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+	addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
 		eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-		var pExprList: IAFXExprInstruction[] = <IAFXExprInstruction[]>this._getInstructions();
-		var pFunction: IAFXFunctionDeclInstruction = this.getFunction();
-		var pArguments: IAFXVariableDeclInstruction[] = <IAFXVariableDeclInstruction[]>pFunction._getArguments();
+		var pExprList: IAFXExprInstruction[] = <IAFXExprInstruction[]>this.instructions;
+		var pFunction: IAFXFunctionDeclInstruction = this.function;
+		var pArguments: IAFXVariableDeclInstruction[] = <IAFXVariableDeclInstruction[]>pFunction.arguments;
 
-		pExprList[0]._addUsedData(pUsedDataCollector, eUsedMode);
+		pExprList[0].addUsedData(pUsedDataCollector, eUsedMode);
 
 		for (var i: number = 0; i < pArguments.length; i++) {
-			if (pArguments[i]._getType()._hasUsage("out")) {
-				pExprList[i + 1]._addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
+			if (pArguments[i].type.hasUsage("out")) {
+				pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
 			}
-			else if (pArguments[i]._getType()._hasUsage("inout")) {
-				pExprList[i + 1]._addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+			else if (pArguments[i].type.hasUsage("inout")) {
+				pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
 			}
 			else {
-				pExprList[i + 1]._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+				pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
 			}
 		}
 	}

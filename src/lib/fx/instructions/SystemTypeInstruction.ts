@@ -5,284 +5,262 @@ import { Instruction } from "./Instruction";
 import { IdInstruction } from "./IdInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { VariableDeclInstruction } from "./VariableInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class SystemTypeInstruction extends Instruction implements IAFXTypeInstruction {
-	private _sName: string = "";
-	private _sRealName: string = "";
-	private _pElementType: IAFXTypeInstruction = null;
-	private _iLength: number = 1;
-	private _iSize: number = null;
-	private _pFieldDeclMap: IMap<IAFXVariableDeclInstruction> = null;
-	private _bIsArray: boolean = false;
-	private _bIsWritable: boolean = true;
-	private _bIsReadable: boolean = true;
-	private _pFieldNameList: string[] = null;
-	private _pWrapVariableType: IAFXVariableTypeInstruction = null;
-	private _bIsBuiltIn: boolean = true;
-	private _sDeclString: string = "";
-
-	constructor() {
-		super();
-		this._eInstructionType = EAFXInstructionTypes.k_SystemTypeInstruction;
-		this._pWrapVariableType = new VariableTypeInstruction();
-		this._pWrapVariableType._pushType(this);
-	}
-
-	toString(): string {
-		return this._getName() || this._getHash();
-	}
-
-	_toDeclString(): string {
-		return this._sDeclString;
-	}
-
-	_toFinalCode(): string {
-		return this._sRealName;
-	}
-
-	_isBuiltIn(): boolean {
-		return this._bIsBuiltIn;
-	}
-
-	_setBuiltIn(isBuiltIn: boolean): void {
-		this._bIsBuiltIn = isBuiltIn;
-	}
-
-	setDeclString(sDecl: string): void {
-		this._sDeclString = sDecl;
-	}
-
-	//-----------------------------------------------------------------//
-	//----------------------------SIMPLE TESTS-------------------------//
-	//-----------------------------------------------------------------//
-
-	_isBase(): boolean {
-		return true;
-	}
-
-	_isArray(): boolean {
-		return this._bIsArray;
-	}
-
-	_isNotBaseArray(): boolean {
-		return false;
-	}
-
-	_isComplex(): boolean {
-		return false;
-	}
-
-	_isEqual(pType: IAFXTypeInstruction): boolean {
-		return this._getHash() === pType._getHash();
-	}
-
-	_isStrongEqual(pType: IAFXTypeInstruction): boolean {
-		return this._getStrongHash() === pType._getStrongHash();
-	}
-
-	_isConst(): boolean {
-		return false;
-	}
-
-	_isSampler(): boolean {
-		return this._getName() === "sampler" ||
-			this._getName() === "sampler2D" ||
-			this._getName() === "samplerCUBE";
-	}
-
-	_isSamplerCube(): boolean {
-		return this._getName() === "samplerCUBE";
-	}
-
-	_isSampler2D(): boolean {
-		return this._getName() === "sampler" ||
-			this._getName() === "sampler2D";
-	}
-
-
-	_isWritable(): boolean {
-		return this._bIsWritable;
-	}
-
-	_isReadable(): boolean {
-		return this._bIsReadable;
-	}
-
-	_containArray(): boolean {
-		return false;
-	}
+    private _sName: string = "";
+    private _sRealName: string = "";
+    private _pElementType: IAFXTypeInstruction = null;
+    private _iLength: number = 1;
+    private _iSize: number = null;
+    private _pFieldDeclMap: IMap<IAFXVariableDeclInstruction> = null;
+    private _bIsArray: boolean = false;
+    private _bIsWritable: boolean = true;
+    private _bIsReadable: boolean = true;
+    private _pFieldNameList: string[] = null;
+    private _pWrapVariableType: IAFXVariableTypeInstruction = null;
+    private _bIsBuiltIn: boolean = true;
+    private _sDeclString: string = "";
+
+    constructor(pNode: IParseNode) {
+        super(pNode);
+        this._eInstructionType = EAFXInstructionTypes.k_SystemTypeInstruction;
+        this._pWrapVariableType = new VariableTypeInstruction(null);
+        this._pWrapVariableType.pushType(this);
+    }
+
+    toString(): string {
+        return this.name || this.hash;
+    }
+
+    toDeclString(): string {
+        return this._sDeclString;
+    }
+
+    _toFinalCode(): string {
+        return this._sRealName;
+    }
+
+    get builtIn(): boolean {
+        return this._bIsBuiltIn;
+    }
+
+    set builtIn(isBuiltIn: boolean) {
+        this._bIsBuiltIn = isBuiltIn;
+    }
+
+    get declString(): string {
+        return this.toDeclString();
+    }
+
+    set declString(sDecl: string) {
+        this._sDeclString = sDecl;
+    }
+
+    isBase(): boolean {
+        return true;
+    }
+
+    isArray(): boolean {
+        return this._bIsArray;
+    }
+
+    isNotBaseArray(): boolean {
+        return false;
+    }
+
+    isComplex(): boolean {
+        return false;
+    }
+
+    isEqual(pType: IAFXTypeInstruction): boolean {
+        return this.hash === pType.hash;
+    }
+
+    isStrongEqual(pType: IAFXTypeInstruction): boolean {
+        return this.strongHash === pType.strongHash;
+    }
+
+    isConst(): boolean {
+        return false;
+    }
+
+    isSampler(): boolean {
+        return this.name === "sampler" ||
+            this.name === "sampler2D" ||
+            this.name === "samplerCUBE";
+    }
+
+    isSamplerCube(): boolean {
+        return this.name === "samplerCUBE";
+    }
+
+    isSampler2D(): boolean {
+        return this.name === "sampler" ||
+            this.name === "sampler2D";
+    }
+
+
+    get writable(): boolean {
+        return this._bIsWritable;
+    }
+
+    get readable(): boolean {
+        return this._bIsReadable;
+    }
+
+    isContainArray(): boolean {
+        return false;
+    }
 
-	_containSampler(): boolean {
-		return false;
-	}
+    isContainSampler(): boolean {
+        return false;
+    }
 
-	_containPointer(): boolean {
-		return false;
-	}
+    isContainPointer(): boolean {
+        return false;
+    }
 
-	_containComplexType(): boolean {
-		return false;
-	}
+    isContainComplexType(): boolean {
+        return false;
+    }
 
-	//-----------------------------------------------------------------//
-	//----------------------------SET BASE TYPE INFO-------------------//
-	//-----------------------------------------------------------------//
 
-	_setName(sName: string): void {
-		this._sName = sName;
-	}
+    set name(sName: string) {
+        this._sName = sName;
+    }
 
-	setRealName(sRealName: string): void {
-		this._sRealName = sRealName;
-	}
+    set realName(sRealName: string) {
+        this._sRealName = sRealName;
+    }
 
-	setSize(iSize: number): void {
-		this._iSize = iSize;
-	}
+    set size(iSize: number) {
+        this._iSize = iSize;
+    }
 
-	_canWrite(isWritable: boolean): void {
-		this._bIsWritable = isWritable;
-	}
+    set writable(isWritable: boolean) {
+        this._bIsWritable = isWritable;
+    }
 
-	_canRead(isReadable: boolean): void {
-		this._bIsReadable = isReadable;
-	}
+    set readable(isReadable: boolean) {
+        this._bIsReadable = isReadable;
+    }
 
-	//-----------------------------------------------------------------//
-	//---------------------------INIT API------------------------------//
-	//-----------------------------------------------------------------//
+    addIndex(pType: IAFXTypeInstruction, iLength: number): void {
+        this._pElementType = pType;
+        this._iLength = iLength;
+        this._iSize = iLength * pType.size;
+        this._bIsArray = true;
+    }
 
-	addIndex(pType: IAFXTypeInstruction, iLength: number): void {
-		this._pElementType = pType;
-		this._iLength = iLength;
-		this._iSize = iLength * pType._getSize();
-		this._bIsArray = true;
-	}
+    addField(sFieldName: string, pType: IAFXTypeInstruction, isWrite: boolean = true,
+        sRealFieldName: string = sFieldName): void {
 
-	addField(sFieldName: string, pType: IAFXTypeInstruction, isWrite: boolean = true,
-		sRealFieldName: string = sFieldName): void {
+        var pField: IAFXVariableDeclInstruction = new VariableDeclInstruction(null);
+        var pFieldType: VariableTypeInstruction = new VariableTypeInstruction(null);
+        var pFieldId: IAFXIdInstruction = new IdInstruction(null);
 
-		var pField: IAFXVariableDeclInstruction = new VariableDeclInstruction();
-		var pFieldType: VariableTypeInstruction = new VariableTypeInstruction();
-		var pFieldId: IAFXIdInstruction = new IdInstruction();
+        pFieldType.pushType(pType);
+        pFieldType.wriable = (isWrite);
 
-		pFieldType._pushType(pType);
-		pFieldType._canWrite(isWrite);
+        pFieldId.name = (sFieldName);
+        pFieldId.realName = (sRealFieldName);
 
-		pFieldId._setName(sFieldName);
-		pFieldId._setRealName(sRealFieldName);
+        pField.push(pFieldType, true);
+        pField.push(pFieldId, true);
 
-		pField._push(pFieldType, true);
-		pField._push(pFieldId, true);
+        if (isNull(this._pFieldDeclMap)) {
+            this._pFieldDeclMap = <IMap<IAFXVariableDeclInstruction>>{};
+        }
 
-		if (isNull(this._pFieldDeclMap)) {
-			this._pFieldDeclMap = <IMap<IAFXVariableDeclInstruction>>{};
-		}
+        this._pFieldDeclMap[sFieldName] = pField;
 
-		this._pFieldDeclMap[sFieldName] = pField;
+        if (isNull(this._pFieldNameList)) {
+            this._pFieldNameList = [];
+        }
 
-		if (isNull(this._pFieldNameList)) {
-			this._pFieldNameList = [];
-		}
+        this._pFieldNameList.push(sFieldName);
+    }
 
-		this._pFieldNameList.push(sFieldName);
-	}
+    get name(): string {
+        return this._sName;
+    }
 
-	//-----------------------------------------------------------------//
-	//----------------------------GET TYPE INFO------------------------//
-	//-----------------------------------------------------------------//
+    get realName(): string {
+        return this._sRealName;
+    }
 
-	_getName(): string {
-		return this._sName;
-	}
+    get hash(): string {
+        return this._sRealName;
+    }
 
-	_getRealName(): string {
-		return this._sRealName;
-	}
+    get strongHash(): string {
+        return this._sName;
+    }
 
-	_getHash(): string {
-		return this._sRealName;
-	}
+    get size(): number {
+        return this._iSize;
+    }
 
-	_getStrongHash(): string {
-		return this._sName;
-	}
+    get baseType(): IAFXTypeInstruction {
+        return this;
+    }
 
-	_getSize(): number {
-		return this._iSize;
-	}
+    get variableType(): IAFXVariableTypeInstruction {
+        return this._pWrapVariableType;
+    }
 
-	_getBaseType(): IAFXTypeInstruction {
-		return this;
-	}
+    get arrayElementType(): IAFXTypeInstruction {
+        return this._pElementType;
+    }
 
-	getVariableType(): IAFXVariableTypeInstruction {
-		return this._pWrapVariableType;
-	}
+    get typeDecl(): IAFXTypeDeclInstruction {
+        if (this.builtIn) {
+            return null;
+        }
 
-	_getArrayElementType(): IAFXTypeInstruction {
-		return this._pElementType;
-	}
+        return <IAFXTypeDeclInstruction>this.parent;
+    }
 
-	_getTypeDecl(): IAFXTypeDeclInstruction {
-		if (this._isBuiltIn()) {
-			return null;
-		}
 
-		return <IAFXTypeDeclInstruction>this._getParent();
-	}
+    get length(): number {
+        return this._iLength;
+    }
 
+    hasField(sFieldName: string): boolean {
+        return isDef(this._pFieldDeclMap[sFieldName]);
+    }
 
-	_getLength(): number {
-		return this._iLength;
-	}
+    hasFieldWithSematic(sSemantic: string): boolean {
+        return false;
+    }
 
-	_hasField(sFieldName: string): boolean {
-		return isDef(this._pFieldDeclMap[sFieldName]);
-	}
+    hasAllUniqueSemantics(): boolean {
+        return false;
+    }
 
-	_hasFieldWithSematic(sSemantic: string): boolean {
-		return false;
-	}
+    hasFieldWithoutSemantic(): boolean {
+        return false;
+    }
 
-	_hasAllUniqueSemantics(): boolean {
-		return false;
-	}
+    getField(sFieldName: string): IAFXVariableDeclInstruction {
+        return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName] : null;
+    }
 
-	_hasFieldWithoutSemantic(): boolean {
-		return false;
-	}
+    getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
+        return null;
+    }
 
-	_getField(sFieldName: string): IAFXVariableDeclInstruction {
-		return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName] : null;
-	}
+    getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
+        return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName].type : null;
+    }
 
-	_getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
-		return null;
-	}
+    getFieldNameList(): string[] {
+        return this._pFieldNameList;
+    }
 
-	_getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
-		return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName]._getType() : null;
-	}
-
-	_getFieldNameList(): string[] {
-		return this._pFieldNameList;
-	}
-
-	//-----------------------------------------------------------------//
-	//----------------------------SYSTEM-------------------------------//
-	//-----------------------------------------------------------------//
-
-	_clone(pRelationMap?: IMap<IAFXInstruction>): SystemTypeInstruction {
-		return this;
-	}
-
-	_blend(pType: IAFXTypeInstruction, eMode: EAFXBlendMode): IAFXTypeInstruction {
-		if (this._isStrongEqual(pType)) {
-			return this;
-		}
-
-		return null;
-	}
+    _clone(pRelationMap?: IMap<IAFXInstruction>): SystemTypeInstruction {
+        return this;
+    }
 }
 

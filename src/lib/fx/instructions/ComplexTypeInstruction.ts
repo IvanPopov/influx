@@ -5,7 +5,8 @@ import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
 import { logger } from "../../logger"
 import { EEffectErrors } from "../../idl/EEffectErrors";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstruction {
     private _sName: string = "";
@@ -26,20 +27,19 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
 
     private _isContainArray: boolean = false;
     private _isContainSampler: boolean = false;
-    private _isContainPointer: boolean = false;
     private _isContainComplexType: boolean = false;
 
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = null;
         this._eInstructionType = EAFXInstructionTypes.k_ComplexTypeInstruction;
     }
 
     toString(): string {
-        return this._getName() || this._getHash();
+        return this.name || this.hash;
     }
 
-    _toDeclString(): string {
+    toDeclString(): string {
         var sCode: string = "struct " + this._sRealName + "{";
 
         for (var i: number = 0; i < this._pFieldDeclList.length; i++) {
@@ -55,107 +55,82 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return this._sRealName;
     }
 
-    _isBuiltIn(): boolean {
+    get builtIn(): boolean {
         return false;
     }
 
-    _setBuiltIn(isBuiltIn: boolean): void {
-    }
-
-    //-----------------------------------------------------------------//
-    //----------------------------SIMPLE TESTS-------------------------//
-    //-----------------------------------------------------------------//
-
-    _isBase(): boolean {
+    isBase(): boolean {
         return false;
     }
 
-    _isArray(): boolean {
+    isArray(): boolean {
         return false;
     }
 
-    _isNotBaseArray(): boolean {
+    isNotBaseArray(): boolean {
         return false;
     }
 
-    _isComplex(): boolean {
+    isComplex(): boolean {
         return true;
     }
 
-    _isEqual(pType: IAFXTypeInstruction): boolean {
-        return this._getHash() === pType._getHash();
+    isEqual(pType: IAFXTypeInstruction): boolean {
+        return this.hash === pType.hash;
     }
 
-    _isStrongEqual(pType: IAFXTypeInstruction): boolean {
-        return this._getStrongHash() === pType._getStrongHash();
+    isStrongEqual(pType: IAFXTypeInstruction): boolean {
+        return this.strongHash === pType.strongHash;
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         return false;
     }
 
-    _isSampler(): boolean {
+    isSampler(): boolean {
         return false;
     }
 
-    _isSamplerCube(): boolean {
+    isSamplerCube(): boolean {
         return false;
     }
 
-    _isSampler2D(): boolean {
+    isSampler2D(): boolean {
         return false;
     }
 
-    _isWritable(): boolean {
+    get writable(): boolean {
         return true;
     }
 
-    _isReadable(): boolean {
+    get readable(): boolean {
         return true;
     }
 
-    _containArray(): boolean {
+    isContainArray(): boolean {
         return this._isContainArray;
     }
 
-    _containSampler(): boolean {
+    isContainSampler(): boolean {
         return this._isContainSampler;
     }
 
-    _containPointer(): boolean {
-        return this._isContainPointer;
-    }
-
-    _containComplexType(): boolean {
+    isContainComplexType(): boolean {
         return this._isContainComplexType;
     }
 
-    //-----------------------------------------------------------------//
-    //----------------------------SET BASE TYPE INFO-------------------//
-    //-----------------------------------------------------------------//
-
-    _setName(sName: string): void {
+    set name(sName: string) {
         this._sName = sName;
         this._sRealName = sName;
     }
 
-    setRealName(sRealName: string): void {
+    set realName(sRealName: string) {
         this._sRealName = sRealName;
     }
 
-    setSize(iSize: number): void {
+    set size(iSize: number) {
         this._iSize = iSize;
     }
-
-    _canWrite(isWritable: boolean): void {
-    }
-
-    _canRead(isWritable: boolean): void {
-    }
-
-    //-----------------------------------------------------------------//
-    //----------------------------INIT API-----------------------------//
-    //-----------------------------------------------------------------//
 
     addField(pVariable: IAFXVariableDeclInstruction): void {
         if (isNull(this._pFieldDeclMap)) {
@@ -167,11 +142,11 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
             this._pFieldDeclList = [];
         }
 
-        var sVarName: string = pVariable._getName();
+        var sVarName: string = pVariable.name;
         this._pFieldDeclMap[sVarName] = pVariable;
 
         if (this._iSize !== Instruction.UNDEFINE_SIZE) {
-            var iSize: number = pVariable._getType()._getSize();
+            var iSize: number = pVariable.type.size;
             if (iSize !== Instruction.UNDEFINE_SIZE) {
                 this._iSize += iSize;
             }
@@ -186,50 +161,43 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
             this._pFieldDeclList.push(pVariable);
         }
 
-        var pType: IAFXVariableTypeInstruction = pVariable._getType();
+        var pType: IAFXVariableTypeInstruction = pVariable.type;
         //pType._markAsField();
 
-        if (pType._isNotBaseArray() || pType._containArray()) {
+        if (pType.isNotBaseArray() || pType.isContainArray()) {
             this._isContainArray = true;
         }
 
-        if (Effect.isSamplerType(pType) || pType._containSampler()) {
+        if (Effect.isSamplerType(pType) || pType.isContainSampler()) {
             this._isContainSampler = true;
         }
 
-        if (pType._isPointer() || pType._containPointer()) {
-            this._isContainPointer = true;
-        }
-
-        if (pType._isComplex()) {
+        if (pType.isComplex()) {
             this._isContainComplexType = true;
         }
     }
 
     addFields(pFieldCollector: IAFXInstruction, isSetParent: boolean = true): void {
-        this._pFieldDeclList = <IAFXVariableDeclInstruction[]>(pFieldCollector._getInstructions());
+        this._pFieldDeclList = <IAFXVariableDeclInstruction[]>(pFieldCollector.instructions);
 
         for (var i: number = 0; i < this._pFieldDeclList.length; i++) {
             this.addField(this._pFieldDeclList[i]);
-            this._pFieldDeclList[i]._setParent(this);
+            this._pFieldDeclList[i].parent = (this);
         }
 
         this.calculatePaddings();
     }
 
-    //-----------------------------------------------------------------//
-    //----------------------------GET TYPE INFO------------------------//
-    //-----------------------------------------------------------------//
 
-    _getName(): string {
+    get name(): string {
         return this._sName;
     }
 
-    _getRealName(): string {
+    get realName(): string {
         return this._sRealName;
     }
 
-    _getHash(): string {
+    get hash(): string {
         if (this._sHash === "") {
             this.calcHash();
         }
@@ -237,7 +205,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return this._sHash;
     }
 
-    _getStrongHash(): string {
+    get strongHash(): string {
         if (this._sStrongHash === "") {
             this.calcStrongHash();
         }
@@ -245,11 +213,11 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return this._sStrongHash;
     }
 
-    _hasField(sFieldName: string): boolean {
+    hasField(sFieldName: string): boolean {
         return isDef(this._pFieldDeclMap[sFieldName]);
     }
 
-    _hasFieldWithSematic(sSemantic: string): boolean {
+    hasFieldWithSematic(sSemantic: string): boolean {
         if (isNull(this._pFieldDeclBySemanticMap)) {
             this.analyzeSemantics();
         }
@@ -257,88 +225,84 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return isDef(this._pFieldDeclBySemanticMap[sSemantic]);
     }
 
-    _hasAllUniqueSemantics(): boolean {
+    hasAllUniqueSemantics(): boolean {
         if (isNull(this._pFieldDeclBySemanticMap)) {
             this.analyzeSemantics();
         }
         return this._bHasAllUniqueSemantics;
     }
 
-    _hasFieldWithoutSemantic(): boolean {
+    hasFieldWithoutSemantic(): boolean {
         if (isNull(this._pFieldDeclBySemanticMap)) {
             this.analyzeSemantics();
         }
         return this._bHasFieldWithoutSemantic;
     }
 
-    _getField(sFieldName: string): IAFXVariableDeclInstruction {
-        if (!this._hasField(sFieldName)) {
+    getField(sFieldName: string): IAFXVariableDeclInstruction {
+        if (!this.hasField(sFieldName)) {
             return null;
         }
 
         return this._pFieldDeclMap[sFieldName];
     }
 
-    _getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
-        if (!this._hasFieldWithSematic(sSemantic)) {
+    getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
+        if (!this.hasFieldWithSematic(sSemantic)) {
             return null;
         }
 
         return this._pFieldDeclBySemanticMap[sSemantic];
     }
 
-    _getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
-        return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName]._getType() : null;
+    getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
+        return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName].type : null;
     }
 
-    _getFieldNameList(): string[] {
+    getFieldNameList(): string[] {
         return this._pFieldNameList;
     }
 
-    _getSize(): number {
+    get size(): number {
         if (this._iSize === Instruction.UNDEFINE_SIZE) {
-            this._iSize = this._calcSize();
+            this._iSize = this.calcSize();
         }
         return this._iSize;
     }
 
-    _getBaseType(): IAFXTypeInstruction {
+    get baseType(): IAFXTypeInstruction {
         return this;
     }
 
-    _getArrayElementType(): IAFXTypeInstruction {
+    get arrayElementType(): IAFXTypeInstruction {
         return null;
     }
 
-    _getTypeDecl(): IAFXTypeDeclInstruction {
-        return <IAFXTypeDeclInstruction>this._getParent();
+    get typeDecl(): IAFXTypeDeclInstruction {
+        return <IAFXTypeDeclInstruction>this.parent;
     }
 
-    _getLength(): number {
+    get length(): number {
         return 0;
     }
 
-    _getFieldDeclList(): IAFXVariableDeclInstruction[] {
+    getFieldDeclList(): IAFXVariableDeclInstruction[] {
         return this._pFieldDeclList;
     }
 
-    //-----------------------------------------------------------------//
-    //----------------------------SYSTEM-------------------------------//
-    //-----------------------------------------------------------------//
-
     _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): ComplexTypeInstruction {
         if (this._pParentInstruction === null ||
-            !isDef(pRelationMap[this._pParentInstruction._getInstructionID()]) ||
-            pRelationMap[this._pParentInstruction._getInstructionID()] === this._pParentInstruction) {
-            //pRelationMap[this._getInstructionID()] = this;
+            !isDef(pRelationMap[this._pParentInstruction.instructionID]) ||
+            pRelationMap[this._pParentInstruction.instructionID] === this._pParentInstruction) {
+            //pRelationMap[this.instructionID] = this;
             return this;
         }
 
         var pClone: ComplexTypeInstruction = <ComplexTypeInstruction>super._clone(pRelationMap);
 
-        pClone._setCloneName(this._sName, this._sRealName);
-        pClone._setCloneHash(this._sHash, this._sStrongHash);
-        pClone._setCloneContain(this._isContainArray, this._isContainSampler);
+        pClone.setCloneName(this._sName, this._sRealName);
+        pClone.setCloneHash(this._sHash, this._sStrongHash);
+        pClone.setCloneContain(this._isContainArray, this._isContainSampler);
 
         var pFieldDeclList: IAFXVariableDeclInstruction[] = new Array(this._pFieldDeclList.length);
         var pFieldNameList: string[] = new Array(this._pFieldNameList.length);
@@ -346,143 +310,47 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
 
         for (var i: number = 0; i < this._pFieldDeclList.length; i++) {
             let pCloneVar: IAFXVariableDeclInstruction = this._pFieldDeclList[i]._clone(pRelationMap);
-            var sVarName: string = pCloneVar._getName();
+            var sVarName: string = pCloneVar.name;
 
             pFieldDeclList[i] = pCloneVar;
             pFieldNameList[i] = sVarName;
             pFieldDeclMap[sVarName] = pCloneVar;
         }
 
-        pClone._setCloneFields(pFieldDeclList, pFieldNameList,
+        pClone.setCloneFields(pFieldDeclList, pFieldNameList,
             pFieldDeclMap);
-        pClone.setSize(this._iSize);
+        pClone.size =(this._iSize);
 
         return pClone;
     }
 
-    public _blend(pType: IAFXTypeInstruction, eMode: EAFXBlendMode): IAFXTypeInstruction {
-        if (pType === this) {
-            return this;
-        }
-
-        if (eMode === EAFXBlendMode.k_TypeDecl) {
-            return null;
-        }
-
-        if (eMode === EAFXBlendMode.k_Uniform || eMode === EAFXBlendMode.k_Attribute) {
-            if (this._hasFieldWithoutSemantic() || pType._hasFieldWithoutSemantic()) {
-                return null;
-            }
-        }
-
-        var pFieldList: IAFXVariableDeclInstruction[] = this._pFieldDeclList;
-        var pBlendType: ComplexTypeInstruction = new ComplexTypeInstruction();
-        var pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{};
-
-        if (isNull(pFieldList)) {
-            logger.log(this, pType);
-        }
-
-        for (var i: number = 0; i < pFieldList.length; i++) {
-            var pField: IAFXVariableDeclInstruction = pFieldList[i];
-            var pBlendField: IAFXVariableDeclInstruction = null;
-            var sFieldName: string = pField._getName();
-            var sFieldSemantic: string = pField._getSemantic();
-
-            if (eMode === EAFXBlendMode.k_Shared) {
-                if (pType._hasField(sFieldName)) {
-                    pBlendField = pField._blend(pType._getField(sFieldName), eMode);
-                }
-                else {
-                    pBlendField = pField._clone(pRelationMap);
-                }
-            }
-            else if (eMode === EAFXBlendMode.k_Attribute ||
-                eMode === EAFXBlendMode.k_Uniform ||
-                eMode === EAFXBlendMode.k_VertexOut) {
-
-                if (pType._hasFieldWithSematic(sFieldSemantic)) {
-                    pBlendField = pField._blend(pType._getFieldBySemantic(sFieldSemantic), eMode);
-                }
-                else {
-                    pBlendField = pField._clone(pRelationMap);
-                }
-
-                if (!isNull(pBlendField)) {
-                    pBlendField._getNameId()._setName(sFieldSemantic);
-                    pBlendField._getNameId()._setRealName(sFieldSemantic);
-                }
-            }
-
-            if (isNull(pBlendField)) {
-                return null;
-            }
-
-            pBlendType.addField(pBlendField);
-        }
-
-        pFieldList = (<ComplexTypeInstruction>pType)._getFieldDeclList();
-
-        for (var i: number = 0; i < pFieldList.length; i++) {
-            var pField: IAFXVariableDeclInstruction = pFieldList[i];
-            var pBlendField: IAFXVariableDeclInstruction = null;
-            var sFieldName: string = pField._getName();
-            var sFieldSemantic: string = pField._getSemantic();
-
-            if (eMode === EAFXBlendMode.k_Shared) {
-                if (!this._hasField(sFieldName)) {
-                    pBlendField = pField._clone(pRelationMap);
-                }
-            }
-            else if (eMode === EAFXBlendMode.k_Attribute ||
-                eMode === EAFXBlendMode.k_Uniform ||
-                eMode === EAFXBlendMode.k_VertexOut) {
-
-                if (!this._hasFieldWithSematic(sFieldSemantic)) {
-                    pBlendField = pField._clone(pRelationMap);
-                    pBlendField._getNameId()._setName(sFieldSemantic);
-                    pBlendField._getNameId()._setRealName(sFieldSemantic);
-                }
-            }
-
-            if (!isNull(pBlendField)) {
-                pBlendType.addField(pBlendField);
-            }
-        }
-
-        pBlendType._setName(this._getName());
-        pBlendType.setRealName(this._getRealName());
-
-        return pBlendType;
-    }
-
-    public _setCloneName(sName: string, sRealName: string): void {
+    public setCloneName(sName: string, sRealName: string): void {
         this._sName = sName;
         this._sRealName = sRealName;
     }
 
-    public _setCloneHash(sHash: string, sStrongHash: string): void {
+    public setCloneHash(sHash: string, sStrongHash: string): void {
         this._sHash = sHash;
         this._sStrongHash = sStrongHash;
     }
 
-    public _setCloneContain(isContainArray: boolean, isContainSampler: boolean): void {
+    public setCloneContain(isContainArray: boolean, isContainSampler: boolean): void {
         this._isContainArray = isContainArray;
         this._isContainSampler = isContainSampler;
     }
 
-    public _setCloneFields(pFieldDeclList: IAFXVariableDeclInstruction[], pFieldNameList: string[],
+    public setCloneFields(pFieldDeclList: IAFXVariableDeclInstruction[], pFieldNameList: string[],
         pFieldDeclMap: IMap<IAFXVariableDeclInstruction>): void {
         this._pFieldDeclList = pFieldDeclList;
         this._pFieldNameList = pFieldNameList;
         this._pFieldDeclMap = pFieldDeclMap;
     }
 
-    public _calcSize(): number {
+    public calcSize(): number {
         let iSize: number = 0;
 
         for (let i: number = 0; i < this._pFieldDeclList.length; i++) {
-            let iFieldSize: number = this._pFieldDeclList[i]._getType()._getSize();
+            let iFieldSize: number = this._pFieldDeclList[i].type.size;
 
             if (iFieldSize === Instruction.UNDEFINE_SIZE) {
                 iSize = Instruction.UNDEFINE_SIZE;
@@ -500,7 +368,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         let sHash: string = "{";
 
         for (let i: number = 0; i < this._pFieldDeclList.length; i++) {
-            sHash += this._pFieldDeclList[i]._getType()._getHash() + ";";
+            sHash += this._pFieldDeclList[i].type.hash + ";";
         }
 
         sHash += "}";
@@ -512,7 +380,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         let sStrongHash: string = "{";
 
         for (let i: number = 0; i < this._pFieldDeclList.length; i++) {
-            sStrongHash += this._pFieldDeclList[i]._getType()._getStrongHash() + ";";
+            sStrongHash += this._pFieldDeclList[i].type.strongHash + ";";
         }
 
         sStrongHash += "}";
@@ -525,7 +393,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
 
         for (let i: number = 0; i < this._pFieldDeclList.length; i++) {
             let pVar: IAFXVariableDeclInstruction = this._pFieldDeclList[i];
-            let sSemantic: string = pVar._getSemantic();
+            let sSemantic: string = pVar.semantics;
 
             if (sSemantic === "") {
                 this._bHasFieldWithoutSemantic = true;
@@ -537,9 +405,9 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
 
             this._pFieldDeclBySemanticMap[sSemantic] = pVar;
 
-            this._bHasFieldWithoutSemantic = this._bHasFieldWithoutSemantic || pVar._getType()._hasFieldWithoutSemantic();
-            if (this._bHasAllUniqueSemantics && pVar._getType()._isComplex()) {
-                this._bHasAllUniqueSemantics = pVar._getType()._hasAllUniqueSemantics();
+            this._bHasFieldWithoutSemantic = this._bHasFieldWithoutSemantic || pVar.type.hasFieldWithoutSemantic();
+            if (this._bHasAllUniqueSemantics && pVar.type.isComplex()) {
+                this._bHasAllUniqueSemantics = pVar.type.hasAllUniqueSemantics();
             }
         }
 
@@ -549,15 +417,15 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         let iPadding: number = 0;
 
         for (let i: number = 0; i < this._pFieldDeclList.length; i++) {
-            let pVarType: IAFXVariableTypeInstruction = this._pFieldDeclList[i]._getType();
-            let iVarSize: number = pVarType._getSize();
+            let pVarType: IAFXVariableTypeInstruction = this._pFieldDeclList[i].type;
+            let iVarSize: number = pVarType.size;
 
             if (iVarSize === Instruction.UNDEFINE_SIZE) {
-                this._setError(EEffectErrors.CANNOT_CALCULATE_PADDINGS, { typeName: this._getName() });
+                this._setError(EEffectErrors.CANNOT_CALCULATE_PADDINGS, { typeName: this.name });
                 return;
             }
 
-            pVarType._setPadding(iPadding);
+            pVarType.setPadding(iPadding);
             iPadding += iVarSize;
         }
     }

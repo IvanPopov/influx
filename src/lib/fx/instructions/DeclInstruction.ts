@@ -15,63 +15,63 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         this._eInstructionType = EAFXInstructionTypes.k_DeclInstruction;
     }
 
-    _setSemantic(sSemantic: string): void {
+    set semantics(sSemantic: string) {
         this._sSemantic = sSemantic;
     }
 
-    _setAnnotation(pAnnotation: IAFXAnnotationInstruction): void {
+    set annotation(pAnnotation: IAFXAnnotationInstruction) {
         this._pAnnotation = pAnnotation;
     }
 
-    _getName(): string {
+    get name(): string {
         return "";
     }
 
-    _getRealName(): string {
+    get realName(): string {
         return "";
     }
 
-    _getNameId(): IAFXIdInstruction {
+    get nameID(): IAFXIdInstruction {
         return null;
     }
 
-    _getSemantic(): string {
+    get semantics(): string {
         return this._sSemantic;
     }
 
-    _isBuiltIn(): boolean {
+    get builtIn(): boolean {
         return this._bIsBuiltIn;
     }
 
-    _setBuiltIn(isBuiltIn: boolean): void {
+    set builtIn(isBuiltIn: boolean) {
         this._bIsBuiltIn = isBuiltIn;
     }
 
-    _isForAll(): boolean {
+    isForAll(): boolean {
         return this._bForVertex && this._bForPixel;
     }
-    _isForPixel(): boolean {
+    isForPixel(): boolean {
         return this._bForPixel;
     }
-    _isForVertex(): boolean {
+    isForVertex(): boolean {
         return this._bForVertex;
     }
 
-    public _setForAll(canUse: boolean): void {
+    public setForAll(canUse: boolean): void {
         this._bForVertex = canUse;
         this._bForPixel = canUse;
     }
-    public _setForPixel(canUse: boolean): void {
+    public setForPixel(canUse: boolean): void {
         this._bForPixel = canUse;
     }
-    public _setForVertex(canUse: boolean): void {
+    public setForVertex(canUse: boolean): void {
         this._bForVertex = canUse;
     }
 
     public _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXDeclInstruction {
         let pClonedInstruction: IAFXDeclInstruction = <IAFXDeclInstruction>(super._clone(pRelationMap));
-        pClonedInstruction._setSemantic(this._sSemantic);
-        pClonedInstruction._setAnnotation(this._pAnnotation);
+        pClonedInstruction.semantics = (this._sSemantic);
+        pClonedInstruction.annotation = (this._pAnnotation);
         return pClonedInstruction;
     }
 }

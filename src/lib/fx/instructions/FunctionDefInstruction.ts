@@ -1,8 +1,9 @@
 import { DeclInstruction } from "./DeclInstruction";
+import { IParseNode } from "./../../idl/parser/IParser";
 import { IAFXVariableDeclInstruction, IAFXVariableTypeInstruction, IAFXIdInstruction, EAFXInstructionTypes, IAFXTypeInstruction, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
 
 /**
  * Represent type func(...args)[:Semantic]
@@ -24,10 +25,8 @@ export class FunctionDefInstruction extends DeclInstruction {
 
     private _bShaderDef: boolean = false;
 
-    //private _sHash: string = "";
-
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = null;
         this._pParameterList = [];
         this._eInstructionType = EAFXInstructionTypes.k_FunctionDefInstruction;
@@ -36,7 +35,7 @@ export class FunctionDefInstruction extends DeclInstruction {
     _toFinalCode(): string {
         var sCode: string = "";
 
-        if (!this.isShaderDef()) {
+        if (!this.shaderDef) {
 
             sCode += this._pReturnType._toFinalCode();
             sCode += " " + this._pFunctionName._toFinalCode();
@@ -59,118 +58,74 @@ export class FunctionDefInstruction extends DeclInstruction {
         return sCode;
     }
 
-    _setType(pType: IAFXTypeInstruction): void {
-        this.setReturnType(<IAFXVariableTypeInstruction>pType);
+    set type(pType: IAFXTypeInstruction) {
+        this.returnType = (<IAFXVariableTypeInstruction>pType);
     }
 
-    _getType(): IAFXTypeInstruction {
-        return <IAFXTypeInstruction>this.getReturnType();
+    get type(): IAFXTypeInstruction {
+        return <IAFXTypeInstruction>this.returnType;
     }
 
-    setReturnType(pReturnType: IAFXVariableTypeInstruction): boolean {
+    set returnType(pReturnType: IAFXVariableTypeInstruction) {
         this._pReturnType = pReturnType;
-        pReturnType._setParent(this);
-        return true;
+        pReturnType.parent = (this);
     }
-    getReturnType(): IAFXVariableTypeInstruction {
+
+    get returnType(): IAFXVariableTypeInstruction {
         return this._pReturnType;
     }
 
-    setFunctionName(pNameId: IAFXIdInstruction): boolean {
+    set functionName(pNameId: IAFXIdInstruction) {
         this._pFunctionName = pNameId;
-        pNameId._setParent(this);
-        return true;
+        pNameId.parent = (this);
     }
 
-    _getName(): string {
-        return this._pFunctionName._getName();
+    get name(): string {
+        return this._pFunctionName.name;
     }
 
-    _getRealName(): string {
-        return this._pFunctionName._getRealName();
+    get realName(): string {
+        return this._pFunctionName.realName;
     }
 
-    _getNameId(): IAFXIdInstruction {
+    get nameId(): IAFXIdInstruction {
         return this._pFunctionName;
     }
 
-    getArguments(): IAFXVariableDeclInstruction[] {
+    get arguments(): IAFXVariableDeclInstruction[] {
         return this._pParameterList;
     }
 
-    getNumNeededArguments(): number {
+    get numNeededArguments(): number {
         return this._nParamsNeeded;
     }
 
-    markAsShaderDef(isShaderDef: boolean): void {
+    set shaderDef(isShaderDef: boolean) {
         this._bShaderDef = isShaderDef;
     }
 
-    isShaderDef(): boolean {
+    get shaderDef(): boolean {
         return this._bShaderDef;
     }
 
     addParameter(pParameter: IAFXVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
         if (this._pParameterList.length > this._nParamsNeeded &&
-            !pParameter._hasInitializer()) {
+            !pParameter.initializeExpr) {
 
             this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
                 {
-                    funcName: this._pFunctionName._getName(),
-                    varName: pParameter._getName()
+                    funcName: this._pFunctionName.name,
+                    varName: pParameter.name
                 });
             return false;
         }
 
-        var pParameterType: IAFXVariableTypeInstruction = pParameter._getType();
-
-        if (pParameterType._isPointer() || pParameterType._containPointer()) {
-            if (pParameterType._hasUsage("uniform") ||
-                pParameterType._hasUsage("out") ||
-                pParameterType._hasUsage("inout")) {
-
-                this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_USAGE,
-                    {
-                        funcName: this._pFunctionName._getName(),
-                        varName: pParameter._getName()
-                    });
-                return false;
-            }
-
-            this._isAnalyzedForVertexUsage = false;
-            this._isAnalyzedForPixelUsage = true;
-
-            this._setForPixel(false);
-            this._bCanUsedAsFunction = false;
-            pParameterType._setVideoBufferInDepth();
-        }
-        else if (!isStrictModeOn) {
-
-            if (pParameterType._isComplex() &&
-                !pParameterType._hasFieldWithoutSemantic() &&
-                pParameterType._hasAllUniqueSemantics()) {
-
-                if (pParameter._getSemantic() === "" &&
-                    pParameterType._hasAllUniqueSemantics() &&
-                    !pParameterType._hasFieldWithoutSemantic()) {
-
-                    pParameterType._addPointIndexInDepth();
-                }
-                else {
-                    pParameterType._addPointIndex(false);
-                    pParameterType._setVideoBufferInDepth();
-                }
-            }
-            else if (pParameter._getSemantic() !== "") {
-                pParameterType._addPointIndex(false);
-                pParameterType._setVideoBufferInDepth();
-            }
-        }
+        var pParameterType: IAFXVariableTypeInstruction = pParameter.type;
 
         this._pParameterList.push(pParameter);
-        pParameter._setParent(this);
+        pParameter.parent = (this);
 
-        if (!pParameter._hasInitializer()) {
+        if (!pParameter.initializeExpr) {
             this._nParamsNeeded++;
         }
 
@@ -188,8 +143,8 @@ export class FunctionDefInstruction extends DeclInstruction {
     _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): FunctionDefInstruction {
         var pClone: FunctionDefInstruction = <FunctionDefInstruction>super._clone(pRelationMap);
 
-        pClone.setFunctionName(<IAFXIdInstruction>this._pFunctionName._clone(pRelationMap));
-        pClone.setReturnType(<IAFXVariableTypeInstruction>this.getReturnType()._clone(pRelationMap));
+        pClone.functionName = (<IAFXIdInstruction>this._pFunctionName._clone(pRelationMap));
+        pClone.returnType = (<IAFXVariableTypeInstruction>this.returnType._clone(pRelationMap));
 
         for (var i: number = 0; i < this._pParameterList.length; i++) {
             pClone.addParameter(this._pParameterList[i]._clone(pRelationMap));
@@ -200,20 +155,20 @@ export class FunctionDefInstruction extends DeclInstruction {
             pShaderParams.push(this._pParamListForShaderInput[i]._clone(pRelationMap));
         }
 
-        pClone._setShaderParams(pShaderParams, this._bIsComplexShaderInput);
-        pClone._setAnalyzedInfo(this._isAnalyzedForVertexUsage,
+        pClone.setShaderParams(pShaderParams, this._bIsComplexShaderInput);
+        pClone.setAnalyzedInfo(this._isAnalyzedForVertexUsage,
             this._isAnalyzedForPixelUsage,
             this._bCanUsedAsFunction);
 
         return pClone;
     }
 
-    _setShaderParams(pParamList: IAFXVariableDeclInstruction[], isComplexInput: boolean): void {
+    setShaderParams(pParamList: IAFXVariableDeclInstruction[], isComplexInput: boolean): void {
         this._pParamListForShaderInput = pParamList;
         this._bIsComplexShaderInput = isComplexInput;
     }
 
-    _setAnalyzedInfo(isAnalyzedForVertexUsage: boolean,
+    setAnalyzedInfo(isAnalyzedForVertexUsage: boolean,
         isAnalyzedForPixelUsage: boolean,
         bCanUsedAsFunction: boolean): void {
         this._isAnalyzedForVertexUsage = isAnalyzedForVertexUsage;
@@ -221,12 +176,12 @@ export class FunctionDefInstruction extends DeclInstruction {
         this._bCanUsedAsFunction = bCanUsedAsFunction;
     }
 
-    _getStringDef(): string {
+    get stringDef(): string {
         if (this._sDefinition === "") {
-            this._sDefinition = this._pReturnType._getHash() + " " + this._getName() + "(";
+            this._sDefinition = this._pReturnType.hash + " " + this.name + "(";
 
             for (var i: number = 0; i < this._pParameterList.length; i++) {
-                this._sDefinition += this._pParameterList[i]._getType()._getHash() + ",";
+                this._sDefinition += this._pParameterList[i].type.hash + ",";
             }
 
             this._sDefinition += ")";
@@ -235,13 +190,13 @@ export class FunctionDefInstruction extends DeclInstruction {
         return this._sDefinition;
     }
 
-    _canUsedAsFunction(): boolean {
+    canUsedAsFunction(): boolean {
         return this._bCanUsedAsFunction;
     }
 
-    _checkForVertexUsage(): boolean {
+    checkForVertexUsage(): boolean {
         if (this._isAnalyzedForVertexUsage) {
-            return this._isForVertex();
+            return this.isForVertex();
         }
 
         this._isAnalyzedForVertexUsage = true;
@@ -250,24 +205,24 @@ export class FunctionDefInstruction extends DeclInstruction {
 
         isGood = this.checkReturnTypeForVertexUsage();
         if (!isGood) {
-            this._setForVertex(false);
+            this.setForVertex(false);
             return false;
         }
 
         isGood = this.checkArgumentsForVertexUsage();
         if (!isGood) {
-            this._setForVertex(false);
+            this.setForVertex(false);
             return false;
         }
 
-        this._setForVertex(true);
+        this.setForVertex(true);
 
         return true;
     }
 
-    _checkForPixelUsage(): boolean {
+    checkForPixelUsage(): boolean {
         if (this._isAnalyzedForPixelUsage) {
-            return this._isForPixel();
+            return this.isForPixel();
         }
 
         this._isAnalyzedForPixelUsage = true;
@@ -276,17 +231,17 @@ export class FunctionDefInstruction extends DeclInstruction {
 
         isGood = this.checkReturnTypeForPixelUsage();
         if (!isGood) {
-            this._setForPixel(false);
+            this.setForPixel(false);
             return false;
         }
 
         isGood = this.checkArgumentsForPixelUsage();
         if (!isGood) {
-            this._setForPixel(false);
+            this.setForPixel(false);
             return false;
         }
 
-        this._setForPixel(true);
+        this.setForPixel(true);
 
         return true;
     }
@@ -295,17 +250,17 @@ export class FunctionDefInstruction extends DeclInstruction {
         var pReturnType: IAFXVariableTypeInstruction = this._pReturnType;
         var isGood: boolean = true;
 
-        if (pReturnType._isEqual(Effect.getSystemType("void"))) {
+        if (pReturnType.isEqual(Effect.getSystemType("void"))) {
             return true;
         }
 
-        if (pReturnType._isComplex()) {
-            isGood = !pReturnType._hasFieldWithoutSemantic();
+        if (pReturnType.isComplex()) {
+            isGood = !pReturnType.hasFieldWithoutSemantic();
             if (!isGood) {
                 return false;
             }
 
-            isGood = pReturnType._hasAllUniqueSemantics();
+            isGood = pReturnType.hasAllUniqueSemantics();
             if (!isGood) {
                 return false;
             }
@@ -315,17 +270,12 @@ export class FunctionDefInstruction extends DeclInstruction {
             // 	return false;
             // }
 
-            isGood = !pReturnType._containSampler();
+            isGood = !pReturnType.isContainSampler();
             if (!isGood) {
                 return false;
             }
 
-            isGood = !pReturnType._containPointer() && !pReturnType._isPointer();
-            if (!isGood) {
-                return false;
-            }
-
-            isGood = !pReturnType._containComplexType();
+            isGood = !pReturnType.isContainComplexType();
             if (!isGood) {
                 return false;
             }
@@ -333,12 +283,12 @@ export class FunctionDefInstruction extends DeclInstruction {
             return true;
         }
         else {
-            isGood = pReturnType._isEqual(Effect.getSystemType("float4"));
+            isGood = pReturnType.isEqual(Effect.getSystemType("float4"));
             if (!isGood) {
                 return false;
             }
 
-            isGood = (this._getSemantic() === "POSITION");
+            isGood = (this.semantics === "POSITION");
             if (!isGood) {
                 return false;
             }
@@ -351,27 +301,28 @@ export class FunctionDefInstruction extends DeclInstruction {
         var pReturnType: IAFXVariableTypeInstruction = this._pReturnType;
         var isGood: boolean = true;
 
-        if (pReturnType._isEqual(Effect.getSystemType("void"))) {
+        if (pReturnType.isEqual(Effect.getSystemType("void"))) {
             return true;
         }
 
-        isGood = pReturnType._isBase();
+        isGood = pReturnType.isBase();
         if (!isGood) {
             return false;
         }
 
-        isGood = pReturnType._isEqual(Effect.getSystemType("float4"));
+        isGood = pReturnType.isEqual(Effect.getSystemType("float4"));
         if (!isGood) {
             return false;
         }
 
-        isGood = this._getSemantic() === "COLOR";
+        isGood = this.semantics === "COLOR";
         if (!isGood) {
             return false;
         }
 
         return true;
     }
+
 
     private checkArgumentsForVertexUsage(): boolean {
         var pArguments: IAFXVariableDeclInstruction[] = this._pParameterList;
@@ -385,25 +336,25 @@ export class FunctionDefInstruction extends DeclInstruction {
         for (var i: number = 0; i < pArguments.length; i++) {
             var pParam: IAFXVariableDeclInstruction = pArguments[i];
 
-            if (pParam._isUniform()) {
+            if (pParam.isUniform()) {
                 this._pParamListForShaderCompile.push(pParam);
                 continue;
             }
 
             if (!isStartAnalyze) {
-                if (pParam._getSemantic() === "") {
-                    if (pParam._getType()._isBase() ||
-                        pParam._getType()._hasFieldWithoutSemantic() ||
-                        !pParam._getType()._hasAllUniqueSemantics()) {
+                if (pParam.semantics === "") {
+                    if (pParam.type.isBase() ||
+                        pParam.type.hasFieldWithoutSemantic() ||
+                        !pParam.type.hasAllUniqueSemantics()) {
                         return false;
                     }
 
                     isAttributeByStruct = true;
                 }
-                else if (pParam._getSemantic() !== "") {
-                    if (pParam._getType()._isComplex() &&
-                        (pParam._getType()._hasFieldWithoutSemantic() ||
-                            !pParam._getType()._hasAllUniqueSemantics())) {
+                else if (pParam.semantics !== "") {
+                    if (pParam.type.isComplex() &&
+                        (pParam.type.hasFieldWithoutSemantic() ||
+                            !pParam.type.hasAllUniqueSemantics())) {
                         return false;
                     }
 
@@ -416,13 +367,13 @@ export class FunctionDefInstruction extends DeclInstruction {
                 return false;
             }
             else if (isAttributeByParams) {
-                if (pParam._getSemantic() === "") {
+                if (pParam.semantics === "") {
                     return false;
                 }
 
-                if (pParam._getType()._isComplex() &&
-                    (pParam._getType()._hasFieldWithoutSemantic() ||
-                        !pParam._getType()._hasAllUniqueSemantics())) {
+                if (pParam.type.isComplex() &&
+                    (pParam.type.hasFieldWithoutSemantic() ||
+                        !pParam.type.hasAllUniqueSemantics())) {
                     return false;
                 }
             }
@@ -449,39 +400,31 @@ export class FunctionDefInstruction extends DeclInstruction {
         for (var i: number = 0; i < pArguments.length; i++) {
             var pParam: IAFXVariableDeclInstruction = pArguments[i];
 
-            if (pParam._isUniform()) {
+            if (pParam.isUniform()) {
                 this._pParamListForShaderCompile.push(pParam);
                 continue;
             }
 
             if (!isStartAnalyze) {
-                if (pParam._getSemantic() === "") {
-                    if (pParam._getType()._isBase() ||
-                        pParam._getType()._hasFieldWithoutSemantic() ||
-                        !pParam._getType()._hasAllUniqueSemantics() ||
-                        pParam._getType()._containSampler() ||
-                        pParam._getType()._containPointer() ||
-                        pParam._getType()._isPointer()) {
+                if (pParam.semantics === "") {
+                    if (pParam.type.isBase() ||
+                        pParam.type.hasFieldWithoutSemantic() ||
+                        !pParam.type.hasAllUniqueSemantics() ||
+                        pParam.type.isContainSampler()) {
                         return false;
                     }
 
                     isVaryingsByStruct = true;
                 }
-                else if (pParam._getSemantic() !== "") {
-                    if (pParam._getType()._isStrictPointer() ||
-                        pParam._getType()._containPointer() ||
-                        pParam._getType()._containSampler() ||
-                        Effect.isSamplerType(pParam._getType())) {
-                        //LOG(2, pParam._getType()._isPointer(),
-                        //    pParam._getType()._containPointer(),
-                        //    pParam._getType()._containSampler(),
-                        //    Effect.isSamplerType(pParam._getType()));
+                else if (pParam.semantics !== "") {
+                    if (pParam.type.isContainSampler() ||
+                        Effect.isSamplerType(pParam.type)) {
                         return false;
                     }
 
-                    if (pParam._getType()._isComplex() &&
-                        (pParam._getType()._hasFieldWithoutSemantic() ||
-                            !pParam._getType()._hasAllUniqueSemantics())) {
+                    if (pParam.type.isComplex() &&
+                        (pParam.type.hasFieldWithoutSemantic() ||
+                            !pParam.type.hasAllUniqueSemantics())) {
                         return false;
                     }
 
@@ -494,20 +437,18 @@ export class FunctionDefInstruction extends DeclInstruction {
                 return false;
             }
             else if (isVaryingsByParams) {
-                if (pParam._getSemantic() === "") {
+                if (pParam.semantics === "") {
                     return false;
                 }
 
-                if (pParam._getType()._isStrictPointer() ||
-                    pParam._getType()._containPointer() ||
-                    pParam._getType()._containSampler() ||
-                    Effect.isSamplerType(pParam._getType())) {
+                if (pParam.type.isContainSampler() ||
+                    Effect.isSamplerType(pParam.type)) {
                     return false;
                 }
 
-                if (pParam._getType()._isComplex() &&
-                    (pParam._getType()._hasFieldWithoutSemantic() ||
-                        !pParam._getType()._hasAllUniqueSemantics())) {
+                if (pParam.type.isComplex() &&
+                    (pParam.type.hasFieldWithoutSemantic() ||
+                        !pParam.type.hasAllUniqueSemantics())) {
                     return false;
                 }
             }
@@ -521,22 +462,4 @@ export class FunctionDefInstruction extends DeclInstruction {
 
         return true;
     }
-    // _getHash(): string {
-    // 	if(this._sHash === "") {
-    // 		this.calcHash();
-    // 	}
-
-    // 	return this._sHash;
-    // }
-
-    // private calcHash(): void {
-    // 	var sHash: string = "";
-    // 	sHash = this._pFunctionName._getName();
-    // 	sHash += "(";
-
-    // 	for(var i: number = 0; i < this._pParameterList.length; i++){
-    // 		sHash += this._pParameterList[i]
-    // 	}
-
-    // }
 }
