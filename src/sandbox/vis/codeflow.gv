@@ -1,0 +1,36 @@
+digraph {
+    // graph [ dpi = 300 ];
+
+    node [color="#d23f7a", style=filled, fillcolor="#c20a50:#f3cedc", 
+          gradientangle=270, fontcolor=white, penwidth=2, 
+          label_format="\b"];
+    
+
+    platform_IR [ label="platform IR\n(asm, DXIR/SPIRV)" ]
+    source_code [ label="source code" ]
+
+    LLVM -> platform_IR
+
+    source_code -> platform_IR [ label="+easier debugging" ]
+    source_code -> LLVM [ label="+llvm optimizer" ]
+
+
+    platform_lang [ label="Platform Language\n(cpp, hlsl/glsl)" ]
+        platform_lang -> platform_IR [ label="+external compiler" ]
+
+
+    source_code -> platform_lang
+
+    bytecode [ label="Custom bytecode" ]
+    bytecode -> { platform_lang }
+    bytecode -> custom_vm
+
+    custom_vm [ label="Custom\nVirtual Machine" ]
+
+
+    source_code -> bytecode
+
+
+    // Pipeline with memory is not thought out!!!
+
+}

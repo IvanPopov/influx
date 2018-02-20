@@ -1,0 +1,40 @@
+digraph G {
+
+    rankdir=LR;
+    node [shape=record, width=.1, height=.1];
+    node [width = 1.5];
+    
+    geom [shape=Msquare, label="Geometry"]
+
+    position -> geom 
+    vertexID -> geom
+    textureID -> geom
+
+    geom -> viewPos
+    geom -> viewCenter
+    geom -> viewRight
+    geom -> viewUp
+    geom -> worldPos
+    geom -> texUV
+    geom -> hpos
+
+    texUV -> diff_uv -> particle
+
+    diff_uv [shape=Msquare]
+
+    color -> colorCombiner
+    alpha -> colorCombiner
+    colorMult -> colorCombiner
+
+    colorCombiner [shape=Msquare]
+    colorCombiner -> particle
+
+    emitterID -> particle
+
+    particle [label="interpolators", shape=ellipse]
+    shape [shape=ellipse]
+
+    hpos -> shape
+
+
+}

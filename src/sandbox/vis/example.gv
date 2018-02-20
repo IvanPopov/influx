@@ -1,0 +1,33 @@
+digraph G {
+    // nodesep=.05; // margin
+    rankdir=LR;  // ?
+
+    node [shape=record, width=.1, height=.1];
+    node [width = 1.5];
+
+    particle_a
+    deffuse_texture -> particle_a
+    position -> particle_a
+    direction -> particle_a
+    velocity -> particle_a
+    lifespan -> particle_a
+    frame -> particle_a
+    id -> particle_a
+
+    particle_a -> emit_shader
+
+    emit_shader -> resource_a_in
+    emit_shader -> resource_b_in
+
+    resource_a_out -> sim_shader
+    resource_b_out -> sim_shader 
+    part_b_id -> sim_shader
+
+    sim_shader -> particle_b -> simulation -> particle_c
+
+    particle_c -> sim_shader
+    sim_shader -> resource_a_in
+    sim_shader -> resource_b_in
+    particle_c -> prerender -> rend_queue
+
+}

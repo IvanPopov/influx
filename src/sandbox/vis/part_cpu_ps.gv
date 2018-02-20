@@ -1,0 +1,17 @@
+digraph G {
+    rankdir=LR;
+    node [shape=record, width=.1, height=.1];
+    node [width = 1.5];
+
+    UV -> atlas -> vertexLighting -> alphaClip -> color
+    textureID -> atlas
+
+    diffuseLighting -> vertexLighting
+
+    toggle [shape=ellipse]
+    toggle -> vertexLighting
+
+    configurator -> emittersArray -> emitter -> lightingFlag -> toggle
+    emitter -> textureID
+    // atlas -> configurator
+}
