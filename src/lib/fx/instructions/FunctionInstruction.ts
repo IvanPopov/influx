@@ -387,13 +387,13 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         }
 
         this._pImplementation.prepareFor(EFunctionType.k_Vertex);
-        this._pFunctionDefenition.markAsShaderDef(true);
+        this._pFunctionDefenition.shaderDef = (true);
         this.generatesVertexAttrubutes();
         this.generateVertexVaryings();
     }
 
     prepareForPixel(): void {
-        this.setFunctionType(EFunctionType.k_Pixel);
+        this.functionType = (EFunctionType.k_Pixel);
 
         let pShaderInputParamList: IAFXVariableDeclInstruction[] = this._pFunctionDefenition.getParameListForShaderInput();
         for (let i: number = 0; i < pShaderInputParamList.length; i++) {
@@ -413,7 +413,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         }
 
         this._pImplementation.prepareFor(EFunctionType.k_Pixel);
-        this._pFunctionDefenition.markAsShaderDef(true);
+        this._pFunctionDefenition.shaderDef = (true);
 
         this.generatePixelVaryings();
     }
@@ -690,13 +690,13 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
             {
                 this._pUniformVariableMap[iMainVar] = pMainVariable;
 
-                if (!pMainVariable.type.isComplex() && pMainVariable.hasConstantInitializer()) {
+                if (!pMainVariable.type.isComplex() && (!isNull(pMainVariable.initializeExpr) && pMainVariable.initializeExpr.isConst())) {
                     pMainVariable.prepareDefaultValue();
                 }
             }
         }
 
-        if (pVariable.isSampler() && pVariable.hasInitializer()) {
+        if (pVariable.isSampler() && !isNull(pVariable.initializeExpr)) {
             let pInitExpr: IAFXInitExprInstruction = pVariable.initializeExpr;
             let pTexture: IAFXVariableDeclInstruction = null;
             let pSamplerStates: SamplerStateBlockInstruction = null;
@@ -755,7 +755,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         pFunction.generateInfoAboutUsedData();
 
         let pUniformVarMap: IMap<IAFXVariableDeclInstruction> = pFunction.uniformVariableMap;
-        let pTextureVarMap: IMap<IAFXVariableDeclInstruction> = pFunction.textureriableMap();
+        let pTextureVarMap: IMap<IAFXVariableDeclInstruction> = pFunction.textureVariableMap;
         let pUsedComplexTypeMap: IMap<IAFXTypeInstruction> = pFunction.usedComplexTypeMap;
 
         for (let j in pTextureVarMap) {

@@ -320,8 +320,8 @@ export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
     attrExtractionBlock: IAFXInstruction;
     vars: IAFXVariableDeclInstruction[];
 
-    _lockInitializer(): void;
-    _unlockInitializer(): void;
+    lockInitializer(): void;
+    unlockInitializer(): void;
 
     prepareDefaultValue(): void;
 
