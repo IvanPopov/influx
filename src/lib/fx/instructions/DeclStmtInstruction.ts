@@ -15,12 +15,12 @@ export class DeclStmtInstruction extends StmtInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_DeclStmtInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
         var pVariableList: IAFXVariableDeclInstruction[] = <IAFXVariableDeclInstruction[]>this.instructions;
 
-        for (var i: number = 0; i < this._nInstructions; i++) {
-            sCode += pVariableList[i]._toFinalCode() + ";\n";
+        for (var i: number = 0; i < this.instructions.length; i++) {
+            sCode += pVariableList[i].toCode() + ";\n";
         }
 
         return sCode;
@@ -28,7 +28,7 @@ export class DeclStmtInstruction extends StmtInstruction {
 
     addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (isNull(this.instructions) || this._nInstructions === 0) {
+        if (isNull(this.instructions) || this.instructions.length === 0) {
             return;
         }
 
@@ -37,7 +37,7 @@ export class DeclStmtInstruction extends StmtInstruction {
         }
 
         var pVariableList: IAFXVariableDeclInstruction[] = <IAFXVariableDeclInstruction[]>this.instructions;
-        for (var i: number = 0; i < this._nInstructions; i++) {
+        for (var i: number = 0; i < this.instructions.length; i++) {
             var pVarType: IAFXVariableTypeInstruction = pVariableList[i].type;
 
             pUsedDataCollector[pVarType.instructionID] = <IAFXTypeUseInfoContainer>{

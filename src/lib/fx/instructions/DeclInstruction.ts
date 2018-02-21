@@ -15,12 +15,20 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         this._eInstructionType = EAFXInstructionTypes.k_DeclInstruction;
     }
 
+    get semantics(): string {
+        return this._sSemantic;
+    }
+
     set semantics(sSemantic: string) {
         this._sSemantic = sSemantic;
     }
 
     set annotation(pAnnotation: IAFXAnnotationInstruction) {
         this._pAnnotation = pAnnotation;
+    }
+
+    get annotation(): IAFXAnnotationInstruction {
+        return this._pAnnotation;
     }
 
     get name(): string {
@@ -35,10 +43,6 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         return null;
     }
 
-    get semantics(): string {
-        return this._sSemantic;
-    }
-
     get builtIn(): boolean {
         return this._bIsBuiltIn;
     }
@@ -50,9 +54,11 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
     isForAll(): boolean {
         return this._bForVertex && this._bForPixel;
     }
+
     isForPixel(): boolean {
         return this._bForPixel;
     }
+
     isForVertex(): boolean {
         return this._bForVertex;
     }
@@ -61,15 +67,17 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         this._bForVertex = canUse;
         this._bForPixel = canUse;
     }
+
     public setForPixel(canUse: boolean): void {
         this._bForPixel = canUse;
     }
+
     public setForVertex(canUse: boolean): void {
         this._bForVertex = canUse;
     }
 
-    public _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXDeclInstruction {
-        let pClonedInstruction: IAFXDeclInstruction = <IAFXDeclInstruction>(super._clone(pRelationMap));
+    public clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXDeclInstruction {
+        let pClonedInstruction: IAFXDeclInstruction = <IAFXDeclInstruction>(super.clone(pRelationMap));
         pClonedInstruction.semantics = (this._sSemantic);
         pClonedInstruction.annotation = (this._pAnnotation);
         return pClonedInstruction;

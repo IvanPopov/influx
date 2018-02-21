@@ -1,6 +1,6 @@
 
 import { Instruction } from "./Instruction";
-import { IAFXTypeInstruction, IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXInstruction, IAFXVariableTypeInstruction, IAFXTypeDeclInstruction, EAFXBlendMode } from "../../idl/IAFXInstruction";
+import { IAFXTypeInstruction, IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXInstruction, IAFXVariableTypeInstruction, IAFXTypeDeclInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
 import { logger } from "../../logger"
@@ -35,6 +35,78 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         this._eInstructionType = EAFXInstructionTypes.k_ComplexTypeInstruction;
     }
 
+    get builtIn(): boolean {
+        return false;
+    }
+    
+    get writable(): boolean {
+        return true;
+    }
+
+    get readable(): boolean {
+        return true;
+    }
+
+    set size(iSize: number) {
+        this._iSize = iSize;
+    }
+
+    get name(): string {
+        return this._sName;
+    }
+
+    set name(sName: string) {
+        this._sName = sName;
+        this._sRealName = sName;
+    }
+
+    get realName(): string {
+        return this._sRealName;
+    }
+
+    set realName(sRealName: string) {
+        this._sRealName = sRealName;
+    }
+
+    get hash(): string {
+        if (this._sHash === "") {
+            this.calcHash();
+        }
+
+        return this._sHash;
+    }
+
+    get strongHash(): string {
+        if (this._sStrongHash === "") {
+            this.calcStrongHash();
+        }
+
+        return this._sStrongHash;
+    }
+
+    get size(): number {
+        if (this._iSize === Instruction.UNDEFINE_SIZE) {
+            this._iSize = this.calcSize();
+        }
+        return this._iSize;
+    }
+
+    get baseType(): IAFXTypeInstruction {
+        return this;
+    }
+
+    get arrayElementType(): IAFXTypeInstruction {
+        return null;
+    }
+
+    get typeDecl(): IAFXTypeDeclInstruction {
+        return <IAFXTypeDeclInstruction>this.parent;
+    }
+
+    get length(): number {
+        return 0;
+    }
+
     toString(): string {
         return this.name || this.hash;
     }
@@ -43,7 +115,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         var sCode: string = "struct " + this._sRealName + "{";
 
         for (var i: number = 0; i < this._pFieldDeclList.length; i++) {
-            sCode += "\t" + this._pFieldDeclList[i]._toFinalCode() + ";\n";
+            sCode += "\t" + this._pFieldDeclList[i].toCode() + ";\n";
         }
 
         sCode += "}";
@@ -51,12 +123,8 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return sCode;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         return this._sRealName;
-    }
-
-    get builtIn(): boolean {
-        return false;
     }
 
     isBase(): boolean {
@@ -99,14 +167,6 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return false;
     }
 
-    get writable(): boolean {
-        return true;
-    }
-
-    get readable(): boolean {
-        return true;
-    }
-
     isContainArray(): boolean {
         return this._isContainArray;
     }
@@ -117,19 +177,6 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
 
     isContainComplexType(): boolean {
         return this._isContainComplexType;
-    }
-
-    set name(sName: string) {
-        this._sName = sName;
-        this._sRealName = sName;
-    }
-
-    set realName(sRealName: string) {
-        this._sRealName = sRealName;
-    }
-
-    set size(iSize: number) {
-        this._iSize = iSize;
     }
 
     addField(pVariable: IAFXVariableDeclInstruction): void {
@@ -188,31 +235,6 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         this.calculatePaddings();
     }
 
-
-    get name(): string {
-        return this._sName;
-    }
-
-    get realName(): string {
-        return this._sRealName;
-    }
-
-    get hash(): string {
-        if (this._sHash === "") {
-            this.calcHash();
-        }
-
-        return this._sHash;
-    }
-
-    get strongHash(): string {
-        if (this._sStrongHash === "") {
-            this.calcStrongHash();
-        }
-
-        return this._sStrongHash;
-    }
-
     hasField(sFieldName: string): boolean {
         return isDef(this._pFieldDeclMap[sFieldName]);
     }
@@ -263,42 +285,18 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         return this._pFieldNameList;
     }
 
-    get size(): number {
-        if (this._iSize === Instruction.UNDEFINE_SIZE) {
-            this._iSize = this.calcSize();
-        }
-        return this._iSize;
-    }
-
-    get baseType(): IAFXTypeInstruction {
-        return this;
-    }
-
-    get arrayElementType(): IAFXTypeInstruction {
-        return null;
-    }
-
-    get typeDecl(): IAFXTypeDeclInstruction {
-        return <IAFXTypeDeclInstruction>this.parent;
-    }
-
-    get length(): number {
-        return 0;
-    }
-
     getFieldDeclList(): IAFXVariableDeclInstruction[] {
         return this._pFieldDeclList;
     }
 
-    _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): ComplexTypeInstruction {
+    clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): ComplexTypeInstruction {
         if (this._pParentInstruction === null ||
             !isDef(pRelationMap[this._pParentInstruction.instructionID]) ||
             pRelationMap[this._pParentInstruction.instructionID] === this._pParentInstruction) {
-            //pRelationMap[this.instructionID] = this;
             return this;
         }
 
-        var pClone: ComplexTypeInstruction = <ComplexTypeInstruction>super._clone(pRelationMap);
+        var pClone: ComplexTypeInstruction = <ComplexTypeInstruction>super.clone(pRelationMap);
 
         pClone.setCloneName(this._sName, this._sRealName);
         pClone.setCloneHash(this._sHash, this._sStrongHash);
@@ -309,7 +307,7 @@ export class ComplexTypeInstruction extends Instruction implements IAFXTypeInstr
         var pFieldDeclMap: IMap<IAFXVariableDeclInstruction> = <IMap<IAFXVariableDeclInstruction>>{};
 
         for (var i: number = 0; i < this._pFieldDeclList.length; i++) {
-            let pCloneVar: IAFXVariableDeclInstruction = this._pFieldDeclList[i]._clone(pRelationMap);
+            let pCloneVar: IAFXVariableDeclInstruction = this._pFieldDeclList[i].clone(pRelationMap);
             var sVarName: string = pCloneVar.name;
 
             pFieldDeclList[i] = pCloneVar;

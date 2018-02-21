@@ -13,7 +13,7 @@ export class ExprStmtInstruction extends StmtInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_ExprStmtInstruction;
     }
 
-    public _toFinalCode(): string {
-        return this.instructions[0]._toFinalCode() + ';';
+    toCode(): string {
+        return this.instructions[0].toCode() + ';';
     }
 }

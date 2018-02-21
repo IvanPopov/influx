@@ -14,11 +14,11 @@ export class CastExprInstruction extends ExprInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_CastExprInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0]._toFinalCode();
+        sCode += this.instructions[0].toCode();
         sCode += "(";
-        sCode += this.instructions[1]._toFinalCode();
+        sCode += this.instructions[1].toCode();
         sCode += ")";
         return sCode;
     }
@@ -27,11 +27,9 @@ export class CastExprInstruction extends ExprInstruction {
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
         pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-
-        // pUsedDataCollector[this._getType()._getInstructionID()] = this._getType();
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         return (<IAFXExprInstruction>this.instructions[1]).isConst();
     }
 }

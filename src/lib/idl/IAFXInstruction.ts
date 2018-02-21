@@ -45,8 +45,7 @@ export enum EAFXInstructionTypes {
     k_InitExprInstruction,
     k_SamplerStateBlockInstruction,
     k_SamplerStateInstruction,
-    k_ExtractExprInstruction,
-    k_MemExprInstruction,
+    // k_ExtractExprInstruction,
     k_FunctionDeclInstruction,
     k_ShaderFunctionInstruction,
     k_SystemFunctionInstruction,
@@ -60,7 +59,7 @@ export enum EAFXInstructionTypes {
     k_IfStmtInstruction,
     k_DeclStmtInstruction,
     k_ReturnStmtInstruction,
-    k_ExtractStmtInstruction,
+    // k_ExtractStmtInstruction,
     k_SemicolonStmtInstruction,
     k_PassInstruction,
     k_TechniqueInstruction
@@ -70,7 +69,6 @@ export enum EAFXInstructionTypes {
 export enum EFunctionType {
     k_Vertex = 0,
     k_Pixel = 1,
-    k_Fragment = 1,
     k_Function = 2,
     k_PassFunction = 3
 }
@@ -132,21 +130,7 @@ export enum EExtractExprType {
     k_Float4x4
 }
 
-export enum EAFXBlendMode {
-    k_Shared,
-    k_Uniform,
-    k_Attribute,
-    k_Foreign,
-    k_Global,
-    k_Varying,
-    k_TypeDecl,
-    k_VertexOut
-}
 
-export interface IAFXImportedTechniqueInfo {
-    technique: IAFXTechniqueInstruction;
-    shift: number;
-}
 
 /**
  * All opertion are represented by: 
@@ -157,12 +141,13 @@ export interface IAFXInstruction {
     parent: IAFXInstruction;
     operator: string;
     instructions: IAFXInstruction[];
-    instructionType: EAFXInstructionTypes;
     visible: boolean;
-    instructionID: number;
     scope: number;
-    sourceNode: IParseNode | null;
-    globalScope: boolean;
+    
+    readonly instructionType: EAFXInstructionTypes;
+    readonly sourceNode: IParseNode | null;
+    readonly instructionID: number;
+    readonly globalScope: boolean;
 
     _check(eStage: ECheckStage): boolean;
     _getLastError(): IAFXInstructionError;
@@ -170,17 +155,12 @@ export interface IAFXInstruction {
     _clearError(): void;
     _isErrorOccured(): boolean;
 
-    initEmptyInstructions(): void;
-
     push(pInstruction: IAFXInstruction, isSetParent?: boolean): void;
-
-    _addRoutine(fnRoutine: IAFXInstructionRoutine, iPriority?: number);
-    _prepareFor(eUsedType: EFunctionType): void;
+    prepareFor(eUsedType: EFunctionType): void;
 
     toString(): string;
-    _toFinalCode(): string;
-
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXInstruction;
+    toCode(): string;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXInstruction;
 }
 
 export interface IAFXSimpleInstruction extends IAFXInstruction {
@@ -190,18 +170,19 @@ export interface IAFXSimpleInstruction extends IAFXInstruction {
 export interface IAFXTypeInstruction extends IAFXInstruction {
     toDeclString(): string;
 
-    builtIn: boolean;
+    size: number;
     name: string;
     realName: string;
-    hash: string;
-    strongHash: string;
-    size: number;
-    baseType: IAFXTypeInstruction;
-    length: number;
-    arrayElementType: IAFXTypeInstruction;
-    typeDecl: IAFXTypeDeclInstruction;
-    writable: boolean;
-    readable: boolean;
+
+    readonly builtIn: boolean;
+    readonly hash: string;
+    readonly strongHash: string;
+    readonly baseType: IAFXTypeInstruction;
+    readonly length: number;
+    readonly arrayElementType: IAFXTypeInstruction;
+    readonly typeDecl: IAFXTypeDeclInstruction;
+    readonly writable: boolean;
+    readonly readable: boolean;
 
     isBase(): boolean;
     isArray(): boolean;
@@ -227,7 +208,7 @@ export interface IAFXTypeInstruction extends IAFXInstruction {
     getFieldType(sFieldName: string): IAFXVariableTypeInstruction;
     getFieldNameList(): string[];
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypeInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypeInstruction;
 }
 
 export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
@@ -263,7 +244,7 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
     subType: IAFXTypeInstruction;
 
     hasUsage(sUsageName: string): boolean;
-    
+
     getFieldExpr(sFieldName: string): IAFXIdExprInstruction;
     getFieldIfExist(sFieldName: string): IAFXVariableDeclInstruction;
 
@@ -282,8 +263,8 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 	 * System
 	 */
     wrap(): IAFXVariableTypeInstruction;
-    
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableTypeInstruction;
+
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableTypeInstruction;
 
     setCloneHash(sHash: string, sStrongHash: string): void;
     setCloneArrayIndex(pElementType: IAFXVariableTypeInstruction, pIndexExpr: IAFXExprInstruction, iLength: number): void;
@@ -293,14 +274,15 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 
 export interface IAFXTypedInstruction extends IAFXInstruction {
     type: IAFXTypeInstruction;
-
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypedInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypedInstruction;
 }
 
+
 export interface IAFXDeclInstruction extends IAFXTypedInstruction {
-    name: string;
-    realName: string;
-    nameID: IAFXIdInstruction;
+    readonly name: string;
+    readonly realName: string;
+    readonly nameID: IAFXIdInstruction;
+
     semantics: string;
     annotation: IAFXAnnotationInstruction;
     builtIn: boolean;
@@ -313,11 +295,11 @@ export interface IAFXDeclInstruction extends IAFXTypedInstruction {
     setForPixel(canUse: boolean): void;
     setForVertex(canUse: boolean): void;
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXDeclInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXDeclInstruction;
 }
 
 export interface IAFXTypeDeclInstruction extends IAFXDeclInstruction {
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypeDeclInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypeDeclInstruction;
 }
 
 export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
@@ -354,11 +336,11 @@ export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
     markAsShaderOutput(isShaderOutput: boolean): void;
     isShaderOutput(): boolean;
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableDeclInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableDeclInstruction;
 }
 
 export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
-    _toFinalDefCode(): string;
+    toFinalDefCode(): string;
     hasImplementation(): boolean;
 
     arguments: IAFXTypedInstruction[];
@@ -372,7 +354,24 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
     definition: IAFXDeclInstruction
     implementation: IAFXStmtInstruction;
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXFunctionDeclInstruction;
+    attributeVariableMap: IMap<IAFXVariableDeclInstruction>;
+    varyingVariableMap: IMap<IAFXVariableDeclInstruction>;
+
+    uniformVariableMap: IMap<IAFXVariableDeclInstruction>;
+    textureVariableMap: IMap<IAFXVariableDeclInstruction>;
+    usedComplexTypeMap: IMap<IAFXTypeInstruction>;
+
+    attributeVariableKeys: number[];
+    varyingVariableKeys: number[];
+
+    uniformVariableKeys: number[];
+    textureVariableKeys: number[];
+    usedComplexTypeKeys: number[];
+
+    extSystemFunctionList: IAFXFunctionDeclInstruction[];
+    extSystemTypeList: IAFXTypeDeclInstruction[];
+
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXFunctionDeclInstruction;
 
     addOutVariable(pVariable: IAFXVariableDeclInstruction): boolean;
     getOutVariable(): IAFXVariableDeclInstruction;
@@ -411,29 +410,6 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
     prepareForPixel(): void;
 
     generateInfoAboutUsedData(): void;
-
-    attributeVariableMap: IMap<IAFXVariableDeclInstruction>;
-    varyingVariableMap: IMap<IAFXVariableDeclInstruction>;
-
-    sharedVariableMap: IMap<IAFXVariableDeclInstruction>;
-    globalVariableMap: IMap<IAFXVariableDeclInstruction>;
-    uniformVariableMap: IMap<IAFXVariableDeclInstruction>;
-    foreignVariableMap: IMap<IAFXVariableDeclInstruction>;
-    textureVariableMap: IMap<IAFXVariableDeclInstruction>;
-    usedComplexTypeMap: IMap<IAFXTypeInstruction>;
-
-    attributeVariableKeys: number[];
-    varyingVariableKeys: number[];
-
-    sharedVariableKeys: number[];
-    uniformVariableKeys: number[];
-    foreignVariableKeys: number[];
-    globalVariableKeys: number[];
-    textureVariableKeys: number[];
-    usedComplexTypeKeys: number[];
-
-    extSystemFunctionList: IAFXFunctionDeclInstruction[];
-    extSystemTypeList: IAFXTypeDeclInstruction[];
 }
 
 
@@ -446,9 +422,11 @@ export interface IAFXIdInstruction extends IAFXInstruction {
     name: string;
     realName: string;
 
+    readonly visible: boolean;
+
     markAsVarying(bValue: boolean): void;
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdInstruction;
 }
 
 
@@ -469,8 +447,8 @@ export interface IAFXExprInstruction extends IAFXTypedInstruction, IAFXAnalyzedI
     getEvalValue(): any;
     simplify(): boolean;
     isConst(): boolean;
-    
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXExprInstruction;
+
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXExprInstruction;
 }
 
 
@@ -480,14 +458,16 @@ export interface IAFXInitExprInstruction extends IAFXExprInstruction {
 
 
 export interface IAFXIdExprInstruction extends IAFXExprInstruction {
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdExprInstruction;
+    readonly type: IAFXVariableTypeInstruction;
+    readonly visible: boolean;
+
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdExprInstruction;
 }
 
 
 export interface IAFXLiteralInstruction extends IAFXExprInstruction {
     value: any;
-
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction;
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction;
 }
 
 
@@ -505,37 +485,28 @@ export interface IAFXPassInstruction extends IAFXDeclInstruction {
     getFoundedFunctionType(pNode: IParseNode): EFunctionType;
     addCodeFragment(sCode: string): void;
 
-    sharedVariableMapV: IMap<IAFXVariableDeclInstruction>;
-    globalVariableMapV: IMap<IAFXVariableDeclInstruction>;
     uniformVariableMapV: IMap<IAFXVariableDeclInstruction>;
-    foreignVariableMapV: IMap<IAFXVariableDeclInstruction>;
     textureVariableMapV: IMap<IAFXVariableDeclInstruction>;
     usedComplexTypeMapV: IMap<IAFXTypeInstruction>;
 
-    sharedVariableMapP: IMap<IAFXVariableDeclInstruction>;
-    globalVariableMapP: IMap<IAFXVariableDeclInstruction>;
     uniformVariableMapP: IMap<IAFXVariableDeclInstruction>;
-    foreignVariableMapP: IMap<IAFXVariableDeclInstruction>;
     textureVariableMapP: IMap<IAFXVariableDeclInstruction>;
     usedComplexTypeMapP: IMap<IAFXTypeInstruction>;
 
     fullUniformMap: IMap<IAFXVariableDeclInstruction>;
-    fullForeignMap: IMap<IAFXVariableDeclInstruction>;
     fullTextureMap: IMap<IAFXVariableDeclInstruction>;
 
     vertexShader: IAFXFunctionDeclInstruction;
     pixelShader: IAFXFunctionDeclInstruction;
+    renderStates: IMap<ERenderStateValues>;
 
-    addOwnUsedForignVariable(pVarDecl: IAFXVariableDeclInstruction): void;
+    isComplexPass();
     addShader(pShader: IAFXFunctionDeclInstruction): void;
     setState(eType: ERenderStates, eValue: ERenderStateValues): void;
     finalizePass(): void;
-
-    complexPass: boolean;
     evaluate(pEngineStates: any, pForeigns: any, pUniforms: any): boolean;
 
     getState(eType: ERenderStates): ERenderStateValues;
-    renderStates: IMap<ERenderStateValues>;
 }
 
 

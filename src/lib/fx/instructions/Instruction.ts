@@ -5,20 +5,32 @@ import { IParseNode } from "../../idl/parser/IParser";
 import { ProgramScope } from "../ProgramScope";
 
 export class Instruction implements IAFXInstruction {
-    protected _pParentInstruction: IAFXInstruction = null;
-    protected _sOperatorName: string = null;
-    protected _pInstructionList: IAFXInstruction[] = null;
-    protected _nInstructions: number = 0;
+    private _bVisible: boolean;
+
+    protected _pParentInstruction: IAFXInstruction;
+    protected _sOperatorName: string;
+    protected _pInstructionList: IAFXInstruction[];
     protected _eInstructionType: EAFXInstructionTypes = 0;
-    protected _pLastError: IAFXInstructionError = null;
-    protected _bErrorOccured: boolean = false;
-    protected _iInstructionID: number = 0;
-    protected _iScope: number = Instruction.UNDEFINE_SCOPE;
+    protected _pLastError: IAFXInstructionError;
+    protected _bErrorOccured: boolean;
+    protected _iInstructionID: number;
+    protected _iScope: number;
     protected _pSourceNode: IParseNode;
 
     private static _nInstructionCounter: number = 0;
 
-    private _bVisible: boolean = true;
+    constructor(pNode: IParseNode) {
+        this._bVisible = true;
+        this._pParentInstruction = null;
+        this._sOperatorName = null;
+        this._pInstructionList = [];
+        this._eInstructionType = EAFXInstructionTypes.k_Instruction;
+        this._pLastError = { code: 0, info: null };
+        this._bErrorOccured = false;
+        this._iInstructionID = Instruction._nInstructionCounter++;
+        this._iScope = Instruction.UNDEFINE_SCOPE;
+        this._pSourceNode = pNode;
+    }
 
     get parent(): IAFXInstruction {
         return this._pParentInstruction;
@@ -64,7 +76,19 @@ export class Instruction implements IAFXInstruction {
     get globalScope(): boolean {
         return this.scope === ProgramScope.GLOBAL_SCOPE;
     }
-
+    
+    set visible(isVisible: boolean) {
+        this._bVisible = isVisible;
+    }
+    
+    get visible(): boolean {
+        return this._bVisible;
+    }
+    
+    get sourceNode(): IParseNode {
+        return this._pSourceNode;
+    }
+    
     _getLastError(): IAFXInstructionError {
         return this._pLastError;
     }
@@ -85,49 +109,17 @@ export class Instruction implements IAFXInstruction {
         return this._bErrorOccured;
     }
 
-    set visible(isVisible: boolean) {
-        this._bVisible = isVisible;
-    }
-
-    get visible(): boolean {
-        return this._bVisible;
-    }
-
-    initEmptyInstructions(): void {
-        this._pInstructionList = [];
-    }
-
-    constructor(pNode: IParseNode) {
-        this._iInstructionID = Instruction._nInstructionCounter++;
-        this._pParentInstruction = null;
-        this._sOperatorName = null;
-        this._pInstructionList = null;
-        this._nInstructions = 0;
-        this._eInstructionType = EAFXInstructionTypes.k_Instruction;
-        this._pLastError = { code: 0, info: null };
-        this._pSourceNode = pNode;
-    }
-
     push(pInstruction: IAFXInstruction, isSetParent: boolean = false): void {
-        if (!isNull(this._pInstructionList)) {
-            this._pInstructionList[this._nInstructions] = pInstruction;
-            this._nInstructions += 1;
-        }
+        console.assert(pInstruction != null);
+        this._pInstructionList.push(pInstruction);
         if (isSetParent && !isNull(pInstruction)) {
             pInstruction.parent = (this as IAFXInstruction);
         }
     }
 
-    _addRoutine(fnRoutine: IAFXInstructionRoutine, iPriority?: number): void {
-        //TODO
-    }
 
-    _prepareFor(eUsedType: EFunctionType): void {
-        if (!isNull(this._pInstructionList) && this._nInstructions > 0) {
-            for (var i: number = 0; i < this._nInstructions; i++) {
-                this._pInstructionList[i]._prepareFor(eUsedType);
-            }
-        }
+    prepareFor(eUsedType: EFunctionType): void {
+        this._pInstructionList.forEach((pInst) => pInst.prepareFor(eUsedType));
     }
 	/**
 	 * Проверка валидности инструкции
@@ -146,11 +138,11 @@ export class Instruction implements IAFXInstruction {
         return null;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         return "";
     }
 
-    _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXInstruction {
+    clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXInstruction {
         if (isDef(pRelationMap[this.instructionID])) {
             return pRelationMap[this.instructionID];
         }
@@ -165,21 +157,11 @@ export class Instruction implements IAFXInstruction {
         pNewInstruction.parent = (pParent);
         pRelationMap[this.instructionID] = pNewInstruction;
 
-        if (!isNull(this._pInstructionList) && isNull(pNewInstruction.instructions)) {
-            pNewInstruction.initEmptyInstructions();
-        }
-
-        for (var i: number = 0; i < this._nInstructions; i++) {
-            pNewInstruction.push(this._pInstructionList[i]._clone(pRelationMap));
-        }
+        this._pInstructionList.forEach((pInst) => pNewInstruction.push(pInst.clone(pRelationMap)));
 
         pNewInstruction.operator = this.operator;
 
         return pNewInstruction;
-    }
-
-    get sourceNode(): IParseNode {
-        return this._pSourceNode;
     }
 
     static UNDEFINE_LENGTH: number = 0xffffff;

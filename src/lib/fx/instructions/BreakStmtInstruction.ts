@@ -13,7 +13,7 @@ export class BreakStmtInstruction extends StmtInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_BreakStmtInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         return this.operator + ";";
     }
 }

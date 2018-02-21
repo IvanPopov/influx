@@ -15,14 +15,14 @@ export class FunctionCallInstruction extends IdExprInstruction {
 		this._eInstructionType = EAFXInstructionTypes.k_FunctionCallInstruction;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		var sCode: string = "";
 
-		sCode += this.instructions[0]._toFinalCode();
+		sCode += this.instructions[0].toCode();
 		sCode += "(";
-		for (var i: number = 1; i < this._nInstructions; i++) {
-			sCode += this.instructions[i]._toFinalCode();
-			if (i !== this._nInstructions - 1) {
+		for (var i: number = 1; i < this.instructions.length; i++) {
+			sCode += this.instructions[i].toCode();
+			if (i !== this.instructions.length - 1) {
 				sCode += ","
 			}
 		}

@@ -11,15 +11,15 @@ export class IdExprInstruction extends ExprInstruction implements IAFXIdExprInst
     private _bToFinalCode: boolean = true;
     private _isInPassUnifoms: boolean = false;
     private _isInPassForeigns: boolean = false;
-
-    get visible(): boolean {
-        return this._pInstructionList[0].visible;
-    }
-
+    
     constructor(pNode: IParseNode) {
         super(pNode);
         this._pInstructionList = [null];
         this._eInstructionType = EAFXInstructionTypes.k_IdExprInstruction;
+    }
+
+    get visible(): boolean {
+        return this._pInstructionList[0].visible;
     }
 
     get type(): IAFXVariableTypeInstruction {
@@ -54,7 +54,7 @@ export class IdExprInstruction extends ExprInstruction implements IAFXIdExprInst
         }
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
         if (this._bToFinalCode) {
             if (this._isInPassForeigns || this._isInPassUnifoms) {
@@ -67,21 +67,21 @@ export class IdExprInstruction extends ExprInstruction implements IAFXIdExprInst
                 }
             }
             else {
-                sCode += this.instructions[0]._toFinalCode();
+                sCode += this.instructions[0].toCode();
             }
         }
         return sCode;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdExprInstruction {
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXIdExprInstruction {
         if (this.type.isSampler()) {
             //TODO: Need fix for shaders used as functions. Need use relation map.
             return this;
         }
-        return <IAFXIdExprInstruction>super._clone(pRelationMap);
+        return <IAFXIdExprInstruction>super.clone(pRelationMap);
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         if (!this.type.isFromVariableDecl()) {
             return;

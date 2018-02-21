@@ -8,8 +8,8 @@ export class IdInstruction extends Instruction implements IAFXIdInstruction {
     private _sRealName: string;
     private _isForVarying: boolean = false;
 
-    _isVisible(): boolean {
-        return this._getParent()._isVisible();
+    get visible(): boolean {
+        return this.parent.visible();
     }
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
@@ -21,11 +21,11 @@ export class IdInstruction extends Instruction implements IAFXIdInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_IdInstruction;
     }
 
-    _getName(): string {
+    get name(): string {
         return this._sName;
     }
 
-    _getRealName(): string {
+    get realName(): string {
         if (this._isForVarying) {
             return "V_" + this._sRealName;
         }
@@ -34,16 +34,16 @@ export class IdInstruction extends Instruction implements IAFXIdInstruction {
         }
     }
 
-    _setName(sName: string): void {
+    set name(sName: string): void {
         this._sName = sName;
         this._sRealName = sName;
     }
 
-    _setRealName(sRealName: string): void {
+    set realName(sRealName: string): void {
         this._sRealName = sRealName;
     }
 
-    _markAsVarying(bValue: boolean): void {
+    markAsVarying(bValue: boolean): void {
         this._isForVarying = bValue;
     }
 
@@ -51,12 +51,12 @@ export class IdInstruction extends Instruction implements IAFXIdInstruction {
         return this._sRealName;
     }
 
-    _toFinalCode(): string {
-        return this._getRealName();
+    toCode(): string {
+        return this.realName;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IdInstruction {
-        var pClonedInstruction: IdInstruction = <IdInstruction>(super._clone(pRelationMap));
+    clone(pRelationMap?: IMap<IAFXInstruction>): IdInstruction {
+        var pClonedInstruction: IdInstruction = <IdInstruction>(super.clone(pRelationMap));
         pClonedInstruction._setName(this._sName);
         pClonedInstruction._setRealName(this._sRealName);
         return pClonedInstruction;

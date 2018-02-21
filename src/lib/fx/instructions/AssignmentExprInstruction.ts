@@ -14,11 +14,11 @@ export class AssignmentExprInstruction extends ExprInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_AssignmentExprInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0]._toFinalCode();
+        sCode += this.instructions[0].toCode();
         sCode += this.operator;
-        sCode += this.instructions[1]._toFinalCode();
+        sCode += this.instructions[1].toCode();
         return sCode;
     }
 

@@ -32,32 +32,7 @@ export class FunctionDefInstruction extends DeclInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_FunctionDefInstruction;
     }
 
-    _toFinalCode(): string {
-        var sCode: string = "";
-
-        if (!this.shaderDef) {
-
-            sCode += this._pReturnType._toFinalCode();
-            sCode += " " + this._pFunctionName._toFinalCode();
-            sCode += "(";
-
-            for (var i: number = 0; i < this._pParameterList.length; i++) {
-                sCode += this._pParameterList[i]._toFinalCode();
-
-                if (i !== this._pParameterList.length - 1) {
-                    sCode += ",";
-                }
-            }
-
-            sCode += ")";
-        }
-        else {
-            sCode = "void " + this._pFunctionName._toFinalCode() + "()";
-        }
-
-        return sCode;
-    }
-
+    
     set type(pType: IAFXTypeInstruction) {
         this.returnType = (<IAFXVariableTypeInstruction>pType);
     }
@@ -88,7 +63,7 @@ export class FunctionDefInstruction extends DeclInstruction {
         return this._pFunctionName.realName;
     }
 
-    get nameId(): IAFXIdInstruction {
+    get functionName(): IAFXIdInstruction {
         return this._pFunctionName;
     }
 
@@ -106,6 +81,46 @@ export class FunctionDefInstruction extends DeclInstruction {
 
     get shaderDef(): boolean {
         return this._bShaderDef;
+    }
+
+    get stringDef(): string {
+        if (this._sDefinition === "") {
+            this._sDefinition = this._pReturnType.hash + " " + this.name + "(";
+
+            for (var i: number = 0; i < this._pParameterList.length; i++) {
+                this._sDefinition += this._pParameterList[i].type.hash + ",";
+            }
+
+            this._sDefinition += ")";
+        }
+
+        return this._sDefinition;
+    }
+
+    toCode(): string {
+        var sCode: string = "";
+
+        if (!this.shaderDef) {
+
+            sCode += this._pReturnType.toCode();
+            sCode += " " + this._pFunctionName.toCode();
+            sCode += "(";
+
+            for (var i: number = 0; i < this._pParameterList.length; i++) {
+                sCode += this._pParameterList[i].toCode();
+
+                if (i !== this._pParameterList.length - 1) {
+                    sCode += ",";
+                }
+            }
+
+            sCode += ")";
+        }
+        else {
+            sCode = "void " + this._pFunctionName.toCode() + "()";
+        }
+
+        return sCode;
     }
 
     addParameter(pParameter: IAFXVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
@@ -140,19 +155,19 @@ export class FunctionDefInstruction extends DeclInstruction {
         return this._bIsComplexShaderInput;
     }
 
-    _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): FunctionDefInstruction {
-        var pClone: FunctionDefInstruction = <FunctionDefInstruction>super._clone(pRelationMap);
+    clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): FunctionDefInstruction {
+        var pClone: FunctionDefInstruction = <FunctionDefInstruction>super.clone(pRelationMap);
 
-        pClone.functionName = (<IAFXIdInstruction>this._pFunctionName._clone(pRelationMap));
-        pClone.returnType = (<IAFXVariableTypeInstruction>this.returnType._clone(pRelationMap));
+        pClone.functionName = (<IAFXIdInstruction>this._pFunctionName.clone(pRelationMap));
+        pClone.returnType = (<IAFXVariableTypeInstruction>this.returnType.clone(pRelationMap));
 
         for (var i: number = 0; i < this._pParameterList.length; i++) {
-            pClone.addParameter(this._pParameterList[i]._clone(pRelationMap));
+            pClone.addParameter(this._pParameterList[i].clone(pRelationMap));
         }
 
         var pShaderParams: IAFXVariableDeclInstruction[] = [];
         for (var i: number = 0; i < this._pParamListForShaderInput.length; i++) {
-            pShaderParams.push(this._pParamListForShaderInput[i]._clone(pRelationMap));
+            pShaderParams.push(this._pParamListForShaderInput[i].clone(pRelationMap));
         }
 
         pClone.setShaderParams(pShaderParams, this._bIsComplexShaderInput);
@@ -174,20 +189,6 @@ export class FunctionDefInstruction extends DeclInstruction {
         this._isAnalyzedForVertexUsage = isAnalyzedForVertexUsage;
         this._isAnalyzedForPixelUsage = isAnalyzedForPixelUsage;
         this._bCanUsedAsFunction = bCanUsedAsFunction;
-    }
-
-    get stringDef(): string {
-        if (this._sDefinition === "") {
-            this._sDefinition = this._pReturnType.hash + " " + this.name + "(";
-
-            for (var i: number = 0; i < this._pParameterList.length; i++) {
-                this._sDefinition += this._pParameterList[i].type.hash + ",";
-            }
-
-            this._sDefinition += ")";
-        }
-
-        return this._sDefinition;
     }
 
     canUsedAsFunction(): boolean {

@@ -14,13 +14,13 @@ export class ConditionalExprInstruction extends ExprInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_ConditionalExprInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0]._toFinalCode();
+        sCode += this.instructions[0].toCode();
         sCode += "?";
-        sCode += this.instructions[1]._toFinalCode();
+        sCode += this.instructions[1].toCode();
         sCode += ":";
-        sCode += this.instructions[2]._toFinalCode();
+        sCode += this.instructions[2].toCode();
         return sCode;
     }
 

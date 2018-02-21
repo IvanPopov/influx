@@ -14,7 +14,7 @@ export class BoolInstruction extends ExprInstruction implements IAFXLiteralInstr
         super(pNode);
 
         this._bValue = true;
-        this._pType = Effect.getSystemType("bool").getVariableType();
+        this._pType = Effect.getSystemType("bool").variableType;
         this._eInstructionType = EAFXInstructionTypes.k_BoolInstruction;
     }
 
@@ -22,17 +22,16 @@ export class BoolInstruction extends ExprInstruction implements IAFXLiteralInstr
         this._bValue = bValue;
     }
 
-    toString(): string {
-        return <string><any>this._bValue;
+    get value(): boolean {
+        return this._bValue;
     }
 
-    _toFinalCode(): string {
-        if (this._bValue) {
-            return "true";
-        }
-        else {
-            return "false";
-        }
+    toString(): string {
+        return String(this._bValue);
+    }
+
+    toCode(): string {
+        return this._bValue ? "true" : "false";
     }
 
     evaluate(): boolean {
@@ -44,8 +43,8 @@ export class BoolInstruction extends ExprInstruction implements IAFXLiteralInstr
         return true;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
-        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super._clone(pRelationMap));
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
+        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super.clone(pRelationMap));
         pClonedInstruction.value = (this._bValue);
         return pClonedInstruction;
     }

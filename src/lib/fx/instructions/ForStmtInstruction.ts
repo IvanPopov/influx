@@ -12,17 +12,17 @@ import { IParseNode } from "../../idl/parser/IParser";
 export class ForStmtInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
         super(pNode);
-        this._pInstructionList = [null, null, null, null];
+        // this._pInstructionList = [null, null, null, null];
         this._eInstructionType = EAFXInstructionTypes.k_ForStmtInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "for(";
 
-        sCode += this.instructions[0]._toFinalCode() + ";";
-        sCode += this.instructions[1]._toFinalCode() + ";";
-        sCode += this.instructions[2]._toFinalCode() + ")";
-        sCode += this.instructions[3]._toFinalCode();
+        sCode += this.instructions[0].toCode() + ";";
+        sCode += this.instructions[1].toCode() + ";";
+        sCode += this.instructions[2].toCode() + ")";
+        sCode += this.instructions[3].toCode();
 
         return sCode;
     }
@@ -30,7 +30,7 @@ export class ForStmtInstruction extends StmtInstruction {
     check(eStage: ECheckStage, pInfo: any = null): boolean {
         var pInstructionList: IAFXInstruction[] = this.instructions;
 
-        if (this._nInstructions !== 4) {
+        if (this.instructions.length !== 4) {
             this._setError(EEffectErrors.BAD_FOR_STEP_EMPTY);
             return false;
         }
@@ -85,15 +85,15 @@ export class ForStmtInstruction extends StmtInstruction {
 
         pUsedDataCollector[pIteratorType.instructionID] = <IAFXTypeUseInfoContainer>{
             type: pIteratorType,
-        	isRead: false,
-			isWrite: true,
-			numRead: 0,
-			numWrite: 1,
-			numUsed: 1
-		};
+            isRead: false,
+            isWrite: true,
+            numRead: 0,
+            numWrite: 1,
+            numUsed: 1
+        };
 
-		pForCondition.addUsedData(pUsedDataCollector, eUsedMode);
-		pForStep.addUsedData(pUsedDataCollector, eUsedMode);
-		      pForStmt.addUsedData(pUsedDataCollector, eUsedMode);
-	}
+        pForCondition.addUsedData(pUsedDataCollector, eUsedMode);
+        pForStep.addUsedData(pUsedDataCollector, eUsedMode);
+        pForStmt.addUsedData(pUsedDataCollector, eUsedMode);
+    }
 }

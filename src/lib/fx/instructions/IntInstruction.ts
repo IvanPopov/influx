@@ -1,46 +1,51 @@
 import { IAFXLiteralInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class IntInstruction extends ExprInstruction implements IAFXLiteralInstruction {
     private _iValue: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._iValue = 0;
-        this._pType = Effect.getSystemType("number").getVariableType();
+        this._pType = Effect.getSystemType("number").variableType;
         this._eInstructionType = EAFXInstructionTypes.k_IntInstruction;
     }
 
-    _setValue(iValue: number): void {
+    set value(iValue: number) {
         this._iValue = iValue;
+    }
+
+    get value(): number {
+        return this._iValue;
     }
 
     toString(): string {
         return <string><any>this._iValue;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
         sCode += this._iValue.toString();
         return sCode;
     }
 
-    _evaluate(): boolean {
+    evaluate(): boolean {
         this._pLastEvalResult = this._iValue;
         return true;
     }
 
-    _isConst(): boolean {
+    isConst(): boolean {
         return true;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
-        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super._clone(pRelationMap));
-        pClonedInstruction._setValue(this._iValue);
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
+        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super.clone(pRelationMap));
+        pClonedInstruction.value = (this._iValue);
         return pClonedInstruction;
     }
 }

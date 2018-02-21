@@ -1,5 +1,6 @@
 import { EAFXInstructionTypes, IAFXKeywordInstruction } from "../../idl/IAFXInstruction";
 import { Instruction } from "./Instruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class KeywordInstruction extends Instruction implements IAFXKeywordInstruction {
 	private _sValue: string;
@@ -7,25 +8,25 @@ export class KeywordInstruction extends Instruction implements IAFXKeywordInstru
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._sValue = "";
 		this._eInstructionType = EAFXInstructionTypes.k_KeywordInstruction;
 	}
 
-	_setValue(sValue: string): void {
+	set value(sValue: string) {
 		this._sValue = sValue;
 	}
 
-	_isValue(sTestValue: string): boolean {
-		return this._sValue === sTestValue;
+	get value(): string {
+		return this._sValue;
 	}
-
+	
 	toString(): string {
 		return this._sValue;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		return this._sValue;
 	}
 }

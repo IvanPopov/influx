@@ -15,12 +15,12 @@ export class ArithmeticExprInstruction extends ExprInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_ArithmeticExprInstruction;
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
-    _evaluate(): boolean {
+    evaluate(): boolean {
         var pOperands: IAFXExprInstruction[] = <IAFXExprInstruction[]>this.instructions;
         var pValL: any = pOperands[0].evaluate() ? pOperands[0].getEvalValue() : null;
         var pValR: any = pOperands[1].evaluate() ? pOperands[1].getEvalValue() : null;
@@ -54,11 +54,11 @@ export class ArithmeticExprInstruction extends ExprInstruction {
         }
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0]._toFinalCode();
+        sCode += this.instructions[0].toCode();
         sCode += this.operator;
-        sCode += this.instructions[1]._toFinalCode();
+        sCode += this.instructions[1].toCode();
         return sCode;
     }
 

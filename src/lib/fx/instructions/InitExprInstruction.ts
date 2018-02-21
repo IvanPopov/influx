@@ -12,22 +12,21 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 
 	constructor(pNode: IParseNode) {
 		super(pNode);
-		this._pInstructionList = [];
 		this._eInstructionType = EAFXInstructionTypes.k_InitExprInstruction;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		var sCode: string = "";
 
 		if (!isNull(this._pConstructorType)) {
-			sCode += this._pConstructorType._toFinalCode();
+			sCode += this._pConstructorType.toCode();
 		}
 		sCode += "(";
 
-		for (var i: number = 0; i < this._nInstructions; i++) {
-			sCode += this._getInstructions()[i]._toFinalCode();
+		for (var i: number = 0; i < this.instructions.length; i++) {
+			sCode += this.instructions[i].toCode();
 
-			if (i !== this._nInstructions - 1) {
+			if (i !== this.instructions.length - 1) {
 				sCode += ",";
 			}
 		}
@@ -37,12 +36,12 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 		return sCode;
 	}
 
-	_isConst(): boolean {
+	isConst(): boolean {
 		if (isNull(this._bIsConst)) {
-			var pInstructionList: IAFXExprInstruction[] = <IAFXExprInstruction[]>this._getInstructions();
+			var pInstructionList: IAFXExprInstruction[] = <IAFXExprInstruction[]>this.instructions;
 
 			for (var i: number = 0; i < pInstructionList.length; i++) {
-				if (!pInstructionList[i]._isConst()) {
+				if (!pInstructionList[i].isConst()) {
 					this._bIsConst = false;
 					break;
 				}
@@ -54,43 +53,43 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 		return this._bIsConst;
 	}
 
-	_optimizeForVariableType(pType: IAFXVariableTypeInstruction): boolean {
-		if ((pType._isNotBaseArray() && pType._getScope() === 0) ||
-			(pType._isArray() && this._nInstructions > 1)) {
+	optimizeForVariableType(pType: IAFXVariableTypeInstruction): boolean {
+		if ((pType.isNotBaseArray() && pType.globalScope) ||
+			(pType.isArray() && this.instructions.length > 1)) {
 
 
-			if (pType._getLength() === Instruction.UNDEFINE_LENGTH ||
-				(pType._isNotBaseArray() && this._nInstructions !== pType._getLength()) ||
-				(!pType._isNotBaseArray() && this._nInstructions !== pType._getBaseType()._getLength())) {
+			if (pType.length === Instruction.UNDEFINE_LENGTH ||
+				(pType.isNotBaseArray() && this.instructions.length !== pType.length) ||
+				(!pType.isNotBaseArray() && this.instructions.length !== pType.baseType.length)) {
 
 				return false;
 			}
 
-			if (pType._isNotBaseArray()) {
+			if (pType.isNotBaseArray()) {
 				this._isArray = true;
 			}
 
-			var pArrayElementType: IAFXVariableTypeInstruction = pType._getArrayElementType();
+			var pArrayElementType: IAFXVariableTypeInstruction = pType.arrayElementType;
 			var pTestedInstruction: IAFXExprInstruction = null;
 			var isOk: boolean = false;
 
-			for (var i: number = 0; i < this._nInstructions; i++) {
-				pTestedInstruction = (<IAFXExprInstruction>this._getInstructions()[i]);
+			for (var i: number = 0; i < this.instructions.length; i++) {
+				pTestedInstruction = (<IAFXExprInstruction>this.instructions[i]);
 
-				if (pTestedInstruction._getInstructionType() === EAFXInstructionTypes.k_InitExprInstruction) {
-					isOk = (<IAFXInitExprInstruction>pTestedInstruction)._optimizeForVariableType(pArrayElementType);
+				if (pTestedInstruction.instructionType === EAFXInstructionTypes.k_InitExprInstruction) {
+					isOk = (<IAFXInitExprInstruction>pTestedInstruction).optimizeForVariableType(pArrayElementType);
 					if (!isOk) {
 						return false;
 					}
 				}
 				else {
 					if (Effect.isSamplerType(pArrayElementType)) {
-						if (pTestedInstruction._getInstructionType() !== EAFXInstructionTypes.k_SamplerStateBlockInstruction) {
+						if (pTestedInstruction.instructionType !== EAFXInstructionTypes.k_SamplerStateBlockInstruction) {
 							return false;
 						}
 					}
 					else {
-						isOk = pTestedInstruction._getType()._isEqual(pArrayElementType);
+						isOk = pTestedInstruction.type.isEqual(pArrayElementType);
 						if (!isOk) {
 							return false;
 						}
@@ -98,17 +97,17 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 				}
 			}
 
-			this._pConstructorType = pType._getBaseType();
+			this._pConstructorType = pType.baseType;
 			return true;
 		}
 		else {
-			var pFirstInstruction: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
+			var pFirstInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[0];
 
-			if (this._nInstructions === 1 &&
-				pFirstInstruction._getInstructionType() !== EAFXInstructionTypes.k_InitExprInstruction) {
+			if (this.instructions.length === 1 &&
+				pFirstInstruction.instructionType !== EAFXInstructionTypes.k_InitExprInstruction) {
 
 				if (Effect.isSamplerType(pType)) {
-					if (pFirstInstruction._getInstructionType() === EAFXInstructionTypes.k_SamplerStateBlockInstruction) {
+					if (pFirstInstruction.instructionType === EAFXInstructionTypes.k_SamplerStateBlockInstruction) {
 						return true;
 					}
 					else {
@@ -116,34 +115,34 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 					}
 				}
 
-				if (pFirstInstruction._getType()._isEqual(pType)) {
+				if (pFirstInstruction.type.isEqual(pType)) {
 					return true;
 				}
 				else {
 					return false;
 				}
 			}
-			else if (this._nInstructions === 1) {
+			else if (this.instructions.length === 1) {
 				return false;
 			}
 
-			var pInstructionList: IAFXInitExprInstruction[] = <IAFXInitExprInstruction[]>this._getInstructions();
-			var pFieldNameList: string[] = pType._getFieldNameList();
+			var pInstructionList: IAFXInitExprInstruction[] = <IAFXInitExprInstruction[]>this.instructions;
+			var pFieldNameList: string[] = pType.getFieldNameList();
 
 			for (var i: number = 0; i < pInstructionList.length; i++) {
-				var pFieldType: IAFXVariableTypeInstruction = pType._getFieldType(pFieldNameList[i]);
-				if (!pInstructionList[i]._optimizeForVariableType(pFieldType)) {
+				var pFieldType: IAFXVariableTypeInstruction = pType.getFieldType(pFieldNameList[i]);
+				if (!pInstructionList[i].optimizeForVariableType(pFieldType)) {
 					return false;
 				}
 			}
 
-			this._pConstructorType = pType._getBaseType();
+			this._pConstructorType = pType.baseType;
 			return true;
 		}
 	}
 
-	_evaluate(): boolean {
-		if (!this._isConst()) {
+	evaluate(): boolean {
+		if (!this.isConst()) {
 			this._pLastEvalResult = null;
 			return false;
 		}
@@ -151,24 +150,24 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 		var pRes: any = null;
 
 		if (this._isArray) {
-			pRes = new Array(this._nInstructions);
+			pRes = new Array(this.instructions.length);
 
-			for (var i: number = 0; i < this._nInstructions; i++) {
-				var pEvalInstruction = (<IAFXExprInstruction>this._getInstructions()[i]);
+			for (var i: number = 0; i < this.instructions.length; i++) {
+				var pEvalInstruction = (<IAFXExprInstruction>this.instructions[i]);
 
-				if (pEvalInstruction._evaluate()) {
-					pRes[i] = pEvalInstruction._getEvalValue();
+				if (pEvalInstruction.evaluate()) {
+					pRes[i] = pEvalInstruction.getEvalValue();
 				}
 			}
 		}
-		else if (this._nInstructions === 1) {
-			var pEvalInstruction = (<IAFXExprInstruction>this._getInstructions()[0]);
-			pEvalInstruction._evaluate();
-			pRes = pEvalInstruction._getEvalValue();
+		else if (this.instructions.length === 1) {
+			var pEvalInstruction = (<IAFXExprInstruction>this.instructions[0]);
+			pEvalInstruction.evaluate();
+			pRes = pEvalInstruction.getEvalValue();
 		}
 		else {
 			var pJSTypeCtor: any = Effect.getExternalType(this._pConstructorType);
-			var pArguments: any[] = new Array(this._nInstructions);
+			var pArguments: any[] = new Array(this.instructions.length);
 
 			if (isNull(pJSTypeCtor)) {
 				return false;
@@ -176,19 +175,19 @@ export class InitExprInstruction extends ExprInstruction implements IAFXInitExpr
 
 			try {
 				if (Effect.isScalarType(this._pConstructorType)) {
-					var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[1];
-					if (this._nInstructions > 2 || !pTestedInstruction._evaluate()) {
+					var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
+					if (this.instructions.length > 2 || !pTestedInstruction.evaluate()) {
 						return false;
 					}
 
-					pRes = pJSTypeCtor(pTestedInstruction._getEvalValue());
+					pRes = pJSTypeCtor(pTestedInstruction.getEvalValue());
 				}
 				else {
-					for (var i: number = 0; i < this._nInstructions; i++) {
-						var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[i];
+					for (var i: number = 0; i < this.instructions.length; i++) {
+						var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[i];
 
-						if (pTestedInstruction._evaluate()) {
-							pArguments[i] = pTestedInstruction._getEvalValue();
+						if (pTestedInstruction.evaluate()) {
+							pArguments[i] = pTestedInstruction.getEvalValue();
 						}
 						else {
 							return false;

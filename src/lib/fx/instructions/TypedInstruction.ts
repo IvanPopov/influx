@@ -21,10 +21,10 @@ export class TypedInstruction extends Instruction implements IAFXTypedInstructio
         this._pType = pType;
     }
 
-    _clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXTypedInstruction {
-        var pClonedInstruction: IAFXTypedInstruction = <IAFXTypedInstruction>(super._clone(pRelationMap));
+    clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXTypedInstruction {
+        var pClonedInstruction: IAFXTypedInstruction = <IAFXTypedInstruction>(super.clone(pRelationMap));
         if (!isNull(this.type)) {
-            pClonedInstruction.type = this.type._clone(pRelationMap);
+            pClonedInstruction.type = this.type.clone(pRelationMap);
         }
         return pClonedInstruction;
     }

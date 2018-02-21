@@ -12,7 +12,7 @@ export class FloatInstruction extends ExprInstruction implements IAFXLiteralInst
     constructor(pNode: IParseNode) {
         super(pNode);
         this._fValue = 0.0;
-        this._pType = Effect.getSystemType("number").getVariableType();
+        this._pType = Effect.getSystemType("number").variableType;
         this._eInstructionType = EAFXInstructionTypes.k_FloatInstruction;
     }
 
@@ -25,10 +25,10 @@ export class FloatInstruction extends ExprInstruction implements IAFXLiteralInst
     }
 
     toString(): string {
-        return <string><any>this._fValue;
+        return String(this._fValue);
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
         sCode += this._fValue.toString();
         if (this._fValue % 1 === 0) {
@@ -46,8 +46,8 @@ export class FloatInstruction extends ExprInstruction implements IAFXLiteralInst
         return true;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
-        let pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super._clone(pRelationMap));
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
+        let pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super.clone(pRelationMap));
         pClonedInstruction.value = (this._fValue);
         return pClonedInstruction;
     }

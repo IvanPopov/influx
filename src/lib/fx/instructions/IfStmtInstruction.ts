@@ -1,5 +1,6 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -7,25 +8,25 @@ import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
  * ( if || if_else ) Expr Stmt [Stmt]
  */
 export class IfStmtInstruction extends StmtInstruction {
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = [null, null, null];
 		this._eInstructionType = EAFXInstructionTypes.k_IfStmtInstruction;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		var sCode: string = "";
-		if (this._getOperator() === "if") {
+		if (this.operator === "if") {
 			sCode += "if(";
-			sCode += this._getInstructions()[0]._toFinalCode() + ")";
-			sCode += this._getInstructions()[1]._toFinalCode();
+			sCode += this.instructions[0].toCode() + ")";
+			sCode += this.instructions[1].toCode();
 		}
 		else {
 			sCode += "if(";
-			sCode += this._getInstructions()[0]._toFinalCode() + ") ";
-			sCode += this._getInstructions()[1]._toFinalCode();
+			sCode += this.instructions[0].toCode() + ") ";
+			sCode += this.instructions[1].toCode();
 			sCode += "else ";
-			sCode += this._getInstructions()[2]._toFinalCode();
+			sCode += this.instructions[2].toCode();
 		}
 
 		return sCode;

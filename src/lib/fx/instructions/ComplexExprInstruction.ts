@@ -14,11 +14,9 @@ export class ComplexExprInstruction extends ExprInstruction {
         this._eInstructionType = EAFXInstructionTypes.k_ComplexExprInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = "";
-
-        sCode += "(" + this.instructions[0]._toFinalCode() + ")";
-
+        sCode += "(" + this.instructions[0].toCode() + ")";
         return sCode;
     }
 
