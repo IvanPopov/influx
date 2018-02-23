@@ -1,0 +1,6 @@
+/*******************************
+         Site Overrides
+*******************************/
+
+@pageMinWidth  : 100%;
+@largeMonitorBreakpoint: 1049px;

@@ -6,7 +6,6 @@ import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { logger } from 'redux-logger';
 import thunk from 'redux-thunk';
 import { openGrammar, openSource } from './actions';
-// import { getAllProducts } from './actions';
 import { App } from './containers';
 import reducer from './reducers';
 import IStoreState from './store/IStoreState';

@@ -1,5 +1,4 @@
 import autobind from 'autobind-decorator';
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, withStyles } from 'material-ui';
 import * as React from 'react';
 import * as CodeMirror from 'react-codemirror';
 import { connect } from 'react-redux';
@@ -7,6 +6,7 @@ import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree } from '../../lib/idl/parser/IParser';
 import { getGrammarText, getParseMode, getParserType, getSourceCode } from '../reducers';
 import { IParserParams, IStoreState } from '../store/IStoreState';
+import { Modal, Button as Button2 } from 'semantic-ui-react'
 
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
@@ -15,9 +15,6 @@ function deepEqual(a: Object, b: Object): boolean {
 // tslint:disable-next-line:no-import-side-effect
 import 'codemirror/mode/javascript/javascript';
 
-// const decorate = withStyles<'root'>(theme => ({
-//     root: null
-// }));
 
 export interface ISyntaxTreeViewProps {
     readonly parser: {
@@ -31,6 +28,7 @@ export interface ISyntaxTreeViewProps {
         filename: string;
     }
 }
+
 
 class SyntaxTreeView extends React.Component<ISyntaxTreeViewProps, {}> {
     state: {
@@ -62,29 +60,22 @@ class SyntaxTreeView extends React.Component<ISyntaxTreeViewProps, {}> {
         this.parse(this.props);
     }
 
-    render(): React.ReactNode {
+    render() {
         return (
             <div>
-                <Dialog
+                <Modal
+                    dimmer='blurring'
                     open={ this.state.parser.showErrors }
-                    aria-labelledby='alert-dialog-title'
-                    aria-describedby='alert-dialog-description'
+                    size='mini'
                 >
-                    <DialogTitle id='alert-dialog-title'>{ 'Parser initialization error!' }</DialogTitle>
-                    <DialogContent>
-                        <DialogContentText id='alert-dialog-description'>
-                            { this.state.parser.error }
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={ this.hideParserErrors } color='primary' autoFocus>
-                            Ok
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-                {/* <CodeMirror value={ this.parseTreeAsString() }
-                    options={ { mode: 'json', lineNumbers: true, theme: 'eclipse' } } /> */}
-                { /* tslint:disable-next-line:react-no-dangerous-html */ }
+                    <Modal.Header>{ 'Parser initialization error!' }</Modal.Header>
+                    <Modal.Content>
+                        <p>{ this.state.parser.error }</p>
+                    </Modal.Content>
+                    <Modal.Actions>
+                        <Button2 icon='check' content='All Done' onClick={ this.hideParserErrors } />
+                    </Modal.Actions>
+                </Modal>
                 <div dangerouslySetInnerHTML={ { __html: `<pre>${this.parseTreeAsString()}</pre>` } } ></div>
             </div>
         );
@@ -115,10 +106,6 @@ class SyntaxTreeView extends React.Component<ISyntaxTreeViewProps, {}> {
 
         if (!code || !parser) { return; }
 
-        // let time: number;
-        // time = new Date().getTime();
-        // time = new Date().getTime() - tim/e;
-
         try {
             parser.setParseFileName(filename);
             const isParseOk: EParserCode = parser.parse(code);
@@ -128,7 +115,7 @@ class SyntaxTreeView extends React.Component<ISyntaxTreeViewProps, {}> {
                 // TODO
             }
         } catch (e) {
-            console.log(e? e.logEntry: null);
+            console.log(e ? e.logEntry : null);
         }
     }
 

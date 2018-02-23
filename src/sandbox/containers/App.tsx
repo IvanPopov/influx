@@ -1,20 +1,13 @@
+import { Tab, Container, Segment, Grid } from 'semantic-ui-react'
 import autobind from 'autobind-decorator';
 import * as fs from 'fs';
-import AppBar from 'material-ui/AppBar';
-import Grid from 'material-ui/Grid';
-import Paper from 'material-ui/Paper';
-import { StyledComponentProps, WithStyles, withStyles } from 'material-ui/styles';
-import Tabs, { Tab } from 'material-ui/Tabs';
-import Typography from 'material-ui/Typography';
 import * as React from 'react';
 import * as CodeMirror from 'react-codemirror';
 import { render } from 'react-dom';
 import { connect } from 'react-redux';
-import { Dispatch } from 'react-redux';
-import SwipeableViews from 'react-swipeable-views';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { setSource } from '../actions/index';
-import { ParserParameters, TabContainer } from '../components';
+import { ParserParameters } from '../components';
 import SyntaxTreeView from '../components/SyntaxTreeView';
 import { getGrammarText, getParseMode, getParserType, getSourceCode, getSourceFilename } from '../reducers';
 import IStoreState from '../store/IStoreState';
@@ -24,97 +17,78 @@ import 'codemirror/mode/clike/clike';
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
-const decorate = withStyles(theme => ({
-    div: {
-        width: 'auto'
-    },
-    container: {
-        width: 'auto',
-        margin: 'auto'
-    }
-}));
-
-interface IAppProps {
-    readonly sourceFile: {
-        readonly content: string;
-        readonly filename: string;
-    };
-    readonly parser: {
-        readonly grammarText: string;
-        readonly mode: EParseMode;
-        readonly type: EParserType;
-    };
-    readonly setSource: (content: string) => void;
+export interface IAppProps {
+    sourceFile: { content: string; filename: string; };
+    parser: { grammarText: string; mode: EParseMode; type: EParserType; };
+    setSource: (content: string) => void;
 }
 
-interface IAppState {
-    readonly value: number;
-}
-
-class App extends React.Component<IAppProps & WithStyles<'container' | 'div'>, IAppState> {
-    state: IAppState = { value: 0 };
-
+class SourceEditor extends React.Component<{ content: string; onChange: (content) => void; }> {
     render() {
         return (
-            <Grid container style={ { width: 'auto', margin: 'auto' } }>
-                <Grid item xs={ 12 } >
-                    <div style={ { width: 'auto' } }>
-                        <AppBar position='static' color='default'>
-                            <Tabs
-                                value={ this.state.value }
-                                onChange={ this.handleChange }
-                                indicatorColor='primary'
-                                textColor='primary'
-                                fullWidth
-                            >
-                                <Tab label='Sources' />
-                                <Tab label='Grammar' />
-                                <Tab label='Debug' disabled />
-                            </Tabs>
-                        </AppBar>
-                        <SwipeableViews
-                            axis={ 'x' }
-                            index={ this.state.value }
-                            onChangeIndex={ this.handleChangeIndex }
-                        >
-                            <TabContainer dir='ltr'>
-                                <Grid container style={ { width: 'auto', margin: 'auto' } }>
-                                    <Grid item xs={ 6 } >
-                                        <CodeMirror value={ this.props.sourceFile.content || '' }
-                                            options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } } 
-                                            onChange={ this.props.setSource } />
-                                    </Grid>
-                                    <Grid item xs={ 6 } >
-                                        <SyntaxTreeView parser={ this.props.parser } 
-                                            source={ { code: this.props.sourceFile.content, filename: this.props.sourceFile.filename } } />
-                                    </Grid>
-                                </Grid>
-                            </TabContainer>
-                            <div>
-                                <Grid container style={ { width: 'auto', margin: 'auto' } }>
-                                    <Grid item xs={ 12 } >
-                                        <ParserParameters />
-                                    </Grid>
-                                    <Grid item xs={ 12 } >
-                                        <CodeMirror value={ this.props.parser.grammarText || '' }
-                                            options={ { lineNumbers: true, theme: 'eclipse' } } />
-                                    </Grid>
-                                </Grid>
-                            </div>
-                            <TabContainer dir='ltr'>Item Three</TabContainer>
-                        </SwipeableViews>
-                    </div>
-                </Grid>
-            </Grid>
+            <CodeMirror value={ this.props.content }
+                options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } }
+                onChange={ this.props.onChange } />
         );
     }
+}
 
-    private handleChange = (event, value) => {
-        this.setState({ value });
-    }
+class App extends React.Component<IAppProps> {
+    render() {
+        const panes = [
+            {
+                menuItem: 'Sources',
+                render: () => (
+                    <Tab.Pane attached={ false }>
+                        <Grid divided={ true }>
+                            <Grid.Row columns={ 2 }>
+                                <Grid.Column>
+                                    <SourceEditor content={ this.props.sourceFile.content } onChange={ this.props.setSource } />
+                                </Grid.Column>
+                                <Grid.Column>
+                                    <SyntaxTreeView parser={ this.props.parser }
+                                        source={ { code: this.props.sourceFile.content, filename: this.props.sourceFile.filename } } />
+                                </Grid.Column>
+                            </Grid.Row>
+                        </Grid>
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: 'Grammar',
+                render: () => (
+                    <Tab.Pane attached={ false }>
+                        <Grid>
+                            <Grid.Row columns={ 1 }>
+                                <Grid.Column>
+                                    <ParserParameters />
+                                </Grid.Column>
+                            </Grid.Row>
+                            <Grid.Row columns={ 1 }>
+                                <Grid.Column>
+                                    <CodeMirror value={ this.props.parser.grammarText || '' }
+                                        options={ { lineNumbers: true, theme: 'eclipse' } } />
+                                </Grid.Column>
+                            </Grid.Row>
+                        </Grid>
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: 'Debug',
+                render: () => (
+                    <Tab.Pane attached={ false } >todo</Tab.Pane>
+                )
+            },
+        ];
 
-    private handleChangeIndex = (index) => {
-        this.setState({ value: index });
+        return (
+            <div>
+                <Container style={ { marginTop: '1em' } }>
+                    <Tab menu={ { secondary: false, pointing: false } } panes={ panes } />
+                </Container>
+            </div>
+        );
     }
 }
 
@@ -132,4 +106,4 @@ function mapStateToProps(state: IStoreState) {
     };
 }
 
-export default decorate<{}>(connect<{}, {}, IAppProps>(mapStateToProps, { setSource })(App));
+export default connect<{}, {}, IAppProps>(mapStateToProps, { setSource })(App) as any;

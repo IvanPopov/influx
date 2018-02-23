@@ -1,29 +1,15 @@
 import autobind from 'autobind-decorator';
-import {
-    Button, FormControl, FormControlLabel, FormGroup, FormLabel,
-    Paper, Radio, RadioGroup, StyledComponentProps, Switch, Typography, withStyles, WithStyles
-} from 'material-ui';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Dispatch } from 'redux';
+
 import * as bf from '../../lib/bf/bf';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { setParserParams } from '../actions';
 import { getParseMode, getParserType } from '../reducers';
 import { IStoreState } from '../store/IStoreState';
 
-const decorate = withStyles<'root'>(({ mixins }) => ({
-    root: mixins.gutters({
-        paddingTop: 16,
-        paddingBottom: 16
-    })
-}));
-
-const customStyles = {
-    switch: {
-        height: '32px'
-    }
-};
+import { Form, Segment } from 'semantic-ui-react'
 
 const setFlags = (dest: number, src: number, value: boolean) => {
     return value ? bf.setFlags(dest, src) : bf.clearFlags(dest, src);
@@ -41,7 +27,7 @@ export interface IParserParametersState {
     readonly type: EParserType;
 }
 
-class ParserParameters extends React.Component<IParserParametersProps & WithStyles<'root'>, IParserParametersState> {
+class ParserParameters extends React.Component<IParserParametersProps, IParserParametersState> {
     state: IParserParametersState;
 
     componentWillMount() {
@@ -53,72 +39,65 @@ class ParserParameters extends React.Component<IParserParametersProps & WithStyl
     }
 
     render() {
-        const { classes } = this.props;
         const { type, mode } = this.state;
         return (
-            <Paper classes={ classes } elevation={ 1 }>
-                <FormControl component='fieldset' margin='dense'>
-                    <FormLabel component='legend'>Parser type:</FormLabel>
-                    <FormGroup>
-                        <RadioGroup
-                            aria-label='parser-type'
-                            name='parser-type'
-                            // className={ classes.group }
-                            value={ EParserType[this.state.type] }
-                            onChange={ (event, value: string) => this.setState({ type: EParserType[value] }) }
-                            row
-                        >
-                            <FormControlLabel value={ EParserType[EParserType.k_LR0] } control={ <Radio /> } label='LR0' disabled />
-                            <FormControlLabel value={ EParserType[EParserType.k_LR1] } control={ <Radio /> } label='LR1' />
-                            <FormControlLabel value={ EParserType[EParserType.k_LALR] } control={ <Radio /> } label='LALR' />
-                        </RadioGroup>
-                    </FormGroup>
-                    <FormLabel component='legend'>Parser flags:</FormLabel>
-                    <FormGroup>
-                        <FormControlLabel
-                            control={
-                                <Switch style={ customStyles.switch }
-                                    checked={ !!(mode & EParseMode.k_Add) }
-                                    onChange={ this.handleChangeMode.bind(this, EParseMode.k_Add) }
-                                />
-                            }
-                            label='Only marked with `--AN` created'
+            <Segment>
+                <Form>
+                    <Form.Group>
+                        <label>Parser type:</label>
+                        <Form.Radio
+                            label='LR0'
+                            name='radioParserType'
+                            value={ EParserType[EParserType.k_LR0] }
+                            checked={ this.state.type === EParserType.k_LR0 }
+                            onChange={ (e, { value }) => this.setState({ type: EParserType[value] }) }
+                            // disabled
                         />
-                        <FormControlLabel
-                            control={
-                                <Switch style={ customStyles.switch }
-                                    checked={ !!(mode & EParseMode.k_Negate) }
-                                    onChange={ this.handleChangeMode.bind(this, EParseMode.k_Negate) }
-                                />
-                            }
-                            label='Not marked with `--NN` created'
+                        <Form.Radio
+                            label='LR1'
+                            name='radioParserType'
+                            value={ EParserType[EParserType.k_LR1] }
+                            checked={ this.state.type === EParserType.k_LR1 }
+                            onChange={ (e, { value }) => this.setState({ type: EParserType[value] }) }
                         />
-                        <FormControlLabel
-                            control={
-                                <Switch style={ customStyles.switch }
-                                    checked={ !!(mode & EParseMode.k_AllNode) }
-                                    onChange={ this.handleChangeMode.bind(this, EParseMode.k_AllNode) }
-                                />
-                            }
-                            label='All created'
+                        <Form.Radio
+                            label='LALR'
+                            name='radioParserType'
+                            value={ EParserType[EParserType.k_LALR] }
+                            checked={ this.state.type === EParserType.k_LALR }
+                            onChange={ (e, { value }) => this.setState({ type: EParserType[value] }) }
                         />
-                        <FormControlLabel
-                            control={
-                                <Switch style={ customStyles.switch }
-                                    checked={ !!(mode & EParseMode.k_Optimize) }
-                                    onChange={ this.handleChangeMode.bind(this, EParseMode.k_Optimize) }
-                                />
-                            }
-                            label='Created nodes if it has more than one child'
-                        />
-                    </FormGroup>
-                    <label htmlFor='raised-button-file'>
-                        <Button raised component='span' onClick={ () => this.props.setParserParams(type, mode) }>
-                            Reinit parser
-                        </Button>
-                    </label>
-                </FormControl>
-            </Paper>
+                    </Form.Group>
+                    <label>Parser flags:</label>
+                    <Form.Checkbox
+                        toggle
+                        checked={ !!(mode & EParseMode.k_Add) }
+                        onChange={ this.handleChangeMode.bind(this, EParseMode.k_Add) }
+                        label='Only marked with `--AN` created'
+                    />
+                    <Form.Checkbox
+                        toggle
+                        checked={ !!(mode & EParseMode.k_Negate) }
+                        onChange={ this.handleChangeMode.bind(this, EParseMode.k_Negate) }
+                        label='Not marked with `--NN` created'
+                    />
+                    <Form.Checkbox
+                        toggle
+                        checked={ !!(mode & EParseMode.k_AllNode) }
+                        onChange={ this.handleChangeMode.bind(this, EParseMode.k_AllNode) }
+                        label='All created'
+                    />
+                    <Form.Checkbox
+                        toggle
+                        checked={ !!(mode & EParseMode.k_Optimize) }
+                        onChange={ this.handleChangeMode.bind(this, EParseMode.k_Optimize) }
+                        label='Created nodes if it has more than one child'
+                    />
+                    <Form.Button onClick={ () => this.props.setParserParams(type, mode) }>
+                        Reinit parser
+                    </Form.Button>
+                </Form>
+            </Segment>
         );
     }
 
@@ -152,6 +131,4 @@ function mapStateToProps(state: IStoreState) {
     };
 }
 
-export default decorate<{}>(
-    connect<{}, {}, IParserParametersProps>(mapStateToProps, { setParserParams })(ParserParameters)
-);
+export default connect<{}, {}, IParserParametersProps>(mapStateToProps, { setParserParams })(ParserParameters) as any;
