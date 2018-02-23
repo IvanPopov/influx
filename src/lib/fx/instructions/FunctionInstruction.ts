@@ -71,19 +71,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         this._eInstructionType = EAFXInstructionTypes.k_FunctionDeclInstruction;
     }
 
-    toCode(): string {
-        let sCode = "";
-
-        sCode += this._pFunctionDefenition.toCode();
-        sCode += this._pImplementation.toCode();
-
-        return sCode;
-    }
-
-    toFinalDefCode(): string {
-        return this._pFunctionDefenition.toCode();
-    }
-
     get type(): IAFXTypeInstruction {
         return <IAFXTypeInstruction>this.returnType;
     }
@@ -108,10 +95,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         return this._pFunctionDefenition.numNeededArguments;
     }
 
-    hasImplementation(): boolean {
-        return !isNull(this._pImplementation);
-    }
-
     get returnType(): IAFXVariableTypeInstruction {
         return this._pFunctionDefenition.returnType;
     }
@@ -127,21 +110,116 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
     set implementationScope(iScope: number) {
         this._iImplementationScope = iScope;
     }
-
+    
     get implementationScope(): number {
         return this._iImplementationScope;
     }
-
-    set functionDef(pFunctionDef: IAFXDeclInstruction) {
+    
+    set definition(pFunctionDef: IAFXDeclInstruction) {
         this._pFunctionDefenition = <FunctionDefInstruction>pFunctionDef;
         this._pInstructionList[0] = pFunctionDef;
         pFunctionDef.parent = this;
     }
 
+    get definition(): IAFXDeclInstruction {
+        return this._pFunctionDefenition;
+    }
+    
     set implementation(pImplementation: IAFXStmtInstruction) {
         this._pImplementation = <StmtBlockInstruction>pImplementation;
         this._pInstructionList[1] = pImplementation;
         pImplementation.parent = pImplementation;
+    }    
+
+    get vertexShader(): IAFXFunctionDeclInstruction {
+        return this._pVertexShader;
+    }
+    
+    get pixelShader(): IAFXFunctionDeclInstruction {
+        return this._pPixelShader;
+    }
+    
+    get usedFunctionList(): IAFXFunctionDeclInstruction[] {
+        return this._pUsedFunctionList;
+    }
+
+    
+    get attributeVariableMap(): IMap<IAFXVariableDeclInstruction> {
+        return this._pAttributeVariableMap;
+    }
+
+    get varyingVariableMap(): IMap<IAFXVariableDeclInstruction> {
+        return this._pVaryingVariableMap;
+    }
+
+    get uniformVariableMap(): IMap<IAFXVariableDeclInstruction> {
+        return this._pUniformVariableMap;
+    }
+
+    get textureVariableMap(): IMap<IAFXVariableDeclInstruction> {
+        return this._pTextureVariableMap;
+    }
+
+    get usedComplexTypeMap(): IMap<IAFXTypeInstruction> {
+        return this._pUsedComplexTypeMap;
+    }
+
+    get attributeVariableKeys(): number[] {
+        if (isNull(this._pAttributeVariableKeys) && !isNull(this._pAttributeVariableMap)) {
+            this._pAttributeVariableKeys = <number[]><any>Object.keys(this._pAttributeVariableMap);
+        }
+
+        return this._pAttributeVariableKeys;
+    }
+
+    get varyingVariableKeys(): number[] {
+        if (isNull(this._pVaryingVariableKeys) && !isNull(this._pVaryingVariableMap)) {
+            this._pVaryingVariableKeys = <number[]><any>Object.keys(this._pVaryingVariableMap);
+        }
+
+        return this._pVaryingVariableKeys;
+    }
+
+
+    get uniformVariableKeys(): number[] {
+        if (isNull(this._pUniformVariableKeys) && !isNull(this._pUniformVariableMap)) {
+            this._pUniformVariableKeys = <number[]><any[]>Object.keys(this._pUniformVariableMap);
+        }
+
+        return this._pUniformVariableKeys;
+    }
+
+    get textureVariableKeys(): number[] {
+        if (isNull(this._pTextureVariableKeys) && !isNull(this._pTextureVariableMap)) {
+            this._pTextureVariableKeys = <number[]><any[]>Object.keys(this._pTextureVariableMap);
+        }
+
+        return this._pTextureVariableKeys;
+    }
+
+    get usedComplexTypeKeys(): number[] {
+        if (isNull(this._pUsedComplexTypeKeys)) {
+            this._pUsedComplexTypeKeys = <number[]><any[]>Object.keys(this._pUsedComplexTypeMap);
+        }
+
+        return this._pUsedComplexTypeKeys;
+    }
+
+    get extSystemFunctionList(): IAFXFunctionDeclInstruction[] {
+        return this._pExtSystemFunctionList;
+    }
+
+    get extSystemTypeList(): IAFXTypeDeclInstruction[] {
+        return this._pExtSystemTypeList;
+    }
+    
+    toCode(): string {
+        let sCode = "";
+
+        sCode += this._pFunctionDefenition.toCode();
+        sCode += this._pImplementation.toCode();
+
+        return sCode;
     }
 
     clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXFunctionDeclInstruction {
@@ -183,14 +261,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         return this._pOutVariable;
     }
 
-    get vertexShader(): IAFXFunctionDeclInstruction {
-        return this._pVertexShader;
-    }
-
-    get pixelShader(): IAFXFunctionDeclInstruction {
-        return this._pPixelShader;
-    }
-
     markUsedAs(eUsedType: EFunctionType): void {
         switch (eUsedType) {
             case EFunctionType.k_Vertex:
@@ -213,11 +283,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
                 return this._bUsedAsVertex;
             case EFunctionType.k_Pixel:
                 return this._bUsedAsPixel;
-            case EFunctionType.k_Function:
+                case EFunctionType.k_Function:
                 return this._bUsedAsFunction;
+            }
+            return false;
         }
-        return false;
-    }
 
     isUsedAsFunction(): boolean {
         return this._bUsedAsFunction;
@@ -303,9 +373,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
 
     }
 
-    get usedFunctionList(): IAFXFunctionDeclInstruction[] {
-        return this._pUsedFunctionList;
-    }
 
     isBlackListFunction(): boolean {
         return this._isInBlackList;
@@ -488,74 +555,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         }
     }
 
-    get attributeVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return this._pAttributeVariableMap;
-    }
-
-    get varyingVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return this._pVaryingVariableMap;
-    }
-
-    get uniformVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return this._pUniformVariableMap;
-    }
-
-    get textureVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return this._pTextureVariableMap;
-    }
-
-    get usedComplexTypeMap(): IMap<IAFXTypeInstruction> {
-        return this._pUsedComplexTypeMap;
-    }
-
-    get attributeVariableKeys(): number[] {
-        if (isNull(this._pAttributeVariableKeys) && !isNull(this._pAttributeVariableMap)) {
-            this._pAttributeVariableKeys = <number[]><any>Object.keys(this._pAttributeVariableMap);
-        }
-
-        return this._pAttributeVariableKeys;
-    }
-
-    get varyingVariableKeys(): number[] {
-        if (isNull(this._pVaryingVariableKeys) && !isNull(this._pVaryingVariableMap)) {
-            this._pVaryingVariableKeys = <number[]><any>Object.keys(this._pVaryingVariableMap);
-        }
-
-        return this._pVaryingVariableKeys;
-    }
-
-
-    get uniformVariableKeys(): number[] {
-        if (isNull(this._pUniformVariableKeys) && !isNull(this._pUniformVariableMap)) {
-            this._pUniformVariableKeys = <number[]><any[]>Object.keys(this._pUniformVariableMap);
-        }
-
-        return this._pUniformVariableKeys;
-    }
-
-    get textureVariableKeys(): number[] {
-        if (isNull(this._pTextureVariableKeys) && !isNull(this._pTextureVariableMap)) {
-            this._pTextureVariableKeys = <number[]><any[]>Object.keys(this._pTextureVariableMap);
-        }
-
-        return this._pTextureVariableKeys;
-    }
-
-    get usedComplexTypeKeys(): number[] {
-        if (isNull(this._pUsedComplexTypeKeys)) {
-            this._pUsedComplexTypeKeys = <number[]><any[]>Object.keys(this._pUsedComplexTypeMap);
-        }
-
-        return this._pUsedComplexTypeKeys;
-    }
-
-    get extSystemFunctionList(): IAFXFunctionDeclInstruction[] {
-        return this._pExtSystemFunctionList;
-    }
-
-    get extSystemTypeList(): IAFXTypeDeclInstruction[] {
-        return this._pExtSystemTypeList;
-    }
 
     private generatesVertexAttrubutes(): void {
         throw null;
@@ -732,7 +731,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IAFXFunc
         this._pUniformVariableMap[iMainVar] = pMainVariable;
         this.addUsedComplexType(pMainVariable.type.baseType);
 
-        if (!pMainVariable.type.isComplex() && pMainVariable.hasConstantInitializer()) {
+        if (!pMainVariable.type.isComplex() && !isNull(pMainVariable.initializeExpr) && pMainVariable.initializeExpr.isConst()) {
             pMainVariable.prepareDefaultValue();
         }
     }

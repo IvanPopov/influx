@@ -53,7 +53,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
         };
 
         if (!isNull(this._pTexture)) {
-            pSamplerState.textureName = this._pTexture._getRealName();
+            pSamplerState.textureName = this._pTexture.realName;
         }
 
         if (!isNull(this._pSamplerParams)) {
@@ -88,7 +88,6 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
                 return ETextureWrapModes.CLAMP_TO_EDGE;
             case "MIRROR":
                 return ETextureWrapModes.MIRRORED_REPEAT;
-
             default:
                 return 0;
         }

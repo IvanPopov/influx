@@ -161,7 +161,7 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
         var pFieldId: IAFXIdInstruction = new IdInstruction(null);
 
         pFieldType.pushType(pType);
-        pFieldType.wriable = (isWrite);
+        pFieldType.wriatable = (isWrite);
 
         pFieldId.name = (sFieldName);
         pFieldId.realName = (sRealFieldName);

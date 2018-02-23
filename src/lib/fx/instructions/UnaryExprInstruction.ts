@@ -1,51 +1,52 @@
 import { EAFXInstructionTypes, EVarUsedMode, IAFXExprInstruction, IAFXTypeUseInfoContainer } from '../../idl/IAFXInstruction';
 import { IMap } from '../../idl/IMap';
 import { ExprInstruction } from './ExprInstruction';
+import { IParseNode } from '../../idl/parser/IParser';
 
 /**
  * Represent + - ! ++ -- expr
  * (+|-|!|++|--|) Instruction
  */
 export class UnaryExprInstruction extends ExprInstruction {
-    constructor() {
-        super();
+    constructor(pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = [null];
         this._eInstructionType = EAFXInstructionTypes.k_UnaryExprInstruction;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         var sCode: string = '';
-        sCode += this._getOperator();
-        sCode += this._getInstructions()[0]._toFinalCode();
+        sCode += this.operator;
+        sCode += this.instructions[0].toCode();
 
         return sCode;
     }
 
-    _addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
                  eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (this._getOperator() === '++' || this._getOperator() === '--') {
-            (<IAFXExprInstruction>this._getInstructions()[0])._addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+        if (this.operator === '++' || this.operator === '--') {
+            (<IAFXExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
         } else {
-            (<IAFXExprInstruction>this._getInstructions()[0])._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+            (<IAFXExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
 
-    _isConst(): boolean {
-        return (<IAFXExprInstruction>this._getInstructions()[0])._isConst();
+    isConst(): boolean {
+        return (<IAFXExprInstruction>this.instructions[0]).isConst();
     }
 
-    _evaluate(): boolean {
-        var sOperator: string = this._getOperator();
-        var pExpr: IAFXExprInstruction = <IAFXExprInstruction>this._getInstructions()[0];
+    evaluate(): boolean {
+        var sOperator: string = this.operator;
+        var pExpr: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[0];
 
-        if (!pExpr._evaluate()) {
+        if (!pExpr.evaluate()) {
             return false;
         }
 
         var pRes: any = null;
 
         try {
-            pRes = pExpr._getEvalValue();
+            pRes = pExpr.getEvalValue();
             switch (sOperator) {
                 case '+':
                     pRes = +pRes;

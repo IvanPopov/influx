@@ -1,37 +1,38 @@
 import { Instruction } from "./Instruction";
 import { IAFXSimpleInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
+import { IParseNode } from "../../idl/parser/IParser";
 
 export class SimpleInstruction extends Instruction implements IAFXSimpleInstruction {
     private _sValue: string = "";
 
-    constructor(sValue: string) {
-        super();
+    constructor(sValue: string, pNode: IParseNode) {
+        super(pNode);
         this._pInstructionList = null;
         this._eInstructionType = EAFXInstructionTypes.k_SimpleInstruction;
 
         this._sValue = sValue;
     }
 
-    _setValue(sValue: string): void {
+    set value(sValue: string) {
         this._sValue = sValue;
     }
 
-    _isValue(sValue: string): boolean {
-        return (this._sValue === sValue);
+    get value(): string {
+        return this.value;
     }
 
     toString(): string {
         return this._sValue;
     }
 
-    _toFinalCode(): string {
+    toCode(): string {
         return this._sValue;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): SimpleInstruction {
-        var pClone: SimpleInstruction = <SimpleInstruction>super._clone(pRelationMap);
-        pClone._setValue(this._sValue);
+    clone(pRelationMap?: IMap<IAFXInstruction>): SimpleInstruction {
+        var pClone: SimpleInstruction = <SimpleInstruction>super.clone(pRelationMap);
+        pClone.value = (this._sValue);
         return pClone;
     }
 }

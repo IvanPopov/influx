@@ -1,49 +1,54 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IAFXLiteralInstruction, IAFXInstruction, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
-import { Effect } from "../Effect";
+import * as Effect from "../Effect";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 
 export class StringInstruction extends ExprInstruction implements IAFXLiteralInstruction {
-	private _sValue: string;
+    private _sValue: string;
 
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-	constructor() {
-		super();
-		this._sValue = "";
-		this._pType = Effect.getSystemType("string").getVariableType();
-		this._eInstructionType = EAFXInstructionTypes.k_StringInstruction;
-	}
+    constructor(pNode: IParseNode) {
+        super(pNode);
+        this._sValue = "";
+        this._pType = Effect.getSystemType("string").variableType;
+        this._eInstructionType = EAFXInstructionTypes.k_StringInstruction;
+    }
 
-	_setValue(sValue: string): void {
-		this._sValue = sValue;
-	}
+    get value(): string {
+        return this._sValue;
+    }
 
-	toString(): string {
-		return this._sValue;
-	}
+    set value(sValue: string) {
+        this._sValue = sValue;
+    }
 
-	_toFinalCode(): string {
-		var sCode: string = "";
-		sCode += this._sValue;
-		return sCode;
-	}
+    toString(): string {
+        return this._sValue;
+    }
 
-	_evaluate(): boolean {
-		this._pLastEvalResult = this._sValue;
-		return true;
-	}
+    toCode(): string {
+        var sCode: string = "";
+        sCode += this._sValue;
+        return sCode;
+    }
 
-	_isConst(): boolean {
-		return true;
-	}
+    evaluate(): boolean {
+        this._pLastEvalResult = this._sValue;
+        return true;
+    }
 
-	_clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
-		var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super._clone(pRelationMap));
-		pClonedInstruction._setValue(this._sValue);
-		return pClonedInstruction;
-	}
+    isConst(): boolean {
+        return true;
+    }
+
+    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
+        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super.clone(pRelationMap));
+        pClonedInstruction.value = (this._sValue);
+        return pClonedInstruction;
+    }
 }

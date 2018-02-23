@@ -181,8 +181,11 @@ export interface IAFXTypeInstruction extends IAFXInstruction {
     readonly length: number;
     readonly arrayElementType: IAFXTypeInstruction;
     readonly typeDecl: IAFXTypeDeclInstruction;
-    readonly writable: boolean;
-    readonly readable: boolean;
+
+    writable: boolean;
+    readable: boolean;
+
+    fieldNameList: string[];
 
     isBase(): boolean;
     isArray(): boolean;
@@ -206,7 +209,6 @@ export interface IAFXTypeInstruction extends IAFXInstruction {
     getField(sFieldName: string): IAFXVariableDeclInstruction;
     getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction;
     getFieldType(sFieldName: string): IAFXVariableTypeInstruction;
-    getFieldNameList(): string[];
 
     clone(pRelationMap?: IMap<IAFXInstruction>): IAFXTypeInstruction;
 }
@@ -226,7 +228,7 @@ export interface IAFXVariableTypeInstruction extends IAFXTypeInstruction {
 	/**
 	 * init api
 	 */
-    setPadding(iPadding: number): void;
+    
     pushType(pType: IAFXTypeInstruction): void;
     addUsage(sUsage: string): void;
     addArrayIndex(pExpr: IAFXExprInstruction): void;
@@ -340,9 +342,6 @@ export interface IAFXVariableDeclInstruction extends IAFXDeclInstruction {
 }
 
 export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
-    toFinalDefCode(): string;
-    hasImplementation(): boolean;
-
     arguments: IAFXTypedInstruction[];
     numNeededArguments: number;
     returnType: IAFXVariableTypeInstruction;
@@ -350,24 +349,24 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
 
     vertexShader: IAFXFunctionDeclInstruction;
     pixelShader: IAFXFunctionDeclInstruction;
-
+    
     definition: IAFXDeclInstruction
     implementation: IAFXStmtInstruction;
-
+    
     attributeVariableMap: IMap<IAFXVariableDeclInstruction>;
     varyingVariableMap: IMap<IAFXVariableDeclInstruction>;
-
+    
     uniformVariableMap: IMap<IAFXVariableDeclInstruction>;
     textureVariableMap: IMap<IAFXVariableDeclInstruction>;
     usedComplexTypeMap: IMap<IAFXTypeInstruction>;
-
+    
     attributeVariableKeys: number[];
     varyingVariableKeys: number[];
-
+    
     uniformVariableKeys: number[];
     textureVariableKeys: number[];
     usedComplexTypeKeys: number[];
-
+    
     extSystemFunctionList: IAFXFunctionDeclInstruction[];
     extSystemTypeList: IAFXTypeDeclInstruction[];
 
@@ -376,18 +375,20 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
     addOutVariable(pVariable: IAFXVariableDeclInstruction): boolean;
     getOutVariable(): IAFXVariableDeclInstruction;
 
-    markUsedAs(eUsedType: EFunctionType): void;
     isUsedAs(eUsedType: EFunctionType): boolean;
     isUsedAsFunction(): boolean;
     isUsedAsVertex(): boolean;
     isUsedAsPixel(): boolean;
     isUsed(): boolean;
-    markUsedInVertex(): void;
-    markUsedInPixel(): void;
     isUsedInVertex(): boolean;
     isUsedInPixel(): boolean;
+    
     checkVertexUsage(): boolean;
     checkPixelUsage(): boolean;
+
+    markUsedAs(eUsedType: EFunctionType): void;
+    markUsedInVertex(): void;
+    markUsedInPixel(): void;
 
     checkDefenitionForVertexUsage(): boolean;
     checkDefenitionForPixelUsage(): boolean;
@@ -401,6 +402,7 @@ export interface IAFXFunctionDeclInstruction extends IAFXDeclInstruction {
 
     isBlackListFunction(): boolean;
     addToBlackList(): void;
+
     getStringDef(): string;
 
     convertToVertexShader(): IAFXFunctionDeclInstruction;

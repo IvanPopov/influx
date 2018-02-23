@@ -2,6 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EAFXInstructionTypes, IAFXTypeUseInfoContainer, IAFXVariableTypeInstruction, EVarUsedMode } from "../../idl/IAFXInstruction";
 import { IMap } from "../../idl/IMap";
 import { isDef } from "../../common";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -9,24 +10,24 @@ import { isDef } from "../../common";
  * @ Instruction
  */
 export class PrimaryExprInstruction extends ExprInstruction {
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = [null];
 		this._eInstructionType = EAFXInstructionTypes.k_PrimaryExprInstruction;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		var sCode: string = "";
 
-		sCode += this._getInstructions()[0]._toFinalCode();
+		sCode += this.instructions[0].toCode();
 
 		return sCode;
 	}
 
-	_addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+	addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
 		eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-		var pPointerType: IAFXVariableTypeInstruction = this._getType();
-		var pInfo: IAFXTypeUseInfoContainer = pUsedDataCollector[pPointerType._getInstructionID()];
+		var pPointerType: IAFXVariableTypeInstruction = this.type;
+		var pInfo: IAFXTypeUseInfoContainer = pUsedDataCollector[pPointerType.instructionID];
 
 		if (!isDef(pInfo)) {
 			pInfo = <IAFXTypeUseInfoContainer>{
@@ -38,7 +39,7 @@ export class PrimaryExprInstruction extends ExprInstruction {
 				numUsed: 0
 			}
 
-			pUsedDataCollector[pPointerType._getInstructionID()] = pInfo;
+			pUsedDataCollector[pPointerType.instructionID] = pInfo;
 		}
 
 		if (eUsedMode === EVarUsedMode.k_Read) {

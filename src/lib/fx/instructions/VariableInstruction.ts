@@ -8,7 +8,6 @@ import { IdInstruction } from './IdInstruction';
 import { isNull } from '../../common';
 import { IMap } from '../../idl/IMap';
 import { StringDictionary } from '../../stringUtils/StringDictionary'
-import { PostfixPointInstruction } from './PostfixPointInstruction';
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 
@@ -126,7 +125,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         return this.type.isSampler();
     }
 
-    get subVarDecls(): IAFXVariableDeclInstruction[] {
+    get vars(): IAFXVariableDeclInstruction[] {
         return this.type.subVarDecls;
     }
 
@@ -193,30 +192,8 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
             return this._pFullNameExpr;
         }
 
-        if (!this.isField() ||
-            !(<IAFXVariableTypeInstruction>this.parent).parentVarDecl.visible) {
-            this._pFullNameExpr = new IdExprInstruction(null);
-            this._pFullNameExpr.push(this.nameID, false);
-        }
-        else {
-            var pMainVar: IAFXVariableDeclInstruction = <IAFXVariableDeclInstruction>this.type.parentContainer;
-
-            if (isNull(pMainVar)) {
-                return null;
-            }
-
-            var pMainExpr: IAFXExprInstruction = pMainVar.fullNameExpr;
-            if (isNull(pMainExpr)) {
-                return null;
-            }
-            var pFieldExpr: IAFXExprInstruction = new IdExprInstruction(null);
-            pFieldExpr.push(this.nameID, false);
-
-            this._pFullNameExpr = new PostfixPointInstruction();
-            this._pFullNameExpr.push(pMainExpr, false);
-            this._pFullNameExpr.push(pFieldExpr, false);
-            this._pFullNameExpr.type = (this.type);
-        }
+        this._pFullNameExpr = new IdExprInstruction(null);
+        this._pFullNameExpr.push(this.nameID, false);
 
         return this._pFullNameExpr;
     }

@@ -18,7 +18,7 @@ export class StmtInstruction extends Instruction implements IAFXStmtInstruction 
         var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this.instructions;
 
         if (!isNull(pUsedDataCollector)) {
-            for (var i: number = 0; i < this._nInstructions; i++) {
+            for (var i: number = 0; i < this.instructions.length; i++) {
                 pInstructionList[i].addUsedData(pUsedDataCollector, eUsedMode);
             }
         }

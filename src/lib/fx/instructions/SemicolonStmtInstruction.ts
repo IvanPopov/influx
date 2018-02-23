@@ -1,5 +1,6 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -7,13 +8,13 @@ import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
  * ;
  */
 export class SemicolonStmtInstruction extends StmtInstruction {
-	constructor() {
-		super();
+	constructor(pNode: IParseNode) {
+		super(pNode);
 		this._pInstructionList = null;
 		this._eInstructionType = EAFXInstructionTypes.k_SemicolonStmtInstruction;
 	}
 
-	_toFinalCode(): string {
+	toCode(): string {
 		return ";";
 	}
 }

@@ -2,7 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXFunctionDeclInstruction, IAFXInstruction, IAFXTypeUseInfoContainer, EVarUsedMode, IAFXAnalyzedInstruction, IAFXExprInstruction } from "../../idl/IAFXInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
-import { SystemFunctionInstruction } from "./SystemFunctionInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 
 
 /**
@@ -10,66 +10,65 @@ import { SystemFunctionInstruction } from "./SystemFunctionInstruction";
  * EMPTY_OPERATOR SimpleInstruction ... SimpleInstruction 
  */
 export class SystemCallInstruction extends ExprInstruction {
-	private _pSystemFunction: SystemFunctionInstruction = null;
-	private _pSamplerDecl: IAFXVariableDeclInstruction = null;
+    private _pSystemFunction: SystemFunctionInstruction = null;
+    private _pSamplerDecl: IAFXVariableDeclInstruction = null;
 
-	constructor() {
-		super();
-		this._pInstructionList = null;
-		this._eInstructionType = EAFXInstructionTypes.k_SystemCallInstruction;
-	}
+    constructor(pNode: IParseNode) {
+        super(pNode);
+        this._pInstructionList = null;
+        this._eInstructionType = EAFXInstructionTypes.k_SystemCallInstruction;
+    }
 
-	_toFinalCode(): string {
-		if (!isNull(this._pSamplerDecl) && this._pSamplerDecl._isDefinedByZero()) {
-			return "vec4(0.)";
-		}
+    toCode(): string {
+        if (!isNull(this._pSamplerDecl) && this._pSamplerDecl.isDefinedByZero()) {
+            return "vec4(0.)";
+        }
 
-		var sCode: string = "";
+        var sCode: string = "";
 
-		for (var i: number = 0; i < this._getInstructions().length; i++) {
-			sCode += this._getInstructions()[i]._toFinalCode();
-		}
+        for (var i: number = 0; i < this.instructions.length; i++) {
+            sCode += this.instructions[i].toCode();
+        }
 
-		return sCode;
-	}
+        return sCode;
+    }
 
-	setSystemCallFunction(pFunction: IAFXFunctionDeclInstruction): void {
-		this._pSystemFunction = <SystemFunctionInstruction>pFunction;
-		this._setType(pFunction._getType());
-	}
+    setSystemCallFunction(pFunction: IAFXFunctionDeclInstruction): void {
+        this._pSystemFunction = <SystemFunctionInstruction>pFunction;
+        this.type = (pFunction.type);
+    }
 
-	_setInstructions(pInstructionList: IAFXInstruction[]): void {
-		this._pInstructionList = pInstructionList;
-		this._nInstructions = pInstructionList.length;
-		for (var i: number = 0; i < pInstructionList.length; i++) {
-			pInstructionList[i]._setParent(this);
-		}
-	}
+    set instructions(pInstructionList: IAFXInstruction[]) {
+        this._pInstructionList = pInstructionList;
+        for (var i: number = 0; i < pInstructionList.length; i++) {
+            pInstructionList[i].parent = (this);
+        }
+    }
 
-	fillByArguments(pArguments: IAFXInstruction[]): void {
-		this._setInstructions(this._pSystemFunction.closeArguments(pArguments));
-	}
+    fillByArguments(pArguments: IAFXInstruction[]): void {
+        this.instructions = (this._pSystemFunction.closeArguments(pArguments));
+    }
 
-	_addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-		eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-		var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this._getInstructions();
-		for (var i: number = 0; i < this._nInstructions; i++) {
-			if (pInstructionList[i]._getInstructionType() !== EAFXInstructionTypes.k_SimpleInstruction) {
-				pInstructionList[i]._addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-				if ((<IAFXExprInstruction>pInstructionList[i])._getType()._isSampler()) {
-					this._pSamplerDecl = (<IAFXExprInstruction>pInstructionList[i])._getType()._getParentVarDecl();
-				}
-			}
-		}
-	}
+    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this.instructions;
+        for (var i: number = 0; i < this.instructions.length; i++) {
+            if (pInstructionList[i].instructionType !== EAFXInstructionTypes.k_SimpleInstruction) {
+                pInstructionList[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+                if ((<IAFXExprInstruction>pInstructionList[i]).type.isSampler) {
+                    this._pSamplerDecl = (<IAFXExprInstruction>pInstructionList[i]).type.parentVarDecl;
+                }
+            }
+        }
+    }
 
-	_clone(pRelationMap?: IMap<IAFXInstruction>): SystemCallInstruction {
-		var pClone: SystemCallInstruction = <SystemCallInstruction>super._clone(pRelationMap);
+    clone(pRelationMap?: IMap<IAFXInstruction>): SystemCallInstruction {
+        var pClone: SystemCallInstruction = <SystemCallInstruction>super.clone(pRelationMap);
 
-		pClone.setSystemCallFunction(this._pSystemFunction);
+        pClone.setSystemCallFunction(this._pSystemFunction);
 
-		return pClone;
-	}
+        return pClone;
+    }
 
 }
 
