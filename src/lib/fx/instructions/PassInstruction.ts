@@ -1,4 +1,4 @@
-import { IAFXFunctionDeclInstruction, IAFXPassInstruction, EFunctionType, IAFXVariableDeclInstruction, EAFXInstructionTypes, IAFXTypeInstruction } from "../../idl/IAFXInstruction";
+import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
 import { ERenderStateValues } from "../../idl/ERenderStateValues";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -7,51 +7,79 @@ import { isNull } from "../../common";
 import { ERenderStates } from "../../idl/ERenderStates";
 
 interface IEvaluateOutput {
-    "fragment": IAFXFunctionDeclInstruction;
-    "vertex": IAFXFunctionDeclInstruction;
+    "fragment": IFunctionDeclInstruction;
+    "vertex": IFunctionDeclInstruction;
 };
 
 interface IPassFunction {
-    (engine: any, uniforms: any, states: IMap<ERenderStateValues>, shaderMap: IMap<IAFXFunctionDeclInstruction>, out: IEvaluateOutput): void;
+    (engine: any, uniforms: any, states: IMap<ERenderStateValues>, shaderMap: IMap<IFunctionDeclInstruction>, out: IEvaluateOutput): void;
 }
 
-export class PassInstruction extends DeclInstruction implements IAFXPassInstruction {
+export class PassInstruction extends DeclInstruction implements IPassInstruction {
     private _pTempNodeList: IParseNode[] = null;
-    private _pTempFoundedFuncList: IAFXFunctionDeclInstruction[] = null;
+    private _pTempFoundedFuncList: IFunctionDeclInstruction[] = null;
     private _pTempFoundedFuncTypeList: EFunctionType[] = null;
     private _pParseNode: IParseNode = null;
 
     private _sFunctionCode: string = "";
 
-    private _pShadersMap: IMap<IAFXFunctionDeclInstruction> = null;
+    private _pShadersMap: IMap<IFunctionDeclInstruction> = null;
     private _pPassStateMap: IMap<ERenderStateValues> = null;
 
     private _bIsComlexPass: boolean = false;
     private _fnPassFunction: IPassFunction = null;
 
-    private _pVertexShader: IAFXFunctionDeclInstruction = null;
-    private _pPixelShader: IAFXFunctionDeclInstruction = null;
+    private _pVertexShader: IFunctionDeclInstruction = null;
+    private _pPixelShader: IFunctionDeclInstruction = null;
 
-    private _pUniformVariableMapV: IMap<IAFXVariableDeclInstruction> = null;
-    private _pTextureVariableMapV: IMap<IAFXVariableDeclInstruction> = null;
-    private _pUsedComplexTypeMapV: IMap<IAFXTypeInstruction> = null;
+    private _pUniformVariableMapV: IMap<IVariableDeclInstruction> = null;
+    private _pTextureVariableMapV: IMap<IVariableDeclInstruction> = null;
+    private _pUsedComplexTypeMapV: IMap<ITypeInstruction> = null;
 
-    private _pUniformVariableMapP: IMap<IAFXVariableDeclInstruction> = null;
-    private _pTextureVariableMapP: IMap<IAFXVariableDeclInstruction> = null;
-    private _pUsedComplexTypeMapP: IMap<IAFXTypeInstruction> = null;
+    private _pUniformVariableMapP: IMap<IVariableDeclInstruction> = null;
+    private _pTextureVariableMapP: IMap<IVariableDeclInstruction> = null;
+    private _pUsedComplexTypeMapP: IMap<ITypeInstruction> = null;
 
-    private _pFullUniformVariableMap: IMap<IAFXVariableDeclInstruction> = null;
-    private _pFullTextureVariableMap: IMap<IAFXVariableDeclInstruction> = null;
+    private _pFullUniformVariableMap: IMap<IVariableDeclInstruction> = null;
+    private _pFullTextureVariableMap: IMap<IVariableDeclInstruction> = null;
 
     private _pComplexPassEvaluateOutput: IEvaluateOutput = { "fragment": null, "vertex": null };
 
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = null;
-        this._eInstructionType = EAFXInstructionTypes.k_PassInstruction;
+        super(pNode, EInstructionTypes.k_PassInstruction);
+
+        this._pTempNodeList = null;
+        this._pTempFoundedFuncList = null;
+        this._pTempFoundedFuncTypeList = null;
+        this._pParseNode = null;
+
+        this._sFunctionCode = "";
+
+        this._pShadersMap = null;
+        this._pPassStateMap = null;
+
+        this._bIsComlexPass = false;
+        this._fnPassFunction = null;
+
+        this._pVertexShader = null;
+        this._pPixelShader = null;
+
+        this._pUniformVariableMapV = null;
+        this._pTextureVariableMapV = null;
+        this._pUsedComplexTypeMapV = null;
+
+        this._pUniformVariableMapP = null;
+        this._pTextureVariableMapP = null;
+        this._pUsedComplexTypeMapP = null;
+
+        this._pFullUniformVariableMap = null;
+        this._pFullTextureVariableMap = null;
+
+        this._pComplexPassEvaluateOutput = { "fragment": null, "vertex": null };
+
     }
 
-    addFoundFunction(pNode: IParseNode, pShader: IAFXFunctionDeclInstruction, eType: EFunctionType): void {
+    addFoundFunction(pNode: IParseNode, pShader: IFunctionDeclInstruction, eType: EFunctionType): void {
         if (isNull(this._pTempNodeList)) {
             this._pTempNodeList = [];
             this._pTempFoundedFuncList = [];
@@ -63,7 +91,7 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
         this._pTempFoundedFuncTypeList.push(eType);
     }
 
-    getFoundedFunction(pNode: IParseNode): IAFXFunctionDeclInstruction {
+    getFoundedFunction(pNode: IParseNode): IFunctionDeclInstruction {
         if (isNull(this._pTempNodeList)) {
             return null;
         }
@@ -92,65 +120,65 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
     }
 
     addCodeFragment(sCode: string): void {
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             this._sFunctionCode += sCode;
         }
     }
 
-    markAsComplex(isComplex: boolean): void {
+    set complexPass(isComplex: boolean) {
         this._bIsComlexPass = isComplex;
     }
 
-    get uniformVariableMapV(): IMap<IAFXVariableDeclInstruction> {
+    get uniformVariableMapV(): IMap<IVariableDeclInstruction> {
         return this._pUniformVariableMapV;
     }
 
-    get textureVariableMapV(): IMap<IAFXVariableDeclInstruction> {
+    get textureVariableMapV(): IMap<IVariableDeclInstruction> {
         return this._pTextureVariableMapV;
     }
 
-    get usedComplexTypeMapV(): IMap<IAFXTypeInstruction> {
+    get usedComplexTypeMapV(): IMap<ITypeInstruction> {
         return this._pUsedComplexTypeMapV;
     }
 
-    get uniformVariableMapP(): IMap<IAFXVariableDeclInstruction> {
+    get uniformVariableMapP(): IMap<IVariableDeclInstruction> {
         return this._pUniformVariableMapP;
     }
 
-    get textureVariableMapP(): IMap<IAFXVariableDeclInstruction> {
+    get textureVariableMapP(): IMap<IVariableDeclInstruction> {
         return this._pTextureVariableMapP;
     }
 
-    get usedComplexTypeMapP(): IMap<IAFXTypeInstruction> {
+    get usedComplexTypeMapP(): IMap<ITypeInstruction> {
         return this._pUsedComplexTypeMapP;
     }
 
-    get fullUniformMap(): IMap<IAFXVariableDeclInstruction> {
+    get fullUniformMap(): IMap<IVariableDeclInstruction> {
         return this._pFullUniformVariableMap;
     }
 
-    get fullTextureMap(): IMap<IAFXVariableDeclInstruction> {
+    get fullTextureMap(): IMap<IVariableDeclInstruction> {
         return this._pFullTextureVariableMap;
     }
 
-    isComplexPass(): boolean {
+    get complexPass(): boolean {
         return this._bIsComlexPass;
     }
 
-    get vertexShader(): IAFXFunctionDeclInstruction {
+    get vertexShader(): IFunctionDeclInstruction {
         return this._pVertexShader;
     }
 
-    get pixelShader(): IAFXFunctionDeclInstruction {
+    get pixelShader(): IFunctionDeclInstruction {
         return this._pPixelShader;
     }
 
-    addShader(pShader: IAFXFunctionDeclInstruction): void {
+    addShader(pShader: IFunctionDeclInstruction): void {
         var isVertex: boolean = pShader.functionType === EFunctionType.k_Vertex;
 
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             if (isNull(this._pShadersMap)) {
-                this._pShadersMap = <IMap<IAFXFunctionDeclInstruction>>{};
+                this._pShadersMap = <IMap<IFunctionDeclInstruction>>{};
             }
             var iShader: number = pShader.instructionID;
             this._pShadersMap[iShader] = pShader;
@@ -174,7 +202,7 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
         // 	this._pPassStateMap = render.createRenderStateMap();
         // }
 
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             this.addCodeFragment("states[" + eType + "]=" + eValue + ";");
         }
         // else {
@@ -183,7 +211,7 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
     }
 
     finalizePass(): void {
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             this._fnPassFunction = <any>(new Function("engine", "uniforms", "states", "shaderMap", "out", this._sFunctionCode));
         }
 
@@ -197,7 +225,7 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
     }
 
     evaluate(pEngineStates: any, pUniforms: any): boolean {
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             this._pComplexPassEvaluateOutput.fragment = null;
             this._pComplexPassEvaluateOutput.vertex = null;
             // this.clearPassStates();
@@ -222,19 +250,19 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
 
     private generateInfoAboutUsedVaraibles(): void {
         {
-            this._pUniformVariableMapV = <IMap<IAFXVariableDeclInstruction>>{};
-            this._pTextureVariableMapV = <IMap<IAFXVariableDeclInstruction>>{};
-            this._pUsedComplexTypeMapV = <IMap<IAFXTypeInstruction>>{};
+            this._pUniformVariableMapV = <IMap<IVariableDeclInstruction>>{};
+            this._pTextureVariableMapV = <IMap<IVariableDeclInstruction>>{};
+            this._pUsedComplexTypeMapV = <IMap<ITypeInstruction>>{};
 
-            this._pUniformVariableMapP = <IMap<IAFXVariableDeclInstruction>>{};
-            this._pTextureVariableMapP = <IMap<IAFXVariableDeclInstruction>>{};
-            this._pUsedComplexTypeMapP = <IMap<IAFXTypeInstruction>>{};
+            this._pUniformVariableMapP = <IMap<IVariableDeclInstruction>>{};
+            this._pTextureVariableMapP = <IMap<IVariableDeclInstruction>>{};
+            this._pUsedComplexTypeMapP = <IMap<ITypeInstruction>>{};
 
-            this._pFullUniformVariableMap = <IMap<IAFXVariableDeclInstruction>>{};
-            this._pFullTextureVariableMap = <IMap<IAFXVariableDeclInstruction>>{};
+            this._pFullUniformVariableMap = <IMap<IVariableDeclInstruction>>{};
+            this._pFullTextureVariableMap = <IMap<IVariableDeclInstruction>>{};
         }
 
-        if (this.isComplexPass()) {
+        if (this.complexPass) {
             for (var i in this._pShadersMap) {
                 this.addInfoAbouUsedVariablesFromFunction(this._pShadersMap[i]);
             }
@@ -249,18 +277,18 @@ export class PassInstruction extends DeclInstruction implements IAFXPassInstruct
         }
     }
 
-    private addInfoAbouUsedVariablesFromFunction(pFunction: IAFXFunctionDeclInstruction): void {
-        var pUniformVars: IMap<IAFXVariableDeclInstruction> = pFunction.uniformVariableMap;
-        var pTextureVars: IMap<IAFXVariableDeclInstruction> = pFunction.textureVariableMap;
-        var pTypes: IMap<IAFXTypeInstruction> = pFunction.usedComplexTypeMap;
+    private addInfoAbouUsedVariablesFromFunction(pFunction: IFunctionDeclInstruction): void {
+        var pUniformVars: IMap<IVariableDeclInstruction> = pFunction.uniformVariableMap;
+        var pTextureVars: IMap<IVariableDeclInstruction> = pFunction.textureVariableMap;
+        var pTypes: IMap<ITypeInstruction> = pFunction.usedComplexTypeMap;
 
 
-        var pSharedVarsTo: IMap<IAFXVariableDeclInstruction> = null;
-        var pGlobalVarsTo: IMap<IAFXVariableDeclInstruction> = null;
-        var pUniformVarsTo: IMap<IAFXVariableDeclInstruction> = null;
-        var pForeignVarsTo: IMap<IAFXVariableDeclInstruction> = null;
-        var pTextureVarsTo: IMap<IAFXVariableDeclInstruction> = null;
-        var pTypesTo: IMap<IAFXTypeInstruction> = null;
+        var pSharedVarsTo: IMap<IVariableDeclInstruction> = null;
+        var pGlobalVarsTo: IMap<IVariableDeclInstruction> = null;
+        var pUniformVarsTo: IMap<IVariableDeclInstruction> = null;
+        var pForeignVarsTo: IMap<IVariableDeclInstruction> = null;
+        var pTextureVarsTo: IMap<IVariableDeclInstruction> = null;
+        var pTypesTo: IMap<ITypeInstruction> = null;
 
         if (pFunction.functionType === EFunctionType.k_Vertex) {
             pUniformVarsTo = this._pUniformVariableMapV;

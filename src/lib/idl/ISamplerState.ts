@@ -1,10 +1,9 @@
 import { ETextureWrapModes, ETextureFilters } from "./ITexture";
 
 
-export interface IAFXSamplerState {
+export interface ISamplerState {
 	textureName: string;
-	// texture: ITexture;
-
+	
 	wrap_s: ETextureWrapModes;
 	wrap_t: ETextureWrapModes;
 

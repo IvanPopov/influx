@@ -1,4 +1,4 @@
-import { EAFXInstructionTypes, EVarUsedMode, IAFXExprInstruction, IAFXTypeUseInfoContainer } from '../../idl/IAFXInstruction';
+import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContainer } from '../../idl/IInstruction';
 import { IMap } from '../../idl/IMap';
 import { ExprInstruction } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
@@ -9,9 +9,7 @@ import { IParseNode } from '../../idl/parser/IParser';
  */
 export class UnaryExprInstruction extends ExprInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null];
-        this._eInstructionType = EAFXInstructionTypes.k_UnaryExprInstruction;
+        super(pNode, EInstructionTypes.k_UnaryExprInstruction);
     }
 
     toCode(): string {
@@ -22,22 +20,22 @@ export class UnaryExprInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
                  eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         if (this.operator === '++' || this.operator === '--') {
-            (<IAFXExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+            (<IExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
         } else {
-            (<IAFXExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+            (<IExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
 
     isConst(): boolean {
-        return (<IAFXExprInstruction>this.instructions[0]).isConst();
+        return (<IExprInstruction>this.instructions[0]).isConst();
     }
 
     evaluate(): boolean {
         var sOperator: string = this.operator;
-        var pExpr: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[0];
+        var pExpr: IExprInstruction = <IExprInstruction>this.instructions[0];
 
         if (!pExpr.evaluate()) {
             return false;

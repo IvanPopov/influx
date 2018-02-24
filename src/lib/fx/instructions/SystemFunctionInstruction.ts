@@ -1,4 +1,4 @@
-import { IAFXFunctionDeclInstruction, IAFXSimpleInstruction, IAFXTypeDeclInstruction, IAFXIdInstruction, IAFXTypedInstruction, IAFXTypeInstruction, EAFXInstructionTypes, IAFXVariableTypeInstruction, EFunctionType, IAFXInstruction, IAFXDeclInstruction, IAFXVariableDeclInstruction, EVarUsedMode, IAFXStmtInstruction } from "../../idl/IAFXInstruction";
+import { IFunctionDeclInstruction, ISimpleInstruction, ITypeDeclInstruction, IIdInstruction, ITypedInstruction, ITypeInstruction, EInstructionTypes, IVariableTypeInstruction, EFunctionType, IInstruction, IDeclInstruction, IVariableDeclInstruction, EVarUsedMode, IStmtInstruction } from "../../idl/IInstruction";
 import { DeclInstruction } from "./DeclInstruction";
 import { IdInstruction } from "./IdInstruction";
 import { isNull } from "../../common";
@@ -8,31 +8,29 @@ import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 
 
-export class SystemFunctionInstruction extends DeclInstruction implements IAFXFunctionDeclInstruction {
-    private _pExprTranslator: ExprTemplateTranslator = null;
-    private _pName: IAFXIdInstruction = null;
-    private _pReturnType: VariableTypeInstruction = null;
-    private _pArguments: IAFXTypedInstruction[] = null;
+export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
+    private _pExprTranslator: ExprTemplateTranslator ;
+    private _pName: IIdInstruction;
+    private _pReturnType: VariableTypeInstruction;
+    private _pArguments: ITypedInstruction[];
 
-    private _sDefinition: string = "";
-    private _sImplementation: string = "";
+    private _sDefinition: string;
+    private _sImplementation: string;
 
-    private _pExtSystemTypeList: IAFXTypeDeclInstruction[] = null;
-    private _pExtSystemFunctionList: IAFXFunctionDeclInstruction[] = null;
+    private _pExtSystemTypeList: ITypeDeclInstruction[];
+    private _pExtSystemFunctionList: IFunctionDeclInstruction[];
 
-    constructor(sName: string, pReturnType: IAFXTypeInstruction,
+    constructor(sName: string, pReturnType: ITypeInstruction,
         pExprTranslator: ExprTemplateTranslator,
-        pArgumentTypes: IAFXTypeInstruction[]) {
-        super(null);
-
-        this._eInstructionType = EAFXInstructionTypes.k_SystemFunctionInstruction;
+        pArgumentTypes: ITypeInstruction[]) {
+        super(null, EInstructionTypes.k_SystemFunctionInstruction);
 
         this._pName = new IdInstruction(null);
         this._pName.name = (sName);
         this._pName.parent = (this);
 
         this._pReturnType = new VariableTypeInstruction(null);
-        this._pReturnType._pushType(pReturnType);
+        this._pReturnType.pushType(pReturnType);
         this._pReturnType.parent = (this);
 
         this._pArguments = [];
@@ -46,6 +44,12 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
                 this._pArguments.push(pArgument);
             }
         }
+
+        this._sDefinition = null;
+        this._sImplementation = null;
+    
+        this._pExtSystemTypeList = [];
+        this._pExtSystemFunctionList = [];
 
         this._pExprTranslator = pExprTranslator;
     }
@@ -76,8 +80,8 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
         return this._sDefinition + this._sImplementation;
     }
 
-    setUsedSystemData(pTypeList: IAFXTypeDeclInstruction[],
-        pFunctionList: IAFXFunctionDeclInstruction[]): void {
+    setUsedSystemData(pTypeList: ITypeDeclInstruction[],
+        pFunctionList: IFunctionDeclInstruction[]): void {
 
         this._pExtSystemTypeList = pTypeList;
         this._pExtSystemFunctionList = pFunctionList;
@@ -85,7 +89,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
     closeSystemDataInfo(): void {
         for (var i: number = 0; i < this._pExtSystemFunctionList.length; i++) {
-            var pFunction: IAFXFunctionDeclInstruction = this._pExtSystemFunctionList[i];
+            var pFunction: IFunctionDeclInstruction = this._pExtSystemFunctionList[i];
 
             var pTypes = pFunction.extSystemTypeList;
             var pFunctions = pFunction.extSystemFunctionList;
@@ -104,27 +108,31 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
         }
     }
 
-    setExprTranslator(pExprTranslator: ExprTemplateTranslator): void {
+    set exprTranslator(pExprTranslator: ExprTemplateTranslator) {
         this._pExprTranslator = pExprTranslator;
     }
 
-    get nameID(): IAFXIdInstruction {
+    get exprTranslator(): ExprTemplateTranslator {
+        return this._pExprTranslator;
+    }
+
+    get nameID(): IIdInstruction {
         return this._pName;
     }
 
-    get arguments(): IAFXTypedInstruction[] {
+    get arguments(): ITypedInstruction[] {
         return this._pArguments;
     }
 
-    _getNumNeededArguments(): number {
+    get numArgsRequired(): number {
         return this._pArguments.length;
     }
 
-    get type(): IAFXVariableTypeInstruction {
+    get type(): IVariableTypeInstruction {
         return this.returnType;
     }
 
-    get returnType(): IAFXVariableTypeInstruction {
+    get returnType(): IVariableTypeInstruction {
         return this._pReturnType;
     }
 
@@ -132,37 +140,89 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
         return EFunctionType.k_Function;
     }
 
-    set functionType(eFunctionType: EFunctionType) {
+    set functionType(eFunctionType: EFunctionType) {}
 
+    set functionDef(pFunctionDef: IDeclInstruction) {}
+
+    set implementation(pImplementation: IStmtInstruction) {}
+
+    get vertexShader(): IFunctionDeclInstruction {
+        return null;
     }
 
-    closeArguments(pArguments: IAFXInstruction[]): IAFXInstruction[] {
+    get pixelShader(): IFunctionDeclInstruction {
+        return null;
+    }
+
+    get stringDef(): string {
+        return "system_func";
+    }
+
+    get attributeVariableMap(): IMap<IVariableDeclInstruction> {
+        return null;
+    }
+
+    get varyingVariableMap(): IMap<IVariableDeclInstruction> {
+        return null;
+    }
+
+    get uniformVariableMap(): IMap<IVariableDeclInstruction> {
+        return null;
+    }
+
+    get textureVariableMap(): IMap<IVariableDeclInstruction> {
+        return null;
+    }
+
+    get usedComplexTypeMap(): IMap<ITypeInstruction> {
+        return null;
+    }
+
+    get attributeVariableKeys(): number[] {
+        return null;
+    }
+
+    get varyingVariableKeys(): number[] {
+        return null;
+    }
+
+    get uniformVariableKeys(): number[] {
+        return null;
+    }
+
+    get textureVariableKeys(): number[] {
+        return null;
+    }
+
+    get usedComplexTypeKeys(): number[] {
+        return null;
+    }
+
+    get extSystemFunctionList(): IFunctionDeclInstruction[] {
+        return this._pExtSystemFunctionList;
+    }
+
+    get extSystemTypeList(): ITypeDeclInstruction[] {
+        return this._pExtSystemTypeList;
+    }
+
+    get usedFunctionList(): IFunctionDeclInstruction[] {
+        return null;
+    }
+
+    closeArguments(pArguments: IInstruction[]): IInstruction[] {
         return this._pExprTranslator.toInstructionList(pArguments);
     }
 
-    set functionDef(pFunctionDef: IAFXDeclInstruction) {
-    }
-
-    set implementation(pImplementation: IAFXStmtInstruction) {
-    }
-
-    clone(pRelationMap?: IMap<IAFXInstruction>): SystemFunctionInstruction {
+    clone(pRelationMap?: IMap<IInstruction>): SystemFunctionInstruction {
         return this;
     }
 
-    addOutVariable(pVariable: IAFXVariableDeclInstruction): boolean {
+    addOutVariable(pVariable: IVariableDeclInstruction): boolean {
         return false;
     }
 
-    getOutVariable(): IAFXVariableDeclInstruction {
-        return null;
-    }
-
-    get vertexShader(): IAFXFunctionDeclInstruction {
-        return null;
-    }
-
-    get pixelShader(): IAFXFunctionDeclInstruction {
+    getOutVariable(): IVariableDeclInstruction {
         return null;
     }
 
@@ -204,11 +264,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
     }
 
     checkVertexUsage(): boolean {
-        return this.isForVertex();
+        return this.vertex;
     }
 
     checkPixelUsage(): boolean {
-        return this.isForPixel();
+        return this.pixel;
     }
 
     checkDefenitionForVertexUsage(): boolean {
@@ -225,41 +285,26 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
     notCanUsedAsFunction(): void { }
 
-    addUsedFunction(pFunction: IAFXFunctionDeclInstruction): boolean {
+    addUsedFunction(pFunction: IFunctionDeclInstruction): boolean {
         return false;
     }
 
-    addUsedVariable(pVariable: IAFXVariableDeclInstruction): void {
+    addUsedVariable(pVariable: IVariableDeclInstruction): void {
 
     }
 
-    getUsedFunctionList(): IAFXFunctionDeclInstruction[] {
+    convertToVertexShader(): IFunctionDeclInstruction {
         return null;
     }
 
-    isBlackListFunction(): boolean {
-        return false;
-    }
-
-    addToBlackList(): void {
-    }
-
-    get stringDef(): string {
-        return "system_func";
-    }
-
-    convertToVertexShader(): IAFXFunctionDeclInstruction {
-        return null;
-    }
-
-    convertToPixelShader(): IAFXFunctionDeclInstruction {
+    convertToPixelShader(): IFunctionDeclInstruction {
         return null;
     }
 
     prepareForVertex(): void { }
     prepareForPixel(): void { }
 
-    addUsedVariableType(pType: IAFXVariableTypeInstruction, eUsedMode: EVarUsedMode): boolean {
+    addUsedVariableType(pType: IVariableTypeInstruction, eUsedMode: EVarUsedMode): boolean {
         return false;
     }
 
@@ -267,64 +312,14 @@ export class SystemFunctionInstruction extends DeclInstruction implements IAFXFu
 
     }
 
-    getAttributeVariableMap(): IMap<IAFXVariableDeclInstruction> {
+    getAttributeVariableMap(): IMap<IVariableDeclInstruction> {
         return null;
     }
 
-    get varyingVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
+    isBlackListFunction(): boolean {
+        return false;
     }
 
-    get sharedVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
-    }
-
-    get globalVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
-    }
-
-    get uniformVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
-    }
-
-    get foreignVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
-    }
-
-    get textureVariableMap(): IMap<IAFXVariableDeclInstruction> {
-        return null;
-    }
-
-    get usedComplexTypeMap(): IMap<IAFXTypeInstruction> {
-        return null;
-    }
-
-    get attributeVariableKeys(): number[] {
-        return null;
-    }
-
-    get varyingVariableKeys(): number[] {
-        return null;
-    }
-
-    get uniformVariableKeys(): number[] {
-        return null;
-    }
-
-    get textureVariableKeys(): number[] {
-        return null;
-    }
-
-    get usedComplexTypeKeys(): number[] {
-        return null;
-    }
-
-    get extSystemFunctionList(): IAFXFunctionDeclInstruction[] {
-        return this._pExtSystemFunctionList;
-    }
-
-    get extSystemTypeList(): IAFXTypeDeclInstruction[] {
-        return this._pExtSystemTypeList;
-    }
+    addToBlackList(): void {}
 }
 

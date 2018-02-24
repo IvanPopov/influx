@@ -1,33 +1,32 @@
 import { TypedInstruction } from "./TypedInstruction";
-import { IAFXDeclInstruction, IAFXAnnotationInstruction, EAFXInstructionTypes, IAFXIdInstruction, IAFXInstruction } from "../../idl/IAFXInstruction";
+import { IDeclInstruction, IAnnotationInstruction, EInstructionTypes, IIdInstruction, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruction {
-    protected _sSemantic: string = "";
-    protected _pAnnotation: IAFXAnnotationInstruction = null;
+export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
+    protected _sSemantics: string = "";
+    protected _pAnnotation: IAnnotationInstruction = null;
     protected _bForPixel: boolean = true;
     protected _bForVertex: boolean = true;
     protected _bIsBuiltIn: boolean = false;
 
-    constructor(pNode: IParseNode) {
-        super(pNode);
-        this._eInstructionType = EAFXInstructionTypes.k_DeclInstruction;
+    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_DeclInstruction) {
+        super(pNode, eType);
     }
 
     get semantics(): string {
-        return this._sSemantic;
+        return this._sSemantics;
     }
 
     set semantics(sSemantic: string) {
-        this._sSemantic = sSemantic;
+        this._sSemantics = sSemantic;
     }
 
-    set annotation(pAnnotation: IAFXAnnotationInstruction) {
+    set annotation(pAnnotation: IAnnotationInstruction) {
         this._pAnnotation = pAnnotation;
     }
 
-    get annotation(): IAFXAnnotationInstruction {
+    get annotation(): IAnnotationInstruction {
         return this._pAnnotation;
     }
 
@@ -39,7 +38,7 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         return "";
     }
 
-    get nameID(): IAFXIdInstruction {
+    get nameID(): IIdInstruction {
         return null;
     }
 
@@ -51,35 +50,20 @@ export class DeclInstruction extends TypedInstruction implements IAFXDeclInstruc
         this._bIsBuiltIn = isBuiltIn;
     }
 
-    isForAll(): boolean {
-        return this._bForVertex && this._bForPixel;
-    }
-
-    isForPixel(): boolean {
-        return this._bForPixel;
-    }
-
-    isForVertex(): boolean {
+    get vertex(): boolean {
         return this._bForVertex;
     }
 
-    public setForAll(canUse: boolean): void {
-        this._bForVertex = canUse;
-        this._bForPixel = canUse;
+    set vertex(bVal: boolean) {
+        this._bForVertex = true;
     }
 
-    public setForPixel(canUse: boolean): void {
-        this._bForPixel = canUse;
+    get pixel(): boolean {
+        return this._bForPixel;
     }
 
-    public setForVertex(canUse: boolean): void {
-        this._bForVertex = canUse;
+    set pixel(bVal: boolean) {
+        this._bForPixel = true;
     }
 
-    public clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXDeclInstruction {
-        let pClonedInstruction: IAFXDeclInstruction = <IAFXDeclInstruction>(super.clone(pRelationMap));
-        pClonedInstruction.semantics = (this._sSemantic);
-        pClonedInstruction.annotation = (this._pAnnotation);
-        return pClonedInstruction;
-    }
 }

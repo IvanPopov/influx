@@ -1,15 +1,15 @@
 import { IMap } from "../idl/IMap";
-import { IAFXSimpleInstruction, IAFXInstruction } from "../idl/IAFXInstruction";
+import { ISimpleInstruction, IInstruction } from "../idl/IInstruction";
 import { isNull } from "../common";
 import { SimpleInstruction } from "./instructions/SimpleInstruction";
 
 export class ExprTemplateTranslator {
     private _pInToOutArgsMap: IMap<number> = null;
-    private _pExprPart: IAFXSimpleInstruction[] = null;
+    private _pExprPart: ISimpleInstruction[] = null;
 
     constructor(sExprTemplate: string) {
         this._pInToOutArgsMap = <IMap<number>>{};
-        this._pExprPart = <IAFXSimpleInstruction[]>[];
+        this._pExprPart = <ISimpleInstruction[]>[];
 
         var pSplitTemplate: string[] = sExprTemplate.split(/(\$\d+)/);
 
@@ -26,8 +26,8 @@ export class ExprTemplateTranslator {
         }
     }
 
-    toInstructionList(pArguments: IAFXInstruction[]): IAFXInstruction[] {
-        var pOutputInstructionList: IAFXInstruction[] = <IAFXInstruction[]>[];
+    toInstructionList(pArguments: IInstruction[]): IInstruction[] {
+        var pOutputInstructionList: IInstruction[] = <IInstruction[]>[];
 
         for (var i: number = 0; i < this._pExprPart.length; i++) {
             if (isNull(this._pExprPart[i])) {

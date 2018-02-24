@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { EAFXInstructionTypes, ECheckStage, IAFXInstruction, IAFXTypeUseInfoContainer, EVarUsedMode, IAFXExprInstruction, IAFXVariableDeclInstruction, IAFXStmtInstruction, IAFXVariableTypeInstruction } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, ECheckStage, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IVariableDeclInstruction, IStmtInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
@@ -11,9 +11,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class ForStmtInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        // this._pInstructionList = [null, null, null, null];
-        this._eInstructionType = EAFXInstructionTypes.k_ForStmtInstruction;
+        super(pNode, EInstructionTypes.k_ForStmtInstruction);
     }
 
     toCode(): string {
@@ -28,7 +26,7 @@ export class ForStmtInstruction extends StmtInstruction {
     }
 
     check(eStage: ECheckStage, pInfo: any = null): boolean {
-        var pInstructionList: IAFXInstruction[] = this.instructions;
+        var pInstructionList: IInstruction[] = this.instructions;
 
         if (this.instructions.length !== 4) {
             this._setError(EEffectErrors.BAD_FOR_STEP_EMPTY);
@@ -40,7 +38,7 @@ export class ForStmtInstruction extends StmtInstruction {
             return false;
         }
 
-        if (pInstructionList[0].instructionType !== EAFXInstructionTypes.k_VariableDeclInstruction) {
+        if (pInstructionList[0].instructionType !== EInstructionTypes.k_VariableDeclInstruction) {
             this._setError(EEffectErrors.BAD_FOR_INIT_EXPR);
             return false;
         }
@@ -50,14 +48,14 @@ export class ForStmtInstruction extends StmtInstruction {
             return false;
         }
 
-        if (pInstructionList[1].instructionType !== EAFXInstructionTypes.k_RelationalExprInstruction) {
+        if (pInstructionList[1].instructionType !== EInstructionTypes.k_RelationalExprInstruction) {
             this._setError(EEffectErrors.BAD_FOR_COND_RELATION);
             return false;
         }
 
-        if (pInstructionList[2].instructionType === EAFXInstructionTypes.k_UnaryExprInstruction ||
-            pInstructionList[2].instructionType === EAFXInstructionTypes.k_AssignmentExprInstruction ||
-            pInstructionList[2].instructionType === EAFXInstructionTypes.k_PostfixArithmeticInstruction) {
+        if (pInstructionList[2].instructionType === EInstructionTypes.k_UnaryExprInstruction ||
+            pInstructionList[2].instructionType === EInstructionTypes.k_AssignmentExprInstruction ||
+            pInstructionList[2].instructionType === EInstructionTypes.k_PostfixArithmeticInstruction) {
 
             var sOperator: string = pInstructionList[2].operator;
             if (sOperator !== "++" && sOperator !== "--" &&
@@ -74,16 +72,16 @@ export class ForStmtInstruction extends StmtInstruction {
         return true;
     }
 
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pForInit: IAFXVariableDeclInstruction = <IAFXVariableDeclInstruction>this.instructions[0];
-        var pForCondition: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
-        var pForStep: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[2];
-        var pForStmt: IAFXStmtInstruction = <IAFXStmtInstruction>this.instructions[3];
+        var pForInit: IVariableDeclInstruction = <IVariableDeclInstruction>this.instructions[0];
+        var pForCondition: IExprInstruction = <IExprInstruction>this.instructions[1];
+        var pForStep: IExprInstruction = <IExprInstruction>this.instructions[2];
+        var pForStmt: IStmtInstruction = <IStmtInstruction>this.instructions[3];
 
-        var pIteratorType: IAFXVariableTypeInstruction = pForInit.type;
+        var pIteratorType: IVariableTypeInstruction = pForInit.type;
 
-        pUsedDataCollector[pIteratorType.instructionID] = <IAFXTypeUseInfoContainer>{
+        pUsedDataCollector[pIteratorType.instructionID] = <ITypeUseInfoContainer>{
             type: pIteratorType,
             isRead: false,
             isWrite: true,

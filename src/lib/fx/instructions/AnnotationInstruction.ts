@@ -1,10 +1,9 @@
-import { IAFXAnnotationInstruction, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IAnnotationInstruction, EInstructionTypes } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class AnnotationInstruction extends Instruction implements IAFXAnnotationInstruction {
+export class AnnotationInstruction extends Instruction implements IAnnotationInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._eInstructionType = EAFXInstructionTypes.k_AnnotationInstruction;
+        super(EInstructionTypes.k_AnnotationInstruction, pNode);
     }
 }

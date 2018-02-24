@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 /**
@@ -8,16 +8,14 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class StmtBlockInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [];
-        this._eInstructionType = EAFXInstructionTypes.k_StmtBlockInstruction;
+        super(pNode, EInstructionTypes.k_StmtBlockInstruction);
     }
 
     toCode(): string {
         var sCode: string = "{" + "\n";
 
         for (var i: number = 0; i < this.instructions.length; i++) {
-            sCode += "\t" + this._pInstructionList[i].toCode() + "\n";
+            sCode += "\t" + this.instructions[i].toCode() + "\n";
         }
 
         sCode += "}";

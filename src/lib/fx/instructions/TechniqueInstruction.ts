@@ -1,49 +1,49 @@
 import { isNull } from '../../common';
-import { EAFXInstructionTypes, IAFXPassInstruction, IAFXTechniqueInstruction } from '../../idl/IAFXInstruction';
+import { EInstructionTypes, IPassInstruction, ITechniqueInstruction } from '../../idl/IInstruction';
 import { DeclInstruction } from './DeclInstruction';
 import { PassInstruction } from './PassInstruction';
+import { IParseNode } from '../../idl/parser/IParser';
 
-export class TechniqueInstruction extends DeclInstruction implements IAFXTechniqueInstruction {
-    private _sName: string = '';
-    private _bHasComplexName: boolean = false;
-    private _pPassList: IAFXPassInstruction[] = null;
-    private _nTotalPasses: number = 0;
-    private _bIsPostEffect: boolean = false;
+export class TechniqueInstruction extends DeclInstruction implements ITechniqueInstruction {
+    private _sName: string;
+    private _bHasComplexName: boolean;
+    private _pPassList: IPassInstruction[];
 
-    constructor() {
-        super();
-        this._pInstructionList = null;
-        this._eInstructionType = EAFXInstructionTypes.k_TechniqueInstruction;
+    constructor(pNode: IParseNode) {
+        super(pNode, EInstructionTypes.k_TechniqueInstruction);
+        this._sName = null;
+        this._bHasComplexName = null;
+        this._pPassList = [];
+
     }
 
-    _setName(sName: string, isComplexName: boolean): void {
+    set name(sName: string) {
         this._sName = sName;
-        this._bHasComplexName = isComplexName;
     }
 
-    _getName(): string {
+    set complexName(bVal: boolean) {
+        this._bHasComplexName = bVal;
+    }
+
+    get name(): string {
         return this._sName;
     }
 
-    _setSemantic(sSemantic: string): void {
-        super._setSemantic(sSemantic);
-
-        if (sSemantic === PassInstruction.POST_EFFECT_SEMANTIC) {
-            this._bIsPostEffect = true;
-        } else {
-            this._bIsPostEffect = false;
-        }
-    }
-
-    _hasComplexName(): boolean {
+    get complexName(): boolean {
         return this._bHasComplexName;
     }
 
-    _isPostEffect(): boolean {
-        return this._bIsPostEffect;
+    get passList(): IPassInstruction[] {
+        return this._pPassList;
     }
 
-    _addPass(pPass: IAFXPassInstruction): void {
+    
+    get totalPasses(): number {
+        return this._pPassList.length;
+    }
+
+
+    addPass(pPass: IPassInstruction): void {
         if (isNull(this._pPassList)) {
             this._pPassList = [];
         }
@@ -51,19 +51,8 @@ export class TechniqueInstruction extends DeclInstruction implements IAFXTechniq
         this._pPassList.push(pPass);
     }
 
-    _getPassList(): IAFXPassInstruction[] {
-        return this._pPassList;
-    }
 
-    _getPass(iPass: number): IAFXPassInstruction {
+    getPass(iPass: number): IPassInstruction {
         return iPass < this._pPassList.length ? this._pPassList[iPass] : null;
-    }
-
-    _totalOwnPasses(): number {
-        return this._pPassList.length;
-    }
-
-    _totalPasses(): number {
-        return this._nTotalPasses;
     }
 }

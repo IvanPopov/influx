@@ -1,5 +1,5 @@
 import { isDef, isNull } from "../../common";
-import { IAFXVariableDeclInstruction, IAFXInstruction, IAFXTypeInstruction, EAFXBlendMode, IAFXVariableTypeInstruction, EAFXInstructionTypes, IAFXIdInstruction, IAFXTypeDeclInstruction } from "../../idl/IAFXInstruction";
+import { IVariableDeclInstruction, IInstruction, ITypeInstruction, IVariableTypeInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { Instruction } from "./Instruction";
 import { IdInstruction } from "./IdInstruction";
@@ -7,38 +7,39 @@ import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { VariableDeclInstruction } from "./VariableInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class SystemTypeInstruction extends Instruction implements IAFXTypeInstruction {
-    private _sName: string = "";
-    private _sRealName: string = "";
-    private _pElementType: IAFXTypeInstruction = null;
-    private _iLength: number = 1;
-    private _iSize: number = null;
-    private _pFieldDeclMap: IMap<IAFXVariableDeclInstruction> = null;
-    private _bIsArray: boolean = false;
-    private _bIsWritable: boolean = true;
-    private _bIsReadable: boolean = true;
-    private _pFieldNameList: string[] = null;
-    private _pWrapVariableType: IAFXVariableTypeInstruction = null;
-    private _bIsBuiltIn: boolean = true;
-    private _sDeclString: string = "";
+export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
+    private _sName: string;
+    private _sRealName: string;
+    private _pElementType: ITypeInstruction;
+    private _iLength: number;
+    private _iSize: number;
+    private _pFieldDeclMap: IMap<IVariableDeclInstruction>;
+    private _bIsArray: boolean;
+    private _bIsWritable: boolean;
+    private _bIsReadable: boolean;
+    private _pFieldNameList: string[];
+    private _pWrapVariableType: IVariableTypeInstruction;
+    private _bIsBuiltIn: boolean;
+    private _sDeclString: string;
 
-    constructor(pNode: IParseNode) {
-        super(pNode);
-        this._eInstructionType = EAFXInstructionTypes.k_SystemTypeInstruction;
+    constructor() {
+        super(null, EInstructionTypes.k_SystemTypeInstruction);
+
+        this._sName = null;
+        this._sRealName = null;
+        this._pElementType = null;
+        this._iLength = 1;
+        this._iSize = null;
+        this._pFieldDeclMap = {};
+        this._bIsArray = false;
+        this._bIsWritable = true;
+        this._bIsReadable = true;
+        this._pFieldNameList = [];
+        this._bIsBuiltIn = true;
+        this._sDeclString = "";
+
         this._pWrapVariableType = new VariableTypeInstruction(null);
         this._pWrapVariableType.pushType(this);
-    }
-
-    toString(): string {
-        return this.name || this.hash;
-    }
-
-    toDeclString(): string {
-        return this._sDeclString;
-    }
-
-    _toFinalCode(): string {
-        return this._sRealName;
     }
 
     get builtIn(): boolean {
@@ -57,50 +58,6 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
         this._sDeclString = sDecl;
     }
 
-    isBase(): boolean {
-        return true;
-    }
-
-    isArray(): boolean {
-        return this._bIsArray;
-    }
-
-    isNotBaseArray(): boolean {
-        return false;
-    }
-
-    isComplex(): boolean {
-        return false;
-    }
-
-    isEqual(pType: IAFXTypeInstruction): boolean {
-        return this.hash === pType.hash;
-    }
-
-    isStrongEqual(pType: IAFXTypeInstruction): boolean {
-        return this.strongHash === pType.strongHash;
-    }
-
-    isConst(): boolean {
-        return false;
-    }
-
-    isSampler(): boolean {
-        return this.name === "sampler" ||
-            this.name === "sampler2D" ||
-            this.name === "samplerCUBE";
-    }
-
-    isSamplerCube(): boolean {
-        return this.name === "samplerCUBE";
-    }
-
-    isSampler2D(): boolean {
-        return this.name === "sampler" ||
-            this.name === "sampler2D";
-    }
-
-
     get writable(): boolean {
         return this._bIsWritable;
     }
@@ -108,23 +65,6 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
     get readable(): boolean {
         return this._bIsReadable;
     }
-
-    isContainArray(): boolean {
-        return false;
-    }
-
-    isContainSampler(): boolean {
-        return false;
-    }
-
-    isContainPointer(): boolean {
-        return false;
-    }
-
-    isContainComplexType(): boolean {
-        return false;
-    }
-
 
     set name(sName: string) {
         this._sName = sName;
@@ -144,42 +84,6 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
 
     set readable(isReadable: boolean) {
         this._bIsReadable = isReadable;
-    }
-
-    addIndex(pType: IAFXTypeInstruction, iLength: number): void {
-        this._pElementType = pType;
-        this._iLength = iLength;
-        this._iSize = iLength * pType.size;
-        this._bIsArray = true;
-    }
-
-    addField(sFieldName: string, pType: IAFXTypeInstruction, isWrite: boolean = true,
-        sRealFieldName: string = sFieldName): void {
-
-        var pField: IAFXVariableDeclInstruction = new VariableDeclInstruction(null);
-        var pFieldType: VariableTypeInstruction = new VariableTypeInstruction(null);
-        var pFieldId: IAFXIdInstruction = new IdInstruction(null);
-
-        pFieldType.pushType(pType);
-        pFieldType.wriatable = (isWrite);
-
-        pFieldId.name = (sFieldName);
-        pFieldId.realName = (sRealFieldName);
-
-        pField.push(pFieldType, true);
-        pField.push(pFieldId, true);
-
-        if (isNull(this._pFieldDeclMap)) {
-            this._pFieldDeclMap = <IMap<IAFXVariableDeclInstruction>>{};
-        }
-
-        this._pFieldDeclMap[sFieldName] = pField;
-
-        if (isNull(this._pFieldNameList)) {
-            this._pFieldNameList = [];
-        }
-
-        this._pFieldNameList.push(sFieldName);
     }
 
     get name(): string {
@@ -202,29 +106,152 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
         return this._iSize;
     }
 
-    get baseType(): IAFXTypeInstruction {
+    get baseType(): ITypeInstruction {
         return this;
     }
 
-    get variableType(): IAFXVariableTypeInstruction {
+    get variableType(): IVariableTypeInstruction {
         return this._pWrapVariableType;
     }
 
-    get arrayElementType(): IAFXTypeInstruction {
+    get arrayElementType(): ITypeInstruction {
         return this._pElementType;
     }
 
-    get typeDecl(): IAFXTypeDeclInstruction {
+    get typeDecl(): ITypeDeclInstruction {
         if (this.builtIn) {
             return null;
         }
 
-        return <IAFXTypeDeclInstruction>this.parent;
+        return <ITypeDeclInstruction>this.parent;
     }
 
 
     get length(): number {
         return this._iLength;
+    }
+
+    get fieldDeclList(): IVariableDeclInstruction[] {
+        let pList = [];
+        for (let key in this._pFieldDeclMap) {
+            pList.push(this._pFieldDeclMap[key]);
+        }
+        return pList;
+    }
+
+    get fieldNameList(): string[] {
+        let pList = [];
+        for (let key in this._pFieldDeclMap) {
+            pList.push(key);
+        }
+        return pList;
+    }
+
+    isBase(): boolean {
+        return true;
+    }
+
+    isArray(): boolean {
+        return this._bIsArray;
+    }
+
+    isNotBaseArray(): boolean {
+        return false;
+    }
+
+    isComplex(): boolean {
+        return false;
+    }
+
+    isEqual(pType: ITypeInstruction): boolean {
+        return this.hash === pType.hash;
+    }
+
+    isStrongEqual(pType: ITypeInstruction): boolean {
+        return this.strongHash === pType.strongHash;
+    }
+
+    isConst(): boolean {
+        return false;
+    }
+
+    isSampler(): boolean {
+        return this.name === "sampler" ||
+            this.name === "sampler2D" ||
+            this.name === "samplerCUBE";
+    }
+
+    isSamplerCube(): boolean {
+        return this.name === "samplerCUBE";
+    }
+
+    isSampler2D(): boolean {
+        return this.name === "sampler" ||
+            this.name === "sampler2D";
+    }
+
+    isContainArray(): boolean {
+        return false;
+    }
+
+    isContainSampler(): boolean {
+        return false;
+    }
+
+    isContainPointer(): boolean {
+        return false;
+    }
+
+    isContainComplexType(): boolean {
+        return false;
+    }
+
+    toString(): string {
+        return this.name || this.hash;
+    }
+
+    toDeclString(): string {
+        return this._sDeclString;
+    }
+
+    toCode(): string {
+        return this._sRealName;
+    }
+
+    addIndex(pType: ITypeInstruction, iLength: number): void {
+        this._pElementType = pType;
+        this._iLength = iLength;
+        this._iSize = iLength * pType.size;
+        this._bIsArray = true;
+    }
+
+    addField(sFieldName: string, pType: ITypeInstruction, isWrite: boolean = true,
+        sRealFieldName: string = sFieldName): void {
+
+        var pField: IVariableDeclInstruction = new VariableDeclInstruction(null);
+        var pFieldType: VariableTypeInstruction = new VariableTypeInstruction(null);
+        var pFieldId: IIdInstruction = new IdInstruction(null);
+
+        pFieldType.pushType(pType);
+        pFieldType.writable = (isWrite);
+
+        pFieldId.name = (sFieldName);
+        pFieldId.realName = (sRealFieldName);
+
+        pField.push(pFieldType, true);
+        pField.push(pFieldId, true);
+
+        if (isNull(this._pFieldDeclMap)) {
+            this._pFieldDeclMap = <IMap<IVariableDeclInstruction>>{};
+        }
+
+        this._pFieldDeclMap[sFieldName] = pField;
+
+        if (isNull(this._pFieldNameList)) {
+            this._pFieldNameList = [];
+        }
+
+        this._pFieldNameList.push(sFieldName);
     }
 
     hasField(sFieldName: string): boolean {
@@ -243,15 +270,15 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
         return false;
     }
 
-    getField(sFieldName: string): IAFXVariableDeclInstruction {
+    getField(sFieldName: string): IVariableDeclInstruction {
         return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName] : null;
     }
 
-    getFieldBySemantic(sSemantic: string): IAFXVariableDeclInstruction {
+    getFieldBySemantic(sSemantic: string): IVariableDeclInstruction {
         return null;
     }
 
-    getFieldType(sFieldName: string): IAFXVariableTypeInstruction {
+    getFieldType(sFieldName: string): IVariableTypeInstruction {
         return isDef(this._pFieldDeclMap[sFieldName]) ? this._pFieldDeclMap[sFieldName].type : null;
     }
 
@@ -259,7 +286,7 @@ export class SystemTypeInstruction extends Instruction implements IAFXTypeInstru
         return this._pFieldNameList;
     }
 
-    _clone(pRelationMap?: IMap<IAFXInstruction>): SystemTypeInstruction {
+    _clone(pRelationMap?: IMap<IInstruction>): SystemTypeInstruction {
         return this;
     }
 }

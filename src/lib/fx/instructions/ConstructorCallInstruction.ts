@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXAnalyzedInstruction, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import * as Effect from "../Effect";
@@ -11,11 +11,11 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR IdInstruction ExprInstruction ... ExprInstruction 
  */
 export class ConstructorCallInstruction extends ExprInstruction {
+    
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null];
-        this._eInstructionType = EAFXInstructionTypes.k_ConstructorCallInstruction;
+        super(pNode, EInstructionTypes.k_ConstructorCallInstruction);
     }
+
 
     toCode(): string {
         var sCode: string = "";
@@ -35,17 +35,19 @@ export class ConstructorCallInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pInstructionList: IAFXAnalyzedInstruction[] = <IAFXAnalyzedInstruction[]>this.instructions;
+        var pInstructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.instructions;
         for (var i: number = 1; i < this.instructions.length; i++) {
             pInstructionList[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
 
+
     isConst(): boolean {
         for (var i: number = 1; i < this.instructions.length; i++) {
-            if (!(<IAFXExprInstruction>this.instructions[i]).isConst()) {
+            if (!(<IExprInstruction>this.instructions[i]).isConst()) {
                 return false;
             }
         }
@@ -68,7 +70,7 @@ export class ConstructorCallInstruction extends ExprInstruction {
 
         try {
             if (Effect.isScalarType(this.type)) {
-                var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
+                var pTestedInstruction: IExprInstruction = <IExprInstruction>this.instructions[1];
                 if (this.instructions.length > 2 || !pTestedInstruction.evaluate()) {
                     return false;
                 }
@@ -77,7 +79,7 @@ export class ConstructorCallInstruction extends ExprInstruction {
             }
             else {
                 for (var i: number = 1; i < this.instructions.length; i++) {
-                    var pTestedInstruction: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[i];
+                    var pTestedInstruction: IExprInstruction = <IExprInstruction>this.instructions[i];
 
                     if (pTestedInstruction.evaluate()) {
                         pArguments[i - 1] = pTestedInstruction.getEvalValue();

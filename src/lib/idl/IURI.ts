@@ -1,24 +1,24 @@
 export interface IURI {
-	getScheme(): string;
-	getUserInfo(): string;
-	getFragment(): string;
-	getURN(): string;
-	getURL(): string;
-	getAuthority(): string;
-	getProtocol(): string;
-	
-	getHost(): string;
-	setHost(sHost: string): void;
+    getScheme(): string;
+    getUserInfo(): string;
+    getFragment(): string;
+    getURN(): string;
+    getURL(): string;
+    getAuthority(): string;
+    getProtocol(): string;
 
-	getPort(): number;
-	setPort(iPort: number): void;
+    getHost(): string;
+    setHost(sHost: string): void;
 
-	getPath(): string;
-	setPath(sPath: string): void;
+    getPort(): number;
+    setPort(iPort: number): void;
 
-	getQuery(): string;
-	setQuery(sQuery: string): void;
+    getPath(): string;
+    setPath(sPath: string): void;
 
-	toString(): string;
+    getQuery(): string;
+    setQuery(sQuery: string): void;
+
+    toString(): string;
 }
 

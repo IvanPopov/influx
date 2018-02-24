@@ -1,25 +1,22 @@
-import { EAFXInstructionTypes, IAFXExprInstruction, IAFXVariableTypeInstruction, IAFXInstruction, EVarUsedMode, IAFXAnalyzedInstruction, IAFXTypeUseInfoContainer } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, IExprInstruction, IVariableTypeInstruction, IInstruction, EVarUsedMode, IAnalyzedInstruction, ITypeUseInfoContainer } from "../../idl/IInstruction";
 import { TypedInstruction } from "./TypedInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class ExprInstruction extends TypedInstruction implements IAFXExprInstruction {
-    protected _pLastEvalResult: any = null;
+export class ExprInstruction extends TypedInstruction implements IExprInstruction {
+    protected _pLastEvalResult: any;
 
-    /**
-     * Respresent all kind of instruction
-     */
-    constructor(pNode: IParseNode) {
-        super(pNode);
-        this._eInstructionType = EAFXInstructionTypes.k_ExprInstruction;
+    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_ExprInstruction) {
+        super(pNode, eType);
+        this._pLastEvalResult = null;
     }
 
-    get type(): IAFXVariableTypeInstruction {
-        return <IAFXVariableTypeInstruction>super.type;
+    get type(): IVariableTypeInstruction {
+        return <IVariableTypeInstruction>super.type;
     }
 
-    set type(pType: IAFXVariableTypeInstruction) {
+    set type(pType: IVariableTypeInstruction) {
         super.type = pType;
     }
 
@@ -39,12 +36,8 @@ export class ExprInstruction extends TypedInstruction implements IAFXExprInstruc
         return false;
     }
 
-    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXExprInstruction {
-        return <IAFXExprInstruction>super.clone(pRelationMap);
-    }
-
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        (this.instructions as IAFXAnalyzedInstruction[]).forEach((pInst) => pInst.addUsedData(pUsedDataCollector, eUsedMode));
+        (this.instructions as IAnalyzedInstruction[]).forEach((pInst) => pInst.addUsedData(pUsedDataCollector, eUsedMode));
     }
 }

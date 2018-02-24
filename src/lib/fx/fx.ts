@@ -5,8 +5,6 @@ import { logger } from '../logger';
 import * as fs from "fs";
 import { IMap } from "../idl/IMap";
 import { IAFXTechniqueInstruction } from "../idl/IAFXInstruction";
-import { IAFXEffect } from "../idl/IAFXEffect";
-import { Effect } from "./Effect";
 
 /** For addComponent/delComponent/hasComponent */
 export const ALL_PASSES = 0xffffff;

@@ -1,8 +1,8 @@
 import { DeclInstruction } from './DeclInstruction';
 import * as Effect from '../Effect';
-import { IAFXExprInstruction, IAFXInstruction, EAFXInstructionTypes,
-    IAFXInitExprInstruction, IAFXVariableDeclInstruction, IAFXVariableTypeInstruction,
-    IAFXIdInstruction } from '../../idl/IAFXInstruction';
+import { IExprInstruction, IInstruction, EInstructionTypes,
+    IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction,
+    IIdInstruction } from '../../idl/IInstruction';
 import { IdExprInstruction } from './IdExprInstruction';
 import { IdInstruction } from './IdInstruction';
 import { isNull } from '../../common';
@@ -11,54 +11,41 @@ import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 
-export class VariableDeclInstruction extends DeclInstruction implements IAFXVariableDeclInstruction {
-    private _pFullNameExpr: IAFXExprInstruction = null;
-    private _bDefineByZero: boolean = false;
-    private _bShaderOutput: boolean = false;
+export class VariableDeclInstruction extends DeclInstruction implements IVariableDeclInstruction {
+    private _pFullNameExpr: IExprInstruction;
+    private _bShaderOutput: boolean;
+    private _pAttrExtractionBlock: IInstruction;
+    private _pValue: any;
+    private _pDefaultValue: any;
+    private _bLockInitializer: boolean;
+    private _iNameIndex: number;
 
-    private _pAttrExtractionBlock: IAFXInstruction = null;
-
-    private _pValue: any = null;
-    private _pDefaultValue: any = null;
-
-    private _bLockInitializer: boolean = false;
-
-    private _iNameIndex: number = 0;
-
-    static pShaderVarNamesGlobalDictionary: StringDictionary = new StringDictionary();
+    static SHADER_VAR_NAMES_GLOBAL_DICT: StringDictionary = new StringDictionary();
     static _getIndex(sName: string): number {
-        return VariableDeclInstruction.pShaderVarNamesGlobalDictionary.add(sName);
+        return VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.index(sName);
     }
     /**
      * Represent type var_name [= init_expr]
      * EMPTY_OPERATOR VariableTypeInstruction IdInstruction InitExprInstruction
      */
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pSourceNode = pNode;
-        this._pInstructionList = [null, null, null];
-        this._eInstructionType = EAFXInstructionTypes.k_VariableDeclInstruction;
-    }
+        super(pNode, EInstructionTypes.k_VariableDeclInstruction);
 
-    get initializeExpr(): IAFXInitExprInstruction {
-        return <IAFXInitExprInstruction>this.instructions[2];
-    }
-
-    lockInitializer(): void {
-        this._bLockInitializer = true;
-    }
-
-    unlockInitializer(): void {
+        this._pFullNameExpr = null;
+        this._bShaderOutput = false;
+        this._pAttrExtractionBlock = null;
+        this._pValue = null;
+        this._pDefaultValue = null;
         this._bLockInitializer = false;
+        this._iNameIndex = 0;
+    }
+
+    get initializeExpr(): IInitExprInstruction {
+        return <IInitExprInstruction>this.instructions[2];
     }
 
     get defaultValue(): any {
         return this._pDefaultValue;
-    }
-
-    prepareDefaultValue(): void {
-        this.initializeExpr.evaluate();
-        this._pDefaultValue = this.initializeExpr.getEvalValue();
     }
 
     get value(): any {
@@ -69,21 +56,21 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         this._pValue = pValue;
     }
 
-    get type(): IAFXVariableTypeInstruction {
-        return <IAFXVariableTypeInstruction>this._pInstructionList[0];
+    get type(): IVariableTypeInstruction {
+        return <IVariableTypeInstruction>this.instructions[0];
     }
 
-    set type(pType: IAFXVariableTypeInstruction) {
-        this._pInstructionList[0] = <IAFXVariableTypeInstruction>pType;
+    set type(pType: IVariableTypeInstruction) {
+        this.instructions[0] = <IVariableTypeInstruction>pType;
         pType.parent = (this);
     }
 
     set name(sName: string) {
-        var pName: IAFXIdInstruction = new IdInstruction(null);
+        var pName: IIdInstruction = new IdInstruction(null);
         pName.name = (sName);
         pName.parent = (this);
 
-        this._pInstructionList[1] = <IAFXIdInstruction>pName;
+        this.instructions[1] = <IIdInstruction>pName;
     }
 
     set realName(sRealName: string) {
@@ -91,16 +78,93 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
     }
 
     get name(): string {
-        return (<IAFXIdInstruction>this._pInstructionList[1]).name;
+        return (<IIdInstruction>this.instructions[1]).name;
     }
 
     get realName(): string {
-        return (<IAFXIdInstruction>this._pInstructionList[1]).realName;
+        return (<IIdInstruction>this.instructions[1]).realName;
     }
 
-    get nameID(): IAFXIdInstruction {
-        return <IAFXIdInstruction>this._pInstructionList[1];
+    get nameID(): IIdInstruction {
+        return <IIdInstruction>this.instructions[1];
     }
+
+    get vars(): IVariableDeclInstruction[] {
+        return this.type.vars;
+    }
+
+    set collapsed(bValue: boolean) {
+        this.type.collapsed = (bValue);
+    }
+
+    get collapsed(): boolean {
+        return this.type.collapsed;
+    }
+
+    set varying(bValue: boolean) {
+        this.nameID.varying = bValue;
+    }
+
+    get varying(): boolean {
+        return this.nameID.varying;
+    }
+
+    set shaderOutput(isShaderOutput: boolean) {
+        this._bShaderOutput = isShaderOutput;
+    }
+
+    get shaderOutput(): boolean {
+        return this._bShaderOutput;
+    }
+
+    set attrExtractionBlock(pCodeBlock: IInstruction) {
+        this._pAttrExtractionBlock = pCodeBlock;
+    }
+
+    get attrExtractionBlock(): IInstruction {
+        return this._pAttrExtractionBlock;
+    }
+
+    get nameIndex(): number {
+        return this._iNameIndex || (this._iNameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName));
+    }
+
+    get fullNameExpr(): IExprInstruction {
+        if (!isNull(this._pFullNameExpr)) {
+            return this._pFullNameExpr;
+        }
+
+        this._pFullNameExpr = new IdExprInstruction(null);
+        this._pFullNameExpr.push(this.nameID, false);
+
+        return this._pFullNameExpr;
+    }
+
+    get fullName(): string {
+        if (this.isField() &&
+            (<IVariableTypeInstruction>this.parent).parentVarDecl.visible) {
+
+            var sName: string = '';
+            var eParentType: EInstructionTypes = this.parent.instructionType;
+
+            if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
+                sName = (<IVariableTypeInstruction>this.parent).fullName;
+            }
+
+            sName += '.' + this.name;
+
+            return sName;
+        }
+        else {
+            return this.name;
+        }
+    }
+
+
+    fillNameIndex(): void {
+        this._iNameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName);
+    }
+
 
     isUniform(): boolean {
         return this.type.hasUsage('uniform');
@@ -111,10 +175,10 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
             return false;
         }
 
-        var eParentType: EAFXInstructionTypes = this.parent.instructionType;
-        if (eParentType === EAFXInstructionTypes.k_VariableTypeInstruction ||
-            eParentType === EAFXInstructionTypes.k_ComplexTypeInstruction ||
-            eParentType === EAFXInstructionTypes.k_SystemTypeInstruction) {
+        var eParentType: EInstructionTypes = this.parent.instructionType;
+        if (eParentType === EInstructionTypes.k_VariableTypeInstruction ||
+            eParentType === EInstructionTypes.k_ComplexTypeInstruction ||
+            eParentType === EInstructionTypes.k_SystemTypeInstruction) {
             return true;
         }
 
@@ -125,20 +189,21 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         return this.type.isSampler();
     }
 
-    get vars(): IAFXVariableDeclInstruction[] {
-        return this.type.subVarDecls;
+    lockInitializer(): void {
+        this._bLockInitializer = true;
     }
 
-    isDefinedByZero(): boolean {
-        return this._bDefineByZero;
+    unlockInitializer(): void {
+        this._bLockInitializer = false;
     }
 
-    defineByZero(isDefine: boolean): void {
-        this._bDefineByZero = isDefine;
+    prepareDefaultValue(): void {
+        this.initializeExpr.evaluate();
+        this._pDefaultValue = this.initializeExpr.getEvalValue();
     }
 
     toCode(): string {
-        if (this.isShaderOutput()) {
+        if (this.shaderOutput) {
             return '';
         }
         var sCode: string = '';
@@ -161,73 +226,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IAFXVari
         }
 
         return sCode;
-    }
-
-    markAsVarying(bValue: boolean): void {
-        this.nameID.markAsVarying(bValue);
-    }
-
-    markAsShaderOutput(isShaderOutput: boolean): void {
-        this._bShaderOutput = isShaderOutput;
-    }
-
-    isShaderOutput(): boolean {
-        return this._bShaderOutput;
-    }
-
-    set attrExtractionBlock(pCodeBlock: IAFXInstruction) {
-        this._pAttrExtractionBlock = pCodeBlock;
-    }
-
-    get attrExtractionBlock(): IAFXInstruction {
-        return this._pAttrExtractionBlock;
-    }
-
-    get nameIndex(): number {
-        return this._iNameIndex || (this._iNameIndex = VariableDeclInstruction.pShaderVarNamesGlobalDictionary.add(this.realName));
-    }
-
-    get fullNameExpr(): IAFXExprInstruction {
-        if (!isNull(this._pFullNameExpr)) {
-            return this._pFullNameExpr;
-        }
-
-        this._pFullNameExpr = new IdExprInstruction(null);
-        this._pFullNameExpr.push(this.nameID, false);
-
-        return this._pFullNameExpr;
-    }
-
-    get fullName(): string {
-        if (this.isField() &&
-            (<IAFXVariableTypeInstruction>this.parent).parentVarDecl.visible) {
-
-            var sName: string = '';
-            var eParentType: EAFXInstructionTypes = this.parent.instructionType;
-
-            if (eParentType === EAFXInstructionTypes.k_VariableTypeInstruction) {
-                sName = (<IAFXVariableTypeInstruction>this.parent).fullName;
-            }
-
-            sName += '.' + this.name;
-
-            return sName;
-        }
-        else {
-            return this.name;
-        }
-    }
-
-    set collapsed(bValue: boolean) {
-        this.type.collapsed = (bValue);
-    }
-
-    get collapsed(): boolean {
-        return this.type.collapsed;
-    }
-
-    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXVariableDeclInstruction {
-        return <IAFXVariableDeclInstruction>super.clone(pRelationMap);
     }
 }
 

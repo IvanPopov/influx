@@ -1,19 +1,18 @@
-import { IAFXLiteralInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
+import { ILiteralInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class IntInstruction extends ExprInstruction implements IAFXLiteralInstruction {
+export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
     private _iValue: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor(pNode: IParseNode) {
-        super(pNode);
+        super(pNode, EInstructionTypes.k_IntInstruction);
         this._iValue = 0;
         this._pType = Effect.getSystemType("number").variableType;
-        this._eInstructionType = EAFXInstructionTypes.k_IntInstruction;
     }
 
     set value(iValue: number) {
@@ -41,12 +40,6 @@ export class IntInstruction extends ExprInstruction implements IAFXLiteralInstru
 
     isConst(): boolean {
         return true;
-    }
-
-    clone(pRelationMap?: IMap<IAFXInstruction>): IAFXLiteralInstruction {
-        var pClonedInstruction: IAFXLiteralInstruction = <IAFXLiteralInstruction>(super.clone(pRelationMap));
-        pClonedInstruction.value = (this._iValue);
-        return pClonedInstruction;
     }
 }
 

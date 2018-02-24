@@ -1,31 +1,22 @@
 import { Instruction } from "./Instruction";
-import { IAFXTypedInstruction, IAFXTypeInstruction, EAFXInstructionTypes, IAFXInstruction } from "../../idl/IAFXInstruction";
+import { ITypedInstruction, ITypeInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class TypedInstruction extends Instruction implements IAFXTypedInstruction {
-    protected _pType: IAFXTypeInstruction;
+export class TypedInstruction extends Instruction implements ITypedInstruction {
+    protected _pType: ITypeInstruction;
 
-    constructor(pNode: IParseNode) {
-        super(pNode);
+    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_TypedInstruction) {
+        super(pNode, eType);
         this._pType = null;
-        this._eInstructionType = EAFXInstructionTypes.k_TypedInstruction;
     }
 
-    get type(): IAFXTypeInstruction {
+    get type(): ITypeInstruction {
         return this._pType;
     }
 
-    set type(pType: IAFXTypeInstruction) {
+    set type(pType: ITypeInstruction) {
         this._pType = pType;
-    }
-
-    clone(pRelationMap: IMap<IAFXInstruction> = <IMap<IAFXInstruction>>{}): IAFXTypedInstruction {
-        var pClonedInstruction: IAFXTypedInstruction = <IAFXTypedInstruction>(super.clone(pRelationMap));
-        if (!isNull(this.type)) {
-            pClonedInstruction.type = this.type.clone(pRelationMap);
-        }
-        return pClonedInstruction;
     }
 }

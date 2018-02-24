@@ -1,4 +1,4 @@
-import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { EInstructionTypes } from "../../idl/IInstruction";
 import { StmtInstruction } from "./StmtInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -9,9 +9,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class WhileStmtInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null, null];
-        this._eInstructionType = EAFXInstructionTypes.k_WhileStmtInstruction;
+        super(pNode, EInstructionTypes.k_WhileStmtInstruction);
     }
 
     toCode(): string {

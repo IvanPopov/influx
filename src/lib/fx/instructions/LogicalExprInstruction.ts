@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { EAFXInstructionTypes, IAFXTypeUseInfoContainer, EVarUsedMode, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -9,28 +9,27 @@ import { IParseNode } from "../../idl/parser/IParser";
  * (&& | ||) Instruction Instruction
  */
 export class LogicalExprInstruction extends ExprInstruction {
-	constructor(pNode: IParseNode) {
-		super(pNode);
-		this._eInstructionType = EAFXInstructionTypes.k_LogicalExprInstruction;
-	}
+    constructor(pNode: IParseNode) {
+        super(pNode, EInstructionTypes.k_LogicalExprInstruction);
+    }
 
-	toCode(): string {
-		var sCode: string = "";
-		sCode += this.instructions[0].toCode();
-		sCode += this.operator;
-		sCode += this.instructions[1].toCode();
-		return sCode;
-	}
+    toCode(): string {
+        var sCode: string = "";
+        sCode += this.instructions[0].toCode();
+        sCode += this.operator;
+        sCode += this.instructions[1].toCode();
+        return sCode;
+    }
 
-	addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-		eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-		super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-	}
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
+        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+        super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+    }
 
-	isConst(): boolean {
-		return (<IAFXExprInstruction>this.instructions[0]).isConst() &&
-			(<IAFXExprInstruction>this.instructions[1]).isConst() &&
-			(<IAFXExprInstruction>this.instructions[2]).isConst();
-	}
+    isConst(): boolean {
+        return (<IExprInstruction>this.instructions[0]).isConst() &&
+            (<IExprInstruction>this.instructions[1]).isConst() &&
+            (<IExprInstruction>this.instructions[2]).isConst();
+    }
 }
 

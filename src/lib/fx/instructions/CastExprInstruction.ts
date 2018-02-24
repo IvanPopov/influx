@@ -1,4 +1,4 @@
-import { IAFXExprInstruction, EVarUsedMode, IAFXTypeUseInfoContainer, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
@@ -9,9 +9,7 @@ import { ExprInstruction } from "./ExprInstruction";
  */
 export class CastExprInstruction extends ExprInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null, null];
-        this._eInstructionType = EAFXInstructionTypes.k_CastExprInstruction;
+        super(pNode, EInstructionTypes.k_CastExprInstruction);
     }
 
     toCode(): string {
@@ -23,13 +21,13 @@ export class CastExprInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[1];
+        var pSubExpr: IExprInstruction = <IExprInstruction>this.instructions[1];
         pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
     isConst(): boolean {
-        return (<IAFXExprInstruction>this.instructions[1]).isConst();
+        return (<IExprInstruction>this.instructions[1]).isConst();
     }
 }

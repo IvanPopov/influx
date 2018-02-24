@@ -1,6 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
-import { EAFXInstructionTypes, EVarUsedMode, IAFXTypeUseInfoContainer, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 
 /**
@@ -9,9 +9,7 @@ import { IMap } from "../../idl/IMap";
  */
 export class ConditionalExprInstruction extends ExprInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null, null, null];
-        this._eInstructionType = EAFXInstructionTypes.k_ConditionalExprInstruction;
+        super(pNode, EInstructionTypes.k_ConditionalExprInstruction);
     }
 
     toCode(): string {
@@ -24,14 +22,14 @@ export class ConditionalExprInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
     isConst(): boolean {
-        return (<IAFXExprInstruction>this.instructions[0]).isConst() &&
-            (<IAFXExprInstruction>this.instructions[1]).isConst();
+        return (<IExprInstruction>this.instructions[0]).isConst() &&
+            (<IExprInstruction>this.instructions[1]).isConst();
     }
 }
 

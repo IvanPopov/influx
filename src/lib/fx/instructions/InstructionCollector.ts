@@ -1,12 +1,10 @@
 import { Instruction } from "./Instruction";
-import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class InstructionCollector extends Instruction {
-    constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [];
-        this._eInstructionType = EAFXInstructionTypes.k_InstructionCollector;
+    constructor() {
+        super(null, EInstructionTypes.k_InstructionCollector);
     }
 
     toCode(): string {

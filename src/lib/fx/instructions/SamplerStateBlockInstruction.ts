@@ -1,7 +1,7 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IAFXVariableDeclInstruction, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
-import { IAFXSamplerState } from "../../idl/IAFXSamplerState"
+import { ISamplerState } from "../../idl/ISamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -9,15 +9,24 @@ import { IParseNode } from "../../idl/parser/IParser";
 /**
   * Represetn sampler_state { states }
   */
-export class SamplerStateBlockInstruction extends ExprInstruction {
-    private _pTexture: IAFXVariableDeclInstruction = null;
-    private _pSamplerParams: any = null;
+export class SamplerStateBlockInstruction extends ExprInstruction implements ISamplerStateBlockInstruction {
+    private _pTexture: IVariableDeclInstruction;
+    private _pSamplerParams: any;
 
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = null;
-        this._eInstructionType = EAFXInstructionTypes.k_SamplerStateBlockInstruction;
+        super(pNode, EInstructionTypes.k_SamplerStateBlockInstruction);
+        this._pSamplerParams = null;
+        this._pTexture = null;
     }
+
+    set texture(pTexture: IVariableDeclInstruction) {
+        this._pTexture = pTexture;
+    }
+
+    get texture(): IVariableDeclInstruction {
+        return this._pTexture;
+    }
+
 
     addState(sStateType: string, sStateValue: string): void {
         if (isNull(this._pSamplerParams)) {
@@ -28,20 +37,14 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
         return;
     }
 
-    set texture(pTexture: IAFXVariableDeclInstruction) {
-        this._pTexture = pTexture;
-    }
-
-    get texture(): IAFXVariableDeclInstruction {
-        return this._pTexture;
-    }
 
     isConst(): boolean {
         return true;
     }
 
+
     evaluate(): boolean {
-        var pSamplerState: IAFXSamplerState = {
+        var pSamplerState: ISamplerState = {
             // texture: null,
             textureName: "",
 
@@ -80,6 +83,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
         return true;
     }
 
+
     static convertWrapMode(sState: string): ETextureWrapModes {
         switch (sState) {
             case "WRAP":
@@ -92,6 +96,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction {
                 return 0;
         }
     }
+    
 
     static convertFilters(sState: string): ETextureFilters {
         switch (sState) {

@@ -1,16 +1,16 @@
-﻿import { IScopeMap, IScope, EScopeType } from "../idl/IScope";
+﻿import { IScope, EScopeType } from "../idl/IScope";
 import { isNull, isDef } from "../common";
-import { IAFXVariableDeclInstruction, IAFXTypedInstruction, IAFXFunctionDeclInstruction, IAFXFunctionDeclListMap, IAFXTypeDeclInstruction, EAFXBlendMode, IAFXTypeInstruction } from "../idl/IAFXInstruction";
+import { IVariableDeclInstruction, ITypedInstruction, IFunctionDeclInstruction, IFunctionDeclListMap, ITypeDeclInstruction, ITypeInstruction } from "../idl/IInstruction";
 import { IMap } from "../idl/IMap";
 
 export class ProgramScope {
 
-    private _pScopeMap: IScopeMap;
+    private _pScopeMap: IMap<IScope>;
     private _iCurrentScope: number;
     private _nScope: number;
 
     constructor() {
-        this._pScopeMap = <IScopeMap>{};
+        this._pScopeMap = <IMap<IScope>>{};
         this._iCurrentScope = -1;
         this._nScope = 0;
     }
@@ -34,7 +34,7 @@ export class ProgramScope {
     }
 
 
-    pushScope(eType: EScopeType): void {
+    pushScope(eType: EScopeType = EScopeType.k_Default): void {
         var pParentScope: IScope;
 
         if (this._iCurrentScope == -1) {
@@ -99,7 +99,7 @@ export class ProgramScope {
         return this._pScopeMap[this._iCurrentScope].type;
     }
 
-    getVariable(sVariableName: string, iScope: number = this._iCurrentScope): IAFXVariableDeclInstruction {
+    getVariable(sVariableName: string, iScope: number = this._iCurrentScope): IVariableDeclInstruction {
         console.assert(iScope != -1);
         if (iScope == -1) {
             return null;
@@ -108,10 +108,10 @@ export class ProgramScope {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
-            var pVariableMap: IMap<IAFXVariableDeclInstruction> = pScope.variableMap;
+            var pVariableMap: IMap<IVariableDeclInstruction> = pScope.variableMap;
 
             if (!isNull(pVariableMap)) {
-                var pVariable: IAFXVariableDeclInstruction = pVariableMap[sVariableName];
+                var pVariable: IVariableDeclInstruction = pVariableMap[sVariableName];
 
                 if (isDef(pVariable)) {
                     return pVariable;
@@ -125,11 +125,11 @@ export class ProgramScope {
     }
 
 
-    getType(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeInstruction {
-        var pTypeDecl: IAFXTypeDeclInstruction = this.getTypeDecl(sTypeName, iScope);
+    getType(sTypeName: string, iScope: number = this._iCurrentScope): ITypeInstruction {
+        var pTypeDecl: ITypeDeclInstruction = this.getTypeDecl(sTypeName, iScope);
 
         if (!isNull(pTypeDecl)) {
-            return pTypeDecl._getType();
+            return pTypeDecl.type;
         }
         else {
             return null;
@@ -137,7 +137,7 @@ export class ProgramScope {
     }
 
 
-    getTypeDecl(sTypeName: string, iScope: number = this._iCurrentScope): IAFXTypeDeclInstruction {
+    getTypeDecl(sTypeName: string, iScope: number = this._iCurrentScope): ITypeDeclInstruction {
         if (iScope == -1) {
             return null;
         }
@@ -145,10 +145,10 @@ export class ProgramScope {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
-            var pTypeMap: IMap<IAFXTypeDeclInstruction> = pScope.typeMap;
+            var pTypeMap: IMap<ITypeDeclInstruction> = pScope.typeMap;
 
             if (!isNull(pTypeMap)) {
-                var pType: IAFXTypeDeclInstruction = pTypeMap[sTypeName];
+                var pType: ITypeDeclInstruction = pTypeMap[sTypeName];
 
                 if (isDef(pType)) {
                     return pType;
@@ -165,28 +165,28 @@ export class ProgramScope {
      * get function by name and list of types
      * return null - if threre are not function; undefined - if there more then one function; function - if all ok
      */
-    getFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
+    getFunction(sFuncName: string, pArgumentTypes: ITypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IFunctionDeclInstruction {
         if (iScope == -1) {
             return null;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pFunction: IAFXFunctionDeclInstruction = null;
+        var pFunction: IFunctionDeclInstruction = null;
 
         while (!isNull(pScope)) {
-            var pFunctionListMap: IAFXFunctionDeclListMap = pScope.functionMap;
+            var pFunctionListMap: IFunctionDeclListMap = pScope.functionMap;
 
             if (!isNull(pFunctionListMap)) {
-                var pFunctionList: IAFXFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
+                var pFunctionList: IFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
 
                 if (isDef(pFunctionList)) {
 
                     for (var i: number = 0; i < pFunctionList.length; i++) {
-                        var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
-                        var pTestedArguments: IAFXTypedInstruction[] = pTestedFunction._getArguments();
+                        var pTestedFunction: IFunctionDeclInstruction = pFunctionList[i];
+                        var pTestedArguments: ITypedInstruction[] = pTestedFunction.arguments;
 
                         if (isNull(pArgumentTypes)) {
-                            if (pTestedFunction._getNumNeededArguments() === 0) {
+                            if (pTestedFunction.numArgsRequired === 0) {
                                 if (!isNull(pFunction)) {
                                     return undefined;
                                 }
@@ -198,7 +198,7 @@ export class ProgramScope {
                         }
 
                         if (pArgumentTypes.length > pTestedArguments.length ||
-                            pArgumentTypes.length < pTestedFunction._getNumNeededArguments()) {
+                            pArgumentTypes.length < pTestedFunction.numArgsRequired) {
                             continue;
                         }
 
@@ -207,7 +207,7 @@ export class ProgramScope {
                         for (var j: number = 0; j < pArgumentTypes.length; j++) {
                             isParamsEqual = false;
 
-                            if (!pArgumentTypes[j]._getType()._isEqual(pTestedArguments[j]._getType())) {
+                            if (!pArgumentTypes[j].type.isEqual(pTestedArguments[j].type)) {
                                 break;
                             }
 
@@ -235,25 +235,25 @@ export class ProgramScope {
      * get shader function by name and list of types
      * return null - if threre are not function; undefined - if there more then one function; function - if all ok
      */
-    getShaderFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IAFXFunctionDeclInstruction {
+    getShaderFunction(sFuncName: string, pArgumentTypes: ITypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): IFunctionDeclInstruction {
         if (iScope == -1) {
             return null;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pFunction: IAFXFunctionDeclInstruction = null;
+        var pFunction: IFunctionDeclInstruction = null;
 
         while (!isNull(pScope)) {
-            var pFunctionListMap: IAFXFunctionDeclListMap = pScope.functionMap;
+            var pFunctionListMap: IFunctionDeclListMap = pScope.functionMap;
 
             if (!isNull(pFunctionListMap)) {
-                var pFunctionList: IAFXFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
+                var pFunctionList: IFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
 
                 if (isDef(pFunctionList)) {
 
                     for (var i: number = 0; i < pFunctionList.length; i++) {
-                        var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
-                        var pTestedArguments: IAFXVariableDeclInstruction[] = <IAFXVariableDeclInstruction[]>pTestedFunction._getArguments();
+                        var pTestedFunction: IFunctionDeclInstruction = pFunctionList[i];
+                        var pTestedArguments: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>pTestedFunction.arguments;
 
                         if (pArgumentTypes.length > pTestedArguments.length) {
                             continue;
@@ -275,15 +275,15 @@ export class ProgramScope {
                             isParamsEqual = false;
 
                             if (iArg >= pArgumentTypes.length) {
-                                if (pTestedArguments[j]._isUniform()) {
+                                if (pTestedArguments[j].isUniform()) {
                                     break;
                                 }
                                 else {
                                     isParamsEqual = true;
                                 }
                             }
-                            else if (pTestedArguments[j]._isUniform()) {
-                                if (!pArgumentTypes[iArg]._getType()._isEqual(pTestedArguments[j]._getType())) {
+                            else if (pTestedArguments[j].isUniform()) {
+                                if (!pArgumentTypes[iArg].type.isEqual(pTestedArguments[j].type)) {
                                     break;
                                 }
                                 else {
@@ -311,19 +311,19 @@ export class ProgramScope {
     }
 
 
-    addVariable(pVariable: IAFXVariableDeclInstruction, iScope: number = this._iCurrentScope): boolean {
+    addVariable(pVariable: IVariableDeclInstruction, iScope: number = this._iCurrentScope): boolean {
         if (iScope == -1) {
             return false;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pVariableMap: IMap<IAFXVariableDeclInstruction> = pScope.variableMap;
+        var pVariableMap: IMap<IVariableDeclInstruction> = pScope.variableMap;
 
         if (isNull(pVariableMap)) {
-            pVariableMap = pScope.variableMap = <IMap<IAFXVariableDeclInstruction>>{};
+            pVariableMap = pScope.variableMap = <IMap<IVariableDeclInstruction>>{};
         }
 
-        var sVariableName: string = pVariable._getName();
+        var sVariableName: string = pVariable.name;
 
         {
             if (!this.hasVariableInScope(sVariableName, iScope)) {
@@ -339,19 +339,19 @@ export class ProgramScope {
     }
 
 
-    addType(pType: IAFXTypeDeclInstruction, iScope: number = this._iCurrentScope): boolean {
+    addType(pType: ITypeDeclInstruction, iScope: number = this._iCurrentScope): boolean {
         if (iScope == -1) {
             return false;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pTypeMap: IMap<IAFXTypeDeclInstruction> = pScope.typeMap;
+        var pTypeMap: IMap<ITypeDeclInstruction> = pScope.typeMap;
 
         if (isNull(pTypeMap)) {
-            pTypeMap = pScope.typeMap = <IMap<IAFXTypeDeclInstruction>>{};
+            pTypeMap = pScope.typeMap = <IMap<ITypeDeclInstruction>>{};
         }
 
-        var sTypeName: string = pType._getName();
+        var sTypeName: string = pType.name;
 
         if (this.hasTypeInScope(sTypeName, iScope)) {
             return false;
@@ -364,19 +364,19 @@ export class ProgramScope {
     }
 
 
-    addFunction(pFunction: IAFXFunctionDeclInstruction, iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
+    addFunction(pFunction: IFunctionDeclInstruction, iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
         if (iScope == -1) {
             return false;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pFunctionMap: IAFXFunctionDeclListMap = pScope.functionMap;
+        var pFunctionMap: IFunctionDeclListMap = pScope.functionMap;
 
         if (isNull(pFunctionMap)) {
-            pFunctionMap = pScope.functionMap = <IAFXFunctionDeclListMap>{};
+            pFunctionMap = pScope.functionMap = <IFunctionDeclListMap>{};
         }
 
-        var sFuncName: string = pFunction._getName();
+        var sFuncName: string = pFunction.name;
 
         if (this.hasFunctionInScope(pFunction, iScope)) {
             return false;
@@ -401,10 +401,10 @@ export class ProgramScope {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
-            var pVariableMap: IMap<IAFXVariableDeclInstruction> = pScope.variableMap;
+            var pVariableMap: IMap<IVariableDeclInstruction> = pScope.variableMap;
 
             if (!isNull(pVariableMap)) {
-                var pVariable: IAFXVariableDeclInstruction = pVariableMap[sVariableName];
+                var pVariable: IVariableDeclInstruction = pVariableMap[sVariableName];
 
                 if (isDef(pVariable)) {
                     return true;
@@ -426,10 +426,10 @@ export class ProgramScope {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
-            var pTypeMap: IMap<IAFXTypeDeclInstruction> = pScope.typeMap;
+            var pTypeMap: IMap<ITypeDeclInstruction> = pScope.typeMap;
 
             if (!isNull(pTypeMap)) {
-                var pType: IAFXTypeDeclInstruction = pTypeMap[sTypeName];
+                var pType: ITypeDeclInstruction = pTypeMap[sTypeName];
 
                 if (isDef(pType)) {
                     return true;
@@ -443,7 +443,7 @@ export class ProgramScope {
     }
 
 
-    hasFunction(sFuncName: string, pArgumentTypes: IAFXTypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
+    hasFunction(sFuncName: string, pArgumentTypes: ITypedInstruction[], iScope: number = ProgramScope.GLOBAL_SCOPE): boolean {
         if (iScope == -1) {
             return false;
         }
@@ -451,20 +451,20 @@ export class ProgramScope {
         var pScope: IScope = this._pScopeMap[iScope];
 
         while (!isNull(pScope)) {
-            var pFunctionListMap: IAFXFunctionDeclListMap = pScope.functionMap;
+            var pFunctionListMap: IFunctionDeclListMap = pScope.functionMap;
 
             if (!isNull(pFunctionListMap)) {
-                var pFunctionList: IAFXFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
+                var pFunctionList: IFunctionDeclInstruction[] = pFunctionListMap[sFuncName];
 
                 if (isDef(pFunctionList)) {
-                    // var pFunction: IAFXFunctionDeclInstruction = null;
+                    // var pFunction: IFunctionDeclInstruction = null;
 
                     for (var i: number = 0; i < pFunctionList.length; i++) {
-                        var pTestedFunction: IAFXFunctionDeclInstruction = pFunctionList[i];
-                        var pTestedArguments: IAFXTypedInstruction[] = pTestedFunction._getArguments();
+                        var pTestedFunction: IFunctionDeclInstruction = pFunctionList[i];
+                        var pTestedArguments: ITypedInstruction[] = pTestedFunction.arguments;
 
                         if (pArgumentTypes.length > pTestedArguments.length ||
-                            pArgumentTypes.length < pTestedFunction._getNumNeededArguments()) {
+                            pArgumentTypes.length < pTestedFunction.numArgsRequired) {
                             continue;
                         }
 
@@ -473,7 +473,7 @@ export class ProgramScope {
                         for (var j: number = 0; j < pArgumentTypes.length; j++) {
                             isParamsEqual = false;
 
-                            if (!pArgumentTypes[j]._getType()._isEqual(pTestedArguments[j]._getType())) {
+                            if (!pArgumentTypes[j].type.isEqual(pTestedArguments[j].type)) {
                                 break;
                             }
 
@@ -505,24 +505,24 @@ export class ProgramScope {
     }
 
 
-    hasFunctionInScope(pFunction: IAFXFunctionDeclInstruction, iScope: number): boolean {
+    hasFunctionInScope(pFunction: IFunctionDeclInstruction, iScope: number): boolean {
         if (iScope == -1) {
             return false;
         }
 
         var pScope: IScope = this._pScopeMap[iScope];
-        var pFunctionListMap: IAFXFunctionDeclListMap = pScope.functionMap;
-        var pFunctionList: IAFXFunctionDeclInstruction[] = pFunctionListMap[pFunction._getName()];
+        var pFunctionListMap: IFunctionDeclListMap = pScope.functionMap;
+        var pFunctionList: IFunctionDeclInstruction[] = pFunctionListMap[pFunction.name];
 
         if (!isDef(pFunctionList)) {
             return false;
         }
 
-        var pFunctionArguments: IAFXTypedInstruction[] = <IAFXTypedInstruction[]>pFunction._getArguments();
+        var pFunctionArguments: ITypedInstruction[] = <ITypedInstruction[]>pFunction.arguments;
         var hasFunction: boolean = false;
 
         for (var i: number = 0; i < pFunctionList.length; i++) {
-            var pTestedArguments: IAFXTypedInstruction[] = <IAFXTypedInstruction[]>pFunctionList[i]._getArguments();
+            var pTestedArguments: ITypedInstruction[] = <ITypedInstruction[]>pFunctionList[i].arguments;
 
             if (pTestedArguments.length !== pFunctionArguments.length) {
                 continue;
@@ -533,7 +533,7 @@ export class ProgramScope {
             for (var j: number = 0; j < pFunctionArguments.length; j++) {
                 isParamsEqual = false;
 
-                if (!pTestedArguments[j]._getType()._isEqual(pFunctionArguments[j]._getType())) {
+                if (!pTestedArguments[j].type.isEqual(pFunctionArguments[j].type)) {
                     break;
                 }
 

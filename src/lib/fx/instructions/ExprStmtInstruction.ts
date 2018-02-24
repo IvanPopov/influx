@@ -1,6 +1,6 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
-import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { EInstructionTypes } from "../../idl/IInstruction";
 
 /**
  * Represent expr;
@@ -8,9 +8,7 @@ import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
  */
 export class ExprStmtInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null];
-        this._eInstructionType = EAFXInstructionTypes.k_ExprStmtInstruction;
+        super(pNode, EInstructionTypes.k_ExprStmtInstruction);
     }
 
     toCode(): string {

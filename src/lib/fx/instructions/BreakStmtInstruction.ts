@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 /**
@@ -8,11 +8,10 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class BreakStmtInstruction extends StmtInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = null;
-        this._eInstructionType = EAFXInstructionTypes.k_BreakStmtInstruction;
+        super(pNode, EInstructionTypes.k_BreakStmtInstruction);
     }
 
+    // todo: validate operator's name
     toCode(): string {
         return this.operator + ";";
     }

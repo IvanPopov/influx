@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { EAFXInstructionTypes, IAFXExprInstruction } from "../../idl/IAFXInstruction";
+import { EInstructionTypes, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 
@@ -9,9 +9,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class ComplexExprInstruction extends ExprInstruction {
     constructor(pNode: IParseNode) {
-        super(pNode);
-        this._pInstructionList = [null];
-        this._eInstructionType = EAFXInstructionTypes.k_ComplexExprInstruction;
+        super(pNode, EInstructionTypes.k_ComplexExprInstruction);
     }
 
     toCode(): string {
@@ -21,12 +19,12 @@ export class ComplexExprInstruction extends ExprInstruction {
     }
 
     isConst(): boolean {
-        return (<IAFXExprInstruction>this.instructions[0]).isConst();
+        return (<IExprInstruction>this.instructions[0]).isConst();
     }
 
     evaluate(): boolean {
-        if ((<IAFXExprInstruction>this.instructions[0]).evaluate()) {
-            this._pLastEvalResult = (<IAFXExprInstruction>this.instructions[0]).getEvalValue();
+        if ((<IExprInstruction>this.instructions[0]).evaluate()) {
+            this._pLastEvalResult = (<IExprInstruction>this.instructions[0]).getEvalValue();
             return true;
         } else {
             return false;

@@ -1,4 +1,4 @@
-import { IAFXExprInstruction, EVarUsedMode, IAFXTypeUseInfoContainer, EAFXInstructionTypes } from "../../idl/IAFXInstruction";
+import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
@@ -9,29 +9,27 @@ import { ExprInstruction } from "./ExprInstruction";
  * (-- | ++) Instruction
  */
 export class PostfixArithmeticInstruction extends ExprInstruction {
-	constructor(pNode: IParseNode) {
-		super(pNode);
-		this._pInstructionList = [null];
-		this._eInstructionType = EAFXInstructionTypes.k_PostfixArithmeticInstruction;
-	}
+    constructor(pNode: IParseNode) {
+        super(pNode, EInstructionTypes.k_PostfixArithmeticInstruction);
+    }
 
-	toCode(): string {
-		var sCode: string = "";
+    toCode(): string {
+        var sCode: string = "";
 
-		sCode += this.instructions[0].toCode();
-		sCode += this.operator;
+        sCode += this.instructions[0].toCode();
+        sCode += this.operator;
 
-		return sCode;
-	}
+        return sCode;
+    }
 
-	addUsedData(pUsedDataCollector: IMap<IAFXTypeUseInfoContainer>,
-		eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-		var pSubExpr: IAFXExprInstruction = <IAFXExprInstruction>this.instructions[0];
-		pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
-	}
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
+        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+        var pSubExpr: IExprInstruction = <IExprInstruction>this.instructions[0];
+        pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+    }
 
-	isConst(): boolean {
-		return (<IAFXExprInstruction>this.instructions[0]).isConst();
-	}
+    isConst(): boolean {
+        return (<IExprInstruction>this.instructions[0]).isConst();
+    }
 }
 

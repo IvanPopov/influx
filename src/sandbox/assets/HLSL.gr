@@ -299,9 +299,6 @@ ObjectExpr : T_KW_SAMPLER_STATE StateBlock
 ObjectExpr : T_KW_COMPILE_FRAGMENT Target NonTypeId '(' ArgumentsOpt ')'
 ObjectExpr : T_KW_STATEBLOCK_STATE StateBlock
 
-PrimaryExpr : ComplexExpr
-PrimaryExpr : SimpleExpr
-PostfixExpr : PrimaryExpr
 PostfixExpr : PostfixExpr '[' Expr ']'
 PostfixExpr : PostfixExpr '.' Id
 PostfixExpr : PostfixExpr T_OP_INC
