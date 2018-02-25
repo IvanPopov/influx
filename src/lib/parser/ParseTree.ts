@@ -1,4 +1,18 @@
-﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule } from "../idl/parser/IParser";
+﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule, ITokenLocation, ITokenPosition } from "../idl/parser/IParser";
+
+function locMin(a: ITokenPosition, b: ITokenPosition): ITokenPosition {
+    return {
+        line: Math.min(a.line, b.line),
+        column: Math.min(a.column, b.column)
+    };
+}
+
+function locMax(a: ITokenPosition, b: ITokenPosition): ITokenPosition {
+    return {
+        line: Math.max(a.line, b.line),
+        column: Math.max(a.column, b.column)
+    };
+}
 
 export class ParseTree implements IParseTree {
     private _pRoot: IParseNode;
@@ -30,18 +44,12 @@ export class ParseTree implements IParseTree {
     }
 
     addToken(pToken: IToken): void {
-        var pNode: IParseNode = {
+        let pNode: IParseNode = {
             name: pToken.name,
             value: pToken.value,
-
-            start: pToken.start,
-            end: pToken.end,
-            line: pToken.line,
-
             children: null,
             parent: null,
-            isAnalyzed: false,
-            position: this._pNodes.length
+            loc: pToken.loc,
         };
 
         this.addNode(pNode);
@@ -53,12 +61,13 @@ export class ParseTree implements IParseTree {
     }
 
     reduceByRule(pRule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
-        var iReduceCount: number = 0;
-        var pNodesCountStack: number[] = this._pNodesCountStack;
-        var pNode: IParseNode;
-        var iRuleLength: number = pRule.right.length;
-        var pNodes: IParseNode[] = this._pNodes;
-        var nOptimize: number = this._isOptimizeMode ? 1 : 0;
+        let iReduceCount: number = 0;
+        let pNodesCountStack: number[] = this._pNodesCountStack;
+        let pNode: IParseNode;
+        let iRuleLength: number = pRule.right.length;
+        let pNodes: IParseNode[] = this._pNodes;
+        let nOptimize: number = this._isOptimizeMode ? 1 : 0;
+        let pTemp: IParseNode;
 
         while (iRuleLength) {
             iReduceCount += pNodesCountStack.pop();
@@ -66,18 +75,26 @@ export class ParseTree implements IParseTree {
         }
 
         if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > nOptimize) || (eCreate === ENodeCreateMode.k_Necessary)) {
-            pNode = <IParseNode>{
+
+            pTemp = pNodes.pop();
+            iReduceCount--;
+
+            pNode = {
                 name: pRule.left,
                 children: null,
                 parent: null,
                 value: '',
-                isAnalyzed: false,
-                position: this._pNodes.length
+                loc: {
+                    start: pTemp.loc.start,
+                    end: pTemp.loc.end
+                }
             };
+
+            this.addLink(pNode, pTemp);
 
             while (iReduceCount) {
                 this.addLink(pNode, pNodes.pop());
-                iReduceCount -= 1;
+                iReduceCount --;
             }
 
             pNodes.push(pNode);
@@ -98,7 +115,7 @@ export class ParseTree implements IParseTree {
     }
 
     clone(): IParseTree {
-        var pTree = new ParseTree();
+        let pTree = new ParseTree();
         pTree.setRoot(this.cloneNode(this._pRoot));
         return pTree;
     }
@@ -115,23 +132,25 @@ export class ParseTree implements IParseTree {
         if (!pParent.children) {
             pParent.children = <IParseNode[]>[];
         }
+        
+        pParent.loc.start = locMin(pNode.loc.start, pParent.loc.start);
+        pParent.loc.end = locMax(pNode.loc.end, pParent.loc.end);
+
         pParent.children.push(pNode);
         pNode.parent = pParent;
     }
 
     private cloneNode(pNode: IParseNode): IParseNode {
-        var pNewNode: IParseNode;
+        let pNewNode: IParseNode;
         pNewNode = <IParseNode>{
             name: pNode.name,
             value: pNode.value,
             children: null,
-            parent: null,
-            isAnalyzed: pNode.isAnalyzed,
-            position: pNode.position
+            parent: null
         };
 
-        var pChildren: IParseNode[] = pNode.children;
-        for (var i = 0; pChildren && i < pChildren.length; i++) {
+        let pChildren: IParseNode[] = pNode.children;
+        for (let i = 0; pChildren && i < pChildren.length; i++) {
             this.addLink(pNewNode, this.cloneNode(pChildren[i]));
         }
 
@@ -139,9 +158,9 @@ export class ParseTree implements IParseTree {
     }
 
     private toStringNode(pNode: IParseNode, sPadding: string = ""): string {
-        var sRes: string = sPadding + "{\n";
-        var sOldPadding: string = sPadding;
-        var sDefaultPadding: string = "  ";
+        let sRes: string = sPadding + "{\n";
+        let sOldPadding: string = sPadding;
+        let sDefaultPadding: string = "  ";
 
         sPadding += sDefaultPadding;
 
@@ -153,13 +172,13 @@ export class ParseTree implements IParseTree {
             sRes += sPadding + "name : \"" + pNode.name + "\"" + "\n";
             sRes += sPadding + "children : [";
 
-            var pChildren: IParseNode[] = pNode.children;
+            let pChildren: IParseNode[] = pNode.children;
 
             if (pChildren) {
                 sRes += "\n";
                 sPadding += sDefaultPadding;
 
-                for (var i = pChildren.length - 1; i >= 0; i--) {
+                for (let i = pChildren.length - 1; i >= 0; i--) {
                     sRes += this.toStringNode(pChildren[i], sPadding);
                     sRes += ",\n";
                 }
@@ -176,22 +195,25 @@ export class ParseTree implements IParseTree {
         return sRes;
     }
 
-    toHTMLString(pNode, sPadding) {
+    toHTMLString(pNode: IParseNode, sPadding: string = "") {
         pNode = pNode || this.getRoot();
-        sPadding = sPadding || "";
-        var sRes = sPadding + "{\n";
-        var sOldPadding = sPadding;
-        var sDefaultPadding = "  ";
+        let sRes = sPadding + "{\n";
+        let sOldPadding = sPadding;
+        let sDefaultPadding = "  ";
         sPadding += sDefaultPadding;
         if (pNode.value) {
             sRes += sPadding + "<b style=\"color: #458383;\">name</b>: \"" + pNode.name + "\"" + ",\n";
             sRes += sPadding + "<b style=\"color: #458383;\">value</b>: \"" + pNode.value + "\"" + ",\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">line</b>: \"" + pNode.line + "\"" + ",\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">column</b>: \"" + pNode.start + "\"" + "\n";
+            sRes += sPadding + "<b style=\"color: #458383;\">line</b>: \"" + pNode.loc.start.line + "\" - \""  + pNode.loc.end.line + "\"" + "\n";
+            sRes += sPadding + "<b style=\"color: #458383;\">column</b>: \"" + pNode.loc.start.column + "\" - \""  + pNode.loc.end.column + "\"" + "\n";
+            // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
         }
         else {
-            var i;
+            let i;
             sRes += sPadding + "<i style=\"color: #8A2BE2;\">name</i>: \"" + pNode.name + "\"" + "\n";
+            sRes += sPadding + "<b style=\"color: #458383;\">line</b>: \"" + pNode.loc.start.line + "\" - \""  + pNode.loc.end.line + "\"" + "\n";
+            sRes += sPadding + "<b style=\"color: #458383;\">column</b>: \"" + pNode.loc.start.column + "\" - \""  + pNode.loc.end.column + "\"" + "\n";
+            // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
             sRes += sPadding + "<i style=\"color: #8A2BE2;\">children</i>: [";
             if (pNode.children) {
                 sRes += "\n";
@@ -211,24 +233,4 @@ export class ParseTree implements IParseTree {
         sRes += sOldPadding + "}";
         return sRes;
     }
-
-    toTreeView(pNode: IParseNode): {} { // TODO: fixme, use proper type
-        pNode = pNode || this.getRoot();
-        let pRes: any = {};
-        if (pNode.value) {
-            pRes.label = pNode.name + ": " + pNode.value;
-        }
-        else {
-            pRes.label = pNode.name;
-            if (pNode.children) {
-                pRes.children = [];
-                pRes.expanded = true;
-                for (let i = pNode.children.length - 1; i >= 0; i--) {
-                    pRes.children.push(this.toTreeView(pNode.children[i]));
-                }
-            }
-        }
-        return pRes;
-    }
-
 }

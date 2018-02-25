@@ -3,6 +3,7 @@ import { ITypeDeclInstruction, EInstructionTypes, ITypeInstruction, IInstruction
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
+// todo: add description comment.
 export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclInstruction {
     constructor(pNode: IParseNode) {
         super(pNode, EInstructionTypes.k_TypeDeclInstruction);

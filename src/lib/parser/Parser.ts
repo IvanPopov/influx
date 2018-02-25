@@ -269,9 +269,7 @@ export class Parser implements IParser {
         try {
             this.defaultInit();
             this._sSource = sSource;
-            this._pLexer._init(sSource);
-
-            //this._isSync = isSync;
+            this._pLexer.init(sSource);
 
             this._fnFinishCallback = fnFinishCallback;
 
@@ -430,7 +428,7 @@ export class Parser implements IParser {
     _saveState(): IParserState {
         return <IParserState>{
             source: this._sSource,
-            index: (<ILexer>this._pLexer)._getIndex(),
+            index: (<ILexer>this._pLexer).getIndex(),
             fileName: this._sFileName,
             tree: this._pSyntaxTree,
             types: this._pTypeIdMap,
@@ -450,8 +448,8 @@ export class Parser implements IParser {
         this._pToken = pState.token;
         this._fnFinishCallback = pState.fnCallback;
 
-        this._pLexer._setSource(pState.source);
-        this._pLexer._setIndex(pState.index);
+        this._pLexer.setSource(pState.source);
+        this._pLexer.setIndex(pState.index);
     }
 
     addAdditionalFunction(sFuncName: string, fnRuleFunction: IRuleFunction): void {
@@ -512,8 +510,8 @@ export class Parser implements IParser {
 
         if (eCode === PARSER_SYNTAX_ERROR) {
             pToken = <IToken>pErrorInfo;
-            iLine = pToken.line;
-            iColumn = pToken.start;
+            iLine = pToken.loc.start.line;
+            iColumn = pToken.loc.start.column;
 
             pInfo.tokenValue = pToken.value;
             pInfo.line = iLine;
@@ -947,10 +945,10 @@ export class Parser implements IParser {
 
 
                     if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
-                        sName = this._pLexer._addKeyword(pTempRule[2], pTempRule[0]);
+                        sName = this._pLexer.addKeyword(pTempRule[2], pTempRule[0]);
                     }
                     else {
-                        sName = this._pLexer._addPunctuator(pTempRule[2], pTempRule[0]);
+                        sName = this._pLexer.addPunctuator(pTempRule[2], pTempRule[0]);
                     }
 
                     this._pGrammarSymbols[sName] = pTempRule[2];
@@ -1033,7 +1031,7 @@ export class Parser implements IParser {
                         //this._error("Can`t generate rules from grammar! Unexpected symbol! Must be");
                     }
 
-                    sName = this._pLexer._addPunctuator(pTempRule[j][1]);
+                    sName = this._pLexer.addPunctuator(pTempRule[j][1]);
                     pRule.right.push(sName);
                     this._pSymbolMap[sName] = true;
                 }
@@ -1438,37 +1436,6 @@ export class Parser implements IParser {
         }
     }
 
-    // private calcBaseItem(): number {
-    //     var num: number = 0;
-    //     var i: number = 0;
-
-    //     for (i = 0; i < this._pStateList.length; i++) {
-    //         num += this._pStateList[i].getNumBaseItems();
-    //     }
-
-    //     return num;
-    // }
-
-    // private printExpectedTable(): string {
-    //     var i: number = 0, j: number = 0;
-    //     var sMsg: string = "";
-
-    //     var pKeys: string[] = Object.keys(this._pExpectedExtensionDMap);
-    //     for (i = 0; i < pKeys.length; i++) {
-    //         sMsg += "State " + this._pBaseItemList[<number><any>pKeys[i]].getState().getIndex() + ":   ";
-    //         sMsg += this._pBaseItemList[<number><any>pKeys[i]].toString() + "  |----->\n";
-
-    //         var pExtentions: string[] = Object.keys(this._pExpectedExtensionDMap[pKeys[i]]);
-    //         for (j = 0; j < pExtentions.length; j++) {
-    //             sMsg += "\t\t\t\t\t" + "State " + this._pBaseItemList[<number><any>pExtentions[j]].getState().getIndex() + ":   ";
-    //             sMsg += this._pBaseItemList[<number><any>pExtentions[j]].toString() + "\n";
-    //         }
-
-    //         sMsg += "\n";
-    //     }
-
-    //     return sMsg;
-    // }
 
     private addReducing(pState: IState): void {
         let i: number = 0, j: number = 0;
@@ -1551,7 +1518,7 @@ export class Parser implements IParser {
     }
 
     private readToken(): IToken {
-        return this._pLexer._getNextToken();
+        return this._pLexer.getNextToken();
     }
 
     private operationAdditionalAction(iStateIndex: number, sGrammarSymbol: string): EOperationType {
@@ -1713,7 +1680,7 @@ export class Parser implements IParser {
         if (!this.isTerminal(sSymbol)) {
             return sSymbol;
         } else {
-            return this._pLexer._getTerminalValueByName(sSymbol);
+            return this._pLexer.getTerminalValueByName(sSymbol);
         }
     }
 }

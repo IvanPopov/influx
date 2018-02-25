@@ -18,9 +18,11 @@ export class ComplexExprInstruction extends ExprInstruction {
         return sCode;
     }
 
+    
     isConst(): boolean {
         return (<IExprInstruction>this.instructions[0]).isConst();
     }
+
 
     evaluate(): boolean {
         if ((<IExprInstruction>this.instructions[0]).evaluate()) {

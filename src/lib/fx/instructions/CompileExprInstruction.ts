@@ -7,10 +7,12 @@ import { IParseNode } from "../../idl/parser/IParser";
   * compile IdExprInstruction ExprInstruction ... ExprInstruction
   */
 export class CompileExprInstruction extends ExprInstruction implements ICompileExprInstruction {
+
     constructor(pNode: IParseNode) {
         super(pNode, EInstructionTypes.k_CompileExprInstruction);
     }
 
+    
     get function(): IFunctionDeclInstruction {
         return <IFunctionDeclInstruction>this.instructions[0].parent.parent;
     }

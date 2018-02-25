@@ -22,11 +22,13 @@ export class ConditionalExprInstruction extends ExprInstruction {
         return sCode;
     }
 
+
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
+    
     isConst(): boolean {
         return (<IExprInstruction>this.instructions[0]).isConst() &&
             (<IExprInstruction>this.instructions[1]).isConst();

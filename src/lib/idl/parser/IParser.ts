@@ -38,14 +38,23 @@ export enum ETokenType {
     k_End
 }
 
+export interface ITokenPosition {
+    line: number; 
+    column: number;
+}
+
+export interface ITokenLocation {
+    start: ITokenPosition;
+    end: ITokenPosition;
+}
+
 export interface IToken {
     value: string;
-    start: number;
-    end: number;
-    line: number;
-
     name?: string;
     type?: ETokenType;
+
+    loc?: ITokenLocation;
+    range?: number[];
 }
 
 export interface IRule {
@@ -72,14 +81,7 @@ export interface IParseNode {
     parent: IParseNode;
     name: string;
     value: string;
-
-    //Data for next-step analyze
-    isAnalyzed: boolean;
-    position: number;
-
-    start?: number;
-    end?: number;
-    line?: number;
+    loc?: ITokenLocation;
 }
 
 export interface IParseTree {
@@ -104,17 +106,17 @@ export interface IParseTree {
 }
 
 export interface ILexer {
-    _addPunctuator(sValue: string, sName?: string): string;
-    _addKeyword(sValue: string, sName: string): string;
+    addPunctuator(sValue: string, sName?: string): string;
+    addKeyword(sValue: string, sName: string): string;
 
-    _getTerminalValueByName(sName: string): string;
+    getTerminalValueByName(sName: string): string;
 
-    _init(sSource: string): void;
+    init(sSource: string): void;
 
-    _getNextToken(): IToken | null;
-    _getIndex(): number;
-    _setSource(sSource: string): void;
-    _setIndex(iIndex: number): void;
+    getNextToken(): IToken | null;
+    getIndex(): number;
+    setSource(sSource: string): void;
+    setIndex(iIndex: number): void;
 }
 
 export interface IParserState {

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { Dispatch } from 'redux';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, 
-    SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from '../actions/ActionTypeKeys';
+    SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, GRAMMAR_CONTENT_SPECIFIED } from '../actions/ActionTypeKeys';
 import IStoreState from '../store/IStoreState';
 
 export function openSource(filename: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
@@ -23,6 +23,12 @@ export function openSource(filename: string): (dispatch: Dispatch<IStoreState>) 
 export function openGrammar(filename: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
     return async (dispatch: Dispatch<IStoreState>) => {
         dispatch({ type: GRAMMAR_FILE_SPECIFIED, payload: { filename } });
+    };
+}
+
+export function setGrammar(content: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
+    return async (dispatch: Dispatch<IStoreState>) => {
+        dispatch({ type: GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
     };
 }
 

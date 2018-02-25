@@ -15,8 +15,6 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
         this.type = Effect.getSystemType("bool").variableType;
     }
 
-    set type(pType: IVariableTypeInstruction) {}
-
     set value(bValue: boolean) {
         this._bValue = bValue;
     }

@@ -74,8 +74,8 @@ function getNodeSourceLocation(pNode: IParseNode): { line: number; column: numbe
     if (!isDefAndNotNull(pNode)) {
         return null;
     }
-    if (isDef(pNode.line)) {
-        return { line: pNode.line, column: pNode.start };
+    if (isDef(pNode.loc)) {
+        return { line: pNode.loc.start.line, column: pNode.loc.start.column };
     } else {
         return getNodeSourceLocation(pNode.children[pNode.children.length - 1]);
     }
@@ -3669,10 +3669,11 @@ function analyzePassStateForShader(pContext: Context, pScope: ProgramScope, pNod
         eShaderType = EFunctionType.k_Pixel;
     }
     else {
+        console.error('unknown shader type');
         return;
     }
 
-    pNode.isAnalyzed = true;
+    pContext.markPassNodeAsAnalyzed(pNode);
 
     const pStateExprNode: IParseNode = pChildren[pChildren.length - 3];
     const pExprNode: IParseNode = pStateExprNode.children[pStateExprNode.children.length - 1];
@@ -3815,7 +3816,7 @@ function analyzePassState(pContext: Context, pScope: ProgramScope, pNode: IParse
         return;
     }
 
-    if (pNode.isAnalyzed) {
+    if (pContext.isPassNodeAnalyzed(pNode)) {
         const pFunc: IFunctionDeclInstruction = pPass.getFoundedFunction(pNode);
         const eShaderType: EFunctionType = pPass.getFoundedFunctionType(pNode);
         let pShader: IFunctionDeclInstruction = null;
@@ -4091,8 +4092,6 @@ function analyzeTypeDecl(pContext: Context, pScope: ProgramScope, pNode: IParseN
     checkInstruction(pContext, pTypeDeclInstruction, ECheckStage.CODE_TARGET_SUPPORT);
     addTypeDecl(pContext, pScope, pTypeDeclInstruction);
 
-    pNode.isAnalyzed = true;
-
     if (!isNull(pParentInstruction)) {
         pParentInstruction.push(pTypeDeclInstruction, true);
     }
@@ -4188,7 +4187,7 @@ initSystemTypes();
 initSystemFunctions();
 initSystemVariables();
 
-
+// TODO: refactor context data!
 class Context {
     public currentFunction: IFunctionDeclInstruction | null = null;
     public currentPass: IPassInstruction | null = null;
@@ -4201,6 +4200,8 @@ class Context {
     public techniqueMap: IMap<ITechniqueInstruction> = {};
     public provideNameSpace: string | null = null;
 
+    private analyzedPassNodes: IParseNode[] = [];
+
     constructor(filename: string) {
         this.analyzedFileName = filename;
     }
@@ -4208,6 +4209,15 @@ class Context {
     setCurrentAnalyzedFunction(pFunction: IFunctionDeclInstruction): void {
         this.currentFunction = pFunction;
         this.haveCurrentFunctionReturnOccur = false;
+    }
+
+    isPassNodeAnalyzed(pNode: IParseNode): boolean {
+        return this.analyzedPassNodes.indexOf(pNode) != -1;
+    }
+
+    markPassNodeAsAnalyzed(pNode: IParseNode): void {
+        console.assert(this.isPassNodeAnalyzed(pNode) === false);
+        this.analyzedPassNodes.push(pNode);
     }
 }
 

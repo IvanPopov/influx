@@ -23,7 +23,7 @@
     "grunt-contrib-pug": "^1.0.0",
     "grunt-ts": "^6.0.0-beta.17",
     "grunt-tslint": "^5.0.1",
-    "less": "^2.7.2",
+    "less": "^2.7.3",
     "pug": "^2.0.0-rc.2",
     "react": "^16.2.0",
     "react-codemirror": "^1.0.0",

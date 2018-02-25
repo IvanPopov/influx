@@ -1,6 +1,6 @@
 import { ILoggerEntity, ISourceLocation } from '../idl/ILogger';
 import { IMap } from '../idl/IMap';
-import { ETokenType, ILexer, IParser, IToken } from '../idl/parser/IParser';
+import { ETokenType, ILexer, IParser, IToken, ITokenPosition, ITokenLocation } from '../idl/parser/IParser';
 import { logger } from '../logger';
 import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
@@ -33,22 +33,22 @@ export class Lexer implements ILexer {
         this._pPunctuatorsFirstSymbols = <IMap<boolean>>{};
     }
 
-    public static _getPunctuatorName(sValue: string): string {
+    public static getPunctuatorName(sValue: string): string {
         return "T_PUNCTUATOR_" + sValue.charCodeAt(0);
     }
 
-    _addPunctuator(sValue: string, sName: string = Lexer._getPunctuatorName(sValue)): string {
+    addPunctuator(sValue: string, sName: string = Lexer.getPunctuatorName(sValue)): string {
         this._pPunctuatorsMap[sValue] = sName;
         this._pPunctuatorsFirstSymbols[sValue[0]] = true;
         return sName;
     }
 
-    public _addKeyword(sValue: string, sName: string): string {
+    public addKeyword(sValue: string, sName: string): string {
         this._pKeywordsMap[sValue] = sName;
         return sName;
     }
 
-    public _getTerminalValueByName(sName: string): string {
+    public getTerminalValueByName(sName: string): string {
         var sValue: string = "";
 
         for (sValue in this._pPunctuatorsMap) {
@@ -66,22 +66,24 @@ export class Lexer implements ILexer {
         return sName;
     }
 
-    public _init(sSource: string): void {
+    public init(sSource: string): void {
         this._sSource = sSource;
         this._iLineNumber = 0;
         this._iColumnNumber = 0;
         this._iIndex = 0;
     }
 
-    public _getNextToken(): IToken | null {
+    public getNextToken(): IToken | null {
         var ch: string = this.currentChar();
         if (!ch) {
+            let pos = this.pos();
             return <IToken>{
                 name: END_SYMBOL,
                 value: END_SYMBOL,
-                start: this._iColumnNumber,
-                end: this._iColumnNumber,
-                line: this._iLineNumber
+                loc: { 
+                    start: pos, 
+                    end: pos 
+                }
             };
         }
         var eType: ETokenType = this.identityTokenType();
@@ -92,7 +94,7 @@ export class Lexer implements ILexer {
                 break;
             case ETokenType.k_CommentLiteral:
                 this.scanComment();
-                pToken = this._getNextToken();
+                pToken = this.getNextToken();
                 break;
             case ETokenType.k_StringLiteral:
                 pToken = this.scanString();
@@ -105,34 +107,42 @@ export class Lexer implements ILexer {
                 break;
             case ETokenType.k_WhitespaceLiteral:
                 this.scanWhiteSpace();
-                pToken = this._getNextToken();
+                pToken = this.getNextToken();
                 break;
             default:
-                this._error(LEXER_UNKNOWN_TOKEN,
+                this.error(LEXER_UNKNOWN_TOKEN,
                     <IToken>{
                         name: UNKNOWN_TOKEN,
                         value: ch + this._sSource[this._iIndex + 1],
-                        start: this._iColumnNumber,
-                        end: this._iColumnNumber + 1,
-                        line: this._iLineNumber
+                        loc: {
+                            start: this.pos(),
+                            end: this.pos(1)
+                        }
                     });
         }
         return pToken;
     }
 
-    public _getIndex(): number {
+    public getIndex(): number {
         return this._iIndex;
     }
 
-    public _setSource(sSource: string): void {
+    public setSource(sSource: string): void {
         this._sSource = sSource;
     }
 
-    public _setIndex(iIndex: number): void {
+    public setIndex(iIndex: number): void {
         this._iIndex = iIndex;
     }
 
-    private _error(eCode: number, pToken: IToken): void {
+    private pos(n: number = 0): ITokenPosition {
+        return { 
+            line: this._iLineNumber, 
+            column: this._iColumnNumber + n
+        };
+    }
+
+    private error(eCode: number, pToken: IToken): void {
         let pLocation: ISourceLocation = <ISourceLocation>{
             file: this._pParser.getParseFileName(),
             line: this._iLineNumber
@@ -265,7 +275,7 @@ export class Lexer implements ILexer {
         let ch: string = "";
         let chPrevious: string = chFirst;
         let isGoodFinish: boolean = false;
-        let iStart: number = this._iColumnNumber;
+        let start = this.pos();
 
         while (true) {
             ch = this.readNextChar();
@@ -285,9 +295,10 @@ export class Lexer implements ILexer {
             return <IToken>{
                 name: T_STRING,
                 value: sValue,
-                start: iStart,
-                end: this._iColumnNumber - 1,
-                line: this._iLineNumber
+                loc: {
+                    start: start,
+                    end: this.pos()
+                }
             };
         }
         else {
@@ -296,12 +307,13 @@ export class Lexer implements ILexer {
             }
             sValue += ch;
 
-            this._error(LEXER_BAD_TOKEN, <IToken>{
+            this.error(LEXER_BAD_TOKEN, <IToken>{
                 type: ETokenType.k_StringLiteral,
                 value: sValue,
-                start: iStart,
-                end: this._iColumnNumber,
-                line: this._iLineNumber
+                loc: {
+                    start: start,
+                    end: this.pos()
+                }
             });
             return null;
         }
@@ -310,7 +322,7 @@ export class Lexer implements ILexer {
     private scanPunctuator(): IToken {
         let sValue: string = this.currentChar();
         let ch: string;
-        let iStart: number = this._iColumnNumber;
+        let start = this.pos();
 
         while (true) {
             ch = this.readNextChar();
@@ -330,9 +342,10 @@ export class Lexer implements ILexer {
         return <IToken>{
             name: this._pPunctuatorsMap[sValue],
             value: sValue,
-            start: iStart,
-            end: this._iColumnNumber - 1,
-            line: this._iLineNumber
+            loc: {
+                start: start,
+                end: this.pos()
+            }
         };
     }
 
@@ -342,7 +355,7 @@ export class Lexer implements ILexer {
         let isFloat: boolean = false;
         let chPrevious: string = ch;
         let isGoodFinish: boolean = false;
-        let iStart: number = this._iColumnNumber;
+        let start = this.pos();
         let isE: boolean = false;
 
         if (ch === ".") {
@@ -401,9 +414,10 @@ export class Lexer implements ILexer {
             return <IToken>{
                 name: sName,
                 value: sValue,
-                start: iStart,
-                end: this._iColumnNumber - 1,
-                line: this._iLineNumber
+                loc: {
+                    start: start,
+                    end: this.pos()
+                }
             };
         }
         else {
@@ -411,12 +425,13 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             sValue += ch;
-            this._error(LEXER_BAD_TOKEN, <IToken>{
+            this.error(LEXER_BAD_TOKEN, <IToken>{
                 type: ETokenType.k_NumericLiteral,
                 value: sValue,
-                start: iStart,
-                end: this._iColumnNumber,
-                line: this._iLineNumber
+                loc: {
+                    start: start,
+                    end: this.pos()
+                }
             });
             return null;
         }
@@ -425,7 +440,7 @@ export class Lexer implements ILexer {
     private scanIdentifier(): IToken | null {
         let ch: string = this.currentChar();
         let sValue: string = ch;
-        let iStart: number = this._iColumnNumber;
+        let start = this.pos();
         let isGoodFinish: boolean = false;
 
         while (true) {
@@ -446,9 +461,10 @@ export class Lexer implements ILexer {
                 return <IToken>{
                     name: this._pKeywordsMap[sValue],
                     value: sValue,
-                    start: iStart,
-                    end: this._iColumnNumber - 1,
-                    line: this._iLineNumber
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 };
             }
             else {
@@ -456,9 +472,10 @@ export class Lexer implements ILexer {
                 return <IToken>{
                     name: sName,
                     value: sValue,
-                    start: iStart,
-                    end: this._iColumnNumber - 1,
-                    line: this._iLineNumber
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 };
             }
         }
@@ -467,12 +484,13 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             sValue += ch;
-            this._error(LEXER_BAD_TOKEN, <IToken>{
+            this.error(LEXER_BAD_TOKEN, <IToken>{
                 type: ETokenType.k_IdentifierLiteral,
                 value: sValue,
-                start: iStart,
-                end: this._iColumnNumber,
-                line: this._iLineNumber
+                loc: {
+                    start: start,
+                    end: this.pos()
+                }
             });
             return null;
         }
@@ -536,7 +554,7 @@ export class Lexer implements ILexer {
             //Multiline Comment
             let chPrevious: string = ch;
             let isGoodFinish: boolean = false;
-            let iStart: number = this._iColumnNumber;
+            let start = this.pos();
 
             while (true) {
                 ch = this.readNextChar();
@@ -567,12 +585,13 @@ export class Lexer implements ILexer {
                     ch = EOF;
                 }
                 sValue += ch;
-                this._error(LEXER_BAD_TOKEN, <IToken>{
+                this.error(LEXER_BAD_TOKEN, <IToken>{
                     type: ETokenType.k_CommentLiteral,
                     value: sValue,
-                    start: iStart,
-                    end: this._iColumnNumber,
-                    line: this._iLineNumber
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 });
                 return false;
             }

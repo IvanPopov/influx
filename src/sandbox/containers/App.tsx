@@ -7,9 +7,8 @@ import { render } from 'react-dom';
 import { connect } from 'react-redux';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { setSource } from '../actions/index';
-import { ParserParameters } from '../components';
-import SyntaxTreeView from '../components/SyntaxTreeView';
-import { getGrammarText, getParseMode, getParserType, getSourceCode, getSourceFilename } from '../reducers';
+import { ParserParameters, ASTView } from '../components';
+import * as api from '../reducers';
 import IStoreState from '../store/IStoreState';
 
 // tslint:disable-next-line:no-import-side-effect
@@ -18,8 +17,15 @@ import 'codemirror/mode/clike/clike';
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
 export interface IAppProps {
-    sourceFile: { content: string; filename: string; };
-    parser: { grammarText: string; mode: EParseMode; type: EParserType; };
+    sourceFile: { 
+        content: string; 
+        filename: string; 
+    };
+    parser: { 
+        grammar: string; 
+        mode: EParseMode; 
+        type: EParserType; 
+    };
     setSource: (content: string) => void;
 }
 
@@ -35,6 +41,7 @@ class SourceEditor extends React.Component<{ content: string; onChange: (content
 
 class App extends React.Component<IAppProps> {
     render() {
+        const { props } = this;
         const panes = [
             {
                 menuItem: 'Sources',
@@ -43,11 +50,11 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ true }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column>
-                                    <SourceEditor content={ this.props.sourceFile.content } onChange={ this.props.setSource } />
+                                    <SourceEditor content={ props.sourceFile.content } onChange={ props.setSource } />
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <SyntaxTreeView parser={ this.props.parser }
-                                        source={ { code: this.props.sourceFile.content, filename: this.props.sourceFile.filename } } />
+                                    <ASTView parser={ props.parser }
+                                        source={ { code: props.sourceFile.content, filename: props.sourceFile.filename } } />
                                 </Grid.Column>
                             </Grid.Row>
                         </Grid>
@@ -58,19 +65,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: 'Grammar',
                 render: () => (
                     <Tab.Pane attached={ false }>
-                        <Grid>
-                            <Grid.Row columns={ 1 }>
-                                <Grid.Column>
-                                    <ParserParameters />
-                                </Grid.Column>
-                            </Grid.Row>
-                            <Grid.Row columns={ 1 }>
-                                <Grid.Column>
-                                    <CodeMirror value={ this.props.parser.grammarText || '' }
-                                        options={ { lineNumbers: true, theme: 'eclipse' } } />
-                                </Grid.Column>
-                            </Grid.Row>
-                        </Grid>
+                        <ParserParameters />
                     </Tab.Pane>
                 )
             },
@@ -95,13 +90,13 @@ class App extends React.Component<IAppProps> {
 function mapStateToProps(state: IStoreState) {
     return {
         sourceFile: {
-            content: getSourceCode(state),
-            filename: getSourceFilename(state)
+            content: api.getSourceCode(state),
+            filename: api.getSourceFilename(state)
         },
         parser: {
-            grammarText: getGrammarText(state),
-            mode: getParseMode(state),
-            type: getParserType(state)
+            grammar: api.getGrammar(state),
+            mode: api.getParseMode(state),
+            type: api.getParserType(state)
         }
     };
 }

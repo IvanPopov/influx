@@ -1,6 +1,6 @@
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, SOURCE_FILE_LOADED,
-    SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from './ActionTypeKeys';
+    SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, GRAMMAR_CONTENT_SPECIFIED } from './ActionTypeKeys';
 
 // source file api
 
@@ -33,12 +33,17 @@ export interface IGrammarFileSpecified {
     readonly payload: { readonly filename: string; };
 }
 
+export interface IGrammarContentSpecified {
+    readonly type: typeof GRAMMAR_CONTENT_SPECIFIED;
+    readonly payload: { readonly content: string; };
+}
+
 export interface IParserParamsChanged {
     readonly type: typeof PARSER_PARAMS_CHANGED;
     readonly payload: { mode: number; type: EParserType; };
 }
 
-export type ParserParamsActions = IGrammarFileSpecified | IParserParamsChanged;
+export type ParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;
 
 export type ActionTypes = SourceFileActions & ParserParamsActions;
 

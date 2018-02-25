@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED } from '../actions/ActionTypeKeys';
+import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, GRAMMAR_CONTENT_SPECIFIED } from '../actions/ActionTypeKeys';
 import { IGrammarFileSpecified, ParserParamsActions } from '../actions/ActionTypes';
 import { IParserParams, IStoreState } from '../store/IStoreState';
 
@@ -12,8 +12,10 @@ const initialState: IParserParams = {
 
 const parserParams = (state: IParserParams = initialState, action: ParserParamsActions): IParserParams => {
     switch (action.type) {
+        case GRAMMAR_CONTENT_SPECIFIED:
+            return { ...state, grammar: action.payload.content };
         case GRAMMAR_FILE_SPECIFIED:
-            return { ...state, grammar: action.payload.filename };
+            return { ...state, grammar: fs.readFileSync(action.payload.filename, 'utf-8') };
         case PARSER_PARAMS_CHANGED:
             const { mode, type } = action.payload;
             return { ...state, mode, type };
@@ -22,13 +24,8 @@ const parserParams = (state: IParserParams = initialState, action: ParserParamsA
     }
 };
 
-export function getGrammarText (state: IParserParams): string {
-    try {
-        if (state === null) { return null; }
-        return fs.readFileSync(state.grammar, 'utf-8');
-    } catch {
-        return null;
-    }
+export function getGrammar (state: IParserParams): string {
+    return state.grammar;
 }
 
 export default parserParams;

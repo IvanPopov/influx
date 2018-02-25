@@ -51,7 +51,7 @@ module.exports = function (grunt) {
                         expand: true,
                         cwd: `${semanticLessPath}/themes/github/assets`,
                         src: ['**'],
-                        dest: `${buildPath}/assets/themes/default/assets`
+                        dest: `${buildPath}/assets/themes/github/assets`
                     }
                 ]
             }
