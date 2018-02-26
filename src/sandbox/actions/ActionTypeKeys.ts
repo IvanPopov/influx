@@ -7,3 +7,5 @@ export const GRAMMAR_CONTENT_SPECIFIED  = 'grammar-content-specified';
 export const PARSER_PARAMS_CHANGED      = 'parser-params-changed';
 
 export const SOURCE_CODE_MODIFED        = 'source-code-modified';
+export const SOURCE_CODE_ADD_MARKER     = 'source-code-add-marker';
+export const SOURCE_CODE_REMOVE_MARKER  = 'source-code-remove-marker';

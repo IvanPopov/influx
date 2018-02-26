@@ -1,11 +1,14 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
+
 import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode } from '../../lib/idl/parser/IParser';
-import { IParserParams, IStoreState } from '../store/IStoreState';
 import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
+import { IStoreState } from '../store';
+import { sourceCode as sourceActions, mapActions } from '../actions';
+import { common as commonAccessor, mapProps } from '../reducers';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -13,17 +16,8 @@ function deepEqual(a: Object, b: Object): boolean {
 }
 
 
-export interface IASTViewProps {
-    readonly parser: {
-        type: EParserType;
-        mode: EParseMode;
-        grammar: string;
-    };
-
-    readonly source: {
-        code: string;
-        filename: string;
-    }
+export interface IASTViewProps extends IStoreState {
+    actions: typeof sourceActions;
 }
 
 
@@ -45,8 +39,8 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
     componentWillReceiveProps(nextProps: IASTViewProps): void {
         const { props } = this;
-        const parserChanged: boolean = !deepEqual(props.parser, nextProps.parser);
-        const codeChanged: boolean = !deepEqual(props.source.code, nextProps.source.code);
+        const parserChanged: boolean = !deepEqual(props.parserParams, nextProps.parserParams);
+        const codeChanged: boolean = !deepEqual(props.sourceFile.content, nextProps.sourceFile.content);
 
         if (parserChanged) {
             this.initParser(nextProps, () => this.parse(nextProps));
@@ -66,7 +60,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     render() {
         const { state: { parseTree } } = this;
         return (
-            <List selection>
+            <List selection size="tiny">
                 { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
             </List>
         );
@@ -74,7 +68,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     private initParser(props: IASTViewProps, callback?: () => void): void {
-        const { grammar, mode, type } = props.parser;
+        const { grammar, mode, type } = props.parserParams;
 
         if (!grammar) {
             return;
@@ -95,16 +89,16 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     private parse(props: IASTViewProps): void {
-        const { code, filename } = props.source;
+        const { content, filename } = props.sourceFile;
         const { parser } = this.state.parser;
 
-        if (!code || !parser) { return; }
+        if (!content || !parser) { return; }
 
-        this.setState({ nodeStats: {} });
+        // this.setState({ nodeStats: {} });
 
         try {
             parser.setParseFileName(filename);
-            const isParseOk: EParserCode = parser.parse(code);
+            const isParseOk: EParserCode = parser.parse(content);
             if (isParseOk === EParserCode.k_Ok) {
                 this.setState({ parseTree: parser.getSyntaxTree() });
             } else {
@@ -126,8 +120,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         if (node.value) {
             return (
-                <List.Item key={ idx } onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }>
-                    <List.Icon name='chevron right' />
+                <List.Item key={ idx } 
+                    onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } } 
+                    onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
+                    onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                >
+                    <List.Icon />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
                         <List.Description>{ node.value }</List.Description>
@@ -141,8 +139,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                 children = node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse();
             }
             return (
-                <List.Item key={ idx } onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }>
-                    <List.Icon name='chevron down' />
+                <List.Item key={ idx } 
+                    onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }
+                    onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
+                    onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                >
+                    <List.Icon name={ show ? `chevron down` : `chevron right` } />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
                         <List.List>
@@ -152,6 +154,14 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                 </List.Item>
             );
         }
+    }
+
+    private handleNodeOver(idx: string, node: IParseNode) {
+        this.props.actions.addMarker(`ast-range-${idx}`, node.loc);
+    }
+
+    private handleNodeOut(idx: string, node: IParseNode) {
+        this.props.actions.removeMarker(`ast-range-${idx}`);
     }
 
 
@@ -167,4 +177,5 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 }
 
-export default ASTView;
+export default connect<{}, {}, IStoreState>(mapProps(commonAccessor), mapActions(sourceActions))(ASTView) as any;
+

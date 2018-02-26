@@ -1,7 +1,6 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
 
 import * as bf from '../../lib/bf/bf';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';

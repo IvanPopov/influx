@@ -21,7 +21,7 @@ import IStoreState from './store/IStoreState';
 //     .catch((err) => console.log('An error occurred: ', err));
 
 // todo: add support for retail configuration
-const middleware: Middleware[] = [ thunk, logger, reduxImmutableStateInvariant() ];
+const middleware: Middleware[] = [ thunk, /*logger, */reduxImmutableStateInvariant() ];
 
 const store = createStore<IStoreState>(
   reducer,

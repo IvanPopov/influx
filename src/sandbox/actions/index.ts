@@ -1,28 +1,30 @@
 import * as fs from 'fs';
 import { Dispatch } from 'redux';
 
-import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserType, ITokenLocation } from '../../lib/idl/parser/IParser';
 import * as evt from '../actions/ActionTypeKeys';
 import IStoreState from '../store/IStoreState';
 import { bindActionCreators } from 'redux';
+import { IMarkerRange } from './ActionTypes';
 
 export type IDispatch = Dispatch<IStoreState>;
+export type IActionCreator = (dispatch: IDispatch) => Promise<void>;
 
 
 export const parser = {
-    openGrammar (filename: string): (dispatch: IDispatch) => Promise<void> {
+    openGrammar (filename: string): IActionCreator {
         return async (dispatch: IDispatch) => {
             dispatch({ type: evt.GRAMMAR_FILE_SPECIFIED, payload: { filename } });
         };
     },
 
-    setGrammar (content: string): (dispatch: IDispatch) => Promise<void> {
+    setGrammar (content: string): IActionCreator {
         return async (dispatch: IDispatch) => {
             dispatch({ type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
         };
     },
 
-    setParams(type: EParserType, mode: number): (dispatch: IDispatch) => Promise<void> {
+    setParams(type: EParserType, mode: number): IActionCreator {
         return async (dispatch: IDispatch) => {
             dispatch({ type: evt.PARSER_PARAMS_CHANGED, payload: { type, mode } });
         };
@@ -31,7 +33,7 @@ export const parser = {
 
 
 export const sourceCode = {
-    openFile (filename: string): (dispatch: IDispatch) => Promise<void> {
+    openFile (filename: string): IActionCreator {
         return async (dispatch: IDispatch) => {
     
             dispatch({ type: evt.SOURCE_FILE_REQUEST, payload: { filename } });
@@ -46,9 +48,21 @@ export const sourceCode = {
         };
     },
 
-    setContent (content: string): (dispatch: IDispatch) => Promise<void> {
+    setContent (content: string): IActionCreator {
         return async (dispatch: IDispatch) => {
             dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
+        };
+    },
+
+    addMarker (name: string, range: IMarkerRange): IActionCreator {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.SOURCE_CODE_ADD_MARKER, payload: { name, range } });
+        };
+    },
+
+    removeMarker (name: string): IActionCreator {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
         };
     }
 };
