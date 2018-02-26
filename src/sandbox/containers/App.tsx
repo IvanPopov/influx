@@ -56,8 +56,6 @@ class SourceEditor extends React.Component<{ content: string; name?:string, onCh
             height="calc(100vh - 115px)" // todo: fixme
             onChange={ props.onChange }
             fontSize={ 12 }
-            showPrintMargin={ true }
-            showGutter={ true }
             value={ props.content || '' }
             markers = { this.aceMarkers }
             setOptions={ {

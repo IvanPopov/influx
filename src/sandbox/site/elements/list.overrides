@@ -1,4 +1,7 @@
-/*******************************
-         Theme Overrides
-*******************************/
-
+/**
+ * AST View
+ */
+.ui.selection.list .list > .item.astnode,
+.ui.selection.list > .item.astnode {
+  padding: 0.05em 0.05em;
+}

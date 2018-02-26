@@ -323,12 +323,10 @@ export class Lexer implements ILexer {
         let sValue: string = this.currentChar();
         let ch: string;
         let start = this.pos();
-
         while (true) {
             ch = this.readNextChar();
             if (ch) {
                 sValue += ch;
-                this._iColumnNumber++;
                 if (!this.isPunctuator(sValue)) {
                     sValue = sValue.slice(0, sValue.length - 1);
                     break;
@@ -338,7 +336,6 @@ export class Lexer implements ILexer {
                 break;
             }
         }
-
         return <IToken>{
             name: this._pPunctuatorsMap[sValue],
             value: sValue,

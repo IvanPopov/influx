@@ -119,7 +119,7 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
                             value={ grammar || '' }
                             setOptions={ {
                                 showLineNumbers: true,
-                                tabSize: 2,
+                                tabSize: 2
                             } } />
                     </Grid.Column>
                 </Grid.Row>

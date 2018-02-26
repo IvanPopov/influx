@@ -1,0 +1,7 @@
+/*******************************
+         List
+*******************************/
+
+// /* remove paddings from list items for AST view */
+// @selectionListItemVerticalPadding: 0;
+// @selectionListItemHorizontalPadding: 0;

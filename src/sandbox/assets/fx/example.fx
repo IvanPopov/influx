@@ -1,4 +1,4 @@
-provide akra.system;
+provide akra.system;;
 
 texture tex0 : INPUT_TEXTURE;
 

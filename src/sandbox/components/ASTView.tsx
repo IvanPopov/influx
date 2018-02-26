@@ -60,7 +60,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     render() {
         const { state: { parseTree } } = this;
         return (
-            <List selection size="tiny">
+            <List selection size="small">
                 { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
             </List>
         );
@@ -124,6 +124,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                     onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } } 
                     onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
                     onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                    className="astnode"
                 >
                     <List.Icon />
                     <List.Content>
@@ -136,36 +137,38 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         else {
             let children = null;
             if (show) {
-                children = node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse();
+                children = (<List.List> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
             }
             return (
                 <List.Item key={ idx } 
                     onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }
                     onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
                     onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                    className="astnode"
                 >
                     <List.Icon name={ show ? `chevron down` : `chevron right` } />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
-                        <List.List>
-                            { children }
-                        </List.List>
+                        { children }
                     </List.Content>
                 </List.Item>
             );
         }
     }
 
+
     private handleNodeOver(idx: string, node: IParseNode) {
         this.props.actions.addMarker(`ast-range-${idx}`, node.loc);
     }
 
+    
     private handleNodeOut(idx: string, node: IParseNode) {
         this.props.actions.removeMarker(`ast-range-${idx}`);
     }
 
 
     private handleNodeClick(idx: string, node: IParseNode) {
+        console.log(JSON.stringify(node.loc));
         let nodeStats = Object.assign(this.state.nodeStats, { [idx]: !this.state.nodeStats[idx] });
         this.setState({ nodeStats });
     }

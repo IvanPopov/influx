@@ -19,8 +19,8 @@ IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
 
 ImportDecl : T_KW_IMPORT ComplexNameOpt
 
-ProvideDecl : T_KW_PROVIDE ComplexNameOpt
-ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt
+ProvideDecl : T_KW_PROVIDE ComplexNameOpt ';'
+ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'
 
 UseDecl : T_KW_USE Mode
 Mode : T_KW_STRICT
