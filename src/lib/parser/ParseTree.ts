@@ -133,6 +133,7 @@ export class ParseTree implements IParseTree {
             pParent.children = <IParseNode[]>[];
         }
         
+        // todo: remove min/max in order to correct start/end calculation based on node order
         pParent.loc.start = locMin(pNode.loc.start, pParent.loc.start);
         pParent.loc.end = locMax(pNode.loc.end, pParent.loc.end);
 
