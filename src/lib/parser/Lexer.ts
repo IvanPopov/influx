@@ -510,7 +510,8 @@ export class Lexer implements ILexer {
                 continue;
             }
             else if (ch === "\t") {
-                this._iColumnNumber += 3;
+                // possible way to convert tab to multiple spaces
+                this._iColumnNumber += 0;
             }
             else if (ch !== " ") {
                 break;
