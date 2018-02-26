@@ -1,19 +1,16 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
-import * as CodeMirror from 'react-codemirror';
 import { connect } from 'react-redux';
 import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode } from '../../lib/idl/parser/IParser';
 import { IParserParams, IStoreState } from '../store/IStoreState';
 import { List } from 'semantic-ui-react'
+import { IMap } from '../../lib/idl/IMap';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
 }
-
-// tslint:disable-next-line:no-import-side-effect
-import 'codemirror/mode/javascript/javascript';
 
 
 export interface IASTViewProps {
@@ -38,21 +35,22 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             parser: EffectParser;
         },
         parseTree: IParseTree;
+        nodeStats: IMap<boolean>;
     };
 
     constructor(props) {
         super(props);
-        this.state = { parser: { showErrors: false, parser: null }, parseTree: null };
+        this.state = { parser: { showErrors: false, parser: null }, parseTree: null, nodeStats: {} };
     }
 
     componentWillReceiveProps(nextProps: IASTViewProps): void {
         const { props } = this;
         const parserChanged: boolean = !deepEqual(props.parser, nextProps.parser);
         const codeChanged: boolean = !deepEqual(props.source.code, nextProps.source.code);
+
         if (parserChanged) {
-            this.initParser(nextProps);
-        }
-        if (codeChanged || parserChanged) {
+            this.initParser(nextProps, () => this.parse(nextProps));
+        } else if (codeChanged) {
             this.parse(nextProps);
         }
     }
@@ -68,7 +66,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     render() {
         const { state: { parseTree } } = this;
         return (
-            <List>
+            <List selection>
                 { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
             </List>
         );
@@ -102,6 +100,8 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         if (!code || !parser) { return; }
 
+        this.setState({ nodeStats: {} });
+
         try {
             parser.setParseFileName(filename);
             const isParseOk: EParserCode = parser.parse(code);
@@ -116,13 +116,17 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private renderASTNode(node: IParseNode, idx = 0, lvl = 0) {
+    private renderASTNode(node: IParseNode, idx = '0') {
         if (!node) {
             return null;
         }
+
+        const forceShow = idx.split('.').length < 2;
+        const show = forceShow || (this.state.nodeStats[idx] || false);
+
         if (node.value) {
             return (
-                <List.Item key={ `${lvl}.${idx}` }>
+                <List.Item key={ idx } onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }>
                     <List.Icon name='chevron right' />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
@@ -132,18 +136,28 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             );
         }
         else {
+            let children = null;
+            if (show) {
+                children = node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse();
+            }
             return (
-                <List.Item key={ `${lvl}.${idx}` }>
+                <List.Item key={ idx } onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }>
                     <List.Icon name='chevron down' />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
                         <List.List>
-                            { node.children.map((node, i) => this.renderASTNode(node, i, lvl + 1)).reverse() }
+                            { children }
                         </List.List>
                     </List.Content>
                 </List.Item>
             );
         }
+    }
+
+
+    private handleNodeClick(idx: string, node: IParseNode) {
+        let nodeStats = Object.assign(this.state.nodeStats, { [idx]: !this.state.nodeStats[idx] });
+        this.setState({ nodeStats });
     }
 
 

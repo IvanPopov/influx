@@ -1,44 +1,41 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Dispatch } from 'redux';
+import { bindActionCreators } from 'redux';
 
 import * as bf from '../../lib/bf/bf';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { setParserParams, setGrammar } from '../actions';
-import { getParseMode, getParserType, getGrammar } from '../reducers';
-import { IStoreState } from '../store/IStoreState';
+import { parser as parserActions, IDispatch, mapActions } from '../actions';
+import { parser as parserAccessor, mapProps } from '../reducers';
+import { IStoreState, IParserParams } from '../store/IStoreState';
 
-import * as CodeMirror from 'react-codemirror';
 import { Form, Segment, Grid } from 'semantic-ui-react'
+
+import AceEditor from 'react-ace';
+
+import 'brace';
+import 'brace/theme/github';
+import 'brace/mode/text';
+
 
 const setFlags = (dest: number, src: number, value: boolean) => {
     return value ? bf.setFlags(dest, src) : bf.clearFlags(dest, src);
 };
 
-export interface IParserParametersProps {
-    readonly mode: EParseMode;
-    readonly type: EParserType;
-    readonly grammar: string;
-    // tslint:disable-next-line:prefer-method-signature
-    setParserParams?: (type: EParserType, mode: EParseMode) => void;
-    setGrammar: (content: string) => void;
+export interface IParserProps extends IParserParams {
+    // warning, actions actually have void return type!
+    actions: typeof parserActions;
 }
 
-export interface IParserParametersState {
-    readonly mode: EParseMode;
-    readonly type: EParserType;
-    readonly grammar: string;
-}
 
-class ParserParameters extends React.Component<IParserParametersProps, IParserParametersState> {
-    state: IParserParametersState;
+class ParserParameters extends React.Component<IParserProps, IParserParams> {
+    state: IParserParams;
 
     componentWillMount() {
         this.setState(this.props);
     }
 
-    componentWillReceiveProps(nextProps: IParserParametersProps) {
+    componentWillReceiveProps(nextProps) {
         this.setState(nextProps);
     }
 
@@ -113,10 +110,18 @@ class ParserParameters extends React.Component<IParserParametersProps, IParserPa
                 </Grid.Row>
                 <Grid.Row columns={ 1 }>
                     <Grid.Column>
-                        <CodeMirror
-                            value={ grammar || '' }
+                        <AceEditor
+                            name={ "grammar-text" }
+                            theme="github"
+                            width="100%"
+                            mode="text"
                             onChange={ (grammar: string) => this.setState({ grammar }) }
-                            options={ { lineNumbers: true, theme: 'eclipse' } } />
+                            fontSize={ 12 }
+                            value={ grammar || '' }
+                            setOptions={ {
+                                showLineNumbers: true,
+                                tabSize: 2,
+                            } } />
                     </Grid.Column>
                 </Grid.Row>
             </Grid>
@@ -127,8 +132,8 @@ class ParserParameters extends React.Component<IParserParametersProps, IParserPa
     @autobind
     private reinit() {
         const { type, mode, grammar } = this.state;
-        this.props.setParserParams(type, mode);
-        this.props.setGrammar(grammar);
+        this.props.actions.setParams(type, mode);
+        this.props.actions.setGrammar(grammar);
     }
 
     @autobind
@@ -154,12 +159,4 @@ class ParserParameters extends React.Component<IParserParametersProps, IParserPa
     }
 }
 
-function mapStateToProps(state: IStoreState) {
-    return {
-        mode: getParseMode(state),
-        type: getParserType(state),
-        grammar: getGrammar(state)
-    };
-}
-
-export default connect<{}, {}, IParserParametersProps>(mapStateToProps, { setParserParams, setGrammar })(ParserParameters) as any;
+export default connect<{}, {}, IParserProps>(mapProps(parserAccessor), mapActions(parserActions))(ParserParameters) as any;

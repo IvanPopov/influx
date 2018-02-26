@@ -5,7 +5,7 @@ import { applyMiddleware, createStore, Middleware, Store } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { logger } from 'redux-logger';
 import thunk from 'redux-thunk';
-import { openGrammar, openSource } from './actions';
+import { parser, sourceCode } from './actions';
 import { App } from './containers';
 import reducer from './reducers';
 import IStoreState from './store/IStoreState';
@@ -37,5 +37,5 @@ render(
   document.getElementById('app')
 );
 
-store.dispatch(openSource('assets/fx/example.fx'));
-store.dispatch(openGrammar('assets/HLSL.gr'));
+store.dispatch(sourceCode.openFile('assets/fx/example.fx'));
+store.dispatch(parser.openGrammar('assets/HLSL.gr'));

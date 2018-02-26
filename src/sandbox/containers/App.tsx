@@ -1,42 +1,53 @@
-import { Tab, Container, Segment, Grid } from 'semantic-ui-react'
-import autobind from 'autobind-decorator';
 import * as fs from 'fs';
 import * as React from 'react';
-import * as CodeMirror from 'react-codemirror';
 import { render } from 'react-dom';
 import { connect } from 'react-redux';
-import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { setSource } from '../actions/index';
-import { ParserParameters, ASTView } from '../components';
-import * as api from '../reducers';
-import IStoreState from '../store/IStoreState';
+import autobind from 'autobind-decorator';
+import { Tab, Container, Segment, Grid } from 'semantic-ui-react'
 
-// tslint:disable-next-line:no-import-side-effect
-import 'codemirror/mode/clike/clike';
+import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
+import { ParserParameters, ASTView } from '../components';
+import { common as commonAccessor, mapProps } from '../reducers';
+import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
+
+import AceEditor from 'react-ace';
+
+import 'brace';
+import 'brace/mode/c_cpp';
+import 'brace/theme/github';
+
+import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
+import { bindActionCreators } from 'redux';
+
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
-export interface IAppProps {
-    sourceFile: { 
-        content: string; 
-        filename: string; 
-    };
-    parser: { 
-        grammar: string; 
-        mode: EParseMode; 
-        type: EParserType; 
-    };
-    setSource: (content: string) => void;
-}
-
-class SourceEditor extends React.Component<{ content: string; onChange: (content) => void; }> {
+class SourceEditor extends React.Component<{ content: string; name?:string, onChange?: (content) => void; }> {
     render() {
+        const { props } = this;
         return (
-            <CodeMirror value={ this.props.content }
-                options={ { mode: 'text/x-c++src', lineNumbers: true, theme: 'eclipse' } }
-                onChange={ this.props.onChange } />
+            <AceEditor
+            name={ props.name }
+            mode="c_cpp"
+            theme="github"
+            width="100%"
+            height="calc(100vh - 75px)" // todo: fixme
+            onChange={ props.onChange }
+            fontSize={ 12 }
+            showPrintMargin={ true }
+            showGutter={ true }
+            value={ props.content || '' }
+            setOptions={ {
+                showLineNumbers: true,
+                tabSize: 2,
+            } } />
         );
     }
+}
+
+// todo: remove the inheritance of the type of data
+export interface IAppProps extends IStoreState {
+    actions: typeof sourceActions;
 }
 
 class App extends React.Component<IAppProps> {
@@ -44,16 +55,16 @@ class App extends React.Component<IAppProps> {
         const { props } = this;
         const panes = [
             {
-                menuItem: 'Sources',
-                render: () => (
-                    <Tab.Pane attached={ false }>
+                menuItem: 'Source File',
+                pane: (
+                    <Tab.Pane key="source">
                         <Grid divided={ true }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column>
-                                    <SourceEditor content={ props.sourceFile.content } onChange={ props.setSource } />
+                                    <SourceEditor name="source-code" content={ props.sourceFile.content } onChange={ props.actions.setContent } />
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <ASTView parser={ props.parser }
+                                    <ASTView parser={ props.parserParams }
                                         source={ { code: props.sourceFile.content, filename: props.sourceFile.filename } } />
                                 </Grid.Column>
                             </Grid.Row>
@@ -63,42 +74,24 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: 'Grammar',
-                render: () => (
-                    <Tab.Pane attached={ false }>
+                pane: (
+                    <Tab.Pane key="grammar">
                         <ParserParameters />
                     </Tab.Pane>
                 )
-            },
-            {
-                menuItem: 'Debug',
-                render: () => (
-                    <Tab.Pane attached={ false } >todo</Tab.Pane>
-                )
-            },
+            }
         ];
 
         return (
             <div>
                 <Container style={ { marginTop: '1em' } }>
-                    <Tab menu={ { secondary: false, pointing: false } } panes={ panes } />
+                    <Tab panes={ panes } renderActiveOnly={ false } />
                 </Container>
             </div>
         );
     }
 }
 
-function mapStateToProps(state: IStoreState) {
-    return {
-        sourceFile: {
-            content: api.getSourceCode(state),
-            filename: api.getSourceFilename(state)
-        },
-        parser: {
-            grammar: api.getGrammar(state),
-            mode: api.getParseMode(state),
-            type: api.getParserType(state)
-        }
-    };
-}
 
-export default connect<{}, {}, IAppProps>(mapStateToProps, { setSource })(App) as any;
+
+export default connect<{}, {}, IAppProps>(mapProps(commonAccessor), mapActions(sourceActions))(App) as any;

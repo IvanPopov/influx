@@ -6,7 +6,13 @@ const codemirrorPath    = './node_modules/codemirror';
 module.exports = function (grunt) {
     grunt.initConfig({
         ts: {
-            debug: { tsconfig: 'tsconfig.json' }
+            debug: { 
+                tsconfig: 'tsconfig.json'
+            },
+            live: {
+                watch: `${sandboxPath}`,
+                tsconfig: 'tsconfig.json'
+            }
         },
         clean: {
             debug: [`${buildPath}`]
@@ -76,5 +82,5 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-pug');
     grunt.loadNpmTasks("grunt-ts");
-    grunt.registerTask("default", ["copy", "pug", "less", "ts"]);
+    grunt.registerTask("default", ["copy", "pug", "less", "ts:debug"]);
 };

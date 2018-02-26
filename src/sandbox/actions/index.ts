@@ -1,45 +1,62 @@
 import * as fs from 'fs';
 import { Dispatch } from 'redux';
+
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, 
-    SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, GRAMMAR_CONTENT_SPECIFIED } from '../actions/ActionTypeKeys';
+import * as evt from '../actions/ActionTypeKeys';
 import IStoreState from '../store/IStoreState';
+import { bindActionCreators } from 'redux';
 
-export function openSource(filename: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
-    return async (dispatch: Dispatch<IStoreState>) => {
+export type IDispatch = Dispatch<IStoreState>;
 
-        dispatch({ type: SOURCE_FILE_REQUEST, payload: { filename } });
 
-        fs.readFile(filename, 'utf8', (error: Error, content: string) => {
-            if (error) {
-                dispatch({ type: SOURCE_FILE_LOADING_FAILED, payload: { error } });
-            } else {
-                dispatch({ type: SOURCE_FILE_LOADED, payload: { content } });
-            }
-        });
-    };
-}
+export const parser = {
+    openGrammar (filename: string): (dispatch: IDispatch) => Promise<void> {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.GRAMMAR_FILE_SPECIFIED, payload: { filename } });
+        };
+    },
 
-export function openGrammar(filename: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
-    return async (dispatch: Dispatch<IStoreState>) => {
-        dispatch({ type: GRAMMAR_FILE_SPECIFIED, payload: { filename } });
-    };
-}
+    setGrammar (content: string): (dispatch: IDispatch) => Promise<void> {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
+        };
+    },
 
-export function setGrammar(content: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
-    return async (dispatch: Dispatch<IStoreState>) => {
-        dispatch({ type: GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
-    };
-}
+    setParams(type: EParserType, mode: number): (dispatch: IDispatch) => Promise<void> {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.PARSER_PARAMS_CHANGED, payload: { type, mode } });
+        };
+    }
+};
 
-export function setParserParams(type: EParserType, mode: number): (dispatch: Dispatch<IStoreState>) => Promise<void> {
-    return async (dispatch: Dispatch<IStoreState>) => {
-        dispatch({ type: PARSER_PARAMS_CHANGED, payload: { type, mode } });
-    };
-}
 
-export function setSource (content: string): (dispatch: Dispatch<IStoreState>) => Promise<void> {
-    return async (dispatch: Dispatch<IStoreState>) => {
-        dispatch({ type: SOURCE_CODE_MODIFED, payload: { content } });
+export const sourceCode = {
+    openFile (filename: string): (dispatch: IDispatch) => Promise<void> {
+        return async (dispatch: IDispatch) => {
+    
+            dispatch({ type: evt.SOURCE_FILE_REQUEST, payload: { filename } });
+    
+            fs.readFile(filename, 'utf8', (error: Error, content: string) => {
+                if (error) {
+                    dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
+                } else {
+                    dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+                }
+            });
+        };
+    },
+
+    setContent (content: string): (dispatch: IDispatch) => Promise<void> {
+        return async (dispatch: IDispatch) => {
+            dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
+        };
+    }
+};
+
+
+export type mapDispatchToProps = (dispatch: IDispatch) => { actions: any; };
+export function mapActions(actions): mapDispatchToProps {
+    return (dispatch) => {
+        return { actions: bindActionCreators(actions, dispatch) }
     };
 }

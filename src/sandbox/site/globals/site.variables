@@ -3,4 +3,4 @@
 *******************************/
 
 @pageMinWidth  : 100%;
-@largeMonitorBreakpoint: 1049px;
+@largeMonitorBreakpoint: 1920px;

@@ -1,14 +1,20 @@
 import { AnyAction, combineReducers } from 'redux';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import IStoreState from '../store/IStoreState';
+import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
 import parserParams, * as fromParserParams from './parserParams';
 import sourceFile from './sourceFile';
 
 export default combineReducers<IStoreState>({ sourceFile, parserParams });
 
-export const getSourceCode = (state: IStoreState) => state.sourceFile.content;
-export const getSourceFilename = (state: IStoreState) => state.sourceFile.filename;
-export const getGrammar = (state: IStoreState) => fromParserParams.getGrammar(state.parserParams);
-export const getParseMode = (state: IStoreState): EParseMode => state.parserParams.mode;
-export const getParserType = (state: IStoreState): EParserType => state.parserParams.type;
+/**
+ * data accessors
+ */
+export const parser = (state: IStoreState): IParserParams => state.parserParams;
+export const sourceCode = (state: IStoreState): IFileState => state.sourceFile;
+export const common = (state: IStoreState): IStoreState => state;
 
+// todo: use ReturnType for better readability.
+export type ReturnType<T> = any;//T extends (...args: any[]) => infer R ? R : T;
+export function mapProps<T extends { (state: IStoreState): any; }>(accessor: T): (state: IStoreState) => ReturnType<T> {
+    return (state) => accessor(state);
+}
