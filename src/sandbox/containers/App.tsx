@@ -10,7 +10,7 @@ import { ParserParameters, ASTView } from '../components';
 import { common as commonAccessor, mapProps } from '../reducers';
 import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
 
-import AceEditor from 'react-ace';
+import AceEditor, { Marker } from 'react-ace';
 
 import 'brace';
 import 'brace/mode/c_cpp';
@@ -18,28 +18,52 @@ import 'brace/theme/github';
 
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { bindActionCreators } from 'redux';
+import { IMarkerRange } from '../actions/ActionTypes';
+import { IMap } from '../../lib/idl/IMap';
 
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
-class SourceEditor extends React.Component<{ content: string; name?:string, onChange?: (content) => void; }> {
+class SourceEditor extends React.Component<{ content: string; name?:string, onChange?: (content) => void; markers: IMap<IMarkerRange> }> {
+
+    private get aceMarkers() {
+        const { props } = this;
+        let markers: Marker[] = [];
+        for (let key in props.markers) {
+            let range = props.markers[key];
+            let marker: Marker = {
+                startRow: range.start.line,
+                startCol: range.start.column,
+                endRow: range.end.line,
+                endCol: range.end.column,
+                type: 'text',
+                className: 'text-yellow'
+            }
+            markers.push(marker);
+        }
+        return markers;
+    }
+
     render() {
         const { props } = this;
+
         return (
             <AceEditor
             name={ props.name }
             mode="c_cpp"
             theme="github"
             width="100%"
-            height="calc(100vh - 75px)" // todo: fixme
+            height="calc(100vh - 115px)" // todo: fixme
             onChange={ props.onChange }
             fontSize={ 12 }
             showPrintMargin={ true }
             showGutter={ true }
             value={ props.content || '' }
+            markers = { this.aceMarkers }
             setOptions={ {
+                showInvisibles: true,
                 showLineNumbers: true,
-                tabSize: 2,
+                tabSize: 4,
             } } />
         );
     }
@@ -61,11 +85,10 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ true }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column>
-                                    <SourceEditor name="source-code" content={ props.sourceFile.content } onChange={ props.actions.setContent } />
+                                    <SourceEditor name="source-code" content={ props.sourceFile.content } onChange={ props.actions.setContent } markers={ props.sourceFile.markers } />
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <ASTView parser={ props.parserParams }
-                                        source={ { code: props.sourceFile.content, filename: props.sourceFile.filename } } />
+                                    <ASTView />
                                 </Grid.Column>
                             </Grid.Row>
                         </Grid>
@@ -84,8 +107,10 @@ class App extends React.Component<IAppProps> {
 
         return (
             <div>
-                <Container style={ { marginTop: '1em' } }>
-                    <Tab panes={ panes } renderActiveOnly={ false } />
+                <Container 
+                    // style={ { marginTop: '1em' } }
+                >
+                    <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ false } />
                 </Container>
             </div>
         );
