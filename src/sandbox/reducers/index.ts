@@ -7,7 +7,7 @@ import sourceFile from './sourceFile';
 export default combineReducers<IStoreState>({ sourceFile, parserParams });
 
 /**
- * data accessors
+ * selectors
  */
 export const parser = (state: IStoreState): IParserParams => state.parserParams;
 export const sourceCode = (state: IStoreState): IFileState => state.sourceFile;

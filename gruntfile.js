@@ -43,7 +43,7 @@ module.exports = function (grunt) {
                     { 
                         expand: true, 
                         cwd: `${sandboxPath}/deps/`, 
-                        src: ['react-ace/lib/*', 'react-ace/package.json', 'brace/index.js', 'brace/theme/*', 'brace/mode/*', 'brace/package.json'], 
+                        src: ['react-ace/lib/*', 'react-ace/package.json', 'brace/index.js', 'brace/ext/*', 'brace/theme/*', 'brace/mode/*', 'brace/package.json'], 
                         dest: `${buildPath}/sandbox/deps` 
                     },
                     {
