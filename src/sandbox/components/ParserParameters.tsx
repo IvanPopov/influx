@@ -10,11 +10,11 @@ import { IStoreState, IParserParams } from '../store/IStoreState';
 
 import { Form, Segment, Grid } from 'semantic-ui-react'
 
-import AceEditor from 'react-ace';
-
-import 'brace';
-import 'brace/theme/github';
-import 'brace/mode/text';
+// import from submodules
+import AceEditor from '../deps/react-ace';
+import '../deps/brace';
+import '../deps/brace/theme/github';
+import '../deps/brace/mode/text';
 
 
 const setFlags = (dest: number, src: number, value: boolean) => {

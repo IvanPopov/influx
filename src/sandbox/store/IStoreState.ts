@@ -1,5 +1,4 @@
-import { EParserType } from '../../lib/idl/parser/IParser';
-import { IMarkerRange } from '../actions/ActionTypes';
+import { EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { IMap } from '../../lib/idl/IMap';
 
 export interface IFileState {
@@ -8,7 +7,7 @@ export interface IFileState {
     fetching: boolean;
     fetched: boolean;
     error: Error;
-    markers: IMap<IMarkerRange>;
+    markers: IMap<IRange>;
 }
 
 export interface IParserParams {

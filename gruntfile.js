@@ -34,7 +34,18 @@ module.exports = function (grunt) {
         copy: {
             debug: {
                 files: [
-                    { expand: true, cwd: `${sandboxPath}/assets/`, src: ['**'], dest: `${buildPath}/assets` },
+                    { 
+                        expand: true, 
+                        cwd: `${sandboxPath}/assets/`, 
+                        src: ['**'], 
+                        dest: `${buildPath}/assets` 
+                    },
+                    { 
+                        expand: true, 
+                        cwd: `${sandboxPath}/deps/`, 
+                        src: ['react-ace/lib/*', 'react-ace/package.json', 'brace/index.js', 'brace/theme/*', 'brace/mode/*', 'brace/package.json'], 
+                        dest: `${buildPath}/sandbox/deps` 
+                    },
                     {
                         expand: true,
                         cwd: `${codemirrorPath}/lib/`,

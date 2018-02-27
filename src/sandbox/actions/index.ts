@@ -1,11 +1,10 @@
 import * as fs from 'fs';
 import { Dispatch } from 'redux';
 
-import { EParseMode, EParserType, ITokenLocation } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
 import * as evt from '../actions/ActionTypeKeys';
 import IStoreState from '../store/IStoreState';
 import { bindActionCreators } from 'redux';
-import { IMarkerRange } from './ActionTypes';
 
 export type IDispatch = Dispatch<IStoreState>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
@@ -45,7 +44,7 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
     },
 
-    addMarker (name: string, range: IMarkerRange) {
+    addMarker (name: string, range: IRange) {
         return { type: evt.SOURCE_CODE_ADD_MARKER, payload: { name, range } };
     },
 

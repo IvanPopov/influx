@@ -38,14 +38,14 @@ export enum ETokenType {
     k_End
 }
 
-export interface ITokenPosition {
+export interface IPosition {
     line: number; 
     column: number;
 }
 
-export interface ITokenLocation {
-    start: ITokenPosition;
-    end: ITokenPosition;
+export interface IRange {
+    start: IPosition;
+    end: IPosition;
 }
 
 export interface IToken {
@@ -53,7 +53,7 @@ export interface IToken {
     name?: string;
     type?: ETokenType;
 
-    loc?: ITokenLocation;
+    loc?: IRange;
     range?: number[];
 }
 
@@ -81,7 +81,7 @@ export interface IParseNode {
     parent: IParseNode;
     name: string;
     value: string;
-    loc?: ITokenLocation;
+    loc?: IRange;
 }
 
 export interface IParseTree {

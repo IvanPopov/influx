@@ -1,13 +1,13 @@
-﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule, ITokenLocation, ITokenPosition } from "../idl/parser/IParser";
+﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule, IRange, IPosition } from "../idl/parser/IParser";
 
-function locMin(a: ITokenPosition, b: ITokenPosition): ITokenPosition {
+function locMin(a: IPosition, b: IPosition): IPosition {
     return {
         line: Math.min(a.line, b.line),
         column: Math.min(a.column, b.column)
     };
 }
 
-function locMax(a: ITokenPosition, b: ITokenPosition): ITokenPosition {
+function locMax(a: IPosition, b: IPosition): IPosition {
     return {
         line: Math.max(a.line, b.line),
         column: Math.max(a.column, b.column)

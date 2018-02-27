@@ -1,8 +1,7 @@
-import { EParseMode, EParserType, ITokenLocation } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, SOURCE_FILE_LOADED,
     SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, SOURCE_CODE_ADD_MARKER, SOURCE_CODE_REMOVE_MARKER, GRAMMAR_CONTENT_SPECIFIED } from './ActionTypeKeys';
 
-export type IMarkerRange = ITokenLocation;
 // source file api
 
 export interface ISourceFileRequest {
@@ -27,7 +26,7 @@ export interface ISourceCodeModified {
 
 export interface ISourceCodeAddMarker {
     readonly type: typeof SOURCE_CODE_ADD_MARKER;
-    readonly payload: { name: string; range: IMarkerRange };
+    readonly payload: { name: string; range: IRange };
 }
 
 export interface ISourceCodeRemoveMarker {

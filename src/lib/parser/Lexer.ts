@@ -1,6 +1,6 @@
 import { ILoggerEntity, ISourceLocation } from '../idl/ILogger';
 import { IMap } from '../idl/IMap';
-import { ETokenType, ILexer, IParser, IToken, ITokenPosition, ITokenLocation } from '../idl/parser/IParser';
+import { ETokenType, ILexer, IParser, IToken, IPosition, IRange } from '../idl/parser/IParser';
 import { logger } from '../logger';
 import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
@@ -135,7 +135,7 @@ export class Lexer implements ILexer {
         this._iIndex = iIndex;
     }
 
-    private pos(n: number = 0): ITokenPosition {
+    private pos(n: number = 0): IPosition {
         return { 
             line: this._iLineNumber, 
             column: this._iColumnNumber + n
