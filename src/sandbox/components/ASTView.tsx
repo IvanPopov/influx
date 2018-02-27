@@ -157,7 +157,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private handleNodeOver(idx: string, node: IParseNode) {
+    private async handleNodeOver(idx: string, node: IParseNode) {
         this.props.actions.addMarker(`ast-range-${idx}`, node.loc);
     }
 

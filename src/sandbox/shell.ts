@@ -6,6 +6,7 @@ import * as url from 'url';
 
 let win: Electron.BrowserWindow;
 
+
 function createWindow(): void {
   win = new BrowserWindow({ width: 800, height: 600 });
   win.loadURL(url.format({

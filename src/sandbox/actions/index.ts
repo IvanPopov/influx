@@ -8,26 +8,20 @@ import { bindActionCreators } from 'redux';
 import { IMarkerRange } from './ActionTypes';
 
 export type IDispatch = Dispatch<IStoreState>;
-export type IActionCreator = (dispatch: IDispatch) => Promise<void>;
+export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
 
 
 export const parser = {
-    openGrammar (filename: string): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.GRAMMAR_FILE_SPECIFIED, payload: { filename } });
-        };
+    openGrammar (filename: string) {
+        return { type: evt.GRAMMAR_FILE_SPECIFIED, payload: { filename } };
     },
 
-    setGrammar (content: string): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
-        };
+    setGrammar (content: string) {
+        return { type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } };
     },
 
-    setParams(type: EParserType, mode: number): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.PARSER_PARAMS_CHANGED, payload: { type, mode } });
-        };
+    setParams(type: EParserType, mode: number) {
+        return { type: evt.PARSER_PARAMS_CHANGED, payload: { type, mode } };
     }
 };
 
@@ -35,7 +29,6 @@ export const parser = {
 export const sourceCode = {
     openFile (filename: string): IActionCreator {
         return async (dispatch: IDispatch) => {
-    
             dispatch({ type: evt.SOURCE_FILE_REQUEST, payload: { filename } });
     
             fs.readFile(filename, 'utf8', (error: Error, content: string) => {
@@ -48,22 +41,24 @@ export const sourceCode = {
         };
     },
 
-    setContent (content: string): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
-        };
+    setContent (content: string) {
+        return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
     },
 
-    addMarker (name: string, range: IMarkerRange): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.SOURCE_CODE_ADD_MARKER, payload: { name, range } });
-        };
+    addMarker (name: string, range: IMarkerRange) {
+        return { type: evt.SOURCE_CODE_ADD_MARKER, payload: { name, range } };
     },
 
-    removeMarker (name: string): IActionCreator {
-        return async (dispatch: IDispatch) => {
-            dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
-        };
+    // IP: Just an incredible example of a AC power!!
+    // someRoutine (...argv): IActionCreator {
+    //     return async (dispatch: IDispatch, getState) => {
+    //         await dispatch({ type: 'some routine', payload: argv });
+    //         return getState();
+    //     };
+    // },
+
+    removeMarker (name: string) {
+        return { type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } };
     }
 };
 
