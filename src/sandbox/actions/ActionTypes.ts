@@ -1,7 +1,5 @@
 import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
-import { SOURCE_FILE_REQUEST } from "./ActionTypeKeys";
 import * as evt from './ActionTypeKeys';
-import { BaseAction } from 'redux-actions';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
