@@ -9,7 +9,7 @@ import injectSheet from 'react-jss'
 
 import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { ParserParameters, ASTView, IWithStyles } from '../components';
-import { common as commonAccessor, mapProps } from '../reducers';
+import { getCommon, mapProps } from '../reducers';
 import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { IMap } from '../../lib/idl/IMap';
@@ -229,4 +229,4 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(commonAccessor), mapActions(sourceActions))(App) as any;
+export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions(sourceActions))(App) as any;

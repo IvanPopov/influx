@@ -5,7 +5,8 @@ import { connect } from 'react-redux';
 import * as bf from '../../lib/bf/bf';
 import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
 import { parser as parserActions, IDispatch, mapActions } from '../actions';
-import { parser as parserAccessor, mapProps } from '../reducers';
+import { mapProps } from '../reducers';
+import { getParser } from '../reducers/parserParams'
 import { IStoreState, IParserParams } from '../store/IStoreState';
 
 import { Form, Segment, Grid } from 'semantic-ui-react'
@@ -158,4 +159,4 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
     }
 }
 
-export default connect<{}, {}, IParserProps>(mapProps(parserAccessor), mapActions(parserActions))(ParserParameters) as any;
+export default connect<{}, {}, IParserProps>(mapProps(getParser), mapActions(parserActions))(ParserParameters) as any;

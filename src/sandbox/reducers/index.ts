@@ -9,12 +9,11 @@ export default combineReducers<IStoreState>({ sourceFile, parserParams });
 /**
  * selectors
  */
-export const parser = (state: IStoreState): IParserParams => state.parserParams;
-export const sourceCode = (state: IStoreState): IFileState => state.sourceFile;
-export const common = (state: IStoreState): IStoreState => state;
+
+export const getCommon = (state: IStoreState): IStoreState => state;
 
 // todo: use ReturnType for better readability.
 export type ReturnType<T> = any;//T extends (...args: any[]) => infer R ? R : T;
-export function mapProps<T extends { (state: IStoreState): any; }>(accessor: T): (state: IStoreState) => ReturnType<T> {
-    return (state) => accessor(state);
+export function mapProps<T extends { (state: IStoreState): any; }>(selector: T): (state: IStoreState) => ReturnType<T> {
+    return (state) => selector(state);
 }

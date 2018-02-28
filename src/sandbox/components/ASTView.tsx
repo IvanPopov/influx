@@ -8,7 +8,7 @@ import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
 import { IStoreState } from '../store';
 import { sourceCode as sourceActions, mapActions } from '../actions';
-import { common as commonAccessor, mapProps } from '../reducers';
+import { getCommon, mapProps } from '../reducers';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -158,7 +158,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     private async handleNodeOver(idx: string, node: IParseNode) {
-        this.props.actions.addMarker(`ast-range-${idx}`, node.loc);
+        this.props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' });
     }
 
     
@@ -180,5 +180,5 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 }
 
-export default connect<{}, {}, IStoreState>(mapProps(commonAccessor), mapActions(sourceActions))(ASTView) as any;
+export default connect<{}, {}, IStoreState>(mapProps(getCommon), mapActions(sourceActions))(ASTView) as any;
 

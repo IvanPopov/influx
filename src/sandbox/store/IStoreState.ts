@@ -11,6 +11,7 @@ export interface IFileState {
 }
 
 export interface IParserParams {
+    filename: string;
     grammar: string;
     type: EParserType;
     mode: number;

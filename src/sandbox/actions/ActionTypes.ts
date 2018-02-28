@@ -1,62 +1,50 @@
 import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, SOURCE_CODE_MODIFED, SOURCE_FILE_LOADED,
-    SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, SOURCE_CODE_ADD_MARKER, SOURCE_CODE_REMOVE_MARKER, GRAMMAR_CONTENT_SPECIFIED } from './ActionTypeKeys';
+import { SOURCE_FILE_REQUEST } from "./ActionTypeKeys";
+import * as evt from './ActionTypeKeys';
+import { BaseAction } from 'redux-actions';
 
+export interface IBaseAction<T extends String> {
+    readonly type: T;
+}
+export interface IAction<T extends String, P> extends IBaseAction<T> {
+    readonly payload?: P;
+}
+
+//
 // source file api
+//
 
-export interface ISourceFileRequest {
-    readonly type: typeof SOURCE_FILE_REQUEST;
-    readonly payload: { filename: string; };
+export type ISourceFileRequest          = IAction<typeof evt.SOURCE_FILE_REQUEST, { filename: string }>;
+export type ISourceFileLoaded           = IAction<typeof evt.SOURCE_FILE_LOADED, { content: string }>;
+export type ISourceFileLoadingFailed    = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
+export type ISourceCodeModified         = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
+
+
+export interface IMarkerDesc {
+    name: string;
+    range: IRange,
+    type: 'marker' | 'error',
+    tooltip?: string
 }
 
-export interface ISourceFileLoaded {
-    readonly type: typeof SOURCE_FILE_LOADED;
-    readonly payload: { content: string; };
-}
+export type ISourceCodeAddMarker        = IAction<typeof evt.SOURCE_CODE_ADD_MARKER, IMarkerDesc>;
+export type ISourceCodeRemoveMarker     = IAction<typeof evt.SOURCE_CODE_REMOVE_MARKER, { name: string }>;
 
-export interface ISourceFileLoadingFailed {
-    readonly type: typeof SOURCE_FILE_LOADING_FAILED;
-    readonly payload: { error: Error; };
-}
-
-export interface ISourceCodeModified {
-    readonly type: typeof SOURCE_CODE_MODIFED;
-    readonly payload: { content: string; };
-}
-
-export interface ISourceCodeAddMarker {
-    readonly type: typeof SOURCE_CODE_ADD_MARKER;
-    readonly payload: { name: string; range: IRange };
-}
-
-export interface ISourceCodeRemoveMarker {
-    readonly type: typeof SOURCE_CODE_REMOVE_MARKER;
-    readonly payload: { name: string };
-}
-
-export type SourceFileActions = 
+export type ISourceFileActions = 
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | 
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker;
 
+//
 // grammar api (simplified)
+//
 
-export interface IGrammarFileSpecified {
-    readonly type: typeof GRAMMAR_FILE_SPECIFIED;
-    readonly payload: { filename: string; };
-}
+export type IGrammarFileSpecified       = IAction<typeof evt.GRAMMAR_FILE_SPECIFIED, { filename: string; }>;
+export type IGrammarContentSpecified    = IAction<typeof evt.GRAMMAR_CONTENT_SPECIFIED, { content: string; }>;
+export type IParserParamsChanged        = IAction<typeof evt.PARSER_PARAMS_CHANGED, { mode: number; type: EParserType; }>;
 
-export interface IGrammarContentSpecified {
-    readonly type: typeof GRAMMAR_CONTENT_SPECIFIED;
-    readonly payload: { content: string; };
-}
 
-export interface IParserParamsChanged {
-    readonly type: typeof PARSER_PARAMS_CHANGED;
-    readonly payload: { mode: number; type: EParserType; };
-}
+export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;
 
-export type ParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;
-
-export type ActionTypes = SourceFileActions & ParserParamsActions;
+export type ActionTypes = ISourceFileActions & IParserParamsActions;
 
 export default ActionTypes;
