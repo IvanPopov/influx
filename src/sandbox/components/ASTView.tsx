@@ -20,7 +20,6 @@ export interface IASTViewProps extends IStoreState {
     actions: typeof sourceActions;
 }
 
-
 class ASTView extends React.Component<IASTViewProps, {}> {
     state: {
         parser: {
@@ -59,8 +58,13 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
     render() {
         const { state: { parseTree } } = this;
+        const style = {
+            height: 'calc(100vh - 115px)',
+            overflowY: 'auto'
+        };
+
         return (
-            <List selection size="small">
+            <List style={ style } selection size="small">
                 { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
             </List>
         );

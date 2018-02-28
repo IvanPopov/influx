@@ -4,4 +4,14 @@
 .ui.selection.list .list > .item.astnode,
 .ui.selection.list > .item.astnode {
   padding: 0.05em 0.05em;
+
+  .header {
+    display: inline-block;
+  }
+
+  .description {
+    display: inline-block;
+    margin-left: 0.25em;
+    color: lighten(@itemDescriptionColor, 10%);
+  }
 }
