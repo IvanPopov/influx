@@ -12,6 +12,11 @@ logger.registerCodeFamily(2000, 2199, "ParserSyntaxErrors");
 logger.registerCode(LEXER_UNKNOWN_TOKEN, "Unknown token: {tokenValue}");
 logger.registerCode(LEXER_BAD_TOKEN, "Bad token: {tokenValue}");
 
+interface ILexerError extends ISourceLocation {
+    code: number;
+    token: IToken;
+}
+
 export class Lexer implements ILexer {
     private _iLineNumber: number;
     private _iColumnNumber: number;
@@ -80,9 +85,9 @@ export class Lexer implements ILexer {
             return <IToken>{
                 name: END_SYMBOL,
                 value: END_SYMBOL,
-                loc: { 
-                    start: pos, 
-                    end: pos 
+                loc: {
+                    start: pos,
+                    end: pos
                 }
             };
         }
@@ -110,17 +115,24 @@ export class Lexer implements ILexer {
                 pToken = this.getNextToken();
                 break;
             default:
-                this.error(LEXER_UNKNOWN_TOKEN,
-                    <IToken>{
+                Lexer.error({
+                    ...this.loc(),
+                    code: LEXER_UNKNOWN_TOKEN,
+                    token: {
                         name: UNKNOWN_TOKEN,
                         value: ch + this._sSource[this._iIndex + 1],
                         loc: {
                             start: this.pos(),
                             end: this.pos(1)
                         }
-                    });
+                    }
+                });
         }
         return pToken;
+    }
+
+    private loc(): ISourceLocation {
+        return { line: this._iLineNumber, file: this._pParser.getParseFileName() };
     }
 
     public getIndex(): number {
@@ -136,27 +148,23 @@ export class Lexer implements ILexer {
     }
 
     private pos(n: number = 0): IPosition {
-        return { 
-            line: this._iLineNumber, 
+        return {
+            line: this._iLineNumber,
             column: this._iColumnNumber + n
         };
     }
 
-    private error(eCode: number, pToken: IToken): void {
-        let pLocation: ISourceLocation = <ISourceLocation>{
-            file: this._pParser.getParseFileName(),
-            line: this._iLineNumber
-        };
+    private static error(pError: ILexerError): void {
+        const { token, code, file, line } = pError;
         let pInfo: Object = {
-            tokenValue: pToken.value,
-            tokenType: pToken.type
+            tokenValue: token.value,
+            tokenType: token.type
         };
 
-        let pLogEntity: ILoggerEntity = <ILoggerEntity>{ code: eCode, info: pInfo, location: pLocation };
-
+        const pLogEntity: ILoggerEntity = <ILoggerEntity>{ code, info: pInfo, location: { file, line } };
         logger.error(pLogEntity);
 
-        throw new Error(eCode.toString());
+        throw new Error(code.toString());
     }
 
     private identityTokenType(): ETokenType {
@@ -307,12 +315,16 @@ export class Lexer implements ILexer {
             }
             sValue += ch;
 
-            this.error(LEXER_BAD_TOKEN, <IToken>{
-                type: ETokenType.k_StringLiteral,
-                value: sValue,
-                loc: {
-                    start: start,
-                    end: this.pos()
+            Lexer.error({
+                ...this.loc(),
+                code: LEXER_BAD_TOKEN,
+                token: {
+                    type: ETokenType.k_StringLiteral,
+                    value: sValue,
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 }
             });
             return null;
@@ -422,12 +434,16 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             sValue += ch;
-            this.error(LEXER_BAD_TOKEN, <IToken>{
-                type: ETokenType.k_NumericLiteral,
-                value: sValue,
-                loc: {
-                    start: start,
-                    end: this.pos()
+            Lexer.error({
+                ...this.loc(),
+                code: LEXER_BAD_TOKEN,
+                token: {
+                    type: ETokenType.k_NumericLiteral,
+                    value: sValue,
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 }
             });
             return null;
@@ -481,12 +497,16 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             sValue += ch;
-            this.error(LEXER_BAD_TOKEN, <IToken>{
-                type: ETokenType.k_IdentifierLiteral,
-                value: sValue,
-                loc: {
-                    start: start,
-                    end: this.pos()
+            Lexer.error({
+                ...this.loc(),
+                code: LEXER_BAD_TOKEN,
+                token: {
+                    type: ETokenType.k_IdentifierLiteral,
+                    value: sValue,
+                    loc: {
+                        start: start,
+                        end: this.pos()
+                    }
                 }
             });
             return null;
@@ -583,12 +603,16 @@ export class Lexer implements ILexer {
                     ch = EOF;
                 }
                 sValue += ch;
-                this.error(LEXER_BAD_TOKEN, <IToken>{
-                    type: ETokenType.k_CommentLiteral,
-                    value: sValue,
-                    loc: {
-                        start: start,
-                        end: this.pos()
+                Lexer.error({
+                    ...this.loc(),
+                    code: LEXER_BAD_TOKEN,
+                    token: {
+                        type: ETokenType.k_CommentLiteral,
+                        value: sValue,
+                        loc: {
+                            start: start,
+                            end: this.pos()
+                        }
                     }
                 });
                 return false;

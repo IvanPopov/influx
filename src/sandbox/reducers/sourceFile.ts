@@ -33,7 +33,7 @@ export default handleActions<IFileState, ISourceFileActions>({
         ({ ...state, content: action.payload.content }),
 
     [ SOURCE_CODE_ADD_MARKER ]: (state, action: ISourceCodeAddMarker) =>
-        ({ ...state, markers: { [action.payload.name]: action.payload.range } }),
+        ({ ...state, markers: { ...state.markers, [action.payload.name]: action.payload } }),
 
     [ SOURCE_CODE_REMOVE_MARKER ]: (state, action: ISourceCodeRemoveMarker) => {
             let markers = { ...state.markers };

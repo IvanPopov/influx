@@ -1,4 +1,5 @@
 import { logger } from "../logger";
+import { IRange } from "./../idl/parser/IParser";
 import { ISourceLocation, ILoggerEntity, ELogLevel } from "../idl/ILogger";
 import { isDef, isNull, isDefAndNotNull } from "../common";
 import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, IFinishFunc, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
@@ -12,12 +13,53 @@ import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, EN
 import { Item } from "./Item";
 import { State } from "./State";
 
-const PARSER_GRAMMAR_ADD_OPERATION = 2001;
-const PARSER_GRAMMAR_ADD_STATE_LINK = 2002;
-const PARSER_GRAMMAR_UNEXPECTED_SYMBOL = 2003;
-const PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME = 2004;
-const PARSER_GRAMMAR_BAD_KEYWORD = 2005;
-const PARSER_SYNTAX_ERROR = 2051;
+export const PARSER_GRAMMAR_ADD_OPERATION = 2001;
+export const PARSER_GRAMMAR_ADD_STATE_LINK = 2002;
+export const PARSER_GRAMMAR_UNEXPECTED_SYMBOL = 2003;
+export const PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME = 2004;
+export const PARSER_GRAMMAR_BAD_KEYWORD = 2005;
+export const PARSER_SYNTAX_ERROR = 2051;
+
+interface IError {
+    code: number;
+}
+
+interface IGrammarAddOperationError extends IError {
+    stateIndex: number;
+    grammarSymbol: string;
+    oldOperation: IOperation;
+    newOperation: IOperation;
+}
+
+interface IGrammarAddStateLinkError extends IError {
+    stateIndex: number;
+    oldNextStateIndex: IState;
+    newNextStateIndex: number;
+    grammarSymbol: string;
+}
+
+interface IGrammarUnexpectedSymbolError extends IError {
+    unexpectedSymbol: string;
+    expectedSymbol: string;
+    grammarLine: number;
+}
+
+interface IGrammarBadAdditionalFuncName extends IError {
+    grammarLine: number;
+}
+
+interface IGrammarBadKeyword extends IError {
+    grammarLine: number;
+    badKeyword: string;
+}
+
+interface ISyntaxError extends IError {
+    token: IToken;
+    filename: string;
+}
+
+type IParserError = IGrammarAddOperationError | IGrammarAddStateLinkError | IGrammarBadKeyword | 
+    IGrammarUnexpectedSymbolError | IGrammarBadAdditionalFuncName | ISyntaxError;
 
 logger.registerCode(PARSER_GRAMMAR_ADD_OPERATION, "Grammar not LALR(1)! Cannot to generate syntax table. Add operation error.\n" +
     "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
@@ -39,7 +81,7 @@ logger.registerCode(PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, "Grammar error. Emp
 logger.registerCode(PARSER_GRAMMAR_BAD_KEYWORD, "Grammar error. Bad keyword: {badKeyword}\n" +
     "All keyword must be define in lexer rule block.");
 
-logger.registerCode(PARSER_SYNTAX_ERROR, "Syntax error during parsing. Token: {tokenValue}\n" +
+logger.registerCode(PARSER_SYNTAX_ERROR, "Syntax error during parsing. Token: '{tokenValue}'\n" +
     "Line: {line}. Column: {column}.");
 
 function sourceLocationToString(pLocation: ISourceLocation): string {
@@ -347,9 +389,7 @@ export class Parser implements IParser {
                     isStop = true;
                 }
             }
-        }
-        catch (e) {
-            // debug_print(e.stack);
+        } catch (e) {
             this._sFileName = "stdin";
             return EParserCode.k_Error;
         }
@@ -367,7 +407,7 @@ export class Parser implements IParser {
             return EParserCode.k_Ok;
         }
         else {
-            this._error(PARSER_SYNTAX_ERROR, pToken);
+            Parser.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
             if (!isNull(this._fnFinishCallback)) {
                 this._fnFinishCallback(EParserCode.k_Error, this.getParseFileName());
             }
@@ -475,13 +515,12 @@ export class Parser implements IParser {
         this._pSyntaxTree.setOptimizeMode(bf.testAll(this._eParseMode, EParseMode.k_Optimize));
     }
 
-    private _error(eCode: number, pErrorInfo: any): void {
+    private static error(pError: IParserError): void {
         const pLocation: ISourceLocation = <ISourceLocation>{};
 
         const pInfo: any = {
             tokenValue: null,
-            line: null,
-            column: null,
+            loc: null,
             stateIndex: null,
             oldNextStateIndex: null,
             newNextStateIndex: null,
@@ -493,88 +532,63 @@ export class Parser implements IParser {
             badKeyword: null
         };
 
+        const eCode = pError.code;
         const pLogEntity: ILoggerEntity = <ILoggerEntity>{ code: eCode, info: pInfo, location: pLocation };
 
-        let pToken: IToken;
-        let iLine: number;
-        let iColumn: number;
-        let iStateIndex: number;
-        let sSymbol: string;
-        let pOldOperation: IOperation;
-        let pNewOperation: IOperation;
-        let iOldNextStateIndex: number;
-        let iNewNextStateIndex: number;
-        let sExpectedSymbol: string;
-        // let sUnexpectedSymbol: string;
-        let sBadKeyword: string;
-
         if (eCode === PARSER_SYNTAX_ERROR) {
-            pToken = <IToken>pErrorInfo;
-            iLine = pToken.loc.start.line;
-            iColumn = pToken.loc.start.column;
+            const { token, filename } = (pError as ISyntaxError);
 
-            pInfo.tokenValue = pToken.value;
-            pInfo.line = iLine;
-            pInfo.column = iColumn;
+            pInfo.tokenValue = token.value;
+            pInfo.loc = { ...token.loc };
 
-            pLocation.file = this.getParseFileName();
-            pLocation.line = iLine;
+            pLocation.file = filename;
+            pLocation.line = pInfo.loc.start.line;
         }
         else if (eCode === PARSER_GRAMMAR_ADD_OPERATION) {
-            iStateIndex = pErrorInfo.stateIndex;
-            sSymbol = pErrorInfo.grammarSymbol;
-            pOldOperation = pErrorInfo.oldOperation;
-            pNewOperation = pErrorInfo.newOperation;
+            const { stateIndex, grammarSymbol, oldOperation, newOperation } = (pError as IGrammarAddOperationError); 
 
-            pInfo.stateIndex = iStateIndex;
-            pInfo.grammarSymbol = sSymbol;
-            pInfo.oldOperation = this.operationToString(pOldOperation);
-            pInfo.newOperation = this.operationToString(pNewOperation);
+            pInfo.stateIndex = stateIndex;
+            pInfo.grammarSymbol = grammarSymbol;
+            pInfo.oldOperation = Parser.operationToString(oldOperation);
+            pInfo.newOperation = Parser.operationToString(newOperation);
 
             pLocation.file = "GRAMMAR";
             pLocation.line = 0;
         }
         else if (eCode === PARSER_GRAMMAR_ADD_STATE_LINK) {
-            iStateIndex = pErrorInfo.stateIndex;
-            sSymbol = pErrorInfo.grammarSymbol;
-            iOldNextStateIndex = pErrorInfo.oldNextStateIndex;
-            iNewNextStateIndex = pErrorInfo.newNextStateIndex;
+            const { stateIndex, grammarSymbol, oldNextStateIndex, newNextStateIndex } = (pError as IGrammarAddStateLinkError);
 
-            pInfo.stateIndex = iStateIndex;
-            pInfo.grammarSymbol = sSymbol;
-            pInfo.oldNextStateIndex = iOldNextStateIndex;
-            pInfo.newNextStateIndex = iNewNextStateIndex;
+            pInfo.stateIndex = stateIndex;
+            pInfo.grammarSymbol = grammarSymbol;
+            pInfo.oldNextStateIndex = oldNextStateIndex;
+            pInfo.newNextStateIndex = newNextStateIndex;
 
             pLocation.file = "GRAMMAR";
             pLocation.line = 0;
         }
         else if (eCode === PARSER_GRAMMAR_UNEXPECTED_SYMBOL) {
-            iLine = pErrorInfo.grammarLine;
-            sExpectedSymbol = pErrorInfo.expectedSymbol;
-            // sUnexpectedSymbol = pErrorInfo.unexpectedSymbol;
+            const { grammarLine, expectedSymbol, unexpectedSymbol } = (pError as IGrammarUnexpectedSymbolError);
 
-            pInfo.expectedSymbol = sExpectedSymbol;
-            pInfo.unexpectedSymbol = sExpectedSymbol;
+            pInfo.expectedSymbol = expectedSymbol;
+            pInfo.unexpectedSymbol = unexpectedSymbol;
 
             pLocation.file = "GRAMMAR";
-            pLocation.line = iLine || 0;
+            pLocation.line = grammarLine || 0;
         }
         else if (eCode === PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME) {
-            iLine = pErrorInfo.grammarLine;
+            const { grammarLine } = (pError as IGrammarBadAdditionalFuncName);
             pLocation.file = "GRAMMAR";
-            pLocation.line = iLine || 0;
+            pLocation.line = grammarLine || 0;
         }
         else if (eCode === PARSER_GRAMMAR_BAD_KEYWORD) {
-            iLine = pErrorInfo.grammarLine;
-            sBadKeyword = pErrorInfo.badKeyword;
-            pInfo.badKeyword = sBadKeyword;
+            const { grammarLine, badKeyword } = (pError as IGrammarBadKeyword);
+            pInfo.badKeyword = badKeyword;
 
             pLocation.file = "GRAMMAR";
-            pLocation.line = iLine || 0;
+            pLocation.line = grammarLine || 0;
         }
 
         logger.error(pLogEntity);
-
         throw new Error(eCode.toString());
     }
 
@@ -659,20 +673,22 @@ export class Parser implements IParser {
             pSyntaxTable[iIndex] = <IOperationMap>{};
         }
         if (isDef(pSyntaxTable[iIndex][sSymbol])) {
-            this._error(PARSER_GRAMMAR_ADD_OPERATION, {
+            Parser.error({
+                code: PARSER_GRAMMAR_ADD_OPERATION,
                 stateIndex: iIndex,
                 grammarSymbol: this.convertGrammarSymbol(sSymbol),
                 oldOperation: this._pSyntaxTable[iIndex][sSymbol],
                 newOperation: pOperation
             });
-        }
+        }``
         pSyntaxTable[iIndex][sSymbol] = pOperation;
     }
 
     private addStateLink(pState: IState, pNextState: IState, sSymbol: string): void {
         var isAddState: boolean = pState.addNextState(sSymbol, pNextState);
         if (!isAddState) {
-            this._error(PARSER_GRAMMAR_ADD_STATE_LINK, {
+            Parser.error({
+                code: PARSER_GRAMMAR_ADD_STATE_LINK,
                 stateIndex: pState.getIndex(),
                 oldNextStateIndex: pState.getNextStateBySymbol(sSymbol),
                 newNextStateIndex: pNextState.getIndex(),
@@ -932,7 +948,8 @@ export class Parser implements IParser {
 
                     //TERMINALS
                     if (pTempRule[2][0] !== pTempRule[2][pTempRule[2].length - 1]) {
-                        this._error(PARSER_GRAMMAR_UNEXPECTED_SYMBOL, {
+                        Parser.error({
+                            code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
                             unexpectedSymbol: pTempRule[2][pTempRule[2].length - 1],
                             expectedSymbol: pTempRule[2][0],
                             grammarLine: i
@@ -1003,7 +1020,7 @@ export class Parser implements IParser {
                 }
                 if (pTempRule[j] === FLAG_RULE_FUNCTION) {
                     if ((!pTempRule[j + 1] || pTempRule[j + 1].length === 0)) {
-                        this._error(PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, { grammarLine: i });
+                        Parser.error({ code: PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, grammarLine: i });
                     }
 
                     var pFuncInfo: IAdditionalFuncInfo = <IAdditionalFuncInfo>{
@@ -1017,13 +1034,15 @@ export class Parser implements IParser {
                 }
                 if (pTempRule[j][0] === "'" || pTempRule[j][0] === "\"") {
                     if (pTempRule[j].length !== 3) {
-                        this._error(PARSER_GRAMMAR_BAD_KEYWORD, {
+                        Parser.error({
+                            code: PARSER_GRAMMAR_BAD_KEYWORD,
                             badKeyword: pTempRule[j],
                             grammarLine: i
                         });
                     }
                     if (pTempRule[j][0] !== pTempRule[j][2]) {
-                        this._error(PARSER_GRAMMAR_UNEXPECTED_SYMBOL, {
+                        Parser.error({
+                            code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
                             unexpectedSymbol: pTempRule[j][2],
                             expectedSymbol: pTempRule[j][0],
                             grammarLine: i
@@ -1625,7 +1644,7 @@ export class Parser implements IParser {
             return EParserCode.k_Ok;
         }
         else {
-            this._error(PARSER_SYNTAX_ERROR, pToken);
+            Parser.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
             if (isDef(this._fnFinishCallback)) {
                 this._fnFinishCallback(EParserCode.k_Error, this.getParseFileName());
             }
@@ -1650,7 +1669,7 @@ export class Parser implements IParser {
         return sMsg;
     }
 
-    private operationToString(pOperation: IOperation): string {
+    private static operationToString(pOperation: IOperation): string {
         let sOperation: string = "";
 
         switch (pOperation.type) {
@@ -1658,7 +1677,7 @@ export class Parser implements IParser {
                 sOperation = "SHIFT to state " + pOperation.index.toString();
                 break;
             case EOperationType.k_Reduce:
-                sOperation = "REDUCE by rule { " + this.ruleToString(pOperation.rule) + " }";
+                sOperation = "REDUCE by rule { " + Parser.ruleToString(pOperation.rule) + " }";
                 break;
             case EOperationType.k_Success:
                 sOperation = "SUCCESS";
@@ -1668,7 +1687,7 @@ export class Parser implements IParser {
         return sOperation;
     }
 
-    private ruleToString(pRule: IRule): string {
+    private static ruleToString(pRule: IRule): string {
         let sRule: string;
 
         sRule = pRule.left + " : " + pRule.right.join(" ");

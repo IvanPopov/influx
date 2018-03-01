@@ -10,7 +10,7 @@ import injectSheet from 'react-jss'
 import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { ParserParameters, ASTView, IWithStyles } from '../components';
 import { getCommon, mapProps } from '../reducers';
-import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
+import IStoreState, { IParserParams, IFileState, IMarker } from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { IMap } from '../../lib/idl/IMap';
 
@@ -29,6 +29,24 @@ const styles = {
     yellowMarker: {
         backgroundColor: 'yellow',
         position: 'absolute'
+    },
+    errorMarker: {
+        // backgroundColor: 'red',
+        position: 'absolute',
+        background: 'url(http://i.imgur.com/HlfA2is.gif) bottom repeat-x'
+        // display: 'inline-block', 
+        // '&:before': {
+        //     content: "~~~~~~~~~~~~",
+        //     fontSize: '0.6em',
+        //     fontWeight: 700,
+        //     fontFamily: 'Times New Roman, Serif',
+        //     color: 'red',
+        //     width: '100%',
+        //     position: 'absolute',
+        //     top: '12px',
+        //     left: '-1px',
+        //     overflow: 'hidden'
+        //   }
     }
 }
 
@@ -37,7 +55,7 @@ interface ISourceEditorProps extends IWithStyles<typeof styles> {
     content: string;
     name?: string,
     onChange?: (content) => void;
-    markers: IMap<IRange>
+    markers: IMap<IMarker>
 }
 
 
@@ -54,13 +72,14 @@ class DynamicMarker {
     marker: any; // AceRange
     className: string;
     inFront: boolean;
+    tooltip: string;
 
-    constructor(range, className: string) {
+    constructor(range, className: string, tooltip: string) {
         this.marker = range;
         this.className = className;
         this.inFront = false;
+        this.tooltip = tooltip;
     }
-
 
     update(html, markerLayer, session, config) {
         let markerElement = this.getMarker(html, markerLayer, session, config) as HTMLDivElement;
@@ -69,7 +88,7 @@ class DynamicMarker {
         const proxy = <div style={ { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } }></div>;
 
         render(proxy, markerElement);
-        render(<Popup trigger={ proxy } content='Add users to your feed' />, markerElement);
+        render(<Popup trigger={ proxy } content={ this.tooltip } />, markerElement);
         markerElement.style.pointerEvents = 'auto';
         markerLayer.element.appendChild(markerElement);
     }
@@ -98,20 +117,35 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     private get aceMarkers() {
         const { props } = this;
-        let markers: Marker[] = [];
+        const { classes } = props;
+
+        const types = {
+            marker: classes.yellowMarker,
+            error: classes.errorMarker
+        };
+
+        let markers: Array<Marker | DynamicMarker> = [];
         for (let key in props.markers) {
-            let range = props.markers[ key ];
-            let marker: Marker = {
-                startRow: range.start.line,
-                startCol: range.start.column,
-                endRow: range.end.line,
-                endCol: range.end.column,
-                type: 'text',
-                className: props.classes.yellowMarker
+            let { range, type, tooltip, range: { start, end } } = props.markers[key];
+
+            if (!tooltip) {
+                markers.push({
+                    startRow: start.line,
+                    startCol: start.column,
+                    endRow: end.line,
+                    endCol: end.column,
+                    type: 'text',
+                    className: types[type]
+                });
+            } else {
+                markers.push(new DynamicMarker(
+                    new AceRange(start.line, start.column, end.line, end.column),
+                    types[type],
+                    tooltip
+                ));
             }
-            markers.push(marker);
         }
-        (markers as any).push(new DynamicMarker(new AceRange(0, 0, 0, 10), this.props.classes.yellowMarker));
+
         return markers;
     }
 
@@ -167,7 +201,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     onChange={ props.onChange }
                     fontSize={ 12 }
                     value={ props.content || '' }
-                    markers={ this.aceMarkers }
+                    markers={ this.aceMarkers as any }
                     annotations={ this.aceAnnotations }
                     setOptions={ {
                         showInvisibles: showWhitespaces,
@@ -195,7 +229,12 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ true }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column>
-                                    <SourceEditor name="source-code" content={ props.sourceFile.content } onChange={ props.actions.setContent } markers={ props.sourceFile.markers } />
+                                    <SourceEditor 
+                                        name="source-code" 
+                                        content={ props.sourceFile.content } 
+                                        onChange={ props.actions.setContent } 
+                                        markers={ props.sourceFile.markers } 
+                                    />
                                 </Grid.Column>
                                 <Grid.Column>
                                     <ASTView />

@@ -1,5 +1,6 @@
 import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
 import * as evt from './ActionTypeKeys';
+import { IMarker } from '../store/IStoreState';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
@@ -18,11 +19,8 @@ export type ISourceFileLoadingFailed    = IAction<typeof evt.SOURCE_FILE_LOADING
 export type ISourceCodeModified         = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
 
 
-export interface IMarkerDesc {
+export interface IMarkerDesc extends IMarker {
     name: string;
-    range: IRange,
-    type: 'marker' | 'error',
-    tooltip?: string
 }
 
 export type ISourceCodeAddMarker        = IAction<typeof evt.SOURCE_CODE_ADD_MARKER, IMarkerDesc>;

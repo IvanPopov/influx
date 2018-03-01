@@ -98,6 +98,11 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
                                                 onChange={ this.handleChangeMode.bind(this, EParseMode.k_Optimize) }
                                                 label='Created nodes if it has more than one child'
                                             />
+                                            <Form.Checkbox
+                                                checked={ !!(mode & EParseMode.k_DebugMode) }
+                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_DebugMode) }
+                                                label='Debug mode'
+                                            />
                                         </Form.Group>
                                     </Grid.Column>
                                 </Grid>

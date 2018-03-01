@@ -3,12 +3,15 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 
 import { EffectParser } from '../../lib/fx/EffectParser';
-import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
 import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
 import { IStoreState } from '../store';
 import { sourceCode as sourceActions, mapActions } from '../actions';
 import { getCommon, mapProps } from '../reducers';
+import { PARSER_SYNTAX_ERROR } from '../../lib/parser/Parser';
+import { ISourceLocation } from '../../lib/idl/ILogger';
+import { IMarkerDesc } from '../actions/ActionTypes';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -19,6 +22,8 @@ function deepEqual(a: Object, b: Object): boolean {
 export interface IASTViewProps extends IStoreState {
     actions: typeof sourceActions;
 }
+
+const SYNTAX_ERROR_MARKER = "syntax-error";
 
 class ASTView extends React.Component<IASTViewProps, {}> {
     state: {
@@ -105,11 +110,30 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             const isParseOk: EParserCode = parser.parse(content);
             if (isParseOk === EParserCode.k_Ok) {
                 this.setState({ parseTree: parser.getSyntaxTree() });
+                props.actions.removeMarker(SYNTAX_ERROR_MARKER);
             } else {
+                alert("@unhandled_error");
                 // todo: handle error
             }
         } catch (e) {
-            console.log(e ? e.logEntry : null);
+            // if (e.name == "SyntaxError") ...
+
+            if (e.logEntry.code == PARSER_SYNTAX_ERROR) {
+                // const message = e.message
+                const location: ISourceLocation = e.logEntry.location;
+                const loc: IRange = e.logEntry.info.loc;
+
+                let marker: IMarkerDesc = {
+                    name: SYNTAX_ERROR_MARKER,
+                    range: loc,
+                    type: 'error',
+                    tooltip: e.message
+                };
+
+                props.actions.addMarker(marker);
+            } else {
+                console.error(e);
+            }
         }
     }
 

@@ -1,13 +1,19 @@
 import { EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { IMap } from '../../lib/idl/IMap';
 
+export interface IMarker {
+    range: IRange;
+    type: 'error' | 'marker';
+    tooltip?: string;
+}
+
 export interface IFileState {
     filename: string;
     content: string;
     fetching: boolean;
     fetched: boolean;
     error: Error;
-    markers: IMap<IRange>;
+    markers: IMap<IMarker>;
 }
 
 export interface IParserParams {
