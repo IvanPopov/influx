@@ -14,7 +14,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     private _subType: ITypeInstruction;
     private _usageList: string[];
 
-    private _name: string;
     private _isWritable: boolean;
     private _isReadable: boolean;
 
@@ -28,7 +27,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     private _padding: number;
 
     constructor(pNode: IParseNode, type: ITypeInstruction, usages: string[] = [], 
-                name: string = null, writable: boolean = true, readable: boolean = true, 
+                writable: boolean = true, readable: boolean = true, 
                 arrayIndex: IExprInstruction = null, padding = Instruction.UNDEFINE_PADDING) {
         super(pNode, EInstructionTypes.k_VariableTypeInstruction);
 
@@ -36,7 +35,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         this._usageList = usages;
         this.pushType(type);
 
-        this._name = name;
         this._isWritable = writable;
         this._isReadable = readable;
 
@@ -71,7 +69,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get name(): string {
-        return this._name;
+        return this.baseType.name;
     }
 
 
@@ -549,7 +547,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         let padding = pSubField.type.padding;
         let semantics = pSubField.semantics;
 
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, null, true, true, null, padding);
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, true, true, null, padding);
         let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null, semantics);
 
         field.parent = this;
