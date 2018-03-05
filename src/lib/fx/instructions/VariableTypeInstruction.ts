@@ -14,36 +14,27 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     private _subType: ITypeInstruction;
     private _usageList: string[];
 
+    /** overrites for defautl read/write tests */
     private _isWritable: boolean;
     private _isReadable: boolean;
-
-    private _isArray: boolean;
-    private _isUniform: boolean;
-    private _isConst: boolean;
-    private _length: number;
 
     private _arrayIndexExpr: IExprInstruction;
     private _arrayElementType: IVariableTypeInstruction;
     private _padding: number;
 
-    constructor(pNode: IParseNode, type: ITypeInstruction, usages: string[] = [], 
-                writable: boolean = true, readable: boolean = true, 
-                arrayIndex: IExprInstruction = null, padding = Instruction.UNDEFINE_PADDING) {
+    constructor(pNode: IParseNode, type: ITypeInstruction, usages: string[] = [], arrayIndex: IExprInstruction = null) {
         super(pNode, EInstructionTypes.k_VariableTypeInstruction);
 
         
-        this._usageList = usages;
+        usages.forEach( usage => this.addUsage(usage) );
         this.pushType(type);
 
-        this._isWritable = writable;
-        this._isReadable = readable;
-
-        this._isArray = false;
-        this._length = Instruction.UNDEFINE_LENGTH;
+        this._isWritable = true;
+        this._isReadable = true;
 
         this._arrayIndexExpr = null;
         this._arrayElementType = null;
-        this._padding = padding;
+        this._padding = Instruction.UNDEFINE_PADDING;
 
         this.addArrayIndex(arrayIndex);
     }
@@ -115,19 +106,17 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get size(): number {
-        if (this._isArray) {
-            let iSize: number = this._arrayElementType.size;
-            if (this._length === Instruction.UNDEFINE_LENGTH ||
-                iSize === Instruction.UNDEFINE_SIZE) {
+        if (this.isArray()) {
+            let size: number = this._arrayElementType.size;
+            let length: number = this.length;
+            if (length === Instruction.UNDEFINE_LENGTH || size === Instruction.UNDEFINE_SIZE) {
                 return Instruction.UNDEFINE_SIZE;
             }
-            else {
-                return iSize * this._length;
-            }
+
+            return size * length;
         }
-        else {
-            return this.subType.size;
-        }
+
+        return this.subType.size;
     }
 
 
@@ -141,19 +130,20 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return 0;
         }
 
-        if (this.isNotBaseArray() && !this._isArray) {
+        if (this.isNotBaseArray() && !this.isArray()) {
             return this.subType.length;
         }
-        else if (this._length === Instruction.UNDEFINE_LENGTH) {
-            let isEval: boolean = this._arrayIndexExpr.evaluate();
+        
+        let isEval: boolean = this._arrayIndexExpr.evaluate();
 
-            if (isEval) {
-                let iValue: number = <number>this._arrayIndexExpr.getEvalValue();
-                return isNumber(iValue) ? iValue : Instruction.UNDEFINE_LENGTH;
+        if (isEval) {
+            let iValue: number = <number>this._arrayIndexExpr.getEvalValue();
+            if (isNumber(iValue)) {
+                return iValue;
             }
         }
 
-        return this._length;
+        return Instruction.UNDEFINE_LENGTH;
     }
 
 
@@ -176,17 +166,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this._arrayElementType;
     }
 
-    get typeDecl(): ITypeDeclInstruction {
-        if (!this.isFromTypeDecl()) {
-            return null;
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_TypeDeclInstruction) {
-            return <ITypeDeclInstruction>this.parent;
-        }
-        return (<ITypeInstruction>this.parent).typeDecl;
-    }
 
 
     get fieldNames(): string[] {
@@ -209,93 +188,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
         return this.generateSubDeclList();
-    }
-
-
-    get fullName(): string {
-        if (!this.isFromVariableDecl()) {
-            return "Not from variable decl";
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-            return (<IVariableDeclInstruction>this.parent).fullName;
-        }
-        return (<IVariableTypeInstruction>this.parent).fullName;
-    }
-
-
-    get varDeclName(): string {
-        if (!this.isFromVariableDecl()) {
-            return "";
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-
-        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-            return (<IVariableDeclInstruction>this.parent).name;
-        }
-        else {
-            return (<IVariableTypeInstruction>this.parent).varDeclName;
-        }
-    }
-
-
-    get typeDeclName(): string {
-        if (!this.isFromVariableDecl()) {
-            return "";
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-
-        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-            return (<ITypeDeclInstruction>this.parent).name;
-        }
-        else {
-            return (<IVariableTypeInstruction>this.parent).typeDeclName;
-        }
-    }
-
-
-    get parentVarDecl(): IVariableDeclInstruction {
-        if (!this.isFromVariableDecl()) {
-            return null;
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-
-        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-            return <IVariableDeclInstruction>this.parent;
-        }
-        else {
-            return (<IVariableTypeInstruction>this.parent).parentVarDecl;
-        }
-    }
-
-
-    get parentContainer(): IVariableDeclInstruction {
-        if (!this.isFromVariableDecl() || !this.isTypeOfField()) {
-            return null;
-        }
-
-        let pContainerType: IVariableTypeInstruction = <IVariableTypeInstruction>this.parentVarDecl.parent;
-        if (!pContainerType.isFromVariableDecl()) {
-            return null;
-        }
-
-        return pContainerType.parentVarDecl;
-    }
-
-
-    get mainVariable(): IVariableDeclInstruction {
-        if (!this.isFromVariableDecl()) {
-            return null;
-        }
-
-        if (this.isTypeOfField()) {
-            return (<IVariableTypeInstruction>this.parent.parent).mainVariable;
-        }
-        return (<IVariableDeclInstruction>this.parentVarDecl);
     }
 
 
@@ -326,18 +218,17 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     isBase(): boolean {
-        return this.subType.isBase() && this._isArray === false;
+        return this.subType.isBase() && !this.isArray();
     }
 
 
     isArray(): boolean {
-        return this._isArray ||
-            (this.subType.isArray());
+        return !isNull(this._arrayElementType) || this.subType.isArray();
     }
 
 
     isNotBaseArray(): boolean {
-        return this._isArray || (this.subType.isNotBaseArray());
+        return this.isArray() || this.subType.isNotBaseArray();
     }
 
 
@@ -401,37 +292,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    isFromVariableDecl(): boolean {
-        if (isNull(this.parent)) {
-            return false;
-        }
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-            return true;
-        }
-        else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-            return (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
-        }
-        return false;
-    }
-
-    isFromTypeDecl(): boolean {
-        if (isNull(this.parent)) {
-            return false;
-        }
-
-        let eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_TypeDeclInstruction) {
-            return true;
-        }
-        else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-            return (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
-        }
-
-        return false;
-    }
-
-
     isUniform(): boolean {
         return this.hasUsage("uniform");
     }
@@ -442,17 +302,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    isTypeOfField(): boolean {
-        if (isNull(this.parent)) {
-            return false;
-        }
-
-        if (this.parent.instructionType === EInstructionTypes.k_VariableDeclInstruction) {
-            let pParentDecl: IVariableDeclInstruction = <IVariableDeclInstruction>this.parent;
-            return pParentDecl.isField();
-        }
-
-        return false;
+    $overwritePadding(val: number) {
+        this._padding = val;
     }
 
 
@@ -496,11 +347,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         //TODO: add support for v[][10]
 
         this._arrayElementType = new VariableTypeInstruction(null, this.subType, this._usageList.slice());
-        this._arrayElementType.parent = this;
+        this._arrayElementType.$linkTo(this);
         this._arrayIndexExpr = pExpr;
-
-        this._length = this._arrayIndexExpr.evaluate() ? this._arrayIndexExpr.getEvalValue() : Instruction.UNDEFINE_LENGTH;
-        this._isArray = true;
     }
 
 
@@ -541,16 +389,18 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        let pSubField: IVariableDeclInstruction = this.subType.getField(sFieldName);
-        let id = pSubField.nameID;
-        let type = pSubField.type;
-        let padding = pSubField.type.padding;
-        let semantics = pSubField.semantics;
+        let subField: IVariableDeclInstruction = this.subType.getField(sFieldName);
+        let id = subField.nameID;
+        let type = subField.type;
+        let padding = subField.type.padding;
+        let semantics = subField.semantics;
 
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, true, true, null, padding);
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type);
+        fieldType.$overwritePadding(padding);
+
         let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null, semantics);
 
-        field.parent = this;
+        field.$linkTo(this);
         return field;
     }
 
@@ -560,11 +410,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        let pSubField: IVariableDeclInstruction = this.subType.getFieldBySemantics(sSemantic);
+        let subField: IVariableDeclInstruction = this.subType.getFieldBySemantics(sSemantic);
 
-        let padding = pSubField.type.padding;
-        let id = pSubField.id;
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, pSubField.type);
+        let padding = subField.type.padding;
+        let id = subField.id;
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, subField.type);
         let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null);
         field.parent = this;
 
@@ -596,36 +446,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    getFieldExpr(sFieldName: string): IIdExprInstruction {
-        if (!this.hasField(sFieldName)) {
-            return null;
-        }
-
-        let field: IVariableDeclInstruction = this.getField(sFieldName);
-        let pExpr: IIdExprInstruction = new IdExprInstruction(null, field);
-
-        return pExpr;
-    }
-
-
-    getFieldIfExist(sFieldName: string): IVariableDeclInstruction {
-        if (this.hasField(sFieldName)) {
-            return this.getField(sFieldName);
-        }
-
-        return null;
-    }
-
-
-    wrap(): IVariableTypeInstruction {
-        var type: IVariableTypeInstruction = new VariableTypeInstruction(null, this);
-        return type;
-    }
-
-
     private calcHash(): string {
         let hash: string = this.subType.hash;
-        if (this._isArray) {
+        if (this.isArray()) {
             hash += "[";
 
             const iLength: number = this.length;
@@ -645,7 +468,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     private calcStrongHash(): string {
         let strongHash: string = this.subType.strongHash;
 
-        if (this._isArray) {
+        if (this.isArray()) {
             strongHash += "[";
             const iLength: number = this.length;
 
@@ -690,5 +513,116 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     private canHaveSubDecls(): boolean {
         return this.isComplex();
+    }
+
+    
+    /**
+     * Helpers
+     */
+
+    // todo: rename it
+    static isInheritedFromVariableDecl(type: ITypeInstruction): boolean {
+        if (isNull(type.parent)) {
+            return false;
+        }
+        let parentType: EInstructionTypes = type.parent.instructionType;
+        if (parentType === EInstructionTypes.k_VariableDeclInstruction) {
+            return true;
+        }
+        else if (parentType === EInstructionTypes.k_VariableTypeInstruction) {
+            return VariableTypeInstruction.isInheritedFromVariableDecl(<IVariableTypeInstruction>type.parent);
+        }
+        return false;
+    }
+
+
+    static isTypeOfField(type: ITypeInstruction): boolean {
+        if (isNull(type.parent)) {
+            return false;
+        }
+
+        if (type.parent.instructionType === EInstructionTypes.k_VariableDeclInstruction) {
+            let pParentDecl: IVariableDeclInstruction = <IVariableDeclInstruction>type.parent;
+            return pParentDecl.isField();
+        }
+
+        return false;
+    }
+
+
+    static findParentContainer(type: IVariableTypeInstruction): IVariableDeclInstruction {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type) || !VariableTypeInstruction.isTypeOfField(type)) {
+            return null;
+        }
+
+        let containerType: IVariableTypeInstruction = <IVariableTypeInstruction>VariableTypeInstruction.findParentVariableDecl(type).parent;
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(containerType)) {
+            return null;
+        }
+
+        return VariableTypeInstruction.findParentVariableDecl(containerType);
+    }
+
+
+    static findParentVariableDecl(type: ITypeInstruction): IVariableDeclInstruction {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
+            return null;
+        }
+
+        let parentType: EInstructionTypes = type.parent.instructionType;
+        if (parentType === EInstructionTypes.k_VariableDeclInstruction) {
+            return <IVariableDeclInstruction>type.parent;
+        }
+
+        return VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>type.parent);
+    }
+
+
+    static findParentVariableDeclName(type: ITypeInstruction): string {
+        let varDecl = VariableTypeInstruction.findParentVariableDecl(type)
+        return isNull(varDecl) ? null : varDecl.name;
+    }
+
+
+
+    static finParentTypeDecl(type: ITypeInstruction): ITypeDeclInstruction {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
+            return null;
+        }
+
+        let parentType: EInstructionTypes = type.parent.instructionType;
+        if (parentType === EInstructionTypes.k_TypeDeclInstruction) {
+            return <ITypeDeclInstruction>type.parent;
+        }
+        return VariableTypeInstruction.finParentTypeDecl(<ITypeInstruction>type.parent);
+    }
+
+
+    static finParentTypeDeclName(type: IVariableTypeInstruction): string {
+        let typeDecl = VariableTypeInstruction.finParentTypeDecl(type);
+        return isNull(typeDecl) ? null : typeDecl.name;
+    }
+
+
+    static findVariableDeclFullName(type: ITypeInstruction): string {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
+            console.error("Not from variable decl");
+            return null;
+        }
+
+        return VariableTypeInstruction.findParentVariableDecl(type).fullName;
+    }
+
+
+    // todo: add comment!!!!
+    static findMainVariable(type: ITypeInstruction): IVariableDeclInstruction {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
+            return null;
+        }
+
+        if (VariableTypeInstruction.isTypeOfField(type)) {
+            return (<IVariableTypeInstruction>type.parent.parent).mainVariable;
+        }
+        return VariableTypeInstruction.findParentVariableDecl(type);
     }
 }

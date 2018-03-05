@@ -24,10 +24,6 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
         return false;
     }
 
-    simplify(): boolean {
-        return false;
-    }
-
     getEvalValue(): any {
         return this._evalResult;
     }

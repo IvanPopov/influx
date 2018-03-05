@@ -30,10 +30,6 @@ export class Instruction implements IInstruction {
         return this._pParentInstruction;
     }
 
-    set parent(pParentInstruction: IInstruction) {
-        this._pParentInstruction = pParentInstruction;
-    }
-
     get instructionType(): EInstructionTypes {
         return this._eInstructionType;
     }
@@ -46,25 +42,16 @@ export class Instruction implements IInstruction {
         return !this.globalScope ? this._iScope : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
     }
 
-    // TODO: bad pattern!!
-    set scope(iScope: number) {
-        this._iScope = iScope;
-    }
-
     get globalScope(): boolean {
         return this.scope === ProgramScope.GLOBAL_SCOPE;
     }
 
-    set visible(isVisible: boolean) {
-        this._bVisible = isVisible;
+    get sourceNode(): IParseNode {
+        return this._pSourceNode;
     }
 
     get visible(): boolean {
         return this._bVisible;
-    }
-
-    get sourceNode(): IParseNode {
-        return this._pSourceNode;
     }
 
     _getLastError(): IInstructionError {
@@ -111,6 +98,18 @@ export class Instruction implements IInstruction {
         return "";
     }
 
+
+    $hide(): void {
+        this._bVisible = false;
+    }
+
+    $linkTo(pParentInstruction: IInstruction) {
+        this._pParentInstruction = pParentInstruction;
+    }
+
+    $specifyScope(iScope: number) {
+        this._iScope = iScope;
+    }
 
     static UNDEFINE_LENGTH: number = 0xffffff;
     static UNDEFINE_SIZE: number = 0xffffff;

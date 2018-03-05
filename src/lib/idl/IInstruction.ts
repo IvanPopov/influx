@@ -130,27 +130,32 @@ export enum EExtractExprType {
  * Operator and instructions may be empty.
  */
 export interface IInstruction {
-    parent: IInstruction;
-    scope: number;
+    readonly parent: IInstruction;
+    readonly scope: number;
 
     /** Specifies whether to display the instruction in the code. */
-    visible: boolean;
+    readonly visible: boolean;
 
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
     readonly globalScope: boolean;
 
+    prepareFor(eUsedType: EFunctionType): void;
+
+    toString(): string;
+    toCode(): string;
+
+    /** Internal API */
+    $hide(): void;
+    $linkTo(parent: IInstruction): void;
+    $specifyScope(scope: number): void;
+
     _check(eStage: ECheckStage): boolean;
     _getLastError(): IInstructionError;
     _setError(eCode: number, pInfo?: any): void;
     _clearError(): void;
     _isErrorOccured(): boolean;
-
-    prepareFor(eUsedType: EFunctionType): void;
-
-    toString(): string;
-    toCode(): string;
 }
 
 
@@ -163,9 +168,8 @@ export interface ISimpleInstruction extends IInstruction {
     value: string;
 }
 
-export interface ITypeInstruction extends IInstruction {
-    toDeclString(): string;
 
+export interface ITypeInstruction extends IInstruction {
     readonly size: number;
     readonly name: string;
     readonly realName: string;
@@ -207,38 +211,20 @@ export interface ITypeInstruction extends IInstruction {
     getFieldBySemantics(sSemantic: string): IVariableDeclInstruction;
     getFieldType(sFieldName: string): IVariableTypeInstruction;
 
+    toDeclString(): string;
 }
 
+
 export interface IVariableTypeInstruction extends ITypeInstruction {
-    readonly typeDecl: ITypeDeclInstruction;
     readonly usageList: string[];
     readonly subType: ITypeInstruction;
-    readonly fullName: string;
-    readonly varDeclName: string;
-    readonly typeDeclName: string;
-    readonly parentContainer: IVariableDeclInstruction;
-    readonly mainVariable: IVariableDeclInstruction;
-    readonly parentVarDecl: IVariableDeclInstruction;
+    readonly padding: number;
 
-    padding: number;
-
-    isFromVariableDecl(): boolean;
-    isFromTypeDecl(): boolean;
-    isContainComplexType(): boolean;
-    isContainArray(): boolean;
-    isSampler2D(): boolean;
-    isContainSampler(): boolean;
     isUniform(): boolean;
-    isConst(): boolean;
-    isTypeOfField(): boolean;
-
     hasUsage(sUsageName: string): boolean;
 
-    getFieldExpr(sFieldName: string): IIdExprInstruction;
-    getFieldIfExist(sFieldName: string): IVariableDeclInstruction;
-    getFieldIfExist(sFieldName: string): IVariableDeclInstruction;
-
-    wrap(): IVariableTypeInstruction;
+    // for structures internal usage
+    $overwritePadding(val: number): void;
 }
 
 
@@ -396,7 +382,6 @@ export interface IExprInstruction extends ITypedInstruction, IAnalyzedInstructio
 
     evaluate(): boolean;
     getEvalValue(): any;
-    simplify(): boolean;
 
     isConst(): boolean;
 }
