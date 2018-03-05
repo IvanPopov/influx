@@ -9,19 +9,40 @@ import { isNull } from "../../common";
  * (+|-|*|/|%) Instruction Instruction
  */
 export class ArithmeticExprInstruction extends ExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_ArithmeticExprInstruction);
+    private _leftOperand: IExprInstruction;
+    private _rightOperand: IExprInstruction;
+    private _operator: string;
+
+    constructor(node: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {
+        // todo: chose longest type?
+        super(node, left.type, EInstructionTypes.k_ArithmeticExprInstruction);
+
+        this._leftOperand = left;
+        this._rightOperand = right;
+        this._operator = operator;
+    }
+
+    get left(): IExprInstruction {
+        return this._leftOperand;
+    }
+
+    get right(): IExprInstruction {
+        return this._rightOperand;
+    }
+
+    get operator(): string {
+        return this._operator;
     }
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+        this._leftOperand.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+        this._rightOperand.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
     evaluate(): boolean {
-        var pOperands: IExprInstruction[] = <IExprInstruction[]>this.instructions;
-        var pValL: any = pOperands[0].evaluate() ? pOperands[0].getEvalValue() : null;
-        var pValR: any = pOperands[1].evaluate() ? pOperands[1].getEvalValue() : null;
+        var pValL: any = this._leftOperand.evaluate() ? this._leftOperand.getEvalValue() : null;
+        var pValR: any = this._rightOperand.evaluate() ? this._rightOperand.getEvalValue() : null;
 
         if (isNull(pValL) || isNull(pValR)) {
             return false;
@@ -30,19 +51,19 @@ export class ArithmeticExprInstruction extends ExprInstruction {
         try {
             switch (this.operator) {
                 case "+":
-                    this._pLastEvalResult = pValL + pValR;
+                    this._evalResult = pValL + pValR;
                     break;
                 case "-":
-                    this._pLastEvalResult = pValL - pValR;
+                    this._evalResult = pValL - pValR;
                     break;
                 case "*":
-                    this._pLastEvalResult = pValL * pValR;
+                    this._evalResult = pValL * pValR;
                     break;
                 case "/":
-                    this._pLastEvalResult = pValL / pValR;
+                    this._evalResult = pValL / pValR;
                     break;
                 case "%":
-                    this._pLastEvalResult = pValL % pValR;
+                    this._evalResult = pValL % pValR;
                     break;
             }
             return true;
@@ -54,15 +75,14 @@ export class ArithmeticExprInstruction extends ExprInstruction {
 
     toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0].toCode();
+        sCode += this._leftOperand.toCode();
         sCode += this.operator;
-        sCode += this.instructions[1].toCode();
+        sCode += this._rightOperand.toCode();
         return sCode;
     }
 
     isConst(): boolean {
-        var pOperands: IExprInstruction[] = <IExprInstruction[]>this.instructions;
-        return pOperands[0].isConst() && pOperands[1].isConst();
+        return this.left.isConst() && this.right.isConst();
     }
 }
 

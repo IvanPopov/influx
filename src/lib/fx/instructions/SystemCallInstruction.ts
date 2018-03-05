@@ -11,46 +11,47 @@ import { SystemFunctionInstruction } from "./SystemFunctionInstruction";
  * EMPTY_OPERATOR SimpleInstruction ... SimpleInstruction 
  */
 export class SystemCallInstruction extends ExprInstruction {
-    private _pSystemFunction: SystemFunctionInstruction;
-    private _pSamplerDecl: IVariableDeclInstruction;
+    private _func: SystemFunctionInstruction;
+    private _args: IExprInstruction[];
+    // private _samplerDecl: IVariableDeclInstruction;
 
-    constructor() {
-        super(null, EInstructionTypes.k_SystemCallInstruction);
-        this._pSystemFunction = null;
-        this._pSamplerDecl = null;
+    constructor(func: SystemFunctionInstruction, args: IExprInstruction[]) {
+        super(null, func.type, EInstructionTypes.k_SystemCallInstruction);
+        this._func = func;
+        // this._samplerDecl = null;
+        this._args = <IExprInstruction[]>this._func.closeArguments(args);
     }
+
+
+    get func(): IFunctionDeclInstruction {
+        return this._func as IFunctionDeclInstruction;
+    }
+
+
+    get arguments(): IExprInstruction[] {
+        return this._args;
+    }
+
 
     toCode(): string {
-        var sCode: string = "";
-
-        for (var i: number = 0; i < this.instructions.length; i++) {
-            sCode += this.instructions[i].toCode();
+        let code: string = '';
+        for (let i: number = 0; i < this.arguments.length; i++) {
+            code += this.arguments[i].toCode();
         }
-
-        return sCode;
+        return code;
     }
 
 
-    setSystemCallFunction(pFunction: IFunctionDeclInstruction): void {
-        this._pSystemFunction = <SystemFunctionInstruction>pFunction;
-        this.type = (pFunction.type as IVariableTypeInstruction);
-    }
-
-
-    fillByArguments(pArguments: IInstruction[]): void {
-        this.instructions.length = 0; 
-        this._pSystemFunction.closeArguments(pArguments).forEach( pInst => this.push(pInst, true) );
-    }
 
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pInstructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.instructions;
-        for (var i: number = 0; i < this.instructions.length; i++) {
+        let pInstructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.arguments;
+        for (let i: number = 0; i < this.arguments.length; i++) {
             if (pInstructionList[i].instructionType !== EInstructionTypes.k_SimpleInstruction) {
                 pInstructionList[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
                 if ((<IExprInstruction>pInstructionList[i]).type.isSampler) {
-                    this._pSamplerDecl = (<IExprInstruction>pInstructionList[i]).type.parentVarDecl;
+                    // this._samplerDecl = (<IExprInstruction>pInstructionList[i]).type.parentVarDecl;
                 }
             }
         }

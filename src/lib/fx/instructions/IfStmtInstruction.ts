@@ -1,5 +1,6 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { EInstructionTypes } from "../../idl/IInstruction";
+import { isNull } from "./../../common";
+import { IStmtInstruction, EInstructionTypes, IExprInstruction, IIfStmtInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 
@@ -7,27 +8,53 @@ import { IParseNode } from "../../idl/parser/IParser";
  * Represent if(expr) stmt or if(expr) stmt else stmt
  * ( if || if_else ) Expr Stmt [Stmt]
  */
-export class IfStmtInstruction extends StmtInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_IfStmtInstruction);
+export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruction {
+    private _cond: IExprInstruction;
+    private _ifStmt: IStmtInstruction;
+    private _elseStmt: IStmtInstruction;
+
+    
+    constructor(node: IParseNode, cond: IExprInstruction, 
+                ifStmt: IStmtInstruction, elseStmt: IStmtInstruction = null) {
+        super(node, EInstructionTypes.k_IfStmtInstruction);
+
+        this._cond = cond;
+        this._ifStmt = ifStmt;
+        this._elseStmt = elseStmt;
     }
 
+
+    get cond(): IExprInstruction {
+        return this._cond;
+    }
+
+
+    get ifStmt(): IStmtInstruction {
+        return this._ifStmt;
+    }
+
+
+    get elseStmt(): IStmtInstruction {
+        return this._elseStmt;
+    }
+
+
     toCode(): string {
-        var sCode: string = "";
-        if (this.operator === "if") {
-            sCode += "if(";
-            sCode += this.instructions[0].toCode() + ")";
-            sCode += this.instructions[1].toCode();
+        var code: string = "";
+        if (isNull(this._elseStmt)) {
+            code += "if(";
+            code += this._cond.toCode() + ")";
+            code += this._ifStmt.toCode();
         }
         else {
-            sCode += "if(";
-            sCode += this.instructions[0].toCode() + ") ";
-            sCode += this.instructions[1].toCode();
-            sCode += "else ";
-            sCode += this.instructions[2].toCode();
+            code += "if(";
+            code += this._cond.toCode() + ") ";
+            code += this._ifStmt.toCode();
+            code += "else ";
+            code += this._elseStmt.toCode();
         }
 
-        return sCode;
+        return code;
     }
 }
 

@@ -1,11 +1,21 @@
 import { Instruction } from "./Instruction";
-import { EInstructionTypes } from "../../idl/IInstruction";
+import { EInstructionTypes, IInstructionCollector, IInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class InstructionCollector extends Instruction {
-    constructor() {
+export class InstructionCollector extends Instruction implements IInstructionCollector {
+    private _instructions: IInstruction[];
+
+    constructor(instructions: IInstruction[]) {
         super(null, EInstructionTypes.k_InstructionCollector);
+
+        this._instructions = instructions;
     }
+
+
+    get instructions(): IInstruction[] {
+        return this._instructions;
+    }
+
 
     toCode(): string {
         var sCode: string = "";

@@ -68,8 +68,7 @@ export enum EInstructionTypes {
 export enum EFunctionType {
     k_Vertex = 0,
     k_Pixel = 1,
-    k_Function = 2,
-    k_PassFunction = 3
+    k_Function = 2
 }
 
 export enum ECheckStage {
@@ -133,11 +132,9 @@ export enum EExtractExprType {
 export interface IInstruction {
     parent: IInstruction;
     scope: number;
+
     /** Specifies whether to display the instruction in the code. */
     visible: boolean;
-
-    readonly operator: string;
-    readonly instructions: IInstruction[];
 
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
@@ -150,12 +147,17 @@ export interface IInstruction {
     _clearError(): void;
     _isErrorOccured(): boolean;
 
-    push(pInstruction: IInstruction, isSetParent?: boolean): void;
     prepareFor(eUsedType: EFunctionType): void;
 
     toString(): string;
     toCode(): string;
 }
+
+
+export interface IInstructionCollector extends IInstruction {
+    readonly instructions: IInstruction[];
+}
+
 
 export interface ISimpleInstruction extends IInstruction {
     value: string;
@@ -164,9 +166,9 @@ export interface ISimpleInstruction extends IInstruction {
 export interface ITypeInstruction extends IInstruction {
     toDeclString(): string;
 
-    size: number;
-    name: string;
-    realName: string;
+    readonly size: number;
+    readonly name: string;
+    readonly realName: string;
 
     readonly builtIn: boolean;
     readonly hash: string;
@@ -176,11 +178,11 @@ export interface ITypeInstruction extends IInstruction {
     readonly arrayElementType: ITypeInstruction;
     readonly typeDecl: ITypeDeclInstruction;
 
-    writable: boolean;
-    readable: boolean;
+    readonly writable: boolean;
+    readonly readable: boolean;
 
-    fieldNameList: string[];
-    fieldDeclList: IVariableDeclInstruction[];
+    readonly fieldNames: string[];
+    readonly fields: IVariableDeclInstruction[];
 
     isBase(): boolean;
     isArray(): boolean;
@@ -197,39 +199,28 @@ export interface ITypeInstruction extends IInstruction {
     isContainComplexType(): boolean;
 
     hasField(sFieldName: string): boolean;
-    hasFieldWithSematic(sSemantic: string);
+    hasFieldWithSematics(sSemantic: string);
     hasAllUniqueSemantics(): boolean;
-    hasFieldWithoutSemantic(): boolean;
+    hasFieldWithoutSemantics(): boolean;
 
     getField(sFieldName: string): IVariableDeclInstruction;
-    getFieldBySemantic(sSemantic: string): IVariableDeclInstruction;
+    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction;
     getFieldType(sFieldName: string): IVariableTypeInstruction;
 
 }
 
 export interface IVariableTypeInstruction extends ITypeInstruction {
-    readonly builtIn;
-    readonly hash: string;
-    readonly strongHash: string;
     readonly typeDecl: ITypeDeclInstruction;
     readonly usageList: string[];
     readonly subType: ITypeInstruction;
-    readonly vars: IVariableDeclInstruction[];
     readonly fullName: string;
     readonly varDeclName: string;
     readonly typeDeclName: string;
     readonly parentContainer: IVariableDeclInstruction;
     readonly mainVariable: IVariableDeclInstruction;
-    readonly arrayElementType: IVariableTypeInstruction;
-    readonly attrOffset: IVariableDeclInstruction;
+    readonly parentVarDecl: IVariableDeclInstruction;
 
-    name: string;
-    realName: string;
-    writable: boolean;
-    readable: boolean;
     padding: number;
-    collapsed: boolean;
-    parentVarDecl: IVariableDeclInstruction;
 
     isFromVariableDecl(): boolean;
     isFromTypeDecl(): boolean;
@@ -241,29 +232,25 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
     isConst(): boolean;
     isTypeOfField(): boolean;
 
-    pushType(pType: ITypeInstruction): void;
-    addUsage(sUsage: string): void;
-    addArrayIndex(pExpr: IExprInstruction): void;
-    addAttrOffset(pOffset: IVariableDeclInstruction): void;
-
     hasUsage(sUsageName: string): boolean;
-    hasField(sFieldName: string): boolean;
-    hasFieldWithSematic(sSemantic: string): boolean;
-    hasAllUniqueSemantics(): boolean;
-    hasFieldWithoutSemantic(): boolean;
 
     getFieldExpr(sFieldName: string): IIdExprInstruction;
     getFieldIfExist(sFieldName: string): IVariableDeclInstruction;
-    getFieldBySemantic(sSemantic: string): IVariableDeclInstruction;
-    getFieldType(sFieldName: string): IVariableTypeInstruction;
     getFieldIfExist(sFieldName: string): IVariableDeclInstruction;
 
     wrap(): IVariableTypeInstruction;
 }
 
 
-export interface ITypedInstruction extends IInstruction {
+export interface ITypedInstruction extends IAnalyzedInstruction {
     type: ITypeInstruction;
+}
+
+
+export interface IConditionalExprInstruction extends IExprInstruction {
+    readonly condition: IExprInstruction;
+    readonly left: ITypedInstruction;
+    readonly right: ITypedInstruction;
 }
 
 
@@ -272,114 +259,79 @@ export interface IDeclInstruction extends ITypedInstruction {
     readonly realName: string;
     readonly nameID: IIdInstruction;
 
-    semantics: string;
-    annotation: IAnnotationInstruction;
-    builtIn: boolean;
+    readonly semantics: string;
+    readonly annotation: IAnnotationInstruction;
 
+    /** Additional markers */
+    builtIn: boolean;
     vertex: boolean;
     pixel: boolean;
 }
 
 
 export interface IFunctionDefInstruction extends IDeclInstruction {
-    /** Return type. */
-    type: ITypeInstruction;
     returnType: ITypeInstruction; 
     functionName: IIdInstruction;
     name: string;
     realName: string;
     arguments: IVariableDeclInstruction[];
+
     numArgsRequired: number;
     shaderDef: boolean; // << Is it function represent shader?
-    stringDef: string;  // << declaration with uniq name
-
+    
     readonly paramListForShaderInput: IVariableDeclInstruction[];
-
-    addParameter(pParam: IVariableDeclInstruction, useStrict?: boolean): boolean;
+    
+    // moved to effect.fx
+    // addParameter(pParam: IVariableDeclInstruction, useStrict?: boolean): boolean;
     
     /** Determines if the function has a complex type on the input of the shader. */
     isComplexShaderInput(): boolean; // << todo: rename! 
-
-    setShaderParams(pParamList: IVariableDeclInstruction[], isComplexInput: boolean): void;
     
-    /** TODO: remove or rename/fix */
-    setAnalyzedInfo(isAnalyzedForVertexUsage: boolean, isAnalyzedForPixelUsage: boolean, bCanUsedAsFunction: boolean);
-
     canUsedAsFunction(): boolean;
     checkForVertexUsage(): boolean;
     checkForPixelUsage(): boolean;
+
+    toString(): string;  // << declaration with uniq name
 }
 
 
 export interface ITypeDeclInstruction extends IDeclInstruction {
+    type: ITypeInstruction;
+    name: string;
+    realName: string;
 }
 
 export interface IVariableDeclInstruction extends IDeclInstruction {
-    readonly initializeExpr: IInitExprInstruction;
-    readonly defaultValue: any;
+    readonly id: IIdInstruction;
     readonly type: IVariableTypeInstruction;
-    readonly nameID: IIdInstruction;
-    readonly vars: IVariableDeclInstruction[];
+    readonly initExpr: IInitExprInstruction;
+    readonly defaultValue: any;
     readonly nameIndex: number;
-    readonly fullNameExpr: IExprInstruction;
     readonly fullName: string;
-    
-    value: any;
-    varying: boolean;
-    shaderOutput: boolean;
-
-    name: string;
-    realName: string;
-
-    collapsed: boolean;
-    attrExtractionBlock: IInstruction;
-
-    lockInitializer(): void;
-    unlockInitializer(): void;
-
-    prepareDefaultValue(): void;
-    fillNameIndex(): void;
 
     isUniform(): boolean;
     isField(): boolean;
     isSampler(): boolean;
+    isVarying(): boolean;
 }
 
 export interface IFunctionDeclInstruction extends IDeclInstruction {
-    readonly nameID: IIdInstruction;
-    readonly arguments: ITypedInstruction[];
-    readonly numArgsRequired: number;
-    readonly type: ITypeInstruction;
-    readonly returnType: IVariableTypeInstruction;
+    readonly definition: IFunctionDefInstruction;
+    readonly implementation: IStmtInstruction;
+    readonly functionType: EFunctionType;
 
     readonly vertexShader: IFunctionDeclInstruction;
     readonly pixelShader: IFunctionDeclInstruction;
-    readonly stringDef: string;
     
     readonly attributeVariableMap: IMap<IVariableDeclInstruction>;
     readonly varyingVariableMap: IMap<IVariableDeclInstruction>;
-    
     readonly uniformVariableMap: IMap<IVariableDeclInstruction>;
     readonly textureVariableMap: IMap<IVariableDeclInstruction>;
     readonly usedComplexTypeMap: IMap<ITypeInstruction>;
-    
-    readonly attributeVariableKeys: number[];
-    readonly varyingVariableKeys: number[];
-    
-    readonly uniformVariableKeys: number[];
-    readonly textureVariableKeys: number[];
-    readonly usedComplexTypeKeys: number[];
-    readonly usedFunctionList: IFunctionDeclInstruction[];
-    
+
     readonly extSystemFunctionList: IFunctionDeclInstruction[];
     readonly extSystemTypeList: ITypeDeclInstruction[];
     
-    definition: IDeclInstruction
-    implementation: IStmtInstruction;
-    functionType: EFunctionType;
-
-    addOutVariable(pVariable: IVariableDeclInstruction): boolean;
-    getOutVariable(): IVariableDeclInstruction;
 
     isUsedAs(eUsedType: EFunctionType): boolean;
     isUsedAsFunction(): boolean;
@@ -388,22 +340,22 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     isUsed(): boolean;
     isUsedInVertex(): boolean;
     isUsedInPixel(): boolean;
+    canUsedAsFunction(): boolean;
 
     checkVertexUsage(): boolean;
     checkPixelUsage(): boolean;
 
+    /**
+     * Active API
+     */
+
+    // todo: remove
     markUsedAs(eUsedType: EFunctionType): void;
     markUsedInVertex(): void;
     markUsedInPixel(): void;
 
-    checkDefenitionForVertexUsage(): boolean;
-    checkDefenitionForPixelUsage(): boolean;
-
-    canUsedAsFunction(): boolean;
-    notCanUsedAsFunction(): void;
-
-    addUsedFunction(pFunction: IFunctionDeclInstruction): boolean;
-    addUsedVariable(pVariable: IVariableDeclInstruction): void;
+    checkDefinitionForVertexUsage(): boolean;
+    checkDefinitionForPixelUsage(): boolean;
 
     convertToVertexShader(): IFunctionDeclInstruction;
     convertToPixelShader(): IFunctionDeclInstruction;
@@ -412,9 +364,6 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     prepareForPixel(): void;
 
     generateInfoAboutUsedData(): void;
-
-    isBlackListFunction(): boolean;
-    addToBlackList(): void;
 }
 
 
@@ -424,10 +373,10 @@ export interface IStructDeclInstruction extends IInstruction {
 
 
 export interface IIdInstruction extends IInstruction {
-    name: string;
-    realName: string;
-    varying: boolean;
+    readonly name: string;
+    readonly realName: string;
 
+    /** Specifies whether to emit ID to source code or not. */
     readonly visible: boolean;
 }
 
@@ -448,13 +397,21 @@ export interface IExprInstruction extends ITypedInstruction, IAnalyzedInstructio
     evaluate(): boolean;
     getEvalValue(): any;
     simplify(): boolean;
+
     isConst(): boolean;
 }
 
 
+export interface IConstructorCallInstruction extends IExprInstruction {
+    arguments: IInstruction[];
+    ctor: IVariableTypeInstruction;
+}
+
+
 export interface ISamplerStateBlockInstruction extends IExprInstruction {
-    texture: IVariableDeclInstruction;
-    addState(sStateType: string, sStateValue: string): void;
+    readonly texture: IVariableDeclInstruction;
+    readonly params: IMap<string>;
+    readonly operator: string;
 }
 
 
@@ -466,10 +423,11 @@ export interface ICompileExprInstruction extends IExprInstruction {
 export interface IPairedExprInstruction extends IExprInstruction {
     readonly left: IInstruction;
     readonly right: IInstruction;
+    readonly operator: string;
 }
 
 export interface IAssignmentExprInstruction extends IPairedExprInstruction {
-
+    readonlyoperator: string;
 }
 
 
@@ -479,19 +437,20 @@ export interface IInitExprInstruction extends IExprInstruction {
 
 
 export interface IIdExprInstruction extends IExprInstruction {
-    type: IVariableTypeInstruction;
+    readonly type: IVariableTypeInstruction;
     readonly visible: boolean;
-
+    readonly declaration: IDeclInstruction;
 }
 
 
 export interface IFunctionCallInstruction extends IIdExprInstruction {
     readonly declaration: IFunctionDeclInstruction;
+    readonly args: IExprInstruction[];
 }
 
 
 export interface ILiteralInstruction extends IExprInstruction {
-    value: any;
+    readonly value: number | string | boolean;
 }
 
 
@@ -502,6 +461,16 @@ export interface IAnnotationInstruction extends IInstruction {
 export interface IStmtInstruction extends IInstruction, IAnalyzedInstruction {
 }
 
+export interface IIfStmtInstruction extends IStmtInstruction {
+    readonly cond: IExprInstruction;
+    readonly ifStmt: IStmtInstruction;
+    readonly elseStmt: IStmtInstruction;
+}
+
+
+export interface IStmtBlockInstruction extends IStmtInstruction {
+    readonly instructions: IStmtInstruction[];
+}
 
 export interface IPassInstruction extends IDeclInstruction {
     readonly uniformVariableMapV: IMap<IVariableDeclInstruction>;
@@ -519,45 +488,17 @@ export interface IPassInstruction extends IDeclInstruction {
     readonly pixelShader: IFunctionDeclInstruction;
     readonly renderStates: IMap<ERenderStateValues>;
 
-    complexPass: boolean;
 
-    addFoundFunction(pNode: IParseNode, pShader: IFunctionDeclInstruction, eType: EFunctionType): void;
-    getFoundedFunction(pNode: IParseNode): IFunctionDeclInstruction;
-    getFoundedFunctionType(pNode: IParseNode): EFunctionType;
-    addCodeFragment(sCode: string): void;
-
-    addShader(pShader: IFunctionDeclInstruction): void;
-    setState(eType: ERenderStates, eValue: ERenderStateValues): void;
     finalizePass(): void;
     evaluate(pEngineStates: any, pForeigns: any, pUniforms: any): boolean;
-
     getState(eType: ERenderStates): ERenderStateValues;
 }
 
 
 export interface ITechniqueInstruction extends IDeclInstruction {
     name: string;
-    complexName: boolean;
 
     readonly passList: IPassInstruction[];
-    readonly totalPasses: number;
-
-    addPass(pPass: IPassInstruction): void;
-    getPass(iPass: number): IPassInstruction;
-
-}
-
-
-export interface IVariableBlendInfo {
-    varList: IVariableDeclInstruction[];
-    blendType: IVariableTypeInstruction;
-    name: string;
-    nameIndex: number;
-}
-
-
-export interface IVariableBlendInfoMap {
-    [index: number]: IVariableBlendInfo;
 }
 
 

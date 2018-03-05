@@ -14,8 +14,8 @@ import { Form, Segment, Grid } from 'semantic-ui-react'
 // import from submodules
 import AceEditor from '../deps/react-ace';
 import '../deps/brace';
+import '../deps/brace/mode/sh';
 import '../deps/brace/theme/github';
-import '../deps/brace/mode/text';
 
 
 const setFlags = (dest: number, src: number, value: boolean) => {
@@ -119,7 +119,7 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
                             name={ "grammar-text" }
                             theme="github"
                             width="100%"
-                            mode="text"
+                            mode="sh"
                             onChange={ (grammar: string) => this.setState({ grammar }) }
                             fontSize={ 12 }
                             value={ grammar || '' }

@@ -8,18 +8,13 @@ import { isNull } from "../../common";
  * Represent all kind of statements
  */
 export class StmtInstruction extends Instruction implements IStmtInstruction {
-    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_StmtInstruction) {
-        super(pNode, eType);
+    constructor(node: IParseNode, type: EInstructionTypes = EInstructionTypes.k_StmtInstruction) {
+        super(node, type);
     }
 
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pInstructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.instructions;
 
-        if (!isNull(pUsedDataCollector)) {
-            for (var i: number = 0; i < this.instructions.length; i++) {
-                pInstructionList[i].addUsedData(pUsedDataCollector, eUsedMode);
-            }
-        }
+    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
+        usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
+        console.error("@not_implemented");
     }
 }

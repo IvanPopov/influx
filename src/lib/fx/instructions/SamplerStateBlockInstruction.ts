@@ -1,4 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IMap } from "./../../idl/IMap";
 import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
 import { ISamplerState } from "../../idl/ISamplerState"
@@ -10,31 +11,31 @@ import { IParseNode } from "../../idl/parser/IParser";
   * Represetn sampler_state { states }
   */
 export class SamplerStateBlockInstruction extends ExprInstruction implements ISamplerStateBlockInstruction {
-    private _pTexture: IVariableDeclInstruction;
-    private _pSamplerParams: any;
+    private _texture: IVariableDeclInstruction;
+    private _samplerParams: IMap<string>;
+    private _operator: string;
 
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_SamplerStateBlockInstruction);
-        this._pSamplerParams = null;
-        this._pTexture = null;
+
+    constructor(node: IParseNode, texture: IVariableDeclInstruction, samplerParams: IMap<string>, operator: string) {
+        super(node, texture.type, EInstructionTypes.k_SamplerStateBlockInstruction);
+        this._samplerParams = samplerParams || {};
+        this._texture = texture;
+        this._operator = operator;
     }
 
-    set texture(pTexture: IVariableDeclInstruction) {
-        this._pTexture = pTexture;
-    }
-
+    
     get texture(): IVariableDeclInstruction {
-        return this._pTexture;
+        return this._texture;
+    }
+
+    
+    get params(): IMap<string> {
+        return this._samplerParams;
     }
 
 
-    addState(sStateType: string, sStateValue: string): void {
-        if (isNull(this._pSamplerParams)) {
-            this._pSamplerParams = {};
-        }
-
-        this._pSamplerParams[sStateType] = sStateValue;
-        return;
+    get operator(): string {
+        return this._operator;
     }
 
 
@@ -42,10 +43,9 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
         return true;
     }
 
-
+    
     evaluate(): boolean {
-        var pSamplerState: ISamplerState = {
-            // texture: null,
+        var samplerState: ISamplerState = {
             textureName: "",
 
             wrap_s: 0,
@@ -55,31 +55,30 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
             min_filter: 0
         };
 
-        if (!isNull(this._pTexture)) {
-            pSamplerState.textureName = this._pTexture.realName;
+        if (!isNull(this._texture)) {
+            samplerState.textureName = this._texture.realName;
         }
 
-        if (!isNull(this._pSamplerParams)) {
-            if (isDef(this._pSamplerParams["ADDRESSU"])) {
-                pSamplerState.wrap_s = SamplerStateBlockInstruction.convertWrapMode(this._pSamplerParams["ADDRESSU"]);
+        if (!isNull(this._samplerParams)) {
+            if (isDef(this._samplerParams["ADDRESSU"])) {
+                samplerState.wrap_s = SamplerStateBlockInstruction.convertWrapMode(this._samplerParams["ADDRESSU"]);
             }
 
-            if (isDef(this._pSamplerParams["ADDRESSV"])) {
-                pSamplerState.wrap_t = SamplerStateBlockInstruction.convertWrapMode(this._pSamplerParams["ADDRESSV"]);
+            if (isDef(this._samplerParams["ADDRESSV"])) {
+                samplerState.wrap_t = SamplerStateBlockInstruction.convertWrapMode(this._samplerParams["ADDRESSV"]);
             }
 
-            if (isDef(this._pSamplerParams["MAGFILTER"])) {
-                pSamplerState.mag_filter = SamplerStateBlockInstruction.convertFilters(this._pSamplerParams["MAGFILTER"]);
+            if (isDef(this._samplerParams["MAGFILTER"])) {
+                samplerState.mag_filter = SamplerStateBlockInstruction.convertFilters(this._samplerParams["MAGFILTER"]);
             }
 
-            if (isDef(this._pSamplerParams["MINFILTER"])) {
-                pSamplerState.min_filter = SamplerStateBlockInstruction.convertFilters(this._pSamplerParams["MINFILTER"]);
+            if (isDef(this._samplerParams["MINFILTER"])) {
+                samplerState.min_filter = SamplerStateBlockInstruction.convertFilters(this._samplerParams["MINFILTER"]);
             }
         }
 
 
-        this._pLastEvalResult = pSamplerState;
-
+        this._evalResult = samplerState;
         return true;
     }
 
@@ -112,7 +111,6 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
                 return ETextureFilters.NEAREST_MIPMAP_LINEAR;
             case "LINEAR_MIPMAP_LINEAR":
                 return ETextureFilters.LINEAR_MIPMAP_LINEAR;
-
             default:
                 return 0;
         }

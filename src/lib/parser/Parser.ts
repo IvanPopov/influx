@@ -9,7 +9,7 @@ import { IItem } from "../idl/parser/IItem";
 import { Lexer } from "./Lexer";
 import * as bf from "../bf/bf"
 import { ParseTree } from "./ParseTree";
-import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, END_SYMBOL, START_SYMBOL, FLAG_RULE_CREATE_NODE, END_POSITION, UNUSED_SYMBOL } from "./symbols";
+import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, END_SYMBOL, START_SYMBOL, FLAG_RULE_CREATE_NODE, END_POSITION, UNUSED_SYMBOL, INLINE_COMMENT_SYMBOL } from "./symbols";
 import { Item } from "./Item";
 import { State } from "./State";
 
@@ -976,6 +976,10 @@ export class Parser implements IParser {
 
             if (pTempRule[0] === LEXER_RULES) {
                 isLexerBlock = true;
+                continue;
+            }
+
+            if (pTempRule[0][0] == INLINE_COMMENT_SYMBOL) {
                 continue;
             }
 

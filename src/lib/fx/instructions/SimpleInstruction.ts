@@ -4,15 +4,11 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class SimpleInstruction extends Instruction implements ISimpleInstruction {
-    private _sValue: string;
+    private _value: string;
 
-    constructor(sValue: string, pNode: IParseNode) {
+    constructor(pNode: IParseNode, value: string) {
         super(pNode, EInstructionTypes.k_SimpleInstruction);
-        this._sValue = sValue;
-    }
-
-    set value(sValue: string) {
-        this._sValue = sValue;
+        this._value = value;
     }
 
     get value(): string {
@@ -20,11 +16,11 @@ export class SimpleInstruction extends Instruction implements ISimpleInstruction
     }
 
     toString(): string {
-        return this._sValue;
+        return this._value;
     }
 
     toCode(): string {
-        return this._sValue;
+        return this._value;
     }
 }
 

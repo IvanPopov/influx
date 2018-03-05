@@ -7,39 +7,37 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 
 export class StringInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _sValue: string;
+    private _value: string;
 
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_StringInstruction);
-        this._sValue = "";
-        this._pType = Effect.getSystemType("string").variableType;
+    constructor(pNode: IParseNode, value: string) {
+        super(pNode, Effect.getSystemType("string").variableType, EInstructionTypes.k_StringInstruction);
+        this._value = value;
     }
 
+    
     get value(): string {
-        return this._sValue;
+        return this._value;
     }
 
-    set value(sValue: string) {
-        this._sValue = sValue;
-    }
 
     toString(): string {
-        return this._sValue;
+        return this._value;
     }
+
 
     toCode(): string {
-        var sCode: string = "";
-        sCode += this._sValue;
-        return sCode;
+        return this._value;
     }
 
+
     evaluate(): boolean {
-        this._pLastEvalResult = this._sValue;
+        this._evalResult = this._value;
         return true;
     }
+
 
     isConst(): boolean {
         return true;

@@ -1,4 +1,5 @@
 import { DeclInstruction } from './DeclInstruction';
+import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import * as Effect from '../Effect';
 import { IExprInstruction, IInstruction, EInstructionTypes,
     IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction,
@@ -11,134 +12,67 @@ import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 
+/**
+ * Represent type var_name [= init_expr]
+ * EMPTY_OPERATOR VariableTypeInstruction IdInstruction InitExprInstruction
+ */
 export class VariableDeclInstruction extends DeclInstruction implements IVariableDeclInstruction {
-    private _pFullNameExpr: IExprInstruction;
-    private _bShaderOutput: boolean;
-    private _pAttrExtractionBlock: IInstruction;
-    private _pValue: any;
-    private _pDefaultValue: any;
-    private _bLockInitializer: boolean;
-    private _iNameIndex: number;
+
+    protected _id: IIdInstruction;
+    protected _type: IVariableTypeInstruction;
+    protected _initExpr: IInitExprInstruction;
+
+    private _nameIndex: number;
 
     static SHADER_VAR_NAMES_GLOBAL_DICT: StringDictionary = new StringDictionary();
-    static _getIndex(sName: string): number {
-        return VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.index(sName);
-    }
-    /**
-     * Represent type var_name [= init_expr]
-     * EMPTY_OPERATOR VariableTypeInstruction IdInstruction InitExprInstruction
-     */
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_VariableDeclInstruction);
 
-        this._pFullNameExpr = null;
-        this._bShaderOutput = false;
-        this._pAttrExtractionBlock = null;
-        this._pValue = null;
-        this._pDefaultValue = null;
-        this._bLockInitializer = false;
-        this._iNameIndex = 0;
+    constructor(node: IParseNode, id: IIdInstruction, type: IVariableTypeInstruction, initExpr: IInitExprInstruction,
+                semantics: string = null, annotation: IAnnotationInstruction = null) {
+        super(node, semantics, annotation, EInstructionTypes.k_VariableDeclInstruction);
+
+        this._id = id;
+        this._type = type;
+        this._initExpr = initExpr;
+        
+        this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName);
     }
 
-    get initializeExpr(): IInitExprInstruction {
-        return <IInitExprInstruction>this.instructions[2];
+    
+    get initExpr(): IInitExprInstruction {
+        return this._initExpr;
     }
+
 
     get defaultValue(): any {
-        return this._pDefaultValue;
+        this._initExpr.evaluate();
+        return this._initExpr.getEvalValue();
     }
 
-    get value(): any {
-        return this._pValue;
-    }
-
-    set value(pValue: any) {
-        this._pValue = pValue;
-    }
 
     get type(): IVariableTypeInstruction {
-        return <IVariableTypeInstruction>this.instructions[0];
+        return <IVariableTypeInstruction>this._type;
     }
 
-    set type(pType: IVariableTypeInstruction) {
-        this.instructions[0] = <IVariableTypeInstruction>pType;
-        pType.parent = (this);
-    }
-
-    set name(sName: string) {
-        var pName: IIdInstruction = new IdInstruction(null);
-        pName.name = (sName);
-        pName.parent = (this);
-
-        this.instructions[1] = <IIdInstruction>pName;
-    }
-
-    set realName(sRealName: string) {
-        this.nameID.realName = (sRealName);
-    }
 
     get name(): string {
-        return (<IIdInstruction>this.instructions[1]).name;
+        return this._id.name;
     }
 
+    
     get realName(): string {
-        return (<IIdInstruction>this.instructions[1]).realName;
+        return this._id.realName;
     }
 
-    get nameID(): IIdInstruction {
-        return <IIdInstruction>this.instructions[1];
+    
+    get id(): IIdInstruction {
+        return this._id;
     }
 
-    get vars(): IVariableDeclInstruction[] {
-        return this.type.vars;
-    }
-
-    set collapsed(bValue: boolean) {
-        this.type.collapsed = (bValue);
-    }
-
-    get collapsed(): boolean {
-        return this.type.collapsed;
-    }
-
-    set varying(bValue: boolean) {
-        this.nameID.varying = bValue;
-    }
-
-    get varying(): boolean {
-        return this.nameID.varying;
-    }
-
-    set shaderOutput(isShaderOutput: boolean) {
-        this._bShaderOutput = isShaderOutput;
-    }
-
-    get shaderOutput(): boolean {
-        return this._bShaderOutput;
-    }
-
-    set attrExtractionBlock(pCodeBlock: IInstruction) {
-        this._pAttrExtractionBlock = pCodeBlock;
-    }
-
-    get attrExtractionBlock(): IInstruction {
-        return this._pAttrExtractionBlock;
-    }
 
     get nameIndex(): number {
-        return this._iNameIndex || (this._iNameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName));
+        return this._nameIndex;
     }
 
-    get fullNameExpr(): IExprInstruction {
-        if (!isNull(this._pFullNameExpr)) {
-            return this._pFullNameExpr;
-        }
-
-        this._pFullNameExpr = new IdExprInstruction(null);
-        this._pFullNameExpr.push(this.nameID, false);
-
-        return this._pFullNameExpr;
-    }
 
     get fullName(): string {
         if (this.isField() &&
@@ -161,14 +95,16 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    fillNameIndex(): void {
-        this._iNameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName);
-    }
-
-
     isUniform(): boolean {
         return this.type.hasUsage('uniform');
     }
+
+
+    isVarying(): boolean {
+        console.log('probably will not work');
+        return this.type.hasUsage('varying');
+    }
+    
 
     isField(): boolean {
         if (isNull(this.parent)) {
@@ -185,47 +121,32 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return false;
     }
 
+    
     isSampler(): boolean {
         return this.type.isSampler();
     }
 
-    lockInitializer(): void {
-        this._bLockInitializer = true;
-    }
-
-    unlockInitializer(): void {
-        this._bLockInitializer = false;
-    }
-
-    prepareDefaultValue(): void {
-        this.initializeExpr.evaluate();
-        this._pDefaultValue = this.initializeExpr.getEvalValue();
-    }
 
     toCode(): string {
-        if (this.shaderOutput) {
-            return '';
-        }
-        var sCode: string = '';
+        var code: string = '';
 
         {
-            sCode = this.type.toCode();
-            sCode += ' ' + this.nameID.toCode();
+            code = this.type.toCode();
+            code += ' ' + this.nameID.toCode();
 
             if (this.type.isNotBaseArray()) {
                 var iLength: number = this.type.length;
-                sCode += '[' + iLength + ']';
+                code += '[' + iLength + ']';
             }
 
-            if (!isNull(this.initializeExpr) &&
+            if (!isNull(this.initExpr) &&
                 !this.isSampler() &&
-                !this.isUniform() &&
-                !this._bLockInitializer) {
-                sCode += '=' + this.initializeExpr.toCode();
+                !this.isUniform()) {
+                code += '=' + this.initExpr.toCode();
             }
         }
 
-        return sCode;
+        return code;
     }
 }
 

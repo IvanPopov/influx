@@ -3,7 +3,7 @@ import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class AnnotationInstruction extends Instruction implements IAnnotationInstruction {
-    constructor(pNode: IParseNode) {
-        super(EInstructionTypes.k_AnnotationInstruction, pNode);
+    constructor(node: IParseNode) {
+        super(node, EInstructionTypes.k_AnnotationInstruction);
     }
 }

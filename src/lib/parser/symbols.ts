@@ -3,6 +3,7 @@ export const T_EMPTY : string                    = 'EMPTY';               //item
 export const UNKNOWN_TOKEN : string              = 'UNNOWN';              //lexer
 export const START_SYMBOL : string               = 'S';                   //parser
 export const UNUSED_SYMBOL : string              = '##';                  //parser
+export const INLINE_COMMENT_SYMBOL: string       = '#';                   //parser
 export const END_SYMBOL : string                 = '$';                   //lexer, parser
 export const LEXER_RULES : string                = '--LEXER--';           //parser
 export const FLAG_RULE_CREATE_NODE : string      = '--AN';                //parser

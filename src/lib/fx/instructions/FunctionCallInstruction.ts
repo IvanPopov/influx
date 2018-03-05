@@ -9,50 +9,57 @@ import { IdExprInstruction } from "./IdExprInstruction";
  * EMPTY_OPERATOR IdExprInstruction ExprInstruction ... ExprInstruction 
  */
 export class FunctionCallInstruction extends IdExprInstruction implements IFunctionCallInstruction {
+    private _arguments: IExprInstruction[];
     
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_FunctionCallInstruction);
+    constructor(node: IParseNode, decl: IFunctionDeclInstruction, args: IdExprInstruction[]) {
+        super(node, decl, EInstructionTypes.k_FunctionCallInstruction);
+        
+        this._arguments = args;
     }
 
     get declaration(): IFunctionDeclInstruction {
-        return <IFunctionDeclInstruction>(<IIdExprInstruction>this.instructions[0]).type.parent.parent;
+        return <IFunctionDeclInstruction>super.declaration;
+    }
+
+    get args(): IExprInstruction[] {
+        return this._arguments;
     }
 
 
     toCode(): string {
-        var sCode: string = "";
+        var code: string = "";
 
-        sCode += this.instructions[0].toCode();
-        sCode += "(";
-        for (var i: number = 1; i < this.instructions.length; i++) {
-            sCode += this.instructions[i].toCode();
-            if (i !== this.instructions.length - 1) {
-                sCode += ","
+        code += this.declaration.nameID.toCode();
+        code += "(";
+        for (var i: number = 0; i < this._arguments.length; i++) {
+            code += this._arguments[i].toCode();
+            if (i !== this._arguments.length - 1) {
+                code += ","
             }
         }
-        sCode += ")"
+        code += ")"
 
-        return sCode;
+        return code;
     }
 
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pExprList: IExprInstruction[] = <IExprInstruction[]>this.instructions;
+        var pArgs: IExprInstruction[] = <IExprInstruction[]>this.args;
         var pFunction: IFunctionDeclInstruction = this.declaration;
-        var pArguments: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>pFunction.arguments;
+        var pArgDecls: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>pFunction.arguments;
 
-        pExprList[0].addUsedData(pUsedDataCollector, eUsedMode);
+        // this.nameID.addUsedData(pUsedDataCollector, eUsedMode);
 
-        for (var i: number = 0; i < pArguments.length; i++) {
-            if (pArguments[i].type.hasUsage("out")) {
-                pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
+        for (var i: number = 0; i < pArgDecls.length; i++) {
+            if (pArgDecls[i].type.hasUsage("out")) {
+                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
             }
-            else if (pArguments[i].type.hasUsage("inout")) {
-                pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+            else if (pArgDecls[i].type.hasUsage("inout")) {
+                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
             }
             else {
-                pExprList[i + 1].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
             }
         }
     }

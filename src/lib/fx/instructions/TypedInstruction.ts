@@ -1,22 +1,32 @@
 import { Instruction } from "./Instruction";
-import { ITypedInstruction, ITypeInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
+import { ITypedInstruction, ITypeInstruction, EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
 
-export class TypedInstruction extends Instruction implements ITypedInstruction {
-    protected _pType: ITypeInstruction;
+/**
+ * For example: 
+ *      int x;
+ *      int main();
+ */
 
-    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_TypedInstruction) {
-        super(pNode, eType);
-        this._pType = null;
+export class TypedInstruction extends Instruction implements ITypedInstruction {
+    protected _type: ITypeInstruction;
+
+    constructor(node: IParseNode, type: ITypeInstruction, instrType: EInstructionTypes = EInstructionTypes.k_TypedInstruction) {
+        super(node, instrType);
+        this._type = type;
     }
 
     get type(): ITypeInstruction {
-        return this._pType;
+        return this._type;
     }
 
-    set type(pType: ITypeInstruction) {
-        this._pType = pType;
+    set type(type: ITypeInstruction) {
+        this._type = type;
+    }
+
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void {
+        console.error("@pure_virtual");
     }
 }

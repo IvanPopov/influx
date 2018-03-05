@@ -1,4 +1,4 @@
-import { EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes, IVariableDeclInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
+import { EVarUsedMode, IDeclInstruction, ITypeUseInfoContainer, EInstructionTypes, IVariableDeclInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { StmtInstruction } from "./StmtInstruction";
 import { IMap } from "../../idl/IMap";
@@ -9,19 +9,29 @@ import { isNull } from "../../common";
  * EMPTY DeclInstruction
  */
 export class DeclStmtInstruction extends StmtInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_DeclStmtInstruction);
+    private _instructions: IDeclInstruction[];
+
+    
+    constructor(node: IParseNode, instructions: IDeclInstruction[]) {
+        super(node, EInstructionTypes.k_DeclStmtInstruction);
+        this._instructions = instructions;
     }
 
+
+    get instructions(): IDeclInstruction[] {
+        return this._instructions;
+    }
+
+
     toCode(): string {
-        var sCode: string = "";
+        var code: string = "";
         var pVariableList: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>this.instructions;
 
         for (var i: number = 0; i < this.instructions.length; i++) {
-            sCode += pVariableList[i].toCode() + ";\n";
+            code += pVariableList[i].toCode() + ";\n";
         }
 
-        return sCode;
+        return code;
     }
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,

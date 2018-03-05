@@ -10,8 +10,6 @@ export class Instruction implements IInstruction {
     private _pSourceNode: IParseNode;
     private _iInstructionID: number;
     private _eInstructionType: EInstructionTypes;
-    private _sOperator: string;
-    private _pInstructions: IInstruction[];
     private _iScope: number;
     private _pParentInstruction: IInstruction;
     private _pLastError: IInstructionError;
@@ -23,8 +21,6 @@ export class Instruction implements IInstruction {
         this._pSourceNode = pNode;
         this._iInstructionID = (Instruction.INSTRUCTION_COUNTER++);
         this._eInstructionType = eType;
-        this._sOperator = null;
-        this._pInstructions = [];
         this._iScope = Instruction.UNDEFINE_SCOPE;
         this._pParentInstruction = null;
         this._pLastError = null;
@@ -44,19 +40,6 @@ export class Instruction implements IInstruction {
 
     get instructionID(): number {
         return this._iInstructionID;
-    }
-
-    get instructions(): IInstruction[] {
-        return this._pInstructions;
-    }
-
-    get operator(): string {
-        return this._sOperator;
-    }
-
-    // TODO: bad pattern!!
-    set operator(sOperator: string) {
-        this._sOperator = sOperator;
     }
 
     get scope(): number {
@@ -100,16 +83,9 @@ export class Instruction implements IInstruction {
         return !isNull(this._pLastError);
     }
 
-    push(pInstruction: IInstruction, isSetParent: boolean = false): void {
-        this.instructions.push(pInstruction);
-        if (isSetParent && !isNull(pInstruction)) {
-            pInstruction.parent = (this as IInstruction);
-        }
-    }
-
 
     prepareFor(eUsedType: EFunctionType): void {
-        this.instructions.forEach((pInst) => pInst.prepareFor(eUsedType));
+        console.error("pure virtual method!");
     }
 
 

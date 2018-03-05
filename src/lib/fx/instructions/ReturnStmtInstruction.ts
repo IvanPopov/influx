@@ -1,4 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
+import { IExprInstruction } from "./../../idl/IInstruction";
 import { EInstructionTypes, EFunctionType, ITypedInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -9,55 +10,44 @@ import { IParseNode } from "../../idl/parser/IParser";
  * return ExprInstruction
  */
 export class ReturnStmtInstruction extends StmtInstruction {
-    private _isPositionReturn: boolean;
-    private _isColorReturn: boolean;
-    private _isOnlyReturn: boolean;
+    private _operator: string;
+    private _expr: IExprInstruction;
 
-    constructor(pNode: IParseNode) {
+    constructor(pNode: IParseNode, expr: IExprInstruction) {
         super(pNode, EInstructionTypes.k_ReturnStmtInstruction);
-        this.operator = "return";
-        this._isPositionReturn = false;
-        this._isColorReturn = false;
-        this._isOnlyReturn = false;
+        
+        this._operator = "return";
+        this._expr = expr;
     }
 
+
+    get expr(): IExprInstruction {
+        return this._expr;
+    }
+
+
     prepareFor(eUsedMode: EFunctionType): void {
-        var pReturn: ITypedInstruction = <ITypedInstruction>this.instructions[0];
-        if (isNull(pReturn)) {
+        var expr: ITypedInstruction = <ITypedInstruction>this.expr;
+        if (isNull(expr)) {
             return;
         }
 
         if (eUsedMode === EFunctionType.k_Vertex) {
-            if (pReturn.type.isBase()) {
-                this._isPositionReturn = true;
+            if (expr.type.isBase()) {
+                // this._isPositionReturn = true;
             }
             else {
-                this._isOnlyReturn = true;
+                // this._isOnlyReturn = true;
             }
         }
         else if (eUsedMode === EFunctionType.k_Pixel) {
-            this._isColorReturn = true;
-        }
-
-        for (var i: number = 0; i < this.instructions.length; i++) {
-            this.instructions[i].prepareFor(eUsedMode);
+            // this._isColorReturn = true;
         }
     }
 
     toCode(): string {
-        if (this._isPositionReturn) {
-            return "Out.POSITION=" + this.instructions[0].toCode() + "; return;";
-        }
-        if (this._isColorReturn) {
-            //return "gl_FragColor=" + this.instructions[0].toCode() + "; return;";
-            return "resultColor=" + this.instructions[0].toCode() + "; return;";
-        }
-        if (this._isOnlyReturn) {
-            return "return;"
-        }
-
-        if (this.instructions.length > 0) {
-            return "return " + this.instructions[0].toCode() + ";";
+        if (this.expr) {
+            return "return " + this.expr.toCode() + ";";
         }
         else {
             return "return;";

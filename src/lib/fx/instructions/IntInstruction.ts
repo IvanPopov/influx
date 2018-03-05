@@ -5,38 +5,36 @@ import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _iValue: number;
+    private _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_IntInstruction);
-        this._iValue = 0;
-        this._pType = Effect.getSystemType("number").variableType;
+    constructor(pNode: IParseNode, value: number) {
+        super(pNode, Effect.getSystemType("number").variableType, EInstructionTypes.k_IntInstruction);
+        this._value = value;
     }
 
-    set value(iValue: number) {
-        this._iValue = iValue;
-    }
-
+    
     get value(): number {
-        return this._iValue;
+        return this._value;
     }
+
 
     toString(): string {
-        return <string><any>this._iValue;
+        return <string><any>this._value;
     }
 
+    
     toCode(): string {
-        var sCode: string = "";
-        sCode += this._iValue.toString();
-        return sCode;
+        return this._value.toString();
     }
 
+    
     evaluate(): boolean {
-        this._pLastEvalResult = this._iValue;
+        this._evalResult = this._value;
         return true;
     }
+
 
     isConst(): boolean {
         return true;

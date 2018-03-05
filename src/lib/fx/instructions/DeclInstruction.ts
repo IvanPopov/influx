@@ -4,38 +4,36 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
-    protected _sSemantics: string = "";
-    protected _pAnnotation: IAnnotationInstruction = null;
-    protected _bForPixel: boolean = true;
-    protected _bForVertex: boolean = true;
-    protected _bIsBuiltIn: boolean = false;
+    protected _semantics: string
+    protected _annotation: IAnnotationInstruction;
+    protected _bIsBuiltIn: boolean;
+    protected _bForPixel: boolean;
+    protected _bForVertex: boolean;
+    
+    constructor(node: IParseNode, semantics: string = null, annotation: IAnnotationInstruction = null, type: EInstructionTypes = EInstructionTypes.k_DeclInstruction) {
+        super(node, null, type);
 
-    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_DeclInstruction) {
-        super(pNode, eType);
+        this._semantics = semantics;
+        this._annotation = annotation;
+        this._bIsBuiltIn = false;
+        this._bForPixel = true;
+        this._bForVertex = true;
     }
 
     get semantics(): string {
-        return this._sSemantics;
-    }
-
-    set semantics(sSemantic: string) {
-        this._sSemantics = sSemantic;
-    }
-
-    set annotation(pAnnotation: IAnnotationInstruction) {
-        this._pAnnotation = pAnnotation;
+        return this._semantics;
     }
 
     get annotation(): IAnnotationInstruction {
-        return this._pAnnotation;
+        return this._annotation;
     }
 
     get name(): string {
-        return "";
+        return null;
     }
 
     get realName(): string {
-        return "";
+        return null;
     }
 
     get nameID(): IIdInstruction {
@@ -46,8 +44,8 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
         return this._bIsBuiltIn;
     }
 
-    set builtIn(isBuiltIn: boolean) {
-        this._bIsBuiltIn = isBuiltIn;
+    set builtIn(val: boolean) {
+        this._bIsBuiltIn = val;
     }
 
     get vertex(): boolean {
@@ -65,5 +63,4 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
     set pixel(bVal: boolean) {
         this._bForPixel = true;
     }
-
 }

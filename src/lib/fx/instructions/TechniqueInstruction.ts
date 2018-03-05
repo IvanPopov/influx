@@ -1,58 +1,28 @@
 import { isNull } from '../../common';
+import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import { EInstructionTypes, IPassInstruction, ITechniqueInstruction } from '../../idl/IInstruction';
 import { DeclInstruction } from './DeclInstruction';
 import { PassInstruction } from './PassInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 
 export class TechniqueInstruction extends DeclInstruction implements ITechniqueInstruction {
-    private _sName: string;
-    private _bHasComplexName: boolean;
-    private _pPassList: IPassInstruction[];
+    private _name: string;
+    private _passList: IPassInstruction[];
 
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_TechniqueInstruction);
-        this._sName = null;
-        this._bHasComplexName = null;
-        this._pPassList = [];
-
+    constructor(node: IParseNode, name: string, passes: IPassInstruction[], 
+                semantics: string = null, annotation: IAnnotationInstruction = null) {
+        super(node, semantics, annotation, EInstructionTypes.k_TechniqueInstruction);
+        this._name = name;
+        this._passList = passes;
     }
 
-    set name(sName: string) {
-        this._sName = sName;
-    }
-
-    set complexName(bVal: boolean) {
-        this._bHasComplexName = bVal;
-    }
 
     get name(): string {
-        return this._sName;
-    }
-
-    get complexName(): boolean {
-        return this._bHasComplexName;
-    }
-
-    get passList(): IPassInstruction[] {
-        return this._pPassList;
+        return this._name;
     }
 
     
-    get totalPasses(): number {
-        return this._pPassList.length;
-    }
-
-
-    addPass(pPass: IPassInstruction): void {
-        if (isNull(this._pPassList)) {
-            this._pPassList = [];
-        }
-
-        this._pPassList.push(pPass);
-    }
-
-
-    getPass(iPass: number): IPassInstruction {
-        return iPass < this._pPassList.length ? this._pPassList[iPass] : null;
+    get passList(): IPassInstruction[] {
+        return this._passList;
     }
 }

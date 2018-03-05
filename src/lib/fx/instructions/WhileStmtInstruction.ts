@@ -1,4 +1,6 @@
 import { EInstructionTypes } from "../../idl/IInstruction";
+import { IStmtInstruction } from "./../../idl/IInstruction";
+import { IExprInstruction } from "./../../idl/IInstruction";
 import { StmtInstruction } from "./StmtInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -8,25 +10,49 @@ import { IParseNode } from "../../idl/parser/IParser";
  * ( while || do_while) ExprInstruction StmtInstruction
  */
 export class WhileStmtInstruction extends StmtInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_WhileStmtInstruction);
+    protected _operator: string;
+    protected _cond: IExprInstruction;
+    protected _body: IStmtInstruction;
+
+    
+    constructor(node: IParseNode, cond: IExprInstruction, body: IStmtInstruction, operator: string) {
+        super(node, EInstructionTypes.k_WhileStmtInstruction);
+        this._cond = cond;
+        this._body = body;
+        this._operator = operator;
     }
 
+
+    get cond(): IExprInstruction {
+        return this.cond;
+    }
+
+
+    get body(): IStmtInstruction {
+        return this._body;
+    }
+
+
+    get operator(): string {
+        return this._operator;
+    }
+
+
     toCode(): string {
-        var sCode: string = "";
+        var code: string = "";
         if (this.operator === "while") {
-            sCode += "while(";
-            sCode += this.instructions[0].toCode();
-            sCode += ")";
-            sCode += this.instructions[1].toCode();
+            code += "while(";
+            code += this.cond.toCode();
+            code += ")";
+            code += this.body.toCode();
         }
         else {
-            sCode += "do";
-            sCode += this.instructions[1].toCode();
-            sCode += "while(";
-            sCode += this.instructions[0].toCode();
-            sCode += ");";
+            code += "do";
+            code += this.body.toCode();
+            code += "while(";
+            code += this.cond.toCode();
+            code += ");";
         }
-        return sCode;
+        return code;
     }
 }

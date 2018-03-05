@@ -1,5 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IVariableDeclInstruction, EInstructionTypes, IExprInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
+import { IDispatch } from "./../../../sandbox/actions/index";
+import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, IExprInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -10,20 +11,35 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR Instruction ExprInstruction
  */
 export class PostfixIndexInstruction extends ExprInstruction {
-    private _pSamplerArrayDecl: IVariableDeclInstruction = null;
+    // private _samplerArrayDecl: IVariableDeclInstruction = null;
+    private _element: IExprInstruction;
+    private _index: IExprInstruction;
 
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_PostfixIndexInstruction);
+    constructor(node: IParseNode, element: IExprInstruction, index: IExprInstruction) {
+        super(node, (element.type as IVariableTypeInstruction).arrayElementType, EInstructionTypes.k_PostfixIndexInstruction);
+        this._element = element;
+        this._index = index;
     }
+
+    
+    get index(): IExprInstruction {
+        return this._index;
+    }
+
+
+    get element(): IExprInstruction {
+        return this._element;
+    }
+
 
     toCode(): string {
         var sCode: string = "";
 
         {
-            sCode += this.instructions[0].toCode();
+            sCode += this.element.toCode();
 
-            if (!(<IExprInstruction>this.instructions[0]).type.collapsed) {
-                sCode += "[" + this.instructions[1].toCode() + "]";
+            if (!(<IExprInstruction>this.element).type.collapsed) {
+                sCode += "[" + this.index.toCode() + "]";
             }
         }
 
@@ -32,20 +48,20 @@ export class PostfixIndexInstruction extends ExprInstruction {
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this.instructions[0];
-        var pIndex: IExprInstruction = <IExprInstruction>this.instructions[1];
+        var pSubExpr: IExprInstruction = <IExprInstruction>this.element;
+        var pIndex: IExprInstruction = <IExprInstruction>this.index;
 
         pSubExpr.addUsedData(pUsedDataCollector, eUsedMode);
         pIndex.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
 
         if (pSubExpr.type.isFromVariableDecl() && pSubExpr.type.isSampler()) {
-            this._pSamplerArrayDecl = pSubExpr.type.parentVarDecl;
+            // this._samplerArrayDecl = pSubExpr.type.parentVarDecl;
         }
     }
 
     isConst(): boolean {
-        return (<IExprInstruction>this.instructions[0]).isConst() &&
-            (<IExprInstruction>this.instructions[1]).isConst();
+        return (<IExprInstruction>this.element).isConst() &&
+            (<IExprInstruction>this.index).isConst();
     }
 }
 

@@ -1,4 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { ITypedInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstruction, IInstruction, IAssignmentExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
@@ -8,16 +9,28 @@ import { IMap } from "../../idl/IMap";
  * (=|+=|-=|*=|/=|%=) Instruction Instruction
  */
 export class AssignmentExprInstruction extends ExprInstruction implements IAssignmentExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_AssignmentExprInstruction);
+    private _leftValue: ITypedInstruction;
+    private _rightValue: ITypedInstruction;
+    private _operator: string;
+
+    constructor(node: IParseNode, left: ITypedInstruction, right: ITypedInstruction, operator: string) {
+        super(node, left.type, EInstructionTypes.k_AssignmentExprInstruction);
+
+        this._leftValue = left;
+        this._rightValue = right;
+        this._operator = operator;
     }
 
     get left(): IInstruction {
-        return this.instructions[0];
+        return this._leftValue;
     }
 
     get right(): IInstruction {
-        return this.instructions[1];
+        return this._rightValue;
+    }
+
+    get operator(): string {
+        return this._operator;
     }
 
     toCode(): string {

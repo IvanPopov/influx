@@ -1,4 +1,4 @@
-import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes } from "../../idl/IInstruction";
+import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, ITypeInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
@@ -8,26 +8,34 @@ import { ExprInstruction } from "./ExprInstruction";
  * EMPTY_OPERATOR VariableTypeInstruction Instruction
  */
 export class CastExprInstruction extends ExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_CastExprInstruction);
+    private _srcExpr: IInstruction;
+
+    constructor(node: IParseNode, type: ITypeInstruction, expr: IInstruction) {
+        super(node, type, EInstructionTypes.k_CastExprInstruction);
+
+        this._srcExpr = expr;
+    }
+
+    get expr(): IInstruction {
+        return this._srcExpr;
     }
 
     toCode(): string {
         var sCode: string = "";
-        sCode += this.instructions[0].toCode();
+        sCode += this.type.toCode();
         sCode += "(";
-        sCode += this.instructions[1].toCode();
+        sCode += this._srcExpr.toCode();
         sCode += ")";
         return sCode;
     }
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this.instructions[1];
+        var pSubExpr: IExprInstruction = <IExprInstruction>this._srcExpr;
         pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
 
     isConst(): boolean {
-        return (<IExprInstruction>this.instructions[1]).isConst();
+        return (<IExprInstruction>this._srcExpr).isConst();
     }
 }

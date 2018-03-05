@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { EInstructionTypes, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, IIdExprInstruction, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -9,49 +9,54 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR Instruction IdInstruction
  */
 export class PostfixPointInstruction extends ExprInstruction {
-    private _bToFinalFirst: boolean;
-    private _bToFinalSecond: boolean;
+    private _element: IExprInstruction;
+    private _postfix: IIdExprInstruction;
 
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_PostfixPointInstruction);
-        this._bToFinalFirst = true;
-        this._bToFinalSecond = true;
+
+    constructor(node: IParseNode, element: IExprInstruction, postfix: IIdExprInstruction) {
+        super(node, postfix.type, EInstructionTypes.k_PostfixPointInstruction);
+        this._element = element;
+        this._postfix = postfix;
     }
+
+
+    get element(): IExprInstruction {
+        return this._element;
+    }
+
+
+    get postfix(): IIdExprInstruction {
+        return this._postfix;
+    }
+
+
 
     prepareFor(eUsedMode: EFunctionType) {
-        if (!this.instructions[0].visible) {
-            this._bToFinalFirst = false;
-        }
-
-        if (!this.instructions[1].visible) {
-            this._bToFinalSecond = false;
-        }
-
-        this.instructions[0].prepareFor(eUsedMode);
-        this.instructions[1].prepareFor(eUsedMode);
+        this.element.prepareFor(eUsedMode);
+        this.postfix.prepareFor(eUsedMode);
     }
 
+    
     toCode(): string {
-        var sCode: string = "";
+        var code: string = '';
 
-        sCode += this._bToFinalFirst ? this.instructions[0].toCode() : "";
-        sCode += this._bToFinalFirst ? "." : "";
-        sCode += this._bToFinalSecond ? this.instructions[1].toCode() : "";
+        code += this.element.visible ? this.element.toCode() : "";
+        code += this.element.visible ? "." : "";
+        code += this.postfix.visible ? this.postfix.toCode() : "";
 
-        return sCode;
+        return code;
     }
 
+    
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this.instructions[0];
-        var pPoint: IExprInstruction = <IExprInstruction>this.instructions[1];
-
-        pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Undefined);
-        pPoint.addUsedData(pUsedDataCollector, eUsedMode);
+        this._element.addUsedData(pUsedDataCollector, EVarUsedMode.k_Undefined);
+        this._postfix.addUsedData(pUsedDataCollector, eUsedMode);
     }
 
+
     isConst(): boolean {
-        return (<IExprInstruction>this.instructions[0]).isConst();
+        return (<IExprInstruction>this.element).isConst();
     }
 }
 

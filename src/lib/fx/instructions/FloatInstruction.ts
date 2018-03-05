@@ -5,41 +5,41 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class FloatInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _fValue: number;
+    private _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_FloatInstruction);
-        this._fValue = 0.0;
-        this.type = Effect.getSystemType("number").variableType;
+    constructor(node: IParseNode, val: number) {
+        super(node, Effect.getSystemType("number").variableType, EInstructionTypes.k_FloatInstruction);
+        this._value = val;
     }
 
-    set value(fValue: number) {
-        this._fValue = fValue;
-    }
-
+    
     get value(): number {
-        return this._fValue;
+        return this._value;
     }
 
+    
     toString(): string {
-        return String(this._fValue);
+        return String(this._value);
     }
 
+    
     toCode(): string {
-        var sCode: string = "";
-        sCode += this._fValue.toString();
-        if (this._fValue % 1 === 0) {
-            sCode += ".";
+        var code: string = "";
+        code += this._value.toString();
+        if (this._value % 1 === 0) {
+            code += ".";
         }
-        return sCode;
+        return code;
     }
 
+    
     evaluate(): boolean {
-        this._pLastEvalResult = this._fValue;
+        this._evalResult = this._value;
         return true;
     }
+
 
     isConst(): boolean {
         return true;

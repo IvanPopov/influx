@@ -192,24 +192,24 @@ PassStates : PassState --NN
 PassStates : PassStates PassState
 
 PassState : Id StateIndex StateExprBegin PassStateExpr StateExprEnd --AN
-PassState : StateIf
-PassState : StateSwitch
+# PassState : StateIf
+# PassState : StateSwitch
 
-StateIf : T_KW_IF '(' Expr ')' PassStateBlock
-StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE PassStateBlock
-StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE StateIf
-StateSwitch : T_KW_SWITCH '(' Expr ')' CaseBlock
+# StateIf : T_KW_IF '(' Expr ')' PassStateBlock
+# StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE PassStateBlock
+# StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE StateIf
+# StateSwitch : T_KW_SWITCH '(' Expr ')' CaseBlock
 
-CaseBlock : '{' CaseStates DefaultState '}'
-CaseStates : CaseState --NN
-CaseStates : CaseStates CaseState
+# CaseBlock : '{' CaseStates DefaultState '}'
+# CaseStates : CaseState --NN
+# CaseStates : CaseStates CaseState
 
-CaseState : T_KW_CASE AssignmentExpr ':' PassStates BreakOpt
-DefaultState : T_KW_DEFAULT ':' PassStates BreakOpt
+# CaseState : T_KW_CASE AssignmentExpr ':' PassStates BreakOpt
+# DefaultState : T_KW_DEFAULT ':' PassStates BreakOpt
 
-BreakOpt :  --NN
-BreakOpt : ';'
-BreakOpt : T_KW_BREAK ';'
+# BreakOpt :  --NN
+# BreakOpt : ';'
+# BreakOpt : T_KW_BREAK ';'
 
 StateBlock : StateBlockBegin StateBlockEnd --AN
 StateBlock : StateBlockBegin States StateBlockEnd

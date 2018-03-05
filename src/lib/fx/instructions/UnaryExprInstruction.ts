@@ -2,20 +2,38 @@ import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContaine
 import { IMap } from '../../idl/IMap';
 import { ExprInstruction } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
+import * as Effect from '../Effect';
 
 /**
  * Represent + - ! ++ -- expr
  * (+|-|!|++|--|) Instruction
  */
 export class UnaryExprInstruction extends ExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_UnaryExprInstruction);
+    protected _operator: string;
+    protected _expr: IExprInstruction;
+
+
+    constructor(pNode: IParseNode, expr: IExprInstruction, operator: string) {
+        super(pNode, Effect.getSystemType('bool').variableType, EInstructionTypes.k_UnaryExprInstruction);
+        this._expr = expr;
+        this._operator = operator;
     }
+
+
+    get operator(): string {
+        return this._operator;
+    }
+
+
+    get expr(): IExprInstruction {
+        return this._expr;
+    }
+
 
     toCode(): string {
         var sCode: string = '';
         sCode += this.operator;
-        sCode += this.instructions[0].toCode();
+        sCode += this.expr.toCode();
 
         return sCode;
     }
@@ -23,19 +41,20 @@ export class UnaryExprInstruction extends ExprInstruction {
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
                  eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         if (this.operator === '++' || this.operator === '--') {
-            (<IExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+            (<IExprInstruction>this.expr).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
         } else {
-            (<IExprInstruction>this.instructions[0]).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+            (<IExprInstruction>this.expr).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
         }
     }
 
     isConst(): boolean {
-        return (<IExprInstruction>this.instructions[0]).isConst();
+        return (<IExprInstruction>this.expr).isConst();
     }
+
 
     evaluate(): boolean {
         var sOperator: string = this.operator;
-        var pExpr: IExprInstruction = <IExprInstruction>this.instructions[0];
+        var pExpr: IExprInstruction = <IExprInstruction>this.expr;
 
         if (!pExpr.evaluate()) {
             return false;
@@ -66,8 +85,7 @@ export class UnaryExprInstruction extends ExprInstruction {
             return false;
         }
 
-        this._pLastEvalResult = pRes;
-
+        this._evalResult = pRes;
         return true;
     }
 }

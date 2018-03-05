@@ -1,6 +1,6 @@
 import { DeclInstruction } from "./DeclInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
-import { IVariableDeclInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
+import { IVariableDeclInstruction, IAnnotationInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
 import * as Effect from "../Effect";
@@ -11,157 +11,137 @@ import { isNull } from "../../common";
  * EMPTY_OPERTOR VariableTypeInstruction IdInstruction VarDeclInstruction ... VarDeclInstruction
  */
 export class FunctionDefInstruction extends DeclInstruction implements IFunctionDefInstruction {
-    private _pParameterList: IVariableDeclInstruction[];
-    private _pParamListForShaderCompile: IVariableDeclInstruction[];
-    private _pParamListForShaderInput: IVariableDeclInstruction[];
+    private _parameterList: IVariableDeclInstruction[];
+    private _paramListForShaderCompile: IVariableDeclInstruction[];
+    private _paramListForShaderInput: IVariableDeclInstruction[];
+    
+    private _returnType: IVariableTypeInstruction;
+    private _functionName: IIdInstruction;
+    
+    // todo: remove
+    // Specifies whether to use as shader main function.
+    private _bShaderDef: boolean;
+    // Specifies whether the parameters are suitable for the shader.
     private _bIsComplexShaderInput: boolean;
 
-    private _pReturnType: IVariableTypeInstruction;
-    private _pFunctionName: IIdInstruction;
-    private _nParamsRequired: number;
-    private _sDefinition: string;
-    
-    private _isAnalyzedForVertexUsage: boolean;
-    private _isAnalyzedForPixelUsage: boolean;
-    private _bCanUsedAsFunction: boolean;
+    constructor(node: IParseNode, type: IVariableTypeInstruction, 
+        name: IIdInstruction, params: IVariableDeclInstruction[], 
+        semantics: string = null, annotation: IAnnotationInstruction = null) {
+        super(node, semantics, annotation, EInstructionTypes.k_FunctionDefInstruction);
 
-    private _bShaderDef: boolean;
+        this._parameterList = params || [];
+        this._returnType = type;
+        this._functionName = name;
 
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_FunctionDefInstruction);
-        this._pParameterList = [];
-        this._pParamListForShaderInput = [];
-        this._pParamListForShaderCompile = [];
+        this._paramListForShaderInput = [];
+        this._paramListForShaderCompile = [];
         this._bIsComplexShaderInput = false;
-        this._pReturnType = null;
-        this._nParamsRequired = 0;
-        this._pFunctionName = null;
-        this._sDefinition = null;
-        this._isAnalyzedForPixelUsage = false;
-        this._isAnalyzedForVertexUsage = false;
-        this._bCanUsedAsFunction = true;
         this._bShaderDef = false;
     }
 
-    
-    set type(pType: ITypeInstruction) {
-        this.returnType = (<IVariableTypeInstruction>pType);
-    }
-
-    get type(): ITypeInstruction {
-        return <ITypeInstruction>this.returnType;
-    }
-
-    set returnType(pReturnType: IVariableTypeInstruction) {
-        this._pReturnType = pReturnType;
-        pReturnType.parent = (this);
-    }
 
     get returnType(): IVariableTypeInstruction {
-        return this._pReturnType;
-    }
-
-    set functionName(pNameId: IIdInstruction) {
-        this._pFunctionName = pNameId;
-        pNameId.parent = (this);
+        return this._returnType;
     }
 
     get name(): string {
-        return this._pFunctionName.name;
+        return this._functionName.name;
     }
 
     get realName(): string {
-        return this._pFunctionName.realName;
+        return this._functionName.realName;
     }
 
     get functionName(): IIdInstruction {
-        return this._pFunctionName;
+        return this._functionName;
     }
 
     get arguments(): IVariableDeclInstruction[] {
-        return this._pParameterList;
+        return this._parameterList;
     }
 
     get numArgsRequired(): number {
-        return this._nParamsRequired;
+        // todo: check order!!
+        return this._parameterList.filter((param) => !!param.initializeExpr).length;
     }
 
+    // todo: remove
     set shaderDef(isShaderDef: boolean) {
         this._bShaderDef = isShaderDef;
     }
 
+    // todo: remove
     get shaderDef(): boolean {
         return this._bShaderDef;
     }
 
-    get stringDef(): string {
-        if (isNull(this._sDefinition)) {
-            this._sDefinition = this._pReturnType.hash + " " + this.name + "(";
 
-            for (var i: number = 0; i < this._pParameterList.length; i++) {
-                this._sDefinition += this._pParameterList[i].type.hash + ",";
-            }
+    toString(): string {
+        let def = this._returnType.hash + " " + this.name + "(";
 
-            this._sDefinition += ")";
+        for (var i: number = 0; i < this._parameterList.length; i++) {
+            def += this._parameterList[i].type.hash + ",";
         }
 
-        return this._sDefinition;
+        def += ")";
+        // todo: add semantics
+        return def;
     }
 
     get paramListForShaderInput(): IVariableDeclInstruction[] {
-        return this._pParamListForShaderInput;
+        return this._paramListForShaderInput;
     }
 
 
     toCode(): string {
-        var sCode: string = "";
+        var code: string = "";
 
         if (!this.shaderDef) {
 
-            sCode += this._pReturnType.toCode();
-            sCode += " " + this._pFunctionName.toCode();
-            sCode += "(";
+            code += this._returnType.toCode();
+            code += " " + this._functionName.toCode();
+            code += "(";
 
-            for (var i: number = 0; i < this._pParameterList.length; i++) {
-                sCode += this._pParameterList[i].toCode();
+            for (var i: number = 0; i < this._parameterList.length; i++) {
+                code += this._parameterList[i].toCode();
 
-                if (i !== this._pParameterList.length - 1) {
-                    sCode += ",";
+                if (i !== this._parameterList.length - 1) {
+                    code += ",";
                 }
             }
 
-            sCode += ")";
+            code += ")";
         }
         else {
-            sCode = "void " + this._pFunctionName.toCode() + "()";
+            code = "void " + this._functionName.toCode() + "()";
         }
 
-        return sCode;
+        return code;
     }
 
-    addParameter(pParameter: IVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
-        if (this._pParameterList.length > this._nParamsRequired &&
-            !pParameter.initializeExpr) {
+    // addParameter(pParameter: IVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
+    //     if (this._parameterList.length > this._nParamsRequired &&
+    //         !pParameter.initializeExpr) {
 
-            this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
-                {
-                    funcName: this._pFunctionName.name,
-                    varName: pParameter.name
-                });
-            return false;
-        }
+    //         this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
+    //             {
+    //                 funcName: this._functionName.name,
+    //                 varName: pParameter.name
+    //             });
+    //         return false;
+    //     }
 
-        var pParameterType: IVariableTypeInstruction = pParameter.type;
+    //     var pParameterType: IVariableTypeInstruction = pParameter.type;
 
-        this._pParameterList.push(pParameter);
-        pParameter.parent = (this);
+    //     this._parameterList.push(pParameter);
+    //     pParameter.parent = (this);
 
-        if (!pParameter.initializeExpr) {
-            this._nParamsRequired++;
-        }
+    //     if (!pParameter.initializeExpr) {
+    //         this._nParamsRequired++;
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
 
     isComplexShaderInput(): boolean {
@@ -169,78 +149,52 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    setShaderParams(pParamList: IVariableDeclInstruction[], isComplexInput: boolean): void {
-        this._pParamListForShaderInput = pParamList;
-        this._bIsComplexShaderInput = isComplexInput;
-    }
-
-    setAnalyzedInfo(isAnalyzedForVertexUsage: boolean,
-        isAnalyzedForPixelUsage: boolean,
-        bCanUsedAsFunction: boolean): void {
-        this._isAnalyzedForVertexUsage = isAnalyzedForVertexUsage;
-        this._isAnalyzedForPixelUsage = isAnalyzedForPixelUsage;
-        this._bCanUsedAsFunction = bCanUsedAsFunction;
-    }
-
-
     canUsedAsFunction(): boolean {
-        return this._bCanUsedAsFunction;
+        return true;
     }
 
     checkForVertexUsage(): boolean {
-        if (this._isAnalyzedForVertexUsage) {
-            return this.vertex;
-        }
-
-        this._isAnalyzedForVertexUsage = true;
-
         var isGood: boolean = true;
 
         isGood = this.checkReturnTypeForVertexUsage();
         if (!isGood) {
-            this.vertex = (false);
+            this.vertex = false;
             return false;
         }
 
         isGood = this.checkArgumentsForVertexUsage();
         if (!isGood) {
-            this.vertex = (false);
+            this.vertex = false;
             return false;
         }
 
-        this.vertex = (true);
+        this.vertex = true;
 
         return true;
     }
 
     checkForPixelUsage(): boolean {
-        if (this._isAnalyzedForPixelUsage) {
-            return this.pixel;
-        }
-
-        this._isAnalyzedForPixelUsage = true;
-
         var isGood: boolean = true;
 
         isGood = this.checkReturnTypeForPixelUsage();
         if (!isGood) {
-            this.pixel = (false);
+            this.pixel = false;
             return false;
         }
 
         isGood = this.checkArgumentsForPixelUsage();
         if (!isGood) {
-            this.pixel = (false);
+            this.pixel = false;
             return false;
         }
 
-        this.pixel = (true);
+        this.pixel = true;
 
         return true;
     }
 
     private checkReturnTypeForVertexUsage(): boolean {
-        var pReturnType: IVariableTypeInstruction = this._pReturnType;
+        var pReturnType: IVariableTypeInstruction = this._returnType;
         var isGood: boolean = true;
 
         if (pReturnType.isEqual(Effect.getSystemType("void"))) {
@@ -291,7 +245,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
     private checkReturnTypeForPixelUsage(): boolean {
-        var pReturnType: IVariableTypeInstruction = this._pReturnType;
+        var pReturnType: IVariableTypeInstruction = this._returnType;
         var isGood: boolean = true;
 
         if (pReturnType.isEqual(Effect.getSystemType("void"))) {
@@ -318,19 +272,19 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     private checkArgumentsForVertexUsage(): boolean {
-        var pArguments: IVariableDeclInstruction[] = this._pParameterList;
+        var params: IVariableDeclInstruction[] = this._parameterList;
         var isAttributeByStruct: boolean = false;
         var isAttributeByParams: boolean = false;
         var isStartAnalyze: boolean = false;
 
-        this._pParamListForShaderInput = [];
-        this._pParamListForShaderCompile = [];
+        this._paramListForShaderInput = [];
+        this._paramListForShaderCompile = [];
 
-        for (var i: number = 0; i < pArguments.length; i++) {
-            var pParam: IVariableDeclInstruction = pArguments[i];
+        for (var i: number = 0; i < params.length; i++) {
+            var pParam: IVariableDeclInstruction = params[i];
 
             if (pParam.isUniform()) {
-                this._pParamListForShaderCompile.push(pParam);
+                this._paramListForShaderCompile.push(pParam);
                 continue;
             }
 
@@ -371,7 +325,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
             }
 
-            this._pParamListForShaderInput.push(pParam);
+            this._paramListForShaderInput.push(pParam);
         }
 
         if (isAttributeByStruct) {
@@ -382,19 +336,19 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
     private checkArgumentsForPixelUsage(): boolean {
-        var pArguments: IVariableDeclInstruction[] = this._pParameterList;
+        var params: IVariableDeclInstruction[] = this._parameterList;
         var isVaryingsByStruct: boolean = false;
         var isVaryingsByParams: boolean = false;
         var isStartAnalyze: boolean = false;
 
-        this._pParamListForShaderInput = [];
-        this._pParamListForShaderCompile = [];
+        this._paramListForShaderInput = [];
+        this._paramListForShaderCompile = [];
 
-        for (var i: number = 0; i < pArguments.length; i++) {
-            var pParam: IVariableDeclInstruction = pArguments[i];
+        for (var i: number = 0; i < params.length; i++) {
+            var pParam: IVariableDeclInstruction = params[i];
 
             if (pParam.isUniform()) {
-                this._pParamListForShaderCompile.push(pParam);
+                this._paramListForShaderCompile.push(pParam);
                 continue;
             }
 
@@ -446,7 +400,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
             }
 
-            this._pParamListForShaderInput.push(pParam);
+            this._paramListForShaderInput.push(pParam);
         }
 
         if (isVaryingsByStruct) {

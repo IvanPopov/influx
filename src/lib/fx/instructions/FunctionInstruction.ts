@@ -1,4 +1,5 @@
 import { DeclInstruction } from "./DeclInstruction";
+import { IFunctionDefInstruction, IStmtBlockInstruction } from "./../../idl/IInstruction";
 import { IFunctionDeclInstruction, EFunctionType, IVariableDeclInstruction, ITypeUseInfoContainer, ITypeDeclInstruction, ISimpleInstruction, EInstructionTypes, ITypeInstruction, IIdInstruction, IVariableTypeInstruction, IDeclInstruction, IStmtInstruction, IInstruction, IInitExprInstruction } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -19,266 +20,129 @@ import * as Effect from "../Effect";
  * EMPTY_OPERTOR FunctionDefInstruction StmtBlockInstruction
  */
 export class FunctionDeclInstruction extends DeclInstruction implements IFunctionDeclInstruction {
-    protected _pFunctionDefenition: FunctionDefInstruction;
-    protected _pImplementation: StmtBlockInstruction;
-    protected _eFunctionType: EFunctionType;
+    protected _definition: IFunctionDefInstruction;
+    protected _implementation: IStmtBlockInstruction;
+    protected _functionType: EFunctionType;
+    protected _implementationScope: number;
 
     protected _bUsedAsFunction: boolean;
     protected _bUsedAsVertex: boolean;
     protected _bUsedAsPixel: boolean;
     protected _bCanUsedAsFunction: boolean;
-
     protected _bUsedInVertex: boolean;
     protected _bUsedInPixel: boolean;
 
-    protected _iImplementationScope: number;
-
-    protected _isInBlackList: boolean;
-
-    protected _pOutVariable: IVariableDeclInstruction;
-
     //Info about used data
-    protected _pUsedFunctionList: IFunctionDeclInstruction[];
-    protected _pUsedFunctionMap: IMap<IFunctionDeclInstruction>;
+    protected _usedFunctionMap: IMap<IFunctionDeclInstruction>;
+    protected _attributeVariableMap: IMap<IVariableDeclInstruction>;
+    protected _varyingVariableMap: IMap<IVariableDeclInstruction>;
+    protected _usedVarTypeMap: IMap<ITypeUseInfoContainer>;
+    protected _uniformVariableMap: IMap<IVariableDeclInstruction>;
+    protected _textureVariableMap: IMap<IVariableDeclInstruction>;
+    protected _usedComplexTypeMap: IMap<ITypeInstruction>;
 
-    protected _pAttributeVariableMap: IMap<IVariableDeclInstruction>;
-    protected _pVaryingVariableMap: IMap<IVariableDeclInstruction>;
+    protected _vertexShader: IFunctionDeclInstruction;
+    protected _pixelShader: IFunctionDeclInstruction;
 
-    protected _pUsedVarTypeMap: IMap<ITypeUseInfoContainer>;
+    // not builtin used system functions.
+    private _extSystemTypeList: ITypeDeclInstruction[];
+    private _extSystemFunctionList: IFunctionDeclInstruction[];
 
-    protected _pUniformVariableMap: IMap<IVariableDeclInstruction>;
-    protected _pTextureVariableMap: IMap<IVariableDeclInstruction>;
+    constructor(node: IParseNode, definition: IFunctionDefInstruction,
+        implementation: IStmtBlockInstruction, scope: number = Instruction.UNDEFINE_SCOPE, semantics: string = null) {
+        super(node, semantics, null, EInstructionTypes.k_FunctionDeclInstruction);
 
-    protected _pUsedComplexTypeMap: IMap<ITypeInstruction>;
-
-    protected _pAttributeVariableKeys: number[];
-    protected _pVaryingVariableKeys: number[];
-
-    protected _pUniformVariableKeys: number[];
-    protected _pTextureVariableKeys: number[];
-    protected _pUsedComplexTypeKeys: number[];
-
-    protected _pVertexShader: IFunctionDeclInstruction;
-    protected _pPixelShader: IFunctionDeclInstruction;
-
-    private _pExtSystemTypeList: ITypeDeclInstruction[];
-    private _pExtSystemFunctionList: IFunctionDeclInstruction[];
-
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_FunctionDeclInstruction);
-
-        this._pFunctionDefenition = null;
-        this._pImplementation = null;
-        this._eFunctionType = EFunctionType.k_Function;
+        this._definition = definition;
+        this._implementation = implementation;
+        this._functionType = EFunctionType.k_Function;
+        this._implementationScope = scope;
 
         this._bUsedAsFunction = false;
         this._bUsedAsVertex = false;
         this._bUsedAsPixel = false;
         this._bCanUsedAsFunction = true;
-
         this._bUsedInVertex = false;
         this._bUsedInPixel = false;
 
-        this._iImplementationScope = Instruction.UNDEFINE_SCOPE;
+        this._usedFunctionMap = {};
+        this._attributeVariableMap = {};
+        this._varyingVariableMap = {};
+        this._usedVarTypeMap = {};
+        this._uniformVariableMap = {};
+        this._textureVariableMap = {};
+        this._usedComplexTypeMap = {};
 
-        this._isInBlackList = false;
-        this._pOutVariable = null;
+        this._vertexShader = null;
+        this._pixelShader = null;
 
-        this._pUsedFunctionList = [];
-        this._pUsedFunctionMap = {};
-
-        this._pAttributeVariableMap = {};
-        this._pVaryingVariableMap = {};
-
-        this._pUsedVarTypeMap = null;
-
-        this._pUniformVariableMap = {};
-        this._pTextureVariableMap = {};
-
-        this._pUsedComplexTypeMap = {};
-
-        this._pAttributeVariableKeys = [];
-        this._pVaryingVariableKeys = [];
-
-        this._pUniformVariableKeys = [];
-        this._pTextureVariableKeys = [];
-        this._pUsedComplexTypeKeys = [];
-
-        this._pVertexShader = null;
-        this._pPixelShader = null;
-
-        this._pExtSystemTypeList = [];
-        this._pExtSystemFunctionList = [];
+        this._extSystemTypeList = [];
+        this._extSystemFunctionList = [];
     }
 
-    get type(): ITypeInstruction {
-        return <ITypeInstruction>this.returnType;
-    }
 
-    get name(): string {
-        return this._pFunctionDefenition.name;
-    }
-
-    get realName(): string {
-        return this._pFunctionDefenition.realName;
-    }
-
-    get nameID(): IIdInstruction {
-        return this._pFunctionDefenition.nameID;
-    }
-
-    get arguments(): IVariableDeclInstruction[] {
-        return this._pFunctionDefenition.arguments;
-    }
-
-    get numArgsRequired(): number {
-        return this._pFunctionDefenition.numArgsRequired;
-    }
-
-    get returnType(): IVariableTypeInstruction {
-        return this._pFunctionDefenition.returnType;
-    }
 
     get functionType(): EFunctionType {
-        return this._eFunctionType;
+        return this._functionType;
     }
 
     set functionType(eFunctionType: EFunctionType) {
-        this._eFunctionType = eFunctionType;
-    }
-
-    set implementationScope(iScope: number) {
-        this._iImplementationScope = iScope;
+        this._functionType = eFunctionType;
     }
 
     get implementationScope(): number {
-        return this._iImplementationScope;
+        return this._implementationScope;
     }
 
-    set definition(pFunctionDef: IDeclInstruction) {
-        this._pFunctionDefenition = <FunctionDefInstruction>pFunctionDef;
-        this.instructions[0] = pFunctionDef;
-        pFunctionDef.parent = this;
+    get implementation(): IStmtBlockInstruction {
+        return this._implementation;
     }
 
-    get definition(): IDeclInstruction {
-        return this._pFunctionDefenition;
-    }
-
-    set implementation(pImplementation: IStmtInstruction) {
-        this._pImplementation = <StmtBlockInstruction>pImplementation;
-        this.instructions[1] = pImplementation;
-        pImplementation.parent = pImplementation;
+    get definition(): IFunctionDefInstruction {
+        return this._definition;
     }
 
     get vertexShader(): IFunctionDeclInstruction {
-        return this._pVertexShader;
+        return this._vertexShader;
     }
 
     get pixelShader(): IFunctionDeclInstruction {
-        return this._pPixelShader;
+        return this._pixelShader;
     }
-
-    get usedFunctionList(): IFunctionDeclInstruction[] {
-        return this._pUsedFunctionList;
-    }
-
 
     get attributeVariableMap(): IMap<IVariableDeclInstruction> {
-        return this._pAttributeVariableMap;
+        return this._attributeVariableMap;
     }
 
     get varyingVariableMap(): IMap<IVariableDeclInstruction> {
-        return this._pVaryingVariableMap;
+        return this._varyingVariableMap;
     }
 
     get uniformVariableMap(): IMap<IVariableDeclInstruction> {
-        return this._pUniformVariableMap;
+        return this._uniformVariableMap;
     }
 
     get textureVariableMap(): IMap<IVariableDeclInstruction> {
-        return this._pTextureVariableMap;
+        return this._textureVariableMap;
     }
 
     get usedComplexTypeMap(): IMap<ITypeInstruction> {
-        return this._pUsedComplexTypeMap;
-    }
-
-    get attributeVariableKeys(): number[] {
-        if (isNull(this._pAttributeVariableKeys) && !isNull(this._pAttributeVariableMap)) {
-            this._pAttributeVariableKeys = <number[]><any>Object.keys(this._pAttributeVariableMap);
-        }
-
-        return this._pAttributeVariableKeys;
-    }
-
-    get varyingVariableKeys(): number[] {
-        if (isNull(this._pVaryingVariableKeys) && !isNull(this._pVaryingVariableMap)) {
-            this._pVaryingVariableKeys = <number[]><any>Object.keys(this._pVaryingVariableMap);
-        }
-
-        return this._pVaryingVariableKeys;
-    }
-
-
-    get uniformVariableKeys(): number[] {
-        if (isNull(this._pUniformVariableKeys) && !isNull(this._pUniformVariableMap)) {
-            this._pUniformVariableKeys = <number[]><any[]>Object.keys(this._pUniformVariableMap);
-        }
-
-        return this._pUniformVariableKeys;
-    }
-
-    get textureVariableKeys(): number[] {
-        if (isNull(this._pTextureVariableKeys) && !isNull(this._pTextureVariableMap)) {
-            this._pTextureVariableKeys = <number[]><any[]>Object.keys(this._pTextureVariableMap);
-        }
-
-        return this._pTextureVariableKeys;
-    }
-
-    get usedComplexTypeKeys(): number[] {
-        if (isNull(this._pUsedComplexTypeKeys)) {
-            this._pUsedComplexTypeKeys = <number[]><any[]>Object.keys(this._pUsedComplexTypeMap);
-        }
-
-        return this._pUsedComplexTypeKeys;
-    }
-
-    get extSystemFunctionList(): IFunctionDeclInstruction[] {
-        return this._pExtSystemFunctionList;
+        return this._usedComplexTypeMap;
     }
 
     get extSystemTypeList(): ITypeDeclInstruction[] {
-        return this._pExtSystemTypeList;
+        return this._extSystemTypeList;
     }
+
+    get extSystemFunctionList(): IFunctionDeclInstruction[] {
+        return this._extSystemFunctionList;
+    }
+
 
     toCode(): string {
-        let sCode = "";
-
-        sCode += this._pFunctionDefenition.toCode();
-        sCode += this._pImplementation.toCode();
-
-        return sCode;
-    }
-
-
-    addOutVariable(pVariable: IVariableDeclInstruction): boolean {
-        if (!isNull(this._pOutVariable)) {
-            return false;
-        }
-
-        if (!pVariable.type.isEqual(this.returnType)) {
-            return false;
-        }
-
-        this._pOutVariable = pVariable;
-        return true;
-    }
-
-
-    getOutVariable(): IVariableDeclInstruction {
-        return this._pOutVariable;
+        let code = '';
+        code += this._definition.toCode();
+        code += this._implementation.toCode();
+        return code;
     }
 
 
@@ -350,20 +214,16 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         return this.isUsedInPixel() ? this.pixel : true;
     }
 
-    checkDefenitionForVertexUsage(): boolean {
-        return this._pFunctionDefenition.checkForVertexUsage();
+    checkDefinitionForVertexUsage(): boolean {
+        return this._definition.checkForVertexUsage();
     }
 
-    checkDefenitionForPixelUsage(): boolean {
-        return this._pFunctionDefenition.checkForPixelUsage();
+    checkDefinitionForPixelUsage(): boolean {
+        return this._definition.checkForPixelUsage();
     }
 
     canUsedAsFunction(): boolean {
-        return this._bCanUsedAsFunction && this._pFunctionDefenition.canUsedAsFunction();
-    }
-
-    notCanUsedAsFunction(): void {
-        this._bCanUsedAsFunction = false;
+        return this._bCanUsedAsFunction && this._definition.canUsedAsFunction();
     }
 
     addUsedFunction(pFunction: IFunctionDeclInstruction): boolean {
@@ -374,16 +234,10 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
             return true;
         }
 
-        if (isNull(this._pUsedFunctionMap)) {
-            this._pUsedFunctionMap = <IMap<IFunctionDeclInstruction>>{};
-            this._pUsedFunctionList = [];
-        }
-
         let iFuncId: number = pFunction.instructionID;
 
-        if (!isDef(this._pUsedFunctionMap[iFuncId])) {
-            this._pUsedFunctionMap[iFuncId] = pFunction;
-            this._pUsedFunctionList.push(pFunction);
+        if (!isDef(this._usedFunctionMap[iFuncId])) {
+            this._usedFunctionMap[iFuncId] = pFunction;
             return true;
         }
 
@@ -395,20 +249,8 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
 
-    isBlackListFunction(): boolean {
-        return this._isInBlackList;
-    }
-
-    addToBlackList(): void {
-        this._isInBlackList = true;
-    }
-
-    get stringDef(): string {
-        return this._pFunctionDefenition.stringDef;
-    }
-
     convertToVertexShader(): IFunctionDeclInstruction {
-        let pShader: FunctionDeclInstruction = null;
+        let pShader: IFunctionDeclInstruction = null;
 
         if ((!this.canUsedAsFunction() || !this.isUsedAsFunction()) &&
             (!this.isUsedInPixel())) {
@@ -420,7 +262,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         }
 
         pShader.prepareForVertex();
-        this._pVertexShader = pShader;
+        this._vertexShader = pShader;
 
         return pShader;
     }
@@ -438,7 +280,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         }
 
         pShader.prepareForPixel();
-        this._pPixelShader = pShader;
+        this._pixelShader = pShader;
 
         return pShader;
     }
@@ -446,38 +288,25 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     prepareForVertex(): void {
         this.functionType = (EFunctionType.k_Vertex);
 
-        let pShaderInputParamList: IVariableDeclInstruction[] = this._pFunctionDefenition.paramListForShaderInput;
+        let pShaderInputParamList: IVariableDeclInstruction[] = this._definition.paramListForShaderInput;
         for (let i: number = 0; i < pShaderInputParamList.length; i++) {
             let pParamType: IVariableTypeInstruction = pShaderInputParamList[i].type;
 
             if (pParamType.isComplex() &&
-                isDef(this._pUsedVarTypeMap[pParamType.instructionID]) &&
-                this._pUsedVarTypeMap[pParamType.instructionID].isRead) {
+                isDef(this._usedVarTypeMap[pParamType.instructionID]) &&
+                this._usedVarTypeMap[pParamType.instructionID].isRead) {
 
                 this._setError(EEffectTempErrors.BAD_LOCAL_OF_SHADER_INPUT, { funcName: this.name });
                 return;
             }
         }
 
-        let pOutVariable: IVariableDeclInstruction = this.getOutVariable();
-
-        if (!isNull(pOutVariable)) {
-            if (isDef(this._pUsedVarTypeMap[pOutVariable.type.instructionID]) &&
-                this._pUsedVarTypeMap[pOutVariable.type.instructionID].isRead) {
-
-                this._setError(EEffectTempErrors.BAD_LOCAL_OF_SHADER_OUTPUT, { funcName: this.name });
-                return;
-            }
-
-            pOutVariable.shaderOutput = (true);
-        }
-
-        if (this._pFunctionDefenition.isComplexShaderInput()) {
+        if (this._definition.isComplexShaderInput()) {
             pShaderInputParamList[0].visible = (false);
         }
 
-        this._pImplementation.prepareFor(EFunctionType.k_Vertex);
-        this._pFunctionDefenition.shaderDef = (true);
+        this._implementation.prepareFor(EFunctionType.k_Vertex);
+        this._definition.shaderDef = (true);
         this.generatesVertexAttrubutes();
         this.generateVertexVaryings();
     }
@@ -485,63 +314,39 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     prepareForPixel(): void {
         this.functionType = (EFunctionType.k_Pixel);
 
-        let pShaderInputParamList: IVariableDeclInstruction[] = this._pFunctionDefenition.paramListForShaderInput;
+        let pShaderInputParamList: IVariableDeclInstruction[] = this._definition.paramListForShaderInput;
         for (let i: number = 0; i < pShaderInputParamList.length; i++) {
             let pParamType: IVariableTypeInstruction = pShaderInputParamList[i].type;
 
             if (pParamType.isComplex() &&
-                isDef(this._pUsedVarTypeMap[pParamType.instructionID]) &&
-                this._pUsedVarTypeMap[pParamType.instructionID].isRead) {
+                isDef(this._usedVarTypeMap[pParamType.instructionID]) &&
+                this._usedVarTypeMap[pParamType.instructionID].isRead) {
 
                 this._setError(EEffectTempErrors.BAD_LOCAL_OF_SHADER_INPUT, { funcName: this.name });
                 return;
             }
         }
 
-        if (this._pFunctionDefenition.isComplexShaderInput()) {
+        if (this._definition.isComplexShaderInput()) {
             pShaderInputParamList[0].visible = (false);
         }
 
-        this._pImplementation.prepareFor(EFunctionType.k_Pixel);
-        this._pFunctionDefenition.shaderDef = (true);
+        this._implementation.prepareFor(EFunctionType.k_Pixel);
+        this._definition.shaderDef = (true);
 
         this.generatePixelVaryings();
     }
 
-    setOutVariable(pVar: IVariableDeclInstruction): void {
-        this._pOutVariable = pVar;
-    }
-
-    setUsedFunctions(pUsedFunctionMap: IMap<IFunctionDeclInstruction>,
-        pUsedFunctionList: IFunctionDeclInstruction[]): void {
-        this._pUsedFunctionMap = pUsedFunctionMap;
-        this._pUsedFunctionList = pUsedFunctionList;
-    }
-
-    setUsedVariableData(pUsedVarTypeMap: IMap<ITypeUseInfoContainer>,
-        pUniformVariableMap: IMap<IVariableDeclInstruction>,
-        pTextureVariableMap: IMap<IVariableDeclInstruction>,
-        pUsedComplexTypeMap: IMap<ITypeInstruction>): void {
-        this._pUsedVarTypeMap = pUsedVarTypeMap;
-        this._pUniformVariableMap = pUniformVariableMap;
-        this._pTextureVariableMap = pTextureVariableMap;
-        this._pUsedComplexTypeMap = pUsedComplexTypeMap;
-    }
-
-    initAfterClone(): void {
-        this._pFunctionDefenition = <FunctionDefInstruction>this.instructions[0];
-        this._pImplementation = <StmtBlockInstruction>this.instructions[1];
-    }
 
     generateInfoAboutUsedData(): void {
-        if (!isNull(this._pUsedVarTypeMap)) {
+        if (!isNull(this._usedVarTypeMap)) {
             return;
         }
 
         let pUsedData: IMap<ITypeUseInfoContainer> = <IMap<ITypeUseInfoContainer>>{};
 
-        this._pImplementation.addUsedData(pUsedData);
-        this._pUsedVarTypeMap = pUsedData;
+        this._implementation.addUsedData(pUsedData);
+        this._usedVarTypeMap = pUsedData;
 
         for (let i in pUsedData) {
             let pAnalyzedInfo: ITypeUseInfoContainer = pUsedData[i];
@@ -551,20 +356,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
                 this.addGlobalVariableType(pAnalyzedType, pAnalyzedInfo.isWrite, pAnalyzedInfo.isRead);
             } else if (pAnalyzedType.isUniform()) {
                 this.addUniformParameter(pAnalyzedType);
-            } else if (pAnalyzedType.scope < this.implementationScope) {
-                if (!this.isUsedAsFunction()) {
-                    if (!isNull(this.getOutVariable()) &&
-                        this.getOutVariable().type !== pAnalyzedType) {
-
-                        this.addUsedComplexType(pAnalyzedType.baseType);
-                    }
-                }
             }
         }
-        if (!isNull(this._pUsedFunctionList)) {
-            for (let j: number = 0; j < this._pUsedFunctionList.length; j++) {
-                this.addUsedInfoFromFunction(this._pUsedFunctionList[j]);
-            }
+
+        for (let j in this._usedFunctionMap) {
+            this.addUsedInfoFromFunction(this._usedFunctionMap[j]);
         }
     }
 
@@ -575,36 +371,32 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
     private generateVertexVaryings(): void {
-        if (isNull(this.getOutVariable())) {
-            return;
-        }
+        // this._varyingVariableMap = <IMap<IVariableDeclInstruction>>{};
 
-        this._pVaryingVariableMap = <IMap<IVariableDeclInstruction>>{};
-
-        let pContainerVariable: IVariableDeclInstruction = this.getOutVariable();
-        let pContainerType: IVariableTypeInstruction = pContainerVariable.type;
+        // let pContainerVariable: IVariableDeclInstruction = this.getOutVariable();
+        // let pContainerType: IVariableTypeInstruction = pContainerVariable.type;
 
 
-        let pVaryingNames: string[] = pContainerType.fieldNameList;
+        // let pVaryingNames: string[] = pContainerType.fieldNameList;
 
-        for (let i: number = 0; i < pVaryingNames.length; i++) {
-            let pVarying: IVariableDeclInstruction = pContainerType.getField(pVaryingNames[i]);
+        // for (let i: number = 0; i < pVaryingNames.length; i++) {
+        //     let pVarying: IVariableDeclInstruction = pContainerType.getField(pVaryingNames[i]);
 
-            if (!this.isVariableTypeUse(pVarying.type)) {
-                continue;
-            }
+        //     if (!this.isVariableTypeUse(pVarying.type)) {
+        //         continue;
+        //     }
 
-            this._pVaryingVariableMap[pVarying.instructionID] = pVarying;
-        }
+        //     this._varyingVariableMap[pVarying.instructionID] = pVarying;
+        // }
 
-        this._pVaryingVariableKeys = this.varyingVariableKeys;
+        // this._varyingVariableKeys = this.varyingVariableKeys;
     }
 
     private generatePixelVaryings(): void {
-        let pShaderInputParamList: IVariableDeclInstruction[] = this._pFunctionDefenition.paramListForShaderInput;
-        let isComplexInput: boolean = this._pFunctionDefenition.isComplexShaderInput();
+        let pShaderInputParamList: IVariableDeclInstruction[] = this._definition.paramListForShaderInput;
+        let isComplexInput: boolean = this._definition.isComplexShaderInput();
 
-        this._pVaryingVariableMap = <IMap<IVariableDeclInstruction>>{};
+        this._varyingVariableMap = <IMap<IVariableDeclInstruction>>{};
 
         if (isComplexInput) {
             let pContainerVariable: IVariableDeclInstruction = pShaderInputParamList[0];
@@ -619,7 +411,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
                     continue;
                 }
 
-                this._pVaryingVariableMap[pVarying.instructionID] = pVarying;
+                this._varyingVariableMap[pVarying.instructionID] = pVarying;
             }
         }
         else {
@@ -630,11 +422,9 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
                     continue;
                 }
 
-                this._pVaryingVariableMap[pVarying.instructionID] = pVarying;
+                this._varyingVariableMap[pVarying.instructionID] = pVarying;
             }
         }
-
-        this._pVaryingVariableKeys = this.varyingVariableKeys;
     }
 
     private cloneVarTypeUsedMap(pMap: IMap<ITypeUseInfoContainer>, pRelationMap: IMap<IInstruction>): IMap<ITypeUseInfoContainer> {
@@ -694,13 +484,13 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         let iMainVar: number = pMainVariable.instructionID;
 
         if (isWrite || pMainVariable.type.isConst()) {
-            if (isDefAndNotNull(this._pUniformVariableMap[iMainVar])) {
-                this._pUniformVariableMap[iMainVar] = null;
+            if (isDefAndNotNull(this._uniformVariableMap[iMainVar])) {
+                this._uniformVariableMap[iMainVar] = null;
             }
         }
         else {
             {
-                this._pUniformVariableMap[iMainVar] = pMainVariable;
+                this._uniformVariableMap[iMainVar] = pMainVariable;
 
                 if (!pMainVariable.type.isComplex() && (!isNull(pMainVariable.initializeExpr) && pMainVariable.initializeExpr.isConst())) {
                     pMainVariable.prepareDefaultValue();
@@ -720,7 +510,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
                     pTexture = pSamplerStates.texture;
 
                     if (!isNull(pTexture)) {
-                        this._pTextureVariableMap[pTexture.instructionID] = pTexture;
+                        this._textureVariableMap[pTexture.instructionID] = pTexture;
                     }
                 }
             }
@@ -729,7 +519,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
                 pTexture = pSamplerStates.texture;
 
                 if (!isNull(pTexture)) {
-                    this._pTextureVariableMap[pTexture.instructionID] = pTexture;
+                    this._textureVariableMap[pTexture.instructionID] = pTexture;
                 }
             }
         }
@@ -741,7 +531,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         let pMainVariable: IVariableDeclInstruction = pType.mainVariable;
         let iMainVar: number = pMainVariable.instructionID;
 
-        this._pUniformVariableMap[iMainVar] = pMainVariable;
+        this._uniformVariableMap[iMainVar] = pMainVariable;
         this.addUsedComplexType(pMainVariable.type.baseType);
 
         if (!pMainVariable.type.isComplex() && !isNull(pMainVariable.initializeExpr) && pMainVariable.initializeExpr.isConst()) {
@@ -750,11 +540,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
     private addUsedComplexType(pType: ITypeInstruction): void {
-        if (pType.isBase() || isDef(this._pUsedComplexTypeMap[pType.instructionID])) {
+        if (pType.isBase() || isDef(this._usedComplexTypeMap[pType.instructionID])) {
             return;
         }
 
-        this._pUsedComplexTypeMap[pType.instructionID] = pType;
+        this._usedComplexTypeMap[pType.instructionID] = pType;
 
         let pFieldNameList: string[] = pType.fieldNameList;
 
@@ -771,34 +561,29 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         let pUsedComplexTypeMap: IMap<ITypeInstruction> = pFunction.usedComplexTypeMap;
 
         for (let j in pTextureVarMap) {
-            this._pTextureVariableMap[pTextureVarMap[j].instructionID] = pTextureVarMap[j];
+            this._textureVariableMap[pTextureVarMap[j].instructionID] = pTextureVarMap[j];
         }
 
         for (let j in pUniformVarMap) {
             {
-                this._pUniformVariableMap[pUniformVarMap[j].instructionID] = pUniformVarMap[j];
+                this._uniformVariableMap[pUniformVarMap[j].instructionID] = pUniformVarMap[j];
             }
         }
 
         for (let j in pUsedComplexTypeMap) {
-            this._pUsedComplexTypeMap[pUsedComplexTypeMap[j].instructionID] = pUsedComplexTypeMap[j];
+            this._usedComplexTypeMap[pUsedComplexTypeMap[j].instructionID] = pUsedComplexTypeMap[j];
         }
 
         this.addExtSystemFunction(pFunction);
     }
 
     private addExtSystemFunction(pFunction: IFunctionDeclInstruction): void {
-        if (isNull(this._pExtSystemFunctionList)) {
-            this._pExtSystemFunctionList = [];
-            this._pExtSystemTypeList = [];
-        }
-
         if (pFunction.instructionType === EInstructionTypes.k_SystemFunctionInstruction) {
-            if (this._pExtSystemFunctionList.indexOf(pFunction) !== -1) {
+            if (this._extSystemFunctionList.indexOf(pFunction) !== -1) {
                 return;
             }
 
-            this._pExtSystemFunctionList.push(pFunction);
+            this._extSystemFunctionList.push(pFunction);
         }
 
         let pTypes = pFunction.extSystemTypeList;
@@ -806,16 +591,16 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
 
         if (!isNull(pTypes)) {
             for (let j: number = 0; j < pTypes.length; j++) {
-                if (this._pExtSystemTypeList.indexOf(pTypes[j]) === -1) {
-                    this._pExtSystemTypeList.push(pTypes[j]);
+                if (this._extSystemTypeList.indexOf(pTypes[j]) === -1) {
+                    this._extSystemTypeList.push(pTypes[j]);
                 }
             }
         }
 
         if (!isNull(pFunctions)) {
             for (let j: number = 0; j < pFunctions.length; j++) {
-                if (this._pExtSystemFunctionList.indexOf(pFunctions[j]) === -1) {
-                    this._pExtSystemFunctionList.unshift(pFunctions[j]);
+                if (this._extSystemFunctionList.indexOf(pFunctions[j]) === -1) {
+                    this._extSystemFunctionList.unshift(pFunctions[j]);
                 }
             }
         }
@@ -824,11 +609,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     private isVariableTypeUse(pVariableType: IVariableTypeInstruction): boolean {
         let id: number = pVariableType.instructionID;
 
-        if (!isDef(this._pUsedVarTypeMap[id])) {
+        if (!isDef(this._usedVarTypeMap[id])) {
             return false;
         }
 
-        if (this._pUsedVarTypeMap[id].numUsed === 0) {
+        if (this._usedVarTypeMap[id].numUsed === 0) {
             return false;
         }
 

@@ -8,25 +8,34 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR ExprInstruction
  */
 export class ComplexExprInstruction extends ExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_ComplexExprInstruction);
+    private _expr: IExprInstruction;
+
+
+    constructor(node: IParseNode, expr: IExprInstruction) {
+        super(node, expr.type, EInstructionTypes.k_ComplexExprInstruction);
+
+        this._expr = expr;
     }
 
+    
+    get expr(): IExprInstruction {
+        return this._expr;
+    }
+    
+
     toCode(): string {
-        var sCode: string = "";
-        sCode += "(" + this.instructions[0].toCode() + ")";
-        return sCode;
+        return "(" + this.expr.toCode() + ")";
     }
 
     
     isConst(): boolean {
-        return (<IExprInstruction>this.instructions[0]).isConst();
+        return (<IExprInstruction>this.expr).isConst();
     }
 
-
+    
     evaluate(): boolean {
-        if ((<IExprInstruction>this.instructions[0]).evaluate()) {
-            this._pLastEvalResult = (<IExprInstruction>this.instructions[0]).getEvalValue();
+        if ((<IExprInstruction>this.expr).evaluate()) {
+            this._evalResult = (<IExprInstruction>this.expr).getEvalValue();
             return true;
         } else {
             return false;

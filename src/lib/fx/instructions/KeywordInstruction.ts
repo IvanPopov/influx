@@ -3,29 +3,27 @@ import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class KeywordInstruction extends Instruction implements IKeywordInstruction {
-    private _sValue: string;
+    private _value: string;
 
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-    constructor(pNode: IParseNode) {
+    constructor(pNode: IParseNode, value: string) {
         super(pNode, EInstructionTypes.k_KeywordInstruction);
-        this._sValue = "";
-    }
-
-    set value(sValue: string) {
-        this._sValue = sValue;
+        this._value = value;
     }
 
     get value(): string {
-        return this._sValue;
+        return this._value;
     }
+
 
     toString(): string {
-        return this._sValue;
+        return this._value;
     }
 
+    
     toCode(): string {
-        return this._sValue;
+        return this._value;
     }
 }

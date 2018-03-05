@@ -2,6 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IPairedExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+import * as Effect from '../Effect';
 
 
 /**
@@ -9,30 +10,48 @@ import { IParseNode } from "../../idl/parser/IParser";
  * (==|!=|<|>|<=|>=) Instruction Instruction
  */
 export class RelationalExprInstruction extends ExprInstruction implements IPairedExprInstruction {
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_RelationalExprInstruction);
+    private _leftOperand: IExprInstruction;
+    private _rightOperand: IExprInstruction;
+    private _operator: string;
+
+
+    constructor(pNode: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {
+        super(pNode, Effect.getSystemType('bool').variableType, EInstructionTypes.k_RelationalExprInstruction);
+        this._leftOperand = left;
+        this._rightOperand = right;
+        this._operator = operator;
     }
 
+    
     get left(): IInstruction {
-        return this.instructions[0];
+        return this._leftOperand;
     }
 
+    
     get right(): IInstruction {
-        return this.instructions[1];
+        return this._rightOperand;
     }
+
+
+    get operator(): string {
+        return this._operator;
+    }
+
 
     toCode(): string {
-        var sCode: string = "";
-        sCode += this.left.toCode();
-        sCode += this.operator;
-        sCode += this.right.toCode();
-        return sCode;
+        var code: string = '';
+        code += this.left.toCode();
+        code += this.operator;
+        code += this.right.toCode();
+        return code;
     }
 
+    
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
     }
+
 
     isConst(): boolean {
         return (<IExprInstruction>this.left).isConst() &&

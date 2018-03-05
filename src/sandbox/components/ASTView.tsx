@@ -131,6 +131,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                 };
 
                 props.actions.addMarker(marker);
+                console.log(e);
             } else {
                 console.error(e);
             }

@@ -9,123 +9,106 @@ import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 
 
 export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
-    private _pExprTranslator: ExprTemplateTranslator ;
-    private _pName: IIdInstruction;
-    private _pReturnType: VariableTypeInstruction;
-    private _pArguments: ITypedInstruction[];
+    private _exprTranslator: ExprTemplateTranslator ;
+    private _name: IIdInstruction;
+    private _args: ITypedInstruction[];
+    private _returnType: ITypeInstruction;
 
-    private _sDefinition: string;
-    private _sImplementation: string;
+    private _definition: string;
+    private _implementation: string;
 
-    private _pExtSystemTypeList: ITypeDeclInstruction[];
-    private _pExtSystemFunctionList: IFunctionDeclInstruction[];
+    private _extSystemTypeList: ITypeDeclInstruction[];
+    private _extSystemFunctionList: IFunctionDeclInstruction[];
 
-    constructor(sName: string, pReturnType: ITypeInstruction,
-        pExprTranslator: ExprTemplateTranslator,
-        pArgumentTypes: ITypeInstruction[]) {
-        super(null, EInstructionTypes.k_SystemFunctionInstruction);
+    constructor(name: IdInstruction, returnType: IVariableTypeInstruction,
+                exprTranslator: ExprTemplateTranslator,
+                args: ITypedInstruction[], definition: string, implementations: string) {
 
-        this._pName = new IdInstruction(null);
-        this._pName.name = (sName);
-        this._pName.parent = (this);
+        super(null, null, null, EInstructionTypes.k_SystemFunctionInstruction);
 
-        this._pReturnType = new VariableTypeInstruction(null);
-        this._pReturnType.pushType(pReturnType);
-        this._pReturnType.parent = (this);
+        this._name = name;
+        this._returnType = returnType;
+        this._args = args;
 
-        this._pArguments = [];
+        // if (!isNull(args)) {
+        //     for (var i: number = 0; i < args.length; i++) {
+        //         var pArgument: TypedInstruction = new TypedInstruction(null);
+        //         pArgument.type = (args[i]);
+        //         pArgument.parent = (this);
 
-        if (!isNull(pArgumentTypes)) {
-            for (var i: number = 0; i < pArgumentTypes.length; i++) {
-                var pArgument: TypedInstruction = new TypedInstruction(null);
-                pArgument.type = (pArgumentTypes[i]);
-                pArgument.parent = (this);
+        //         this._args.push(pArgument);
+        //     }
+        // }
 
-                this._pArguments.push(pArgument);
-            }
-        }
-
-        this._sDefinition = null;
-        this._sImplementation = null;
+        this._definition = definition;
+        this._implementation = this.implementaion;
     
-        this._pExtSystemTypeList = [];
-        this._pExtSystemFunctionList = [];
+        this._extSystemTypeList = [];
+        this._extSystemFunctionList = [];
 
-        this._pExprTranslator = pExprTranslator;
+        this._exprTranslator = exprTranslator;
     }
 
-    // TODO: fixdefinition/implemetation types!!!
-    // move system functions to default pipeline!!
-
-    set definition(sDefinition: any) {
-        this._sDefinition = sDefinition;
-    }
-
-    set implementaion(sImplementation: any) {
-        this._sImplementation = sImplementation;
-    }
 
     get definition(): any {
-        return this._sDefinition;
+        return this._definition;
     }
     
     get implementaion(): any {
-        return this._sImplementation;
+        return this._implementation;
     }
 
-    /**
-     * Generate code 
-     */
+
     toCode(): string {
-        return this._sDefinition + this._sImplementation;
+        return this._definition + this._implementation;
     }
 
     setUsedSystemData(pTypeList: ITypeDeclInstruction[],
         pFunctionList: IFunctionDeclInstruction[]): void {
 
-        this._pExtSystemTypeList = pTypeList;
-        this._pExtSystemFunctionList = pFunctionList;
+        this._extSystemTypeList = pTypeList;
+        this._extSystemFunctionList = pFunctionList;
     }
 
     closeSystemDataInfo(): void {
-        for (var i: number = 0; i < this._pExtSystemFunctionList.length; i++) {
-            var pFunction: IFunctionDeclInstruction = this._pExtSystemFunctionList[i];
+        for (var i: number = 0; i < this._extSystemFunctionList.length; i++) {
+            var pFunction: IFunctionDeclInstruction = this._extSystemFunctionList[i];
 
             var pTypes = pFunction.extSystemTypeList;
             var pFunctions = pFunction.extSystemFunctionList;
 
             for (var j: number = 0; j < pTypes.length; j++) {
-                if (this._pExtSystemTypeList.indexOf(pTypes[j]) === -1) {
-                    this._pExtSystemTypeList.push(pTypes[j]);
+                if (this._extSystemTypeList.indexOf(pTypes[j]) === -1) {
+                    this._extSystemTypeList.push(pTypes[j]);
                 }
             }
 
             for (var j: number = 0; j < pFunctions.length; j++) {
-                if (this._pExtSystemFunctionList.indexOf(pFunctions[j]) === -1) {
-                    this._pExtSystemFunctionList.unshift(pFunctions[j]);
+                if (this._extSystemFunctionList.indexOf(pFunctions[j]) === -1) {
+                    this._extSystemFunctionList.unshift(pFunctions[j]);
                 }
             }
         }
     }
 
-    set exprTranslator(pExprTranslator: ExprTemplateTranslator) {
-        this._pExprTranslator = pExprTranslator;
+    set exprTranslator(exprTranslator: ExprTemplateTranslator) {
+        this._exprTranslator = exprTranslator;
     }
 
     get exprTranslator(): ExprTemplateTranslator {
-        return this._pExprTranslator;
+        return this._exprTranslator;
     }
 
     get nameID(): IIdInstruction {
-        return this._pName;
+        return this._name;
     }
 
     get arguments(): ITypedInstruction[] {
-        return this._pArguments;
+        return this._args;
     }
 
     get numArgsRequired(): number {
-        return this._pArguments.length;
+        return this._args.length;
     }
 
     get type(): IVariableTypeInstruction {
@@ -133,7 +116,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     get returnType(): IVariableTypeInstruction {
-        return this._pReturnType;
+        return this.type;
     }
 
     get functionType(): EFunctionType {
@@ -199,11 +182,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     get extSystemFunctionList(): IFunctionDeclInstruction[] {
-        return this._pExtSystemFunctionList;
+        return this._extSystemFunctionList;
     }
 
     get extSystemTypeList(): ITypeDeclInstruction[] {
-        return this._pExtSystemTypeList;
+        return this._extSystemTypeList;
     }
 
     get usedFunctionList(): IFunctionDeclInstruction[] {
@@ -211,7 +194,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     closeArguments(pArguments: IInstruction[]): IInstruction[] {
-        return this._pExprTranslator.toInstructionList(pArguments);
+        return this._exprTranslator.toInstructionList(pArguments);
     }
 
     clone(pRelationMap?: IMap<IInstruction>): SystemFunctionInstruction {
@@ -271,11 +254,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         return this.pixel;
     }
 
-    checkDefenitionForVertexUsage(): boolean {
+    checkDefinitionForVertexUsage(): boolean {
         return false;
     }
 
-    checkDefenitionForPixelUsage(): boolean {
+    checkDefinitionForPixelUsage(): boolean {
         return false;
     }
 

@@ -11,169 +11,120 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 
 export class VariableTypeInstruction extends Instruction implements IVariableTypeInstruction {
-    private _pSubType: ITypeInstruction;
-    private _pUsageList: string[];
+    private _subType: ITypeInstruction;
+    private _usageList: string[];
 
-    private _sName: string;
-    private _bIsWritable: boolean;
-    private _bIsReadable: boolean;
+    private _name: string;
+    private _isWritable: boolean;
+    private _isReadable: boolean;
 
-    private _sHash: string;
-    private _sStrongHash: string;
-    private _bIsArray: boolean;
-    private _bIsUniform: boolean;
-    private _bIsConst: boolean;
-    private _iLength: number;
-    private _isNeedToUpdateLength: boolean;
+    private _isArray: boolean;
+    private _isUniform: boolean;
+    private _isConst: boolean;
+    private _length: number;
 
-    private _bIsFromVariableDecl: boolean;
-    private _bIsFromTypeDecl: boolean;
+    private _arrayIndexExpr: IExprInstruction;
+    private _arrayElementType: IVariableTypeInstruction;
+    private _padding: number;
 
-    private _pArrayIndexExpr: IExprInstruction;
-    private _pArrayElementType: IVariableTypeInstruction;
-
-    private _pFieldDeclMap: IMap<IVariableDeclInstruction>;
-    private _pFieldDeclBySemanticMap: IMap<IVariableDeclInstruction>;
-
-    private _iPadding: number;
-
-    private _pSubDeclList: IVariableDeclInstruction[];
-    private _pAttrOffset: IVariableDeclInstruction;
-
-    private _bCollapsed: boolean;
-
-    constructor(pNode: IParseNode) {
+    constructor(pNode: IParseNode, type: ITypeInstruction, usages: string[] = [], 
+                name: string = null, writable: boolean = true, readable: boolean = true, 
+                arrayIndex: IExprInstruction = null, padding = Instruction.UNDEFINE_PADDING) {
         super(pNode, EInstructionTypes.k_VariableTypeInstruction);
 
-        this._pSubType = null;
-        this._pUsageList = [];
+        
+        this._usageList = usages;
+        this.pushType(type);
 
-        this._sName = "";
-        this._bIsWritable = null;
-        this._bIsReadable = null;
+        this._name = name;
+        this._isWritable = writable;
+        this._isReadable = readable;
 
-        this._sHash = "";
-        this._sStrongHash = "";
-        this._bIsArray = false;
-        this._bIsUniform = null;
-        this._bIsConst = null;
-        this._iLength = Instruction.UNDEFINE_LENGTH;
-        this._isNeedToUpdateLength = false;
+        this._isArray = false;
+        this._length = Instruction.UNDEFINE_LENGTH;
 
-        this._bIsFromVariableDecl = null;
-        this._bIsFromTypeDecl = null;
+        this._arrayIndexExpr = null;
+        this._arrayElementType = null;
+        this._padding = padding;
 
-        this._pArrayIndexExpr = null;
-        this._pArrayElementType = null;
-
-        this._pFieldDeclMap = {};
-        this._pFieldDeclBySemanticMap = {};
-
-        this._iPadding = Instruction.UNDEFINE_PADDING;
-
-        this._pSubDeclList = [];
-        this._pAttrOffset = null;
-
-        this._bCollapsed = false;
+        this.addArrayIndex(arrayIndex);
     }
 
-    get fieldDeclList(): IVariableDeclInstruction[] {
-        let list = [];
-        for (let key in this._pFieldDeclMap) {
-            list.push(this._pFieldDeclMap[key]);
-        }
-        return list;
-    }
-    
+
+    // get fields(): IVariableDeclInstruction[] {
+    //     let list = [];
+    //     for (let key in this._fields) {
+    //         list.push(this._fields[key]);
+    //     }
+    //     return list;
+    // }
+
+
     get builtIn(): boolean {
         return false;
     }
-    
-    set builtIn(isBuiltIn: boolean) {
-    }
-    
-    set collapsed(bValue: boolean) {
-        this._bCollapsed = bValue;
-    }
-    
-    get collapsed(): boolean {
-        return this._bCollapsed;
-    }
 
-    set name(sName: string) {
-        this._sName = sName;
-    }
-
-    set writable(isWritable: boolean) {
-        this._bIsWritable = isWritable;
-    }
 
     set readable(isReadable: boolean) {
-        this._bIsReadable = isReadable;
+        this._isReadable = isReadable;
     }
 
-    set padding(iPadding: number) {
-        this._iPadding = iPadding;
-    }
 
     get name(): string {
-        return this._sName;
+        return this._name;
     }
+
 
     get realName(): string {
         return this.baseType.realName;
     }
 
-    get hash(): string {
-        if (isNull(this._sHash)) {
-            this.calcHash();
-        }
 
-        return this._sHash;
+    get hash(): string {
+        return this.calcHash();
     }
+
 
     get strongHash(): string {
-        if (isNull(this._sStrongHash)) {
-            this.calcStrongHash();
-        }
-
-        return this._sStrongHash;
+        return this.calcStrongHash();
     }
 
-    get wriatable(): boolean {
-        if (!this._bIsWritable) {
+
+    get writable(): boolean {
+        if (!this._isWritable) {
             return false;
         }
 
         if ((this.isArray() && !this.isBase()) || this.isUniform()) {
             return false;
         }
-        
+
         return this.subType.writable;
     }
 
+
     get readable(): boolean {
-        if (!this._bIsReadable) {
+        if (!this._isReadable) {
             return false;
         }
 
         if (this.hasUsage("out")) {
             return false;
         }
-        
+
         return this.subType.readable;
     }
 
 
     get size(): number {
-        if (this._bIsArray) {
-            var iSize: number = this._pArrayElementType.size;
-            if (this._iLength === Instruction.UNDEFINE_LENGTH ||
+        if (this._isArray) {
+            let iSize: number = this._arrayElementType.size;
+            if (this._length === Instruction.UNDEFINE_LENGTH ||
                 iSize === Instruction.UNDEFINE_SIZE) {
                 return Instruction.UNDEFINE_SIZE;
             }
             else {
-                return iSize * this._iLength;
+                return iSize * this._length;
             }
         }
         else {
@@ -181,52 +132,50 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
     }
 
+
     get baseType(): ITypeInstruction {
         return this.subType.baseType;
     }
 
+
     get length(): number {
         if (!this.isNotBaseArray()) {
-            this._iLength = 0;
             return 0;
         }
 
-        if (this.isNotBaseArray() && !this._bIsArray) {
-            this._iLength = this.subType.length;
+        if (this.isNotBaseArray() && !this._isArray) {
+            return this.subType.length;
         }
-        else if (this._iLength === Instruction.UNDEFINE_LENGTH || this._isNeedToUpdateLength) {
-            var isEval: boolean = this._pArrayIndexExpr.evaluate();
+        else if (this._length === Instruction.UNDEFINE_LENGTH) {
+            let isEval: boolean = this._arrayIndexExpr.evaluate();
 
             if (isEval) {
-                var iValue: number = <number>this._pArrayIndexExpr.getEvalValue();
-                this._iLength = isNumber(iValue) ? iValue : Instruction.UNDEFINE_LENGTH;
+                let iValue: number = <number>this._arrayIndexExpr.getEvalValue();
+                return isNumber(iValue) ? iValue : Instruction.UNDEFINE_LENGTH;
             }
         }
 
-        return this._iLength;
+        return this._length;
     }
 
+
     get padding(): number {
-        return this._iPadding;
+        return this._padding;
     }
+
+
+    // for overloading from structers decls
+    set padding(val: number) {
+        this._padding = val;
+    }
+
 
     get arrayElementType(): IVariableTypeInstruction {
         if (!this.isArray()) {
             return null;
         }
 
-        if (isNull(this._pArrayElementType)) {
-            this._pArrayElementType = new VariableTypeInstruction(null);
-            this._pArrayElementType.pushType(this.subType.arrayElementType);
-            if (!isNull(this._pUsageList)) {
-                for (var i: number = 0; i < this._pUsageList.length; i++) {
-                    this._pArrayElementType.addUsage(this._pUsageList[i]);
-                }
-            }
-            this._pArrayElementType.parent = (this);
-        }
-
-        return this._pArrayElementType;
+        return this._arrayElementType;
     }
 
     get typeDecl(): ITypeDeclInstruction {
@@ -234,61 +183,56 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
-
+        let eParentType: EInstructionTypes = this.parent.instructionType;
         if (eParentType === EInstructionTypes.k_TypeDeclInstruction) {
             return <ITypeDeclInstruction>this.parent;
         }
-        else {
-            return (<ITypeInstruction>this.parent).typeDecl;
-        }
+        return (<ITypeInstruction>this.parent).typeDecl;
     }
 
-    get fieldNameList(): string[] {
-        return this.subType.fieldNameList;
+
+    get fieldNames(): string[] {
+        return this.subType.fieldNames;
     }
+
 
     get usageList(): string[] {
-        return this._pUsageList;
+        return this._usageList;
     }
+
 
     get subType(): ITypeInstruction {
-        return this._pSubType;
+        return this._subType;
     }
 
 
-    get vars(): IVariableDeclInstruction[] {
+    get fields(): IVariableDeclInstruction[] {
         if (!this.canHaveSubDecls()) {
             return null;
         }
-
-        if (isNull(this._pSubDeclList)) {
-            this.generateSubDeclList();
-        }
-        return this._pSubDeclList;
+        return this.generateSubDeclList();
     }
+
 
     get fullName(): string {
         if (!this.isFromVariableDecl()) {
             return "Not from variable decl";
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
-
+        let eParentType: EInstructionTypes = this.parent.instructionType;
         if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
             return (<IVariableDeclInstruction>this.parent).fullName;
         }
-        else {
-            return (<IVariableTypeInstruction>this.parent).fullName;
-        }
+        return (<IVariableTypeInstruction>this.parent).fullName;
     }
+
 
     get varDeclName(): string {
         if (!this.isFromVariableDecl()) {
             return "";
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
+        let eParentType: EInstructionTypes = this.parent.instructionType;
 
         if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
             return (<IVariableDeclInstruction>this.parent).name;
@@ -298,12 +242,13 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
     }
 
+
     get typeDeclName(): string {
         if (!this.isFromVariableDecl()) {
             return "";
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
+        let eParentType: EInstructionTypes = this.parent.instructionType;
 
         if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
             return (<ITypeDeclInstruction>this.parent).name;
@@ -313,12 +258,13 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
     }
 
+
     get parentVarDecl(): IVariableDeclInstruction {
         if (!this.isFromVariableDecl()) {
             return null;
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
+        let eParentType: EInstructionTypes = this.parent.instructionType;
 
         if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
             return <IVariableDeclInstruction>this.parent;
@@ -328,18 +274,20 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
     }
 
+
     get parentContainer(): IVariableDeclInstruction {
         if (!this.isFromVariableDecl() || !this.isTypeOfField()) {
             return null;
         }
 
-        var pContainerType: IVariableTypeInstruction = <IVariableTypeInstruction>this.parentVarDecl.parent;
+        let pContainerType: IVariableTypeInstruction = <IVariableTypeInstruction>this.parentVarDecl.parent;
         if (!pContainerType.isFromVariableDecl()) {
             return null;
         }
 
         return pContainerType.parentVarDecl;
     }
+
 
     get mainVariable(): IVariableDeclInstruction {
         if (!this.isFromVariableDecl()) {
@@ -349,51 +297,51 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         if (this.isTypeOfField()) {
             return (<IVariableTypeInstruction>this.parent.parent).mainVariable;
         }
-        else {
-            return (<IVariableDeclInstruction>this.parentVarDecl);
-        }
+        return (<IVariableDeclInstruction>this.parentVarDecl);
     }
 
-
-    get attrOffset(): IVariableDeclInstruction {
-        return this._pAttrOffset;
-    }
 
     toString(): string {
         return this.name || this.subType.toString() || this.hash;
     }
 
+
     toCode(): string {
-        var sCode: string = "";
-        if (!isNull(this._pUsageList)) {
+        let code: string = "";
+        if (!isNull(this._usageList)) {
             {
-                for (var i: number = 0; i < this._pUsageList.length; i++) {
-                    sCode += this._pUsageList[i] + " ";
+                for (let i: number = 0; i < this._usageList.length; i++) {
+                    code += this._usageList[i] + " ";
                 }
             }
         }
 
-        sCode += this.subType.toCode();
+        code += this.subType.toCode();
 
-        return sCode;
+        return code;
     }
+
 
     toDeclString(): string {
         return this.subType.toDeclString();
     }
 
+
     isBase(): boolean {
-        return this.subType.isBase() && this._bIsArray === false;
+        return this.subType.isBase() && this._isArray === false;
     }
 
+
     isArray(): boolean {
-        return this._bIsArray ||
+        return this._isArray ||
             (this.subType.isArray());
     }
 
+
     isNotBaseArray(): boolean {
-        return this._bIsArray || (this.subType.isNotBaseArray());
+        return this._isArray || (this.subType.isNotBaseArray());
     }
+
 
     isComplex(): boolean {
         return this.subType.isComplex();
@@ -415,6 +363,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return true;
     }
 
+
     isStrongEqual(pType: ITypeInstruction): boolean {
         if (!this.isEqual(pType) || this.strongHash !== pType.strongHash) {
             return false;
@@ -423,95 +372,75 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return true;
     }
 
+
     isSampler(): boolean {
         return this.subType.isSampler();
     }
+
 
     isSamplerCube(): boolean {
         return this.subType.isSamplerCube();
     }
 
+
     isSampler2D(): boolean {
         return this.subType.isSampler2D();
     }
+
 
     isContainArray(): boolean {
         return this.subType.isContainArray();
     }
 
+
     isContainSampler(): boolean {
         return this.subType.isContainSampler();
     }
+
 
     isContainComplexType(): boolean {
         return this.subType.isContainComplexType();
     }
 
+
     isFromVariableDecl(): boolean {
-        if (!isNull(this._bIsFromVariableDecl)) {
-            return this._bIsFromVariableDecl;
-        }
-
         if (isNull(this.parent)) {
-            this._bIsFromVariableDecl = false;
+            return false;
         }
-        else {
-            var eParentType: EInstructionTypes = this.parent.instructionType;
-
-            if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
-                this._bIsFromVariableDecl = true;
-            }
-            else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-                this._bIsFromVariableDecl = (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
-            }
-            else {
-                this._bIsFromVariableDecl = false;
-            }
+        let eParentType: EInstructionTypes = this.parent.instructionType;
+        if (eParentType === EInstructionTypes.k_VariableDeclInstruction) {
+            return true;
         }
-
-        return this._bIsFromVariableDecl;
+        else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
+            return (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
+        }
+        return false;
     }
 
     isFromTypeDecl(): boolean {
-        if (!isNull(this._bIsFromTypeDecl)) {
-            return this._bIsFromTypeDecl;
-        }
-
         if (isNull(this.parent)) {
-            this._bIsFromTypeDecl = false;
-        }
-        else {
-            var eParentType: EInstructionTypes = this.parent.instructionType;
-
-            if (eParentType === EInstructionTypes.k_TypeDeclInstruction) {
-                this._bIsFromTypeDecl = true;
-            }
-            else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-                this._bIsFromTypeDecl = (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
-            }
-            else {
-                this._bIsFromTypeDecl = false;
-            }
+            return false;
         }
 
-        return this._bIsFromTypeDecl;
+        let eParentType: EInstructionTypes = this.parent.instructionType;
+        if (eParentType === EInstructionTypes.k_TypeDeclInstruction) {
+            return true;
+        }
+        else if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
+            return (<IVariableTypeInstruction>this.parent).isFromVariableDecl();
+        }
+
+        return false;
     }
 
-    isUniform(): boolean {
-        if (isNull(this._bIsUniform)) {
-            this._bIsUniform = this.hasUsage("uniform");
-        }
 
-        return this._bIsUniform;
+    isUniform(): boolean {
+        return this.hasUsage("uniform");
     }
 
 
     isConst(): boolean {
-        if (isNull(this._bIsConst)) {
-            this._bIsConst = this.hasUsage("const");
-        }
-
-        return this._bIsConst;
+        return this.hasUsage("const");
     }
 
 
@@ -521,87 +450,75 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         if (this.parent.instructionType === EInstructionTypes.k_VariableDeclInstruction) {
-            var pParentDecl: IVariableDeclInstruction = <IVariableDeclInstruction>this.parent;
+            let pParentDecl: IVariableDeclInstruction = <IVariableDeclInstruction>this.parent;
             return pParentDecl.isField();
         }
 
         return false;
     }
 
-    pushType(pType: ITypeInstruction): void {
-        var eType: EInstructionTypes = pType.instructionType;
+
+    private pushType(pType: ITypeInstruction): void {
+        let eType: EInstructionTypes = pType.instructionType;
 
         if (eType === EInstructionTypes.k_SystemTypeInstruction ||
             eType === EInstructionTypes.k_ComplexTypeInstruction) {
-            this._pSubType = pType;
+            this._subType = pType;
         }
         else {
-            var pVarType: IVariableTypeInstruction = <IVariableTypeInstruction>pType;
+            let pVarType: IVariableTypeInstruction = <IVariableTypeInstruction>pType;
             if (!pVarType.isNotBaseArray()) {
-                var pUsageList: string[] = pVarType.usageList;
+                let pUsageList: string[] = pVarType.usageList;
                 if (!isNull(pUsageList)) {
-                    for (var i: number = 0; i < pUsageList.length; i++) {
+                    for (let i: number = 0; i < pUsageList.length; i++) {
                         this.addUsage(pUsageList[i]);
                     }
                 }
-
-                this._pSubType = pVarType.subType;
+                this._subType = pVarType.subType;
             }
             else {
-                this._pSubType = pType;
+                this._subType = pType;
             }
         }
-
     }
 
-    addUsage(sUsage: string): void {
-        if (isNull(this._pUsageList)) {
-            this._pUsageList = [];
-        }
 
+    private addUsage(sUsage: string): void {
         if (!this.hasUsage(sUsage)) {
-            this._pUsageList.push(sUsage);
+            this._usageList.push(sUsage);
         }
     }
 
-    addArrayIndex(pExpr: IExprInstruction): void {
+
+    private addArrayIndex(pExpr: IExprInstruction): void {
+        if (!pExpr) {
+            return;
+        }
+
         //TODO: add support for v[][10]
 
-        this._pArrayElementType = new VariableTypeInstruction(null);
-        this._pArrayElementType.pushType(this.subType);
-        if (!isNull(this._pUsageList)) {
-            for (var i: number = 0; i < this._pUsageList.length; i++) {
-                this._pArrayElementType.addUsage(this._pUsageList[i]);
-            }
-        }
-        this._pArrayElementType.parent = (this);
+        this._arrayElementType = new VariableTypeInstruction(null, this.subType, this._usageList.slice());
+        this._arrayElementType.parent = this;
+        this._arrayIndexExpr = pExpr;
 
-        this._pArrayIndexExpr = pExpr;
-
-        this._iLength = this._pArrayIndexExpr.evaluate() ? this._pArrayIndexExpr.getEvalValue() : Instruction.UNDEFINE_LENGTH;
-
-        this._bIsArray = true;
-
-        if (this._iLength === Instruction.UNDEFINE_LENGTH) {
-            this._isNeedToUpdateLength = true;
-        }
+        this._length = this._arrayIndexExpr.evaluate() ? this._arrayIndexExpr.getEvalValue() : Instruction.UNDEFINE_LENGTH;
+        this._isArray = true;
     }
 
-    addAttrOffset(pOffset: IVariableDeclInstruction): void {
-        this._pAttrOffset = pOffset;
-    }
 
     hasField(sFieldName: string): boolean {
         return this.subType.hasField(sFieldName);
     }
 
-    hasFieldWithSematic(sSemantic: string): boolean {
+
+    hasFieldWithSematics(sSemantic: string): boolean {
         if (!this.isComplex()) {
             return false;
         }
 
-        return this.subType.hasFieldWithSematic(sSemantic);
+        return this.subType.hasFieldWithSematics(sSemantic);
     }
+
 
     hasAllUniqueSemantics(): boolean {
         if (!this.isComplex()) {
@@ -611,90 +528,64 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this.subType.hasAllUniqueSemantics();
     }
 
-    hasFieldWithoutSemantic(): boolean {
+
+    hasFieldWithoutSemantics(): boolean {
         if (!this.isComplex()) {
             return false;
         }
 
-        return this.subType.hasFieldWithoutSemantic();
+        return this.subType.hasFieldWithoutSemantics();
     }
+
 
     getField(sFieldName: string): IVariableDeclInstruction {
         if (!this.hasField(sFieldName)) {
             return null;
         }
 
-        if (isNull(this._pFieldDeclMap)) {
-            this._pFieldDeclMap = <IMap<IVariableDeclInstruction>>{};
-        }
+        let pSubField: IVariableDeclInstruction = this.subType.getField(sFieldName);
+        let id = pSubField.nameID;
+        let type = pSubField.type;
+        let padding = pSubField.type.padding;
+        let semantics = pSubField.semantics;
 
-        if (isDef(this._pFieldDeclMap[sFieldName])) {
-            return this._pFieldDeclMap[sFieldName];
-        }
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, null, true, true, null, padding);
+        let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null, semantics);
 
-        var pField: IVariableDeclInstruction = new VariableDeclInstruction(null);
-
-        {
-            var pSubField: IVariableDeclInstruction = this.subType.getField(sFieldName);
-            var pFieldType: IVariableTypeInstruction = new VariableTypeInstruction(null);
-
-            pFieldType.pushType(pSubField.type);
-            pFieldType.padding = (pSubField.type.padding);
-            pField.push(pFieldType, true);
-            pField.push(pSubField.nameID, false);
-            pField.semantics = (pSubField.semantics);
-        }
-
-        pField.parent = (this);
-
-        this._pFieldDeclMap[sFieldName] = pField;
-
-        return pField;
+        field.parent = this;
+        return field;
     }
 
-    getFieldBySemantic(sSemantic: string): IVariableDeclInstruction {
-        if (this.hasFieldWithSematic(sSemantic)) {
+
+    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction {
+        if (this.hasFieldWithSematics(sSemantic)) {
             return null;
         }
 
-        if (isNull(this._pFieldDeclBySemanticMap)) {
-            this._pFieldDeclBySemanticMap = <IMap<IVariableDeclInstruction>>{};
-        }
+        let pSubField: IVariableDeclInstruction = this.subType.getFieldBySemantics(sSemantic);
 
-        if (isDef(this._pFieldDeclBySemanticMap[sSemantic])) {
-            return this._pFieldDeclBySemanticMap[sSemantic];
-        }
+        let padding = pSubField.type.padding;
+        let id = pSubField.id;
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, pSubField.type);
+        let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null);
+        field.parent = this;
 
-        var pField: IVariableDeclInstruction = new VariableDeclInstruction(null);
-        var pSubField: IVariableDeclInstruction = this.subType.getFieldBySemantic(sSemantic);
-
-        var pFieldType: IVariableTypeInstruction = new VariableTypeInstruction(null);
-        pFieldType.pushType(pSubField.type);
-        // if(!this.isBase()){
-        pFieldType.padding = (pSubField.type.padding);
-        // }
-        pField.push(pFieldType, true);
-        pField.push(pSubField.nameID, false);
-
-
-        pField.parent = (this);
-
-        this._pFieldDeclBySemanticMap[sSemantic] = pField;
-
-        return pField;
+        return field;
     }
+
 
     getFieldType(sFieldName: string): IVariableTypeInstruction {
         return <IVariableTypeInstruction>this.getField(sFieldName).type;
     }
 
+
     hasUsage(sUsageName: string): boolean {
-        if (isNull(this._pUsageList)) {
+        if (isNull(this._usageList)) {
             return false;
         }
 
-        for (var i: number = 0; i < this._pUsageList.length; i++) {
-            if (this._pUsageList[i] === sUsageName) {
+        for (let i: number = 0; i < this._usageList.length; i++) {
+            if (this._usageList[i] === sUsageName) {
                 return true;
             }
         }
@@ -712,75 +603,67 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        let pField: IVariableDeclInstruction = this.getField(sFieldName);
-        let pExpr: IIdExprInstruction = new IdExprInstruction(null);
-        pExpr.push(pField.nameID, false);
-        pExpr.type = pField.type;
+        let field: IVariableDeclInstruction = this.getField(sFieldName);
+        let pExpr: IIdExprInstruction = new IdExprInstruction(null, field);
 
         return pExpr;
     }
 
+
     getFieldIfExist(sFieldName: string): IVariableDeclInstruction {
-        if (isNull(this._pFieldDeclMap) && isDef(this._pFieldDeclMap[sFieldName])) {
-            return this._pFieldDeclMap[sFieldName];
+        if (this.hasField(sFieldName)) {
+            return this.getField(sFieldName);
         }
-        else {
-            return null;
-        }
+
+        return null;
     }
 
 
     wrap(): IVariableTypeInstruction {
-        var pCloneType: IVariableTypeInstruction = new VariableTypeInstruction(null);
-        pCloneType.pushType(this);
-
-        return pCloneType;
+        var type: IVariableTypeInstruction = new VariableTypeInstruction(null, this);
+        return type;
     }
 
-    private calcHash(): void {
-        let sHash: string = this.subType.hash;
 
-        if (this._bIsArray) {
-            sHash += "[";
+    private calcHash(): string {
+        let hash: string = this.subType.hash;
+        if (this._isArray) {
+            hash += "[";
 
             const iLength: number = this.length;
 
             if (iLength === Instruction.UNDEFINE_LENGTH) {
-                sHash += "undef";
+                hash += "undef";
             }
             else {
-                sHash += iLength.toString();
+                hash += iLength.toString();
             }
-
-            sHash += "]";
+            hash += "]";
         }
-
-        this._sHash = sHash;
+        return hash;
     }
 
-    private calcStrongHash(): void {
-        let sStrongHash: string = this.subType.strongHash;
 
-        if (this._bIsArray) {
-            sStrongHash += "[";
+    private calcStrongHash(): string {
+        let strongHash: string = this.subType.strongHash;
 
+        if (this._isArray) {
+            strongHash += "[";
             const iLength: number = this.length;
 
             if (iLength === Instruction.UNDEFINE_LENGTH) {
-                sStrongHash += "undef";
+                strongHash += "undef";
             }
             else {
-                sStrongHash += iLength.toString();
+                strongHash += iLength.toString();
             }
-
-            sStrongHash += "]";
+            strongHash += "]";
         }
-
-
-        this._sStrongHash = sStrongHash;
+        return strongHash;
     }
 
-    private generateSubDeclList(): void {
+
+    private generateSubDeclList(): IVariableDeclInstruction[] {
         if (!this.canHaveSubDecls()) {
             return;
         }
@@ -788,16 +671,12 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         let pDeclList: IVariableDeclInstruction[] = [];
         let i: number = 0;
 
-        if (!isNull(this._pAttrOffset)) {
-            pDeclList.push(this._pAttrOffset);
-        }
-
         if (this.isComplex()) {
-            let pFieldNameList: string[] = this.fieldNameList;
+            let pFieldNameList: string[] = this.fieldNames;
 
             for (i = 0; i < pFieldNameList.length; i++) {
-                const pField: IVariableDeclInstruction = this.getField(pFieldNameList[i]);
-                const pFieldSubDeclList: IVariableDeclInstruction[] = pField.vars;
+                const field: IVariableDeclInstruction = this.getField(pFieldNameList[i]);
+                const pFieldSubDeclList: IVariableDeclInstruction[] = field.type.fields;
 
                 if (!isNull(pFieldSubDeclList)) {
                     for (let j: number = 0; j < pFieldSubDeclList.length; j++) {
@@ -807,10 +686,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             }
         }
 
-        this._pSubDeclList = pDeclList;
+        return pDeclList;
     }
 
+
     private canHaveSubDecls(): boolean {
-        return this.isComplex() || !isNull(this._pAttrOffset);
+        return this.isComplex();
     }
 }
