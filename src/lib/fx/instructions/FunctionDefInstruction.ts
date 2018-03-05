@@ -44,26 +44,27 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return this._returnType;
     }
 
+    
     get name(): string {
         return this._functionName.name;
     }
 
-    get realName(): string {
-        return this._functionName.realName;
-    }
 
     get functionName(): IIdInstruction {
         return this._functionName;
     }
 
+
     get arguments(): IVariableDeclInstruction[] {
         return this._parameterList;
     }
+
 
     get numArgsRequired(): number {
         // todo: check order!!
         return this._parameterList.filter((param) => !!param.initExpr).length;
     }
+
 
     // todo: remove
     isShader() {

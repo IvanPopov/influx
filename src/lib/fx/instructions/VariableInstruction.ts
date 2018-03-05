@@ -34,7 +34,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         this._type = type;
         this._initExpr = initExpr;
         
-        this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.realName);
+        this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.name);
     }
 
     
@@ -56,11 +56,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     get name(): string {
         return this._id.name;
-    }
-
-    
-    get realName(): string {
-        return this._id.realName;
     }
 
     

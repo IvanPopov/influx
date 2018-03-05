@@ -34,9 +34,6 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
         return null;
     }
 
-    get realName(): string {
-        return null;
-    }
 
     get nameID(): IIdInstruction {
         return null;
@@ -54,15 +51,15 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
         return this._bForVertex;
     }
 
-    set vertex(bVal: boolean) {
-        this._bForVertex = true;
-    }
-
     get pixel(): boolean {
         return this._bForPixel;
     }
 
-    set pixel(bVal: boolean) {
-        this._bForPixel = true;
+    $makeVertexCompatible(val = true): void {
+        this._bForVertex = val;
+    }
+
+    $makePixelCompatible(val = true): void {
+        this._bForPixel = val;
     }
 }

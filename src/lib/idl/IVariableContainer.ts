@@ -41,32 +41,29 @@ export interface IVariableInfo {
     variable: IVariableDeclInstruction;
     type: EShaderVariableType;
     name: string;
-    realName: string;
     isArray: boolean;
 }
 
-export interface IVariableContainer {
-    getIndices(): number[];
+// export interface IVariableContainer {
+//     getIndices(): number[];
 
-    add(pVar: IVariableDeclInstruction): void;
-    addSystemEntry(sName: string, eType: EShaderVariableType): void;
+//     add(pVar: IVariableDeclInstruction): void;
+//     addSystemEntry(sName: string, eType: EShaderVariableType): void;
 
-    finalize(): void;
+//     finalize(): void;
 
-    getVarInfoByIndex(iIndex: number): IVariableInfo;
-    getVarByIndex(iIndex: number): IVariableDeclInstruction;
-    getTypeByIndex(iIndex: number): EShaderVariableType;
-    isArrayVariable(iIndex: number): boolean;
+//     getVarInfoByIndex(iIndex: number): IVariableInfo;
+//     getVarByIndex(iIndex: number): IVariableDeclInstruction;
+//     getTypeByIndex(iIndex: number): EShaderVariableType;
+//     isArrayVariable(iIndex: number): boolean;
 
-    getIndexByName(sName: string): number;
-    getIndexByRealName(sName: string): number;
+//     getIndexByName(sName: string): number;
 
-    hasVariableWithName(sName: string): boolean;
-    hasVariableWithRealName(sName: string): boolean;
+//     hasVariableWithName(sName: string): boolean;
+//     hasVariableWithRealName(sName: string): boolean;
 
-    getVarByName(sName: string): IVariableDeclInstruction;
-    getVarByRealName(sName: string): IVariableDeclInstruction;
-}
+//     getVarByName(sName: string): IVariableDeclInstruction;
+// }
 
 
 

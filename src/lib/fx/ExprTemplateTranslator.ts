@@ -4,40 +4,39 @@ import { isNull } from "../common";
 import { SimpleInstruction } from "./instructions/SimpleInstruction";
 
 export class ExprTemplateTranslator {
-    private _pInToOutArgsMap: IMap<number> = null;
-    private _pExprPart: ISimpleInstruction[] = null;
+    private _inToOutArgsMap: IMap<number> = null;
+    private _exprPart: ISimpleInstruction[] = null;
 
-    constructor(sExprTemplate: string) {
-        this._pInToOutArgsMap = <IMap<number>>{};
-        this._pExprPart = <ISimpleInstruction[]>[];
+    constructor(exprTemplate: string) {
+        this._inToOutArgsMap = <IMap<number>>{};
+        this._exprPart = <ISimpleInstruction[]>[];
 
-        var pSplitTemplate: string[] = sExprTemplate.split(/(\$\d+)/);
-
-        for (var i: number = 0; i < pSplitTemplate.length; i++) {
+        let pSplitTemplate: string[] = exprTemplate.split(/(\$\d+)/);
+        for (let i: number = 0; i < pSplitTemplate.length; i++) {
             if (pSplitTemplate[i]) {
                 if (pSplitTemplate[i][0] !== '$') {
-                    this._pExprPart.push(new SimpleInstruction(pSplitTemplate[i]));
+                    this._exprPart.push(new SimpleInstruction(null, pSplitTemplate[i]));
                 }
                 else {
-                    this._pExprPart.push(null);
-                    this._pInToOutArgsMap[this._pExprPart.length - 1] = ((<number><any>(pSplitTemplate[i].substr(1))) * 1 - 1);
+                    this._exprPart.push(null);
+                    this._inToOutArgsMap[this._exprPart.length - 1] = ((<number><any>(pSplitTemplate[i].substr(1))) * 1 - 1);
                 }
             }
         }
     }
 
-    toInstructionList(pArguments: IInstruction[]): IInstruction[] {
-        var pOutputInstructionList: IInstruction[] = <IInstruction[]>[];
+    toInstructionList(args: IInstruction[]): IInstruction[] {
+        let outputInstructionList: IInstruction[] = <IInstruction[]>[];
 
-        for (var i: number = 0; i < this._pExprPart.length; i++) {
-            if (isNull(this._pExprPart[i])) {
-                pOutputInstructionList.push(pArguments[this._pInToOutArgsMap[i]]);
+        for (let i: number = 0; i < this._exprPart.length; i++) {
+            if (isNull(this._exprPart[i])) {
+                outputInstructionList.push(args[this._inToOutArgsMap[i]]);
             }
             else {
-                pOutputInstructionList.push(this._pExprPart[i]);
+                outputInstructionList.push(this._exprPart[i]);
             }
         }
 
-        return pOutputInstructionList;
+        return outputInstructionList;
     }
 }

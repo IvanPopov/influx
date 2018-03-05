@@ -1,4 +1,5 @@
 ﻿import { EScopeType } from '../idl/IScope'
+import { IPosition } from "./../idl/parser/IParser";
 import { IParseNode, IParseTree } from '../idl/parser/IParser';
 import {
     IInstruction, IFunctionDeclInstruction, IPassInstruction, ISimpleInstruction,
@@ -70,7 +71,7 @@ import { PostfixPointInstruction } from './instructions/PostfixPointInstruction'
 const TEMPLATE_TYPE = 'template';
 
 
-function getNodeSourceLocation(node: IParseNode): { line: number; column: number; } | null {
+function resolveNodeSourceLocation(node: IParseNode): IPosition | null {
     if (!isDefAndNotNull(node)) {
         return null;
     }
@@ -79,58 +80,61 @@ function getNodeSourceLocation(node: IParseNode): { line: number; column: number
         return { line: node.loc.start.line, column: node.loc.start.column };
     }
 
-    return getNodeSourceLocation(node.children[node.children.length - 1]);
+    return resolveNodeSourceLocation(node.children[node.children.length - 1]);
 }
 
 
 const systemTypes: IMap<SystemTypeInstruction> = {};
+const systemFunctionsMap: IMap<SystemFunctionInstruction[]> = {};
+const systemVariables: IMap<IVariableDeclInstruction> = {};
+const systemFunctionHashMap: IMap<boolean> = {};
 
-function generateSystemType(
-    name: string,
-    realName: string,
-    size: number = 1,
-    elementType: ITypeInstruction = null,
-    length: number = 1
-): ITypeInstruction {
+
+function generateSystemType(name: string, elementType: ITypeInstruction = null, length: number = 1, fields: IVariableDeclInstruction[] = null): ITypeInstruction {
 
     if (getSystemType(name)) {
         console.error(`type already exists: ${name}`);
         return null;
     }
 
-    let systemType: SystemTypeInstruction = new SystemTypeInstruction(name, realName, elementType, length);
+    let systemType: SystemTypeInstruction = new SystemTypeInstruction(name, elementType, length, fields);
     systemTypes[name] = systemType;
 
     return systemType;
 }
 
-const systemFunctionsMap: IMap<SystemFunctionInstruction[]> = {};
-const systemVariables: IMap<IVariableDeclInstruction> = {};
-const systemVertexOut: ComplexTypeInstruction = null;
-const systemFunctionHashMap: IMap<boolean> = {};
+function addField(fields: IVariableDeclInstruction[], fieldName: string, type: ITypeInstruction, writable: boolean = true): void {
+    let fieldID: IIdInstruction = new IdInstruction(null, fieldName);
+    let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, null, writable)
+    let field: IVariableDeclInstruction = new VariableDeclInstruction(null, fieldID, fieldType, null);
 
-function addFieldsToVectorFromSuffixObject(suffixMap: IMap<boolean>, type: ITypeInstruction, baseType: string) {
-    let sSuffix: string = null;
+    fieldType.$linkTo(field);
+    fieldID.$linkTo(field);
 
-    for (sSuffix in suffixMap) {
-        let fieldTypeName: string = baseType + ((sSuffix.length > 1) ? sSuffix.length.toString() : '');
+    fields.push(field);
+}
+
+
+function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
+    for (let suffix in suffixMap) {
+        let fieldTypeName: string = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
         let fieldType: ITypeInstruction = getSystemType(fieldTypeName);
 
-        (<SystemTypeInstruction>type).addField(sSuffix, fieldType, suffixMap[sSuffix]);
+        addField(fields, suffix, fieldType, suffixMap[suffix]);
     }
 }
 
 
 function addSystemTypeScalar(): void {
-    generateSystemType('void', 'void', 0);
-    generateSystemType('number', 'number', 1);
-    generateSystemType('bool', 'bool', 1);
-    generateSystemType('float', 'float', 1);
-    generateSystemType('string', '', 0);
-    generateSystemType('texture', '', 0);
-    generateSystemType('sampler', 'sampler2D', 1);
-    generateSystemType('sampler2D', 'sampler2D', 1);
-    generateSystemType('samplerCUBE', 'samplerCube', 1);
+    generateSystemType('void');
+    generateSystemType('number');
+    generateSystemType('bool');
+    generateSystemType('float');
+    generateSystemType('string');
+    generateSystemType('texture');
+    generateSystemType('sampler');
+    generateSystemType('sampler2D');
+    generateSystemType('samplerCUBE');
 }
 
 
@@ -163,53 +167,64 @@ function addSystemTypeVector(): void {
     let int: ITypeInstruction = getSystemType('number');
     let bool: ITypeInstruction = getSystemType('bool');
 
-    let float2: ITypeInstruction = generateSystemType('float2', 'vec2', 0, true, float, 2);
-    let float3: ITypeInstruction = generateSystemType('float3', 'vec3', 0, true, float, 3);
-    let float4: ITypeInstruction = generateSystemType('float4', 'vec4', 0, true, float, 4);
+    
+    let suf2f: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf2f, STSuffix, 'float');
 
-    let int2: ITypeInstruction = generateSystemType('int2', 'ivec2', 0, true, int, 2);
-    let int3: ITypeInstruction = generateSystemType('int3', 'ivec3', 0, true, int, 3);
-    let int4: ITypeInstruction = generateSystemType('int4', 'ivec4', 0, true, int, 4);
+    let suf3f: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, 'float');
 
-    let bool2: ITypeInstruction = generateSystemType('bool2', 'bvec2', 0, true, bool, 2);
-    let bool3: ITypeInstruction = generateSystemType('bool3', 'bvec3', 0, true, bool, 3);
-    let bool4: ITypeInstruction = generateSystemType('bool4', 'bvec4', 0, true, bool, 4);
+    let suf4f: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, 'float');
+    addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, 'float');
 
-    addFieldsToVectorFromSuffixObject(XYSuffix, float2, 'float');
-    addFieldsToVectorFromSuffixObject(RGSuffix, float2, 'float');
-    addFieldsToVectorFromSuffixObject(STSuffix, float2, 'float');
+    let suf2i: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'number');
 
-    addFieldsToVectorFromSuffixObject(XYZSuffix, float3, 'float');
-    addFieldsToVectorFromSuffixObject(RGBSuffix, float3, 'float');
-    addFieldsToVectorFromSuffixObject(STPSuffix, float3, 'float');
+    let suf3i: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'number');
 
-    addFieldsToVectorFromSuffixObject(XYZWSuffix, float4, 'float');
-    addFieldsToVectorFromSuffixObject(RGBASuffix, float4, 'float');
-    addFieldsToVectorFromSuffixObject(STPQSuffix, float4, 'float');
+    let suf4i: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'number');
 
-    addFieldsToVectorFromSuffixObject(XYSuffix, int2, 'number');
-    addFieldsToVectorFromSuffixObject(RGSuffix, int2, 'number');
-    addFieldsToVectorFromSuffixObject(STSuffix, int2, 'number');
+    let suf2b: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf2b, RGSuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf2b, STSuffix, 'bool');
 
-    addFieldsToVectorFromSuffixObject(XYZSuffix, int3, 'number');
-    addFieldsToVectorFromSuffixObject(RGBSuffix, int3, 'number');
-    addFieldsToVectorFromSuffixObject(STPSuffix, int3, 'number');
+    let suf3b: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf3b, XYZSuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf3b, RGBSuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf3b, STPSuffix, 'bool');
 
-    addFieldsToVectorFromSuffixObject(XYZWSuffix, int4, 'number');
-    addFieldsToVectorFromSuffixObject(RGBASuffix, int4, 'number');
-    addFieldsToVectorFromSuffixObject(STPQSuffix, int4, 'number');
+    let suf4b: IVariableDeclInstruction[] = [];
+    addFieldsToVectorFromSuffixObject(suf4b, XYZWSuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf4b, RGBASuffix, 'bool');
+    addFieldsToVectorFromSuffixObject(suf4b, STPQSuffix, 'bool');
 
-    addFieldsToVectorFromSuffixObject(XYSuffix, bool2, 'bool');
-    addFieldsToVectorFromSuffixObject(RGSuffix, bool2, 'bool');
-    addFieldsToVectorFromSuffixObject(STSuffix, bool2, 'bool');
 
-    addFieldsToVectorFromSuffixObject(XYZSuffix, bool3, 'bool');
-    addFieldsToVectorFromSuffixObject(RGBSuffix, bool3, 'bool');
-    addFieldsToVectorFromSuffixObject(STPSuffix, bool3, 'bool');
+    let float2: ITypeInstruction = generateSystemType('float2', float, 2, suf2f);
+    let float3: ITypeInstruction = generateSystemType('float3', float, 3, suf3f);
+    let float4: ITypeInstruction = generateSystemType('float4', float, 4, suf4f);
 
-    addFieldsToVectorFromSuffixObject(XYZWSuffix, bool4, 'bool');
-    addFieldsToVectorFromSuffixObject(RGBASuffix, bool4, 'bool');
-    addFieldsToVectorFromSuffixObject(STPQSuffix, bool4, 'bool');
+    let int2: ITypeInstruction = generateSystemType('int2', int, 2, suf2i);
+    let int3: ITypeInstruction = generateSystemType('int3', int, 3, suf3i);
+    let int4: ITypeInstruction = generateSystemType('int4', int, 4, suf4i);
+
+    let bool2: ITypeInstruction = generateSystemType('bool2', bool, 2, suf2b);
+    let bool3: ITypeInstruction = generateSystemType('bool3', bool, 3, suf3b);
+    let bool4: ITypeInstruction = generateSystemType('bool4', bool, 4, suf4b);
 }
 
 
@@ -226,84 +241,41 @@ function addSystemTypeMatrix(): void {
     let bool3: ITypeInstruction = getSystemType('bool3');
     let bool4: ITypeInstruction = getSystemType('bool4');
 
-    generateSystemType('float2x2', 'mat2', 0, true, float2, 2);
-    generateSystemType('float2x3', 'mat2x3', 0, true, float2, 3);
-    generateSystemType('float2x4', 'mat2x4', 0, true, float2, 4);
+    generateSystemType('float2x2', float2, 2);
+    generateSystemType('float2x3', float2, 3);
+    generateSystemType('float2x4', float2, 4);
 
-    generateSystemType('float3x2', 'mat3x2', 0, true, float3, 2);
-    generateSystemType('float3x3', 'mat3', 0, true, float3, 3);
-    generateSystemType('float3x4', 'mat3x4', 0, true, float3, 4);
+    generateSystemType('float3x2', float3, 2);
+    generateSystemType('float3x3', float3, 3);
+    generateSystemType('float3x4', float3, 4);
 
-    generateSystemType('float4x2', 'mat4x2', 0, true, float4, 2);
-    generateSystemType('float4x3', 'mat4x3', 0, true, float4, 3);
-    generateSystemType('float4x4', 'mat4', 0, true, float4, 4);
+    generateSystemType('float4x2', float4, 2);
+    generateSystemType('float4x3', float4, 3);
+    generateSystemType('float4x4', float4, 4);
 
-    generateSystemType('int2x2', 'imat2', 0, true, int2, 2);
-    generateSystemType('int2x3', 'imat2x3', 0, true, int2, 3);
-    generateSystemType('int2x4', 'imat2x4', 0, true, int2, 4);
+    generateSystemType('int2x2', int2, 2);
+    generateSystemType('int2x3', int2, 3);
+    generateSystemType('int2x4', int2, 4);
 
-    generateSystemType('int3x2', 'imat3x2', 0, true, int3, 2);
-    generateSystemType('int3x3', 'imat3', 0, true, int3, 3);
-    generateSystemType('int3x4', 'imat3x4', 0, true, int3, 4);
+    generateSystemType('int3x2', int3, 2);
+    generateSystemType('int3x3', int3, 3);
+    generateSystemType('int3x4', int3, 4);
 
-    generateSystemType('int4x2', 'imat4x2', 0, true, int4, 2);
-    generateSystemType('int4x3', 'imat4x3', 0, true, int4, 3);
-    generateSystemType('int4x4', 'imat4', 0, true, int4, 4);
+    generateSystemType('int4x2', int4, 2);
+    generateSystemType('int4x3', int4, 3);
+    generateSystemType('int4x4', int4, 4);
 
-    generateSystemType('bool2x2', 'bmat2', 0, true, bool2, 2);
-    generateSystemType('bool2x3', 'bmat2x3', 0, true, bool2, 3);
-    generateSystemType('bool2x4', 'bmat2x4', 0, true, bool2, 4);
+    generateSystemType('bool2x2', bool2, 2);
+    generateSystemType('bool2x3', bool2, 3);
+    generateSystemType('bool2x4', bool2, 4);
 
-    generateSystemType('bool3x2', 'bmat3x2', 0, true, bool3, 2);
-    generateSystemType('bool3x3', 'bmat3', 0, true, bool3, 3);
-    generateSystemType('bool3x4', 'bmat3x4', 0, true, bool3, 4);
+    generateSystemType('bool3x2', bool3, 2);
+    generateSystemType('bool3x3', bool3, 3);
+    generateSystemType('bool3x4', bool3, 4);
 
-    generateSystemType('bool4x2', 'bmat4x2', 0, true, bool4, 2);
-    generateSystemType('bool4x3', 'bmat4x3', 0, true, bool4, 3);
-    generateSystemType('bool4x4', 'bmat4', 0, true, bool4, 4);
-}
-
-
-function generateBaseVertexOutput(): void {
-    //TODO: fix defenition of this variables
-
-    let outBasetype: ComplexTypeInstruction = new ComplexTypeInstruction(null);
-
-    let position: VariableDeclInstruction = new VariableDeclInstruction(null);
-    let pointSize: VariableDeclInstruction = new VariableDeclInstruction(null);
-    let positionType: VariableTypeInstruction = new VariableTypeInstruction(null);
-    let pointSizeType: VariableTypeInstruction = new VariableTypeInstruction(null);
-    let positionId: IdInstruction = new IdInstruction(null);
-    let pointSizeId: IdInstruction = new IdInstruction(null);
-
-    positionType.pushType(getSystemType('float4'));
-    pointSizeType.pushType(getSystemType('float'));
-
-    positionId.name = ('pos');
-    positionId.realName = ('POSITION');
-
-    pointSizeId.name = ('psize');
-    pointSizeId.realName = ('PSIZE');
-
-    position.push(positionType, true);
-    position.push(positionId, true);
-
-    pointSize.push(pointSizeType, true);
-    pointSize.push(pointSizeId, true);
-
-    position.semantics = ('POSITION');
-    pointSize.semantics = ('PSIZE');
-
-    let fieldCollector: IInstruction = new InstructionCollector();
-    fieldCollector.push(position, false);
-    fieldCollector.push(pointSize, false);
-
-    outBasetype.addFields(fieldCollector, true);
-
-    outBasetype.name = ('VS_OUT');
-    outBasetype.realName = ('VS_OUT_S');
-
-    systemVertexOut = outBasetype;
+    generateSystemType('bool4x2', bool4, 2);
+    generateSystemType('bool4x3', bool4, 3);
+    generateSystemType('bool4x4', bool4, 4);
 }
 
 
@@ -382,6 +354,7 @@ export function getExternalType(type: ITypeInstruction): any {
     }
 }
 
+
 export function isMatrixType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('float2x2')) ||
         type.isEqual(getSystemType('float3x3')) ||
@@ -393,6 +366,7 @@ export function isMatrixType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType('bool3x3')) ||
         type.isEqual(getSystemType('bool4x4'));
 }
+
 
 export function isVectorType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('float2')) ||
@@ -406,11 +380,13 @@ export function isVectorType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType('int4'));
 }
 
+
 export function isScalarType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('bool')) ||
         type.isEqual(getSystemType('number')) ||
         type.isEqual(getSystemType('float'));
 }
+
 
 export function isFloatBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('float')) ||
@@ -422,6 +398,7 @@ export function isFloatBasedType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType('float4x4'));
 }
 
+
 export function isIntBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('number')) ||
         type.isEqual(getSystemType('int2')) ||
@@ -431,6 +408,7 @@ export function isIntBasedType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType('int3x3')) ||
         type.isEqual(getSystemType('int4x4'));
 }
+
 
 export function isBoolBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('bool')) ||
@@ -442,6 +420,7 @@ export function isBoolBasedType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType('bool4x4'));
 }
 
+
 export function isSamplerType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('sampler')) ||
         type.isEqual(getSystemType('sampler2D')) ||
@@ -450,88 +429,95 @@ export function isSamplerType(type: ITypeInstruction): boolean {
 }
 
 
-function generateSystemFunction(name: string, sTranslationExpr: string,
-    sReturnTypeName: string,
-    argsTypes: string[],
-    pTemplateTypes: string[],
-    isForVertex: boolean = true, isForPixel: boolean = true): void {
+function generateSystemFunction(name: string, 
+                                translationExpr: string,
+                                returnTypeName: string,
+                                argsTypes: string[],
+                                templateTypes: string[],
+                                isForVertex: boolean = true, 
+                                isForPixel: boolean = true): void {
 
-    var exprTranslator: ExprTemplateTranslator = new ExprTemplateTranslator(sTranslationExpr);
-    var systemFunctions: IMap<SystemFunctionInstruction[]> = systemFunctionsMap;
-    var types: ITypeInstruction[] = null;
-    var sFunctionHash: string = "";
-    var returnType: ITypeInstruction = null;
-    var func: SystemFunctionInstruction = null;
+    let exprTranslator: ExprTemplateTranslator = new ExprTemplateTranslator(translationExpr);
+    let systemFunctions: IMap<SystemFunctionInstruction[]> = systemFunctionsMap;
+    let types: ITypeInstruction[] = null;
+    let functionHash: string = "";
+    let returnType: ITypeInstruction = null;
+    let func: SystemFunctionInstruction = null;
+    let nameID: IIdInstruction;
 
-    if (!isNull(pTemplateTypes)) {
-        for (var i: number = 0; i < pTemplateTypes.length; i++) {
+    if (!isNull(templateTypes)) {
+        for (let i: number = 0; i < templateTypes.length; i++) {
             types = [];
-            sFunctionHash = name + "(";
-            returnType = (sReturnTypeName === TEMPLATE_TYPE) ?
-                getSystemType(pTemplateTypes[i]) :
-                getSystemType(sReturnTypeName);
+            functionHash = name + "(";
+            returnType = (returnTypeName === TEMPLATE_TYPE) ?
+                getSystemType(templateTypes[i]) :
+                getSystemType(returnTypeName);
 
 
-            for (var j: number = 0; j < argsTypes.length; j++) {
+            for (let j: number = 0; j < argsTypes.length; j++) {
                 if (argsTypes[j] === TEMPLATE_TYPE) {
-                    types.push(getSystemType(pTemplateTypes[i]));
-                    sFunctionHash += pTemplateTypes[i] + ",";
+                    types.push(getSystemType(templateTypes[i]));
+                    functionHash += templateTypes[i] + ",";
                 }
                 else {
                     types.push(getSystemType(argsTypes[j]));
-                    sFunctionHash += argsTypes[j] + ","
+                    functionHash += argsTypes[j] + ","
                 }
             }
 
-            sFunctionHash += ")";
+            functionHash += ")";
 
-            if (systemFunctionHashMap[sFunctionHash]) {
-                _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: sFunctionHash });
+            if (systemFunctionHashMap[functionHash]) {
+                _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
             }
 
-            func = new SystemFunctionInstruction(name, returnType, exprTranslator, types);
+            nameID = new IdInstruction(null, name);
+            func = new SystemFunctionInstruction(nameID, returnType, exprTranslator, types);
+
+            nameID.$linkTo(func);
 
             if (!isDef(systemFunctions[name])) {
                 systemFunctions[name] = [];
             }
 
-            func.vertex = (isForVertex);
-            func.pixel = (isForPixel);
+            func.$makeVertexCompatible(isForVertex);
+            func.$makePixelCompatible(isForPixel);
 
             systemFunctions[name].push(func);
-            func.builtIn = (true);
         }
     }
     else {
-
-        if (sReturnTypeName === TEMPLATE_TYPE) {
+        if (returnTypeName === TEMPLATE_TYPE) {
             logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
-        returnType = getSystemType(sReturnTypeName);
+        returnType = getSystemType(returnTypeName);
         types = [];
-        sFunctionHash = name + "(";
+        functionHash = name + "(";
 
-        for (var i: number = 0; i < argsTypes.length; i++) {
+        for (let i: number = 0; i < argsTypes.length; i++) {
             if (argsTypes[i] === TEMPLATE_TYPE) {
                 logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
                 types.push(getSystemType(argsTypes[i]));
-                sFunctionHash += argsTypes[i] + ",";
+                functionHash += argsTypes[i] + ",";
             }
         }
 
-        sFunctionHash += ")";
+        functionHash += ")";
 
-        if (systemFunctionHashMap[sFunctionHash]) {
-            _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: sFunctionHash });
+        if (systemFunctionHashMap[functionHash]) {
+            _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
         }
 
-        func = new SystemFunctionInstruction(name, returnType, exprTranslator, types);
+        nameID = new IdInstruction(null, name);
+        func = new SystemFunctionInstruction(nameID, returnType, exprTranslator, types);
 
-        func.vertex = (isForVertex);
-        func.pixel = (isForPixel);
+        nameID.$linkTo(func);
+
+        func.$makeVertexCompatible(isForVertex);
+        func.$makePixelCompatible(isForPixel);
 
         if (!isDef(systemFunctions[name])) {
             systemFunctions[name] = [];
@@ -698,6 +684,7 @@ function addSystemFunctions(): void {
     generateSystemFunction('width', 'width($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     generateSystemFunction('fwidth', 'fwidth($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     // generateSystemFunction("smoothstep", "smoothstep($1, $2, $3)", "float3", ["float3", "float3", "float3"], null);
+    
     generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, ['float', 'float', TEMPLATE_TYPE], ['float2', 'float3', 'float4']);
 
@@ -715,8 +702,6 @@ function initSystemTypes(): void {
     addSystemTypeScalar();
     addSystemTypeVector();
     addSystemTypeMatrix();
-
-    generateBaseVertexOutput();
 }
 
 
@@ -759,11 +744,11 @@ function generateSystemVariable(name: string, realName: string, sTypeName: strin
 
 
 function addSystemVariables(): void {
-    generateSystemVariable('fragColor', 'gl_FragColor', 'float4', false, true, true);
-    generateSystemVariable('fragCoord', 'gl_FragCoord', 'float4', false, true, true);
-    generateSystemVariable('frontFacing', 'gl_FrontFacing', 'bool', false, true, true);
-    generateSystemVariable('pointCoord', 'gl_PointCoord', 'float2', false, true, true);
-    generateSystemVariable('resultColor', 'resultColor', 'float4', false, true, true);
+    // generateSystemVariable('fragColor', 'gl_FragColor', 'float4', false, true, true);
+    // generateSystemVariable('fragCoord', 'gl_FragCoord', 'float4', false, true, true);
+    // generateSystemVariable('frontFacing', 'gl_FrontFacing', 'bool', false, true, true);
+    // generateSystemVariable('pointCoord', 'gl_PointCoord', 'float2', false, true, true);
+    // generateSystemVariable('resultColor', 'resultColor', 'float4', false, true, true);
 }
 
 
@@ -848,10 +833,6 @@ function findFunctionByDef(scope: ProgramScope, pDef: FunctionDefInstruction): I
 }
 
 
-export function getBaseVertexOutType(): ComplexTypeInstruction {
-    return systemVertexOut;
-}
-
 
 export function getSystemType(sTypeName: string): SystemTypeInstruction {
     //boolean, string, float and others
@@ -895,7 +876,7 @@ function isSystemType(type: ITypeDeclInstruction): boolean {
 
 function _error(context: Context, node: IParseNode, eCode: number, pInfo: IEffectErrorInfo = {}): void {
     let location: ISourceLocation = <ISourceLocation>{ file: context? context.analyzedFileName: null, line: 0 };
-    let lineColumn: { line: number; column: number; } = getNodeSourceLocation(node);
+    let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(node);
 
     switch (eCode) {
         default:
@@ -2936,7 +2917,7 @@ function analyzeUsageStructDecl(context: Context, scope: ProgramScope, node: IPa
 function analyzeStruct(context: Context, scope: ProgramScope, node: IParseNode): ITypeInstruction {
     const children: IParseNode[] = node.children;
 
-    const pStruct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
+    const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
     const fieldCollector: IInstruction = new InstructionCollector();
 
     scope.pushScope(EScopeType.k_Struct);
@@ -2949,10 +2930,10 @@ function analyzeStruct(context: Context, scope: ProgramScope, node: IParseNode):
     }
 
     scope.popScope();
-    pStruct.addFields(fieldCollector, true);
+    struct.addFields(fieldCollector, true);
 
-    checkInstruction(context, pStruct, ECheckStage.CODE_TARGET_SUPPORT);
-    return pStruct;
+    checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
+    return struct;
 }
 
 
@@ -3795,12 +3776,12 @@ function analyzeImportDecl(context: Context, node: IParseNode, pTechnique: ITech
 function analyzeStructDecl(context: Context, scope: ProgramScope, node: IParseNode): ITypeInstruction {
     const children: IParseNode[] = node.children;
 
-    const pStruct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
+    const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
     const fieldCollector: IInstruction = new InstructionCollector();
 
     const name: string = children[children.length - 2].value;
 
-    pStruct.name = name;
+    struct.name = name;
 
     scope.pushScope(EScopeType.k_Struct);
 
@@ -3813,10 +3794,10 @@ function analyzeStructDecl(context: Context, scope: ProgramScope, node: IParseNo
 
     scope.popScope();
 
-    pStruct.addFields(fieldCollector, true);
+    struct.addFields(fieldCollector, true);
 
-    checkInstruction(context, pStruct, ECheckStage.CODE_TARGET_SUPPORT);
-    return pStruct;
+    checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
+    return struct;
 }
 
 

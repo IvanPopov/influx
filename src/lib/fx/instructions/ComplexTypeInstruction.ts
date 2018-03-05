@@ -11,18 +11,16 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export class ComplexTypeInstruction extends Instruction implements ITypeInstruction {
     private _name: string;
-    private _realName: string;
     private _fields: IMap<IVariableDeclInstruction>;
 
     private _isContainArray: boolean;
     private _isContainSampler: boolean;
     private _isContainComplexType: boolean;
 
-    constructor(node: IParseNode, name: string, realName: string, fields: IInstructionCollector) {
+    constructor(node: IParseNode, name: string, fields: IInstructionCollector) {
         super(node, EInstructionTypes.k_ComplexTypeInstruction);
 
         this._name = null;
-        this._realName = null;
         this._fields = {};
 
         this._isContainArray = false;
@@ -49,11 +47,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     
     get name(): string {
         return this._name;
-    }
-
-
-    get realName(): string {
-        return this._realName;
     }
 
 
@@ -108,7 +101,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     
     toDeclString(): string {
-        var code: string = "struct " + this._realName + "{";
+        var code: string = "struct " + this._name + "{";
 
         for (var i: number = 0; i < this.fields.length; i++) {
             code += "\t" + this.fields[i].toCode() + ";\n";
@@ -121,7 +114,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     
     toCode(): string {
-        return this._realName;
+        return this._name;
     }
 
     
@@ -341,7 +334,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
                 return;
             }
 
-            varType.padding = padding;
+            varType.$overwritePadding(padding);
             padding += varSize;
         }
     }

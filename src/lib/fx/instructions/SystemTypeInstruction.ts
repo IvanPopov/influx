@@ -9,7 +9,6 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
     protected _name: string;
-    protected _realName: string;
     protected _elementType: ITypeInstruction;
     protected _length: number;
     protected _fields: IVariableDeclInstruction[];
@@ -21,13 +20,12 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     protected _variableTypeWrapper: IVariableTypeInstruction;
 
-    constructor(name: string, realName: string, elemType: ITypeInstruction = null, 
+    constructor(name: string, elemType: ITypeInstruction = null, 
                 length: number = 1, fields: IVariableDeclInstruction[] = [], 
                 writable: boolean = true, readable: boolean = true, declaration: string = '') {
         super(null, EInstructionTypes.k_SystemTypeInstruction);
 
         this._name = name;
-        this._realName = realName;
         this._elementType = elemType;
         this._length = length;
         this._fields = fields;
@@ -64,13 +62,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
     
-    get realName(): string {
-        return this._realName;
-    }
-
-    
     get hash(): string {
-        return this._realName;
+        return this._name;
     }
 
     
@@ -215,7 +208,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     
     toCode(): string {
-        return this._realName;
+        return this._name;
     }
 
 

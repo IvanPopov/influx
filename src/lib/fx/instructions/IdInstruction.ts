@@ -5,12 +5,10 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export class IdInstruction extends Instruction implements IIdInstruction {
     protected _name: string;
-    protected _realName: string;
 
     constructor(node: IParseNode, name: string) {
         super(node, EInstructionTypes.k_IdInstruction);
         this._name = name;
-        this._realName = name;
     }
     
 
@@ -24,23 +22,13 @@ export class IdInstruction extends Instruction implements IIdInstruction {
     }
 
 
-    get realName(): string {
-        return this._realName;
-    }
-
-
-    set realName(sRealName: string) {
-        this._realName = sRealName;
-    }
-
-
     toString(): string {
         return this._name;
     }
 
 
     toCode(): string {
-        return this.realName;
+        return this.name;
     }
 }
 

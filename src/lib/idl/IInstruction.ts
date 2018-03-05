@@ -172,7 +172,6 @@ export interface ISimpleInstruction extends IInstruction {
 export interface ITypeInstruction extends IInstruction {
     readonly size: number;
     readonly name: string;
-    readonly realName: string;
     readonly baseType: ITypeInstruction;
     readonly length: number;
     readonly arrayElementType: ITypeInstruction;
@@ -242,7 +241,6 @@ export interface IConditionalExprInstruction extends IExprInstruction {
 
 export interface IDeclInstruction extends ITypedInstruction {
     readonly name: string;
-    readonly realName: string;
     readonly nameID: IIdInstruction;
 
     readonly semantics: string;
@@ -252,6 +250,9 @@ export interface IDeclInstruction extends ITypedInstruction {
     readonly builtIn: boolean;
     readonly vertex: boolean;
     readonly pixel: boolean;
+
+    $makeVertexCompatible(val?: boolean);
+    $makePixelCompatible(val?: boolean);
 }
 
 
@@ -259,7 +260,6 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly returnType: ITypeInstruction; 
     readonly functionName: IIdInstruction;
     readonly name: string;
-    readonly realName: string;
     readonly arguments: IVariableDeclInstruction[];
 
     readonly numArgsRequired: number;
@@ -286,7 +286,6 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
 export interface ITypeDeclInstruction extends IDeclInstruction {
     type: ITypeInstruction;
     name: string;
-    realName: string;
 }
 
 export interface IVariableDeclInstruction extends IDeclInstruction {
@@ -307,7 +306,7 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
     readonly implementation: IStmtInstruction;
     readonly functionType: EFunctionType;
-    readonly arguments: IVariableDeclInstruction[];
+    // readonly arguments: IVariableDeclInstruction[];
 
     readonly vertexShader: IFunctionDeclInstruction;
     readonly pixelShader: IFunctionDeclInstruction;
@@ -366,7 +365,6 @@ export interface IStructDeclInstruction extends IInstruction {
 
 export interface IIdInstruction extends IInstruction {
     readonly name: string;
-    readonly realName: string;
 
     /** Specifies whether to emit ID to source code or not. */
     readonly visible: boolean;

@@ -56,7 +56,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
         };
 
         if (!isNull(this._texture)) {
-            samplerState.textureName = this._texture.realName;
+            samplerState.textureName = this._texture.name;
         }
 
         if (!isNull(this._samplerParams)) {

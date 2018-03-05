@@ -22,7 +22,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor(node: IParseNode, type: ITypeInstruction, usages: string[] = [], arrayIndex: IExprInstruction = null) {
+    constructor(node: IParseNode, type: ITypeInstruction, usages: string[] = [], arrayIndex: IExprInstruction = null,
+                writable = true, readable = true) {
         super(node, EInstructionTypes.k_VariableTypeInstruction);
 
         
@@ -47,8 +48,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             }
         }
 
-        this._isWritable = true;
-        this._isReadable = true;
+        this._isWritable = writable;
+        this._isReadable = readable;
 
         this._arrayIndexExpr = null;
         this._arrayElementType = null;
@@ -84,11 +85,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     get name(): string {
         return this.baseType.name;
-    }
-
-
-    get realName(): string {
-        return this.baseType.realName;
     }
 
 

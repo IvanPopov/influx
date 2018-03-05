@@ -24,11 +24,6 @@ export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclIns
     }
     
 
-    get realName(): string {
-        return this.type.realName;
-    }
-
-
     toCode(): string {
         return this.type.toDeclString() + ";";
     }

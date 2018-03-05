@@ -10,7 +10,7 @@ import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
     private _exprTranslator: ExprTemplateTranslator ;
     private _name: IIdInstruction;
-    private _args: IVariableDeclInstruction[];
+    private _args: ITypeInstruction[];
     private _returnType: ITypeInstruction;
 
     private _definition: string;
@@ -19,9 +19,9 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     private _extSystemTypeList: ITypeDeclInstruction[];
     private _extSystemFunctionList: IFunctionDeclInstruction[];
 
-    constructor(name: IdInstruction, returnType: IVariableTypeInstruction,
+    constructor(name: IIdInstruction, returnType: ITypeInstruction,
                 exprTranslator: ExprTemplateTranslator,
-                args: IVariableDeclInstruction[], definition: string, implementation: string) {
+                args: ITypeInstruction[] = [], definition: string = null, implementation: string = null) {
 
         super(null, null, null, EInstructionTypes.k_SystemFunctionInstruction);
 
@@ -100,7 +100,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         return this._name;
     }
 
-    get arguments(): IVariableDeclInstruction[] {
+    get arguments(): ITypeInstruction[] {
         return this._args;
     }
 
