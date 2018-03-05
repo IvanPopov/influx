@@ -11,9 +11,9 @@ import { SystemFunctionInstruction } from "./SystemFunctionInstruction";
  * EMPTY_OPERATOR SimpleInstruction ... SimpleInstruction 
  */
 export class SystemCallInstruction extends ExprInstruction {
-    private _func: SystemFunctionInstruction;
-    private _args: IExprInstruction[];
-    // private _samplerDecl: IVariableDeclInstruction;
+    protected _func: SystemFunctionInstruction;
+    protected _args: IExprInstruction[];
+    // protected _samplerDecl: IVariableDeclInstruction;
 
     constructor(func: SystemFunctionInstruction, args: IExprInstruction[]) {
         super(null, func.type, EInstructionTypes.k_SystemCallInstruction);

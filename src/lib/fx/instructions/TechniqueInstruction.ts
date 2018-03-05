@@ -6,8 +6,8 @@ import { PassInstruction } from './PassInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 
 export class TechniqueInstruction extends DeclInstruction implements ITechniqueInstruction {
-    private _name: string;
-    private _passList: IPassInstruction[];
+    protected _name: string;
+    protected _passList: IPassInstruction[];
 
     constructor(node: IParseNode, name: string, passes: IPassInstruction[], 
                 semantics: string = null, annotation: IAnnotationInstruction = null) {

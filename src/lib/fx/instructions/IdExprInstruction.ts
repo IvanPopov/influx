@@ -1,4 +1,5 @@
 import { IIdExprInstruction, IVariableTypeInstruction, EInstructionTypes, IVariableDeclInstruction, EFunctionType, IInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
+import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { IDeclInstruction } from "./../../idl/IInstruction";
 import { IIdInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
@@ -54,7 +55,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
 
     addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
         usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (!this.type.isFromVariableDecl()) {
+        if (!VariableTypeInstruction.isInheritedFromVariableDecl(this.type)) {
             return;
         }
 

@@ -10,8 +10,8 @@ import { ExprInstruction } from "./ExprInstruction";
  * (-- | ++) Instruction
  */
 export class PostfixArithmeticInstruction extends ExprInstruction {
-    private _operator: string;
-    private _expr: IExprInstruction;
+    protected _operator: string;
+    protected _expr: IExprInstruction;
 
     
     constructor(node: IParseNode, expr: IExprInstruction, operator: string) {

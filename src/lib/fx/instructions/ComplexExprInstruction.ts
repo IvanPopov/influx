@@ -8,7 +8,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR ExprInstruction
  */
 export class ComplexExprInstruction extends ExprInstruction {
-    private _expr: IExprInstruction;
+    protected _expr: IExprInstruction;
 
 
     constructor(node: IParseNode, expr: IExprInstruction) {

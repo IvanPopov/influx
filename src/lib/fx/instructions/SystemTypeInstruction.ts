@@ -8,18 +8,18 @@ import { VariableDeclInstruction } from "./VariableInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
-    private _name: string;
-    private _realName: string;
-    private _elementType: ITypeInstruction;
-    private _length: number;
-    private _fields: IVariableDeclInstruction[];
+    protected _name: string;
+    protected _realName: string;
+    protected _elementType: ITypeInstruction;
+    protected _length: number;
+    protected _fields: IVariableDeclInstruction[];
 
-    private _bIsWritable: boolean;
-    private _bIsReadable: boolean;
+    protected _bIsWritable: boolean;
+    protected _bIsReadable: boolean;
 
-    private _declaration: string;
+    protected _declaration: string;
 
-    private _variableTypeWrapper: IVariableTypeInstruction;
+    protected _variableTypeWrapper: IVariableTypeInstruction;
 
     constructor(name: string, realName: string, elemType: ITypeInstruction = null, 
                 length: number = 1, fields: IVariableDeclInstruction[] = [], 

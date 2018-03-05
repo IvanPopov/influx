@@ -8,6 +8,7 @@ import { isNull } from "../../common";
  * Represent all kind of statements
  */
 export class StmtInstruction extends Instruction implements IStmtInstruction {
+    
     constructor(node: IParseNode, type: EInstructionTypes = EInstructionTypes.k_StmtInstruction) {
         super(node, type);
     }

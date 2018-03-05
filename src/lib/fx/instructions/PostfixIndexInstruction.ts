@@ -12,8 +12,8 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class PostfixIndexInstruction extends ExprInstruction {
     // private _samplerArrayDecl: IVariableDeclInstruction = null;
-    private _element: IExprInstruction;
-    private _index: IExprInstruction;
+    protected _element: IExprInstruction;
+    protected _index: IExprInstruction;
 
     constructor(node: IParseNode, element: IExprInstruction, index: IExprInstruction) {
         super(node, (element.type as IVariableTypeInstruction).arrayElementType, EInstructionTypes.k_PostfixIndexInstruction);

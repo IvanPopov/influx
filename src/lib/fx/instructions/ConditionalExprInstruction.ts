@@ -8,9 +8,9 @@ import { IMap } from "../../idl/IMap";
  * EMPTY_OPERATOR Instruction Instruction Instruction 
  */
 export class ConditionalExprInstruction extends ExprInstruction implements IConditionalExprInstruction {
-    private _cond: IExprInstruction;
-    private _leftValue: ITypedInstruction;
-    private _rightValue: ITypedInstruction;
+    protected _cond: IExprInstruction;
+    protected _leftValue: ITypedInstruction;
+    protected _rightValue: ITypedInstruction;
 
     constructor(node: IParseNode, cond: IExprInstruction, left: ITypedInstruction, right: ITypedInstruction) {
         super(node, left.type, EInstructionTypes.k_ConditionalExprInstruction);

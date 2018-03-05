@@ -12,21 +12,21 @@ import { ISamplerState } from "../../idl/ISamplerState";
 
 
 export class PassInstruction extends DeclInstruction implements IPassInstruction {
-    private _vertexShader: IFunctionDeclInstruction;
-    private _pixelShader: IFunctionDeclInstruction;
-    private _passStateMap: IMap<ERenderStateValues>;
+    protected _vertexShader: IFunctionDeclInstruction;
+    protected _pixelShader: IFunctionDeclInstruction;
+    protected _passStateMap: IMap<ERenderStateValues>;
 
-    private _uniformVariableMapV: IMap<IVariableDeclInstruction>;
-    private _textureVariableMapV: IMap<IVariableDeclInstruction>;
-    private _usedComplexTypeMapV: IMap<ITypeInstruction>;
+    protected _uniformVariableMapV: IMap<IVariableDeclInstruction>;
+    protected _textureVariableMapV: IMap<IVariableDeclInstruction>;
+    protected _usedComplexTypeMapV: IMap<ITypeInstruction>;
 
-    private _uniformVariableMapP: IMap<IVariableDeclInstruction>;
-    private _textureVariableMapP: IMap<IVariableDeclInstruction>;
-    private _usedComplexTypeMapP: IMap<ITypeInstruction>;
+    protected _uniformVariableMapP: IMap<IVariableDeclInstruction>;
+    protected _textureVariableMapP: IMap<IVariableDeclInstruction>;
+    protected _usedComplexTypeMapP: IMap<ITypeInstruction>;
 
     // todo: remove this extra info
-    private _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
-    private _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
+    protected _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
+    protected _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
 
     constructor(node: IParseNode, vertexShader: IFunctionDeclInstruction, pixelShader: IFunctionDeclInstruction,
         passStates: IMap<ERenderStateValues>, semantics: string = null, annotation: IAnnotationInstruction = null) {

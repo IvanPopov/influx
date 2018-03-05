@@ -141,7 +141,7 @@ export interface IInstruction {
     readonly instructionID: number;
     readonly globalScope: boolean;
 
-    prepareFor(eUsedType: EFunctionType): void;
+    prepareFor(type: EFunctionType): void;
 
     toString(): string;
     toCode(): string;
@@ -149,7 +149,7 @@ export interface IInstruction {
     /** Internal API */
     $hide(): void;
     $linkTo(parent: IInstruction): void;
-    $specifyScope(scope: number): void;
+    $linkToScope(scope: number): void;
 
     _check(eStage: ECheckStage): boolean;
     _getLastError(): IInstructionError;
@@ -173,14 +173,13 @@ export interface ITypeInstruction extends IInstruction {
     readonly size: number;
     readonly name: string;
     readonly realName: string;
+    readonly baseType: ITypeInstruction;
+    readonly length: number;
+    readonly arrayElementType: ITypeInstruction;
 
     readonly builtIn: boolean;
     readonly hash: string;
     readonly strongHash: string;
-    readonly baseType: ITypeInstruction;
-    readonly length: number;
-    readonly arrayElementType: ITypeInstruction;
-    readonly typeDecl: ITypeDeclInstruction;
 
     readonly writable: boolean;
     readonly readable: boolean;
@@ -192,8 +191,6 @@ export interface ITypeInstruction extends IInstruction {
     isArray(): boolean;
     isNotBaseArray(): boolean;
     isComplex(): boolean;
-    isEqual(pType: ITypeInstruction): boolean;
-    isStrongEqual(pType: ITypeInstruction): boolean;
     isConst(): boolean;
     isSampler(): boolean;
     isSamplerCube(): boolean;
@@ -202,14 +199,17 @@ export interface ITypeInstruction extends IInstruction {
     isContainSampler(): boolean;
     isContainComplexType(): boolean;
 
-    hasField(sFieldName: string): boolean;
-    hasFieldWithSematics(sSemantic: string);
+    isEqual(type: ITypeInstruction): boolean;
+    isStrongEqual(type: ITypeInstruction): boolean;
+
+    hasField(fieldName: string): boolean;
+    hasFieldWithSematics(semantics: string);
     hasAllUniqueSemantics(): boolean;
     hasFieldWithoutSemantics(): boolean;
 
-    getField(sFieldName: string): IVariableDeclInstruction;
-    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction;
-    getFieldType(sFieldName: string): IVariableTypeInstruction;
+    getField(fieldName: string): IVariableDeclInstruction;
+    getFieldBySemantics(semantics: string): IVariableDeclInstruction;
+    getFieldType(fieldName: string): IVariableTypeInstruction;
 
     toDeclString(): string;
 }
@@ -249,23 +249,21 @@ export interface IDeclInstruction extends ITypedInstruction {
     readonly annotation: IAnnotationInstruction;
 
     /** Additional markers */
-    builtIn: boolean;
-    vertex: boolean;
-    pixel: boolean;
+    readonly builtIn: boolean;
+    readonly vertex: boolean;
+    readonly pixel: boolean;
 }
 
 
 export interface IFunctionDefInstruction extends IDeclInstruction {
-    returnType: ITypeInstruction; 
-    functionName: IIdInstruction;
-    name: string;
-    realName: string;
-    arguments: IVariableDeclInstruction[];
+    readonly returnType: ITypeInstruction; 
+    readonly functionName: IIdInstruction;
+    readonly name: string;
+    readonly realName: string;
+    readonly arguments: IVariableDeclInstruction[];
 
-    numArgsRequired: number;
-    shaderDef: boolean; // << Is it function represent shader?
-    
-    readonly paramListForShaderInput: IVariableDeclInstruction[];
+    readonly numArgsRequired: number;
+    readonly shaderInput: IVariableDeclInstruction[];
     
     // moved to effect.fx
     // addParameter(pParam: IVariableDeclInstruction, useStrict?: boolean): boolean;
@@ -278,6 +276,10 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     checkForPixelUsage(): boolean;
 
     toString(): string;  // << declaration with uniq name
+
+    isShader(): boolean;
+
+    $makeShader(): void;
 }
 
 
@@ -305,6 +307,7 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
     readonly implementation: IStmtInstruction;
     readonly functionType: EFunctionType;
+    readonly arguments: IVariableDeclInstruction[];
 
     readonly vertexShader: IFunctionDeclInstruction;
     readonly pixelShader: IFunctionDeclInstruction;
@@ -319,7 +322,7 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly extSystemTypeList: ITypeDeclInstruction[];
     
 
-    isUsedAs(eUsedType: EFunctionType): boolean;
+    isUsedAs(type: EFunctionType): boolean;
     isUsedAsFunction(): boolean;
     isUsedAsVertex(): boolean;
     isUsedAsPixel(): boolean;
@@ -336,7 +339,7 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
      */
 
     // todo: remove
-    markUsedAs(eUsedType: EFunctionType): void;
+    markUsedAs(type: EFunctionType): void;
     markUsedInVertex(): void;
     markUsedInPixel(): void;
 
@@ -350,6 +353,9 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     prepareForPixel(): void;
 
     generateInfoAboutUsedData(): void;
+
+    $overwriteType(type: EFunctionType): void;
+    $linkToImplementationScope(scope: number): void;
 }
 
 
@@ -378,7 +384,7 @@ export interface IAnalyzedInstruction extends IInstruction {
 
 
 export interface IExprInstruction extends ITypedInstruction, IAnalyzedInstruction {
-    type: IVariableTypeInstruction;
+    readonly type: IVariableTypeInstruction;
 
     evaluate(): boolean;
     getEvalValue(): any;
@@ -412,12 +418,20 @@ export interface IPairedExprInstruction extends IExprInstruction {
 }
 
 export interface IAssignmentExprInstruction extends IPairedExprInstruction {
-    readonlyoperator: string;
+    readonly operator: string;
+    readonly left: IInstruction;
+    readonly right: IInstruction;
 }
 
 
 export interface IInitExprInstruction extends IExprInstruction {
-    optimizeForVariableType(pType: IVariableTypeInstruction): boolean;
+    readonly arguments: IExprInstruction[];
+
+    isArray(): boolean;
+    isConst(): boolean;
+    
+    optimizeForVariableType(type: IVariableTypeInstruction): boolean;
+    
 }
 
 

@@ -3,7 +3,7 @@ import { EInstructionTypes, IInstructionCollector, IInstruction } from "../../id
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class InstructionCollector extends Instruction implements IInstructionCollector {
-    private _instructions: IInstruction[];
+    protected _instructions: IInstruction[];
 
     constructor(instructions: IInstruction[]) {
         super(null, EInstructionTypes.k_InstructionCollector);

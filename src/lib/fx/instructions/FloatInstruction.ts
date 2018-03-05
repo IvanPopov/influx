@@ -5,7 +5,7 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class FloatInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _value: number;
+    protected _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */

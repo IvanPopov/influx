@@ -7,7 +7,7 @@ import { IParseNode } from "../../idl/parser/IParser";
   * compile IdExprInstruction ExprInstruction ... ExprInstruction
   */
 export class CompileExprInstruction extends ExprInstruction implements ICompileExprInstruction {
-    private _operand: IFunctionDeclInstruction;
+    protected _operand: IFunctionDeclInstruction;
 
 
     constructor(node: IParseNode, operand: IFunctionDeclInstruction) {

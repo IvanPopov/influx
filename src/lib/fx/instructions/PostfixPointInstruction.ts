@@ -9,8 +9,8 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR Instruction IdInstruction
  */
 export class PostfixPointInstruction extends ExprInstruction {
-    private _element: IExprInstruction;
-    private _postfix: IIdExprInstruction;
+    protected _element: IExprInstruction;
+    protected _postfix: IIdExprInstruction;
 
 
     constructor(node: IParseNode, element: IExprInstruction, postfix: IIdExprInstruction) {

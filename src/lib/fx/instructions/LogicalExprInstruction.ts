@@ -10,12 +10,12 @@ import * as Effect from '../Effect';
  * (&& | ||) Instruction Instruction
  */
 export class LogicalExprInstruction extends ExprInstruction {
-    private _operator: string;
-    private _leftOperand: IExprInstruction;
-    private _rightOperand: IExprInstruction;
+    protected _operator: string;
+    protected _leftOperand: IExprInstruction;
+    protected _rightOperand: IExprInstruction;
 
-    constructor(pNode: IParseNode, operator: string, left: IExprInstruction, right: IExprInstruction) {
-        super(pNode, Effect.getSystemType("bool").variableType, EInstructionTypes.k_LogicalExprInstruction);
+    constructor(node: IParseNode, operator: string, left: IExprInstruction, right: IExprInstruction) {
+        super(node, Effect.getSystemType("bool").variableType, EInstructionTypes.k_LogicalExprInstruction);
     }
 
 

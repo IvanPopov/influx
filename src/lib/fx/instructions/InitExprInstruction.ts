@@ -28,14 +28,14 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
 
     toCode(): string {
-        var code: string = '';
+        let code: string = '';
 
         if (!isNull(this.type)) {
             code += this.type.toCode();
         }
         code += "(";
 
-        for (var i: number = 0; i < this.arguments.length; i++) {
+        for (let i: number = 0; i < this.arguments.length; i++) {
             code += this.arguments[i].toCode();
 
             if (i !== this.arguments.length - 1) {
@@ -50,10 +50,10 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
     isConst(): boolean {
         let bConst: boolean;
-        var pInstructionList: IExprInstruction[] = <IExprInstruction[]>this.arguments;
+        let args: IExprInstruction[] = <IExprInstruction[]>this.arguments;
 
-        for (var i: number = 0; i < pInstructionList.length; i++) {
-            if (!pInstructionList[i].isConst()) {
+        for (let i: number = 0; i < args.length; i++) {
+            if (!args[i].isConst()) {
                 return false;
             }
         }
@@ -77,27 +77,27 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 this._isArray = true;
             }
 
-            var pArrayElementType: IVariableTypeInstruction = pType.arrayElementType;
-            var pTestedInstruction: IExprInstruction = null;
-            var isOk: boolean = false;
+            let arrayElementType: IVariableTypeInstruction = <IVariableTypeInstruction>pType.arrayElementType;
+            let testedInstruction: IExprInstruction = null;
+            let isOk: boolean = false;
 
-            for (var i: number = 0; i < this.arguments.length; i++) {
-                pTestedInstruction = (<IExprInstruction>this.arguments[i]);
+            for (let i: number = 0; i < this.arguments.length; i++) {
+                testedInstruction = (<IExprInstruction>this.arguments[i]);
 
-                if (pTestedInstruction.instructionType === EInstructionTypes.k_InitExprInstruction) {
-                    isOk = (<IInitExprInstruction>pTestedInstruction).optimizeForVariableType(pArrayElementType);
+                if (testedInstruction.instructionType === EInstructionTypes.k_InitExprInstruction) {
+                    isOk = (<IInitExprInstruction>testedInstruction).optimizeForVariableType(arrayElementType);
                     if (!isOk) {
                         return false;
                     }
                 }
                 else {
-                    if (Effect.isSamplerType(pArrayElementType)) {
-                        if (pTestedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockInstruction) {
+                    if (Effect.isSamplerType(arrayElementType)) {
+                        if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockInstruction) {
                             return false;
                         }
                     }
                     else {
-                        isOk = pTestedInstruction.type.isEqual(pArrayElementType);
+                        isOk = testedInstruction.type.isEqual(arrayElementType);
                         if (!isOk) {
                             return false;
                         }
@@ -109,7 +109,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return true;
         }
         else {
-            var pFirstInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
+            let pFirstInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
 
             if (this.arguments.length === 1 &&
                 pFirstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
@@ -134,12 +134,12 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 return false;
             }
 
-            var pInstructionList: IInitExprInstruction[] = <IInitExprInstruction[]>this.arguments;
-            var pFieldNameList: string[] = pType.fieldNameList;
+            let args: IInitExprInstruction[] = <IInitExprInstruction[]>this.arguments;
+            let fieldNameList: string[] = pType.fieldNames;
 
-            for (var i: number = 0; i < pInstructionList.length; i++) {
-                var pFieldType: IVariableTypeInstruction = pType.getFieldType(pFieldNameList[i]);
-                if (!pInstructionList[i].optimizeForVariableType(pFieldType)) {
+            for (let i: number = 0; i < args.length; i++) {
+                let pFieldType: IVariableTypeInstruction = pType.getFieldType(fieldNameList[i]);
+                if (!args[i].optimizeForVariableType(pFieldType)) {
                     return false;
                 }
             }
@@ -155,13 +155,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return false;
         }
 
-        var pRes: any = null;
+        let pRes: any = null;
 
         if (this._isArray) {
             pRes = new Array(this.arguments.length);
 
-            for (var i: number = 0; i < this.arguments.length; i++) {
-                var pEvalInstruction = (<IExprInstruction>this.arguments[i]);
+            for (let i: number = 0; i < this.arguments.length; i++) {
+                let pEvalInstruction = (<IExprInstruction>this.arguments[i]);
 
                 if (pEvalInstruction.evaluate()) {
                     pRes[i] = pEvalInstruction.getEvalValue();
@@ -169,13 +169,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             }
         }
         else if (this.arguments.length === 1) {
-            var pEvalInstruction = (<IExprInstruction>this.arguments[0]);
+            let pEvalInstruction = (<IExprInstruction>this.arguments[0]);
             pEvalInstruction.evaluate();
             pRes = pEvalInstruction.getEvalValue();
         }
         else {
-            var pJSTypeCtor: any = Effect.getExternalType(this.type);
-            var pArguments: any[] = new Array(this.arguments.length);
+            let pJSTypeCtor: any = Effect.getExternalType(this.type);
+            let pArguments: any[] = new Array(this.arguments.length);
 
             if (isNull(pJSTypeCtor)) {
                 return false;
@@ -183,19 +183,19 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
             try {
                 if (Effect.isScalarType(this.type)) {
-                    var pTestedInstruction: IExprInstruction = <IExprInstruction>this.arguments[1];
-                    if (this.arguments.length > 2 || !pTestedInstruction.evaluate()) {
+                    let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[1];
+                    if (this.arguments.length > 2 || !testedInstruction.evaluate()) {
                         return false;
                     }
 
-                    pRes = pJSTypeCtor(pTestedInstruction.getEvalValue());
+                    pRes = pJSTypeCtor(testedInstruction.getEvalValue());
                 }
                 else {
-                    for (var i: number = 0; i < this.arguments.length; i++) {
-                        var pTestedInstruction: IExprInstruction = <IExprInstruction>this.arguments[i];
+                    for (let i: number = 0; i < this.arguments.length; i++) {
+                        let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[i];
 
-                        if (pTestedInstruction.evaluate()) {
-                            pArguments[i] = pTestedInstruction.getEvalValue();
+                        if (testedInstruction.evaluate()) {
+                            pArguments[i] = testedInstruction.getEvalValue();
                         }
                         else {
                             return false;

@@ -7,7 +7,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR StmtInstruction ... StmtInstruction
  */
 export class StmtBlockInstruction extends StmtInstruction implements IStmtBlockInstruction {
-    private _instructions: IStmtInstruction[];
+    protected _instructions: IStmtInstruction[];
 
     
     constructor(node: IParseNode, instructions: IStmtInstruction[]) {

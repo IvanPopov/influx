@@ -4,8 +4,8 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class IdInstruction extends Instruction implements IIdInstruction {
-    private _name: string;
-    private _realName: string;
+    protected _name: string;
+    protected _realName: string;
 
     constructor(node: IParseNode, name: string) {
         super(node, EInstructionTypes.k_IdInstruction);

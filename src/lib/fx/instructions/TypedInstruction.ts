@@ -18,14 +18,17 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
         this._type = type;
     }
 
+
     get type(): ITypeInstruction {
         return this._type;
     }
+
 
     set type(type: ITypeInstruction) {
         this._type = type;
     }
 
+    
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void {
         console.error("@pure_virtual");
     }

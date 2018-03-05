@@ -7,7 +7,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  * (continue || break || discard) 
  */
 export class BreakStmtInstruction extends StmtInstruction {
-    private _operator: string;
+    protected _operator: string;
 
     constructor(node: IParseNode, operator: string) {
         super(node, EInstructionTypes.k_BreakStmtInstruction);

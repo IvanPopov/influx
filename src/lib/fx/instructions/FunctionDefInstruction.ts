@@ -11,18 +11,18 @@ import { isNull } from "../../common";
  * EMPTY_OPERTOR VariableTypeInstruction IdInstruction VarDeclInstruction ... VarDeclInstruction
  */
 export class FunctionDefInstruction extends DeclInstruction implements IFunctionDefInstruction {
-    private _parameterList: IVariableDeclInstruction[];
-    private _paramListForShaderCompile: IVariableDeclInstruction[];
-    private _paramListForShaderInput: IVariableDeclInstruction[];
+    protected _parameterList: IVariableDeclInstruction[];
+    protected _paramListForShaderCompile: IVariableDeclInstruction[];
+    protected _paramListForShaderInput: IVariableDeclInstruction[];
     
-    private _returnType: IVariableTypeInstruction;
-    private _functionName: IIdInstruction;
+    protected _returnType: IVariableTypeInstruction;
+    protected _functionName: IIdInstruction;
     
     // todo: remove
     // Specifies whether to use as shader main function.
-    private _bShaderDef: boolean;
+    protected _bShaderDef: boolean;
     // Specifies whether the parameters are suitable for the shader.
-    private _bIsComplexShaderInput: boolean;
+    protected _bIsComplexShaderInput: boolean;
 
     constructor(node: IParseNode, type: IVariableTypeInstruction, 
         name: IIdInstruction, params: IVariableDeclInstruction[], 
@@ -62,16 +62,11 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     get numArgsRequired(): number {
         // todo: check order!!
-        return this._parameterList.filter((param) => !!param.initializeExpr).length;
+        return this._parameterList.filter((param) => !!param.initExpr).length;
     }
 
     // todo: remove
-    set shaderDef(isShaderDef: boolean) {
-        this._bShaderDef = isShaderDef;
-    }
-
-    // todo: remove
-    get shaderDef(): boolean {
+    isShader() {
         return this._bShaderDef;
     }
 
@@ -88,7 +83,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return def;
     }
 
-    get paramListForShaderInput(): IVariableDeclInstruction[] {
+    get shaderInput(): IVariableDeclInstruction[] {
         return this._paramListForShaderInput;
     }
 
@@ -96,7 +91,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     toCode(): string {
         var code: string = "";
 
-        if (!this.shaderDef) {
+        if (!this.isShader()) {
 
             code += this._returnType.toCode();
             code += " " + this._functionName.toCode();
@@ -121,7 +116,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     // addParameter(pParameter: IVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
     //     if (this._parameterList.length > this._nParamsRequired &&
-    //         !pParameter.initializeExpr) {
+    //         !pParameter.initExpr) {
 
     //         this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
     //             {
@@ -136,7 +131,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     //     this._parameterList.push(pParameter);
     //     pParameter.parent = (this);
 
-    //     if (!pParameter.initializeExpr) {
+    //     if (!pParameter.initExpr) {
     //         this._nParamsRequired++;
     //     }
 
@@ -202,7 +197,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         }
 
         if (pReturnType.isComplex()) {
-            isGood = !pReturnType.hasFieldWithoutSemantic();
+            isGood = !pReturnType.hasFieldWithoutSemantics();
             if (!isGood) {
                 return false;
             }
@@ -291,7 +286,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             if (!isStartAnalyze) {
                 if (pParam.semantics === "") {
                     if (pParam.type.isBase() ||
-                        pParam.type.hasFieldWithoutSemantic() ||
+                        pParam.type.hasFieldWithoutSemantics() ||
                         !pParam.type.hasAllUniqueSemantics()) {
                         return false;
                     }
@@ -300,7 +295,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
                 else if (pParam.semantics !== "") {
                     if (pParam.type.isComplex() &&
-                        (pParam.type.hasFieldWithoutSemantic() ||
+                        (pParam.type.hasFieldWithoutSemantics() ||
                             !pParam.type.hasAllUniqueSemantics())) {
                         return false;
                     }
@@ -319,7 +314,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
 
                 if (pParam.type.isComplex() &&
-                    (pParam.type.hasFieldWithoutSemantic() ||
+                    (pParam.type.hasFieldWithoutSemantics() ||
                         !pParam.type.hasAllUniqueSemantics())) {
                     return false;
                 }
@@ -355,7 +350,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             if (!isStartAnalyze) {
                 if (pParam.semantics === "") {
                     if (pParam.type.isBase() ||
-                        pParam.type.hasFieldWithoutSemantic() ||
+                        pParam.type.hasFieldWithoutSemantics() ||
                         !pParam.type.hasAllUniqueSemantics() ||
                         pParam.type.isContainSampler()) {
                         return false;
@@ -370,7 +365,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                     }
 
                     if (pParam.type.isComplex() &&
-                        (pParam.type.hasFieldWithoutSemantic() ||
+                        (pParam.type.hasFieldWithoutSemantics() ||
                             !pParam.type.hasAllUniqueSemantics())) {
                         return false;
                     }
@@ -394,7 +389,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
 
                 if (pParam.type.isComplex() &&
-                    (pParam.type.hasFieldWithoutSemantic() ||
+                    (pParam.type.hasFieldWithoutSemantics() ||
                         !pParam.type.hasAllUniqueSemantics())) {
                     return false;
                 }
@@ -408,5 +403,13 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         }
 
         return true;
+    }
+
+    $makeShader() {
+        this._bShaderDef = true;
+    }
+
+    $overwriteType(): void {
+        this._bShaderDef = true;
     }
 }

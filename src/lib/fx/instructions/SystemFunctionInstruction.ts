@@ -1,8 +1,7 @@
-import { IFunctionDeclInstruction, ISimpleInstruction, ITypeDeclInstruction, IIdInstruction, ITypedInstruction, ITypeInstruction, EInstructionTypes, IVariableTypeInstruction, EFunctionType, IInstruction, IDeclInstruction, IVariableDeclInstruction, EVarUsedMode, IStmtInstruction } from "../../idl/IInstruction";
+import { IFunctionDeclInstruction, ISimpleInstruction, ITypeDeclInstruction, IIdInstruction, ITypeInstruction, EInstructionTypes, IVariableTypeInstruction, EFunctionType, IInstruction, IDeclInstruction, IVariableDeclInstruction, EVarUsedMode, IStmtInstruction } from "../../idl/IInstruction";
 import { DeclInstruction } from "./DeclInstruction";
 import { IdInstruction } from "./IdInstruction";
 import { isNull } from "../../common";
-import { TypedInstruction } from "./TypedInstruction";
 import { IMap } from "../../idl/IMap";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
@@ -11,7 +10,7 @@ import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
     private _exprTranslator: ExprTemplateTranslator ;
     private _name: IIdInstruction;
-    private _args: ITypedInstruction[];
+    private _args: IVariableDeclInstruction[];
     private _returnType: ITypeInstruction;
 
     private _definition: string;
@@ -22,7 +21,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
 
     constructor(name: IdInstruction, returnType: IVariableTypeInstruction,
                 exprTranslator: ExprTemplateTranslator,
-                args: ITypedInstruction[], definition: string, implementation: string) {
+                args: IVariableDeclInstruction[], definition: string, implementation: string) {
 
         super(null, null, null, EInstructionTypes.k_SystemFunctionInstruction);
 
@@ -55,7 +54,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     
-    get implementaion(): any {
+    get implementation(): any {
         return this._implementation;
     }
 
@@ -101,7 +100,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         return this._name;
     }
 
-    get arguments(): ITypedInstruction[] {
+    get arguments(): IVariableDeclInstruction[] {
         return this._args;
     }
 
@@ -296,5 +295,13 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     addToBlackList(): void {}
+
+    $overwriteType(type: EFunctionType) {
+        console.error("@undefined_behavior");
+    } 
+
+    $linkToImplementationScope(scope: number) {
+        console.error("@undefined_behavior");
+    }
 }
 

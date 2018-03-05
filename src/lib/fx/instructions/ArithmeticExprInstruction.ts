@@ -9,9 +9,9 @@ import { isNull } from "../../common";
  * (+|-|*|/|%) Instruction Instruction
  */
 export class ArithmeticExprInstruction extends ExprInstruction {
-    private _leftOperand: IExprInstruction;
-    private _rightOperand: IExprInstruction;
-    private _operator: string;
+    protected _leftOperand: IExprInstruction;
+    protected _rightOperand: IExprInstruction;
+    protected _operator: string;
 
     constructor(node: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {
         // todo: chose longest type?

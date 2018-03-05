@@ -18,7 +18,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     private _isContainSampler: boolean;
     private _isContainComplexType: boolean;
 
-    constructor(node: IParseNode, name: string, realName: string, fields: IVariableDeclInstruction[]) {
+    constructor(node: IParseNode, name: string, realName: string, fields: IInstructionCollector) {
         super(node, EInstructionTypes.k_ComplexTypeInstruction);
 
         this._name = null;
@@ -29,7 +29,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this._isContainSampler = false;
         this._isContainComplexType = false;
 
-        fields.forEach( field => this.addField(field) );
+        this.addFields(fields);
     }
 
     get builtIn(): boolean {
@@ -209,12 +209,12 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         }
     }
 
-    private addFields(pFieldCollector: IInstructionCollector, isSetParent: boolean = true): void {
-        let fields = <IVariableDeclInstruction[]>(pFieldCollector.instructions);
+    private addFields(collector: IInstructionCollector): void {
+        let fields = <IVariableDeclInstruction[]>(collector.instructions);
 
         for (var i: number = 0; i < this.fields.length; i++) {
             this.addField(fields[i]);
-            fields[i].parent = this;
+            fields[i].$linkTo(this);
         }
 
         this.calculatePaddings();

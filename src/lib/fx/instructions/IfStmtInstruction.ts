@@ -9,9 +9,9 @@ import { IParseNode } from "../../idl/parser/IParser";
  * ( if || if_else ) Expr Stmt [Stmt]
  */
 export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruction {
-    private _cond: IExprInstruction;
-    private _ifStmt: IStmtInstruction;
-    private _elseStmt: IStmtInstruction;
+    protected _cond: IExprInstruction;
+    protected _ifStmt: IStmtInstruction;
+    protected _elseStmt: IStmtInstruction;
 
     
     constructor(node: IParseNode, cond: IExprInstruction, 

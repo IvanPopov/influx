@@ -10,9 +10,9 @@ import * as Effect from '../Effect';
  * (==|!=|<|>|<=|>=) Instruction Instruction
  */
 export class RelationalExprInstruction extends ExprInstruction implements IPairedExprInstruction {
-    private _leftOperand: IExprInstruction;
-    private _rightOperand: IExprInstruction;
-    private _operator: string;
+    protected _leftOperand: IExprInstruction;
+    protected _rightOperand: IExprInstruction;
+    protected _operator: string;
 
 
     constructor(pNode: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {

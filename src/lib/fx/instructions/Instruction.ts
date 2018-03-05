@@ -107,7 +107,7 @@ export class Instruction implements IInstruction {
         this._pParentInstruction = pParentInstruction;
     }
 
-    $specifyScope(iScope: number) {
+    $linkToScope(iScope: number) {
         this._iScope = iScope;
     }
 

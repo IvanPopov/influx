@@ -4,10 +4,10 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class SimpleInstruction extends Instruction implements ISimpleInstruction {
-    private _value: string;
+    protected _value: string;
 
-    constructor(pNode: IParseNode, value: string) {
-        super(pNode, EInstructionTypes.k_SimpleInstruction);
+    constructor(node: IParseNode, value: string) {
+        super(node, EInstructionTypes.k_SimpleInstruction);
         this._value = value;
     }
 

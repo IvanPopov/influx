@@ -21,12 +21,12 @@ export class CastExprInstruction extends ExprInstruction {
     }
 
     toCode(): string {
-        var sCode: string = "";
-        sCode += this.type.toCode();
-        sCode += "(";
-        sCode += this._srcExpr.toCode();
-        sCode += ")";
-        return sCode;
+        var code: string = "";
+        code += this.type.toCode();
+        code += "(";
+        code += this._srcExpr.toCode();
+        code += ")";
+        return code;
     }
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,

@@ -9,7 +9,7 @@ import { IdExprInstruction } from "./IdExprInstruction";
  * EMPTY_OPERATOR IdExprInstruction ExprInstruction ... ExprInstruction 
  */
 export class FunctionCallInstruction extends IdExprInstruction implements IFunctionCallInstruction {
-    private _arguments: IExprInstruction[];
+    protected _arguments: IExprInstruction[];
     
     constructor(node: IParseNode, decl: IFunctionDeclInstruction, args: IdExprInstruction[]) {
         super(node, decl, EInstructionTypes.k_FunctionCallInstruction);
@@ -45,21 +45,21 @@ export class FunctionCallInstruction extends IdExprInstruction implements IFunct
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pArgs: IExprInstruction[] = <IExprInstruction[]>this.args;
-        var pFunction: IFunctionDeclInstruction = this.declaration;
-        var pArgDecls: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>pFunction.arguments;
+        var args: IExprInstruction[] = <IExprInstruction[]>this.args;
+        var func: IFunctionDeclInstruction = this.declaration;
+        var argsDecl: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>func.arguments;
 
         // this.nameID.addUsedData(pUsedDataCollector, eUsedMode);
 
-        for (var i: number = 0; i < pArgDecls.length; i++) {
-            if (pArgDecls[i].type.hasUsage("out")) {
-                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
+        for (var i: number = 0; i < argsDecl.length; i++) {
+            if (argsDecl[i].type.hasUsage("out")) {
+                args[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
             }
-            else if (pArgDecls[i].type.hasUsage("inout")) {
-                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
+            else if (argsDecl[i].type.hasUsage("inout")) {
+                args[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
             }
             else {
-                pArgs[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+                args[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
             }
         }
     }

@@ -7,7 +7,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 
 export class StringInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _value: string;
+    protected _value: string;
 
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS

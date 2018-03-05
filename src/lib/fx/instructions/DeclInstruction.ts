@@ -6,6 +6,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
     protected _semantics: string
     protected _annotation: IAnnotationInstruction;
+    
     protected _bIsBuiltIn: boolean;
     protected _bForPixel: boolean;
     protected _bForVertex: boolean;
@@ -15,6 +16,7 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
 
         this._semantics = semantics;
         this._annotation = annotation;
+
         this._bIsBuiltIn = false;
         this._bForPixel = true;
         this._bForVertex = true;

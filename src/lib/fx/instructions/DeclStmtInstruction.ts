@@ -57,8 +57,8 @@ export class DeclStmtInstruction extends StmtInstruction {
                 numUsed: 1
             };
 
-            if (pVariableList[i].initializeExpr) {
-                pVariableList[i].initializeExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
+            if (!isNull(pVariableList[i].initExpr)) {
+                pVariableList[i].initExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
             }
         }
     }

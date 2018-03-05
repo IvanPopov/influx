@@ -5,12 +5,12 @@ import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _value: number;
+    protected _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor(pNode: IParseNode, value: number) {
-        super(pNode, Effect.getSystemType("number").variableType, EInstructionTypes.k_IntInstruction);
+    constructor(node: IParseNode, value: number) {
+        super(node, Effect.getSystemType("number").variableType, EInstructionTypes.k_IntInstruction);
         this._value = value;
     }
 

@@ -12,8 +12,8 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR IdInstruction ExprInstruction ... ExprInstruction 
  */
 export class ConstructorCallInstruction extends ExprInstruction implements IConstructorCallInstruction {
-    private _arguments: IInstruction[];
-    private _ctor: IVariableTypeInstruction;
+    protected _arguments: IInstruction[];
+    protected _ctor: IVariableTypeInstruction;
     
 
     constructor(node: IParseNode, ctor: IVariableTypeInstruction, instructions: IInstruction[]) {

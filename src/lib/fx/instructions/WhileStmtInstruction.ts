@@ -39,7 +39,7 @@ export class WhileStmtInstruction extends StmtInstruction {
 
 
     toCode(): string {
-        var code: string = "";
+        var code: string = '';
         if (this.operator === "while") {
             code += "while(";
             code += this.cond.toCode();

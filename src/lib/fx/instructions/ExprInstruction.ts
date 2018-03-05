@@ -16,10 +16,6 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
         return <IVariableTypeInstruction>super.type;
     }
 
-    set type(pType: IVariableTypeInstruction) {
-        super.type = pType;
-    }
-
     evaluate(): boolean {
         return false;
     }

@@ -76,13 +76,13 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     get fullName(): string {
         if (this.isField() &&
-            (<IVariableTypeInstruction>this.parent).parentVarDecl.visible) {
+            VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>this.parent).visible) {
 
             var sName: string = '';
             var eParentType: EInstructionTypes = this.parent.instructionType;
 
             if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-                sName = (<IVariableTypeInstruction>this.parent).fullName;
+                sName = VariableTypeInstruction.resolveVariableDeclFullName(<IVariableTypeInstruction>this.parent);
             }
 
             sName += '.' + this.name;

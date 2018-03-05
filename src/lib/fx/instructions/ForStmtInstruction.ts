@@ -10,10 +10,10 @@ import { IParseNode } from "../../idl/parser/IParser";
  * for ExprInstruction or VarDeclInstruction ExprInstruction ExprInstruction StmtInstruction
  */
 export class ForStmtInstruction extends StmtInstruction {
-    private _init: ITypedInstruction;
-    private _cond: IExprInstruction;
-    private _step: IExprInstruction;
-    private _body: IStmtInstruction;
+    protected _init: ITypedInstruction;
+    protected _cond: IExprInstruction;
+    protected _step: IExprInstruction;
+    protected _body: IStmtInstruction;
 
     constructor(node: IParseNode, init: ITypedInstruction, cond: IExprInstruction, step: IExprInstruction, body: IStmtInstruction) {
         super(node, EInstructionTypes.k_ForStmtInstruction);

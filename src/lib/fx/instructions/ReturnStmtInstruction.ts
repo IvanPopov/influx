@@ -10,8 +10,8 @@ import { IParseNode } from "../../idl/parser/IParser";
  * return ExprInstruction
  */
 export class ReturnStmtInstruction extends StmtInstruction {
-    private _operator: string;
-    private _expr: IExprInstruction;
+    protected _operator: string;
+    protected _expr: IExprInstruction;
 
     constructor(pNode: IParseNode, expr: IExprInstruction) {
         super(pNode, EInstructionTypes.k_ReturnStmtInstruction);

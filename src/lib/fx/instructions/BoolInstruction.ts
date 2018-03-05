@@ -6,7 +6,7 @@ import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export class BoolInstruction extends ExprInstruction implements ILiteralInstruction {
-    private _value: boolean;
+    protected _value: boolean;
 
     constructor(node: IParseNode, val: boolean) {
         super(node, Effect.getSystemType("bool").variableType, EInstructionTypes.k_BoolInstruction);

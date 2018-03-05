@@ -11,9 +11,9 @@ import { IParseNode } from "../../idl/parser/IParser";
   * Represetn sampler_state { states }
   */
 export class SamplerStateBlockInstruction extends ExprInstruction implements ISamplerStateBlockInstruction {
-    private _texture: IVariableDeclInstruction;
-    private _samplerParams: IMap<string>;
-    private _operator: string;
+    protected _texture: IVariableDeclInstruction;
+    protected _samplerParams: IMap<string>;
+    protected _operator: string;
 
 
     constructor(node: IParseNode, texture: IVariableDeclInstruction, samplerParams: IMap<string>, operator: string) {

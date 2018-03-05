@@ -7,10 +7,10 @@ import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IIn
  * EMPTY_OPERTOR ExprInstruction 
  */
 export class ExprStmtInstruction extends StmtInstruction {
-    private _expr: IExprInstruction;
+    protected _expr: IExprInstruction;
 
-    constructor(pNode: IParseNode, expr: IExprInstruction) {
-        super(pNode, EInstructionTypes.k_ExprStmtInstruction);
+    constructor(node: IParseNode, expr: IExprInstruction) {
+        super(node, EInstructionTypes.k_ExprStmtInstruction);
         
         this._expr = expr;
     }

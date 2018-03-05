@@ -13,8 +13,8 @@ export class UnaryExprInstruction extends ExprInstruction {
     protected _expr: IExprInstruction;
 
 
-    constructor(pNode: IParseNode, expr: IExprInstruction, operator: string) {
-        super(pNode, Effect.getSystemType('bool').variableType, EInstructionTypes.k_UnaryExprInstruction);
+    constructor(node: IParseNode, expr: IExprInstruction, operator: string) {
+        super(node, Effect.getSystemType('bool').variableType, EInstructionTypes.k_UnaryExprInstruction);
         this._expr = expr;
         this._operator = operator;
     }

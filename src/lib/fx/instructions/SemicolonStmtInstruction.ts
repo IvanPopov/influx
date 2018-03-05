@@ -8,6 +8,7 @@ import { IParseNode } from "../../idl/parser/IParser";
  * ;
  */
 export class SemicolonStmtInstruction extends StmtInstruction {
+    
     constructor(pNode: IParseNode) {
         super(pNode, EInstructionTypes.k_SemicolonStmtInstruction);
     }

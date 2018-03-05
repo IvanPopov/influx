@@ -9,9 +9,9 @@ import { IMap } from "../../idl/IMap";
  * (=|+=|-=|*=|/=|%=) Instruction Instruction
  */
 export class AssignmentExprInstruction extends ExprInstruction implements IAssignmentExprInstruction {
-    private _leftValue: ITypedInstruction;
-    private _rightValue: ITypedInstruction;
-    private _operator: string;
+    protected _leftValue: ITypedInstruction;
+    protected _rightValue: ITypedInstruction;
+    protected _operator: string;
 
     constructor(node: IParseNode, left: ITypedInstruction, right: ITypedInstruction, operator: string) {
         super(node, left.type, EInstructionTypes.k_AssignmentExprInstruction);
@@ -34,11 +34,11 @@ export class AssignmentExprInstruction extends ExprInstruction implements IAssig
     }
 
     toCode(): string {
-        var sCode: string = "";
-        sCode += this.left.toCode();
-        sCode += this.operator;
-        sCode += this.right.toCode();
-        return sCode;
+        var code: string = "";
+        code += this.left.toCode();
+        code += this.operator;
+        code += this.right.toCode();
+        return code;
     }
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,

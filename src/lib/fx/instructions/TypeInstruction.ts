@@ -8,8 +8,8 @@ import { IParseNode } from "../../idl/parser/IParser";
 export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclInstruction {
     protected _type: ITypeInstruction;
 
-    constructor(pNode: IParseNode, type: ITypeInstruction, semantics: string = null, annotation: IAnnotationInstruction = null) {
-        super(pNode, semantics, annotation, EInstructionTypes.k_TypeDeclInstruction);
+    constructor(node: IParseNode, type: ITypeInstruction, semantics: string = null, annotation: IAnnotationInstruction = null) {
+        super(node, semantics, annotation, EInstructionTypes.k_TypeDeclInstruction);
         this._type = type;
     }
 
