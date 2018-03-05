@@ -35,8 +35,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bIsReadable = readable;
         this._declaration = declaration;
 
-        this._variableTypeWrapper = new VariableTypeInstruction(null);
-        this._variableTypeWrapper.pushType(this);
+        this._variableTypeWrapper = new VariableTypeInstruction(null, this);
     }
 
     
@@ -225,7 +224,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    hasFieldWithSematic(sSemantic: string): boolean {
+    hasFieldWithSematics(sSemantic: string): boolean {
         return false;
     }
 
@@ -235,7 +234,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    hasFieldWithoutSemantic(): boolean {
+    hasFieldWithoutSemantics(): boolean {
         return false;
     }
 
@@ -245,7 +244,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    getFieldBySemantic(sSemantic: string): IVariableDeclInstruction {
+    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction {
         return null;
     }
 

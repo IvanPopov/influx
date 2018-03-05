@@ -13,6 +13,9 @@ import { PARSER_SYNTAX_ERROR } from '../../lib/parser/Parser';
 import { ISourceLocation } from '../../lib/idl/ILogger';
 import { IMarkerDesc } from '../actions/ActionTypes';
 
+
+import * as Effect from '../../lib/fx/Effect';
+
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
@@ -111,6 +114,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             if (isParseOk === EParserCode.k_Ok) {
                 this.setState({ parseTree: parser.getSyntaxTree() });
                 props.actions.removeMarker(SYNTAX_ERROR_MARKER);
+
+                {
+                    // just for debug
+                    Effect.analyze("example", parer.getSyntaxTree());
+                }
+
             } else {
                 alert("@unhandled_error");
                 // todo: handle error

@@ -84,16 +84,11 @@ function getNodeSourceLocation(node: IParseNode): { line: number; column: number
 
 
 const systemTypes: IMap<SystemTypeInstruction> = {};
-const systemFunctionsMap: IMap<SystemFunctionInstruction[]> = {};
-const systemVariables: IMap<IVariableDeclInstruction> = {};
-const systemVertexOut: ComplexTypeInstruction = null;
-const systemFunctionHashMap: IMap<boolean> = {};
 
 function generateSystemType(
     name: string,
     realName: string,
     size: number = 1,
-    isArray: boolean = false,
     elementType: ITypeInstruction = null,
     length: number = 1
 ): ITypeInstruction {
@@ -103,22 +98,16 @@ function generateSystemType(
         return null;
     }
 
-    let systemType: SystemTypeInstruction = new SystemTypeInstruction();
-
-    systemType.name = name;
-    systemType.realName = realName;
-    systemType.size = size;
-
-    if (isArray) {
-        systemType.addIndex(elementType, length);
-    }
-
+    let systemType: SystemTypeInstruction = new SystemTypeInstruction(name, realName, elementType, length);
     systemTypes[name] = systemType;
-    systemType.builtIn = true;
 
     return systemType;
 }
 
+const systemFunctionsMap: IMap<SystemFunctionInstruction[]> = {};
+const systemVariables: IMap<IVariableDeclInstruction> = {};
+const systemVertexOut: ComplexTypeInstruction = null;
+const systemFunctionHashMap: IMap<boolean> = {};
 
 function addFieldsToVectorFromSuffixObject(pSuffixMap: IMap<boolean>, pType: ITypeInstruction, sBaseType: string) {
     let sSuffix: string = null;

@@ -22,7 +22,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
 
     constructor(name: IdInstruction, returnType: IVariableTypeInstruction,
                 exprTranslator: ExprTemplateTranslator,
-                args: ITypedInstruction[], definition: string, implementations: string) {
+                args: ITypedInstruction[], definition: string, implementation: string) {
 
         super(null, null, null, EInstructionTypes.k_SystemFunctionInstruction);
 
@@ -41,7 +41,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         // }
 
         this._definition = definition;
-        this._implementation = this.implementaion;
+        this._implementation = implementation;
     
         this._extSystemTypeList = [];
         this._extSystemFunctionList = [];
@@ -53,6 +53,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     get definition(): any {
         return this._definition;
     }
+
     
     get implementaion(): any {
         return this._implementation;
@@ -62,6 +63,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     toCode(): string {
         return this._definition + this._implementation;
     }
+
 
     setUsedSystemData(pTypeList: ITypeDeclInstruction[],
         pFunctionList: IFunctionDeclInstruction[]): void {
@@ -91,10 +93,6 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         }
     }
 
-    set exprTranslator(exprTranslator: ExprTemplateTranslator) {
-        this._exprTranslator = exprTranslator;
-    }
-
     get exprTranslator(): ExprTemplateTranslator {
         return this._exprTranslator;
     }
@@ -122,12 +120,6 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     get functionType(): EFunctionType {
         return EFunctionType.k_Function;
     }
-
-    set functionType(eFunctionType: EFunctionType) {}
-
-    set functionDef(pFunctionDef: IDeclInstruction) {}
-
-    set implementation(pImplementation: IStmtInstruction) {}
 
     get vertexShader(): IFunctionDeclInstruction {
         return null;

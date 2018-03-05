@@ -1,0 +1,1 @@
+src\sandbox\shell.ts src\sandbox\index.tsx --sourcemap --declaration --removeComments --noEmitOnError --experimentalDecorators --jsx react --rootDir src/ --noImplicitReturns --noFallthroughCasesInSwitch --allowUnreachableCode --forceConsistentCasingInFileNames --alwaysStrict --baseUrl src --lib es7,es2017,dom,dom.iterable --target ES2017 --module commonjs --outDir build
