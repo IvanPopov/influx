@@ -8,6 +8,8 @@ import { ProgramScope } from "../ProgramScope";
 export interface IInstructionSettings {
     sourceNode?: IParseNode;
     instrType?: EInstructionTypes;
+    scope?: number;
+    visible?: boolean;
 
     // hotfix for "Error: Object literal may only specify known properties, ..."
     // [others: string]: any;
@@ -24,12 +26,18 @@ export class Instruction implements IInstruction {
 
     private static INSTRUCTION_COUNTER: number = 0;
 
-    constructor({ instrType = EInstructionTypes.k_Instruction, sourceNode = null }: IInstructionSettings = {}) {
+    constructor({
+        instrType = EInstructionTypes.k_Instruction,
+        sourceNode = null,
+        scope = Instruction.UNDEFINE_SCOPE,
+        visible = true
+    }: IInstructionSettings = {}) {
+
         this._visible = true;
         this._sourceNode = sourceNode;
         this._instructionType = instrType;
         this._instructionID = (Instruction.INSTRUCTION_COUNTER++);
-        this._scope = Instruction.UNDEFINE_SCOPE;
+        this._scope = scope;
         this._parent = null;
         this._lastError = null;
     }
@@ -126,6 +134,7 @@ export class Instruction implements IInstruction {
     }
 
     $linkToScope(scope: number) {
+        console.warn("@deprecated");
         console.assert(this._scope == Instruction.UNDEFINE_SCOPE, "scope redefenition detected!");
         this._scope = scope;
     }
