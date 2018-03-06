@@ -5,41 +5,55 @@ import { IParseNode } from "../../idl/parser/IParser";
 import { ProgramScope } from "../ProgramScope";
 
 
+export interface IInstructionSettings {
+    sourceNode?: IParseNode;
+    instrType?: EInstructionTypes;
+
+    // hotfix for "Error: Object literal may only specify known properties, ..."
+    // [others: string]: any;
+}
+
 export class Instruction implements IInstruction {
-    private _bVisible: boolean;
-    private _pSourceNode: IParseNode;
-    private _iInstructionID: number;
-    private _eInstructionType: EInstructionTypes;
-    private _iScope: number;
-    private _pParentInstruction: IInstruction;
-    private _pLastError: IInstructionError;
+    private _visible: boolean;
+    private _sourceNode: IParseNode;
+    private _instructionID: number;
+    private _instructionType: EInstructionTypes;
+    private _scope: number;
+    private _parent: IInstruction;
+    private _lastError: IInstructionError;
 
     private static INSTRUCTION_COUNTER: number = 0;
 
-    constructor(pNode: IParseNode, eType: EInstructionTypes = EInstructionTypes.k_Instruction) {
-        this._bVisible = true;
-        this._pSourceNode = pNode;
-        this._iInstructionID = (Instruction.INSTRUCTION_COUNTER++);
-        this._eInstructionType = eType;
-        this._iScope = Instruction.UNDEFINE_SCOPE;
-        this._pParentInstruction = null;
-        this._pLastError = null;
+    constructor({ instrType = EInstructionTypes.k_Instruction, sourceNode = null }: IInstructionSettings = {}) {
+        this._visible = true;
+        this._sourceNode = sourceNode;
+        this._instructionType = instrType;
+        this._instructionID = (Instruction.INSTRUCTION_COUNTER++);
+        this._scope = Instruction.UNDEFINE_SCOPE;
+        this._parent = null;
+        this._lastError = null;
     }
+
 
     get parent(): IInstruction {
-        return this._pParentInstruction;
+        console.assert(this._parent, "Parent is not defined!");
+        return this._parent;
     }
+
 
     get instructionType(): EInstructionTypes {
-        return this._eInstructionType;
+        console.assert(this._instructionType != EInstructionTypes.k_Instruction, "Instruction type 'k_Instruction' is forbidden.");
+        return this._instructionType;
     }
+
 
     get instructionID(): number {
-        return this._iInstructionID;
+        return this._instructionID;
     }
 
+
     get scope(): number {
-        return !this.globalScope ? this._iScope : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
+        return !this.globalScope ? this._scope : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
     }
 
     get globalScope(): boolean {
@@ -47,27 +61,27 @@ export class Instruction implements IInstruction {
     }
 
     get sourceNode(): IParseNode {
-        return this._pSourceNode;
+        return this._sourceNode;
     }
 
     get visible(): boolean {
-        return this._bVisible;
+        return this._visible;
     }
 
     _getLastError(): IInstructionError {
-        return this._pLastError;
+        return this._lastError;
     }
 
     _setError(eCode: number, pInfo: any = null): void {
-        this._pLastError = { code: eCode, info: pInfo }
+        this._lastError = { code: eCode, info: pInfo }
     }
 
     _clearError(): void {
-        this._pLastError = null
+        this._lastError = null
     }
 
     _isErrorOccured(): boolean {
-        return !isNull(this._pLastError);
+        return !isNull(this._lastError);
     }
 
 
@@ -90,25 +104,30 @@ export class Instruction implements IInstruction {
 
 
     toString(): string {
+        console.error("@pure_virtual");
         return null;
     }
 
 
     toCode(): string {
-        return "";
+        console.error("@pure_virtual");
+        return null;
     }
 
 
     $hide(): void {
-        this._bVisible = false;
+        console.assert(this._visible, "parent redefenition detected!");
+        this._visible = false;
     }
 
-    $linkTo(pParentInstruction: IInstruction) {
-        this._pParentInstruction = pParentInstruction;
+    $linkTo(parent: IInstruction) {
+        console.assert(this._parent == null, "parent redefenition detected!");
+        this._parent = parent;
     }
 
-    $linkToScope(iScope: number) {
-        this._iScope = iScope;
+    $linkToScope(scope: number) {
+        console.assert(this._scope == Instruction.UNDEFINE_SCOPE, "scope redefenition detected!");
+        this._scope = scope;
     }
 
     static UNDEFINE_LENGTH: number = 0xffffff;

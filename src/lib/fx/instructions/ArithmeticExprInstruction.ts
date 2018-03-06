@@ -1,8 +1,16 @@
 import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
-import { ExprInstruction } from "./ExprInstruction";
+import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+
+
+export interface IArithmeticExprInstructionSettings extends IExprInstructionSettings {
+    left: IExprInstruction;
+    right: IExprInstruction;
+    operator: string;
+}
+
 
 /**
  * Represent someExpr + / - * % someExpr
@@ -13,9 +21,8 @@ export class ArithmeticExprInstruction extends ExprInstruction {
     protected _rightOperand: IExprInstruction;
     protected _operator: string;
 
-    constructor(node: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {
-        // todo: chose longest type?
-        super(node, left.type, EInstructionTypes.k_ArithmeticExprInstruction);
+    constructor({ left, right, operator, ...settings }: IArithmeticExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ArithmeticExprInstruction, ...settings });
 
         this._leftOperand = left;
         this._rightOperand = right;

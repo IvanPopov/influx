@@ -26,8 +26,12 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     static SHADER_VAR_NAMES_GLOBAL_DICT: StringDictionary = new StringDictionary();
 
-    constructor(node: IParseNode, id: IIdInstruction, type: IVariableTypeInstruction, initExpr: IInitExprInstruction,
-                semantics: string = null, annotation: IAnnotationInstruction = null) {
+    constructor(node: IParseNode, 
+                id: IIdInstruction, 
+                type: IVariableTypeInstruction, 
+                initExpr: IInitExprInstruction,
+                semantics: string = null, 
+                annotation: IAnnotationInstruction = null) {
         super(node, semantics, annotation, EInstructionTypes.k_VariableDeclInstruction);
 
         this._id = id;

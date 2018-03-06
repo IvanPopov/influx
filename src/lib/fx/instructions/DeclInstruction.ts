@@ -1,7 +1,12 @@
-import { TypedInstruction } from "./TypedInstruction";
+import { TypedInstruction, ITypedInstructionSettings } from "./TypedInstruction";
 import { IDeclInstruction, IAnnotationInstruction, EInstructionTypes, IIdInstruction, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+
+export interface IDeclInstructionSettings extends ITypedInstructionSettings {
+    semantics?: string;
+    annotation?: IAnnotationInstruction;
+}
 
 export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
     protected _semantics: string
@@ -11,8 +16,8 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
     protected _bForPixel: boolean;
     protected _bForVertex: boolean;
     
-    constructor(node: IParseNode, semantics: string = null, annotation: IAnnotationInstruction = null, type: EInstructionTypes = EInstructionTypes.k_DeclInstruction) {
-        super(node, null, type);
+    constructor({ semantics = null, annotation = null, ...settings }: IDeclInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
         this._semantics = semantics;
         this._annotation = annotation;

@@ -1,4 +1,4 @@
-import { Instruction } from "./Instruction";
+import { Instruction, IInstructionSettings } from "./Instruction";
 import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction } from '../../idl/IInstruction';
 import { IMap } from "../../idl/IMap";
 import { isNull, isNumber, isDef } from '../../common';
@@ -8,6 +8,15 @@ import { IntInstruction } from "./IntInstruction";
 import { IdExprInstruction } from "./IdExprInstruction"
 import * as Effect from "../Effect"
 import { IParseNode } from "../../idl/parser/IParser";
+
+
+export interface IVariableTypeInstructionSettings extends IInstructionSettings {
+    type: ITypeInstruction;
+    usages?: string[];
+    arrayIndex?: IExprInstruction;
+    writable?: boolean;
+    readable?: boolean;
+}
 
 
 export class VariableTypeInstruction extends Instruction implements IVariableTypeInstruction {
@@ -22,11 +31,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor(node: IParseNode, type: ITypeInstruction, usages: string[] = [], arrayIndex: IExprInstruction = null,
-                writable = true, readable = true) {
-        super(node, EInstructionTypes.k_VariableTypeInstruction);
+    constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, ...settings }: IVariableTypeInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_VariableTypeInstruction, ...settings });
 
-        
         usages.forEach( usage => this.addUsage(usage) );
 
         let eType: EInstructionTypes = type.instructionType;
@@ -57,7 +64,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
-            this._arrayElementType = new VariableTypeInstruction(null, this.subType, this._usageList.slice());
+            this._arrayElementType = new VariableTypeInstruction({ type: this.subType, usages: this._usageList });
             this._arrayElementType.$linkTo(this);
             this._arrayIndexExpr = arrayIndex;
         }

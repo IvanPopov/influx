@@ -228,7 +228,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
 
 
 export interface ITypedInstruction extends IAnalyzedInstruction {
-    type: ITypeInstruction;
+    readonly type: ITypeInstruction;
 }
 
 

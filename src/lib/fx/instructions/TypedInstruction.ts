@@ -1,8 +1,14 @@
-import { Instruction } from "./Instruction";
+import { Instruction, IInstructionSettings } from "./Instruction";
 import { ITypedInstruction, ITypeInstruction, EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
+
+
+export interface ITypedInstructionSettings extends IInstructionSettings {
+    type: ITypeInstruction;
+}
+
 
 /**
  * For example: 
@@ -13,19 +19,14 @@ import { IParseNode } from "../../idl/parser/IParser";
 export class TypedInstruction extends Instruction implements ITypedInstruction {
     protected _type: ITypeInstruction;
 
-    constructor(node: IParseNode, type: ITypeInstruction, instrType: EInstructionTypes = EInstructionTypes.k_TypedInstruction) {
-        super(node, instrType);
+    constructor({ type, ...settings }: ITypedInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_TypedInstruction, ...settings });
         this._type = type;
     }
 
 
     get type(): ITypeInstruction {
         return this._type;
-    }
-
-
-    set type(type: ITypeInstruction) {
-        this._type = type;
     }
 
     
