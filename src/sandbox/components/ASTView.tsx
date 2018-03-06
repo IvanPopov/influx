@@ -14,7 +14,7 @@ import { ISourceLocation } from '../../lib/idl/ILogger';
 import { IMarkerDesc } from '../actions/ActionTypes';
 
 
-import * as Effect from '../../lib/fx/Effect';
+// import * as Effect from '../../lib/fx/Effect';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -36,12 +36,16 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             parser: EffectParser;
         },
         parseTree: IParseTree;
-        nodeStats: IMap<boolean>;
+        nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
     };
 
     constructor(props) {
         super(props);
-        this.state = { parser: { showErrors: false, parser: null }, parseTree: null, nodeStats: {} };
+        this.state = { 
+            parser: { showErrors: false, parser: null }, 
+            parseTree: null, 
+            nodeStats: {}
+        };
     }
 
     componentWillReceiveProps(nextProps: IASTViewProps): void {
@@ -117,7 +121,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
                 {
                     // just for debug
-                    Effect.analyze("example", parer.getSyntaxTree());
+                    // Effect.analyze("example", parer.getSyntaxTree());
                 }
 
             } else {
@@ -152,9 +156,10 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         if (!node) {
             return null;
         }
-
+        const { nodeStats } = this.state;
         const forceShow = idx.split('.').length < 2;
-        const show = forceShow || (this.state.nodeStats[idx] || false);
+        const show = forceShow || (nodeStats[idx] || { opened: false, selected: false }).opened;
+        const selected = (nodeStats[idx] || { opened: false, selected: false }).selected;
 
         if (node.value) {
             return (
@@ -186,7 +191,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                 >
                     <List.Icon name={ show ? `chevron down` : `chevron right` } />
                     <List.Content>
-                        <List.Header>{ node.name }</List.Header>
+                        <List.Header>{ node.name }&nbsp;<a style={ { display: selected ? 'inline' : 'none' } } onClick={ (e) => { e.stopPropagation(); this.handleCopyClick(idx, node); } }>Copy</a></List.Header>
                         { children }
                     </List.Content>
                 </List.Item>
@@ -194,20 +199,33 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         }
     }
 
+    private async handleCopyClick(idx: string, node: IParseNode) {
+        console.log(node);
+    }
 
     private async handleNodeOver(idx: string, node: IParseNode) {
         this.props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' });
+        
+        let { nodeStats } = this.state;
+        nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
+        nodeStats[idx].selected = !nodeStats[idx].selected;
+        this.setState({ nodeStats });
     }
 
     
-    private handleNodeOut(idx: string, node: IParseNode) {
+    private async handleNodeOut(idx: string, node: IParseNode) {
         this.props.actions.removeMarker(`ast-range-${idx}`);
+
+        let { nodeStats } = this.state;
+        nodeStats[idx].selected = !nodeStats[idx].selected;
+        this.setState({ nodeStats });
     }
 
 
     private handleNodeClick(idx: string, node: IParseNode) {
-        console.log(JSON.stringify(node.loc));
-        let nodeStats = Object.assign(this.state.nodeStats, { [idx]: !this.state.nodeStats[idx] });
+        let { nodeStats } = this.state;
+        nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
+        nodeStats[idx].opened = !nodeStats[idx].opened;
         this.setState({ nodeStats });
     }
 

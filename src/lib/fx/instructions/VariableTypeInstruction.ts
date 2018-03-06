@@ -36,10 +36,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         usages.forEach( usage => this.addUsage(usage) );
 
-        let eType: EInstructionTypes = type.instructionType;
+        let instrType: EInstructionTypes = type.instructionType;
 
-        if (eType === EInstructionTypes.k_SystemTypeInstruction ||
-            eType === EInstructionTypes.k_ComplexTypeInstruction) {
+        if (instrType === EInstructionTypes.k_SystemTypeInstruction ||
+            instrType === EInstructionTypes.k_ComplexTypeInstruction) {
             this._subType = type;
         }
         else {
