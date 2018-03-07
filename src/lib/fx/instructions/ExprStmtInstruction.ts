@@ -1,6 +1,12 @@
 import { StmtInstruction } from "./StmtInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IInstruction";
+
+
+export interface IExprStmtInstructionSettings extends IInstructionSettings {
+    expr: IExprInstruction;
+}
 
 /**
  * Represent expr;
@@ -9,8 +15,8 @@ import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IIn
 export class ExprStmtInstruction extends StmtInstruction {
     protected _expr: IExprInstruction;
 
-    constructor(node: IParseNode, expr: IExprInstruction) {
-        super(node, EInstructionTypes.k_ExprStmtInstruction);
+    constructor({ expr, ...settings }: IExprStmtInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ExprStmtInstruction, ...settings });
         
         this._expr = expr;
     }

@@ -14,7 +14,7 @@ import { ISourceLocation } from '../../lib/idl/ILogger';
 import { IMarkerDesc } from '../actions/ActionTypes';
 
 
-// import * as Effect from '../../lib/fx/Effect';
+import * as Effect from '../../lib/fx/Effect';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -121,7 +121,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
                 {
                     // just for debug
-                    // Effect.analyze("example", parer.getSyntaxTree());
+                    Effect.analyze("example", parer.getSyntaxTree());
                 }
 
             } else {

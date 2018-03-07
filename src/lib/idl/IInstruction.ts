@@ -241,7 +241,7 @@ export interface IConditionalExprInstruction extends IExprInstruction {
 
 export interface IDeclInstruction extends ITypedInstruction {
     readonly name: string;
-    readonly nameID: IIdInstruction;
+    readonly id: IIdInstruction;
 
     readonly semantics: string;
     readonly annotation: IAnnotationInstruction;
@@ -354,7 +354,7 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     generateInfoAboutUsedData(): void;
 
     $overwriteType(type: EFunctionType): void;
-    $linkToImplementationScope(scope: number): void;
+    // $linkToImplementationScope(scope: number): void;
 }
 
 
@@ -392,8 +392,8 @@ export interface IExprInstruction extends ITypedInstruction, IAnalyzedInstructio
 
 
 export interface IConstructorCallInstruction extends IExprInstruction {
-    arguments: IInstruction[];
-    ctor: IVariableTypeInstruction;
+    readonly arguments: IInstruction[];
+    readonly ctor: IVariableTypeInstruction;
 }
 
 
@@ -435,14 +435,13 @@ export interface IInitExprInstruction extends IExprInstruction {
 
 export interface IIdExprInstruction extends IExprInstruction {
     readonly type: IVariableTypeInstruction;
-    readonly visible: boolean;
     readonly declaration: IDeclInstruction;
 }
 
 
-export interface IFunctionCallInstruction extends IIdExprInstruction {
-    readonly declaration: IFunctionDeclInstruction;
+export interface IFunctionCallInstruction extends IExprInstruction {
     readonly args: IExprInstruction[];
+    readonly declaration: IDeclInstruction;
 }
 
 

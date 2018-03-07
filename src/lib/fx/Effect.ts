@@ -127,7 +127,7 @@ function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], s
 
 function addSystemTypeScalar(): void {
     generateSystemType('void');
-    generateSystemType('number');
+    generateSystemType('int');
     generateSystemType('bool');
     generateSystemType('float');
     generateSystemType('string');
@@ -164,7 +164,7 @@ function addSystemTypeVector(): void {
     generateSuffixLiterals(['s', 't', 'p', 'q'], STPQSuffix);
 
     let float: ITypeInstruction = getSystemType('float');
-    let int: ITypeInstruction = getSystemType('number');
+    let int: ITypeInstruction = getSystemType('int');
     let bool: ITypeInstruction = getSystemType('bool');
 
     
@@ -184,19 +184,19 @@ function addSystemTypeVector(): void {
     addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, 'float');
 
     let suf2i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'int');
 
     let suf3i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'int');
 
     let suf4i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'number');
-    addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'number');
+    addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'int');
+    addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'int');
 
     let suf2b: IVariableDeclInstruction[] = [];
     addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, 'bool');
@@ -312,7 +312,7 @@ function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDe
 
 
 export function getExternalType(type: ITypeInstruction): any {
-    if (type.isEqual(getSystemType('number')) ||
+    if (type.isEqual(getSystemType('int')) ||
         type.isEqual(getSystemType('float'))) {
         return Number;
     }
@@ -383,7 +383,7 @@ export function isVectorType(type: ITypeInstruction): boolean {
 
 export function isScalarType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('bool')) ||
-        type.isEqual(getSystemType('number')) ||
+        type.isEqual(getSystemType('int')) ||
         type.isEqual(getSystemType('float'));
 }
 
@@ -400,7 +400,7 @@ export function isFloatBasedType(type: ITypeInstruction): boolean {
 
 
 export function isIntBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('number')) ||
+    return type.isEqual(getSystemType('int')) ||
         type.isEqual(getSystemType('int2')) ||
         type.isEqual(getSystemType('int3')) ||
         type.isEqual(getSystemType('int4')) ||
@@ -574,7 +574,7 @@ function generateSystemFunction(name: string,
 
 function addSystemFunctions(): void {
     generateSystemFunction('dot', 'dot($1,$2)', 'float', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('mul', '$1*$2', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'number', 'float2', 'float3', 'float4']);
+    generateSystemFunction('mul', '$1*$2', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'int', 'float2', 'float3', 'float4']);
     generateSystemFunction('mod', 'mod($1,$2)', 'float', ['float', 'float'], null);
     generateSystemFunction('floor', 'floor($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     generateSystemFunction('ceil', 'ceil($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
@@ -2392,7 +2392,7 @@ function analyzePostfixIndex(context: Context, scope: ProgramScope, node: IParse
     indexExpr = analyzeExpr(context, scope,children[children.length - 3]);
     indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
-    intType = getSystemType('number');
+    intType = getSystemType('int');
 
     if (!indexExprType.isEqual(intType)) {
         _error(context, node, EEffectErrors.BAD_POSTIX_NOT_INT_INDEX, { typeName: indexExprType.toString() });

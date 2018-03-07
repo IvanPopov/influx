@@ -6,6 +6,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 export interface IDeclInstructionSettings extends ITypedInstructionSettings {
     semantics?: string;
     annotation?: IAnnotationInstruction;
+    builtIn?: boolean;
 }
 
 export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
@@ -15,25 +16,29 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
     protected _bIsBuiltIn: boolean;
     protected _bForPixel: boolean;
     protected _bForVertex: boolean;
+    protected _bBuiltIn: boolean;
     
-    constructor({ semantics = null, annotation = null, ...settings }: IDeclInstructionSettings) {
+    constructor({ semantics = null, annotation = null, builtIn = false, ...settings }: IDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
         this._semantics = semantics;
         this._annotation = annotation;
 
-        this._bIsBuiltIn = false;
+        this._bIsBuiltIn = builtIn;
         this._bForPixel = true;
         this._bForVertex = true;
     }
+    
 
     get semantics(): string {
         return this._semantics;
     }
 
+
     get annotation(): IAnnotationInstruction {
         return this._annotation;
     }
+
 
     get name(): string {
         return null;
@@ -44,22 +49,22 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
         return null;
     }
 
+    
     get builtIn(): boolean {
         return this._bIsBuiltIn;
     }
 
-    set builtIn(val: boolean) {
-        this._bIsBuiltIn = val;
-    }
 
     get vertex(): boolean {
         return this._bForVertex;
     }
 
+    
     get pixel(): boolean {
         return this._bForPixel;
     }
 
+    
     $makeVertexCompatible(val = true): void {
         this._bForVertex = val;
     }

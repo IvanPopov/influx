@@ -7,12 +7,10 @@ import { ProgramScope } from "../ProgramScope";
 
 export interface IInstructionSettings {
     sourceNode?: IParseNode;
-    instrType?: EInstructionTypes;
     scope?: number;
     visible?: boolean;
-
-    // hotfix for "Error: Object literal may only specify known properties, ..."
-    // [others: string]: any;
+    
+    instrType?: EInstructionTypes;
 }
 
 export class Instruction implements IInstruction {

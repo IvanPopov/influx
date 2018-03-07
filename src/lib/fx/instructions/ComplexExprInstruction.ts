@@ -1,6 +1,12 @@
-import { ExprInstruction } from "./ExprInstruction";
+import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { EInstructionTypes, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+
+
+export interface IComplexExprInstructionSettings extends IInstructionSettings {
+    expr: IExprInstruction;
+}
 
 
 /**
@@ -11,8 +17,8 @@ export class ComplexExprInstruction extends ExprInstruction {
     protected _expr: IExprInstruction;
 
 
-    constructor(node: IParseNode, expr: IExprInstruction) {
-        super(node, expr.type, EInstructionTypes.k_ComplexExprInstruction);
+    constructor({ expr, ...settings }: IComplexExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ComplexExprInstruction, type: expr.type, ...settings });
 
         this._expr = expr;
     }

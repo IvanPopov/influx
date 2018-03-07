@@ -1,16 +1,17 @@
 import { IStmtInstruction, EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
-import { Instruction } from "./Instruction";
+import { Instruction, IInstructionSettings } from "./Instruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+
 
 /**
  * Represent all kind of statements
  */
 export class StmtInstruction extends Instruction implements IStmtInstruction {
     
-    constructor(node: IParseNode, type: EInstructionTypes = EInstructionTypes.k_StmtInstruction) {
-        super(node, type);
+    constructor({ ...settings }: IInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_StmtInstruction, ...settings });
     }
 
 

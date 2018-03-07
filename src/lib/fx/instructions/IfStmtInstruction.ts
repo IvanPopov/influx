@@ -1,7 +1,15 @@
 import { StmtInstruction } from "./StmtInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { isNull } from "./../../common";
 import { IStmtInstruction, EInstructionTypes, IExprInstruction, IIfStmtInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+
+
+export interface IIfStmtInstructionSettings extends IInstructionSettings {
+    cond: IExprInstruction;
+    conseq: IStmtInstruction;
+    contrary?: IStmtInstruction;
+}
 
 
 /**
@@ -14,13 +22,13 @@ export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruc
     protected _elseStmt: IStmtInstruction;
 
     
-    constructor(node: IParseNode, cond: IExprInstruction, 
-                ifStmt: IStmtInstruction, elseStmt: IStmtInstruction = null) {
-        super(node, EInstructionTypes.k_IfStmtInstruction);
+    constructor({ cond, conseq, contrary = null, ...settings }: IIfStmtInstructionSettings) {
+
+        super({ instrType: EInstructionTypes.k_IfStmtInstruction, ...settings });
 
         this._cond = cond;
-        this._ifStmt = ifStmt;
-        this._elseStmt = elseStmt;
+        this._ifStmt = conseq;
+        this._elseStmt = contrary;
     }
 
 

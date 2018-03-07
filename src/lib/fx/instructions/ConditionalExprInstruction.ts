@@ -1,7 +1,16 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { EInstructionTypes, EVarUsedMode, ITypedInstruction, IConditionalExprInstruction, ITypeUseInfoContainer, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
+
+
+export interface IConditionalExprInstructionSettings extends IInstructionSettings {
+    cond: IExprInstruction;
+    left: ITypedInstruction;
+    right: ITypedInstruction;
+}
+
 
 /**
  * Represen boolExpr ? someExpr : someExpr
@@ -12,8 +21,10 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
     protected _leftValue: ITypedInstruction;
     protected _rightValue: ITypedInstruction;
 
-    constructor(node: IParseNode, cond: IExprInstruction, left: ITypedInstruction, right: ITypedInstruction) {
-        super(node, left.type, EInstructionTypes.k_ConditionalExprInstruction);
+    constructor({ cond, left, right, ...settings }: IConditionalExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ConditionalExprInstruction, type: left.type, ...settings});
+
+        console.assert(left.type.isStrongEqual(right.type));
         
         this._cond = cond;
         this._leftValue = left;

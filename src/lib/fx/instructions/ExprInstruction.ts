@@ -11,7 +11,7 @@ export interface IExprInstructionSettings extends ITypedInstructionSettings {
 export class ExprInstruction extends TypedInstruction implements IExprInstruction {
     protected _evalResult: any;
 
-    constructor({ ...settings }: IExprInstructionSettings) {
+    constructor({ ...settings }: ITypedInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ExprInstruction, ...settings });
         this._evalResult = null;
     }

@@ -1,13 +1,20 @@
 import { Instruction } from "./Instruction";
+import { IInstructionSettings } from "./Instruction";
 import { IIdInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
+
+export interface IIdInstructionSettings extends IInstructionSettings {
+    name: string;
+}
+
 export class IdInstruction extends Instruction implements IIdInstruction {
     protected _name: string;
 
-    constructor(node: IParseNode, name: string) {
-        super(node, EInstructionTypes.k_IdInstruction);
+    constructor({ name, ...settings }) {
+        super({ instrType: EInstructionTypes.k_IdInstruction, ...settings });
+        
         this._name = name;
     }
     

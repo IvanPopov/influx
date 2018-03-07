@@ -1,7 +1,14 @@
 import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, ITypeInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
+import { IExprInstructionSettings } from "./ExprInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
+
+
+export interface ICastExprInstructionSettings extends IExprInstructionSettings {
+    sourceExr: IInstruction;
+}
+
 
 /**
  * Represent (type) expr
@@ -10,10 +17,10 @@ import { ExprInstruction } from "./ExprInstruction";
 export class CastExprInstruction extends ExprInstruction {
     private _srcExpr: IInstruction;
 
-    constructor(node: IParseNode, type: ITypeInstruction, expr: IInstruction) {
-        super(node, type, EInstructionTypes.k_CastExprInstruction);
+    constructor({ sourceExr, ...settings }: ICastExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
 
-        this._srcExpr = expr;
+        this._srcExpr = sourceExr;
     }
 
     get expr(): IInstruction {

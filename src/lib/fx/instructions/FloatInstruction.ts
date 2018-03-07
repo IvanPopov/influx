@@ -1,17 +1,22 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { ILiteralInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import * as Effect from "../Effect";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+
+export interface IFloatInstructionSettings extends IInstructionSettings {
+    value: number;
+}
 
 export class FloatInstruction extends ExprInstruction implements ILiteralInstruction {
     protected _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor(node: IParseNode, val: number) {
-        super(node, Effect.getSystemType("number").variableType, EInstructionTypes.k_FloatInstruction);
-        this._value = val;
+    constructor({ value, ...settings }: IFloatInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_FloatInstruction, type: Effect.getSystemType("float").asVarType(), ...settings });
+        this._value = value;
     }
 
     

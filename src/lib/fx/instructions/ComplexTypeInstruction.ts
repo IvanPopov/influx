@@ -1,13 +1,19 @@
 
 import { isDefAndNotNull } from "./../../common";
 import { IInstructionCollector } from "./../../idl/IInstruction";
-import { Instruction } from "./Instruction";
+import { Instruction, IInstructionSettings } from "./Instruction";
 import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
 import { EEffectErrors } from "../../idl/EEffectErrors";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+
+
+export interface IComplexTypeInstructionSettings extends IInstructionSettings {
+    name: string;
+    fields: IInstructionCollector; // << todo: replace this Array<Instruction>;
+}
 
 export class ComplexTypeInstruction extends Instruction implements ITypeInstruction {
     private _name: string;
@@ -17,8 +23,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     private _isContainSampler: boolean;
     private _isContainComplexType: boolean;
 
-    constructor(node: IParseNode, name: string, fields: IInstructionCollector) {
-        super(node, EInstructionTypes.k_ComplexTypeInstruction);
+    constructor({ name, fields, ...settings }: IComplexTypeInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ComplexTypeInstruction, ...settings });
 
         this._name = null;
         this._fields = {};

@@ -1,16 +1,29 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IExprInstructionSettings } from "./ExprInstruction";
 import { IInitExprInstruction, ITypeInstruction, EInstructionTypes, IExprInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { Instruction } from "./Instruction";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 
+/**
+ * Represents:
+ *   int a[3] = { 1, 2, 3 };
+ *              -----------
+ */
+
+export interface IInitExprInstructionSettings extends IExprInstructionSettings {
+    args?: IExprInstruction[];
+}
+
 export class InitExprInstruction extends ExprInstruction implements IInitExprInstruction {
-    private _isArray: boolean;
     private _args: IExprInstruction[];
 
-    constructor(node: IParseNode, type: ITypeInstruction, args: IExprInstruction[]) {
-        super(node, type, EInstructionTypes.k_InitExprInstruction);
+    // todo: remove
+    private _isArray: boolean;
+
+    constructor({ args = [], ...settings }: IInitExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_InitExprInstruction, ...settings });
 
         this._isArray = false;
         this._args = args;
@@ -109,13 +122,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return true;
         }
         else {
-            let pFirstInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
+            let firstInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
 
             if (this.arguments.length === 1 &&
-                pFirstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
+                firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
 
                 if (Effect.isSamplerType(pType)) {
-                    if (pFirstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockInstruction) {
+                    if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockInstruction) {
                         return true;
                     }
                     else {
@@ -123,7 +136,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     }
                 }
 
-                if (pFirstInstruction.type.isEqual(pType)) {
+                if (firstInstruction.type.isEqual(pType)) {
                     return true;
                 }
                 else {

@@ -4,6 +4,16 @@ import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface IForStmtInstructionSettings extends IInstructionSettings {
+    init?: ITypedInstruction;
+    cond?: IExprInstruction;
+    step?: IExprInstruction;
+    body?: IStmtInstruction;
+}
+
 
 /**
  * Represent for(forInit forCond ForStep) stmt
@@ -15,8 +25,8 @@ export class ForStmtInstruction extends StmtInstruction {
     protected _step: IExprInstruction;
     protected _body: IStmtInstruction;
 
-    constructor(node: IParseNode, init: ITypedInstruction, cond: IExprInstruction, step: IExprInstruction, body: IStmtInstruction) {
-        super(node, EInstructionTypes.k_ForStmtInstruction);
+    constructor({ init = null, cond = null, step = null, body = null, ...settings }: IForStmtInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ForStmtInstruction, ...settings });
 
         this._init = init;
         this._cond = cond;

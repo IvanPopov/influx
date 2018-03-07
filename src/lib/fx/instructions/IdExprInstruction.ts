@@ -1,4 +1,5 @@
 import { IIdExprInstruction, IVariableTypeInstruction, EInstructionTypes, IVariableDeclInstruction, EFunctionType, IInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { IDeclInstruction } from "./../../idl/IInstruction";
 import { IIdInstruction } from "./../../idl/IInstruction";
@@ -8,17 +9,23 @@ import { isNull, isDef } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IdInstruction } from "./IdInstruction";
 
+
+export interface IIdExprInstructionSettings extends IInstructionSettings {
+    decl: IDeclInstruction;
+}
+
+
 export class IdExprInstruction extends ExprInstruction implements IIdExprInstruction {
     protected _decl: IDeclInstruction;
 
-    constructor(node: IParseNode, decl: IDeclInstruction, instrType: EInstructionTypes = EInstructionTypes.k_IdExprInstruction) {
-        super(node, decl.type, instrType);
+    constructor({ decl, ...settings }: IIdExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
 
         this._decl = decl;
     }
 
     get visible(): boolean {
-        return this._decl.visible;
+        return super.visible && this._decl.visible;
     }
 
     get type(): IVariableTypeInstruction {
@@ -46,7 +53,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
         var scode: string = "";
         if (this.visible) {
             {
-                scode += this._decl.nameID.toCode();
+                scode += this._decl.id.toCode();
             }
         }
         return scode;

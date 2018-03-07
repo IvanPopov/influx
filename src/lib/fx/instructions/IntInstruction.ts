@@ -3,14 +3,20 @@ import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+export interface IIntInstructionSettings extends IInstructionSettings {
+    value: number;
+}
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
     protected _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor(node: IParseNode, value: number) {
-        super(node, Effect.getSystemType("number").variableType, EInstructionTypes.k_IntInstruction);
+    constructor({ value, ...settings }: IIntInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_IntInstruction, type: Effect.getSystemType("number").asVarType(), ...settings });
+        
         this._value = value;
     }
 

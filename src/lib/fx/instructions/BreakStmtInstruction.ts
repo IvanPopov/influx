@@ -1,6 +1,11 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+export interface IBreakStmtInstructionSettings extends IInstructionSettings {
+    operator?: string;
+}
 
 /**
  * Reprsernt continue; break; discard;
@@ -9,8 +14,8 @@ import { IParseNode } from "../../idl/parser/IParser";
 export class BreakStmtInstruction extends StmtInstruction {
     protected _operator: string;
 
-    constructor(node: IParseNode, operator: string) {
-        super(node, EInstructionTypes.k_BreakStmtInstruction);
+    constructor({ operator = "break", ...settings }: IBreakStmtInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_BreakStmtInstruction, ...settings });
         this._operator = operator;
     }
 

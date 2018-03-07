@@ -1,10 +1,18 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { IConditionalExprInstructionSettings } from "./ConditionalExprInstruction";
 import { ITypeInstruction, IInstruction, IVariableTypeInstruction } from "./../../idl/IInstruction";
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction, IExprInstruction, IConstructorCallInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface IConstructorCallInstructionSettings extends IInstructionSettings {
+    ctor: IVariableTypeInstruction;
+    args?: IExprInstruction[];
+}
 
 
 /**
@@ -12,20 +20,20 @@ import { IParseNode } from "../../idl/parser/IParser";
  * EMPTY_OPERATOR IdInstruction ExprInstruction ... ExprInstruction 
  */
 export class ConstructorCallInstruction extends ExprInstruction implements IConstructorCallInstruction {
-    protected _arguments: IInstruction[];
+    protected _args: IInstruction[];
     protected _ctor: IVariableTypeInstruction;
     
 
-    constructor(node: IParseNode, ctor: IVariableTypeInstruction, instructions: IInstruction[]) {
-        super(node, ctor.subType, EInstructionTypes.k_ConstructorCallInstruction);
+    constructor({ ctor, args = [], ...settings }: IConstructorCallInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_ConstructorCallInstruction, type: ctor.subType, ...settings });
 
-        this._arguments = instructions;
+        this._args = args;
         this._ctor = ctor;
     }
 
     
     get arguments() : IInstruction[] {
-        return this._arguments;
+        return this._args;
     }
 
     

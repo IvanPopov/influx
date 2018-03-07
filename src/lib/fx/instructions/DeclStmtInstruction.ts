@@ -3,6 +3,11 @@ import { IParseNode } from "./../../idl/parser/IParser";
 import { StmtInstruction } from "./StmtInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+import { IInstructionSettings } from "./Instruction";
+
+export interface IDeclStmtInstruction extends IInstructionSettings {
+    instructions?: IDeclInstruction[];
+}
 
 /**
  * Represent TypeDecl or VariableDecl or VarStructDecl
@@ -12,8 +17,9 @@ export class DeclStmtInstruction extends StmtInstruction {
     private _instructions: IDeclInstruction[];
 
     
-    constructor(node: IParseNode, instructions: IDeclInstruction[]) {
-        super(node, EInstructionTypes.k_DeclStmtInstruction);
+    constructor({ instructions, ...settings }) {
+        super({ instrType: EInstructionTypes.k_DeclStmtInstruction, ...settings });
+        
         this._instructions = instructions;
     }
 
