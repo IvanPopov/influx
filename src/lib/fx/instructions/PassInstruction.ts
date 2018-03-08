@@ -1,4 +1,5 @@
 import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
+import { IDeclInstructionSettings } from "./DeclInstruction";
 import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import { ERenderStateValues } from "../../idl/ERenderStateValues";
 import { IMap } from "../../idl/IMap";
@@ -9,6 +10,12 @@ import { ERenderStates } from "../../idl/ERenderStates";
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { ISamplerState } from "../../idl/ISamplerState";
 
+
+export interface IPassInstructionSettings extends IDeclInstructionSettings {
+    vertexShader?: IFunctionDeclInstruction;
+    pixelShader?: IFunctionDeclInstruction;
+    renderStates?: IMap<ERenderStateValues>;
+}
 
 
 export class PassInstruction extends DeclInstruction implements IPassInstruction {
@@ -28,13 +35,12 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
     protected _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
 
-    constructor(node: IParseNode, vertexShader: IFunctionDeclInstruction, pixelShader: IFunctionDeclInstruction,
-        passStates: IMap<ERenderStateValues>, semantics: string = null, annotation: IAnnotationInstruction = null) {
-        super(node, semantics, annotation, EInstructionTypes.k_PassInstruction);
+    constructor({ vertexShader = null, pixelShader = null, renderStates = {}, ...settings }) {
+        super({ instrType: EInstructionTypes.k_PassInstruction, ...settings });
 
         this._passStateMap = {};
         PassInstruction.clearRenderStateMap(this._passStateMap);
-        PassInstruction.copyRenderStateMap(passStates, this._passStateMap);
+        PassInstruction.copyRenderStateMap(renderStates, this._passStateMap);
 
         this._vertexShader = vertexShader;
         this._pixelShader = pixelShader;

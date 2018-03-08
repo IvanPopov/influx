@@ -8,7 +8,7 @@ import { IInstructionSettings } from "./Instruction";
 
 
 export interface IForStmtInstructionSettings extends IInstructionSettings {
-    init?: ITypedInstruction;
+    init?: IExprInstruction;
     cond?: IExprInstruction;
     step?: IExprInstruction;
     body?: IStmtInstruction;
@@ -20,7 +20,7 @@ export interface IForStmtInstructionSettings extends IInstructionSettings {
  * for ExprInstruction or VarDeclInstruction ExprInstruction ExprInstruction StmtInstruction
  */
 export class ForStmtInstruction extends StmtInstruction {
-    protected _init: ITypedInstruction;
+    protected _init: IExprInstruction;
     protected _cond: IExprInstruction;
     protected _step: IExprInstruction;
     protected _body: IStmtInstruction;
@@ -32,6 +32,26 @@ export class ForStmtInstruction extends StmtInstruction {
         this._cond = cond;
         this._step = step;
         this._body = body;
+    }
+
+
+    get init(): IExprInstruction {
+        return this._init;
+    }
+
+
+    get cond(): IExprInstruction {
+        return this._cond;
+    }
+
+
+    get step(): IExprInstruction {
+        return this._step;
+    }
+
+
+    get body(): IStmtInstruction {
+        return this._body;
     }
 
     toCode(): string {
@@ -93,7 +113,7 @@ export class ForStmtInstruction extends StmtInstruction {
 
     addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
         usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var forInit: IVariableDeclInstruction = <IVariableDeclInstruction>this._init;
+        var forInit: IExprInstruction = <IExprInstruction>this._init;
         var forCondition: IExprInstruction = <IExprInstruction>this._cond;
         var forStep: IExprInstruction = <IExprInstruction>this._step;
         var forStmt: IStmtInstruction = <IStmtInstruction>this._body;

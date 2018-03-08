@@ -10,12 +10,6 @@ export interface ITypedInstructionSettings extends IInstructionSettings {
 }
 
 
-/**
- * For example: 
- *      int x;
- *      int main();
- */
-
 export class TypedInstruction extends Instruction implements ITypedInstruction {
     protected _type: ITypeInstruction;
 
@@ -30,7 +24,7 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
     }
 
     
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void {
+    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>, usedMode?: EVarUsedMode): void {
         console.error("@pure_virtual");
     }
 }

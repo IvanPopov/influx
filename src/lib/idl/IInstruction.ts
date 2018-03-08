@@ -139,7 +139,8 @@ export interface IInstruction {
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
-    readonly globalScope: boolean;
+
+    readonly globalScope: boolean; // << ??? rename/remove
 
     prepareFor(type: EFunctionType): void;
 
@@ -147,9 +148,10 @@ export interface IInstruction {
     toCode(): string;
 
     /** Internal API */
+
     $hide(): void;
     $linkTo(parent: IInstruction): void;
-    $linkToScope(scope: number): void;
+    // $linkToScope(scope: number): void;
 
     _check(eStage: ECheckStage): boolean;
     _getLastError(): IInstructionError;
@@ -239,20 +241,15 @@ export interface IConditionalExprInstruction extends IExprInstruction {
 }
 
 
-export interface IDeclInstruction extends ITypedInstruction {
+export interface IDeclInstruction extends IInstruction {
     readonly name: string;
     readonly id: IIdInstruction;
 
     readonly semantics: string;
     readonly annotation: IAnnotationInstruction;
 
-    /** Additional markers */
+    // todo: remove it?
     readonly builtIn: boolean;
-    readonly vertex: boolean;
-    readonly pixel: boolean;
-
-    $makeVertexCompatible(val?: boolean);
-    $makePixelCompatible(val?: boolean);
 }
 
 
@@ -280,6 +277,12 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     isShader(): boolean;
 
     $makeShader(): void;
+
+    // TODO: move it to properly place
+
+    /** Additional markers */
+    readonly vertex: boolean; // << Is it vertex compatible?
+    readonly pixel: boolean;
 }
 
 

@@ -131,11 +131,11 @@ export class Instruction implements IInstruction {
         this._parent = parent;
     }
 
-    $linkToScope(scope: number) {
-        console.warn("@deprecated");
-        console.assert(this._scope == Instruction.UNDEFINE_SCOPE, "scope redefenition detected!");
-        this._scope = scope;
-    }
+    // $linkToScope(scope: number) {
+    //     console.warn("@deprecated");
+    //     console.assert(this._scope == Instruction.UNDEFINE_SCOPE, "scope redefenition detected!");
+    //     this._scope = scope;
+    // }
 
     static UNDEFINE_LENGTH: number = 0xffffff;
     static UNDEFINE_SIZE: number = 0xffffff;

@@ -1,4 +1,5 @@
 import { DeclInstruction } from './DeclInstruction';
+import { IDeclInstructionSettings } from "./DeclInstruction";
 import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import * as Effect from '../Effect';
 import { IExprInstruction, IInstruction, EInstructionTypes,
@@ -11,6 +12,12 @@ import { IMap } from '../../idl/IMap';
 import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
+
+export interface IVariableDeclInstructionSettings extends IDeclInstructionSettings {
+    id: IIdInstruction;
+    type: IVariableTypeInstruction;
+    init?: IInitExprInstruction;
+}
 
 /**
  * Represent type var_name [= init_expr]
@@ -26,17 +33,12 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     static SHADER_VAR_NAMES_GLOBAL_DICT: StringDictionary = new StringDictionary();
 
-    constructor(node: IParseNode, 
-                id: IIdInstruction, 
-                type: IVariableTypeInstruction, 
-                initExpr: IInitExprInstruction,
-                semantics: string = null, 
-                annotation: IAnnotationInstruction = null) {
-        super(node, semantics, annotation, EInstructionTypes.k_VariableDeclInstruction);
+    constructor({ id, type, init = null, ...settings }: IVariableDeclInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
 
         this._id = id;
         this._type = type;
-        this._initExpr = initExpr;
+        this._initExpr = init;
         
         this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.name);
     }
@@ -131,7 +133,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
         {
             code = this.type.toCode();
-            code += ' ' + this.nameID.toCode();
+            code += ' ' + this.id.toCode();
 
             if (this.type.isNotBaseArray()) {
                 var iLength: number = this.type.length;

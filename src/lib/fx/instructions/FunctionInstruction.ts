@@ -1,4 +1,4 @@
-import { DeclInstruction } from "./DeclInstruction";
+import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { IFunctionDefInstruction, IStmtBlockInstruction } from "./../../idl/IInstruction";
 import { IFunctionDeclInstruction, EFunctionType, IVariableDeclInstruction, ITypeUseInfoContainer, ITypeDeclInstruction, ISimpleInstruction, EInstructionTypes, ITypeInstruction, IIdInstruction, IVariableTypeInstruction, IDeclInstruction, IStmtInstruction, IInstruction, IInitExprInstruction } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
@@ -13,6 +13,12 @@ import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
 import { VariableDeclInstruction } from "./VariableInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import * as Effect from "../Effect";
+
+
+export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {
+    definition: IFunctionDefInstruction;
+    implementation?: IStmtBlockInstruction;
+}
 
 
 /**
@@ -41,6 +47,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     protected _textureVariableMap: IMap<IVariableDeclInstruction>;
     protected _usedComplexTypeMap: IMap<ITypeInstruction>;
 
+    // todo: remove ??
     protected _vertexShader: IFunctionDeclInstruction;
     protected _pixelShader: IFunctionDeclInstruction;
 
@@ -48,9 +55,8 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     private _extSystemTypeList: ITypeDeclInstruction[];
     private _extSystemFunctionList: IFunctionDeclInstruction[];
 
-    constructor(node: IParseNode, definition: IFunctionDefInstruction,
-        implementation: IStmtBlockInstruction, semantics: string = null) {
-        super(node, semantics, null, EInstructionTypes.k_FunctionDeclInstruction);
+    constructor({ definition, implementation = null, ...settings }: IFunctionDeclInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_FunctionDeclInstruction, ...settings });
 
         this._definition = definition;
         this._implementation = implementation;
@@ -220,11 +226,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
     checkVertexUsage(): boolean {
-        return this.isUsedInVertex() ? this.vertex : true;
+        return this.isUsedInVertex() ? this.definition.vertex : true;
     }
 
     checkPixelUsage(): boolean {
-        return this.isUsedInPixel() ? this.pixel : true;
+        return this.isUsedInPixel() ? this.definition.pixel : true;
     }
 
     checkDefinitionForVertexUsage(): boolean {

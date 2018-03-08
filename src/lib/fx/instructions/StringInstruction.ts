@@ -3,7 +3,12 @@ import { ILiteralInstruction, IInstruction, EInstructionTypes } from "../../idl/
 import { IMap } from "../../idl/IMap";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
 
+
+export interface IStringInstructionSettings extends IInstructionSettings {
+    value: string;
+}
 
 
 export class StringInstruction extends ExprInstruction implements ILiteralInstruction {
@@ -12,8 +17,8 @@ export class StringInstruction extends ExprInstruction implements ILiteralInstru
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-    constructor(pNode: IParseNode, value: string) {
-        super(pNode, Effect.getSystemType("string").variableType, EInstructionTypes.k_StringInstruction);
+    constructor({ value, ...settings }: IStringInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_StringInstruction, type: Effect.getSystemType("string").asVarType(), ...settings });
         this._value = value;
     }
 

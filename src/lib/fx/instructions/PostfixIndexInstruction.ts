@@ -4,6 +4,14 @@ import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, 
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+import { VariableTypeInstruction } from "./VariableTypeInstruction";
+
+
+export interface IPostfixIndexInstructionSettings extends IInstructionSettings {
+    element: IExprInstruction;
+    index: IExprInstruction;
+}
 
 
 /**
@@ -15,8 +23,11 @@ export class PostfixIndexInstruction extends ExprInstruction {
     protected _element: IExprInstruction;
     protected _index: IExprInstruction;
 
-    constructor(node: IParseNode, element: IExprInstruction, index: IExprInstruction) {
-        super(node, (element.type as IVariableTypeInstruction).arrayElementType, EInstructionTypes.k_PostfixIndexInstruction);
+    constructor({ element, index, ...settings }: IPostfixIndexInstructionSettings) {
+        super({ 
+            instrType: EInstructionTypes.k_PostfixIndexInstruction, 
+            type: (element.type as IVariableTypeInstruction).arrayElementType, ...settings });
+            
         this._element = element;
         this._index = index;
     }
@@ -38,7 +49,7 @@ export class PostfixIndexInstruction extends ExprInstruction {
         {
             sCode += this.element.toCode();
 
-            if (!(<IExprInstruction>this.element).type.collapsed) {
+            {
                 sCode += "[" + this.index.toCode() + "]";
             }
         }
@@ -54,7 +65,8 @@ export class PostfixIndexInstruction extends ExprInstruction {
         pSubExpr.addUsedData(pUsedDataCollector, eUsedMode);
         pIndex.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
 
-        if (pSubExpr.type.isFromVariableDecl() && pSubExpr.type.isSampler()) {
+        
+        if (VariableTypeInstruction.isInheritedFromVariableDecl(pSubExpr.type) && pSubExpr.type.isSampler()) {
             // this._samplerArrayDecl = pSubExpr.type.parentVarDecl;
         }
     }

@@ -4,6 +4,13 @@ import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import { SystemFunctionInstruction } from "./SystemFunctionInstruction";
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface ISystemCallInstructionSettings extends IInstructionSettings {
+    func: SystemFunctionInstruction;
+    args?: IExprInstruction[];
+}
 
 
 /**
@@ -15,8 +22,8 @@ export class SystemCallInstruction extends ExprInstruction {
     protected _args: IExprInstruction[];
     // protected _samplerDecl: IVariableDeclInstruction;
 
-    constructor(func: SystemFunctionInstruction, args: IExprInstruction[]) {
-        super(null, func.type, EInstructionTypes.k_SystemCallInstruction);
+    constructor({ func, args = [], ...settings }: ISystemCallInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_SystemCallInstruction, type: func.type, ...settings });
         this._func = func;
         // this._samplerDecl = null;
         this._args = <IExprInstruction[]>this._func.closeArguments(args);

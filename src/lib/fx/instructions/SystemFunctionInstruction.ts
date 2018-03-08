@@ -1,4 +1,5 @@
 import { IFunctionDeclInstruction, ISimpleInstruction, ITypeDeclInstruction, IIdInstruction, ITypeInstruction, EInstructionTypes, IVariableTypeInstruction, EFunctionType, IInstruction, IDeclInstruction, IVariableDeclInstruction, EVarUsedMode, IStmtInstruction } from "../../idl/IInstruction";
+import { IDeclInstructionSettings } from "./DeclInstruction";
 import { DeclInstruction } from "./DeclInstruction";
 import { IdInstruction } from "./IdInstruction";
 import { isNull } from "../../common";
@@ -7,23 +8,34 @@ import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 
 
+export interface ISystemFunctionInstructionSettings extends IDeclInstructionSettings {
+    id: IIdInstruction;
+    returnType: ITypeInstruction;
+    exprTranslator: ExprTemplateTranslator;
+    args?: ITypeInstruction[];
+    definition?: string;
+    implementation?: string;
+}
+
+
 export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
-    private _exprTranslator: ExprTemplateTranslator ;
-    private _name: IIdInstruction;
-    private _args: ITypeInstruction[];
-    private _returnType: ITypeInstruction;
+    protected _exprTranslator: ExprTemplateTranslator ;
+    protected _name: IIdInstruction;
+    protected _args: ITypeInstruction[];
+    protected _returnType: ITypeInstruction;
 
-    private _definition: string;
-    private _implementation: string;
+    protected _definition: string;
+    protected _implementation: string;
 
-    private _extSystemTypeList: ITypeDeclInstruction[];
-    private _extSystemFunctionList: IFunctionDeclInstruction[];
+    protected _extSystemTypeList: ITypeDeclInstruction[];
+    protected _extSystemFunctionList: IFunctionDeclInstruction[];
 
-    constructor(name: IIdInstruction, returnType: ITypeInstruction,
-                exprTranslator: ExprTemplateTranslator,
-                args: ITypeInstruction[] = [], definition: string = null, implementation: string = null) {
+    protected _bForVertex: boolean;
+    protected _bForPixel: boolean;
 
-        super(null, null, null, EInstructionTypes.k_SystemFunctionInstruction);
+    constructor({ id, returnType, exprTranslator, args = [], definition = null, implementation = null, ...settings }: ISystemFunctionInstructionSettings) {
+
+        super({ instrType: EInstructionTypes.k_SystemFunctionInstruction, ...settings });
 
         this._name = name;
         this._returnType = returnType;
@@ -238,11 +250,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     checkVertexUsage(): boolean {
-        return this.vertex;
+        return this._bForVertex;
     }
 
     checkPixelUsage(): boolean {
-        return this.pixel;
+        return this._bForPixel;
     }
 
     checkDefinitionForVertexUsage(): boolean {
@@ -290,18 +302,19 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         return null;
     }
 
-    isBlackListFunction(): boolean {
-        return false;
-    }
+    // isBlackListFunction(): boolean {
+    //     return false;
+    // }
 
-    addToBlackList(): void {}
+    // addToBlackList(): void {}
+
 
     $overwriteType(type: EFunctionType) {
         console.error("@undefined_behavior");
     } 
 
-    $linkToImplementationScope(scope: number) {
-        console.error("@undefined_behavior");
-    }
+    // $linkToImplementationScope(scope: number) {
+    //     console.error("@undefined_behavior");
+    // }
 }
 

@@ -1,10 +1,18 @@
-import { DeclInstruction } from "./DeclInstruction";
+import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IVariableDeclInstruction, IAnnotationInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
 import * as Effect from "../Effect";
 import { isNull } from "../../common";
+
+
+export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
+    returnType: IVariableTypeInstruction;
+    id: IIdInstruction;
+    args?: IVariableDeclInstruction[];
+}
+
 
 /**
  * Represent type func(...args)[:Semantic]
@@ -24,19 +32,24 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     // Specifies whether the parameters are suitable for the shader.
     protected _bIsComplexShaderInput: boolean;
 
-    constructor(node: IParseNode, type: IVariableTypeInstruction, 
-        name: IIdInstruction, params: IVariableDeclInstruction[], 
-        semantics: string = null, annotation: IAnnotationInstruction = null) {
-        super(node, semantics, annotation, EInstructionTypes.k_FunctionDefInstruction);
 
-        this._parameterList = params || [];
-        this._returnType = type;
+    protected _bForVertex: boolean;
+    protected _bForPixel: boolean;
+
+    constructor({ returnType, id, args = [], ...settings }: IFunctionDefInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
+
+        this._parameterList = args || [];
+        this._returnType = returnType;
         this._functionName = name;
 
         this._paramListForShaderInput = [];
         this._paramListForShaderCompile = [];
         this._bIsComplexShaderInput = false;
         this._bShaderDef = false;
+
+        this._bForVertex = true;
+        this._bForPixel = true;
     }
 
 
@@ -66,6 +79,21 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
+    get vertex(): boolean {
+        return this._bForVertex;
+    }
+
+    
+    get pixel(): boolean {
+        return this._bForPixel;
+    }
+
+
+    get shaderInput(): IVariableDeclInstruction[] {
+        return this._paramListForShaderInput;
+    }
+
+
     // todo: remove
     isShader() {
         return this._bShaderDef;
@@ -82,10 +110,6 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         def += ")";
         // todo: add semantics
         return def;
-    }
-
-    get shaderInput(): IVariableDeclInstruction[] {
-        return this._paramListForShaderInput;
     }
 
 
@@ -154,18 +178,17 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
         isGood = this.checkReturnTypeForVertexUsage();
         if (!isGood) {
-            this.vertex = false;
+            this._bForVertex = false;
             return false;
         }
 
         isGood = this.checkArgumentsForVertexUsage();
         if (!isGood) {
-            this.vertex = false;
+            this._bForVertex = false;
             return false;
         }
 
-        this.vertex = true;
-
+        this._bForVertex = true;
         return true;
     }
 
@@ -174,18 +197,17 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
         isGood = this.checkReturnTypeForPixelUsage();
         if (!isGood) {
-            this.pixel = false;
+            this._bForPixel = false;
             return false;
         }
 
         isGood = this.checkArgumentsForPixelUsage();
         if (!isGood) {
-            this.pixel = false;
+            this._bForPixel = false;
             return false;
         }
 
-        this.pixel = true;
-
+        this._bForPixel = true;
         return true;
     }
 

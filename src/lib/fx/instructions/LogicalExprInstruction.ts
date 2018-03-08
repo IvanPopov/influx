@@ -3,6 +3,14 @@ import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstructio
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import * as Effect from '../Effect';
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface ILogicalExprInstructionSettings extends IInstructionSettings {
+    left: IExprInstruction;
+    right: IExprInstruction;
+    operator: string;
+}
 
 
 /**
@@ -14,8 +22,12 @@ export class LogicalExprInstruction extends ExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
 
-    constructor(node: IParseNode, operator: string, left: IExprInstruction, right: IExprInstruction) {
-        super(node, Effect.getSystemType("bool").variableType, EInstructionTypes.k_LogicalExprInstruction);
+    constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: Effect.getSystemType("bool").asVarType(), ...settings });
+
+        this._leftOperand = left;
+        this._rightOperand = right;
+        this._operator = operator;
     }
 
 

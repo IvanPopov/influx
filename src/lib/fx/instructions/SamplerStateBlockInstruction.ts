@@ -5,6 +5,14 @@ import { isNull, isDef } from "../../common";
 import { ISamplerState } from "../../idl/ISamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface ISamplerStateBlockInstructionSettings extends IInstructionSettings {
+    texture: IVariableDeclInstruction;
+    operator: string;
+    params?: IMap<string>;
+}
 
 
 /**
@@ -16,9 +24,9 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
     protected _operator: string;
 
 
-    constructor(node: IParseNode, texture: IVariableDeclInstruction, samplerParams: IMap<string>, operator: string) {
-        super(node, texture.type, EInstructionTypes.k_SamplerStateBlockInstruction);
-        this._samplerParams = samplerParams || {};
+    constructor({ texture, operator, params = {}, ...settings }: ISamplerStateBlockInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: texture.type, ...settings } );
+        this._samplerParams = params;
         this._texture = texture;
         this._operator = operator;
     }

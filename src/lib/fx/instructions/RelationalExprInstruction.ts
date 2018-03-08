@@ -3,7 +3,13 @@ import { EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode, I
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import * as Effect from '../Effect';
+import { IInstructionSettings } from "./Instruction";
 
+export interface IRelationalExprInstructionSettings extends IInstructionSettings {
+    left: IExprInstruction;
+    right: IExprInstruction;
+    operator: string;
+}
 
 /**
  * Represent someExpr == != < > <= >= someExpr
@@ -15,8 +21,8 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
     protected _operator: string;
 
 
-    constructor(pNode: IParseNode, left: IExprInstruction, right: IExprInstruction, operator: string) {
-        super(pNode, Effect.getSystemType('bool').variableType, EInstructionTypes.k_RelationalExprInstruction);
+    constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: Effect.getSystemType('bool').asVarType(), ...settings });
         this._leftOperand = left;
         this._rightOperand = right;
         this._operator = operator;

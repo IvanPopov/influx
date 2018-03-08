@@ -1,6 +1,7 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
 
 
 /**
@@ -9,8 +10,8 @@ import { IParseNode } from "../../idl/parser/IParser";
  */
 export class SemicolonStmtInstruction extends StmtInstruction {
     
-    constructor(pNode: IParseNode) {
-        super(pNode, EInstructionTypes.k_SemicolonStmtInstruction);
+    constructor({ ...settings }: IInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_SemicolonStmtInstruction, ...settings });
     }
 
     toCode(): string {

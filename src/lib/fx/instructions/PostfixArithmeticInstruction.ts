@@ -1,9 +1,16 @@
 import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes } from "../../idl/IInstruction";
+import { IExprInstructionSettings } from "./ExprInstruction";
 import { IVariableTypeInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
+import { IInstructionSettings } from "./Instruction";
 
+
+export interface IPostfixArithmeticInstructionSettings extends IInstructionSettings {
+    expr: IExprInstruction;
+    operator: string;
+}
 
 /**
  * Represent someExpr ++
@@ -14,8 +21,8 @@ export class PostfixArithmeticInstruction extends ExprInstruction {
     protected _expr: IExprInstruction;
 
     
-    constructor(node: IParseNode, expr: IExprInstruction, operator: string) {
-        super(node, expr.type, EInstructionTypes.k_PostfixArithmeticInstruction);
+    constructor({ expr, operator, ...settings }: IPostfixArithmeticInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_PostfixArithmeticInstruction, type: expr.type, ...settings });
 
         this._operator = operator;
         this._expr = expr;

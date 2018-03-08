@@ -1,6 +1,13 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EInstructionTypes, IStmtBlockInstruction, IStmtInstruction, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
+
+
+export interface IStmtBlockInstructionSettings extends IInstructionSettings {
+    instructions: IStmtInstruction[];
+}
+
 
 /**
  * Represent {stmts}
@@ -10,8 +17,8 @@ export class StmtBlockInstruction extends StmtInstruction implements IStmtBlockI
     protected _instructions: IStmtInstruction[];
 
     
-    constructor(node: IParseNode, instructions: IStmtInstruction[]) {
-        super(node, EInstructionTypes.k_StmtBlockInstruction);
+    constructor({ instructions, ...settings }: IStmtBlockInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_StmtBlockInstruction, ...settings });
         this._instructions = instructions;
     }
 

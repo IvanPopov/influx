@@ -1,4 +1,5 @@
 import { IIdExprInstruction, IVariableTypeInstruction, EInstructionTypes, IVariableDeclInstruction, EFunctionType, IInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
+import { IFunctionDeclInstruction } from "./../../idl/IInstruction";
 import { IInstructionSettings } from "./Instruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { IDeclInstruction } from "./../../idl/IInstruction";
@@ -11,12 +12,12 @@ import { IdInstruction } from "./IdInstruction";
 
 
 export interface IIdExprInstructionSettings extends IInstructionSettings {
-    decl: IDeclInstruction;
+    decl: IVariableDeclInstruction;
 }
 
 
 export class IdExprInstruction extends ExprInstruction implements IIdExprInstruction {
-    protected _decl: IDeclInstruction;
+    protected _decl: IVariableDeclInstruction;
 
     constructor({ decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });

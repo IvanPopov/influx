@@ -2,21 +2,19 @@ import { TypedInstruction, ITypedInstructionSettings } from "./TypedInstruction"
 import { IDeclInstruction, IAnnotationInstruction, EInstructionTypes, IIdInstruction, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
-export interface IDeclInstructionSettings extends ITypedInstructionSettings {
+export interface IDeclInstructionSettings extends IInstructionSettings {
     semantics?: string;
     annotation?: IAnnotationInstruction;
     builtIn?: boolean;
 }
 
-export class DeclInstruction extends TypedInstruction implements IDeclInstruction {
+export class DeclInstruction extends Instruction implements IDeclInstruction {
     protected _semantics: string
     protected _annotation: IAnnotationInstruction;
     
     protected _bIsBuiltIn: boolean;
-    protected _bForPixel: boolean;
-    protected _bForVertex: boolean;
-    protected _bBuiltIn: boolean;
     
     constructor({ semantics = null, annotation = null, builtIn = false, ...settings }: IDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
@@ -25,8 +23,6 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
         this._annotation = annotation;
 
         this._bIsBuiltIn = builtIn;
-        this._bForPixel = true;
-        this._bForVertex = true;
     }
     
 
@@ -45,31 +41,12 @@ export class DeclInstruction extends TypedInstruction implements IDeclInstructio
     }
 
 
-    get nameID(): IIdInstruction {
+    get id(): IIdInstruction {
         return null;
     }
 
     
     get builtIn(): boolean {
         return this._bIsBuiltIn;
-    }
-
-
-    get vertex(): boolean {
-        return this._bForVertex;
-    }
-
-    
-    get pixel(): boolean {
-        return this._bForPixel;
-    }
-
-    
-    $makeVertexCompatible(val = true): void {
-        this._bForVertex = val;
-    }
-
-    $makePixelCompatible(val = true): void {
-        this._bForPixel = val;
     }
 }
