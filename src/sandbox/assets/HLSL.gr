@@ -97,6 +97,15 @@ ObjectType : T_KW_PIXELFRAGMENT
 ObjectType : T_KW_VERTEXFRAGMENT
 ObjectType : T_KW_STATEBLOCK
 
+
+# struct Name
+# {
+#     [InterpolationModifier] Type[RxC] MemberName;
+#     ...
+# };
+# 
+# https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509668(v=vs.85).aspx
+
 Struct : T_KW_STRUCT StructBegin StructEnd --AN
 Struct : T_KW_STRUCT StructBegin StructDecls StructEnd
 StructDecl : T_KW_STRUCT Id StructBegin StructEnd --AN
@@ -136,6 +145,16 @@ Initializer : '=' '{' InitExprs ',' '}'
 InitializerOpt :
 InitializerOpt : Initializer
 
+
+# [Storage_Class] [Type_Modifier] Type Name[Index]
+#    [: Semantic]
+#    [: Packoffset]
+#    [: Register];
+#    [Annotations]
+#    [= Initial_Value]
+#
+# https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509706(v=vs.85).aspx
+
 VariableDecl : UsageType Variables ';' --AN
 VarStructDecl : UsageStructDecl Variables ';' --AN
 Variables : Variable --NN
@@ -143,6 +162,14 @@ Variables : Variables ',' Variable
 Variable : VariableDim SemanticsOpt AnnotationOpt InitializerOpt --AN
 VariableDim : Id --AN
 VariableDim : VariableDim '[' ConstantExpr ']'
+
+
+# [StorageClass] [clipplanes()] [precise] Return_Value Name ( [ArgumentList] ) [: Semantic]
+# {
+#   [StatementBlock]
+# };
+# 
+# https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509607(v=vs.85).aspx
 
 FunctionDecl : FunctionDef ';' --AN
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
@@ -153,6 +180,11 @@ ParamList : ParamListBegin T_KW_VOID ParamListEnd
 ParamList : ParamListBegin ParameterDecls ParamListEnd
 ParamListBegin : '('
 ParamListEnd : ')'
+
+
+# [InputModifier] Type Name [: Semantic] [InterpolationModifier] [= Initializers]
+# 
+# https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509606(v=vs.85).aspx
 
 ParameterDecls : ParameterDecl --NN
 ParameterDecls : ParameterDecls ',' ParameterDecl

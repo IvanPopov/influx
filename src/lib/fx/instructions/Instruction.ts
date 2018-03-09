@@ -6,8 +6,9 @@ import { ProgramScope } from "../ProgramScope";
 
 
 export interface IInstructionSettings {
-    sourceNode?: IParseNode;
     scope?: number;
+    
+    sourceNode?: IParseNode;
     visible?: boolean;
     
     instrType?: EInstructionTypes;

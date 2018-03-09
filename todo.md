@@ -8,6 +8,9 @@
 + Add "unsigned" typed support. 
 + Move instructions properties from getters to 'readonly' prtoperties.
 + Add binary operations support.
++ Add Directx10 sampler state support.
+    - https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509644(v=vs.85).aspx
++ Add Sampler1D support.
 + Cleanup containers/components separation.
 + Add support for non-debug runtime (without debug middleware)
 + Remove "markers" from store.

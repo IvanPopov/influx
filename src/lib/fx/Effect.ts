@@ -16,7 +16,7 @@ import { isNull } from 'util';
 import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
 import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
 import { SystemFunctionInstruction } from './instructions/SystemFunctionInstruction';
-import { VariableDeclInstruction } from './instructions/VariableInstruction';
+import { VariableDeclInstruction } from './instructions/VariableDeclInstruction';
 import { IdInstruction } from './instructions/IdInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
@@ -30,7 +30,7 @@ import { CompileExprInstruction } from './instructions/CompileExprInstruction';
 import { SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
-import { FunctionDeclInstruction } from './instructions/FunctionInstruction';
+import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
 import { SystemCallInstruction } from './instructions/SystemCallInstruction';
 import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
 import { ConstructorCallInstruction } from './instructions/ConstructorCallInstruction';
@@ -53,7 +53,7 @@ import { TechniqueInstruction } from './instructions/TechniqueInstruction';
 import { IfStmtInstruction } from './instructions/IfStmtInstruction';
 import { AssignmentExprInstruction } from './instructions/AssignmentExprInstruction';
 import { SimpleInstruction } from './instructions/SimpleInstruction';
-import { TypeDeclInstruction } from './instructions/TypeInstruction'
+import { TypeDeclInstruction } from './instructions/TypeDeclInstruction'
 import { RelationalExprInstruction } from './instructions/RelationalExprInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
 import { StringInstruction } from './instructions/StringInstruction';
@@ -97,24 +97,25 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null, 
         return null;
     }
 
-    let systemType: SystemTypeInstruction = new SystemTypeInstruction(name, elementType, length, fields);
+    let systemType: SystemTypeInstruction = new SystemTypeInstruction({ name, elementType, length, fields });
     systemTypes[name] = systemType;
 
     return systemType;
 }
 
-function addField(fields: IVariableDeclInstruction[], fieldName: string, fieldType: ITypeInstruction, writable: boolean = true): void {
-    let id: IIdInstruction = new IdInstruction(null, fieldName);
-    let type: IVariableTypeInstruction = new VariableTypeInstruction(null, fieldType, null, null, writable)
 
-    fields.push(new VariableDeclInstruction(null, id, type, null));
+function addField(fields: IVariableDeclInstruction[], fieldName: string, fieldType: ITypeInstruction, writable: boolean = true): void {
+    let id: IIdInstruction = new IdInstruction({ name: fieldName });
+    let type: IVariableTypeInstruction = new VariableTypeInstruction({ type: fieldType, writable })
+
+    fields.push(new VariableDeclInstruction({ id, type }));
 }
 
 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
     for (let suffix in suffixMap) {
-        let fieldTypeName: string = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
-        let fieldType: ITypeInstruction = getSystemType(fieldTypeName);
+        let fieldTypeName = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
+        let fieldType = getSystemType(fieldTypeName);
 
         addField(fields, suffix, fieldType, suffixMap[suffix]);
     }
@@ -163,7 +164,7 @@ function addSystemTypeVector(): void {
     let int: ITypeInstruction = getSystemType('int');
     let bool: ITypeInstruction = getSystemType('bool');
 
-    
+
     let suf2f: IVariableDeclInstruction[] = [];
     addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, 'float');
     addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, 'float');
@@ -420,43 +421,38 @@ export function isBoolBasedType(type: ITypeInstruction): boolean {
 export function isSamplerType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType('sampler')) ||
         type.isEqual(getSystemType('sampler2D')) ||
-        type.isEqual(getSystemType('samplerCUBE')) ||
-        type.isEqual(getSystemType('video_buffer'));
+        type.isEqual(getSystemType('samplerCUBE'));
 }
 
 
-function generateSystemFunction(name: string, 
-                                translationExpr: string,
-                                returnTypeName: string,
-                                argsTypes: string[],
-                                templateTypes: string[],
-                                isForVertex: boolean = true, 
-                                isForPixel: boolean = true): void {
+function generateSystemFunction(name: string,
+    translationExpr: string,
+    returnTypeName: string,
+    argsTypes: string[],
+    templateTypes: string[],
+    isForVertex: boolean = true,
+    isForPixel: boolean = true): void {
 
     let exprTranslator: ExprTemplateTranslator = new ExprTemplateTranslator(translationExpr);
     let systemFunctions: IMap<SystemFunctionInstruction[]> = systemFunctionsMap;
-    let types: ITypeInstruction[] = null;
-    let functionHash: string = "";
-    let returnType: ITypeInstruction = null;
-    let func: SystemFunctionInstruction = null;
-    let nameID: IIdInstruction;
+    let builtIn = true;
 
     if (!isNull(templateTypes)) {
         for (let i: number = 0; i < templateTypes.length; i++) {
-            types = [];
-            functionHash = name + "(";
-            returnType = (returnTypeName === TEMPLATE_TYPE) ?
+            let argTypes: ITypeInstruction[] = [];
+            let functionHash = name + "(";
+            let returnType = (returnTypeName === TEMPLATE_TYPE) ?
                 getSystemType(templateTypes[i]) :
                 getSystemType(returnTypeName);
 
 
             for (let j: number = 0; j < argsTypes.length; j++) {
                 if (argsTypes[j] === TEMPLATE_TYPE) {
-                    types.push(getSystemType(templateTypes[i]));
+                    argTypes.push(getSystemType(templateTypes[i]));
                     functionHash += templateTypes[i] + ",";
                 }
                 else {
-                    types.push(getSystemType(argsTypes[j]));
+                    argTypes.push(getSystemType(argsTypes[j]));
                     functionHash += argsTypes[j] + ","
                 }
             }
@@ -467,10 +463,9 @@ function generateSystemFunction(name: string,
                 _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
             }
 
-            nameID = new IdInstruction(null, name);
-            func = new SystemFunctionInstruction(nameID, returnType, exprTranslator, types);
-
-            nameID.$linkTo(func);
+            let id = new IdInstruction({ name });
+            let func = new SystemFunctionInstruction({ id, returnType, exprTranslator, argTypes, builtIn });
+            // scope: ProgramScope.GLOBAL_SCOPE 
 
             if (!isDef(systemFunctions[name])) {
                 systemFunctions[name] = [];
@@ -487,16 +482,16 @@ function generateSystemFunction(name: string,
             logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
-        returnType = getSystemType(returnTypeName);
-        types = [];
-        functionHash = name + "(";
+        let returnType = getSystemType(returnTypeName);
+        let argTypes = [];
+        let functionHash = name + "(";
 
         for (let i: number = 0; i < argsTypes.length; i++) {
             if (argsTypes[i] === TEMPLATE_TYPE) {
                 logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
-                types.push(getSystemType(argsTypes[i]));
+                argTypes.push(getSystemType(argsTypes[i]));
                 functionHash += argsTypes[i] + ",";
             }
         }
@@ -507,10 +502,8 @@ function generateSystemFunction(name: string,
             _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
         }
 
-        nameID = new IdInstruction(null, name);
-        func = new SystemFunctionInstruction(nameID, returnType, exprTranslator, types);
-
-        nameID.$linkTo(func);
+        let id = new IdInstruction({ name });
+        let func = new SystemFunctionInstruction({ id, returnType, exprTranslator, argTypes, builtIn });
 
         func.$makeVertexCompatible(isForVertex);
         func.$makePixelCompatible(isForPixel);
@@ -520,52 +513,49 @@ function generateSystemFunction(name: string,
         }
 
         systemFunctions[name].push(func);
-        func.builtIn = (true);
     }
-
 }
 
 
-// function generateNotBuiltInSystemFuction(name: string, sDefenition: string, sImplementation: string,
-//     sReturnType: string,
-//     pUsedTypes: string[],
-//     usedFunctions: string[]): void {
+function generateNotBuiltInSystemFuction(name: string, definition: string, implementation: string,
+    returnTypeName: string,
+    usedTypes: string[],
+    usedFunctions: string[]): void {
 
-//     if (isDef(systemFunctionsMap[name])) {
-//         return;
-//     }
+    if (isDef(systemFunctionsMap[name])) {
+        console.warn(`Builtin function ${name} already exists.`);
+        return;
+    }
 
-//     let returnType: ITypeInstruction = getSystemType(sReturnType);
-//     let func: SystemFunctionInstruction = new SystemFunctionInstruction(name, returnType, null, null);
+    let builtIn = false;
+    let returnType = getSystemType(returnTypeName);
+    let id = new IdInstruction({ name })
+    let func = new SystemFunctionInstruction({ id, returnType, definition, implementation, builtIn });
 
-//     func.definition = sDefenition;
-//     func.implementaion = sImplementation;
+    let usedExtSystemTypes: ITypeDeclInstruction[] = [];
+    let usedExtSystemFunctions: IFunctionDeclInstruction[] = [];
 
-//     let pUsedExtSystemTypes: ITypeDeclInstruction[] = [];
-//     let pUsedExtSystemFunctions: IFunctionDeclInstruction[] = [];
+    if (!isNull(usedTypes)) {
+        for (let i: number = 0; i < usedTypes.length; i++) {
+            let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(usedTypes[i]).parent;
+            if (!isNull(typeDecl)) {
+                usedExtSystemTypes.push(typeDecl);
+            }
+        }
+    }
 
-//     if (!isNull(pUsedTypes)) {
-//         for (let i: number = 0; i < pUsedTypes.length; i++) {
-//             let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(pUsedTypes[i]).parent;
-//             if (!isNull(typeDecl)) {
-//                 pUsedExtSystemTypes.push(typeDecl);
-//             }
-//         }
-//     }
+    if (!isNull(usedFunctions)) {
+        for (let i: number = 0; i < usedFunctions.length; i++) {
+            let pFindFunction: IFunctionDeclInstruction = findSystemFunction(usedFunctions[i], null);
+            usedExtSystemFunctions.push(pFindFunction);
+        }
+    }
 
-//     if (!isNull(usedFunctions)) {
-//         for (let i: number = 0; i < usedFunctions.length; i++) {
-//             let pFindFunction: IFunctionDeclInstruction = findSystemFunction(usedFunctions[i], null);
-//             pUsedExtSystemFunctions.push(pFindFunction);
-//         }
-//     }
+    func.$setUsedSystemData(usedExtSystemTypes, usedExtSystemFunctions);
+    func.$closeSystemDataInfo();
 
-//     func.setUsedSystemData(pUsedExtSystemTypes, pUsedExtSystemFunctions);
-//     func.closeSystemDataInfo();
-//     func.builtIn = (false);
-
-//     systemFunctionsMap[name] = [func];
-// }
+    systemFunctionsMap[name] = [func];
+}
 
 
 function addSystemFunctions(): void {
@@ -680,7 +670,7 @@ function addSystemFunctions(): void {
     generateSystemFunction('width', 'width($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     generateSystemFunction('fwidth', 'fwidth($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     // generateSystemFunction("smoothstep", "smoothstep($1, $2, $3)", "float3", ["float3", "float3", "float3"], null);
-    
+
     generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
     generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, ['float', 'float', TEMPLATE_TYPE], ['float2', 'float3', 'float4']);
 
@@ -707,35 +697,21 @@ function initSystemFunctions(): void {
 }
 
 
-function generateSystemVariable(name: string, realName: string, sTypeName: string,
-    isForVertex: boolean, isForPixel: boolean, isOnlyRead: boolean): void {
+function generateSystemVariable(name: string, typeName: string,
+    isForVertex: boolean, isForPixel: boolean, readonly: boolean): void {
 
     if (isDef(systemVariables[name])) {
         return;
     }
 
-    let variableDecl: IVariableDeclInstruction = new VariableDeclInstruction(null);
-    let name: IIdInstruction = new IdInstruction(null);
-    let type: IVariableTypeInstruction = new VariableTypeInstruction(null);
+    let id = new IdInstruction({ name });
+    let type = new VariableTypeInstruction({ type: getSystemType(typeName), writable: readonly });
+    let variableDecl = new VariableDeclInstruction({ id, type, builtIn: true });
 
-    name.name = name;
-    name.realName = (realName);
-
-    type.pushType(getSystemType(sTypeName));
-
-    if (isOnlyRead) {
-        type.writable = (false);
-    }
-
-    variableDecl.vertex = (isForVertex);
-    variableDecl.pixel = (isForPixel);
-
-    variableDecl.push(type, true);
-    variableDecl.push(name, true);
+    variableDecl.$makeVertexCompatible(isForVertex);
+    variableDecl.$makePixelCompatible(isForPixel);
 
     systemVariables[name] = variableDecl;
-
-    variableDecl.builtIn = (true);
 }
 
 
@@ -744,7 +720,6 @@ function addSystemVariables(): void {
     // generateSystemVariable('fragCoord', 'gl_FragCoord', 'float4', false, true, true);
     // generateSystemVariable('frontFacing', 'gl_FrontFacing', 'bool', false, true, true);
     // generateSystemVariable('pointCoord', 'gl_PointCoord', 'float2', false, true, true);
-    // generateSystemVariable('resultColor', 'resultColor', 'float4', false, true, true);
 }
 
 
@@ -755,31 +730,30 @@ function initSystemVariables(): void {
 
 
 function findSystemFunction(functionName: string,
-    args: ITypedInstruction[]): IFunctionDeclInstruction {
-    let systemFunctions: SystemFunctionInstruction[] = systemFunctionsMap[functionName];
+    args: ITypedInstruction[] | IVariableDeclInstruction[]): IFunctionDeclInstruction {
+    let systemFunctions = systemFunctionsMap[functionName];
 
     if (!isDef(systemFunctions)) {
         return null;
     }
 
     if (isNull(args)) {
-        for (let i: number = 0; i < systemFunctions.length; i++) {
+        for (let i = 0; i < systemFunctions.length; i++) {
             if (systemFunctions[i].numArgsRequired === 0) {
                 return <IFunctionDeclInstruction>systemFunctions[i];
             }
         }
     }
 
-    for (let i: number = 0; i < systemFunctions.length; i++) {
+    for (let i = 0; i < systemFunctions.length; i++) {
         if (args.length !== systemFunctions[i].numArgsRequired) {
             continue;
         }
 
-        let testedArguments: ITypedInstruction[] = systemFunctions[i].arguments;
+        let testedArguments = systemFunctions[i].arguments;
+        let isOk = true;
 
-        let isOk: boolean = true;
-
-        for (let j: number = 0; j < args.length; j++) {
+        for (let j = 0; j < args.length; j++) {
             isOk = false;
 
             if (!args[j].type.isEqual(testedArguments[j].type)) {
@@ -797,24 +771,13 @@ function findSystemFunction(functionName: string,
 }
 
 
-function findFunction(scope: ProgramScope, functionName: string,
-    args: IExprInstruction[]): IFunctionDeclInstruction;
-function findFunction(scope: ProgramScope, functionName: string,
-    args: IVariableDeclInstruction[]): IFunctionDeclInstruction;
-function findFunction(scope: ProgramScope, functionName: string,
-    args: ITypedInstruction[]): IFunctionDeclInstruction {
-    return findSystemFunction(functionName, args) ||
-        scope.getFunction(functionName, args);
+function findFunction(scope: ProgramScope, name: string, args: ITypedInstruction[] | IVariableDeclInstruction[]): IFunctionDeclInstruction {
+    return findSystemFunction(name, args) || scope.getFunction(name, args);
 }
 
 
-function findConstructor(type: ITypeInstruction,
-    args: IExprInstruction[]): IVariableTypeInstruction {
-
-    let variableType: IVariableTypeInstruction = new VariableTypeInstruction(null);
-    variableType.pushType(type);
-
-    return variableType;
+function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVariableTypeInstruction {
+    return new VariableTypeInstruction({ type });
 }
 
 
@@ -871,7 +834,7 @@ function isSystemType(type: ITypeDeclInstruction): boolean {
 
 
 function _error(context: Context, node: IParseNode, eCode: number, pInfo: IEffectErrorInfo = {}): void {
-    let location: ISourceLocation = <ISourceLocation>{ file: context? context.analyzedFileName: null, line: 0 };
+    let location: ISourceLocation = <ISourceLocation>{ file: context ? context.analyzedFileName : null, line: 0 };
     let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(node);
 
     switch (eCode) {
@@ -891,7 +854,7 @@ function _error(context: Context, node: IParseNode, eCode: number, pInfo: IEffec
     };
 
     logger.critical(logEntity);
-    //throw new Error(eCode.toString());
+    throw new Error(eCode.toString());
 }
 
 
@@ -1523,7 +1486,7 @@ function checkTwoOperandExprTypes(
         }
 
         if (!rightType.readable) {
-            _error(context, rightType.sourceNode,EEffectErrors.BAD_TYPE_FOR_READ);
+            _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
             return null;
         }
 
@@ -2294,7 +2257,7 @@ function analyzeConstructorCallExpr(context: Context, scope: ProgramScope, node:
 
         for (i = children.length - 3; i > 0; i--) {
             if (children[i].value !== ',') {
-                argumentExpr = analyzeExpr(context, scope,children[i]);
+                argumentExpr = analyzeExpr(context, scope, children[i]);
                 args.push(argumentExpr);
             }
         }
@@ -2334,7 +2297,7 @@ function analyzeSimpleComplexExpr(context: Context, scope: ProgramScope, node: I
     let complexExpr: IExprInstruction;
     let exprType: IVariableTypeInstruction;
 
-    complexExpr = analyzeExpr(context, scope,children[1]);
+    complexExpr = analyzeExpr(context, scope, children[1]);
     exprType = <IVariableTypeInstruction>complexExpr.type;
 
     expr.type = (exprType);
@@ -2354,12 +2317,12 @@ function analyzePostfixExpr(context: Context, scope: ProgramScope, node: IParseN
 
     switch (symbol) {
         case '[':
-            return analyzePostfixIndex(context, scope,node);
+            return analyzePostfixIndex(context, scope, node);
         case '.':
-            return analyzePostfixPoint(context, scope,node);
+            return analyzePostfixPoint(context, scope, node);
         case '++':
         case '--':
-            return analyzePostfixArithmetic(context, scope,node);
+            return analyzePostfixArithmetic(context, scope, node);
     }
 
     return null;
@@ -2377,7 +2340,7 @@ function analyzePostfixIndex(context: Context, scope: ProgramScope, node: IParse
     let indexExprType: IVariableTypeInstruction = null;
     let intType: ITypeInstruction = null;
 
-    postfixExpr = analyzeExpr(context, scope,children[children.length - 1]);
+    postfixExpr = analyzeExpr(context, scope, children[children.length - 1]);
     postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
     if (!postfixExprType.isArray()) {
@@ -2385,7 +2348,7 @@ function analyzePostfixIndex(context: Context, scope: ProgramScope, node: IParse
         return null;
     }
 
-    indexExpr = analyzeExpr(context, scope,children[children.length - 3]);
+    indexExpr = analyzeExpr(context, scope, children[children.length - 3]);
     indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
     intType = getSystemType('int');
@@ -2417,7 +2380,7 @@ function analyzePostfixPoint(context: Context, scope: ProgramScope, node: IParse
     let exprType: IVariableTypeInstruction = null;
     let postfixExprType: IVariableTypeInstruction = null;
 
-    postfixExpr = analyzeExpr(context, scope,children[children.length - 1]);
+    postfixExpr = analyzeExpr(context, scope, children[children.length - 1]);
     postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
     fieldName = children[children.length - 3].value;
@@ -2484,7 +2447,7 @@ function analyzeUnaryExpr(context: Context, scope: ProgramScope, node: IParseNod
     let exprType: IVariableTypeInstruction;
     let unaryExprType: IVariableTypeInstruction;
 
-    unaryExpr = analyzeExpr(context, scope,children[0]);
+    unaryExpr = analyzeExpr(context, scope, children[0]);
     unaryExprType = <IVariableTypeInstruction>unaryExpr.type;
 
     exprType = checkOneOperandExprType(context, node, operator, unaryExprType);
@@ -3916,7 +3879,7 @@ class Context {
     public functionWithImplementationList: IFunctionDeclInstruction[] = [];
     public techniqueMap: IMap<ITechniqueInstruction> = {};
 
-    constructor (filename: string) {
+    constructor(filename: string) {
         this.analyzedFileName = filename;
     }
 }

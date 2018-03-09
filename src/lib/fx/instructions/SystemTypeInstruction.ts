@@ -10,7 +10,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     name: string;
-    elemType?: ITypeInstruction;
+    elementType?: ITypeInstruction;
     length?: number;
     fields?: IVariableDeclInstruction[];
     writable?: boolean;
@@ -34,7 +34,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     constructor({
         name, 
-        elemType = null, 
+        elementType = null, 
         length = 1, 
         fields = [],
         writable = true, 
@@ -46,7 +46,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         super({ instrType: EInstructionTypes.k_SystemTypeInstruction, ...settings });
 
         this._name = name;
-        this._elementType = Instruction.$withNoParent(elemType);
+        this._elementType = Instruction.$withNoParent(elementType);
         this._length = length;
         this._fields = fields.map(field => field.$withParent(this));
         this._bIsWritable = writable;

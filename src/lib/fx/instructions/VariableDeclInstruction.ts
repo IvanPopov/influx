@@ -29,6 +29,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     protected _type: IVariableTypeInstruction;
     protected _initExpr: IInitExprInstruction;
 
+    protected _bForVertex: boolean;
+    protected _bForPixel: boolean;
+
     private _nameIndex: number;
 
     static SHADER_VAR_NAMES_GLOBAL_DICT: StringDictionary = new StringDictionary();
@@ -39,6 +42,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         this._id = id.$withParent(this);
         this._type = type.$withParent(this);
         this._initExpr = init.$withParent(this);
+
+        this._bForVertex = true;
+        this._bForPixel = true;
         
         this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.name);
     }
@@ -149,5 +155,14 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
         return code;
     }
+
+    $makeVertexCompatible(val: boolean): void {
+        this._bForVertex = val;
+    }
+
+    $makePixelCompatible(val: boolean): void {
+        this._bForPixel = val;
+    }
+
 }
 
