@@ -6,10 +6,12 @@ import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstructio
 import { IMap } from "../../idl/IMap";
 
 
+export type AssigmentOperator = "=" | "+=" | "-=" | "/=" | "*=" | "%=";
+
 export interface IAssignmentExprInstructionSettings extends IExprInstructionSettings {
     left: ITypedInstruction;
     right: ITypedInstruction;
-    operator: string;
+    operator: AssigmentOperator;
 }
 
 
@@ -20,13 +22,13 @@ export interface IAssignmentExprInstructionSettings extends IExprInstructionSett
 export class AssignmentExprInstruction extends ExprInstruction implements IAssignmentExprInstruction {
     protected _leftValue: ITypedInstruction;
     protected _rightValue: ITypedInstruction;
-    protected _operator: string;
+    protected _operator: AssigmentOperator;
 
     constructor({ left, right, operator, ...settings }: IAssignmentExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_AssignmentExprInstruction, ...settings });
 
-        this._leftValue = left;
-        this._rightValue = right;
+        this._leftValue = left.$withParent(this);
+        this._rightValue = right.$withParent(this);
         this._operator = operator;
     }
 

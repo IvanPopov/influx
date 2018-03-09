@@ -6,7 +6,7 @@ import { isNull } from "../../common";
 import { IInstructionSettings } from "./Instruction";
 
 export interface IDeclStmtInstruction extends IInstructionSettings {
-    instructions?: IDeclInstruction[];
+    declList?: IDeclInstruction[];
 }
 
 /**
@@ -14,26 +14,26 @@ export interface IDeclStmtInstruction extends IInstructionSettings {
  * EMPTY DeclInstruction
  */
 export class DeclStmtInstruction extends StmtInstruction {
-    private _instructions: IDeclInstruction[];
+    private _declList: IDeclInstruction[];
 
     
-    constructor({ instructions, ...settings }) {
+    constructor({ declList, ...settings }) {
         super({ instrType: EInstructionTypes.k_DeclStmtInstruction, ...settings });
         
-        this._instructions = instructions;
+        this._declList = declList.map(decl => decl.$withParent(this));
     }
 
 
-    get instructions(): IDeclInstruction[] {
-        return this._instructions;
+    get declList(): IDeclInstruction[] {
+        return this._declList;
     }
 
 
     toCode(): string {
         var code: string = "";
-        var pVariableList: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>this.instructions;
+        var pVariableList: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>this.declList;
 
-        for (var i: number = 0; i < this.instructions.length; i++) {
+        for (var i: number = 0; i < this.declList.length; i++) {
             code += pVariableList[i].toCode() + ";\n";
         }
 
@@ -42,16 +42,16 @@ export class DeclStmtInstruction extends StmtInstruction {
 
     addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (isNull(this.instructions) || this.instructions.length === 0) {
+        if (isNull(this.declList) || this.declList.length === 0) {
             return;
         }
 
-        if (this.instructions[0].instructionType === EInstructionTypes.k_TypeDeclInstruction) {
+        if (this.declList[0].instructionType === EInstructionTypes.k_TypeDeclInstruction) {
             return;
         }
 
-        var pVariableList: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>this.instructions;
-        for (var i: number = 0; i < this.instructions.length; i++) {
+        var pVariableList: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>this.declList;
+        for (var i: number = 0; i < this.declList.length; i++) {
             var pVarType: IVariableTypeInstruction = pVariableList[i].type;
 
             pUsedDataCollector[pVarType.instructionID] = <ITypeUseInfoContainer>{

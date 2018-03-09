@@ -20,7 +20,7 @@ export interface ISystemFunctionInstructionSettings extends IDeclInstructionSett
 
 export class SystemFunctionInstruction extends DeclInstruction implements IFunctionDeclInstruction {
     protected _exprTranslator: ExprTemplateTranslator ;
-    protected _name: IIdInstruction;
+    protected _id: IIdInstruction;
     protected _args: ITypeInstruction[];
     protected _returnType: ITypeInstruction;
 
@@ -37,9 +37,9 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
 
         super({ instrType: EInstructionTypes.k_SystemFunctionInstruction, ...settings });
 
-        this._name = name;
-        this._returnType = returnType;
-        this._args = args;
+        this._id = id.$withParent(this);
+        this._returnType = returnType.$withParent(this);
+        this._args = args.map(arg => arg.$withParent(this));
 
         // if (!isNull(args)) {
         //     for (var i: number = 0; i < args.length; i++) {
@@ -109,7 +109,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
     }
 
     get nameID(): IIdInstruction {
-        return this._name;
+        return this._id;
     }
 
     get arguments(): ITypeInstruction[] {
@@ -196,8 +196,8 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         return null;
     }
 
-    closeArguments(pArguments: IInstruction[]): IInstruction[] {
-        return this._exprTranslator.toInstructionList(pArguments);
+    closeArguments(args: IInstruction[]): IInstruction[] {
+        return this._exprTranslator.toInstructionList(args);
     }
 
     clone(pRelationMap?: IMap<IInstruction>): SystemFunctionInstruction {

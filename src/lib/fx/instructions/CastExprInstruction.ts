@@ -20,7 +20,7 @@ export class CastExprInstruction extends ExprInstruction {
     constructor({ sourceExr, ...settings }: ICastExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
 
-        this._srcExpr = sourceExr;
+        this._srcExpr = sourceExr.$withParent(this);
     }
 
     get expr(): IInstruction {

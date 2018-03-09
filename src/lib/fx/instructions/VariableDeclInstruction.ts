@@ -36,9 +36,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     constructor({ id, type, init = null, ...settings }: IVariableDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
 
-        this._id = id;
-        this._type = type;
-        this._initExpr = init;
+        this._id = id.$withParent(this);
+        this._type = type.$withParent(this);
+        this._initExpr = init.$withParent(this);
         
         this._nameIndex = VariableDeclInstruction.SHADER_VAR_NAMES_GLOBAL_DICT.add(this.name);
     }

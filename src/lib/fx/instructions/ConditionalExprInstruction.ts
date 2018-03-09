@@ -26,9 +26,9 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
 
         console.assert(left.type.isStrongEqual(right.type));
         
-        this._cond = cond;
-        this._leftValue = left;
-        this._rightValue = right;
+        this._cond = cond.$withParent(this);
+        this._leftValue = left.$withParent(this);
+        this._rightValue = right.$withParent(this);
     }
 
 

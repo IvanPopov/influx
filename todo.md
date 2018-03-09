@@ -6,6 +6,8 @@
 + Handle grammar errors.
     - Add visualization.
 + Add "unsigned" typed support. 
++ Move instructions properties from getters to 'readonly' prtoperties.
++ Add binary operations support.
 + Cleanup containers/components separation.
 + Add support for non-debug runtime (without debug middleware)
 + Remove "markers" from store.

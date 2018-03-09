@@ -5,7 +5,7 @@ import { IInstructionSettings } from "./Instruction";
 
 
 export interface IStmtBlockInstructionSettings extends IInstructionSettings {
-    instructions: IStmtInstruction[];
+    stmtList: IStmtInstruction[];
 }
 
 
@@ -14,25 +14,25 @@ export interface IStmtBlockInstructionSettings extends IInstructionSettings {
  * EMPTY_OPERATOR StmtInstruction ... StmtInstruction
  */
 export class StmtBlockInstruction extends StmtInstruction implements IStmtBlockInstruction {
-    protected _instructions: IStmtInstruction[];
+    protected _stmtList: IStmtInstruction[];
 
     
-    constructor({ instructions, ...settings }: IStmtBlockInstructionSettings) {
+    constructor({ stmtList, ...settings }: IStmtBlockInstructionSettings) {
         super({ instrType: EInstructionTypes.k_StmtBlockInstruction, ...settings });
-        this._instructions = instructions;
+        this._stmtList = stmtList.map(stmt => stmt.$withParent(this));
     }
 
 
-    get instructions(): IStmtInstruction[] {
-        return this._instructions;
+    get stmtList(): IStmtInstruction[] {
+        return this._stmtList;
     }
 
 
     toCode(): string {
         var code: string = "{" + "\n";
 
-        for (var i: number = 0; i < this.instructions.length; i++) {
-            code += "\t" + this.instructions[i].toCode() + "\n";
+        for (var i: number = 0; i < this.stmtList.length; i++) {
+            code += "\t" + this.stmtList[i].toCode() + "\n";
         }
 
         code += "}";

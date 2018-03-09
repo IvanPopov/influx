@@ -15,7 +15,8 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
 
     constructor({ type, ...settings }: ITypedInstructionSettings) {
         super({ instrType: EInstructionTypes.k_TypedInstruction, ...settings });
-        this._type = type;
+        
+        this._type = type.$withNoParent();
     }
 
 

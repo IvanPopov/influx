@@ -126,16 +126,32 @@ export class Instruction implements IInstruction {
         this._visible = false;
     }
 
-    $linkTo(parent: IInstruction) {
+
+    $withParent<T extends IInstruction>(parent: IInstruction | null): T {
         console.assert(this._parent == null, "parent redefenition detected!");
         this._parent = parent;
+        // todo: remove this hack!
+        return <any>this;
     }
 
-    // $linkToScope(scope: number) {
-    //     console.warn("@deprecated");
-    //     console.assert(this._scope == Instruction.UNDEFINE_SCOPE, "scope redefenition detected!");
-    //     this._scope = scope;
-    // }
+
+    // An auxiliary function created to maintain the clarity of the code.
+    $withNoParent<T extends IInstruction>(): T {
+        return this.$withParent(null);
+    }
+
+
+    static $withParent<T extends IInstruction>(child: T, parent: IInstruction): T | null {
+        if (isNull(child)) {
+            return null;
+        }
+        return child.$withParent(parent);
+    }
+
+    static $withNoParent<T extends IInstruction>(child: T): T | null {
+        return Instruction.$withParent(child, null);
+    }
+
 
     static UNDEFINE_LENGTH: number = 0xffffff;
     static UNDEFINE_SIZE: number = 0xffffff;

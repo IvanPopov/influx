@@ -5,7 +5,7 @@ import { IMap } from "../../idl/IMap";
 import { Instruction } from "./Instruction";
 import { IdInstruction } from "./IdInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import { VariableDeclInstruction } from "./VariableInstruction";
+import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export interface ISystemTypeInstructionSettings extends IInstructionSettings {
@@ -46,9 +46,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         super({ instrType: EInstructionTypes.k_SystemTypeInstruction, ...settings });
 
         this._name = name;
-        this._elementType = elemType;
+        this._elementType = Instruction.$withNoParent(elemType);
         this._length = length;
-        this._fields = fields;
+        this._fields = fields.map(field => field.$withParent(this));
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._declaration = declaration;

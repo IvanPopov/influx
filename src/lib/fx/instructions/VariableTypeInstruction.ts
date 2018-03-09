@@ -3,7 +3,7 @@ import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariable
 import { IMap } from "../../idl/IMap";
 import { isNull, isNumber, isDef } from '../../common';
 import { IdInstruction } from "./IdInstruction";
-import { VariableDeclInstruction } from "./VariableInstruction";
+import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { IntInstruction } from "./IntInstruction";
 import { IdExprInstruction } from "./IdExprInstruction"
 import * as Effect from "../Effect"
@@ -36,8 +36,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         usages.forEach( usage => this.addUsage(usage) );
 
-        let instrType: EInstructionTypes = type.instructionType;
+        type = type.$withNoParent();
 
+        let instrType: EInstructionTypes = type.instructionType;
         if (instrType === EInstructionTypes.k_SystemTypeInstruction ||
             instrType === EInstructionTypes.k_ComplexTypeInstruction) {
             this._subType = type;
@@ -64,9 +65,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
-            this._arrayElementType = new VariableTypeInstruction({ type: this.subType, usages: this._usageList });
-            this._arrayElementType.$linkTo(this);
-            this._arrayIndexExpr = arrayIndex;
+            this._arrayElementType = (new VariableTypeInstruction({ type: this.subType, usages: this._usageList })).$withParent(this);
+            this._arrayIndexExpr = arrayIndex.$withParent(this);
         }
     }
 
@@ -378,18 +378,16 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         let subField: IVariableDeclInstruction = this.subType.getField(sFieldName);
-        let id = subField.nameID;
+        let id = subField.id;
         let type = subField.type;
         let padding = subField.type.padding;
         let semantics = subField.semantics;
 
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type);
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ type });
         fieldType.$overwritePadding(padding);
 
-        let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null, semantics);
-
-        field.$linkTo(this);
-        return field;
+        let field: IVariableDeclInstruction = new VariableDeclInstruction({ id, type: fieldType, semantics });
+        return field.$withParent(this);
     }
 
 
@@ -404,11 +402,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         let padding = subField.type.padding;
         let id = subField.id;
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, subField.type);
-        let field: IVariableDeclInstruction = new VariableDeclInstruction(null, id, fieldType, null);
-        field.$linkTo(this);
-
-        return field;
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ type: subField.type });
+        let field: IVariableDeclInstruction = new VariableDeclInstruction({ id, type: fieldType });
+        return field.$withParent(this);
     }
 
 

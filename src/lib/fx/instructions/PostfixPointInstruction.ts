@@ -23,8 +23,8 @@ export class PostfixPointInstruction extends ExprInstruction {
     constructor({ element, postfix, ...settings }: IPostfixPointInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PostfixPointInstruction, type: postfix.type, ...settings });
         
-        this._element = element;
-        this._postfix = postfix;
+        this._element = element.$withParent(this);
+        this._postfix = postfix.$withParent(this);
     }
 
 

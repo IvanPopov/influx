@@ -4,6 +4,8 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export class AnnotationInstruction extends Instruction implements IAnnotationInstruction {
     
+    // TODO: implement it!
+
     constructor({ ...settings }: IInstructionSettings) {
         super({ instrType: EInstructionTypes.k_AnnotationInstruction, ...settings });
     }

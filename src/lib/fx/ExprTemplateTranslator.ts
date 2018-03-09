@@ -11,19 +11,20 @@ export class ExprTemplateTranslator {
         this._inToOutArgsMap = <IMap<number>>{};
         this._exprPart = <ISimpleInstruction[]>[];
 
-        let pSplitTemplate: string[] = exprTemplate.split(/(\$\d+)/);
-        for (let i: number = 0; i < pSplitTemplate.length; i++) {
-            if (pSplitTemplate[i]) {
-                if (pSplitTemplate[i][0] !== '$') {
-                    this._exprPart.push(new SimpleInstruction(null, pSplitTemplate[i]));
+        let parts: string[] = exprTemplate.split(/(\$\d+)/);
+        for (let i: number = 0; i < parts.length; i++) {
+            if (parts[i]) {
+                if (parts[i][0] !== '$') {
+                    this._exprPart.push(new SimpleInstruction({ value: parts[i] }));
                 }
                 else {
                     this._exprPart.push(null);
-                    this._inToOutArgsMap[this._exprPart.length - 1] = ((<number><any>(pSplitTemplate[i].substr(1))) * 1 - 1);
+                    this._inToOutArgsMap[this._exprPart.length - 1] = ((<number><any>(parts[i].substr(1))) * 1 - 1);
                 }
             }
         }
     }
+    
 
     toInstructionList(args: IInstruction[]): IInstruction[] {
         let outputInstructionList: IInstruction[] = <IInstruction[]>[];

@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { isNull } from "./../../common";
 import { IStmtInstruction, EInstructionTypes, IExprInstruction, IIfStmtInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -18,17 +18,17 @@ export interface IIfStmtInstructionSettings extends IInstructionSettings {
  */
 export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruction {
     protected _cond: IExprInstruction;
-    protected _ifStmt: IStmtInstruction;
-    protected _elseStmt: IStmtInstruction;
+    protected _conseq: IStmtInstruction;
+    protected _contrary: IStmtInstruction;
 
     
     constructor({ cond, conseq, contrary = null, ...settings }: IIfStmtInstructionSettings) {
 
         super({ instrType: EInstructionTypes.k_IfStmtInstruction, ...settings });
 
-        this._cond = cond;
-        this._ifStmt = conseq;
-        this._elseStmt = contrary;
+        this._cond = Instruction.$withParent(cond, this);
+        this._conseq = Instruction.$withParent(conseq, this);
+        this._contrary = Instruction.$withParent(contrary, this);
     }
 
 
@@ -37,29 +37,29 @@ export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruc
     }
 
 
-    get ifStmt(): IStmtInstruction {
-        return this._ifStmt;
+    get conseq(): IStmtInstruction {
+        return this._conseq;
     }
 
 
-    get elseStmt(): IStmtInstruction {
-        return this._elseStmt;
+    get contrary(): IStmtInstruction {
+        return this._contrary;
     }
 
 
     toCode(): string {
         var code: string = "";
-        if (isNull(this._elseStmt)) {
+        if (isNull(this._contrary)) {
             code += "if(";
             code += this._cond.toCode() + ")";
-            code += this._ifStmt.toCode();
+            code += this._conseq.toCode();
         }
         else {
             code += "if(";
             code += this._cond.toCode() + ") ";
-            code += this._ifStmt.toCode();
+            code += this._conseq.toCode();
             code += "else ";
-            code += this._elseStmt.toCode();
+            code += this._contrary.toCode();
         }
 
         return code;

@@ -1,4 +1,5 @@
 import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { IDeclInstructionSettings } from "./DeclInstruction";
 import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import { ERenderStateValues } from "../../idl/ERenderStateValues";
@@ -42,8 +43,8 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         PassInstruction.clearRenderStateMap(this._passStateMap);
         PassInstruction.copyRenderStateMap(renderStates, this._passStateMap);
 
-        this._vertexShader = vertexShader;
-        this._pixelShader = pixelShader;
+        this._vertexShader = Instruction.$withParent(vertexShader, this);
+        this._pixelShader = Instruction.$withParent(pixelShader, this);
 
         console.assert(vertexShader.functionType === EFunctionType.k_Vertex);
         console.assert(pixelShader.functionType === EFunctionType.k_Pixel);

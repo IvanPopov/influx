@@ -1,17 +1,24 @@
 import { DeclInstruction } from "./DeclInstruction";
+import { IDeclInstructionSettings } from "./DeclInstruction";
 import { IAnnotationInstruction } from "./../../idl/IInstruction";
 import { ITypeDeclInstruction, EInstructionTypes, ITypeInstruction, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 
+export interface ITypeDeclInstructionSettings extends IDeclInstructionSettings {
+    type: ITypeInstruction;
+}
+
+
 // todo: add description comment.
 export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclInstruction {
     protected _type: ITypeInstruction;
 
-    constructor(node: IParseNode, type: ITypeInstruction, semantics: string = null, annotation: IAnnotationInstruction = null) {
-        super(node, semantics, annotation, EInstructionTypes.k_TypeDeclInstruction);
-        this._type = type;
+    constructor({ type, ...settings }: ITypeDeclInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_TypeDeclInstruction, ...settings });
+        
+        this._type = type.$withParent(this);
     }
 
 

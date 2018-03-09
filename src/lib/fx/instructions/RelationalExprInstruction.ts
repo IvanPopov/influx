@@ -5,10 +5,12 @@ import { IParseNode } from "../../idl/parser/IParser";
 import * as Effect from '../Effect';
 import { IInstructionSettings } from "./Instruction";
 
+export type RelationOperator = "==" | "!=" | "<" | ">" | "<=" | ">=";
+
 export interface IRelationalExprInstructionSettings extends IInstructionSettings {
     left: IExprInstruction;
     right: IExprInstruction;
-    operator: string;
+    operator: RelationOperator;
 }
 
 /**
@@ -18,7 +20,7 @@ export interface IRelationalExprInstructionSettings extends IInstructionSettings
 export class RelationalExprInstruction extends ExprInstruction implements IPairedExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
-    protected _operator: string;
+    protected _operator: RelationOperator;
 
 
     constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {

@@ -20,7 +20,7 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
         this._semantics = semantics;
-        this._annotation = annotation;
+        this._annotation = Instruction.$withParent(annotation, this);
 
         this._bIsBuiltIn = builtIn;
     }

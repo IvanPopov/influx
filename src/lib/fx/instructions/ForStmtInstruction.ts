@@ -4,7 +4,7 @@ import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface IForStmtInstructionSettings extends IInstructionSettings {
@@ -28,10 +28,10 @@ export class ForStmtInstruction extends StmtInstruction {
     constructor({ init = null, cond = null, step = null, body = null, ...settings }: IForStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ForStmtInstruction, ...settings });
 
-        this._init = init;
-        this._cond = cond;
-        this._step = step;
-        this._body = body;
+        this._init = Instruction.$withParent(init, this);
+        this._cond = Instruction.$withParent(cond, this);
+        this._step = Instruction.$withParent(step, this);
+        this._body = Instruction.$withParent(body, this);
     }
 
 

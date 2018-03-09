@@ -1,6 +1,5 @@
 
 import { isDefAndNotNull } from "./../../common";
-import { IInstructionCollector } from "./../../idl/IInstruction";
 import { Instruction, IInstructionSettings } from "./Instruction";
 import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
@@ -12,16 +11,17 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name: string;
-    fields: IInstructionCollector; // << todo: replace this Array<Instruction>;
+    fields: IVariableDeclInstruction[]; // << todo: replace this Array<Instruction>;
 }
 
 export class ComplexTypeInstruction extends Instruction implements ITypeInstruction {
-    private _name: string;
-    private _fields: IMap<IVariableDeclInstruction>;
+    protected _name: string;
+    protected _fields: IMap<IVariableDeclInstruction>;
 
-    private _isContainArray: boolean;
-    private _isContainSampler: boolean;
-    private _isContainComplexType: boolean;
+    // helpers
+    protected _isContainArray: boolean;
+    protected _isContainSampler: boolean;
+    protected _isContainComplexType: boolean;
 
     constructor({ name, fields, ...settings }: IComplexTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexTypeInstruction, ...settings });
@@ -33,7 +33,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this._isContainSampler = false;
         this._isContainComplexType = false;
 
-        this.addFields(fields);
+        this.addFields(fields.map(field => field.$withParent(this)));
     }
 
     get builtIn(): boolean {
@@ -190,8 +190,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
 
     private addField(variable: IVariableDeclInstruction): void {
-        var sVarName: string = variable.name;
-        this._fields[sVarName] = variable;
+        var varName: string = variable.name;
+        this._fields[varName] = variable;
 
         var type: IVariableTypeInstruction = variable.type;
 
@@ -208,12 +208,10 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         }
     }
 
-    private addFields(collector: IInstructionCollector): void {
-        let fields = <IVariableDeclInstruction[]>(collector.instructions);
+    private addFields(fields: IVariableDeclInstruction[]): void {
 
         for (var i: number = 0; i < this.fields.length; i++) {
             this.addField(fields[i]);
-            fields[i].$linkTo(this);
         }
 
         this.calculatePaddings();

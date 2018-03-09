@@ -20,7 +20,7 @@ export class ComplexExprInstruction extends ExprInstruction {
     constructor({ expr, ...settings }: IComplexExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexExprInstruction, type: expr.type, ...settings });
 
-        this._expr = expr;
+        this._expr = expr.$withParent(this);
     }
 
     

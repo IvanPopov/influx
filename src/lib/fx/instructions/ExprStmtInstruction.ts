@@ -18,7 +18,7 @@ export class ExprStmtInstruction extends StmtInstruction {
     constructor({ expr, ...settings }: IExprStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ExprStmtInstruction, ...settings });
         
-        this._expr = expr;
+        this._expr = expr.$withParent(this);
     }
 
     toCode(): string {

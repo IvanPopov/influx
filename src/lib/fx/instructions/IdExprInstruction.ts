@@ -12,41 +12,41 @@ import { IdInstruction } from "./IdInstruction";
 
 
 export interface IIdExprInstructionSettings extends IInstructionSettings {
+    id: IIdInstruction;
     decl: IVariableDeclInstruction;
 }
 
 
 export class IdExprInstruction extends ExprInstruction implements IIdExprInstruction {
-    protected _decl: IVariableDeclInstruction;
+    protected _id: IIdInstruction;
+    // helpers
+    protected _decl: IVariableDeclInstruction; // << move to resolveDecl() method.
 
-    constructor({ decl, ...settings }: IIdExprInstructionSettings) {
+    constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
 
+        this._id = id.$withParent(this);
         this._decl = decl;
     }
 
-    get visible(): boolean {
-        return super.visible && this._decl.visible;
-    }
-
-    get type(): IVariableTypeInstruction {
-        return super.type;
-    }
-
+    
     get declaration(): IDeclInstruction {
         return this._decl;
     }
 
+    
     isConst(): boolean {
         return this.type.isConst();
     }
 
+    
     evaluate(): boolean {
         return false;
     }
 
+
     prepareFor(usedMode: EFunctionType): void {
-       
+       console.error("@not_implemented");
     }
 
 

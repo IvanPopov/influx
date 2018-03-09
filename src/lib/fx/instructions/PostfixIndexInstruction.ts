@@ -28,8 +28,8 @@ export class PostfixIndexInstruction extends ExprInstruction {
             instrType: EInstructionTypes.k_PostfixIndexInstruction, 
             type: (element.type as IVariableTypeInstruction).arrayElementType, ...settings });
             
-        this._element = element;
-        this._index = index;
+        this._element = element.$withParent(this);
+        this._index = index.$withParent(this);
     }
 
     

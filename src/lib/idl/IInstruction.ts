@@ -150,8 +150,8 @@ export interface IInstruction {
     /** Internal API */
 
     $hide(): void;
-    $linkTo(parent: IInstruction): void;
-    // $linkToScope(scope: number): void;
+    $withParent<T extends IInstruction>(parent: IInstruction): T;
+    $withNoParent<T extends IInstruction>(): T;
 
     _check(eStage: ECheckStage): boolean;
     _getLastError(): IInstructionError;
@@ -357,7 +357,6 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     generateInfoAboutUsedData(): void;
 
     $overwriteType(type: EFunctionType): void;
-    // $linkToImplementationScope(scope: number): void;
 }
 
 
@@ -462,13 +461,13 @@ export interface IStmtInstruction extends IInstruction, IAnalyzedInstruction {
 
 export interface IIfStmtInstruction extends IStmtInstruction {
     readonly cond: IExprInstruction;
-    readonly ifStmt: IStmtInstruction;
-    readonly elseStmt: IStmtInstruction;
+    readonly conseq: IStmtInstruction;
+    readonly contrary: IStmtInstruction;
 }
 
 
 export interface IStmtBlockInstruction extends IStmtInstruction {
-    readonly instructions: IStmtInstruction[];
+    readonly stmtList: IStmtInstruction[];
 }
 
 export interface IPassInstruction extends IDeclInstruction {

@@ -9,7 +9,7 @@ import { IInstructionSettings } from "./Instruction";
 
 export interface IPostfixArithmeticInstructionSettings extends IInstructionSettings {
     expr: IExprInstruction;
-    operator: string;
+    operator: "++" | "--";
 }
 
 /**
@@ -17,7 +17,7 @@ export interface IPostfixArithmeticInstructionSettings extends IInstructionSetti
  * (-- | ++) Instruction
  */
 export class PostfixArithmeticInstruction extends ExprInstruction {
-    protected _operator: string;
+    protected _operator: "++" | "--";
     protected _expr: IExprInstruction;
 
     
@@ -25,7 +25,7 @@ export class PostfixArithmeticInstruction extends ExprInstruction {
         super({ instrType: EInstructionTypes.k_PostfixArithmeticInstruction, type: expr.type, ...settings });
 
         this._operator = operator;
-        this._expr = expr;
+        this._expr = expr.$withParent(this);
     }
 
 

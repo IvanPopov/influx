@@ -103,15 +103,11 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null, 
     return systemType;
 }
 
-function addField(fields: IVariableDeclInstruction[], fieldName: string, type: ITypeInstruction, writable: boolean = true): void {
-    let fieldID: IIdInstruction = new IdInstruction(null, fieldName);
-    let fieldType: IVariableTypeInstruction = new VariableTypeInstruction(null, type, null, null, writable)
-    let field: IVariableDeclInstruction = new VariableDeclInstruction(null, fieldID, fieldType, null);
+function addField(fields: IVariableDeclInstruction[], fieldName: string, fieldType: ITypeInstruction, writable: boolean = true): void {
+    let id: IIdInstruction = new IdInstruction(null, fieldName);
+    let type: IVariableTypeInstruction = new VariableTypeInstruction(null, fieldType, null, null, writable)
 
-    fieldType.$linkTo(field);
-    fieldID.$linkTo(field);
-
-    fields.push(field);
+    fields.push(new VariableDeclInstruction(null, id, type, null));
 }
 
 

@@ -1,21 +1,32 @@
 import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContainer } from '../../idl/IInstruction';
 import { IMap } from '../../idl/IMap';
-import { ExprInstruction } from './ExprInstruction';
+import { ExprInstruction, IExprInstructionSettings } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 import * as Effect from '../Effect';
+
+
+export type UnaryOperator = "+" | "-" | "!" | "++" | "--";
+
+
+export interface IUnaryExprInstructionSettings extends IExprInstructionSettings {
+    expr: IExprInstruction;
+    operator: UnaryOperator;
+}
+
 
 /**
  * Represent + - ! ++ -- expr
  * (+|-|!|++|--|) Instruction
  */
 export class UnaryExprInstruction extends ExprInstruction {
-    protected _operator: string;
+    protected _operator: UnaryOperator;
     protected _expr: IExprInstruction;
 
 
-    constructor(node: IParseNode, expr: IExprInstruction, operator: string) {
-        super(node, Effect.getSystemType('bool').variableType, EInstructionTypes.k_UnaryExprInstruction);
-        this._expr = expr;
+    constructor({ expr, operator, ...settings }: IUnaryExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_UnaryExprInstruction, ...settings });
+        
+        this._expr = expr.$withParent(this);
         this._operator = operator;
     }
 

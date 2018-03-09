@@ -18,15 +18,18 @@ export interface ISystemCallInstructionSettings extends IInstructionSettings {
  * EMPTY_OPERATOR SimpleInstruction ... SimpleInstruction 
  */
 export class SystemCallInstruction extends ExprInstruction {
-    protected _func: SystemFunctionInstruction;
     protected _args: IExprInstruction[];
     // protected _samplerDecl: IVariableDeclInstruction;
+    
+    // helpers
+    protected _func: SystemFunctionInstruction;
 
     constructor({ func, args = [], ...settings }: ISystemCallInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemCallInstruction, type: func.type, ...settings });
+        
         this._func = func;
         // this._samplerDecl = null;
-        this._args = <IExprInstruction[]>this._func.closeArguments(args);
+        this._args = <IExprInstruction[]>this._func.closeArguments(args).map(arg => arg.$withParent(this));
     }
 
 

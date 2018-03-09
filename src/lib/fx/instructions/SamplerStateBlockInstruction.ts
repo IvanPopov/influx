@@ -7,10 +7,11 @@ import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
 
+export type SamplerOperator = "sample_state";
 
 export interface ISamplerStateBlockInstructionSettings extends IInstructionSettings {
     texture: IVariableDeclInstruction;
-    operator: string;
+    operator: SamplerOperator;
     params?: IMap<string>;
 }
 
@@ -21,13 +22,14 @@ export interface ISamplerStateBlockInstructionSettings extends IInstructionSetti
 export class SamplerStateBlockInstruction extends ExprInstruction implements ISamplerStateBlockInstruction {
     protected _texture: IVariableDeclInstruction;
     protected _samplerParams: IMap<string>;
-    protected _operator: string;
+    protected _operator: SamplerOperator;
 
 
     constructor({ texture, operator, params = {}, ...settings }: ISamplerStateBlockInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: texture.type, ...settings } );
+        
         this._samplerParams = params;
-        this._texture = texture;
+        this._texture = texture.$withParent(this);
         this._operator = operator;
     }
 

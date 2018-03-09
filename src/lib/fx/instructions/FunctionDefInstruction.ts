@@ -24,7 +24,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     protected _paramListForShaderInput: IVariableDeclInstruction[];
     
     protected _returnType: IVariableTypeInstruction;
-    protected _functionName: IIdInstruction;
+    protected _id: IIdInstruction;
     
     // todo: remove
     // Specifies whether to use as shader main function.
@@ -39,9 +39,9 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     constructor({ returnType, id, args = [], ...settings }: IFunctionDefInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
 
-        this._parameterList = args || [];
-        this._returnType = returnType;
-        this._functionName = name;
+        this._parameterList = args.map(arg => arg.$withParent(this));
+        this._returnType = returnType.$withParent(this);
+        this._id = id.$withParent(this);
 
         this._paramListForShaderInput = [];
         this._paramListForShaderCompile = [];
@@ -59,12 +59,12 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     
     get name(): string {
-        return this._functionName.name;
+        return this._id.name;
     }
 
 
     get functionName(): IIdInstruction {
-        return this._functionName;
+        return this._id;
     }
 
 
@@ -119,7 +119,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         if (!this.isShader()) {
 
             code += this._returnType.toCode();
-            code += " " + this._functionName.toCode();
+            code += " " + this._id.toCode();
             code += "(";
 
             for (var i: number = 0; i < this._parameterList.length; i++) {
@@ -133,7 +133,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             code += ")";
         }
         else {
-            code = "void " + this._functionName.toCode() + "()";
+            code = "void " + this._id.toCode() + "()";
         }
 
         return code;
@@ -145,7 +145,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     //         this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
     //             {
-    //                 funcName: this._functionName.name,
+    //                 funcName: this._id.name,
     //                 varName: pParameter.name
     //             });
     //         return false;

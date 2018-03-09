@@ -4,11 +4,12 @@ import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 
+export type ArithmeticOperator = "+" | "-" | "/" | "*" | "%";
 
 export interface IArithmeticExprInstructionSettings extends IExprInstructionSettings {
     left: IExprInstruction;
     right: IExprInstruction;
-    operator: string;
+    operator: ArithmeticOperator;
 }
 
 
@@ -19,13 +20,13 @@ export interface IArithmeticExprInstructionSettings extends IExprInstructionSett
 export class ArithmeticExprInstruction extends ExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
-    protected _operator: string;
+    protected _operator: ArithmeticOperator;
 
     constructor({ left, right, operator, ...settings }: IArithmeticExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ArithmeticExprInstruction, ...settings });
 
-        this._leftOperand = left;
-        this._rightOperand = right;
+        this._leftOperand = left.$withParent(this);
+        this._rightOperand = right.$withParent(this);
         this._operator = operator;
     }
 

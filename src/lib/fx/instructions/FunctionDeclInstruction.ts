@@ -10,7 +10,7 @@ import { FunctionDefInstruction } from "./FunctionDefInstruction";
 import { StmtBlockInstruction } from "./StmtBlockInstruction";
 import { EEffectTempErrors } from "../../idl/EEffectErrors";
 import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
-import { VariableDeclInstruction } from "./VariableInstruction";
+import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import * as Effect from "../Effect";
 
@@ -58,8 +58,8 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     constructor({ definition, implementation = null, ...settings }: IFunctionDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDeclInstruction, ...settings });
 
-        this._definition = definition;
-        this._implementation = implementation;
+        this._definition = Instruction.$withParent(definition, this);
+        this._implementation = Instruction.$withParent(implementation, this);
         this._functionType = EFunctionType.k_Function;
         this._implementationScope = Instruction.UNDEFINE_SCOPE;
 

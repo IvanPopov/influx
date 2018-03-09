@@ -1,8 +1,17 @@
 import { EInstructionTypes } from "../../idl/IInstruction";
+import { IInstructionSettings } from "./Instruction";
 import { IStmtInstruction } from "./../../idl/IInstruction";
 import { IExprInstruction } from "./../../idl/IInstruction";
 import { StmtInstruction } from "./StmtInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+
+export type DoWhileOperator = "do" | "while";
+
+export interface IWhileStmtInstructionSettings extends IInstructionSettings {
+    cond: IExprInstruction;
+    body: IStmtInstruction;
+    operator: DoWhileOperator;
+}
 
 
 /**
@@ -10,15 +19,16 @@ import { IParseNode } from "../../idl/parser/IParser";
  * ( while || do_while) ExprInstruction StmtInstruction
  */
 export class WhileStmtInstruction extends StmtInstruction {
-    protected _operator: string;
+    protected _operator: DoWhileOperator;
     protected _cond: IExprInstruction;
     protected _body: IStmtInstruction;
 
     
-    constructor(node: IParseNode, cond: IExprInstruction, body: IStmtInstruction, operator: string) {
-        super(node, EInstructionTypes.k_WhileStmtInstruction);
-        this._cond = cond;
-        this._body = body;
+    constructor({ cond, body, operator, ...settings }) {
+        super({ instrType: EInstructionTypes.k_WhileStmtInstruction, ...settings });
+        
+        this._cond = cond.$withParent(this);
+        this._body = body.$withParent(this);
         this._operator = operator;
     }
 

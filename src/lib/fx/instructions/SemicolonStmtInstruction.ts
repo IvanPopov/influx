@@ -15,6 +15,6 @@ export class SemicolonStmtInstruction extends StmtInstruction {
     }
 
     toCode(): string {
-        return ';';
+        return ";";
     }
 }

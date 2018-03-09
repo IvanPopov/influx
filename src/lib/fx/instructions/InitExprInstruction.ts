@@ -26,7 +26,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         super({ instrType: EInstructionTypes.k_InitExprInstruction, ...settings });
 
         this._isArray = false;
-        this._args = args;
+        this._args = args.map((arg) => arg.$withParent(this));
     }
 
 

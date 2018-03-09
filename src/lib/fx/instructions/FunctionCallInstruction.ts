@@ -15,14 +15,16 @@ export interface IFunctionCallInstructionSettings extends IExprInstructionSettin
  * EMPTY_OPERATOR IdExprInstruction ExprInstruction ... ExprInstruction 
  */
 export class FunctionCallInstruction extends ExprInstruction implements IFunctionCallInstruction {
-    protected _decl: IFunctionDeclInstruction;
     protected _args: IExprInstruction[];
+
+    // helpers
+    protected _decl: IFunctionDeclInstruction; // << move to resolveDecl() method.
     
     constructor({ decl, args = [], ...settings }: IFunctionCallInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionCallInstruction, ...settings });
         
         this._decl = decl;
-        this._args = args;
+        this._args = args.map((arg) => arg.$withParent(this));
     }
 
 
