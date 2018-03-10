@@ -6,7 +6,7 @@ import { ProgramScope } from "../ProgramScope";
 
 
 export interface IInstructionSettings {
-    scope?: number;
+    scopeId?: number;
     
     sourceNode?: IParseNode;
     visible?: boolean;
@@ -19,7 +19,7 @@ export class Instruction implements IInstruction {
     private _sourceNode: IParseNode;
     private _instructionID: number;
     private _instructionType: EInstructionTypes;
-    private _scope: number;
+    private _scopeId: number;
     private _parent: IInstruction;
     private _lastError: IInstructionError;
 
@@ -28,7 +28,7 @@ export class Instruction implements IInstruction {
     constructor({
         instrType = EInstructionTypes.k_Instruction,
         sourceNode = null,
-        scope = Instruction.UNDEFINE_SCOPE,
+        scopeId = Instruction.UNDEFINE_SCOPE,
         visible = true
     }: IInstructionSettings = {}) {
 
@@ -36,7 +36,7 @@ export class Instruction implements IInstruction {
         this._sourceNode = sourceNode;
         this._instructionType = instrType;
         this._instructionID = (Instruction.INSTRUCTION_COUNTER++);
-        this._scope = scope;
+        this._scopeId = scopeId;
         this._parent = null;
         this._lastError = null;
     }
@@ -60,7 +60,7 @@ export class Instruction implements IInstruction {
 
 
     get scope(): number {
-        return !this.globalScope ? this._scope : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
+        return !this.globalScope ? this._scopeId : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
     }
 
     get globalScope(): boolean {

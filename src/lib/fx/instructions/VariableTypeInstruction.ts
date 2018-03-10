@@ -472,7 +472,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     private generateSubDeclList(): IVariableDeclInstruction[] {
         if (!this.canHaveSubDecls()) {
-            return;
+            return [];
         }
 
         let pDeclList: IVariableDeclInstruction[] = [];

@@ -12,6 +12,7 @@ import { IMap } from '../../idl/IMap';
 import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
+import { Instruction } from './Instruction';
 
 export interface IVariableDeclInstructionSettings extends IDeclInstructionSettings {
     id: IIdInstruction;
@@ -39,9 +40,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     constructor({ id, type, init = null, ...settings }: IVariableDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
 
-        this._id = id.$withParent(this);
-        this._type = type.$withParent(this);
-        this._initExpr = init.$withParent(this);
+        this._id = Instruction.$withParent(id, this);
+        this._type = Instruction.$withParent(type, this);
+        this._initExpr =  Instruction.$withParent(init, this);
 
         this._bForVertex = true;
         this._bForPixel = true;

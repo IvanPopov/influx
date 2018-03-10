@@ -118,8 +118,8 @@ function syntaxErrorLogRoutine(pLogEntity: ILoggerEntity): void {
 
     var sMessage = sPosition + sError + pParseMessage.join("");
 
-    // console.error.call(console, sMessage);
-    throw new SyntaxError(sMessage, pLogEntity);
+    console.error.call(console, sMessage);
+    // throw new SyntaxError(sMessage, pLogEntity);
 }
 
 
@@ -223,6 +223,10 @@ export class Parser implements IParser {
     private _pBaseItemList: IItem[] | null;
     private _pExpectedExtensionDMap: IDMap<boolean> | null;
 
+
+    // todo: rewrite error handling mechanics!
+    private _pLastError: ILoggerEntity = null;
+
     constructor() {
         this._sSource = "";
         // this._iIndex = 0;
@@ -265,6 +269,12 @@ export class Parser implements IParser {
 
         this._sFileName = "stdin";
     }
+
+
+    getLastError(): ILoggerEntity {
+        return this._pLastError;
+    }
+
 
     isTypeId(sValue: string): boolean {
         return !!(this._pTypeIdMap[sValue]);
@@ -401,15 +411,15 @@ export class Parser implements IParser {
         if (!isError) {
             pTree.finishTree();
             if (!isNull(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Ok, this.getParseFileName());
+                this._fnFinishCallback(EParserCode.k_Ok, this);
             }
             this._sFileName = "stdin";
             return EParserCode.k_Ok;
         }
         else {
-            Parser.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
+            this.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
             if (!isNull(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Error, this.getParseFileName());
+                this._fnFinishCallback(EParserCode.k_Error, this);
             }
             this._sFileName = "stdin";
             return EParserCode.k_Error;
@@ -515,7 +525,7 @@ export class Parser implements IParser {
         this._pSyntaxTree.setOptimizeMode(bf.testAll(this._eParseMode, EParseMode.k_Optimize));
     }
 
-    private static error(pError: IParserError): void {
+    private error(pError: IParserError): void {
         const pLocation: ISourceLocation = <ISourceLocation>{};
 
         const pInfo: any = {
@@ -588,8 +598,9 @@ export class Parser implements IParser {
             pLocation.line = grammarLine || 0;
         }
 
+        this._pLastError = pLogEntity;
+
         logger.error(pLogEntity);
-        throw new Error(eCode.toString());
     }
 
     private clearMem(): void {
@@ -673,7 +684,7 @@ export class Parser implements IParser {
             pSyntaxTable[iIndex] = <IOperationMap>{};
         }
         if (isDef(pSyntaxTable[iIndex][sSymbol])) {
-            Parser.error({
+            this.error({
                 code: PARSER_GRAMMAR_ADD_OPERATION,
                 stateIndex: iIndex,
                 grammarSymbol: this.convertGrammarSymbol(sSymbol),
@@ -687,7 +698,7 @@ export class Parser implements IParser {
     private addStateLink(pState: IState, pNextState: IState, sSymbol: string): void {
         var isAddState: boolean = pState.addNextState(sSymbol, pNextState);
         if (!isAddState) {
-            Parser.error({
+            this.error({
                 code: PARSER_GRAMMAR_ADD_STATE_LINK,
                 stateIndex: pState.getIndex(),
                 oldNextStateIndex: pState.getNextStateBySymbol(sSymbol),
@@ -948,7 +959,7 @@ export class Parser implements IParser {
 
                     //TERMINALS
                     if (pTempRule[2][0] !== pTempRule[2][pTempRule[2].length - 1]) {
-                        Parser.error({
+                        this.error({
                             code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
                             unexpectedSymbol: pTempRule[2][pTempRule[2].length - 1],
                             expectedSymbol: pTempRule[2][0],
@@ -1024,7 +1035,7 @@ export class Parser implements IParser {
                 }
                 if (pTempRule[j] === FLAG_RULE_FUNCTION) {
                     if ((!pTempRule[j + 1] || pTempRule[j + 1].length === 0)) {
-                        Parser.error({ code: PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, grammarLine: i });
+                        this.error({ code: PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, grammarLine: i });
                     }
 
                     var pFuncInfo: IAdditionalFuncInfo = <IAdditionalFuncInfo>{
@@ -1038,14 +1049,14 @@ export class Parser implements IParser {
                 }
                 if (pTempRule[j][0] === "'" || pTempRule[j][0] === "\"") {
                     if (pTempRule[j].length !== 3) {
-                        Parser.error({
+                        this.error({
                             code: PARSER_GRAMMAR_BAD_KEYWORD,
                             badKeyword: pTempRule[j],
                             grammarLine: i
                         });
                     }
                     if (pTempRule[j][0] !== pTempRule[j][2]) {
-                        Parser.error({
+                        this.error({
                             code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
                             unexpectedSymbol: pTempRule[j][2],
                             expectedSymbol: pTempRule[j][0],
@@ -1642,15 +1653,15 @@ export class Parser implements IParser {
         if (!isError) {
             pTree.finishTree();
             if (isDef(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Ok, this.getParseFileName());
+                this._fnFinishCallback(EParserCode.k_Ok, this);
             }
             this._sFileName = "stdin";
             return EParserCode.k_Ok;
         }
         else {
-            Parser.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
+            this.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
             if (isDef(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Error, this.getParseFileName());
+                this._fnFinishCallback(EParserCode.k_Error, this);
             }
             this._sFileName = "stdin";
             return EParserCode.k_Error;

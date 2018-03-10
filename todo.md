@@ -11,7 +11,10 @@
 + Add Directx10 sampler state support.
     - https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509644(v=vs.85).aspx
 + Add Sampler1D support.
++ Remove unnecessary punctor ';' after include state (rollback last token, before call 'includeCode' routine).
++ Fix problems with Hex/Octal number notations.
 + Cleanup containers/components separation.
++ Move all info about system types/functions/macroses into separated enviroment setup.
 + Add support for non-debug runtime (without debug middleware)
 + Remove "markers" from store.
     - Subscribe to the logger events to display errors.

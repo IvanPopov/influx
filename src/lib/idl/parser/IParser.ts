@@ -1,4 +1,5 @@
 import { IMap } from '../IMap';
+import { ILoggerEntity } from '../ILogger';
 
 export enum ENodeCreateMode {
     k_Default,
@@ -63,7 +64,7 @@ export interface IRule {
     index: number;
 }
 
-export type IFinishFunc = (eCode: EParserCode, sFileName: string) => void;
+export type IFinishFunc = (eCode: EParserCode, pParser: IParser) => void;
 
 export enum EOperationType {
     k_Error = 100,
@@ -141,7 +142,7 @@ export interface IParser {
     init(sGrammar: string, eMode?: EParseMode, eType?: EParserType): boolean;
     defaultInit(): void;
 
-    parse(sSource: string, fnFinishCallback?: IFinishFunc, pCaller?: {}): EParserCode;
+    parse(sSource: string, fnFinishCallback?: IFinishFunc): EParserCode;
 
     setParseFileName(sFileName: string): void;
     getParseFileName(): string;
@@ -158,6 +159,8 @@ export interface IParser {
 
     _saveState(): IParserState;
     _loadState(pState: IParserState): void;
+
+    getLastError(): ILoggerEntity;
 
     // _getLexer(): ILexer;
     // _getSource(): string;

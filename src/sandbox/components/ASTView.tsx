@@ -1,6 +1,7 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
+import * as copy from 'copy-to-clipboard';
 
 import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
@@ -108,46 +109,56 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         const { content, filename } = props.sourceFile;
         const { parser } = this.state.parser;
 
-        if (!content || !parser) { return; }
-
-        // this.setState({ nodeStats: {} });
+        if (!content || !parser) { 
+            return; 
+        }
 
         try {
             parser.setParseFileName(filename);
-            const isParseOk: EParserCode = parser.parse(content);
-            if (isParseOk === EParserCode.k_Ok) {
-                this.setState({ parseTree: parser.getSyntaxTree() });
-                props.actions.removeMarker(SYNTAX_ERROR_MARKER);
-
-                {
-                    // just for debug
-                    Effect.analyze("example", parer.getSyntaxTree());
-                }
-
-            } else {
-                alert("@unhandled_error");
-                // todo: handle error
-            }
+            parser.parse(content, this.handleParserResult);
         } catch (e) {
-            // if (e.name == "SyntaxError") ...
+            alert("@unhandled_error");
+            console.error(e);
+        }
+    }
 
-            if (e.logEntry.code == PARSER_SYNTAX_ERROR) {
-                // const message = e.message
-                const location: ISourceLocation = e.logEntry.location;
-                const loc: IRange = e.logEntry.info.loc;
 
-                let marker: IMarkerDesc = {
-                    name: SYNTAX_ERROR_MARKER,
-                    range: loc,
-                    type: 'error',
-                    tooltip: e.message
-                };
+    @autobind
+    private handleParserResult(result: EParserCode, parser: EffectParser) {
+        const { props } = this;
 
-                props.actions.addMarker(marker);
-                console.log(e);
-            } else {
-                console.error(e);
+        if (result === EParserCode.k_Ok) {
+            const ast = parser.getSyntaxTree();
+            this.setState({ parseTree: ast });
+            props.actions.removeMarker(SYNTAX_ERROR_MARKER);
+
+            {
+                // just for debug
+                Effect.analyze("example", ast);
             }
+
+        } else {
+            this.handleParserError(parser);
+        }
+    }
+
+
+    private handleParserError(parser: EffectParser) {
+        let err = parser.getLastError();
+
+        if (err.code == PARSER_SYNTAX_ERROR) {
+            const loc: IRange = err.info.loc;
+
+            let marker: IMarkerDesc = {
+                name: SYNTAX_ERROR_MARKER,
+                range: loc,
+                type: 'error',
+                tooltip: err.message || 'no message'
+            };
+
+            this.props.actions.addMarker(marker);
+        } else {
+            console.error(err);
         }
     }
 
@@ -164,9 +175,9 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         if (node.value) {
             return (
                 <List.Item key={ idx } 
-                    onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } } 
-                    onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
-                    onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                    onClick={ this.handleNodeClick.bind(this, idx, node) }
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
+                    onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                     className="astnode"
                 >
                     <List.Icon />
@@ -184,14 +195,18 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             }
             return (
                 <List.Item key={ idx } 
-                    onClick={ (e) => { e.stopPropagation(); this.handleNodeClick(idx, node) } }
-                    onMouseOver={ (e) => { e.stopPropagation(); this.handleNodeOver(idx, node) } } 
-                    onMouseOut={ (e) => { e.stopPropagation(); this.handleNodeOut(idx, node) } }
+                    onClick={ this.handleNodeClick.bind(this, idx, node) }
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
+                    onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                     className="astnode"
                 >
                     <List.Icon name={ show ? `chevron down` : `chevron right` } />
                     <List.Content>
-                        <List.Header>{ node.name }&nbsp;<a style={ { display: selected ? 'inline' : 'none' } } onClick={ (e) => { e.stopPropagation(); this.handleCopyClick(idx, node); } }>Copy</a></List.Header>
+                        <List.Header>
+                            { node.name }&nbsp;
+                            <a style={ { display: selected ? 'inline' : 'none' } } 
+                                onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a>
+                        </List.Header>
                         { children }
                     </List.Content>
                 </List.Item>
@@ -199,30 +214,45 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         }
     }
 
-    private async handleCopyClick(idx: string, node: IParseNode) {
-        console.log(node);
+
+    private async handleCopyClick(idx: string, node: IParseNode, e: MouseEvent) {
+        e.stopPropagation();
+        
+        let out = [];
+        out.push(`/**`);
+        out.push(` * AST example:`)
+        out.push(` *    ${node.name}`)
+        out = out.concat(node.children.slice().map(node => ` *       ${node.children? '+': ' '} ${node.name} ${node.value? '= ' + '\'' + node.value + '\'': ''}`));
+        out.push(` */`);
+
+        copy(out.join('\n'), { debug: true });
     }
 
-    private async handleNodeOver(idx: string, node: IParseNode) {
-        this.props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' });
-        
+
+    private async handleNodeOver(idx: string, node: IParseNode, e: MouseEvent) {
+        e.stopPropagation();
+
         let { nodeStats } = this.state;
         nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
         nodeStats[idx].selected = !nodeStats[idx].selected;
+        this.props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' });
         this.setState({ nodeStats });
     }
 
     
-    private async handleNodeOut(idx: string, node: IParseNode) {
-        this.props.actions.removeMarker(`ast-range-${idx}`);
+    private async handleNodeOut(idx: string, node: IParseNode, e: MouseEvent) {
+        e.stopPropagation();
 
         let { nodeStats } = this.state;
         nodeStats[idx].selected = !nodeStats[idx].selected;
+        this.props.actions.removeMarker(`ast-range-${idx}`);
         this.setState({ nodeStats });
     }
 
 
-    private handleNodeClick(idx: string, node: IParseNode) {
+    private handleNodeClick(idx: string, node: IParseNode, e: MouseEvent) {
+        e.stopPropagation();
+
         let { nodeStats } = this.state;
         nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
         nodeStats[idx].opened = !nodeStats[idx].opened;

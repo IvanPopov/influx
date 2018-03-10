@@ -19,7 +19,7 @@ export interface ILoggerEntity {
     code: number;
     location: ISourceLocation;
     message: string | null;
-    info: {}[];
+    info: any;
 }
 
 export interface ILogger {

@@ -1,4 +1,4 @@
-import { IAFXVariableDeclInstruction, IAFXTypeDeclInstruction, IAFXFunctionDeclInstruction } from "./IAFXInstruction";
+import { IVariableDeclInstruction, ITypeDeclInstruction, IFunctionDeclInstruction } from "./IInstruction";
 import { IMap } from "./IMap";
 
 export enum EScopeType {
@@ -13,7 +13,7 @@ export interface IScope {
     type: EScopeType;
     isStrictMode: boolean;
 
-    variableMap: IMap<IAFXVariableDeclInstruction>;
-    typeMap: IMap<IAFXTypeDeclInstruction>;
-    functionMap: IMap<IAFXFunctionDeclInstruction[]>;
+    variableMap: IMap<IVariableDeclInstruction>;
+    typeMap: IMap<ITypeDeclInstruction>;
+    functionMap: IMap<IFunctionDeclInstruction[]>;
 }

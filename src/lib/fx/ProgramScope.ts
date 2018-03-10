@@ -16,7 +16,7 @@ export class ProgramScope {
     }
 
     isStrictMode(scopeId: number = this._currentScope): boolean {
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
             if (scope.isStrictMode) {
@@ -30,24 +30,25 @@ export class ProgramScope {
     }
 
     useStrictMode(scopeId: number = this._currentScope): void {
+        console.log(`Strict mode for scope ${scopeId} enabled.`);
         this._scopeMap[scopeId].isStrictMode = true;
     }
 
 
-    pushScope(eType: EScopeType = EScopeType.k_Default): void {
-        var pParentScope: IScope;
+    push(eType: EScopeType = EScopeType.k_Default): void {
+        let parentScope: IScope;
 
         if (this._currentScope == -1) {
-            pParentScope = null;
+            parentScope = null;
         }
         else {
-            pParentScope = this._scopeMap[this._currentScope];
+            parentScope = this._scopeMap[this._currentScope];
         }
 
         this._currentScope = this._scopeCount++;
 
-        var pNewScope: IScope = <IScope>{
-            parent: pParentScope,
+        let pNewScope: IScope = <IScope>{
+            parent: parentScope,
             index: this._currentScope,
             type: eType,
             isStrictMode: false,
@@ -60,7 +61,7 @@ export class ProgramScope {
     }
 
     // _resumeScope
-    restoreScope(): void {
+    restore(): void {
         if (this._scopeCount === 0) {
             return;
         }
@@ -68,24 +69,24 @@ export class ProgramScope {
         this._currentScope = this._scopeCount - 1;
     }
 
-    // setScope
+    
     set current(scopeId: number) {
+        console.warn("Scope overriting detected!");
         this._currentScope = scopeId;
     }
 
-    // getScope
     get current(): number {
         return this._currentScope;
     }
 
-    popScope(): void {
+    pop(): void {
         console.assert(this._currentScope != -1);
         if (this._currentScope == -1) {
             return;
         }
 
-        var pOldScope: IScope = this._scopeMap[this._currentScope];
-        var pNewScope: IScope = pOldScope.parent;
+        let pOldScope: IScope = this._scopeMap[this._currentScope];
+        let pNewScope: IScope = pOldScope.parent;
 
         if (isNull(pNewScope)) {
             this._currentScope = -1;
@@ -99,22 +100,22 @@ export class ProgramScope {
         return this._scopeMap[this._currentScope].type;
     }
 
-    getVariable(variableName: string, scopeId: number = this._currentScope): IVariableDeclInstruction {
+    findVariable(variableName: string, scopeId: number = this._currentScope): IVariableDeclInstruction {
         console.assert(scopeId != -1);
         if (scopeId == -1) {
             return null;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
-            var pVariableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
+            let variableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
 
-            if (!isNull(pVariableMap)) {
-                var pVariable: IVariableDeclInstruction = pVariableMap[variableName];
+            if (!isNull(variableMap)) {
+                let variable: IVariableDeclInstruction = variableMap[variableName];
 
-                if (isDef(pVariable)) {
-                    return pVariable;
+                if (isDef(variable)) {
+                    return variable;
                 }
             }
 
@@ -125,11 +126,11 @@ export class ProgramScope {
     }
 
 
-    getType(typeName: string, scopeId: number = this._currentScope): ITypeInstruction {
-        var pTypeDecl: ITypeDeclInstruction = this.getTypeDecl(typeName, scopeId);
+    findType(typeName: string, scopeId: number = this._currentScope): ITypeInstruction {
+        let typeDecl: ITypeDeclInstruction = this.findTypeDecl(typeName, scopeId);
 
-        if (!isNull(pTypeDecl)) {
-            return pTypeDecl.type;
+        if (!isNull(typeDecl)) {
+            return typeDecl.type;
         }
         else {
             return null;
@@ -137,21 +138,21 @@ export class ProgramScope {
     }
 
 
-    getTypeDecl(sTypeName: string, scopeId: number = this._currentScope): ITypeDeclInstruction {
+    findTypeDecl(typeName: string, scopeId: number = this._currentScope): ITypeDeclInstruction {
         if (scopeId == -1) {
             return null;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
-            var typeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
+            let typeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
 
             if (!isNull(typeMap)) {
-                var pType: ITypeDeclInstruction = typeMap[sTypeName];
+                let type: ITypeDeclInstruction = typeMap[typeName];
 
-                if (isDef(pType)) {
-                    return pType;
+                if (isDef(type)) {
+                    return type;
                 }
             }
 
@@ -165,49 +166,48 @@ export class ProgramScope {
      * get function by name and list of types
      * return null - if threre are not function; undefined - if there more then one function; function - if all ok
      */
-    getFunction(funcName: string, argTypes: ITypedInstruction[], scopeId: number = ProgramScope.GLOBAL_SCOPE): IFunctionDeclInstruction {
+    findFunction(funcName: string, args: IVariableDeclInstruction[], scopeId: number = ProgramScope.GLOBAL_SCOPE): IFunctionDeclInstruction {
         if (scopeId == -1) {
             return null;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var func: IFunctionDeclInstruction = null;
+        let scope: IScope = this._scopeMap[scopeId];
+        let func: IFunctionDeclInstruction = null;
 
         while (!isNull(scope)) {
-            var funcListMap: IFunctionDeclListMap = scope.functionMap;
+            let funcListMap: IFunctionDeclListMap = scope.functionMap;
 
             if (!isNull(funcListMap)) {
-                var funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
+                let funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
 
                 if (isDef(funcList)) {
+                    for (let i: number = 0; i < funcList.length; i++) {
+                        let testedFunction: IFunctionDeclInstruction = funcList[i];
+                        let testedArguments: IVariableDeclInstruction[] = testedFunction.definition.arguments;
 
-                    for (var i: number = 0; i < funcList.length; i++) {
-                        var pTestedFunction: IFunctionDeclInstruction = funcList[i];
-                        var pTestedArguments: ITypedInstruction[] = pTestedFunction.arguments;
-
-                        if (isNull(argTypes)) {
-                            if (pTestedFunction.numArgsRequired === 0) {
+                        if (isNull(args)) {
+                            if (testedFunction.definition.numArgsRequired === 0) {
                                 if (!isNull(func)) {
                                     return undefined;
                                 }
 
-                                func = pTestedFunction;
+                                func = testedFunction;
                             }
 
                             continue;
                         }
 
-                        if (argTypes.length > pTestedArguments.length ||
-                            argTypes.length < pTestedFunction.numArgsRequired) {
+                        if (args.length > testedArguments.length ||
+                            args.length < testedFunction.definition.numArgsRequired) {
                             continue;
                         }
 
-                        var isParamsEqual: boolean = true;
+                        let isParamsEqual: boolean = true;
 
-                        for (var j: number = 0; j < argTypes.length; j++) {
+                        for (let j: number = 0; j < args.length; j++) {
                             isParamsEqual = false;
 
-                            if (!argTypes[j].type.isEqual(pTestedArguments[j].type)) {
+                            if (!args[j].type.isEqual(testedArguments[j].type)) {
                                 break;
                             }
 
@@ -218,7 +218,7 @@ export class ProgramScope {
                             if (!isNull(func)) {
                                 return undefined;
                             }
-                            func = pTestedFunction;
+                            func = testedFunction;
                         }
                     }
                 }
@@ -240,26 +240,27 @@ export class ProgramScope {
             return null;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var func: IFunctionDeclInstruction = null;
+        let scope: IScope = this._scopeMap[scopeId];
+        let func: IFunctionDeclInstruction = null;
 
         while (!isNull(scope)) {
-            var funcListMap: IFunctionDeclListMap = scope.functionMap;
+            let funcListMap: IFunctionDeclListMap = scope.functionMap;
 
             if (!isNull(funcListMap)) {
-                var funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
+                let funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
 
                 if (isDef(funcList)) {
 
-                    for (var i: number = 0; i < funcList.length; i++) {
-                        var pTestedFunction: IFunctionDeclInstruction = funcList[i];
-                        var pTestedArguments: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>pTestedFunction.arguments;
+                    for (let i: number = 0; i < funcList.length; i++) {
+                        let testedFunction: IFunctionDeclInstruction = funcList[i];
+                        let testedArguments: IVariableDeclInstruction[] = 
+                            <IVariableDeclInstruction[]>testedFunction.definition.arguments;
 
-                        if (argTypes.length > pTestedArguments.length) {
+                        if (argTypes.length > testedArguments.length) {
                             continue;
                         }
 
-                        var isParamsEqual: boolean = true;
+                        let isParamsEqual: boolean = true;
                         let iArg: number = 0;
 
                         if (argTypes.length === 0) {
@@ -267,23 +268,23 @@ export class ProgramScope {
                                 return undefined;
                             }
 
-                            func = pTestedFunction;
+                            func = testedFunction;
                             continue;
                         }
 
-                        for (var j: number = 0; j < pTestedArguments.length; j++) {
+                        for (let j: number = 0; j < testedArguments.length; j++) {
                             isParamsEqual = false;
 
                             if (iArg >= argTypes.length) {
-                                if (pTestedArguments[j].isUniform()) {
+                                if (testedArguments[j].isUniform()) {
                                     break;
                                 }
                                 else {
                                     isParamsEqual = true;
                                 }
                             }
-                            else if (pTestedArguments[j].isUniform()) {
-                                if (!argTypes[iArg].type.isEqual(pTestedArguments[j].type)) {
+                            else if (testedArguments[j].isUniform()) {
+                                if (!argTypes[iArg].type.isEqual(testedArguments[j].type)) {
                                     break;
                                 }
                                 else {
@@ -297,7 +298,7 @@ export class ProgramScope {
                             if (!isNull(func)) {
                                 return undefined;
                             }
-                            func = pTestedFunction;
+                            func = testedFunction;
                         }
                     }
                 }
@@ -311,27 +312,27 @@ export class ProgramScope {
     }
 
 
-    addVariable(pVariable: IVariableDeclInstruction, scopeId: number = this._currentScope): boolean {
+    addVariable(variable: IVariableDeclInstruction, scopeId: number = this._currentScope): boolean {
         if (scopeId == -1) {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var pVariableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
+        let scope: IScope = this._scopeMap[scopeId];
+        let variableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
 
-        if (isNull(pVariableMap)) {
-            pVariableMap = scope.variableMap = <IMap<IVariableDeclInstruction>>{};
+        if (isNull(variableMap)) {
+            variableMap = scope.variableMap = <IMap<IVariableDeclInstruction>>{};
         }
 
-        var variableName: string = pVariable.name;
+        let variableName: string = variable.name;
 
         {
             if (!this.hasVariableInScope(variableName, scopeId)) {
-                pVariableMap[variableName] = pVariable;
-                pVariable.scope = (scopeId);
+                variableMap[variableName] = variable;
+                // variable.scope = (scopeId);
             }
             else {
-                console.error(`variable '${variableName}' already exists in scope ${scopeId}`);
+                console.error(`letiable '${variableName}' already exists in scope ${scopeId}`);
             }
         }
 
@@ -339,26 +340,28 @@ export class ProgramScope {
     }
 
 
-    addType(pType: ITypeDeclInstruction, scopeId: number = this._currentScope): boolean {
+    // todo: remove scopeId from argumts, use type.scope instead.
+    addType(type: ITypeDeclInstruction, scopeId: number = this._currentScope): boolean {
         if (scopeId == -1) {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var pTypeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
+        let scope: IScope = this._scopeMap[scopeId];
+        let typeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
 
-        if (isNull(pTypeMap)) {
-            pTypeMap = scope.typeMap = <IMap<ITypeDeclInstruction>>{};
+        if (isNull(typeMap)) {
+            typeMap = scope.typeMap = <IMap<ITypeDeclInstruction>>{};
         }
 
-        var sTypeName: string = pType.name;
+        let typeName: string = type.name;
 
-        if (this.hasTypeInScope(sTypeName, scopeId)) {
+        if (this.hasTypeInScope(typeName, scopeId)) {
             return false;
         }
 
-        pTypeMap[sTypeName] = pType;
-        pType.scope = (scopeId);
+        typeMap[typeName] = type;
+        // type.scope = (scopeId);
+        console.assert(type.scope === scopeId);
 
         return true;
     }
@@ -369,25 +372,26 @@ export class ProgramScope {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var pFunctionMap: IFunctionDeclListMap = scope.functionMap;
+        let scope: IScope = this._scopeMap[scopeId];
+        let funcMap: IFunctionDeclListMap = scope.functionMap;
 
-        if (isNull(pFunctionMap)) {
-            pFunctionMap = scope.functionMap = <IFunctionDeclListMap>{};
+        if (isNull(funcMap)) {
+            funcMap = scope.functionMap = <IFunctionDeclListMap>{};
         }
 
-        var funcName: string = func.name;
+        let funcName: string = func.name;
 
         if (this.hasFunctionInScope(func, scopeId)) {
             return false;
         }
 
-        if (!isDef(pFunctionMap[funcName])) {
-            pFunctionMap[funcName] = [];
+        if (!isDef(funcMap[funcName])) {
+            funcMap[funcName] = [];
         }
 
-        pFunctionMap[funcName].push(func);
-        func.scope = (scopeId);
+        funcMap[funcName].push(func);
+        // func.scope = (scopeId);
+        console.assert(func.scope === scopeId);
 
         return true;
     }
@@ -398,15 +402,15 @@ export class ProgramScope {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
-            var pVariableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
+            let variableMap: IMap<IVariableDeclInstruction> = scope.variableMap;
 
-            if (!isNull(pVariableMap)) {
-                var pVariable: IVariableDeclInstruction = pVariableMap[variableName];
+            if (!isNull(variableMap)) {
+                let variable: IVariableDeclInstruction = variableMap[variableName];
 
-                if (isDef(pVariable)) {
+                if (isDef(variable)) {
                     return true;
                 }
             }
@@ -418,20 +422,20 @@ export class ProgramScope {
     }
 
 
-    hasType(sTypeName: string, scopeId: number = this._currentScope): boolean {
+    hasType(typeName: string, scopeId: number = this._currentScope): boolean {
         if (scopeId == -1) {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
-            var pTypeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
+            let typeMap: IMap<ITypeDeclInstruction> = scope.typeMap;
 
-            if (!isNull(pTypeMap)) {
-                var pType: ITypeDeclInstruction = pTypeMap[sTypeName];
+            if (!isNull(typeMap)) {
+                let type: ITypeDeclInstruction = typeMap[typeName];
 
-                if (isDef(pType)) {
+                if (isDef(type)) {
                     return true;
                 }
             }
@@ -448,32 +452,32 @@ export class ProgramScope {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
+        let scope: IScope = this._scopeMap[scopeId];
 
         while (!isNull(scope)) {
-            var funcListMap: IFunctionDeclListMap = scope.functionMap;
+            let funcListMap: IFunctionDeclListMap = scope.functionMap;
 
             if (!isNull(funcListMap)) {
-                var funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
+                let funcList: IFunctionDeclInstruction[] = funcListMap[funcName];
 
                 if (isDef(funcList)) {
-                    // var func: IFunctionDeclInstruction = null;
+                    // let func: IFunctionDeclInstruction = null;
 
-                    for (var i: number = 0; i < funcList.length; i++) {
-                        var pTestedFunction: IFunctionDeclInstruction = funcList[i];
-                        var pTestedArguments: ITypedInstruction[] = pTestedFunction.arguments;
+                    for (let i: number = 0; i < funcList.length; i++) {
+                        let testedFunction: IFunctionDeclInstruction = funcList[i];
+                        let testedArguments: IVariableDeclInstruction[] = testedFunction.definition.arguments;
 
-                        if (argTypes.length > pTestedArguments.length ||
-                            argTypes.length < pTestedFunction.numArgsRequired) {
+                        if (argTypes.length > testedArguments.length ||
+                            argTypes.length < testedFunction.definition.numArgsRequired) {
                             continue;
                         }
 
-                        var isParamsEqual: boolean = true;
+                        let isParamsEqual: boolean = true;
 
-                        for (var j: number = 0; j < argTypes.length; j++) {
+                        for (let j: number = 0; j < argTypes.length; j++) {
                             isParamsEqual = false;
 
-                            if (!argTypes[j].type.isEqual(pTestedArguments[j].type)) {
+                            if (!argTypes[j].type.isEqual(testedArguments[j].type)) {
                                 break;
                             }
 
@@ -500,8 +504,8 @@ export class ProgramScope {
     }
 
 
-    hasTypeInScope(sTypeName: string, scopeId: number): boolean {
-        return isDef(this._scopeMap[scopeId].typeMap[sTypeName]);
+    hasTypeInScope(typeName: string, scopeId: number): boolean {
+        return isDef(this._scopeMap[scopeId].typeMap[typeName]);
     }
 
 
@@ -510,30 +514,31 @@ export class ProgramScope {
             return false;
         }
 
-        var scope: IScope = this._scopeMap[scopeId];
-        var funcListMap: IFunctionDeclListMap = scope.functionMap;
-        var funcList: IFunctionDeclInstruction[] = funcListMap[func.name];
+        let scope: IScope = this._scopeMap[scopeId];
+        let funcListMap: IFunctionDeclListMap = scope.functionMap;
+        let funcList: IFunctionDeclInstruction[] = funcListMap[func.name];
 
         if (!isDef(funcList)) {
             return false;
         }
 
-        var pFunctionArguments: ITypedInstruction[] = <ITypedInstruction[]>func.arguments;
-        var hasFunction: boolean = false;
+        let funcArgs: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>func.definition.arguments;
+        let hasFunction: boolean = false;
 
-        for (var i: number = 0; i < funcList.length; i++) {
-            var pTestedArguments: ITypedInstruction[] = <ITypedInstruction[]>funcList[i].arguments;
+        for (let i: number = 0; i < funcList.length; i++) {
+            let testedArguments: IVariableDeclInstruction[] = 
+                <IVariableDeclInstruction[]>funcList[i].definition.arguments;
 
-            if (pTestedArguments.length !== pFunctionArguments.length) {
+            if (testedArguments.length !== funcArgs.length) {
                 continue;
             }
 
-            var isParamsEqual: boolean = true;
+            let isParamsEqual: boolean = true;
 
-            for (var j: number = 0; j < pFunctionArguments.length; j++) {
+            for (let j: number = 0; j < funcArgs.length; j++) {
                 isParamsEqual = false;
 
-                if (!pTestedArguments[j].type.isEqual(pFunctionArguments[j].type)) {
+                if (!testedArguments[j].type.isEqual(funcArgs[j].type)) {
                     break;
                 }
 

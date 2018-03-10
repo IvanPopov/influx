@@ -14,6 +14,8 @@
     "@types/redux-logger": "^3.0.5",
     "@types/redux-thunk": "^2.1.0",
     "autobind-decorator": "^2.1.0",
+    "brace-expansion": "^1.1.11",
+    "copy-to-clipboard": "^3.0.8",
     "electron": "^1.7.10",
     "electron-react-devtools": "^0.5.3",
     "grunt": "^1.0.1",
@@ -44,13 +46,11 @@
     "semantic-ui-react": "^0.78.2",
     "tslint": "^5.8.0",
     "tslint-microsoft-contrib": "^5.0.1",
-    "typescript": "^2.8.0-dev.20180224",
-    "brace-expansion": "^1.1.11"
+    "typescript": "^2.8.0-dev.20180224"
   },
   "scripts": {
     "preinstall": "npm install -g grunt-cli",
     "start": "electron ./build/sandbox/shell.js"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
