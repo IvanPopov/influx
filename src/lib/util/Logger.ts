@@ -353,9 +353,9 @@ export class Logger implements ILogger {
         if (bf.testAll(this._eLogLevel, ELogLevel.CRITICAL) && !isNull(fnLogRoutine)) {
             (<ILogRoutineFunc>fnLogRoutine).call(null, pLogEntity);
         }
-
-        alert(sSystemMessage);
-        throw new Error(sSystemMessage);
+        console.error(sSystemMessage);
+        // alert(sSystemMessage);
+        // throw new Error(sSystemMessage);
     }
 
     public assert(bCondition: boolean, pEntity: ILoggerEntity): void;

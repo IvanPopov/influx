@@ -48,11 +48,13 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._name = name;
         this._elementType = Instruction.$withNoParent(elementType);
         this._length = length;
-        this._fields = fields.map(field => field.$withParent(this));
+        this._fields = [];
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._declaration = declaration;
         this._bBuiltIn = builtIn;
+
+        fields.forEach(field => this.addField(field));
 
         this._variableTypeWrapper = new VariableTypeInstruction({ type: this });
     }
@@ -123,20 +125,12 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     get fields(): IVariableDeclInstruction[] {
-        let pList = [];
-        for (let key in this._fields) {
-            pList.push(this._fields[key]);
-        }
-        return pList;
+        return this._fields;
     }
 
 
     get fieldNames(): string[] {
-        let pList = [];
-        for (let key in this._fields) {
-            pList.push(key);
-        }
-        return pList;
+        return this._fields.map(field => field.name);
     }
 
 
@@ -249,26 +243,23 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     getField(sFieldName: string): IVariableDeclInstruction {
-        return isDef(this._fields[sFieldName]) ? this._fields[sFieldName] : null;
+        return this._fields[sFieldName] || null;
     }
 
 
     getFieldBySemantics(sSemantic: string): IVariableDeclInstruction {
+        console.error("@undefined_behavior");
         return null;
     }
 
 
-    getFieldType(sFieldName: string): IVariableTypeInstruction {
-        return isDef(this._fields[sFieldName]) ? this._fields[sFieldName].type : null;
-    }
-
-
-    getFieldNameList(): string[] {
-        return this._fields.map(field => field.name);
-    }
-
     asVarType(): IVariableTypeInstruction {
         return this._variableTypeWrapper;
+    }
+
+    addField(field: IVariableDeclInstruction): void {
+        console.assert(this.getField(field.name) === null);
+        this._fields.push(field.$withParent(this));
     }
 }
 

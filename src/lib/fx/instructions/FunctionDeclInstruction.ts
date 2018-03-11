@@ -453,10 +453,10 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         let pCloneMap: IMap<ITypeUseInfoContainer> = <IMap<ITypeUseInfoContainer>>{};
 
         for (let j in pMap) {
-            let pType: IVariableTypeInstruction = <IVariableTypeInstruction>(isDef(pRelationMap[j]) ? pRelationMap[j] : pMap[j].type);
-            let id: number = pType.instructionID;
+            let type: IVariableTypeInstruction = <IVariableTypeInstruction>(isDef(pRelationMap[j]) ? pRelationMap[j] : pMap[j].type);
+            let id: number = type.instructionID;
             pCloneMap[id] = {
-                type: pType,
+                type: type,
                 isRead: pMap[j].isRead,
                 isWrite: pMap[j].isWrite,
                 numRead: pMap[j].numRead,
@@ -547,8 +547,8 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         // this.addUsedComplexType(pMainVariable.type._baseType);
     }
 
-    private addUniformParameter(pType: IVariableTypeInstruction): void {
-        let pMainVariable: IVariableDeclInstruction = VariableTypeInstruction.findMainVariable(pType);
+    private addUniformParameter(type: IVariableTypeInstruction): void {
+        let pMainVariable: IVariableDeclInstruction = VariableTypeInstruction.findMainVariable(type);
         let iMainVar: number = pMainVariable.instructionID;
 
         this._uniformVariableMap[iMainVar] = pMainVariable;
@@ -559,19 +559,19 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         // }
     }
 
-    private addUsedComplexType(pType: ITypeInstruction): void {
-        if (pType.isBase() || isDef(this._usedComplexTypeMap[pType.instructionID])) {
+    private addUsedComplexType(type: ITypeInstruction): void {
+        if (type.isBase() || isDef(this._usedComplexTypeMap[type.instructionID])) {
             return;
         }
 
-        this._usedComplexTypeMap[pType.instructionID] = pType;
-
-        let fieldNames: string[] = pType.fieldNames;
+        this._usedComplexTypeMap[type.instructionID] = type;
+        let fieldNames: string[] = type.fieldNames;
 
         for (let i: number = 0; i < fieldNames.length; i++) {
-            this.addUsedComplexType(pType.getFieldType(fieldNames[i]).baseType);
+            this.addUsedComplexType(type.getField(fieldNames[i]).type.baseType);
         }
     }
+
 
     private addUsedInfoFromFunction(pFunction: IFunctionDeclInstruction): void {
         pFunction.generateInfoAboutUsedData();
@@ -606,13 +606,13 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
             this._extSystemFunctionList.push(pFunction);
         }
 
-        let pTypes = pFunction.extSystemTypeList;
+        let types = pFunction.extSystemTypeList;
         let pFunctions = pFunction.extSystemFunctionList;
 
-        if (!isNull(pTypes)) {
-            for (let j: number = 0; j < pTypes.length; j++) {
-                if (this._extSystemTypeList.indexOf(pTypes[j]) === -1) {
-                    this._extSystemTypeList.push(pTypes[j]);
+        if (!isNull(types)) {
+            for (let j: number = 0; j < types.length; j++) {
+                if (this._extSystemTypeList.indexOf(types[j]) === -1) {
+                    this._extSystemTypeList.push(types[j]);
                 }
             }
         }

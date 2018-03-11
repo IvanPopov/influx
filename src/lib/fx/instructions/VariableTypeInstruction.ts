@@ -408,11 +408,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    getFieldType(sFieldName: string): IVariableTypeInstruction {
-        return <IVariableTypeInstruction>this.getField(sFieldName).type;
-    }
-
-
     hasUsage(sUsageName: string): boolean {
         if (isNull(this._usageList)) {
             return false;

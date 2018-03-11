@@ -151,7 +151,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             let fieldNameList: string[] = pType.fieldNames;
 
             for (let i: number = 0; i < args.length; i++) {
-                let pFieldType: IVariableTypeInstruction = pType.getFieldType(fieldNameList[i]);
+                let pFieldType: IVariableTypeInstruction = pType.getField(fieldNameList[i]).type;
                 if (!args[i].optimizeForVariableType(pFieldType)) {
                     return false;
                 }

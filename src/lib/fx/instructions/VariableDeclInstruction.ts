@@ -41,7 +41,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
 
         this._id = Instruction.$withParent(id, this);
-        this._type = Instruction.$withParent(type, this);
+        this._type = Instruction.$withNoParent(type);
         this._initExpr =  Instruction.$withParent(init, this);
 
         this._bForVertex = true;

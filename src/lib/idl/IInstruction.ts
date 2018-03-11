@@ -123,6 +123,49 @@ export enum EExtractExprType {
 }
 
 
+export enum EScopeType {
+    k_Default,
+    k_Struct,
+    k_Annotation
+}
+
+export interface IScope {
+    strictMode: boolean;
+
+    readonly index: number;
+    readonly parent: IScope;
+    readonly type: EScopeType;
+
+    readonly variableMap: IMap<IVariableDeclInstruction>;
+    readonly typeMap: IMap<ITypeDeclInstruction>;
+    readonly functionMap: IMap<IFunctionDeclInstruction[]>;
+    readonly techniqueMap: IMap<ITechniqueInstruction[]>;
+
+    isStrict(): boolean;
+
+    findVariable(variableName: string): IVariableDeclInstruction;
+    findTypeDecl(typeName: string): ITypeDeclInstruction;
+    findType(typeName: string): ITypeInstruction;
+    findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction | null | undefined;
+    findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
+    findTechique(techName: string): ITechniqueInstruction | null | undefined;
+
+    hasVariable(variableName: string): boolean;
+    hasType(typeName: string): boolean;
+    hasFunction(funcName: string, argTypes: ITypedInstruction[]): boolean;
+    hasTechnique(techniqueName: string): boolean;
+
+    hasVariableInScope(variableName: string): boolean;
+    hasTypeInScope(typeName: string): boolean;
+    hasFunctionInScope(func: IFunctionDeclInstruction): boolean;
+    hasTechniqueInScope(tech: ITechniqueInstruction): boolean;
+
+    addVariable(variable: IVariableDeclInstruction): boolean;
+    addType(type: ITypeDeclInstruction): boolean;
+    addFunction(func: IFunctionDeclInstruction): boolean;
+    addTechnique(technique: ITechniqueInstruction): boolean;
+}
+
 
 /**
  * All opertion are represented by: 
@@ -131,7 +174,7 @@ export enum EExtractExprType {
  */
 export interface IInstruction {
     readonly parent: IInstruction;
-    readonly scope: number;
+    readonly scope: IScope;
 
     /** Specifies whether to display the instruction in the code. */
     readonly visible: boolean;
@@ -139,8 +182,6 @@ export interface IInstruction {
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
-
-    readonly globalScope: boolean; // << ??? rename/remove
 
     prepareFor(type: EFunctionType): void;
 
@@ -210,7 +251,6 @@ export interface ITypeInstruction extends IInstruction {
 
     getField(fieldName: string): IVariableDeclInstruction;
     getFieldBySemantics(semantics: string): IVariableDeclInstruction;
-    getFieldType(fieldName: string): IVariableTypeInstruction;
 
     toDeclString(): string;
 }

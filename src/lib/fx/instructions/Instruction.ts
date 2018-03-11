@@ -64,7 +64,7 @@ export class Instruction implements IInstruction {
     }
 
     get globalScope(): boolean {
-        return this.scope === ProgramScope.GLOBAL_SCOPE;
+        return this._scopeId === ProgramScope.GLOBAL_SCOPE;
     }
 
     get sourceNode(): IParseNode {
@@ -130,6 +130,9 @@ export class Instruction implements IInstruction {
 
     $withParent<T extends IInstruction>(parent: IInstruction | null): T {
         console.assert(this._parent == null, "parent redefenition detected!");
+        if ((this as any).name === 'float' && this._parent == null && parent != null) {
+            debugger;
+        }
         this._parent = parent;
         // todo: remove this hack!
         return <any>this;

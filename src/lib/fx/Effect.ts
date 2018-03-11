@@ -67,6 +67,8 @@ import { ProgramScope } from './ProgramScope';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
 
 
+const assert = console.assert.bind(console);
+
 const TEMPLATE_TYPE = 'template';
 
 
@@ -89,7 +91,7 @@ const systemVariables: IMap<IVariableDeclInstruction> = {};
 const systemFunctionHashMap: IMap<boolean> = {};
 
 
-function generateSystemType(name: string, elementType: ITypeInstruction = null, length: number = 1, fields: IVariableDeclInstruction[] = []): ITypeInstruction {
+function generateSystemType(name: string, elementType: ITypeInstruction = null, length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
 
     if (getSystemType(name)) {
         console.error(`type already exists: ${name}`);
@@ -103,20 +105,18 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null, 
 }
 
 
-function addField(fields: IVariableDeclInstruction[], fieldName: string, fieldType: ITypeInstruction, writable: boolean = true): void {
-    let id: IIdInstruction = new IdInstruction({ name: fieldName });
-    let type: IVariableTypeInstruction = new VariableTypeInstruction({ type: fieldType, writable })
-
-    fields.push(new VariableDeclInstruction({ id, type }));
-}
-
 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
     for (let suffix in suffixMap) {
         let fieldTypeName = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
-        let fieldType = getSystemType(fieldTypeName);
-        console.assert(fieldType);
-        addField(fields, suffix, fieldType, suffixMap[suffix]);
+        let fieldBaseType = getSystemType(fieldTypeName);
+
+        assert(fieldBaseType);
+
+        let fieldId = new IdInstruction({ name: suffix });
+        let fieldType = new VariableTypeInstruction({ type: fieldBaseType, writable: suffixMap[suffix] })
+
+        fields.push(new VariableDeclInstruction({ id: fieldId, type: fieldType }));
     }
 }
 
@@ -159,83 +159,109 @@ function addSystemTypeVector(): void {
     generateSuffixLiterals(['s', 't', 'p'], STPSuffix);
     generateSuffixLiterals(['s', 't', 'p', 'q'], STPQSuffix);
 
-    let float: ITypeInstruction = getSystemType('float');
-    let int: ITypeInstruction = getSystemType('int');
-    let bool: ITypeInstruction = getSystemType('bool');
 
+    let float = getSystemType('float');
+    let int = getSystemType('int');
+    let bool = getSystemType('bool');
 
-    let suf2f: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf2f, STSuffix, 'float');
+    let float2 = generateSystemType('float2', float, 2);
+    let float3 = generateSystemType('float3', float, 3);
+    let float4 = generateSystemType('float4', float, 4);
 
-    let suf3f: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, 'float');
+    let int2 = generateSystemType('int2', int, 2);
+    let int3 = generateSystemType('int3', int, 3);
+    let int4 = generateSystemType('int4', int, 4);
 
-    let suf4f: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, 'float');
-    addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, 'float');
+    let bool2 = generateSystemType('bool2', bool, 2);
+    let bool3 = generateSystemType('bool3', bool, 3);
+    let bool4 = generateSystemType('bool4', bool, 4);
 
-    let suf2i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'int');
+    {
+        let suf2f: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf2f, STSuffix, 'float');
+        suf2f.forEach(field => float2.addField(field));
+    }
 
-    let suf3i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'int');
+    {
+        let suf3f: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, 'float');
+        suf3f.forEach(field => float3.addField(field));
+    }
 
-    let suf4i: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'int');
-    addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'int');
+    {
+        let suf4f: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, 'float');
+        addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, 'float');
+        suf4f.forEach(field => float4.addField(field));
+    }
 
-    let suf2b: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf2b, RGSuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf2b, STSuffix, 'bool');
+    {
+        let suf2i: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'int');
+        suf2i.forEach(field => int2.addField(field));
+    }
 
-    let suf3b: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf3b, XYZSuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf3b, RGBSuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf3b, STPSuffix, 'bool');
+    {
+        let suf3i: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'int');
+        suf3i.forEach(field => int3.addField(field));
+    }
 
-    let suf4b: IVariableDeclInstruction[] = [];
-    addFieldsToVectorFromSuffixObject(suf4b, XYZWSuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf4b, RGBASuffix, 'bool');
-    addFieldsToVectorFromSuffixObject(suf4b, STPQSuffix, 'bool');
+    {
+        let suf4i: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'int');
+        addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'int');
+        suf4i.forEach(field => int4.addField(field));
+    }
 
+    {
+        let suf2b: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf2b, RGSuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf2b, STSuffix, 'bool');
+        suf2b.forEach(field => bool2.addField(field));
+    }
 
-    let float2: ITypeInstruction = generateSystemType('float2', float, 2, suf2f);
-    let float3: ITypeInstruction = generateSystemType('float3', float, 3, suf3f);
-    let float4: ITypeInstruction = generateSystemType('float4', float, 4, suf4f);
+    {
+        let suf3b: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf3b, XYZSuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf3b, RGBSuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf3b, STPSuffix, 'bool');
+        suf3b.forEach(field => bool3.addField(field));
+    }
 
-    let int2: ITypeInstruction = generateSystemType('int2', int, 2, suf2i);
-    let int3: ITypeInstruction = generateSystemType('int3', int, 3, suf3i);
-    let int4: ITypeInstruction = generateSystemType('int4', int, 4, suf4i);
-
-    let bool2: ITypeInstruction = generateSystemType('bool2', bool, 2, suf2b);
-    let bool3: ITypeInstruction = generateSystemType('bool3', bool, 3, suf3b);
-    let bool4: ITypeInstruction = generateSystemType('bool4', bool, 4, suf4b);
+    {
+        let suf4b: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf4b, XYZWSuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf4b, RGBASuffix, 'bool');
+        addFieldsToVectorFromSuffixObject(suf4b, STPQSuffix, 'bool');
+        suf4b.forEach(field => bool4.addField(field));
+    }
 }
 
 
 function addSystemTypeMatrix(): void {
-    let float2: ITypeInstruction = getSystemType('float2');
-    let float3: ITypeInstruction = getSystemType('float3');
-    let float4: ITypeInstruction = getSystemType('float4');
+    let float2 = getSystemType('float2');
+    let float3 = getSystemType('float3');
+    let float4 = getSystemType('float4');
 
-    let int2: ITypeInstruction = getSystemType('int2');
-    let int3: ITypeInstruction = getSystemType('int3');
-    let int4: ITypeInstruction = getSystemType('int4');
+    let int2 = getSystemType('int2');
+    let int3 = getSystemType('int3');
+    let int4 = getSystemType('int4');
 
-    let bool2: ITypeInstruction = getSystemType('bool2');
-    let bool3: ITypeInstruction = getSystemType('bool3');
-    let bool4: ITypeInstruction = getSystemType('bool4');
+    let bool2 = getSystemType('bool2');
+    let bool3 = getSystemType('bool3');
+    let bool4 = getSystemType('bool4');
 
     generateSystemType('float2x2', float2, 2);
     generateSystemType('float2x3', float2, 3);
@@ -682,7 +708,7 @@ function addSystemFunctions(): void {
 
 
 function initSystemTypes(): void {
-    console.assert(Object.keys(systemTypes).length == 0);
+    assert(Object.keys(systemTypes).length == 0);
 
     addSystemTypeScalar();
     addSystemTypeVector();
@@ -691,7 +717,7 @@ function initSystemTypes(): void {
 
 
 function initSystemFunctions(): void {
-    console.assert(isNull(systemFunctionsMap));
+    assert(Object.keys(systemFunctionsMap).length == 0);
     addSystemFunctions();
 }
 
@@ -723,7 +749,7 @@ function addSystemVariables(): void {
 
 
 function initSystemVariables(): void {
-    console.assert(isNull(systemVariables))
+    assert(isNull(systemVariables))
     addSystemVariables();
 }
 
@@ -831,7 +857,7 @@ function isSystemType(type: ITypeDeclInstruction): boolean {
 
 
 
-
+// todo: rewrite it!
 function _error(context: Context, node: IParseNode, code: number, info: IEffectErrorInfo = {}): void {
     let location: ISourceLocation = <ISourceLocation>{ file: context ? context.filename : null, line: 0 };
     let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(node);
@@ -851,7 +877,7 @@ function _error(context: Context, node: IParseNode, code: number, info: IEffectE
     };
 
     logger.critical(logEntity);
-    throw new Error(code.toString());
+    // throw new Error(code.toString());
 }
 
 
@@ -901,12 +927,13 @@ function analyzeGlobalUseDecls(context: Context, scope: ProgramScope, ast: IPars
 function analyzeProvideDecl(context: Context, node: IParseNode): void {
     const children: IParseNode[] = node.children;
 
-    if (children.length === 2) {
-        let namespace = analyzeComplexName(children[0]);;
+    if (children.length === 3) {
+        let namespace = analyzeComplexName(children[1]);;
         if (!isNull(context.namespace)) {
             console.warn(`Context namespace overriding detected '${context.namespace}' => '${namespace}'`);
         }
         context.namespace = namespace;
+        assert(children[2].name === 'T_KW_PROVIDE');
     }
     else {
         _error(context, node, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
@@ -3474,7 +3501,7 @@ function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: 
 
     let annotation: IAnnotationInstruction = null;
     let semantics: string = null;
-    let passList: IPassInstruction[] = null;
+    let passList: IPassInstruction[] = [];
 
     for (let i: number = children.length - 3; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
@@ -3881,10 +3908,11 @@ initSystemVariables();
 class Context {
     public filename: string | null = null;
     public namespace: string | null = null;
-    public currentFunction: IFunctionDeclInstruction | null = null;
-    public haveCurrentFunctionReturnOccur: boolean = false;
     public functionWithImplementationList: IFunctionDeclInstruction[] = [];
     public techniqueMap: IMap<ITechniqueInstruction> = {};
+    
+    public currentFunction: IFunctionDeclInstruction | null = null;
+    public haveCurrentFunctionReturnOccur: boolean = false;
 
     constructor(filename: string) {
         this.filename = filename;
@@ -3917,6 +3945,8 @@ export function analyze(filename: string, ast: IParseTree): boolean {
     catch (e) {
         throw e;
     }
+
+    // todo: return false in case of error!
 
     console.timeEnd(`analyze(${filename})`);
 

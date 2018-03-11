@@ -243,11 +243,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return null;
     }
 
-
-    getFieldType(fieldName: string): IVariableTypeInstruction {
-        return isDef(this._fields[fieldName]) ? this._fields[fieldName].type : null;
-    }
-
     
     public calcSize(): number {
         let size: number = 0;

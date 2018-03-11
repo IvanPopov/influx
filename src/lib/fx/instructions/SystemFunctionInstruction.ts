@@ -44,7 +44,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         super({ instrType: EInstructionTypes.k_SystemFunctionInstruction, ...settings });
 
         this._id = id.$withParent(this);
-        this._returnType = returnType.$withParent(this);
+        this._returnType = returnType.$withNoParent();
         this._args = argTypes.map(type => {
             let arg = new TypedInstruction({ type });
             return arg.$withParent(this);

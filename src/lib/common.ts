@@ -63,3 +63,5 @@ export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'objec
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
 export type INullable<T> = {[P in keyof T]: T[P] | null } | null;
+
+export let assert = console.assert.bind(console);
