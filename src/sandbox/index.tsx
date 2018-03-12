@@ -21,7 +21,7 @@ const store = createStore<IStoreState>(
   reducer,
   applyMiddleware(...middleware)
 );
-console.log(store);
+// console.log(store);
 render(
   <Provider store={ store }>
     <App />

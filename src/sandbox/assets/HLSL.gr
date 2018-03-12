@@ -215,7 +215,6 @@ ComplexName : ComplexName '.' Id
 PassDecls : PassDecl --NN
 PassDecls : PassDecls PassDecl
 PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --AN
-PassDecl : ImportDecl
 PassDecl : ';'
 
 PassStateBlock : '{' '}' --AN

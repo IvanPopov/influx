@@ -1,8 +1,10 @@
 import { ERenderStates } from "./ERenderStates";
+import { IDispatch } from "./../../sandbox/actions/index";
 import { IdExprInstruction } from "./../fx/instructions/IdExprInstruction";
 import { ERenderStateValues } from "./ERenderStateValues";
 import { IMap } from "./IMap";
 import { IParseNode } from "./parser/IParser";
+import { ProgramScope } from "../fx/ProgramScope";
 
 export enum EInstructionTypes {
     k_Instruction = 0,
@@ -139,7 +141,7 @@ export interface IScope {
     readonly variableMap: IMap<IVariableDeclInstruction>;
     readonly typeMap: IMap<ITypeDeclInstruction>;
     readonly functionMap: IMap<IFunctionDeclInstruction[]>;
-    readonly techniqueMap: IMap<ITechniqueInstruction[]>;
+    readonly techniqueMap: IMap<ITechniqueInstruction>;
 
     isStrict(): boolean;
 
@@ -148,7 +150,7 @@ export interface IScope {
     findType(typeName: string): ITypeInstruction;
     findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction | null | undefined;
     findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
-    findTechique(techName: string): ITechniqueInstruction | null | undefined;
+    findTechique(techName: string): ITechniqueInstruction | null;
 
     hasVariable(variableName: string): boolean;
     hasType(typeName: string): boolean;
@@ -164,6 +166,8 @@ export interface IScope {
     addType(type: ITypeDeclInstruction): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
+
+    isGlobal(): boolean;
 }
 
 

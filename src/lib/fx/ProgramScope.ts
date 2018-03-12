@@ -1,7 +1,7 @@
 ﻿import { isNull, isDef, assert } from "../common";
 import { isDefAndNotNull } from "./../common";
 import { IDispatch } from "./../../sandbox/actions/index";
-import { IVariableDeclInstruction, ITypedInstruction, IFunctionDeclInstruction, IFunctionDeclListMap, ITypeDeclInstruction, ITypeInstruction, ITechniqueInstruction, EScopeType, IScope } from "../idl/IInstruction";
+import { IVariableDeclInstruction, ITypedInstruction, IFunctionDeclInstruction, IFunctionDeclListMap, ITypeDeclInstruction, ITypeInstruction, ITechniqueInstruction, EScopeType, IScope, IVariableTypeInstruction } from "../idl/IInstruction";
 import { IMap } from "../idl/IMap";
 
 
@@ -24,7 +24,7 @@ export class Scope implements IScope {
     readonly variableMap: IMap<IVariableDeclInstruction>;
     readonly typeMap: IMap<ITypeDeclInstruction>;
     readonly functionMap: IMap<IFunctionDeclInstruction[]>;
-    readonly techniqueMap: IMap<ITechniqueInstruction[]>;
+    readonly techniqueMap: IMap<ITechniqueInstruction>;
 
     constructor({ index, type = EScopeType.k_Default, parent = null, strictMode = false }: IScopeSettings) {
         this.index = index;
@@ -50,10 +50,15 @@ export class Scope implements IScope {
     }
 
 
-    findVariable(variableName: string): IVariableDeclInstruction {
+    isGlobal(): boolean  {
+        return this.index === ProgramScope.GLOBAL_SCOPE;
+    }
+
+
+    findVariable(varName: string): IVariableDeclInstruction {
         let scope: Scope = this;
         while (!isNull(scope)) {
-            let variable: IVariableDeclInstruction = scope.variableMap[variableName];
+            let variable = scope.variableMap[varName];
             if (isDef(variable)) {
                 return variable;
             }
@@ -114,7 +119,6 @@ export class Scope implements IScope {
 
                             func = testedFunction;
                         }
-
                         continue;
                     }
 
@@ -224,39 +228,25 @@ export class Scope implements IScope {
 
 
     findTechique(techName: string): ITechniqueInstruction | null | undefined {
-        console.error("@not_implemented");
+        let scope: Scope = this;
+        while (!isNull(scope)) {
+            let technique = scope.techniqueMap[techName];
+            if (isDef(technique)) {
+                return technique;
+            }
+            scope = scope.parent;
+        }
         return null;
     }
 
 
-    hasVariable(variableName: string): boolean {
-        let scope: Scope = this;
-
-        while (!isNull(scope)) {
-            let variable: IVariableDeclInstruction = scope.variableMap[variableName];
-            if (isDef(variable)) {
-                return true;
-            }
-            scope = scope.parent;
-        }
-
-        return false;
+    hasVariable(varName: string): boolean {
+        return !isNull(this.findVariable(varName));
     }
 
 
     hasType(typeName: string): boolean {
-        let scope: Scope = this;
-
-        while (!isNull(scope)) {
-            let type: ITypeDeclInstruction = scope.typeMap[typeName];
-            if (isDefAndNotNull(type)) {
-                return true;
-            }
-
-            scope = scope.parent;
-        }
-
-        return false;
+        return !isNull(this.findType(typeName));
     }
 
 
@@ -305,13 +295,12 @@ export class Scope implements IScope {
 
 
     hasTechnique(techName: string): boolean {
-        console.error("@not_implemented");
-        return false;
+        return !isNull(this.findTechique(techName));
     }
 
 
-    hasVariableInScope(variableName: string): boolean {
-        return isDefAndNotNull(this.variableMap[variableName]);
+    hasVariableInScope(varName: string): boolean {
+        return isDefAndNotNull(this.variableMap[varName]);
     }
 
 
@@ -320,8 +309,7 @@ export class Scope implements IScope {
     }
 
     hasTechniqueInScope(technique: ITechniqueInstruction): boolean {
-        console.error("@not_implemented");
-        return false;
+        return isDefAndNotNull(this.techniqueMap[technique.name]);
     }
 
 
@@ -369,14 +357,14 @@ export class Scope implements IScope {
     addVariable(variable: IVariableDeclInstruction): boolean {
         let scope: Scope = this;
         let variableMap = scope.variableMap;
-        let variableName = variable.name;
+        let varName = variable.name;
 
-        if (!this.hasVariableInScope(variableName)) {
-            variableMap[variableName] = variable;
+        if (!this.hasVariableInScope(varName)) {
+            variableMap[varName] = variable;
             assert(variable.scope === this);
         }
         else {
-            console.error(`letiable '${variableName}' already exists in scope ${scopeId}`);
+            console.error(`letiable '${varName}' already exists in scope ${this.index}`);
         }
     
         return true;
@@ -430,28 +418,39 @@ export class Scope implements IScope {
 
 export class ProgramScope {
 
+    private _namespace: string;
     private _scopeList: Scope[];
     private _currentScope: number;
 
     constructor() {
+        this._namespace = null;
         this._scopeList = [];
         this._currentScope = -1;
     }
 
-    get current(): Scope {
+
+    get currentScope(): Scope {
         if (this._currentScope == -1) {
             return null;
         }
         return this._scopeList[this._currentScope];
     }
 
+
     get globalScope(): Scope {
         return this._scopeList[ProgramScope.GLOBAL_SCOPE] || null;
     }
 
+    get namespace(): string {
+        return this._namespace;
+    }
+
+    specifyNamespace(name: string) {
+        this._namespace = name;
+    }
 
     push(type: EScopeType = EScopeType.k_Default): void {
-        let parent = this.current;
+        let parent = this.currentScope;
         let index = this._scopeList.length;
 
         let newScope = new Scope({ parent, index, type });
@@ -459,6 +458,7 @@ export class ProgramScope {
         this._scopeList.push(newScope);
         this._currentScope = index;
     }
+
 
     restore(): void {
         if (this._scopeList.length === 0) {
@@ -486,6 +486,20 @@ export class ProgramScope {
         }
     }
 
+
+    findTechnique(techName: string): ITechniqueInstruction {
+        return this.globalScope.findTechique(techName);
+    }
+
+
+    findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction {
+        return this.globalScope.findFunction(funcName, args);
+    }
+
+
+    findVariable(varName: string): IVariableDeclInstruction {
+        return this.currentScope.findVariable(varName);
+    }
 
     public static GLOBAL_SCOPE = 0;
 }

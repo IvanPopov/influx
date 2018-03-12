@@ -18,7 +18,7 @@ export class StringInstruction extends ExprInstruction implements ILiteralInstru
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
     constructor({ value, ...settings }: IStringInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_StringInstruction, type: Effect.getSystemType("string").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_StringInstruction, type: Effect.findSystemType("string").asVarType(), ...settings });
         this._value = value;
     }
 

@@ -1,4 +1,4 @@
-import { IInstruction, IInstructionError, EInstructionTypes, EFunctionType, ECheckStage } from "../../idl/IInstruction";
+import { IInstruction, IInstructionError, EInstructionTypes, EFunctionType, ECheckStage, IScope } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -6,7 +6,7 @@ import { ProgramScope } from "../ProgramScope";
 
 
 export interface IInstructionSettings {
-    scopeId?: number;
+    scope?: IScope;
     
     sourceNode?: IParseNode;
     visible?: boolean;
@@ -19,7 +19,7 @@ export class Instruction implements IInstruction {
     private _sourceNode: IParseNode;
     private _instructionID: number;
     private _instructionType: EInstructionTypes;
-    private _scopeId: number;
+    private _scope: IScope;
     private _parent: IInstruction;
     private _lastError: IInstructionError;
 
@@ -28,7 +28,7 @@ export class Instruction implements IInstruction {
     constructor({
         instrType = EInstructionTypes.k_Instruction,
         sourceNode = null,
-        scopeId = Instruction.UNDEFINE_SCOPE,
+        scope = null,
         visible = true
     }: IInstructionSettings = {}) {
 
@@ -36,7 +36,7 @@ export class Instruction implements IInstruction {
         this._sourceNode = sourceNode;
         this._instructionType = instrType;
         this._instructionID = (Instruction.INSTRUCTION_COUNTER++);
-        this._scopeId = scopeId;
+        this._scope = scope;
         this._parent = null;
         this._lastError = null;
     }
@@ -59,13 +59,17 @@ export class Instruction implements IInstruction {
     }
 
 
-    get scope(): number {
-        return !this.globalScope ? this._scopeId : !isNull(this.parent) ? this.parent.scope : Instruction.UNDEFINE_SCOPE;
+    get scope(): IScope {
+        if (!isNull(this._scope)) {
+            return this._scope;
+        }
+        
+        if (!isNull(this.parent)) {
+            return this.parent.scope;
+        }
+        return null;
     }
 
-    get globalScope(): boolean {
-        return this._scopeId === ProgramScope.GLOBAL_SCOPE;
-    }
 
     get sourceNode(): IParseNode {
         return this._sourceNode;
@@ -159,7 +163,7 @@ export class Instruction implements IInstruction {
 
     static UNDEFINE_LENGTH: number = 0xffffff;
     static UNDEFINE_SIZE: number = 0xffffff;
-    static UNDEFINE_SCOPE: number = 0xffffff;
+    // static UNDEFINE_SCOPE: number = 0xffffff;
     static UNDEFINE_PADDING: number = 0xffffff;
     static UNDEFINE_NAME: string = "undef";
 }

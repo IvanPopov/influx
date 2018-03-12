@@ -75,7 +75,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
     }
 
     optimizeForVariableType(pType: IVariableTypeInstruction): boolean {
-        if ((pType.isNotBaseArray() && pType.globalScope) ||
+        if ((pType.isNotBaseArray() && pType.scope.isGlobal()) ||
             (pType.isArray() && this.arguments.length > 1)) {
 
 

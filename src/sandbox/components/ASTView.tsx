@@ -1,6 +1,5 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
-import { connect } from 'react-redux';
 import * as copy from 'copy-to-clipboard';
 
 import { EffectParser } from '../../lib/fx/EffectParser';
@@ -8,14 +7,13 @@ import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition
 import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
 import { IStoreState } from '../store';
-import { sourceCode as sourceActions, mapActions } from '../actions';
-import { getCommon, mapProps } from '../reducers';
 import { PARSER_SYNTAX_ERROR } from '../../lib/parser/Parser';
 import { ISourceLocation } from '../../lib/idl/ILogger';
 import { IMarkerDesc } from '../actions/ActionTypes';
 
 
 import * as Effect from '../../lib/fx/Effect';
+import { IParserParams } from '../store/IStoreState';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -23,11 +21,16 @@ function deepEqual(a: Object, b: Object): boolean {
 }
 
 
-export interface IASTViewProps extends IStoreState {
-    actions: typeof sourceActions;
+export interface IASTViewProps {
+    parserParams: IParserParams;
+    content: string;
+    filename?: string;
+    
+    onNodeOut: (id :string) => void;
+    onNodeOver: (id: string, node: IParseNode) => void;
+    onError: (loc: IRange , message: string) => void;
+    onComplete: (ast: IParseTree) => void;
 }
-
-const SYNTAX_ERROR_MARKER = "syntax-error";
 
 class ASTView extends React.Component<IASTViewProps, {}> {
     state: {
@@ -49,16 +52,19 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         };
     }
 
-    componentWillReceiveProps(nextProps: IASTViewProps): void {
-        const { props } = this;
-        const parserChanged: boolean = !deepEqual(props.parserParams, nextProps.parserParams);
-        const codeChanged: boolean = !deepEqual(props.sourceFile.content, nextProps.sourceFile.content);
+
+    shouldComponentUpdate(nextProps, nextState): boolean {
+        const { props, state } = this;
+
+        const parserChanged = !deepEqual(props.parserParams, nextProps.parserParams);
+        const codeChanged = !deepEqual(props.content, nextProps.content);
 
         if (parserChanged) {
             this.initParser(nextProps, () => this.parse(nextProps));
         } else if (codeChanged) {
             this.parse(nextProps);
         }
+        return (state.parseTree != nextState.parseTree) || !deepEqual(state.nodeStats, nextState.nodeStats);
     }
 
 
@@ -72,7 +78,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     render() {
         const { state: { parseTree } } = this;
         const style = {
-            height: 'calc(100vh - 115px)',
+            height: 'calc(100vh - 205px)',
             overflowY: 'auto'
         };
 
@@ -106,7 +112,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     private parse(props: IASTViewProps): void {
-        const { content, filename } = props.sourceFile;
+        const { content, filename } = props;
         const { parser } = this.state.parser;
 
         if (!content || !parser) { 
@@ -129,14 +135,8 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         if (result === EParserCode.k_Ok) {
             const ast = parser.getSyntaxTree();
+            props.onComplete(ast);
             this.setState({ parseTree: ast });
-            props.actions.removeMarker(SYNTAX_ERROR_MARKER);
-
-            {
-                // just for debug
-                Effect.analyze("example", ast);
-            }
-
         } else {
             this.handleParserError(parser);
         }
@@ -148,15 +148,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         if (err.code == PARSER_SYNTAX_ERROR) {
             const loc: IRange = err.info.loc;
-
-            let marker: IMarkerDesc = {
-                name: SYNTAX_ERROR_MARKER,
-                range: loc,
-                type: 'error',
-                tooltip: err.message || 'no message'
-            };
-
-            this.props.actions.addMarker(marker);
+            this.props.onError(loc, err.message || null);
         } else {
             console.error(err);
         }
@@ -233,10 +225,13 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
-        nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
-        nodeStats[idx].selected = !nodeStats[idx].selected;
-        this.props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' });
+
+        let val = { opened: false, selected: false, ...nodeStats[idx] };
+        val.selected = !val.selected;
+        nodeStats = { ...nodeStats, [idx]: val };
+
         this.setState({ nodeStats });
+        this.props.onNodeOver(idx, node);
     }
 
     
@@ -244,9 +239,13 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
-        nodeStats[idx].selected = !nodeStats[idx].selected;
-        this.props.actions.removeMarker(`ast-range-${idx}`);
+
+        let val = { opened: false, selected: false, ...nodeStats[idx] };
+        val.selected = !val.selected;
+        nodeStats = { ...nodeStats, [idx]: val };
+
         this.setState({ nodeStats });
+        this.props.onNodeOut(idx);
     }
 
 
@@ -254,8 +253,11 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
-        nodeStats[idx] = nodeStats[idx] || { opened: false, selected: false };
-        nodeStats[idx].opened = !nodeStats[idx].opened;
+
+        let val = { opened: false, selected: false, ...nodeStats[idx] };
+        val.opened = !val.opened;
+        nodeStats = { ...nodeStats, [idx]: val };
+
         this.setState({ nodeStats });
     }
 
@@ -266,5 +268,5 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 }
 
-export default connect<{}, {}, IStoreState>(mapProps(getCommon), mapActions(sourceActions))(ASTView) as any;
+export default ASTView;
 

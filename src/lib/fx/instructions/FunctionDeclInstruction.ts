@@ -1,5 +1,5 @@
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
-import { IFunctionDefInstruction, IStmtBlockInstruction } from "./../../idl/IInstruction";
+import { IFunctionDefInstruction, IStmtBlockInstruction, IScope } from "./../../idl/IInstruction";
 import { IFunctionDeclInstruction, EFunctionType, IVariableDeclInstruction, ITypeUseInfoContainer, ITypeDeclInstruction, ISimpleInstruction, EInstructionTypes, ITypeInstruction, IIdInstruction, IVariableTypeInstruction, IDeclInstruction, IStmtInstruction, IInstruction, IInitExprInstruction } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -29,7 +29,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     protected _definition: IFunctionDefInstruction;
     protected _implementation: IStmtBlockInstruction;
     protected _functionType: EFunctionType;
-    protected _implementationScope: number;
+    protected _implementationScope: IScope;
 
     protected _bUsedAsFunction: boolean;
     protected _bUsedAsVertex: boolean;
@@ -61,7 +61,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         this._definition = Instruction.$withParent(definition, this);
         this._implementation = Instruction.$withParent(implementation, this);
         this._functionType = EFunctionType.k_Function;
-        this._implementationScope = Instruction.UNDEFINE_SCOPE;
+        this._implementationScope = null;
 
         this._bUsedAsFunction = false;
         this._bUsedAsVertex = false;
@@ -92,7 +92,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
 
-    get implementationScope(): number {
+    get implementationScope(): IScope {
         return this._implementationScope;
     }
 
@@ -373,7 +373,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
             let pAnalyzedInfo: ITypeUseInfoContainer = pUsedData[i];
             let pAnalyzedType: IVariableTypeInstruction = pAnalyzedInfo.type;
 
-            if (pAnalyzedType.globalScope) {
+            if (pAnalyzedType.scope.isGlobal()) {
                 this.addGlobalVariableType(pAnalyzedType, pAnalyzedInfo.isWrite, pAnalyzedInfo.isRead);
             } else if (pAnalyzedType.isUniform()) {
                 this.addUniformParameter(pAnalyzedType);
@@ -645,7 +645,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         this._functionType = type;
     }
 
-    $linkToImplementationScope(scope: number) {
+    $linkToImplementationScope(scope: IScope) {
         this._implementationScope = scope;
     }
 }

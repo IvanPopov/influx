@@ -215,7 +215,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         var pReturnType: IVariableTypeInstruction = this._returnType;
         var isGood: boolean = true;
 
-        if (pReturnType.isEqual(Effect.getSystemType("void"))) {
+        if (pReturnType.isEqual(Effect.findSystemType("void"))) {
             return true;
         }
 
@@ -248,7 +248,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             return true;
         }
         else {
-            isGood = pReturnType.isEqual(Effect.getSystemType("float4"));
+            isGood = pReturnType.isEqual(Effect.findSystemType("float4"));
             if (!isGood) {
                 return false;
             }
@@ -266,7 +266,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         var pReturnType: IVariableTypeInstruction = this._returnType;
         var isGood: boolean = true;
 
-        if (pReturnType.isEqual(Effect.getSystemType("void"))) {
+        if (pReturnType.isEqual(Effect.findSystemType("void"))) {
             return true;
         }
 
@@ -275,7 +275,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             return false;
         }
 
-        isGood = pReturnType.isEqual(Effect.getSystemType("float4"));
+        isGood = pReturnType.isEqual(Effect.findSystemType("float4"));
         if (!isGood) {
             return false;
         }

@@ -23,7 +23,7 @@ export class LogicalExprInstruction extends ExprInstruction {
     protected _rightOperand: IExprInstruction;
 
     constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: Effect.getSystemType("bool").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: Effect.findSystemType("bool").asVarType(), ...settings });
 
         this._leftOperand = left.$withParent(this);
         this._rightOperand = right.$withParent(this);

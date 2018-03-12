@@ -15,7 +15,7 @@ export class IntInstruction extends ExprInstruction implements ILiteralInstructi
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor({ value, ...settings }: IIntInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_IntInstruction, type: Effect.getSystemType("number").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_IntInstruction, type: Effect.findSystemType("number").asVarType(), ...settings });
         
         this._value = value;
     }

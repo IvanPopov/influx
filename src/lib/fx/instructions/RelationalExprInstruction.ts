@@ -24,7 +24,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
 
 
     constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: Effect.getSystemType('bool').asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: Effect.findSystemType('bool').asVarType(), ...settings });
         this._leftOperand = left;
         this._rightOperand = right;
         this._operator = operator;

@@ -15,7 +15,7 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor({ value, ...settings }: IFloatInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FloatInstruction, type: Effect.getSystemType("float").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_FloatInstruction, type: Effect.findSystemType("float").asVarType(), ...settings });
         this._value = value;
     }
 

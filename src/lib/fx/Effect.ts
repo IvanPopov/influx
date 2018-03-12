@@ -1,5 +1,4 @@
-﻿import { EScopeType } from '../idl/IScope'
-import { IPosition } from "./../idl/parser/IParser";
+﻿import { IPosition } from "./../idl/parser/IParser";
 import { IParseNode, IParseTree } from '../idl/parser/IParser';
 import {
     IInstruction, IFunctionDeclInstruction, IPassInstruction, ISimpleInstruction,
@@ -11,7 +10,7 @@ import {
 } from '../idl/IInstruction';
 import { IMap } from '../idl/IMap';
 import { time } from '../time';
-import { isDef, isDefAndNotNull } from '../common';
+import { isDef, isDefAndNotNull, assert } from '../common';
 import { isNull } from 'util';
 import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
 import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
@@ -67,8 +66,6 @@ import { ProgramScope } from './ProgramScope';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
 
 
-const assert = console.assert.bind(console);
-
 const TEMPLATE_TYPE = 'template';
 
 
@@ -91,9 +88,10 @@ const systemVariables: IMap<IVariableDeclInstruction> = {};
 const systemFunctionHashMap: IMap<boolean> = {};
 
 
-function generateSystemType(name: string, elementType: ITypeInstruction = null, length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
+function generateSystemType(name: string, elementType: ITypeInstruction = null, 
+    length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
 
-    if (getSystemType(name)) {
+    if (findSystemType(name)) {
         console.error(`type already exists: ${name}`);
         return null;
     }
@@ -109,7 +107,7 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null, 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
     for (let suffix in suffixMap) {
         let fieldTypeName = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
-        let fieldBaseType = getSystemType(fieldTypeName);
+        let fieldBaseType = findSystemType(fieldTypeName);
 
         assert(fieldBaseType);
 
@@ -160,9 +158,9 @@ function addSystemTypeVector(): void {
     generateSuffixLiterals(['s', 't', 'p', 'q'], STPQSuffix);
 
 
-    let float = getSystemType('float');
-    let int = getSystemType('int');
-    let bool = getSystemType('bool');
+    let float = findSystemType('float');
+    let int = findSystemType('int');
+    let bool = findSystemType('bool');
 
     let float2 = generateSystemType('float2', float, 2);
     let float3 = generateSystemType('float3', float, 3);
@@ -251,17 +249,17 @@ function addSystemTypeVector(): void {
 
 
 function addSystemTypeMatrix(): void {
-    let float2 = getSystemType('float2');
-    let float3 = getSystemType('float3');
-    let float4 = getSystemType('float4');
+    let float2 = findSystemType('float2');
+    let float3 = findSystemType('float3');
+    let float4 = findSystemType('float4');
 
-    let int2 = getSystemType('int2');
-    let int3 = getSystemType('int3');
-    let int4 = getSystemType('int4');
+    let int2 = findSystemType('int2');
+    let int3 = findSystemType('int3');
+    let int4 = findSystemType('int4');
 
-    let bool2 = getSystemType('bool2');
-    let bool3 = getSystemType('bool3');
-    let bool4 = getSystemType('bool4');
+    let bool2 = findSystemType('bool2');
+    let bool3 = findSystemType('bool3');
+    let bool4 = findSystemType('bool4');
 
     generateSystemType('float2x2', float2, 2);
     generateSystemType('float2x3', float2, 3);
@@ -334,41 +332,41 @@ function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDe
 
 
 export function getExternalType(type: ITypeInstruction): any {
-    if (type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('float'))) {
+    if (type.isEqual(findSystemType('int')) ||
+        type.isEqual(findSystemType('float'))) {
         return Number;
     }
-    else if (type.isEqual(getSystemType('bool'))) {
+    else if (type.isEqual(findSystemType('bool'))) {
         return 'Boolean';
     }
-    else if (type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('int2'))) {
+    else if (type.isEqual(findSystemType('float2')) ||
+        type.isEqual(findSystemType('bool2')) ||
+        type.isEqual(findSystemType('int2'))) {
         return 'Vec2';
     }
-    else if (type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('int3'))) {
+    else if (type.isEqual(findSystemType('float3')) ||
+        type.isEqual(findSystemType('bool3')) ||
+        type.isEqual(findSystemType('int3'))) {
         return 'Vec3';
     }
-    else if (type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('int4'))) {
+    else if (type.isEqual(findSystemType('float4')) ||
+        type.isEqual(findSystemType('bool4')) ||
+        type.isEqual(findSystemType('int4'))) {
         return 'Vec4';
     }
-    else if (type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('int2x2'))) {
+    else if (type.isEqual(findSystemType('float2x2')) ||
+        type.isEqual(findSystemType('bool2x2')) ||
+        type.isEqual(findSystemType('int2x2'))) {
         return 'Vec2';
     }
-    else if (type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('int3x3'))) {
+    else if (type.isEqual(findSystemType('float3x3')) ||
+        type.isEqual(findSystemType('bool3x3')) ||
+        type.isEqual(findSystemType('int3x3'))) {
         return 'Mat3';
     }
-    else if (type.isEqual(getSystemType('float4x4')) ||
-        type.isEqual(getSystemType('bool4x4')) ||
-        type.isEqual(getSystemType('int4x4'))) {
+    else if (type.isEqual(findSystemType('float4x4')) ||
+        type.isEqual(findSystemType('bool4x4')) ||
+        type.isEqual(findSystemType('int4x4'))) {
         return 'Mat4';
     }
     else {
@@ -378,75 +376,75 @@ export function getExternalType(type: ITypeInstruction): any {
 
 
 export function isMatrixType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('float4x4')) ||
-        type.isEqual(getSystemType('int2x2')) ||
-        type.isEqual(getSystemType('int3x3')) ||
-        type.isEqual(getSystemType('int4x4')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('bool4x4'));
+    return type.isEqual(findSystemType('float2x2')) ||
+        type.isEqual(findSystemType('float3x3')) ||
+        type.isEqual(findSystemType('float4x4')) ||
+        type.isEqual(findSystemType('int2x2')) ||
+        type.isEqual(findSystemType('int3x3')) ||
+        type.isEqual(findSystemType('int4x4')) ||
+        type.isEqual(findSystemType('bool2x2')) ||
+        type.isEqual(findSystemType('bool3x3')) ||
+        type.isEqual(findSystemType('bool4x4'));
 }
 
 
 export function isVectorType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('int2')) ||
-        type.isEqual(getSystemType('int3')) ||
-        type.isEqual(getSystemType('int4'));
+    return type.isEqual(findSystemType('float2')) ||
+        type.isEqual(findSystemType('float3')) ||
+        type.isEqual(findSystemType('float4')) ||
+        type.isEqual(findSystemType('bool2')) ||
+        type.isEqual(findSystemType('bool3')) ||
+        type.isEqual(findSystemType('bool4')) ||
+        type.isEqual(findSystemType('int2')) ||
+        type.isEqual(findSystemType('int3')) ||
+        type.isEqual(findSystemType('int4'));
 }
 
 
 export function isScalarType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('bool')) ||
-        type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('float'));
+    return type.isEqual(findSystemType('bool')) ||
+        type.isEqual(findSystemType('int')) ||
+        type.isEqual(findSystemType('float'));
 }
 
 
 export function isFloatBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float')) ||
-        type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('float4x4'));
+    return type.isEqual(findSystemType('float')) ||
+        type.isEqual(findSystemType('float2')) ||
+        type.isEqual(findSystemType('float3')) ||
+        type.isEqual(findSystemType('float4')) ||
+        type.isEqual(findSystemType('float2x2')) ||
+        type.isEqual(findSystemType('float3x3')) ||
+        type.isEqual(findSystemType('float4x4'));
 }
 
 
 export function isIntBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('int2')) ||
-        type.isEqual(getSystemType('int3')) ||
-        type.isEqual(getSystemType('int4')) ||
-        type.isEqual(getSystemType('int2x2')) ||
-        type.isEqual(getSystemType('int3x3')) ||
-        type.isEqual(getSystemType('int4x4'));
+    return type.isEqual(findSystemType('int')) ||
+        type.isEqual(findSystemType('int2')) ||
+        type.isEqual(findSystemType('int3')) ||
+        type.isEqual(findSystemType('int4')) ||
+        type.isEqual(findSystemType('int2x2')) ||
+        type.isEqual(findSystemType('int3x3')) ||
+        type.isEqual(findSystemType('int4x4'));
 }
 
 
 export function isBoolBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('bool')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('bool4x4'));
+    return type.isEqual(findSystemType('bool')) ||
+        type.isEqual(findSystemType('bool2')) ||
+        type.isEqual(findSystemType('bool3')) ||
+        type.isEqual(findSystemType('bool4')) ||
+        type.isEqual(findSystemType('bool2x2')) ||
+        type.isEqual(findSystemType('bool3x3')) ||
+        type.isEqual(findSystemType('bool4x4'));
 }
 
 
 export function isSamplerType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('sampler')) ||
-        type.isEqual(getSystemType('sampler2D')) ||
-        type.isEqual(getSystemType('samplerCUBE'));
+    return type.isEqual(findSystemType('sampler')) ||
+        type.isEqual(findSystemType('sampler2D')) ||
+        type.isEqual(findSystemType('samplerCUBE'));
 }
 
 
@@ -467,17 +465,17 @@ function generateSystemFunction(name: string,
             let argTypes: ITypeInstruction[] = [];
             let functionHash = name + "(";
             let returnType = (returnTypeName === TEMPLATE_TYPE) ?
-                getSystemType(templateTypes[i]) :
-                getSystemType(returnTypeName);
+                findSystemType(templateTypes[i]) :
+                findSystemType(returnTypeName);
 
 
             for (let j: number = 0; j < argsTypes.length; j++) {
                 if (argsTypes[j] === TEMPLATE_TYPE) {
-                    argTypes.push(getSystemType(templateTypes[i]));
+                    argTypes.push(findSystemType(templateTypes[i]));
                     functionHash += templateTypes[i] + ",";
                 }
                 else {
-                    argTypes.push(getSystemType(argsTypes[j]));
+                    argTypes.push(findSystemType(argsTypes[j]));
                     functionHash += argsTypes[j] + ","
                 }
             }
@@ -490,7 +488,7 @@ function generateSystemFunction(name: string,
 
             let id = new IdInstruction({ name });
             let func = new SystemFunctionInstruction({ id, returnType, exprTranslator, argTypes, builtIn });
-            // scope: ProgramScope.GLOBAL_SCOPE 
+            // program: ProgramScope.GLOBAL_SCOPE 
 
             if (!isDef(systemFunctions[name])) {
                 systemFunctions[name] = [];
@@ -507,7 +505,7 @@ function generateSystemFunction(name: string,
             logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
-        let returnType = getSystemType(returnTypeName);
+        let returnType = findSystemType(returnTypeName);
         let argTypes = [];
         let functionHash = name + "(";
 
@@ -516,7 +514,7 @@ function generateSystemFunction(name: string,
                 logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
-                argTypes.push(getSystemType(argsTypes[i]));
+                argTypes.push(findSystemType(argsTypes[i]));
                 functionHash += argsTypes[i] + ",";
             }
         }
@@ -553,7 +551,7 @@ function generateNotBuiltInSystemFuction(name: string, definition: string, imple
     }
 
     let builtIn = false;
-    let returnType = getSystemType(returnTypeName);
+    let returnType = findSystemType(returnTypeName);
     let id = new IdInstruction({ name })
     let func = new SystemFunctionInstruction({ id, returnType, definition, implementation, builtIn });
 
@@ -562,7 +560,7 @@ function generateNotBuiltInSystemFuction(name: string, definition: string, imple
 
     if (!isNull(usedTypes)) {
         for (let i: number = 0; i < usedTypes.length; i++) {
-            let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(usedTypes[i]).parent;
+            let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>findSystemType(usedTypes[i]).parent;
             if (!isNull(typeDecl)) {
                 usedExtSystemTypes.push(typeDecl);
             }
@@ -730,7 +728,7 @@ function generateSystemVariable(name: string, typeName: string,
     }
 
     let id = new IdInstruction({ name });
-    let type = new VariableTypeInstruction({ type: getSystemType(typeName), writable: readonly });
+    let type = new VariableTypeInstruction({ type: findSystemType(typeName), writable: readonly });
     let variableDecl = new VariableDeclInstruction({ id, type, builtIn: true });
 
     variableDecl.$makeVertexCompatible(isForVertex);
@@ -749,7 +747,7 @@ function addSystemVariables(): void {
 
 
 function initSystemVariables(): void {
-    assert(isNull(systemVariables))
+    assert(Object.keys(systemVariables).length === 0);
     addSystemVariables();
 }
 
@@ -796,8 +794,8 @@ function findSystemFunction(functionName: string,
 }
 
 
-function findFunction(scope: ProgramScope, name: string, args: ITypedInstruction[] | IVariableDeclInstruction[]): IFunctionDeclInstruction {
-    return findSystemFunction(name, args) || scope.findFunction(name, <IVariableDeclInstruction[]>args);
+function findFunction(program: ProgramScope, name: string, args: ITypedInstruction[] | IVariableDeclInstruction[]): IFunctionDeclInstruction {
+    return findSystemFunction(name, args) || program.globalScope.findFunction(name, <IVariableDeclInstruction[]>args);
 }
 
 
@@ -806,36 +804,36 @@ function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVar
 }
 
 
-function findShaderFunction(scope: ProgramScope, functionName: string,
-    args: IExprInstruction[]): IFunctionDeclInstruction {
-    return scope.getShaderFunction(functionName, args);
+function findShaderFunction(program: ProgramScope, functionName: string,
+    args: IExprInstruction[]): IFunctionDeclInstruction | null {
+    return program.globalScope.findShaderFunction(functionName, args);
 }
 
 
-function findFunctionByDef(scope: ProgramScope, pDef: FunctionDefInstruction): IFunctionDeclInstruction {
-    return findFunction(scope, pDef.name, pDef.arguments);
+function findFunctionByDef(program: ProgramScope, pDef: FunctionDefInstruction): IFunctionDeclInstruction {
+    return findFunction(program, pDef.name, pDef.arguments);
 }
 
 
 
-export function getSystemType(sTypeName: string): SystemTypeInstruction {
+export function findSystemType(typeName: string): SystemTypeInstruction {
     //boolean, string, float and others
-    return systemTypes[sTypeName] || null;
+    return systemTypes[typeName] || null;
 }
 
 
-export function getSystemVariable(name: string): IVariableDeclInstruction {
+export function findSystemVariable(name: string): IVariableDeclInstruction {
     return systemVariables[name] || null;
 }
 
 
-function getVariable(scope: ProgramScope, name: string): IVariableDeclInstruction {
-    return getSystemVariable(name) || scope.findVariable(name);
+function findVariable(program: ProgramScope, name: string): IVariableDeclInstruction {
+    return findSystemVariable(name) || program.currentScope.findVariable(name);
 }
 
 
-function getType(scope: ProgramScope, sTypeName: string): ITypeInstruction {
-    return getSystemType(sTypeName) || scope.findType(sTypeName);
+function findType(program: ProgramScope, typeName: string): ITypeInstruction {
+    return findSystemType(typeName) || program.currentScope.findType(typeName);
 }
 
 
@@ -881,9 +879,8 @@ function _error(context: Context, node: IParseNode, code: number, info: IEffectE
 }
 
 
-function analyzeUseDecl(context: Context, scope: ProgramScope, node: IParseNode): void {
-    scope.useStrictMode();
-    // todo: implement it!
+function analyzeUseDecl(context: Context, program: ProgramScope, node: IParseNode): void {
+    program.currentScope.strictMode = true;
 }
 
 
@@ -905,13 +902,13 @@ function analyzeComplexName(node: IParseNode): string {
  *         T_KW_STRICT = 'strict'
  *         T_KW_USE = 'use'
  */
-function analyzeGlobalUseDecls(context: Context, scope: ProgramScope, ast: IParseTree): void {
+function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
     let children: IParseNode[] = ast.getRoot().children;
     let i: number = 0;
 
     for (i = children.length - 1; i >= 0; i--) {
         if (children[i].name === 'UseDecl') {
-            analyzeUseDecl(context, scope, children[i]); // << always 'use strict' by default!
+            analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
         }
     }
 }
@@ -924,15 +921,15 @@ function analyzeGlobalUseDecls(context: Context, scope: ProgramScope, ast: IPars
  *       + ComplexNameOpt 
  *         T_KW_PROVIDE = 'provide'
  */
-function analyzeProvideDecl(context: Context, node: IParseNode): void {
+function analyzeProvideDecl(context: Context, program: ProgramScope, node: IParseNode): void {
     const children: IParseNode[] = node.children;
 
     if (children.length === 3) {
         let namespace = analyzeComplexName(children[1]);;
-        if (!isNull(context.namespace)) {
-            console.warn(`Context namespace overriding detected '${context.namespace}' => '${namespace}'`);
+        if (!isNull(program.namespace)) {
+            console.warn(`Context namespace overriding detected '${program.namespace}' => '${namespace}'`);
         }
-        context.namespace = namespace;
+        program.specifyNamespace(namespace);
         assert(children[2].name === 'T_KW_PROVIDE');
     }
     else {
@@ -944,29 +941,29 @@ function analyzeProvideDecl(context: Context, node: IParseNode): void {
 
 
 
-function analyzeGlobalProvideDecls(context: Context, scope: ProgramScope, ast: IParseTree): void {
+function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
     let children: IParseNode[] = ast.getRoot().children;
     let i: number = 0;
 
     for (i = children.length - 1; i >= 0; i--) {
         if (children[i].name === 'ProvideDecl') {
-            analyzeProvideDecl(context, children[i]);
+            analyzeProvideDecl(context, program, children[i]);
         }
     }
 }
 
 
-// function analyzeInitExpr(context: Context, scope: ProgramScope, node: IParseNode): IInitExprInstruction {
+// function analyzeInitExpr(context: Context, program: ProgramScope, node: IParseNode): IInitExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let initExpr: IInitExprInstruction = new InitExprInstruction(node);
 
 //     if (children.length === 1) {
-//         initExpr.push(analyzeExpr(context, scope, children[0]), true);
+//         initExpr.push(analyzeExpr(context, program, children[0]), true);
 //     }
 //     else {
 //         for (let i: number = 0; i < children.length; i++) {
 //             if (children[i].name === 'InitExpr') {
-//                 initExpr.push(analyzeInitExpr(context, scope, children[i]), true);
+//                 initExpr.push(analyzeInitExpr(context, program, children[i]), true);
 //             }
 //         }
 //     }
@@ -988,15 +985,15 @@ function analyzeGlobalProvideDecls(context: Context, scope: ProgramScope, ast: I
 // }
 
 
-// function addVariableDecl(context: Context, scope: ProgramScope, variable: IVariableDeclInstruction): void {
+// function addVariableDecl(context: Context, program: ProgramScope, variable: IVariableDeclInstruction): void {
 //     if (isSystemVariable(variable)) {
 //         _error(context, variable.sourceNode, EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: variable.name });
 //     }
 
-//     let isVarAdded: boolean = scope.addVariable(variable);
+//     let isVarAdded: boolean = program.addVariable(variable);
 
 //     if (!isVarAdded) {
-//         let eScopeType: EScopeType = scope.type;
+//         let eScopeType: EScopeType = program.type;
 
 //         switch (eScopeType) {
 //             case EScopeType.k_Default:
@@ -1013,12 +1010,12 @@ function analyzeGlobalProvideDecls(context: Context, scope: ProgramScope, ast: I
 // }
 
 
-// function addTypeDecl(context: Context, scope: ProgramScope, type: ITypeDeclInstruction): void {
+// function addTypeDecl(context: Context, program: ProgramScope, type: ITypeDeclInstruction): void {
 //     if (isSystemType(type)) {
 //         _error(context, type.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: type.name });
 //     }
 
-//     let isTypeAdded: boolean = scope.addType(type);
+//     let isTypeAdded: boolean = program.addType(type);
 
 //     if (!isTypeAdded) {
 //         _error(context, type.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: type.name });
@@ -1026,12 +1023,12 @@ function analyzeGlobalProvideDecls(context: Context, scope: ProgramScope, ast: I
 // }
 
 
-// function addFunctionDecl(context: Context, scope: ProgramScope, node: IParseNode, func: IFunctionDeclInstruction): void {
+// function addFunctionDecl(context: Context, program: ProgramScope, node: IParseNode, func: IFunctionDeclInstruction): void {
 //     if (isSystemFunction(func)) {
 //         _error(context, node, EEffectErrors.REDEFINE_SYSTEM_FUNCTION, { funcName: func.name });
 //     }
 
-//     let isFunctionAdded: boolean = scope.addFunction(func);
+//     let isFunctionAdded: boolean = program.addFunction(func);
 
 //     if (!isFunctionAdded) {
 //         _error(context, node, EEffectErrors.REDEFINE_FUNCTION, { funcName: func.name });
@@ -1039,15 +1036,15 @@ function analyzeGlobalProvideDecls(context: Context, scope: ProgramScope, ast: I
 // }
 
 
-function addTechnique(context: Context, scope: ProgramScope, technique: ITechniqueInstruction): void {
+function addTechnique(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
     let name: string = technique.name;
 
-    if (isDef(context.techniqueMap[name])) {
+    if (program.globalScope.hasTechnique(name)) {
         _error(context, technique.sourceNode, EEffectErrors.BAD_TECHNIQUE_REDEFINE_NAME, { techName: name });
         return;
     }
 
-    context.techniqueMap[name] = technique;
+    program.globalScope.addTechnique(technique);
 }
 
 
@@ -1716,17 +1713,17 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 // }
 
 
-// function analyzeVariableDecl(context: Context, scope: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
+// function analyzeVariableDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
 //     let children: IParseNode[] = node.children;
 //     let generalType: IVariableTypeInstruction = null;
 //     let variable: IVariableDeclInstruction = null;
 //     let i: number = 0;
 
-//     generalType = analyzeUsageType(context, scope, children[children.length - 1]);
+//     generalType = analyzeUsageType(context, program, children[children.length - 1]);
 
 //     for (i = children.length - 2; i >= 1; i--) {
 //         if (children[i].name === 'Variable') {
-//             variable = analyzeVariable(context, scope, children[i], generalType);
+//             variable = analyzeVariable(context, program, children[i], generalType);
 
 //             if (!isNull(instruction)) {
 //                 instruction.push(variable, true);
@@ -1744,14 +1741,14 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 // }
 
 
-// function analyzeUsageType(context: Context, scope: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+// function analyzeUsageType(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 //     let children: IParseNode[] = node.children;
 //     let i: number = 0;
 //     let type: IVariableTypeInstruction = new VariableTypeInstruction(node);
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'Type') {
-//             let mainType: ITypeInstruction = analyzeType(context, scope, children[i]);
+//             let mainType: ITypeInstruction = analyzeType(context, program, children[i]);
 //             type.pushType(mainType);
 //         }
 //         else if (children[i].name === 'Usage') {
@@ -1765,7 +1762,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 // }
 
 
-// function analyzeType(context: Context, scope: ProgramScope, node: IParseNode): ITypeInstruction {
+// function analyzeType(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
 //     let children: IParseNode[] = node.children;
 //     let type: ITypeInstruction = null;
 
@@ -1779,7 +1776,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 //             break;
 
 //         case 'Struct':
-//             type = analyzeStruct(context, scope, node);
+//             type = analyzeStruct(context, program, node);
 //             break;
 
 //         case 'T_KW_VOID':
@@ -1803,7 +1800,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 
 //         case 'BaseType':
 //         case 'Type':
-//             return analyzeType(context, scope, children[0]);
+//             return analyzeType(context, program, children[0]);
 //     }
 
 //     return type;
@@ -1816,7 +1813,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 // }
 
 
-// function analyzeVariable(context: Context, scope: ProgramScope, node: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
+// function analyzeVariable(context: Context, program: ProgramScope, node: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
 //     let children: IParseNode[] = node.children;
 
 //     let varDecl: IVariableDeclInstruction = new VariableDeclInstruction(node);
@@ -1827,9 +1824,9 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 
 //     varDecl.push(variableType, true);
 //     variableType.pushType(generalType);
-//     varDecl.scope = (scope.current);
+//     varDecl.scope = (program.current);
 
-//     analyzeVariableDim(context, scope, children[children.length - 1], varDecl);
+//     analyzeVariableDim(context, program, children[children.length - 1], varDecl);
 
 //     let i: number = 0;
 //     for (i = children.length - 2; i >= 0; i--) {
@@ -1843,7 +1840,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 //             varDecl.nameID.realName = (semantics);
 //         }
 //         else if (children[i].name === 'Initializer') {
-//             initExpr = analyzeInitializer(context, scope, children[i]);
+//             initExpr = analyzeInitializer(context, program, children[i]);
 //             if (!initExpr.optimizeForVariableType(variableType)) {
 //                 _error(context, node, EEffectErrors.BAD_VARIABLE_INITIALIZER, { varName: varDecl.name });
 //                 return null;
@@ -1853,14 +1850,14 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 //     }
 
 //     checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
-//     addVariableDecl(context, scope, varDecl);
+//     addVariableDecl(context, program, varDecl);
 //     varDecl.fillNameIndex();
 
 //     return varDecl;
 // }
 
 
-// function analyzeVariableDim(context: Context, scope: ProgramScope, node: IParseNode, variableDecl: IVariableDeclInstruction): void {
+// function analyzeVariableDim(context: Context, program: ProgramScope, node: IParseNode, variableDecl: IVariableDeclInstruction): void {
 //     let children: IParseNode[] = node.children;
 //     let variableType: IVariableTypeInstruction = <IVariableTypeInstruction>variableDecl.type;
 
@@ -1871,10 +1868,10 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 //         return;
 //     }
 
-//     analyzeVariableDim(context, scope, children[children.length - 1], variableDecl);
+//     analyzeVariableDim(context, program, children[children.length - 1], variableDecl);
 
 //     {
-//         let indexExpr: IExprInstruction = analyzeExpr(context, scope, children[children.length - 3]);
+//         let indexExpr: IExprInstruction = analyzeExpr(context, program, children[children.length - 3]);
 //         variableType.addArrayIndex(indexExpr);
 //     }
 // }
@@ -1894,17 +1891,17 @@ function analyzeSemantic(node: IParseNode): string {
 }
 
 
-// function analyzeInitializer(context: Context, scope: ProgramScope, node: IParseNode): IInitExprInstruction {
+// function analyzeInitializer(context: Context, program: ProgramScope, node: IParseNode): IInitExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let initExpr: IInitExprInstruction = new InitExprInstruction(node);
 
 //     if (children.length === 2) {
-//         initExpr.push(analyzeExpr(context, scope, children[0]), true);
+//         initExpr.push(analyzeExpr(context, program, children[0]), true);
 //     }
 //     else {
 //         for (let i: number = children.length - 3; i >= 1; i--) {
 //             if (children[i].name === 'InitExpr') {
-//                 initExpr.push(analyzeInitExpr(context, scope, children[i]), true);
+//                 initExpr.push(analyzeInitExpr(context, program, children[i]), true);
 //             }
 //         }
 //     }
@@ -1913,41 +1910,41 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let name: string = node.name;
 
 //     switch (name) {
 //         case 'ObjectExpr':
-//             return analyzeObjectExpr(context, scope, node);
+//             return analyzeObjectExpr(context, program, node);
 //         case 'ComplexExpr':
-//             return analyzeComplexExpr(context, scope, node);
+//             return analyzeComplexExpr(context, program, node);
 //         case 'PostfixExpr':
-//             return analyzePostfixExpr(context, scope, node);
+//             return analyzePostfixExpr(context, program, node);
 //         case 'UnaryExpr':
-//             return analyzeUnaryExpr(context, scope, node);
+//             return analyzeUnaryExpr(context, program, node);
 //         case 'CastExpr':
-//             return analyzeCastExpr(context, scope, node);
+//             return analyzeCastExpr(context, program, node);
 //         case 'ConditionalExpr':
-//             return analyzeConditionalExpr(context, scope, node);
+//             return analyzeConditionalExpr(context, program, node);
 //         case 'MulExpr':
 //         case 'AddExpr':
-//             return analyzeArithmeticExpr(context, scope, node);
+//             return analyzeArithmeticExpr(context, program, node);
 //         case 'RelationalExpr':
 //         case 'EqualityExpr':
-//             return analyzeRelationExpr(context, scope, node);
+//             return analyzeRelationExpr(context, program, node);
 //         case 'AndExpr':
 //         case 'OrExpr':
-//             return analyzeLogicalExpr(context, scope, node);
+//             return analyzeLogicalExpr(context, program, node);
 //         case 'AssignmentExpr':
-//             return analyzeAssignmentExpr(context, scope, node);
+//             return analyzeAssignmentExpr(context, program, node);
 //         case 'T_NON_TYPE_ID':
-//             return analyzeIdExpr(context, scope, node);
+//             return analyzeIdExpr(context, program, node);
 //         case 'T_STRING':
 //         case 'T_UINT':
 //         case 'T_FLOAT':
 //         case 'T_KW_TRUE':
 //         case 'T_KW_FALSE':
-//             return analyzeSimpleExpr(context, scope, node);
+//             return analyzeSimpleExpr(context, program, node);
 //         default:
 //             _error(context, node, EEffectErrors.UNSUPPORTED_EXPR, { exprName: name });
 //             break;
@@ -1957,21 +1954,21 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeObjectExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeObjectExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let name: string = node.children[node.children.length - 1].name;
 
 //     switch (name) {
 //         case 'T_KW_COMPILE':
-//             return analyzeCompileExpr(context, scope, node);
+//             return analyzeCompileExpr(context, program, node);
 //         case 'T_KW_SAMPLER_STATE':
-//             return analyzeSamplerStateBlock(context, scope, node);
+//             return analyzeSamplerStateBlock(context, program, node);
 //         default:
 //     }
 //     return null;
 // }
 
 
-// function analyzeCompileExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeCompileExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let expr: CompileExprInstruction = new CompileExprInstruction(node);
 //     let exprType: IVariableTypeInstruction;
@@ -1987,7 +1984,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //         for (i = children.length - 3; i > 0; i--) {
 //             if (children[i].value !== ',') {
-//                 argumentExpr = analyzeExpr(context, scope, children[i]);
+//                 argumentExpr = analyzeExpr(context, program, children[i]);
 //                 args.push(argumentExpr);
 //             }
 //         }
@@ -2018,7 +2015,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeSamplerStateBlock(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeSamplerStateBlock(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     node = node.children[0];
 
 //     let children: IParseNode[] = node.children;
@@ -2028,7 +2025,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     expr.operator = ('sample_state');
 
 //     for (i = children.length - 2; i >= 1; i--) {
-//         analyzeSamplerState(context, scope, children[i], expr);
+//         analyzeSamplerState(context, program, children[i], expr);
 //     }
 
 //     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2037,7 +2034,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeSamplerState(context: Context, scope: ProgramScope, node: IParseNode, pSamplerStates: SamplerStateBlockInstruction): void {
+// function analyzeSamplerState(context: Context, program: ProgramScope, node: IParseNode, pSamplerStates: SamplerStateBlockInstruction): void {
 
 //     let children: IParseNode[] = node.children;
 //     if (children[children.length - 2].name === 'StateIndex') {
@@ -2065,7 +2062,7 @@ function analyzeSemantic(node: IParseNode): string {
 //                 return;
 //             }
 //             let textureName: string = stateExprNode.children[1].value;
-//             if (isNull(textureName) || !scope.hasVariable(textureName)) {
+//             if (isNull(textureName) || !program.hasVariable(textureName)) {
 //                 _error(context, stateExprNode.children[1], EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
 //                 return;
 //             }
@@ -2132,23 +2129,23 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeComplexExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeComplexExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'T_NON_TYPE_ID':
-//             return analyzeFunctionCallExpr(context, scope, node);
+//             return analyzeFunctionCallExpr(context, program, node);
 //         case 'BaseType':
 //         case 'T_TYPE_ID':
-//             return analyzeConstructorCallExpr(context, scope, node);
+//             return analyzeConstructorCallExpr(context, program, node);
 //         default:
-//             return analyzeSimpleComplexExpr(context, scope, node);
+//             return analyzeSimpleComplexExpr(context, program, node);
 //     }
 // }
 
 
-// function analyzeFunctionCallExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let expr: IExprInstruction = null;
 //     let exprType: IVariableTypeInstruction = null;
@@ -2166,7 +2163,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //         for (i = children.length - 3; i > 0; i--) {
 //             if (children[i].value !== ',') {
-//                 argumentExpr = analyzeExpr(context, scope, children[i]);
+//                 argumentExpr = analyzeExpr(context, program, children[i]);
 //                 args.push(argumentExpr);
 //             }
 //         }
@@ -2279,7 +2276,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeConstructorCallExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeConstructorCallExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 //     let children: IParseNode[] = node.children;
 //     let expr: ConstructorCallInstruction = new ConstructorCallInstruction(node);
 //     let exprType: IVariableTypeInstruction = null;
@@ -2287,7 +2284,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     let constructorType: ITypeInstruction = null;
 //     let i: number = 0;
 
-//     constructorType = analyzeType(context, scope, children[children.length - 1]);
+//     constructorType = analyzeType(context, program, children[children.length - 1]);
 
 //     if (isNull(constructorType)) {
 //         _error(context, node, EEffectErrors.BAD_COMPLEX_NOT_TYPE);
@@ -2301,7 +2298,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //         for (i = children.length - 3; i > 0; i--) {
 //             if (children[i].value !== ',') {
-//                 argumentExpr = analyzeExpr(context, scope, children[i]);
+//                 argumentExpr = analyzeExpr(context, program, children[i]);
 //                 args.push(argumentExpr);
 //             }
 //         }
@@ -2334,14 +2331,14 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeSimpleComplexExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeSimpleComplexExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let expr: ComplexExprInstruction = new ComplexExprInstruction(node);
 //     let complexExpr: IExprInstruction;
 //     let exprType: IVariableTypeInstruction;
 
-//     complexExpr = analyzeExpr(context, scope, children[1]);
+//     complexExpr = analyzeExpr(context, program, children[1]);
 //     exprType = <IVariableTypeInstruction>complexExpr.type;
 
 //     expr.type = (exprType);
@@ -2354,26 +2351,26 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 
-// function analyzePostfixExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzePostfixExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let symbol: string = children[children.length - 2].value;
 
 //     switch (symbol) {
 //         case '[':
-//             return analyzePostfixIndex(context, scope, node);
+//             return analyzePostfixIndex(context, program, node);
 //         case '.':
-//             return analyzePostfixPoint(context, scope, node);
+//             return analyzePostfixPoint(context, program, node);
 //         case '++':
 //         case '--':
-//             return analyzePostfixArithmetic(context, scope, node);
+//             return analyzePostfixArithmetic(context, program, node);
 //     }
 
 //     return null;
 // }
 
 
-// function analyzePostfixIndex(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzePostfixIndex(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let expr: PostfixIndexInstruction = new PostfixIndexInstruction(node);
@@ -2384,7 +2381,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     let indexExprType: IVariableTypeInstruction = null;
 //     let intType: ITypeInstruction = null;
 
-//     postfixExpr = analyzeExpr(context, scope, children[children.length - 1]);
+//     postfixExpr = analyzeExpr(context, program, children[children.length - 1]);
 //     postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
 //     if (!postfixExprType.isArray()) {
@@ -2392,7 +2389,7 @@ function analyzeSemantic(node: IParseNode): string {
 //         return null;
 //     }
 
-//     indexExpr = analyzeExpr(context, scope, children[children.length - 3]);
+//     indexExpr = analyzeExpr(context, program, children[children.length - 3]);
 //     indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
 //     intType = getSystemType('int');
@@ -2414,7 +2411,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzePostfixPoint(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzePostfixPoint(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let expr: PostfixPointInstruction = new PostfixPointInstruction(node);
@@ -2424,7 +2421,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     let exprType: IVariableTypeInstruction = null;
 //     let postfixExprType: IVariableTypeInstruction = null;
 
-//     postfixExpr = analyzeExpr(context, scope, children[children.length - 1]);
+//     postfixExpr = analyzeExpr(context, program, children[children.length - 1]);
 //     postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
 //     fieldName = children[children.length - 3].value;
@@ -2450,7 +2447,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzePostfixArithmetic(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzePostfixArithmetic(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = children[0].value;
@@ -2459,7 +2456,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     let exprType: IVariableTypeInstruction;
 //     let postfixExprType: IVariableTypeInstruction;
 
-//     postfixExpr = analyzeExpr(context, scope, children[1]);
+//     postfixExpr = analyzeExpr(context, program, children[1]);
 //     postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
 //     exprType = checkOneOperandExprType(context, node, operator, postfixExprType);
@@ -2482,7 +2479,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeUnaryExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeUnaryExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = children[1].value;
@@ -2491,7 +2488,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     let exprType: IVariableTypeInstruction;
 //     let unaryExprType: IVariableTypeInstruction;
 
-//     unaryExpr = analyzeExpr(context, scope, children[0]);
+//     unaryExpr = analyzeExpr(context, program, children[0]);
 //     unaryExprType = <IVariableTypeInstruction>unaryExpr.type;
 
 //     exprType = checkOneOperandExprType(context, node, operator, unaryExprType);
@@ -2514,15 +2511,15 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeCastExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeCastExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let expr: CastExprInstruction = new CastExprInstruction(node);
 //     let exprType: IVariableTypeInstruction;
 //     let castedExpr: IExprInstruction;
 
-//     exprType = analyzeConstTypeDim(context, scope, children[2]);
-//     castedExpr = analyzeExpr(context, scope, children[0]);
+//     exprType = analyzeConstTypeDim(context, program, children[2]);
+//     castedExpr = analyzeExpr(context, program, children[0]);
 
 //     if (!(<IVariableTypeInstruction>castedExpr.type).readable) {
 //         _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
@@ -2539,7 +2536,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeConditionalExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeConditionalExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let expr: ConditionalExprInstruction = new ConditionalExprInstruction(node);
@@ -2551,9 +2548,9 @@ function analyzeSemantic(node: IParseNode): string {
 //     let falseExprType: IVariableTypeInstruction;
 //     let boolType: ITypeInstruction;
 
-//     conditionExpr = analyzeExpr(context, scope, children[children.length - 1]);
-//     trueExpr = analyzeExpr(context, scope, children[children.length - 3]);
-//     falseExpr = analyzeExpr(context, scope, children[0]);
+//     conditionExpr = analyzeExpr(context, program, children[children.length - 1]);
+//     trueExpr = analyzeExpr(context, program, children[children.length - 3]);
+//     falseExpr = analyzeExpr(context, program, children[0]);
 
 //     conditionType = <IVariableTypeInstruction>conditionExpr.type;
 //     trueExprType = <IVariableTypeInstruction>trueExpr.type;
@@ -2600,7 +2597,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeArithmeticExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeArithmeticExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = node.children[1].value;
@@ -2611,8 +2608,8 @@ function analyzeSemantic(node: IParseNode): string {
 //     let rightType: IVariableTypeInstruction = null;
 //     let exprType: IVariableTypeInstruction = null;
 
-//     leftExpr = analyzeExpr(context, scope, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, scope, children[0]);
+//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
+//     rightExpr = analyzeExpr(context, program, children[0]);
 
 //     leftType = <IVariableTypeInstruction>leftExpr.type;
 //     rightType = <IVariableTypeInstruction>rightExpr.type;
@@ -2638,7 +2635,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeRelationExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeRelationExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = node.children[1].value;
@@ -2649,8 +2646,8 @@ function analyzeSemantic(node: IParseNode): string {
 //     let rightType: IVariableTypeInstruction;
 //     let exprType: IVariableTypeInstruction;
 
-//     leftExpr = analyzeExpr(context, scope, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, scope, children[0]);
+//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
+//     rightExpr = analyzeExpr(context, program, children[0]);
 
 //     leftType = <IVariableTypeInstruction>leftExpr.type;
 //     rightType = <IVariableTypeInstruction>rightExpr.type;
@@ -2677,7 +2674,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeLogicalExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeLogicalExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = node.children[1].value;
@@ -2688,8 +2685,8 @@ function analyzeSemantic(node: IParseNode): string {
 //     let rightType: IVariableTypeInstruction;
 //     let boolType: ITypeInstruction;
 
-//     leftExpr = analyzeExpr(context, scope, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, scope, children[0]);
+//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
+//     rightExpr = analyzeExpr(context, program, children[0]);
 
 //     leftType = <IVariableTypeInstruction>leftExpr.type;
 //     rightType = <IVariableTypeInstruction>rightExpr.type;
@@ -2732,7 +2729,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeAssignmentExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeAssignmentExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let operator: string = children[1].value;
@@ -2743,8 +2740,8 @@ function analyzeSemantic(node: IParseNode): string {
 //     let rightType: IVariableTypeInstruction;
 //     let exprType: IVariableTypeInstruction;
 
-//     leftExpr = analyzeExpr(context, scope, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, scope, children[0]);
+//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
+//     rightExpr = analyzeExpr(context, program, children[0]);
 
 //     leftType = <IVariableTypeInstruction>leftExpr.type;
 //     rightType = <IVariableTypeInstruction>rightExpr.type;
@@ -2783,7 +2780,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeIdExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeIdExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let name: string = node.value;
 //     let variable: IVariableDeclInstruction = getVariable(scope, name);
@@ -2812,7 +2809,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeSimpleExpr(context: Context, scope: ProgramScope, node: IParseNode): IExprInstruction {
+// function analyzeSimpleExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
 //     let instruction: ILiteralInstruction = null;
 //     const name: string = node.name;
@@ -2846,7 +2843,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 
-// function analyzeConstTypeDim(context: Context, scope: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+// function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 
 //     const children: IParseNode[] = node.children;
 
@@ -2857,7 +2854,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     let type: IVariableTypeInstruction;
 
-//     type = <IVariableTypeInstruction>(analyzeType(context, scope, children[0]));
+//     type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
 
 //     if (!type.isBase()) {
 //         _error(context, node, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
@@ -2869,18 +2866,18 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeVarStructDecl(context: Context, scope: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
+// function analyzeVarStructDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
 
 //     const children: IParseNode[] = node.children;
 //     let usageType: IVariableTypeInstruction = null;
 //     let variable: IVariableDeclInstruction = null;
 //     let i: number = 0;
 
-//     usageType = analyzeUsageStructDecl(context, scope, children[children.length - 1]);
+//     usageType = analyzeUsageStructDecl(context, program, children[children.length - 1]);
 
 //     for (i = children.length - 2; i >= 1; i--) {
 //         if (children[i].name === 'Variable') {
-//             variable = analyzeVariable(context, scope, children[i], usageType);
+//             variable = analyzeVariable(context, program, children[i], usageType);
 
 //             if (!isNull(instruction)) {
 //                 instruction.push(variable, true);
@@ -2890,7 +2887,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeUsageStructDecl(context: Context, scope: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+// function analyzeUsageStructDecl(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 
 //     let children: IParseNode[] = node.children;
 //     let i: number = 0;
@@ -2898,13 +2895,13 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'StructDecl') {
-//             const mainType: ITypeInstruction = analyzeStructDecl(context, scope, children[i]);
+//             const mainType: ITypeInstruction = analyzeStructDecl(context, program, children[i]);
 //             type.pushType(mainType);
 
 //             const typeDecl: ITypeDeclInstruction = new TypeDeclInstruction(null);
 //             typeDecl.push(mainType, true);
 
-//             addTypeDecl(context, scope, typeDecl);
+//             addTypeDecl(context, program, typeDecl);
 //         }
 //         else if (children[i].name === 'Usage') {
 //             const usage: string = analyzeUsage(children[i]);
@@ -2917,22 +2914,22 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeStruct(context: Context, scope: ProgramScope, node: IParseNode): ITypeInstruction {
+// function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
 //     const children: IParseNode[] = node.children;
 
 //     const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
 //     const fieldCollector: IInstruction = new InstructionCollector();
 
-//     scope.push(EScopeType.k_Struct);
+//     program.push(EScopeType.k_Struct);
 
 //     let i: number = 0;
 //     for (i = children.length - 4; i >= 1; i--) {
 //         if (children[i].name === 'VariableDecl') {
-//             analyzeVariableDecl(context, scope, children[i], fieldCollector);
+//             analyzeVariableDecl(context, program, children[i], fieldCollector);
 //         }
 //     }
 
-//     scope.pop();
+//     program.pop();
 //     struct.addFields(fieldCollector, true);
 
 //     checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2940,7 +2937,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeFunctionDeclOnlyDefinition(context: Context, scope: ProgramScope, node: IParseNode): IFunctionDeclInstruction {
+// function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, node: IParseNode): IFunctionDeclInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     let func: FunctionDeclInstruction = null;
@@ -2949,7 +2946,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     const sLastNodeValue: string = children[0].value;
 //     let bNeedAddFunction: boolean = false;
 
-//     funcDef = analyzeFunctionDef(context, scope, children[children.length - 1]);
+//     funcDef = analyzeFunctionDef(context, program, children[children.length - 1]);
 //     func = <FunctionDeclInstruction>findFunctionByDef(scope, funcDef);
 
 //     if (!isDef(func)) {
@@ -2977,7 +2974,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     func.definition = (<IDeclInstruction>funcDef);
 
-//     scope.restore();
+//     program.restore();
 
 //     if (children.length === 3) {
 //         annotation = analyzeAnnotation(children[1]);
@@ -2985,25 +2982,25 @@ function analyzeSemantic(node: IParseNode): string {
 //     }
 
 //     if (sLastNodeValue !== ';') {
-//         func.implementationScope = (scope.current);
+//         func.implementationScope = (program.current);
 //         context.functionWithImplementationList.push(func);
 //     }
 
-//     scope.pop();
+//     program.pop();
 
 //     if (bNeedAddFunction) {
-//         addFunctionDecl(context, scope, node, func);
+//         addFunctionDecl(context, program, node, func);
 //     }
 
 //     return func;
 // }
 
 
-// function resumeFunctionAnalysis(context: Context, scope: ProgramScope, pAnalzedFunction: IFunctionDeclInstruction): void {
+// function resumeFunctionAnalysis(context: Context, program: ProgramScope, pAnalzedFunction: IFunctionDeclInstruction): void {
 //     const func: FunctionDeclInstruction = <FunctionDeclInstruction>pAnalzedFunction;
 //     const node: IParseNode = func.sourceNode;
 
-//     scope.current = func.implementationScope;
+//     program.current = func.implementationScope;
 
 //     const children: IParseNode[] = node.children;
 //     let stmtBlock: StmtBlockInstruction = null;
@@ -3011,7 +3008,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     context.currentFunction = func;
 //     context.haveCurrentFunctionReturnOccur = false;
 
-//     stmtBlock = <StmtBlockInstruction>analyzeStmtBlock(context, scope, children[0]);
+//     stmtBlock = <StmtBlockInstruction>analyzeStmtBlock(context, program, children[0]);
 //     func.implementation = <IStmtInstruction>stmtBlock;
 
 //     if (!func.returnType.isEqual(getSystemType('void')) && !context.haveCurrentFunctionReturnOccur) {
@@ -3021,13 +3018,13 @@ function analyzeSemantic(node: IParseNode): string {
 //     context.currentFunction = null;
 //     context.haveCurrentFunctionReturnOccur = false;
 
-//     scope.pop();
+//     program.pop();
 
 //     checkInstruction(context, func, ECheckStage.CODE_TARGET_SUPPORT);
 // }
 
 
-// function analyzeFunctionDef(context: Context, scope: ProgramScope, node: IParseNode): FunctionDefInstruction {
+// function analyzeFunctionDef(context: Context, program: ProgramScope, node: IParseNode): FunctionDefInstruction {
 //     const children: IParseNode[] = node.children;
 //     const funcDef: FunctionDefInstruction = new FunctionDefInstruction(node);
 //     let returnType: IVariableTypeInstruction = null;
@@ -3036,7 +3033,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     const funcName: string = nameNode.value;
 
 //     const pRetTypeNode = children[children.length - 1];
-//     returnType = analyzeUsageType(context, scope, pRetTypeNode);
+//     returnType = analyzeUsageType(context, program, pRetTypeNode);
 
 //     if (returnType.isContainSampler()) {
 //         _error(context, pRetTypeNode, EEffectErrors.BAD_RETURN_TYPE_FOR_FUNCTION, { funcName: funcName });
@@ -3055,11 +3052,11 @@ function analyzeSemantic(node: IParseNode): string {
 //         funcDef.semantics = (semantics);
 //     }
 
-//     scope.push(EScopeType.k_Default);
+//     program.push(EScopeType.k_Default);
 
-//     analyzeParamList(context, scope, children[children.length - 3], funcDef);
+//     analyzeParamList(context, program, children[children.length - 3], funcDef);
 
-//     scope.pop();
+//     program.pop();
 
 //     checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -3067,7 +3064,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeParamList(context: Context, scope: ProgramScope, node: IParseNode, funcDef: FunctionDefInstruction): void {
+// function analyzeParamList(context: Context, program: ProgramScope, node: IParseNode, funcDef: FunctionDefInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 //     let param: IVariableDeclInstruction;
@@ -3076,35 +3073,35 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     for (i = children.length - 2; i >= 1; i--) {
 //         if (children[i].name === 'ParameterDecl') {
-//             param = analyzeParameterDecl(context, scope, children[i]);
-//             param.scope = (scope.current);
-//             funcDef.addParameter(param, scope.isStrictMode());
+//             param = analyzeParameterDecl(context, program, children[i]);
+//             param.scope = (program.current);
+//             funcDef.addParameter(param, program.isStrictMode());
 //         }
 //     }
 // }
 
 
-// function analyzeParameterDecl(context: Context, scope: ProgramScope, node: IParseNode): IVariableDeclInstruction {
+// function analyzeParameterDecl(context: Context, program: ProgramScope, node: IParseNode): IVariableDeclInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     let type: IVariableTypeInstruction = null;
 //     let param: IVariableDeclInstruction = null;
 
-//     type = analyzeParamUsageType(context, scope, children[1]);
-//     param = analyzeVariable(context, scope, children[0], type);
+//     type = analyzeParamUsageType(context, program, children[1]);
+//     param = analyzeVariable(context, program, children[0], type);
 
 //     return param;
 // }
 
 
-// function analyzeParamUsageType(context: Context, scope: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+// function analyzeParamUsageType(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 //     const children: IParseNode[] = node.children;
 //     let i: number = 0;
 //     const type: IVariableTypeInstruction = new VariableTypeInstruction(node);
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'Type') {
-//             const mainType: ITypeInstruction = analyzeType(context, scope, children[i]);
+//             const mainType: ITypeInstruction = analyzeType(context, program, children[i]);
 //             type.pushType(mainType);
 //         }
 //         else if (children[i].name === 'ParamUsage') {
@@ -3119,25 +3116,25 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeStmtBlock(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeStmtBlock(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const stmtBlock: StmtBlockInstruction = new StmtBlockInstruction(node);
 //     let stmt: IStmtInstruction;
 //     let i: number = 0;
 
-//     stmtBlock.scope = (scope.current);
+//     stmtBlock.scope = (program.current);
 
-//     scope.push(EScopeType.k_Default);
+//     program.push(EScopeType.k_Default);
 
 //     for (i = children.length - 2; i > 0; i--) {
-//         stmt = analyzeStmt(context, scope, children[i]);
+//         stmt = analyzeStmt(context, program, children[i]);
 //         if (!isNull(stmt)) {
 //             stmtBlock.push(stmt);
 //         }
 //     }
 
-//     scope.pop();
+//     program.pop();
 
 //     checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -3145,56 +3142,56 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'SimpleStmt':
-//             return analyzeSimpleStmt(context, scope, children[0]);
+//             return analyzeSimpleStmt(context, program, children[0]);
 //         case 'UseDecl':
-//             analyzeUseDecl(context, scope, children[0]);
+//             analyzeUseDecl(context, program, children[0]);
 //             return null;
 //         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, scope, node);
+//             return analyzeWhileStmt(context, program, node);
 //         case 'T_KW_FOR':
-//             return analyzeForStmt(context, scope, node);
+//             return analyzeForStmt(context, program, node);
 //         case 'T_KW_IF':
-//             return analyzeIfStmt(context, scope, node);
+//             return analyzeIfStmt(context, program, node);
 //     }
 //     return null;
 // }
 
 
-// function analyzeSimpleStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeSimpleStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'T_KW_RETURN':
-//             return analyzeReturnStmt(context, scope, node);
+//             return analyzeReturnStmt(context, program, node);
 
 //         case 'T_KW_DO':
-//             return analyzeWhileStmt(context, scope, node);
+//             return analyzeWhileStmt(context, program, node);
 
 //         case 'StmtBlock':
-//             return analyzeStmtBlock(context, scope, children[0]);
+//             return analyzeStmtBlock(context, program, children[0]);
 
 //         case 'T_KW_DISCARD':
 //         case 'T_KW_BREAK':
 //         case 'T_KW_CONTINUE':
-//             return analyzeBreakStmt(context, scope, node);
+//             return analyzeBreakStmt(context, program, node);
 
 //         case 'TypeDecl':
 //         case 'VariableDecl':
 //         case 'VarStructDecl':
-//             return analyzeDeclStmt(context, scope, children[0]);
+//             return analyzeDeclStmt(context, program, children[0]);
 
 //         default:
 //             if (children.length === 2) {
-//                 return analyzeExprStmt(context, scope, node);
+//                 return analyzeExprStmt(context, program, node);
 //             }
 //             else {
 //                 return new SemicolonStmtInstruction(node);
@@ -3203,7 +3200,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeReturnStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeReturnStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction(node);
@@ -3222,7 +3219,7 @@ function analyzeSemantic(node: IParseNode): string {
 //     }
 
 //     if (children.length === 3) {
-//         const exprInstruction: IExprInstruction = analyzeExpr(context, scope, children[1]);
+//         const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
 
 //         if (!funcReturnType.isEqual(exprInstruction.type)) {
 //             _error(context, node, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
@@ -3238,7 +3235,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeBreakStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeBreakStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction(node);
@@ -3256,7 +3253,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeDeclStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeDeclStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     // let children: IParseNode[] = node.children;
 //     const sNodeName: string = node.name;
@@ -3264,13 +3261,13 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     switch (sNodeName) {
 //         case 'TypeDecl':
-//             analyzeTypeDecl(context, scope, node, pDeclStmtInstruction);
+//             analyzeTypeDecl(context, program, node, pDeclStmtInstruction);
 //             break;
 //         case 'VariableDecl':
-//             analyzeVariableDecl(context, scope, node, pDeclStmtInstruction);
+//             analyzeVariableDecl(context, program, node, pDeclStmtInstruction);
 //             break;
 //         case 'VarStructDecl':
-//             analyzeVarStructDecl(context, scope, node, pDeclStmtInstruction);
+//             analyzeVarStructDecl(context, program, node, pDeclStmtInstruction);
 //             break;
 //     }
 
@@ -3280,11 +3277,11 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeExprStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeExprStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const exprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction(node);
-//     const exprInstruction: IExprInstruction = analyzeExpr(context, scope, children[1]);
+//     const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
 
 //     exprStmtInstruction.push(exprInstruction, true);
 
@@ -3294,7 +3291,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeWhileStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeWhileStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const isDoWhile: boolean = (children[children.length - 1].value === 'do');
@@ -3308,7 +3305,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     if (isDoWhile) {
 //         whileStmt.operator = ('do_while');
-//         condition = analyzeExpr(context, scope, children[2]);
+//         condition = analyzeExpr(context, program, children[2]);
 //         conditionType = <IVariableTypeInstruction>condition.type;
 
 //         if (!conditionType.isEqual(boolType)) {
@@ -3316,11 +3313,11 @@ function analyzeSemantic(node: IParseNode): string {
 //             return null;
 //         }
 
-//         stmt = analyzeStmt(context, scope, children[0]);
+//         stmt = analyzeStmt(context, program, children[0]);
 //     }
 //     else {
 //         whileStmt.operator = ('while');
-//         condition = analyzeExpr(context, scope, children[2]);
+//         condition = analyzeExpr(context, program, children[2]);
 //         conditionType = <IVariableTypeInstruction>condition.type;
 
 //         if (!conditionType.isEqual(boolType)) {
@@ -3329,10 +3326,10 @@ function analyzeSemantic(node: IParseNode): string {
 //         }
 
 //         if (isNonIfStmt) {
-//             stmt = analyzeNonIfStmt(context, scope, children[0]);
+//             stmt = analyzeNonIfStmt(context, program, children[0]);
 //         }
 //         else {
-//             stmt = analyzeStmt(context, scope, children[0]);
+//             stmt = analyzeStmt(context, program, children[0]);
 //         }
 
 //         whileStmt.push(condition, true);
@@ -3345,13 +3342,13 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeIfStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const isIfElse: boolean = (children.length === 7);
 
 //     const ifStmtInstruction: IfStmtInstruction = new IfStmtInstruction(node);
-//     const condition: IExprInstruction = analyzeExpr(context, scope, children[children.length - 3]);
+//     const condition: IExprInstruction = analyzeExpr(context, program, children[children.length - 3]);
 //     const conditionType: IVariableTypeInstruction = <IVariableTypeInstruction>condition.type;
 //     const boolType: ITypeInstruction = getSystemType('bool');
 
@@ -3367,15 +3364,15 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     if (isIfElse) {
 //         ifStmtInstruction.operator = ('if_else');
-//         ifStmt = analyzeNonIfStmt(context, scope, children[2]);
-//         elseStmt = analyzeStmt(context, scope, children[0]);
+//         ifStmt = analyzeNonIfStmt(context, program, children[2]);
+//         elseStmt = analyzeStmt(context, program, children[0]);
 
 //         ifStmtInstruction.push(ifStmt, true);
 //         ifStmtInstruction.push(elseStmt, true);
 //     }
 //     else {
 //         ifStmtInstruction.operator = ('if');
-//         ifStmt = analyzeNonIfStmt(context, scope, children[0]);
+//         ifStmt = analyzeNonIfStmt(context, program, children[0]);
 
 //         ifStmtInstruction.push(ifStmt, true);
 //     }
@@ -3386,37 +3383,37 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeNonIfStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeNonIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'SimpleStmt':
-//             return analyzeSimpleStmt(context, scope, children[0]);
+//             return analyzeSimpleStmt(context, program, children[0]);
 //         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, scope, node);
+//             return analyzeWhileStmt(context, program, node);
 //         case 'T_KW_FOR':
-//             return analyzeForStmt(context, scope, node);
+//             return analyzeForStmt(context, program, node);
 //     }
 //     return null;
 // }
 
 
-// function analyzeForStmt(context: Context, scope: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeForStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
 //     const children: IParseNode[] = node.children;
 //     const isNonIfStmt: boolean = (node.name === 'NonIfStmt');
 //     const pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction(node);
 //     let stmt: IStmtInstruction = null;
 
-//     scope.push();
+//     program.push();
 
-//     analyzeForInit(context, scope, children[children.length - 3], pForStmtInstruction);
-//     analyzeForCond(context, scope, children[children.length - 4], pForStmtInstruction);
+//     analyzeForInit(context, program, children[children.length - 3], pForStmtInstruction);
+//     analyzeForCond(context, program, children[children.length - 4], pForStmtInstruction);
 
 //     if (children.length === 7) {
-//         analyzeForStep(context, scope, children[2], pForStmtInstruction);
+//         analyzeForStep(context, program, children[2], pForStmtInstruction);
 //     }
 //     else {
 //         pForStmtInstruction.push(null);
@@ -3424,15 +3421,15 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 //     if (isNonIfStmt) {
-//         stmt = analyzeNonIfStmt(context, scope, children[0]);
+//         stmt = analyzeNonIfStmt(context, program, children[0]);
 //     }
 //     else {
-//         stmt = analyzeStmt(context, scope, children[0]);
+//         stmt = analyzeStmt(context, program, children[0]);
 //     }
 
 //     pForStmtInstruction.push(stmt, true);
 
-//     scope.pop();
+//     program.pop();
 
 //     checkInstruction(context, pForStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -3440,17 +3437,17 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeForInit(context: Context, scope: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForInit(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'VariableDecl':
-//             analyzeVariableDecl(context, scope, children[0], pForStmtInstruction);
+//             analyzeVariableDecl(context, program, children[0], pForStmtInstruction);
 //             break;
 //         case 'Expr':
-//             const expr: IExprInstruction = analyzeExpr(context, scope, children[0]);
+//             const expr: IExprInstruction = analyzeExpr(context, program, children[0]);
 //             pForStmtInstruction.push(expr, true);
 //             break;
 //         default:
@@ -3463,7 +3460,7 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeForCond(context: Context, scope: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForCond(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
@@ -3472,17 +3469,17 @@ function analyzeSemantic(node: IParseNode): string {
 //         return;
 //     }
 
-//     const conditionExpr: IExprInstruction = analyzeExpr(context, scope, children[1]);
+//     const conditionExpr: IExprInstruction = analyzeExpr(context, program, children[1]);
 
 //     pForStmtInstruction.push(conditionExpr, true);
 //     return;
 // }
 
 
-// function analyzeForStep(context: Context, scope: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForStep(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
 //     const children: IParseNode[] = node.children;
-//     const pSteexpr: IExprInstruction = analyzeExpr(context, scope, children[0]);
+//     const pSteexpr: IExprInstruction = analyzeExpr(context, program, children[0]);
 
 //     pForStmtInstruction.push(pSteexpr, true);
 
@@ -3492,12 +3489,12 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 
-function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: IParseNode): void {
+function analyzeTechniqueForImport(context: Context, program: ProgramScope, node: IParseNode): void {
     const children: IParseNode[] = node.children;
     const name: string = analyzeComplexName(children[children.length - 2]);
     // Specifies whether name should be interpreted as globalNamespace.name or just a name;
     const isComplexName: boolean = children[children.length - 2].children.length !== 1;
-    const scopeId = scope.current;
+    const scope = program.currentScope;
 
     let annotation: IAnnotationInstruction = null;
     let semantics: string = null;
@@ -3509,27 +3506,27 @@ function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: 
         } else if (children[i].name === 'Semantic') {
             semantics = analyzeSemantic(children[i]);
         } else {
-            // analyzeTechniqueBodyForImports(context, scope, children[i], technique);
+            // analyzeTechniqueBodyForImports(context, program, children[i], technique);
         }
     }
 
-    const technique = new TechniqueInstruction({ name, semantics, annotation, passList, scopeId });
-    addTechnique(context, scope, technique);
+    const technique = new TechniqueInstruction({ name, semantics, annotation, passList, scope });
+    addTechnique(context, program, technique);
 }
 
 
 
-// function analyzeTechniqueBodyForImports(context: Context, scope: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
+// function analyzeTechniqueBodyForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
 //     for (let i: number = children.length - 2; i >= 1; i--) {
-//         analyzePassDeclForImports(context, scope, children[i], technique);
+//         analyzePassDeclForImports(context, program, children[i], technique);
 //     }
 // }
 
 
-// function analyzePassDeclForImports(context: Context, scope: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
+// function analyzePassDeclForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
@@ -3539,24 +3536,24 @@ function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: 
 //     else if (children.length > 1) {
 //         const pPass: IPassInstruction = new PassInstruction(node);
 //         //TODO: add annotation and id
-//         analyzePassStateBlockForShaders(context, scope, children[0], pPass);
+//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
 
 //         technique.addPass(pPass);
 //     }
 // }
 
 
-// function analyzePassStateBlockForShaders(context: Context, scope: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+// function analyzePassStateBlockForShaders(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
 //     for (let i: number = children.length - 2; i >= 1; i--) {
-//         analyzePassStateForShader(context, scope, children[i], pPass);
+//         analyzePassStateForShader(context, program, children[i], pPass);
 //     }
 // }
 
 
-// function analyzePassStateForShader(context: Context, scope: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+// function analyzePassStateForShader(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
@@ -3576,7 +3573,7 @@ function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: 
 
 //     const stateExprNode: IParseNode = children[children.length - 3];
 //     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-//     const pCompileExpr: CompileExprInstruction = <CompileExprInstruction>analyzeExpr(context, scope, exprNode);
+//     const pCompileExpr: CompileExprInstruction = <CompileExprInstruction>analyzeExpr(context, program, exprNode);
 //     const shaderFunc: IFunctionDeclInstruction = pCompileExpr.function;
 
 //     if (eShaderType === EFunctionType.k_Vertex) {
@@ -3594,50 +3591,50 @@ function analyzeTechniqueForImport(context: Context, scope: ProgramScope, node: 
 // }
 
 
-// function analyzePassStateIfForShader(context: Context, scope: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+// function analyzePassStateIfForShader(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
 
 //     const children: IParseNode[] = node.children;
 
 //     if (children.length === 5) {
-//         analyzePassStateBlockForShaders(context, scope, children[0], pPass);
+//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
 //     }
 //     else if (children.length === 7 && children[0].name === 'PassStateBlock') {
-//         analyzePassStateBlockForShaders(context, scope, children[2], pPass);
-//         analyzePassStateBlockForShaders(context, scope, children[0], pPass);
+//         analyzePassStateBlockForShaders(context, program, children[2], pPass);
+//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
 //     }
 //     else {
-//         analyzePassStateBlockForShaders(context, scope, children[2], pPass);
-//         analyzePassStateIfForShader(context, scope, children[0], pPass);
+//         analyzePassStateBlockForShaders(context, program, children[2], pPass);
+//         analyzePassStateIfForShader(context, program, children[0], pPass);
 //     }
 // }
 
 
 
-function resumeTechniqueAnalysis(context: Context, scope: ProgramScope, technique: ITechniqueInstruction): void {
+function resumeTechniqueAnalysis(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
     const passList: IPassInstruction[] = technique.passList;
     for (let i = 0; i < passList.length; i++) {
-        resumePassAnalysis(context, scope, passList[i]);
+        resumePassAnalysis(context, program, passList[i]);
     }
 }
 
 
-function resumePassAnalysis(context: Context, scope: ProgramScope, pPass: IPassInstruction): void {
+function resumePassAnalysis(context: Context, program: ProgramScope, pPass: IPassInstruction): void {
     const node: IParseNode = pPass.sourceNode;
     const children: IParseNode[] = node.children;
-    analyzePassStateBlock(context, scope, children[0], pPass);
+    analyzePassStateBlock(context, program, children[0], pPass);
     pPass.finalizePass(); // << generate info about used variables.
 }
 
 
-function analyzePassStateBlock(context: Context, scope: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+function analyzePassStateBlock(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
     const children: IParseNode[] = node.children;
     for (let i = children.length - 2; i >= 1; i--) {
-        // analyzePassState(context, scope, children[i], pPass);
+        // analyzePassState(context, program, children[i], pPass);
     }
 }
 
 
-function analyzePassState(context: Context, scope: ProgramScope, node: IParseNode): IMap<ERenderStateValues> {
+function analyzePassState(context: Context, program: ProgramScope, node: IParseNode): IMap<ERenderStateValues> {
 
     let renderStates: IMap<ERenderStateValues> = {};
     const children: IParseNode[] = node.children;
@@ -3730,7 +3727,7 @@ function analyzePassState(context: Context, scope: ProgramScope, node: IParseNod
 }
 
 
-function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechniqueInstruction = null): void {
+function analyzeImportDecl(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction = null): void {
     const children: IParseNode[] = node.children;
     const sComponentName: string = analyzeComplexName(children[children.length - 2]);
     // let iShift: number = 0;
@@ -3746,7 +3743,7 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
         //We can import techniques from the same file, but on this stage they don`t have component yet.
         //So we need special mehanism to add them on more belated stage
         // let sShortedComponentName: string = sComponentName;
-        if (context.namespace !== '') {
+        if (!isNull(program.namespace)) {
             // sShortedComponentName = sComponentName.replace(_sProvideNameSpace + ".", "");
         }
 
@@ -3768,7 +3765,7 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 }
 
 
-// function analyzeStructDecl(context: Context, scope: ProgramScope, node: IParseNode): ITypeInstruction {
+// function analyzeStructDecl(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
 //     const children: IParseNode[] = node.children;
 
 //     const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
@@ -3778,16 +3775,16 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 
 //     struct.name = name;
 
-//     scope.push(EScopeType.k_Struct);
+//     program.push(EScopeType.k_Struct);
 
 //     let i: number = 0;
 //     for (i = children.length - 4; i >= 1; i--) {
 //         if (children[i].name === 'VariableDecl') {
-//             analyzeVariableDecl(context, scope, children[i], fieldCollector);
+//             analyzeVariableDecl(context, program, children[i], fieldCollector);
 //         }
 //     }
 
-//     scope.pop();
+//     program.pop();
 
 //     struct.addFields(fieldCollector, true);
 
@@ -3796,13 +3793,13 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 // }
 
 
-// function analyzeTypeDecl(context: Context, scope: ProgramScope, node: IParseNode, pParentInstruction: IInstruction = null): ITypeDeclInstruction {
+// function analyzeTypeDecl(context: Context, program: ProgramScope, node: IParseNode, pParentInstruction: IInstruction = null): ITypeDeclInstruction {
 //     let children: IParseNode[] = node.children;
 
 //     let typeDeclInstruction: ITypeDeclInstruction = new TypeDeclInstruction(node);
 
 //     if (children.length === 2) {
-//         const pStructInstruction: ComplexTypeInstruction = <ComplexTypeInstruction>analyzeStructDecl(context, scope, children[1]);
+//         const pStructInstruction: ComplexTypeInstruction = <ComplexTypeInstruction>analyzeStructDecl(context, program, children[1]);
 //         typeDeclInstruction.push(pStructInstruction, true);
 //     }
 //     else {
@@ -3810,7 +3807,7 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 //     }
 
 //     checkInstruction(context, typeDeclInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-//     addTypeDecl(context, scope, typeDeclInstruction);
+//     addTypeDecl(context, program, typeDeclInstruction);
 
 //     if (!isNull(pParentInstruction)) {
 //         pParentInstruction.push(typeDeclInstruction, true);
@@ -3820,31 +3817,31 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 // }
 
 
-// function analyzeGlobalTypeDecls(context: Context, scope: ProgramScope, ast: IParseTree): void {
+// function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
 //     let children: IParseNode[] = ast.getRoot().children;
 //     let i: number = 0;
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'TypeDecl') {
-//             analyzeTypeDecl(context, scope, children[i]);
+//             analyzeTypeDecl(context, program, children[i]);
 //         }
 //     }
 // }
 
 
-// function analyzeFunctionDefinitions(context: Context, scope: ProgramScope, ast: IParseTree): void {
+// function analyzeFunctionDefinitions(context: Context, program: ProgramScope, ast: IParseTree): void {
 //     let children: IParseNode[] = ast.getRoot().children;
 //     let i: number = 0;
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'FunctionDecl') {
-//             analyzeFunctionDeclOnlyDefinition(context, scope, children[i]);
+//             analyzeFunctionDeclOnlyDefinition(context, program, children[i]);
 //         }
 //     }
 // }
 
 
-// function analyzeGlobalImports(context: Context, scope: ProgramScope, ast: IParseTree): void {
+// function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): void {
 //     let children: IParseNode[] = ast.getRoot().children;
 //     let i: number = 0;
 
@@ -3856,34 +3853,34 @@ function analyzeImportDecl(context: Context, node: IParseNode, technique: ITechn
 // }
 
 
-function analyzeTechniqueImports(context: Context, scope: ProgramScope, ast: IParseTree): void {
+function analyzeTechniqueImports(context: Context, program: ProgramScope, ast: IParseTree): void {
     let children: IParseNode[] = ast.getRoot().children;
     for (let i = children.length - 1; i >= 0; i--) {
         if (children[i].name === 'TechniqueDecl') {
-            analyzeTechniqueForImport(context, scope, children[i]);
+            analyzeTechniqueForImport(context, program, children[i]);
         }
     }
 }
 
 
-// function analyzeVariableDecls(context: Context, scope: ProgramScope, ast: IParseTree): void {
+// function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
 //     let children: IParseNode[] = ast.getRoot().children;
 //     let i: number = 0;
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'VariableDecl') {
-//             analyzeVariableDecl(context, scope, children[i]);
+//             analyzeVariableDecl(context, program, children[i]);
 //         }
 //         else if (children[i].name === 'VarStructDecl') {
-//             analyzeVarStructDecl(context, scope, children[i]);
+//             analyzeVarStructDecl(context, program, children[i]);
 //         }
 //     }
 // }
 
 
-// function analyzeFunctionDecls(context: Context, scope: ProgramScope): void {
+// function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
 //     for (let i: number = 0; i < context.functionWithImplementationList.length; i++) {
-//         resumeFunctionAnalysis(context, scope, context.functionWithImplementationList[i]);
+//         resumeFunctionAnalysis(context, program, context.functionWithImplementationList[i]);
 //     }
 
 //     checkFunctionsForRecursion(context);
@@ -3893,9 +3890,9 @@ function analyzeTechniqueImports(context: Context, scope: ProgramScope, ast: IPa
 // }
 
 
-function analyzeTechniques(context: Context, scope: ProgramScope): void {
-    for (let name in context.techniqueMap) {
-        resumeTechniqueAnalysis(context, scope, context.techniqueMap[name]);
+function analyzeTechniques(context: Context, program: ProgramScope): void {
+    for (let name in program.globalScope.techniqueMap) {
+        resumeTechniqueAnalysis(context, program, program.globalScope.techniqueMap[name]);
     }
 }
 
@@ -3904,13 +3901,9 @@ initSystemTypes();
 initSystemFunctions();
 initSystemVariables();
 
-// TODO: refactor context data!
+
 class Context {
-    public filename: string | null = null;
-    public namespace: string | null = null;
-    public functionWithImplementationList: IFunctionDeclInstruction[] = [];
-    public techniqueMap: IMap<ITechniqueInstruction> = {};
-    
+    public filename: string | null = null; 
     public currentFunction: IFunctionDeclInstruction | null = null;
     public haveCurrentFunctionReturnOccur: boolean = false;
 
@@ -3919,38 +3912,42 @@ class Context {
     }
 }
 
+export interface IAnalyzeResult {
+    success: boolean;
+    program: ProgramScope;
+    // errors: any[];
+    // warnings: any[];
+}
 
-export function analyze(filename: string, ast: IParseTree): boolean {
-    const context: Context = new Context(filename);
+export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
+    const context = new Context(filename);
+    const program = new ProgramScope();
 
-    const scope: ProgramScope = new ProgramScope();
+    let success = true;
 
     console.time(`analyze(${filename})`);
 
     try {
-        scope.push();
+        program.push();
 
-        analyzeGlobalUseDecls(context, scope, ast);
-        analyzeGlobalProvideDecls(context, scope, ast);
-        // analyzeGlobalTypeDecls(context, scope, ast);
-        // analyzeFunctionDefinitions(context, scope, ast);
-        // analyzeGlobalImports(context, scope, ast);
-        analyzeTechniqueImports(context, scope, ast);
-        // analyzeVariableDecls(context, scope, ast);
+        analyzeGlobalUseDecls(context, program, ast);
+        analyzeGlobalProvideDecls(context, program, ast);
+        // analyzeGlobalTypeDecls(context, program, ast);
+        // analyzeFunctionDefinitions(context, program, ast);
+        // analyzeGlobalImports(context, program, ast);
+        analyzeTechniqueImports(context, program, ast);
+        // analyzeVariableDecls(context, program, ast);
         // analyzeFunctionDecls(context, scope);
-        analyzeTechniques(context, scope);
+        analyzeTechniques(context, program);
 
-        scope.pop();
+        program.pop();
     }
     catch (e) {
         throw e;
     }
 
-    // todo: return false in case of error!
-
     console.timeEnd(`analyze(${filename})`);
-
-    return true;
+    return { success, program };
 }
 
 
