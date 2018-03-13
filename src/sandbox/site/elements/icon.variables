@@ -1,0 +1,7 @@
+// @fontName: 'icons';
+// @src:
+//   url("../default/assets/fonts/@{fontName}.eot?#iefix") format('embedded-opentype'),
+//   url("../default/assets/fonts/@{fontName}.woff") format('woff'),
+//   url("../default/assets/fonts/@{fontName}.ttf") format('truetype'),
+//   url("../default/assets/fonts/@{fontName}.svg#icons") format('svg')
+// ;

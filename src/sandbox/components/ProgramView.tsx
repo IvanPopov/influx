@@ -2,7 +2,7 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import * as copy from 'copy-to-clipboard';
 
-import { Breadcrumb } from 'semantic-ui-react';
+import { Divider, Breadcrumb } from 'semantic-ui-react';
 
 import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
@@ -13,11 +13,59 @@ import { ISourceLocation } from '../../lib/idl/ILogger';
 import * as Effect from '../../lib/fx/Effect';
 import { ProgramScope } from '../../lib/fx/ProgramScope';
 import { isNull } from '../../lib/common';
+import { ITechniqueInstruction, IPassInstruction } from '../../lib/idl/IInstruction';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
 }
+
+type InstrView<T> = React.StatelessComponent<T>;
+
+const Namespace: InstrView<{ ns: string; }> = ({ ns }) => {
+    let nsList = ns.split('.');
+    return (
+        <Breadcrumb size='tiny'>
+            {
+                nsList.map((part, i) => {
+                    if (i < nsList.length - 1) {
+                        return (
+                            [
+                                (<Breadcrumb.Section key={ `ns-${part}` }>{ part }</Breadcrumb.Section>),
+                                (<Breadcrumb.Divider key={ `ns-div-${part}` } icon="right chevron" />),
+                            ]
+                        )
+                    }
+                    return <Breadcrumb.Section key={ `ns-${part}` } active>{ part }</Breadcrumb.Section>;
+                })
+            }
+        </Breadcrumb>
+    );
+};
+
+
+const Pass: InstrView<{ pass: IPassInstruction }> = ({ pass }) => (
+    <List.Item>
+        <List.Content>
+            <List.Header>{ pass.name || '[unnamed]' }</List.Header>
+        </List.Content>
+    </List.Item>
+);
+
+
+const Technique: InstrView<{ tech: ITechniqueInstruction }> = ({ tech }) => (
+    <List selection size="small">
+        <List.Item>
+            <List.Icon name={ `zap` as any } />
+            <List.Content>
+                <List.Header>{ tech.name }</List.Header>
+                <List.List>
+                    { tech.passList.map((pass) => <Pass pass={ pass } />) }
+                </List.List>
+            </List.Content>
+        </List.Item>
+    </List>
+);
 
 
 export interface IProgramViewProps {
@@ -41,7 +89,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     componentWillReceiveProps(nextProps) {
-        if (!nextProps.ast) {
+        const { props, state } = this;
+
+        if (isNull(nextProps.ast) || nextProps.ast == props.ast) {
             return;
         }
 
@@ -54,124 +104,27 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
-
-        if (!nextProps.ast) {
-            return false;
-        }
-
-        if (nextProps.ast == props.ast) {
-            return false;
-        }
-
-        return true;
+        return nextProps.ast != props.ast;
     }
 
 
     render() {
-        const { props, state } = this;
+        const { program } = this.state;
 
-        if (isNull(state.program)) {
+        if (isNull(program)) {
             return null;
         }
 
-        // const { state: { parseTree } } = this;
-        // const style = {
-        //     height: 'calc(100vh - 205px)',
-        //     overflowY: 'auto'
-        // };
+        const gs = program.globalScope;
 
-        // return (
-        //     <List style={ style } selection size="small">
-        //         { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
-        //     </List>
-        // );
         return (
             <div>
-                { this.renderNamespace() }
-                <div></div>
+                <Namespace ns={ program.namespace } />
+                <Divider />
+                { Object.keys(gs.techniqueMap).map((name) => <Technique key={ `tech-${name}` } tech={ gs.techniqueMap[name] } />) }
             </div>
         );
     }
-
-    private renderNamespace() {
-        const { state: { program } } = this;
-        let ns = program.namespace.split('.');
-        return (
-            <Breadcrumb size='tiny'>
-                {
-                    ns.map((part, i) => {
-                        if (i < ns.length - 1) {
-                            return (
-                                <>
-                                    <Breadcrumb.Section link>{ part }</Breadcrumb.Section>
-                                    <Breadcrumb.Divider icon="right chevron" />
-                                </>
-                            )
-                        }
-
-                        return <Breadcrumb.Section active>{ part }</Breadcrumb.Section>;
-                    })
-                }
-            </Breadcrumb>
-        );
-    }
-
-
-
-
-    private renderASTNode(node: IParseNode, idx = '0') {
-        // if (!node) {
-        //     return null;
-        // }
-        // const { nodeStats } = this.state;
-        // const forceShow = idx.split('.').length < 2;
-        // const show = forceShow || (nodeStats[idx] || { opened: false, selected: false }).opened;
-        // const selected = (nodeStats[idx] || { opened: false, selected: false }).selected;
-
-        // if (node.value) {
-        //     return (
-        //         <List.Item key={ idx } 
-        //             onClick={ this.handleNodeClick.bind(this, idx, node) }
-        //             onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
-        //             onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
-        //             className="astnode"
-        //         >
-        //             <List.Icon />
-        //             <List.Content>
-        //                 <List.Header>{ node.name }</List.Header>
-        //                 <List.Description>{ node.value }</List.Description>
-        //             </List.Content>
-        //         </List.Item>
-        //     );
-        // }
-        // else {
-        //     let children = null;
-        //     if (show) {
-        //         children = (<List.List> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
-        //     }
-        //     return (
-        //         <List.Item key={ idx } 
-        //             onClick={ this.handleNodeClick.bind(this, idx, node) }
-        //             onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
-        //             onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
-        //             className="astnode"
-        //         >
-        //             <List.Icon name={ show ? `chevron down` : `chevron right` } />
-        //             <List.Content>
-        //                 <List.Header>
-        //                     { node.name }&nbsp;
-        //                     <a style={ { display: selected ? 'inline' : 'none' } } 
-        //                         onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a>
-        //                 </List.Header>
-        //                 { children }
-        //             </List.Content>
-        //         </List.Item>
-        //     );
-        // }
-    }
-
-
-
 }
 
 export default ProgramView;

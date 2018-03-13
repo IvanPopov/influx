@@ -885,7 +885,7 @@ function analyzeUseDecl(context: Context, program: ProgramScope, node: IParseNod
 
 
 function analyzeComplexName(node: IParseNode): string {
-    const children: IParseNode[] = node.children;
+    const children = node.children;
     let name: string = '';
 
     for (let i: number = children.length - 1; i >= 0; i--) {
@@ -922,7 +922,7 @@ function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IPa
  *         T_KW_PROVIDE = 'provide'
  */
 function analyzeProvideDecl(context: Context, program: ProgramScope, node: IParseNode): void {
-    const children: IParseNode[] = node.children;
+    const children = node.children;
 
     if (children.length === 3) {
         let namespace = analyzeComplexName(children[1]);;
@@ -2845,7 +2845,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 
 //     if (children.length > 1) {
 //         _error(context, node, EEffectErrors.BAD_CAST_TYPE_USAGE);
@@ -2868,7 +2868,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeVarStructDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let usageType: IVariableTypeInstruction = null;
 //     let variable: IVariableDeclInstruction = null;
 //     let i: number = 0;
@@ -2915,7 +2915,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 // function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 
 //     const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
 //     const fieldCollector: IInstruction = new InstructionCollector();
@@ -2939,7 +2939,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, node: IParseNode): IFunctionDeclInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let func: FunctionDeclInstruction = null;
 //     let funcDef: FunctionDefInstruction = null;
 //     let annotation: IAnnotationInstruction = null;
@@ -3002,7 +3002,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 //     program.current = func.implementationScope;
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let stmtBlock: StmtBlockInstruction = null;
 
 //     context.currentFunction = func;
@@ -3025,7 +3025,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 // function analyzeFunctionDef(context: Context, program: ProgramScope, node: IParseNode): FunctionDefInstruction {
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const funcDef: FunctionDefInstruction = new FunctionDefInstruction(node);
 //     let returnType: IVariableTypeInstruction = null;
 //     let funcName: IIdInstruction = null;
@@ -3066,7 +3066,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeParamList(context: Context, program: ProgramScope, node: IParseNode, funcDef: FunctionDefInstruction): void {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let param: IVariableDeclInstruction;
 
 //     let i: number = 0;
@@ -3083,7 +3083,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeParameterDecl(context: Context, program: ProgramScope, node: IParseNode): IVariableDeclInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let type: IVariableTypeInstruction = null;
 //     let param: IVariableDeclInstruction = null;
 
@@ -3095,7 +3095,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 // function analyzeParamUsageType(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     let i: number = 0;
 //     const type: IVariableTypeInstruction = new VariableTypeInstruction(node);
 
@@ -3118,7 +3118,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeStmtBlock(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const stmtBlock: StmtBlockInstruction = new StmtBlockInstruction(node);
 //     let stmt: IStmtInstruction;
 //     let i: number = 0;
@@ -3144,7 +3144,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3166,7 +3166,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeSimpleStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3202,7 +3202,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeReturnStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction(node);
 
 //     const funcReturnType: IVariableTypeInstruction = context.currentFunction.returnType;
@@ -3237,7 +3237,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeBreakStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction(node);
 //     const sOperatorName: string = children[1].value;
 
@@ -3279,7 +3279,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeExprStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const exprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction(node);
 //     const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
 
@@ -3293,7 +3293,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeWhileStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const isDoWhile: boolean = (children[children.length - 1].value === 'do');
 //     const isNonIfStmt: boolean = (node.name === 'NonIfStmt') ? true : false;
 
@@ -3344,7 +3344,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const isIfElse: boolean = (children.length === 7);
 
 //     const ifStmtInstruction: IfStmtInstruction = new IfStmtInstruction(node);
@@ -3385,7 +3385,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeNonIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3402,7 +3402,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeForStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const isNonIfStmt: boolean = (node.name === 'NonIfStmt');
 //     const pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction(node);
 //     let stmt: IStmtInstruction = null;
@@ -3439,7 +3439,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeForInit(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3462,7 +3462,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeForCond(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 
 //     if (children.length === 1) {
 //         pForStmtInstruction.push(null);
@@ -3478,7 +3478,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 // function analyzeForStep(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 //     const pSteexpr: IExprInstruction = analyzeExpr(context, program, children[0]);
 
 //     pForStmtInstruction.push(pSteexpr, true);
@@ -3490,7 +3490,7 @@ function analyzeSemantic(node: IParseNode): string {
 
 
 function analyzeTechniqueForImport(context: Context, program: ProgramScope, node: IParseNode): void {
-    const children: IParseNode[] = node.children;
+    const children = node.children;
     const name: string = analyzeComplexName(children[children.length - 2]);
     // Specifies whether name should be interpreted as globalNamespace.name or just a name;
     const isComplexName: boolean = children[children.length - 2].children.length !== 1;
@@ -3506,7 +3506,7 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
         } else if (children[i].name === 'Semantic') {
             semantics = analyzeSemantic(children[i]);
         } else {
-            // analyzeTechniqueBodyForImports(context, program, children[i], technique);
+            analyzeTechniqueBodyForImports(context, program, children[i], technique);
         }
     }
 
@@ -3516,98 +3516,110 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
 
 
 
-// function analyzeTechniqueBodyForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
+function analyzeTechniqueBodyForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
+    const children = node.children;
 
-//     const children: IParseNode[] = node.children;
+    for (let i: number = children.length - 2; i >= 1; i--) {
+        analyzePassDecl(context, program, children[i], technique);
+    }
+}
 
-//     for (let i: number = children.length - 2; i >= 1; i--) {
-//         analyzePassDeclForImports(context, program, children[i], technique);
-//     }
-// }
+/**
+ * AST example:
+ *    PassDecl
+ *       + PassStateBlock 
+ *       + Annotation 
+ *         T_NON_TYPE_ID = 'name'
+ *         T_KW_PASS = 'pass'
+ */
+function analyzePassDecl(context: Context, program: ProgramScope, 
+    sourceNode: IParseNode, technique: ITechniqueInstruction): IPassInstruction {
 
+    const children = sourceNode.children;
+    const entry = analyzePassStateBlockForShaders(context, program, children[0]);
+    const renderStates = {};
+    
+    const pass = new PassInstruction({ 
+        sourceNode, 
+        renderStates, 
+        pixelShader: entry.pixel, 
+        vertexShader: entry.vertex });
+    //TODO: add annotation and id
 
-// function analyzePassDeclForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
-
-//     const children: IParseNode[] = node.children;
-
-//     if (children[0].name === 'ImportDecl') {
-//         analyzeImportDecl(context, children[0], technique);
-//     }
-//     else if (children.length > 1) {
-//         const pPass: IPassInstruction = new PassInstruction(node);
-//         //TODO: add annotation and id
-//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
-
-//         technique.addPass(pPass);
-//     }
-// }
-
-
-// function analyzePassStateBlockForShaders(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
-
-//     const children: IParseNode[] = node.children;
-
-//     for (let i: number = children.length - 2; i >= 1; i--) {
-//         analyzePassStateForShader(context, program, children[i], pPass);
-//     }
-// }
+    return pass;
+}
 
 
-// function analyzePassStateForShader(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+function analyzePassStateBlockForShaders(context: Context, program: ProgramScope, 
+    node: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
 
-//     const children: IParseNode[] = node.children;
+    const children = node.children;
 
-//     const sType: string = children[children.length - 1].value.toUpperCase();
-//     let eShaderType: EFunctionType = EFunctionType.k_Vertex;
+    let pixel: IFunctionDeclInstruction = null;
+    let vertex: IFunctionDeclInstruction = null;
 
-//     if (sType === 'VERTEXSHADER') {
-//         eShaderType = EFunctionType.k_Vertex
-//     }
-//     else if (sType === 'PIXELSHADER') {
-//         eShaderType = EFunctionType.k_Pixel;
-//     }
-//     else {
-//         console.error('unknown shader type');
-//         return;
-//     }
+    for (let i: number = children.length - 2; i >= 1; i--) {
+        let func = analyzePassStateForShader(context, program, children[i]);
+        switch(func.functionType) {
+            case EFunctionType.k_Vertex:
+                assert(vertex == null);
+                vertex = func;
+            break;
+            case EFunctionType.k_Pixel:
+                assert(pixel == null);
+                pixel = func;
+            break;
+            default:
+                // todo: make error!
+                console.error('function is not suitable as shader entry point');
+        }
+    }
 
-//     const stateExprNode: IParseNode = children[children.length - 3];
-//     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-//     const pCompileExpr: CompileExprInstruction = <CompileExprInstruction>analyzeExpr(context, program, exprNode);
-//     const shaderFunc: IFunctionDeclInstruction = pCompileExpr.function;
-
-//     if (eShaderType === EFunctionType.k_Vertex) {
-//         if (!shaderFunc.checkDefenitionForVertexUsage()) {
-//             _error(context, node, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
-//         }
-//     }
-//     else {
-//         if (!shaderFunc.checkDefenitionForPixelUsage()) {
-//             _error(context, node, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
-//         }
-//     }
-
-//     shaderFunc.markUsedAs(eShaderType);
-// }
+    return { vertex, pixel };
+}
 
 
-// function analyzePassStateIfForShader(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
+function analyzePassStateForShader(context: Context, program: ProgramScope, 
+    node: IParseNode): IFunctionDeclInstruction {
 
-//     const children: IParseNode[] = node.children;
+    const children = node.children;
 
-//     if (children.length === 5) {
-//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
-//     }
-//     else if (children.length === 7 && children[0].name === 'PassStateBlock') {
-//         analyzePassStateBlockForShaders(context, program, children[2], pPass);
-//         analyzePassStateBlockForShaders(context, program, children[0], pPass);
-//     }
-//     else {
-//         analyzePassStateBlockForShaders(context, program, children[2], pPass);
-//         analyzePassStateIfForShader(context, program, children[0], pPass);
-//     }
-// }
+    const shaderTypeName = children[children.length - 1].value.toUpperCase();
+    let shaderType = EFunctionType.k_Vertex;
 
+    if (shaderTypeName === 'VERTEXSHADER') {
+        shaderType = EFunctionType.k_Vertex
+    }
+    else if (shaderTypeName === 'PIXELSHADER') {
+        shaderType = EFunctionType.k_Pixel;
+    }
+    else {
+        console.error('unknown shader type');
+        return null;
+    }
+
+    const stateExprNode = children[children.length - 3];
+    const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
+
+    return null;
+    const compileExpr: CompileExprInstruction = <CompileExprInstruction>null;//analyzeExpr(context, program, exprNode);
+    const shaderFunc: IFunctionDeclInstruction = compileExpr.function;
+
+    if (shaderType === EFunctionType.k_Vertex) {
+        if (!shaderFunc.definition.checkForVertexUsage()) {
+            _error(context, node, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
+        }
+    }
+    else {
+        if (!shaderFunc.definition.checkForPixelUsage()) {
+            _error(context, node, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
+        }
+    }
+
+    shaderFunc.markUsedAs(shaderType);
+    shaderFunc.$overwriteType(shaderType); // todo: check this cond!!!
+    return shaderFunc;
+}
 
 
 function resumeTechniqueAnalysis(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
@@ -3620,14 +3632,14 @@ function resumeTechniqueAnalysis(context: Context, program: ProgramScope, techni
 
 function resumePassAnalysis(context: Context, program: ProgramScope, pPass: IPassInstruction): void {
     const node: IParseNode = pPass.sourceNode;
-    const children: IParseNode[] = node.children;
+    const children = node.children;
     analyzePassStateBlock(context, program, children[0], pPass);
     pPass.finalizePass(); // << generate info about used variables.
 }
 
 
 function analyzePassStateBlock(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
-    const children: IParseNode[] = node.children;
+    const children = node.children;
     for (let i = children.length - 2; i >= 1; i--) {
         // analyzePassState(context, program, children[i], pPass);
     }
@@ -3637,7 +3649,7 @@ function analyzePassStateBlock(context: Context, program: ProgramScope, node: IP
 function analyzePassState(context: Context, program: ProgramScope, node: IParseNode): IMap<ERenderStateValues> {
 
     let renderStates: IMap<ERenderStateValues> = {};
-    const children: IParseNode[] = node.children;
+    const children = node.children;
 
     const stateType: string = children[children.length - 1].value.toUpperCase();
     const stateName: ERenderStates = getRenderState(stateType);
@@ -3728,7 +3740,7 @@ function analyzePassState(context: Context, program: ProgramScope, node: IParseN
 
 
 function analyzeImportDecl(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction = null): void {
-    const children: IParseNode[] = node.children;
+    const children = node.children;
     const sComponentName: string = analyzeComplexName(children[children.length - 2]);
     // let iShift: number = 0;
 
@@ -3766,7 +3778,7 @@ function analyzeImportDecl(context: Context, program: ProgramScope, node: IParse
 
 
 // function analyzeStructDecl(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
-//     const children: IParseNode[] = node.children;
+//     const children = node.children;
 
 //     const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
 //     const fieldCollector: IInstruction = new InstructionCollector();

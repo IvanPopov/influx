@@ -393,7 +393,7 @@ export class Scope implements IScope {
 
         let scope: Scope = this;
         let funcMap = scope.functionMap;
-        let funcName: string = func.name;
+        let funcName = func.name;
 
         if (this.hasFunctionInScope(func)) {
             return false;
@@ -411,7 +411,19 @@ export class Scope implements IScope {
 
 
     addTechnique(technique: ITechniqueInstruction): boolean {
-        console.error("@not_implemented");
+        assert(this.index === ProgramScope.GLOBAL_SCOPE);
+
+        let scope: Scope = this;
+        let techMap = scope.techniqueMap;
+        let techName = technique.name;
+
+        if (this.hasTechniqueInScope(technique)) {
+            return false;
+        }
+
+        techMap[techName] = technique;
+        assert(technique.scope === this);
+
         return false;
     }
 }

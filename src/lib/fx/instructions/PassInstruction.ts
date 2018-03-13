@@ -36,7 +36,7 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
     protected _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
 
-    constructor({ vertexShader = null, pixelShader = null, renderStates = {}, ...settings }) {
+    constructor({ vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PassInstruction, ...settings });
 
         this._passStateMap = {};
