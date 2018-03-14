@@ -109,7 +109,7 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i: number = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.definition.arguments;
+                    let testedArguments = testedFunction.definition.paramList;
 
                     if (isNull(args)) {
                         if (testedFunction.definition.numArgsRequired === 0) {
@@ -173,7 +173,7 @@ export class Scope implements IScope {
                 for (let i: number = 0; i < funcList.length; i++) {
                     let testedFunction: IFunctionDeclInstruction = funcList[i];
                     let testedArguments: IVariableDeclInstruction[] =
-                        <IVariableDeclInstruction[]>testedFunction.definition.arguments;
+                        <IVariableDeclInstruction[]>testedFunction.definition.paramList;
 
                     if (argTypes.length > testedArguments.length) {
                         continue;
@@ -262,7 +262,7 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i: number = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.definition.arguments;
+                    let testedArguments = testedFunction.definition.paramList;
 
                     if (argTypes.length > testedArguments.length ||
                         argTypes.length < testedFunction.definition.numArgsRequired) {
@@ -322,12 +322,12 @@ export class Scope implements IScope {
             return false;
         }
 
-        let funcArgs = <IVariableDeclInstruction[]>func.definition.arguments;
+        let funcArgs = <IVariableDeclInstruction[]>func.definition.paramList;
         let hasFunction = false;
 
         for (let i: number = 0; i < funcList.length; i++) {
             let testedArguments =
-                <IVariableDeclInstruction[]>funcList[i].definition.arguments;
+                <IVariableDeclInstruction[]>funcList[i].definition.paramList;
 
             if (testedArguments.length !== funcArgs.length) {
                 continue;

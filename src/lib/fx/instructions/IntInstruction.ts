@@ -6,7 +6,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
 
 export interface IIntInstructionSettings extends IInstructionSettings {
-    value: number;
+    value: string;
 }
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
@@ -17,7 +17,7 @@ export class IntInstruction extends ExprInstruction implements ILiteralInstructi
     constructor({ value, ...settings }: IIntInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IntInstruction, type: Effect.findSystemType("number").asVarType(), ...settings });
         
-        this._value = value;
+        this._value = ((<number><any>value) * 1);
     }
 
     

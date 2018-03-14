@@ -1,18 +1,19 @@
 import { ExprInstruction } from "./ExprInstruction";
+import { findSystemType } from "./../Effect";
 import { IMap } from "./../../idl/IMap";
-import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction } from "../../idl/IInstruction";
+import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction, ISamplerStateInstruction } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
 import { ISamplerState } from "../../idl/ISamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
+import * as Effect from '../Effect';
 
-export type SamplerOperator = "sample_state";
+export type SamplerOperator = "sampler_state";
 
 export interface ISamplerStateBlockInstructionSettings extends IInstructionSettings {
-    texture: IVariableDeclInstruction;
     operator: SamplerOperator;
-    params?: IMap<string>;
+    params?: ISamplerStateInstruction[];
 }
 
 
@@ -20,26 +21,31 @@ export interface ISamplerStateBlockInstructionSettings extends IInstructionSetti
   * Represetn sampler_state { states }
   */
 export class SamplerStateBlockInstruction extends ExprInstruction implements ISamplerStateBlockInstruction {
-    protected _texture: IVariableDeclInstruction;
-    protected _samplerParams: IMap<string>;
+    protected _samplerParams: ISamplerStateInstruction[];
     protected _operator: SamplerOperator;
 
 
-    constructor({ texture, operator, params = {}, ...settings }: ISamplerStateBlockInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: texture.type, ...settings } );
+    constructor({ operator, params = [], ...settings }: ISamplerStateBlockInstructionSettings) {
+        // todo: resolve type from texture type!
+        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: Effect.findSystemType("sampler").asVarType(), ...settings } );
         
-        this._samplerParams = params;
-        this._texture = texture.$withParent(this);
+        this._samplerParams = params.map(param => param.$withParent(this));
         this._operator = operator;
     }
 
     
     get texture(): IVariableDeclInstruction {
-        return this._texture;
+        let params = this._samplerParams;
+        for (let i = 0; i < params.length; ++ i) {
+            if (params[i].name === "TEXTURE") {
+                return <IVariableDeclInstruction>params[i].value;
+            }
+        }
+        return null;
     }
 
     
-    get params(): IMap<string> {
+    get params(): ISamplerStateInstruction[] {
         return this._samplerParams;
     }
 
@@ -54,6 +60,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
     }
 
     
+    // todo: rewrite it!
     evaluate(): boolean {
         var samplerState: ISamplerState = {
             textureName: "",
@@ -65,8 +72,8 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
             min_filter: 0
         };
 
-        if (!isNull(this._texture)) {
-            samplerState.textureName = this._texture.name;
+        if (!isNull(this.texture)) {
+            samplerState.textureName = this.texture.name;
         }
 
         if (!isNull(this._samplerParams)) {

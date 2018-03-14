@@ -12,7 +12,7 @@ export interface IIdInstructionSettings extends IInstructionSettings {
 export class IdInstruction extends Instruction implements IIdInstruction {
     protected _name: string;
 
-    constructor({ name, ...settings }) {
+    constructor({ name, ...settings }: IIdInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdInstruction, ...settings });
         
         this._name = name;

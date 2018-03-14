@@ -1,4 +1,5 @@
 ﻿import { IPosition } from "./../idl/parser/IParser";
+import { ISamplerStateInstructionSettings, SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
 import { IParseNode, IParseTree } from '../idl/parser/IParser';
 import {
     IInstruction, IFunctionDeclInstruction, IPassInstruction, ISimpleInstruction,
@@ -6,7 +7,7 @@ import {
     IVariableTypeInstruction, IIdInstruction, ITypeInstruction, ITypeDeclInstruction,
     IInstructionError, IExprInstruction, EFunctionType, EInstructionTypes, ECheckStage,
     IAnnotationInstruction, IInitExprInstruction, IIdExprInstruction, IStmtInstruction,
-    IDeclInstruction, ILiteralInstruction
+    IDeclInstruction, ILiteralInstruction, ISamplerStateInstruction
 } from '../idl/IInstruction';
 import { IMap } from '../idl/IMap';
 import { time } from '../time';
@@ -26,7 +27,7 @@ import { ISourceLocation, ILoggerEntity } from '../idl/ILogger';
 import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
 import { InitExprInstruction } from './instructions/InitExprInstruction';
 import { CompileExprInstruction } from './instructions/CompileExprInstruction';
-import { SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
+import { SamplerStateBlockInstruction, SamplerOperator } from './instructions/SamplerStateBlockInstruction';
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
 import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
@@ -88,7 +89,7 @@ const systemVariables: IMap<IVariableDeclInstruction> = {};
 const systemFunctionHashMap: IMap<boolean> = {};
 
 
-function generateSystemType(name: string, elementType: ITypeInstruction = null, 
+function generateSystemType(name: string, elementType: ITypeInstruction = null,
     length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
 
     if (findSystemType(name)) {
@@ -973,16 +974,16 @@ function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast:
 
 
 
-// function _errorFromInstruction(context: Context, node: IParseNode, pError: IInstructionError): void {
-//     _error(context, node, pError.code, isNull(pError.info) ? {} : pError.info);
-// }
+function _errorFromInstruction(context: Context, node: IParseNode, pError: IInstructionError): void {
+    _error(context, node, pError.code, isNull(pError.info) ? {} : pError.info);
+}
 
 
-// function checkInstruction(context: Context, pInst: IInstruction, eStage: ECheckStage): void {
-//     if (!pInst._check(eStage)) {
-//         _errorFromInstruction(context, pInst.sourceNode, pInst._getLastError());
-//     }
-// }
+function checkInstruction(context: Context, pInst: IInstruction, eStage: ECheckStage): void {
+    if (!pInst._check(eStage)) {
+        _errorFromInstruction(context, pInst.sourceNode, pInst._getLastError());
+    }
+}
 
 
 // function addVariableDecl(context: Context, program: ProgramScope, variable: IVariableDeclInstruction): void {
@@ -1885,8 +1886,6 @@ function analyzeAnnotation(node: IParseNode): IAnnotationInstruction {
 
 function analyzeSemantic(node: IParseNode): string {
     let semantics: string = node.children[0].value;
-    // let pDecl: IDeclInstruction = <IDeclInstruction>_pCurrentInstruction;
-    // pDecl.semantics = (semantics);
     return semantics;
 }
 
@@ -1910,223 +1909,267 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-//     let name: string = node.name;
+function analyzeExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+    let name: string = node.name;
 
-//     switch (name) {
-//         case 'ObjectExpr':
-//             return analyzeObjectExpr(context, program, node);
-//         case 'ComplexExpr':
-//             return analyzeComplexExpr(context, program, node);
-//         case 'PostfixExpr':
-//             return analyzePostfixExpr(context, program, node);
-//         case 'UnaryExpr':
-//             return analyzeUnaryExpr(context, program, node);
-//         case 'CastExpr':
-//             return analyzeCastExpr(context, program, node);
-//         case 'ConditionalExpr':
-//             return analyzeConditionalExpr(context, program, node);
-//         case 'MulExpr':
-//         case 'AddExpr':
-//             return analyzeArithmeticExpr(context, program, node);
-//         case 'RelationalExpr':
-//         case 'EqualityExpr':
-//             return analyzeRelationExpr(context, program, node);
-//         case 'AndExpr':
-//         case 'OrExpr':
-//             return analyzeLogicalExpr(context, program, node);
-//         case 'AssignmentExpr':
-//             return analyzeAssignmentExpr(context, program, node);
-//         case 'T_NON_TYPE_ID':
-//             return analyzeIdExpr(context, program, node);
-//         case 'T_STRING':
-//         case 'T_UINT':
-//         case 'T_FLOAT':
-//         case 'T_KW_TRUE':
-//         case 'T_KW_FALSE':
-//             return analyzeSimpleExpr(context, program, node);
-//         default:
-//             _error(context, node, EEffectErrors.UNSUPPORTED_EXPR, { exprName: name });
-//             break;
-//     }
+    switch (name) {
+        case 'ObjectExpr':
+            return analyzeObjectExpr(context, program, node);
+        case 'ComplexExpr':
+            return analyzeComplexExpr(context, program, node);
+        case 'PostfixExpr':
+            return analyzePostfixExpr(context, program, node);
+        case 'UnaryExpr':
+            return analyzeUnaryExpr(context, program, node);
+        case 'CastExpr':
+            return analyzeCastExpr(context, program, node);
+        case 'ConditionalExpr':
+            return analyzeConditionalExpr(context, program, node);
+        case 'MulExpr':
+        case 'AddExpr':
+            return analyzeArithmeticExpr(context, program, node);
+        case 'RelationalExpr':
+        case 'EqualityExpr':
+            return analyzeRelationExpr(context, program, node);
+        case 'AndExpr':
+        case 'OrExpr':
+            return analyzeLogicalExpr(context, program, node);
+        case 'AssignmentExpr':
+            return analyzeAssignmentExpr(context, program, node);
+        case 'T_NON_TYPE_ID':
+            return analyzeIdExpr(context, program, node);
+        case 'T_STRING':
+        case 'T_UINT':
+        case 'T_FLOAT':
+        case 'T_KW_TRUE':
+        case 'T_KW_FALSE':
+            return analyzeSimpleExpr(context, program, node);
+        default:
+            _error(context, node, EEffectErrors.UNSUPPORTED_EXPR, { exprName: name });
+            break;
+    }
 
-//     return null;
-// }
+    return null;
+}
 
+/**
+ * AST example:
+ *    ObjectExpr
+ *       + StateBlock 
+ *         T_KW_SAMPLER_STATE = 'sampler_state'
+ *    ObjectExpr
+ *         T_PUNCTUATOR_41 = ')'
+ *         T_PUNCTUATOR_40 = '('
+ *         T_NON_TYPE_ID = 'fs_skybox'
+ *         T_KW_COMPILE = 'compile'
+ */
+function analyzeObjectExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+    let name = node.children[node.children.length - 1].name;
 
-// function analyzeObjectExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-//     let name: string = node.children[node.children.length - 1].name;
-
-//     switch (name) {
-//         case 'T_KW_COMPILE':
-//             return analyzeCompileExpr(context, program, node);
-//         case 'T_KW_SAMPLER_STATE':
-//             return analyzeSamplerStateBlock(context, program, node);
-//         default:
-//     }
-//     return null;
-// }
-
-
-// function analyzeCompileExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-//     let children: IParseNode[] = node.children;
-//     let expr: CompileExprInstruction = new CompileExprInstruction(node);
-//     let exprType: IVariableTypeInstruction;
-//     let args: IExprInstruction[] = null;
-//     let shaderFuncName: string = children[children.length - 2].value;
-//     let shaderFunc: IFunctionDeclInstruction = null;
-//     let i: number = 0;
-
-//     args = [];
-
-//     if (children.length > 4) {
-//         let argumentExpr: IExprInstruction;
-
-//         for (i = children.length - 3; i > 0; i--) {
-//             if (children[i].value !== ',') {
-//                 argumentExpr = analyzeExpr(context, program, children[i]);
-//                 args.push(argumentExpr);
-//             }
-//         }
-//     }
-
-//     shaderFunc = findShaderFunction(scope, sShaderFuncName, args);
-
-//     if (isNull(shaderFunc)) {
-//         _error(context, node, EEffectErrors.BAD_COMPILE_NOT_FUNCTION, { funcName: sShaderFuncName });
-//         return null;
-//     }
-
-//     exprType = (<IVariableTypeInstruction>shaderFunc.type).wrap();
-
-//     expr.type = (exprType);
-//     expr.operator = ('complile');
-//     expr.push(shaderFunc.nameID, false);
-
-//     if (!isNull(args)) {
-//         for (i = 0; i < args.length; i++) {
-//             expr.push(args[i], true);
-//         }
-//     }
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    switch (name) {
+        case 'T_KW_COMPILE':
+            return analyzeCompileExpr(context, program, node);
+        case 'T_KW_SAMPLER_STATE':
+            return analyzeSamplerStateBlock(context, program, node);
+        default:
+    }
+    return null;
+}
 
 
-// function analyzeSamplerStateBlock(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-//     node = node.children[0];
+/**
+ * AST example:
+ *    ObjectExpr
+ *         T_PUNCTUATOR_41 = ')'
+ *         T_PUNCTUATOR_40 = '('
+ *         T_NON_TYPE_ID = 'main'
+ *         T_KW_COMPILE = 'compile'
+ */
+function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): CompileExprInstruction {
+    let children = sourceNode.children;
+    let exprType: IVariableTypeInstruction;
+    let args: IExprInstruction[] = null;
+    let shaderFuncName = children[children.length - 2].value;
+    let shaderFunc: IFunctionDeclInstruction = null;
+    let i: number = 0;
 
-//     let children: IParseNode[] = node.children;
-//     let expr: SamplerStateBlockInstruction = new SamplerStateBlockInstruction(node);
-//     let i: number = 0;
+    args = [];
 
-//     expr.operator = ('sample_state');
+    if (children.length > 4) {
+        let argumentExpr: IExprInstruction;
 
-//     for (i = children.length - 2; i >= 1; i--) {
-//         analyzeSamplerState(context, program, children[i], expr);
-//     }
+        for (i = children.length - 3; i > 0; i--) {
+            if (children[i].value !== ',') {
+                argumentExpr = analyzeExpr(context, program, children[i]);
+                args.push(argumentExpr);
+            }
+        }
+    }
 
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+    shaderFunc = findShaderFunction(program, shaderFuncName, args);
 
-//     return expr;
-// }
+    if (isNull(shaderFunc)) {
+        _error(context, node, EEffectErrors.BAD_COMPILE_NOT_FUNCTION, { funcName: shaderFuncName });
+        return null;
+    }
+
+    exprType = (<IVariableTypeInstruction>shaderFunc.type).wrap();
+
+    // expr.type = (exprType);
+    // expr.operator = ('complile');
+    // expr.push(shaderFunc.nameID, false);
+
+    if (!isNull(args)) {
+        for (i = 0; i < args.length; i++) {
+            expr.push(args[i], true);
+        }
+    }
+
+    checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return new CompileExprInstruction(node);
+}
 
 
-// function analyzeSamplerState(context: Context, program: ProgramScope, node: IParseNode, pSamplerStates: SamplerStateBlockInstruction): void {
+/**
+ * AST example:
+ *    ObjectExpr
+ *       + StateBlock 
+ *         T_KW_SAMPLER_STATE = 'sampler_state'
+ */
+function analyzeSamplerStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    sourceNode = sourceNode.children[0];
 
-//     let children: IParseNode[] = node.children;
-//     if (children[children.length - 2].name === 'StateIndex') {
-//         _error(context, node, EEffectErrors.NOT_SUPPORT_STATE_INDEX);
-//         return;
-//     }
+    let scope = program.currentScope;
+    let children = sourceNode.children;
+    let operator: SamplerOperator = "sampler_state";
+    let texture = null;
+    let params = <ISamplerStateInstruction[]>[];
+    
+    for (let i = children.length - 2; i >= 1; i--) {
+        let param = analyzeSamplerState(context, program, children[i]);
+        if (!isNull(param)) {
+            params.push(param);
+        }
+    }
+    
+    let expr = new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
+    checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
 
-//     let stateExprNode: IParseNode = children[children.length - 3];
-//     let subStateExprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-//     let stateType: string = children[children.length - 1].value.toUpperCase();
-//     let stateValue: string = '';
+    return expr;
+}
 
-//     if (isNull(subStateExprNode.value)) {
-//         _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
-//         return;
-//     }
 
-//     let texture: IVariableDeclInstruction = null;
+/**
+ * AST example:
+ *    State
+ *         T_PUNCTUATOR_59 = ';'
+ *         StateExpr
+ *              T_PUNCTUATOR_62 = '>'
+ *              T_NON_TYPE_ID = 'tex0'
+ *              T_PUNCTUATOR_60 = '<'
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'Texture'
+ */
+function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode: IParseNode): SamplerStateInstruction {
 
-//     switch (stateType) {
-//         case 'TEXTURE':
-//             // let texture: IVariableDeclInstruction = null;
-//             if (stateExprNode.children.length !== 3 || subStateExprNode.value === '{') {
-//                 _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
-//                 return;
-//             }
-//             let textureName: string = stateExprNode.children[1].value;
-//             if (isNull(textureName) || !program.hasVariable(textureName)) {
-//                 _error(context, stateExprNode.children[1], EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
-//                 return;
-//             }
+    let children = sourceNode.children;
 
-//             texture = getVariable(scope, textureName);
-//             stateValue = textureName;
-//             break;
+    if (children[children.length - 2].name === 'StateIndex') {
+        _error(context, sourceNode, EEffectErrors.NOT_SUPPORT_STATE_INDEX);
+        return null;
+    }
 
-//         case 'ADDRESSU': /* WRAP_S */
-//         case 'ADDRESSV': /* WRAP_T */
-//             stateValue = subStateExprNode.value.toUpperCase();
-//             switch (stateValue) {
-//                 case 'WRAP':
-//                 case 'CLAMP':
-//                 case 'MIRROR':
-//                     break;
-//                 default:
-//                     logger.warn('Webgl don`t support this wrapmode: ' + stateValue);
-//                     return;
-//             }
-//             break;
+    let stateExprNode = children[children.length - 3];
+    let subStateExprNode = stateExprNode.children[stateExprNode.children.length - 1];
+    let stateType = children[children.length - 1].value.toUpperCase();
+    let stateValue = '';
+    let scope = program.currentScope;
 
-//         case 'MAGFILTER':
-//         case 'MINFILTER':
-//             stateValue = subStateExprNode.value.toUpperCase();
-//             switch (stateValue) {
-//                 case 'POINT':
-//                     stateValue = 'NEAREST';
-//                     break;
-//                 case 'POINT_MIPMAP_POINT':
-//                     stateValue = 'NEAREST_MIPMAP_NEAREST';
-//                     break;
-//                 case 'LINEAR_MIPMAP_POINT':
-//                     stateValue = 'LINEAR_MIPMAP_NEAREST';
-//                     break;
-//                 case 'POINT_MIPMAP_LINEAR':
-//                     stateValue = 'NEAREST_MIPMAP_LINEAR';
-//                     break;
+    if (isNull(subStateExprNode.value)) {
+        _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+        return null;
+    }
 
-//                 case 'NEAREST':
-//                 case 'LINEAR':
-//                 case 'NEAREST_MIPMAP_NEAREST':
-//                 case 'LINEAR_MIPMAP_NEAREST':
-//                 case 'NEAREST_MIPMAP_LINEAR':
-//                 case 'LINEAR_MIPMAP_LINEAR':
-//                     break;
-//                 default:
-//                     logger.warn('Webgl don`t support this texture filter: ' + stateValue);
-//                     return;
-//             }
-//             break;
+    switch (stateType) {
+        case 'TEXTURE':
+            if (stateExprNode.children.length !== 3 || subStateExprNode.value === '{') {
+                _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+                return null;
+            }
 
-//         default:
-//             logger.warn('Don`t support this texture param: ' + stateType);
-//             return;
-//     }
+            let texNameNode = stateExprNode.children[1];
+            let texName = texNameNode.value;
+            if (isNull(texName) || !program.findVariable(texName)) {
+                _error(context, stateExprNode.children[1], EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+                return null;
+            }
 
-//     if (stateType !== 'TEXTURE') {
-//         pSamplerStates.addState(stateType, stateValue);
-//     }
-//     else {
-//         pSamplerStates.texture = (texture);
-//     }
-// }
+            let texDecl = findVariable(program, texName);
+            let texId = new IdInstruction({ scope, sourceNode: texNameNode, name: texName });
+            let tex = new IdExprInstruction({ scope, sourceNode: texNameNode, id: texId, decl: texDecl });
+    
+            return new SamplerStateInstruction({ scope, sourceNode, name: stateType, value: tex });
+        case 'ADDRESSU': /* WRAP_S */
+        case 'ADDRESSV': /* WRAP_T */
+            stateValue = subStateExprNode.value.toUpperCase();
+            switch (stateValue) {
+                case 'WRAP':
+                case 'CLAMP':
+                case 'MIRROR':
+                    break;
+                default:
+                    // todo: move to errors
+                    logger.warn('Webgl don`t support this wrapmode: ' + stateValue);
+                    return null;
+            }
+            break;
+
+        case 'MAGFILTER':
+        case 'MINFILTER':
+            stateValue = subStateExprNode.value.toUpperCase();
+            switch (stateValue) {
+                case 'POINT':
+                    stateValue = 'NEAREST';
+                    break;
+                case 'POINT_MIPMAP_POINT':
+                    stateValue = 'NEAREST_MIPMAP_NEAREST';
+                    break;
+                case 'LINEAR_MIPMAP_POINT':
+                    stateValue = 'LINEAR_MIPMAP_NEAREST';
+                    break;
+                case 'POINT_MIPMAP_LINEAR':
+                    stateValue = 'NEAREST_MIPMAP_LINEAR';
+                    break;
+
+                case 'NEAREST':
+                case 'LINEAR':
+                case 'NEAREST_MIPMAP_NEAREST':
+                case 'LINEAR_MIPMAP_NEAREST':
+                case 'NEAREST_MIPMAP_LINEAR':
+                case 'LINEAR_MIPMAP_LINEAR':
+                    break;
+                default:
+                    // todo: move to erros api
+                    logger.warn('Webgl don`t support this texture filter: ' + stateValue);
+                    return null;
+            }
+            break;
+
+        default:
+            // todo: move to erros api
+            logger.warn('Don`t support this texture param: ' + stateType);
+            return null;
+    }
+
+    return new SamplerStateInstruction({ 
+        sourceNode, 
+        scope, 
+        name: stateType, 
+        value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue }); 
+    });
+}
+
 
 
 // function analyzeComplexExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
@@ -2809,37 +2852,26 @@ function analyzeSemantic(node: IParseNode): string {
 // }
 
 
-// function analyzeSimpleExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+function analyzeSimpleExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const name = sourceNode.name;
+    const value = sourceNode.value;
 
-//     let instruction: ILiteralInstruction = null;
-//     const name: string = node.name;
-//     const value: string = node.value;
+    switch (name) {
+        // case 'T_INT': // << todo
+        case 'T_UINT':
+            return new IntInstruction({ sourceNode, value });
+        case 'T_FLOAT':
+            return new FloatInstruction({ sourceNode, value });
+        case 'T_STRING':
+            return new StringInstruction({ sourceNode, value });
+        case 'T_KW_TRUE':
+            return new BoolInstruction({ sourceNode, value: "true" });
+        case 'T_KW_FALSE':
+            return new BoolInstruction({ sourceNode, value: "false" });
+    }
 
-//     switch (name) {
-//         case 'T_UINT':
-//             instruction = new IntInstruction(node);
-//             instruction.value = ((<number><any>value) * 1);
-//             break;
-//         case 'T_FLOAT':
-//             instruction = new FloatInstruction(node);
-//             instruction.value = ((<number><any>value) * 1.0);
-//             break;
-//         case 'T_STRING':
-//             instruction = new StringInstruction(node);
-//             instruction.value = (value);
-//             break;
-//         case 'T_KW_TRUE':
-//             instruction = new BoolInstruction(node);
-//             instruction.value = (true);
-//             break;
-//         case 'T_KW_FALSE':
-//             instruction = new BoolInstruction(node);
-//             instruction.value = (false);
-//             break;
-//     }
-
-//     return instruction;
-// }
+    return null;
+}
 
 
 
@@ -3540,12 +3572,12 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
     const children = sourceNode.children;
     const entry = analyzePassStateBlockForShaders(context, program, children[0]);
     const renderStates = {};
-    
-    const pass = new PassInstruction({ 
-        sourceNode, 
-        renderStates, 
-        pixelShader: entry.pixel, 
-        vertexShader: entry.vertex 
+
+    const pass = new PassInstruction({
+        sourceNode,
+        renderStates,
+        pixelShader: entry.pixel,
+        vertexShader: entry.vertex
     });
     //TODO: add annotation and id
 
@@ -3553,7 +3585,7 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
 }
 
 
-function analyzePassStateBlockForShaders(context: Context, program: ProgramScope, 
+function analyzePassStateBlockForShaders(context: Context, program: ProgramScope,
     node: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
 
     const children = node.children;
@@ -3563,15 +3595,15 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
 
     for (let i: number = children.length - 2; i >= 1; i--) {
         let func = analyzePassStateForShader(context, program, children[i]);
-        switch(func.functionType) {
+        switch (func.functionType) {
             case EFunctionType.k_Vertex:
                 assert(vertex == null);
                 vertex = func;
-            break;
+                break;
             case EFunctionType.k_Pixel:
                 assert(pixel == null);
                 pixel = func;
-            break;
+                break;
             default:
                 // todo: make error!
                 console.error('function is not suitable as shader entry point');
@@ -3582,7 +3614,7 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
 }
 
 
-function analyzePassStateForShader(context: Context, program: ProgramScope, 
+function analyzePassStateForShader(context: Context, program: ProgramScope,
     node: IParseNode): IFunctionDeclInstruction {
 
     const children = node.children;
@@ -3917,7 +3949,7 @@ initSystemVariables();
 
 
 class Context {
-    public filename: string | null = null; 
+    public filename: string | null = null;
     public currentFunction: IFunctionDeclInstruction | null = null;
     public haveCurrentFunctionReturnOccur: boolean = false;
 

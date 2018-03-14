@@ -5,18 +5,19 @@ import { ILiteralInstruction, EInstructionTypes, IInstruction } from "../../idl/
 import { IMap } from "../../idl/IMap";
 import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+import { IInstructionSettings } from "./Instruction";
 
-export interface IBoolInstructionSettings extends IExprInstructionSettings {
-    value: boolean
+export interface IBoolInstructionSettings extends IInstructionSettings {
+    value: "true" | "false";
 }
 
 export class BoolInstruction extends ExprInstruction implements ILiteralInstruction {
     protected _value: boolean;
 
     constructor({ value, ...settings }: IBoolInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_BoolInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_BoolInstruction, type: Effect.findSystemType("bool").asVarType(), ...settings });
 
-        this._value = value;
+        this._value = value === "true";
     }
 
     set value(bValue: boolean) {

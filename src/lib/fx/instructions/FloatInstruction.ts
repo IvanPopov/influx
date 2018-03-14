@@ -6,7 +6,7 @@ import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 
 export interface IFloatInstructionSettings extends IInstructionSettings {
-    value: number;
+    value: string;
 }
 
 export class FloatInstruction extends ExprInstruction implements ILiteralInstruction {
@@ -16,7 +16,7 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
      */
     constructor({ value, ...settings }: IFloatInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FloatInstruction, type: Effect.findSystemType("float").asVarType(), ...settings });
-        this._value = value;
+        this._value = ((<number><any>value) * 1.0);
     }
 
     

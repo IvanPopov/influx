@@ -307,9 +307,16 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
 
 
 export interface ITypeDeclInstruction extends IDeclInstruction {
-    type: ITypeInstruction;
-    name: string;
+    readonly type: ITypeInstruction;
+    readonly name: string;
 }
+
+
+export interface ISamplerStateInstruction extends IInstruction {
+    readonly name: string;
+    readonly value: IInstruction;
+}
+
 
 export interface IVariableDeclInstruction extends IDeclInstruction {
     readonly id: IIdInstruction;
@@ -376,7 +383,7 @@ export interface IConstructorCallInstruction extends IExprInstruction {
 
 export interface ISamplerStateBlockInstruction extends IExprInstruction {
     readonly texture: IVariableDeclInstruction;
-    readonly params: IMap<string>;
+    readonly params: ISamplerStateInstruction[];
     readonly operator: string;
 }
 
