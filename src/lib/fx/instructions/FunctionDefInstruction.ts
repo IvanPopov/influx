@@ -20,21 +20,8 @@ export interface IFunctionDefInstructionSettings extends IDeclInstructionSetting
  */
 export class FunctionDefInstruction extends DeclInstruction implements IFunctionDefInstruction {
     protected _parameterList: IVariableDeclInstruction[];
-    protected _paramListForShaderCompile: IVariableDeclInstruction[];
-    protected _paramListForShaderInput: IVariableDeclInstruction[];
-    
     protected _returnType: IVariableTypeInstruction;
     protected _id: IIdInstruction;
-    
-    // todo: remove
-    // Specifies whether to use as shader main function.
-    protected _bShaderDef: boolean;
-    // Specifies whether the parameters are suitable for the shader.
-    protected _bIsComplexShaderInput: boolean;
-
-
-    protected _bForVertex: boolean;
-    protected _bForPixel: boolean;
 
     constructor({ returnType, id, args = [], ...settings }: IFunctionDefInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
@@ -42,14 +29,6 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         this._parameterList = args.map(arg => arg.$withParent(this));
         this._returnType = returnType.$withParent(this);
         this._id = id.$withParent(this);
-
-        this._paramListForShaderInput = [];
-        this._paramListForShaderCompile = [];
-        this._bIsComplexShaderInput = false;
-        this._bShaderDef = false;
-
-        this._bForVertex = true;
-        this._bForPixel = true;
     }
 
 
@@ -57,7 +36,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return this._returnType;
     }
 
-    
+
     get name(): string {
         return this._id.name;
     }
@@ -68,7 +47,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    get arguments(): IVariableDeclInstruction[] {
+    get paramList(): IVariableDeclInstruction[] {
         return this._parameterList;
     }
 
@@ -79,31 +58,10 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    get vertex(): boolean {
-        return this._bForVertex;
-    }
-
-    
-    get pixel(): boolean {
-        return this._bForPixel;
-    }
-
-
-    get shaderInput(): IVariableDeclInstruction[] {
-        return this._paramListForShaderInput;
-    }
-
-
-    // todo: remove
-    isShader() {
-        return this._bShaderDef;
-    }
-
-
     toString(): string {
         let def = this._returnType.hash + " " + this.name + "(";
 
-        for (var i: number = 0; i < this._parameterList.length; i++) {
+        for (let i: number = 0; i < this._parameterList.length; i++) {
             def += this._parameterList[i].type.hash + ",";
         }
 
@@ -114,15 +72,15 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     toCode(): string {
-        var code: string = "";
+        let code = "";
 
-        if (!this.isShader()) {
+        {
 
             code += this._returnType.toCode();
             code += " " + this._id.toCode();
             code += "(";
 
-            for (var i: number = 0; i < this._parameterList.length; i++) {
+            for (let i: number = 0; i < this._parameterList.length; i++) {
                 code += this._parameterList[i].toCode();
 
                 if (i !== this._parameterList.length - 1) {
@@ -132,128 +90,81 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
             code += ")";
         }
-        else {
-            code = "void " + this._id.toCode() + "()";
-        }
+        // else {
+        //     code = "void " + this._id.toCode() + "()";
+        // }
 
         return code;
     }
 
-    // addParameter(pParameter: IVariableDeclInstruction, isStrictModeOn?: boolean): boolean {
-    //     if (this._parameterList.length > this._nParamsRequired &&
-    //         !pParameter.initExpr) {
 
-    //         this._setError(EEffectErrors.BAD_FUNCTION_PARAMETER_DEFENITION_NEED_DEFAULT,
-    //             {
-    //                 funcName: this._id.name,
-    //                 varName: pParameter.name
-    //             });
-    //         return false;
-    //     }
+    static checkForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+        if (!FunctionDefInstruction.checkReturnTypeForVertexUsage(funcDef)) {
+            return false;
+        }
 
-    //     var pParameterType: IVariableTypeInstruction = pParameter.type;
+        if (!FunctionDefInstruction.checkArgumentsForVertexUsage(funcDef)) {
+            return false;
+        }
 
-    //     this._parameterList.push(pParameter);
-    //     pParameter.parent = (this);
-
-    //     if (!pParameter.initExpr) {
-    //         this._nParamsRequired++;
-    //     }
-
-    //     return true;
-    // }
-
-
-    isComplexShaderInput(): boolean {
-        return this._bIsComplexShaderInput;
-    }
-
-
-    canUsedAsFunction(): boolean {
         return true;
     }
 
-    checkForVertexUsage(): boolean {
-        var isGood: boolean = true;
-
-        isGood = this.checkReturnTypeForVertexUsage();
-        if (!isGood) {
-            this._bForVertex = false;
+    static checkForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+        if (!FunctionDefInstruction.checkReturnTypeForPixelUsage(funcDef)) {
             return false;
         }
 
-        isGood = this.checkArgumentsForVertexUsage();
-        if (!isGood) {
-            this._bForVertex = false;
+        if (!FunctionDefInstruction.checkArgumentsForPixelUsage(funcDef)) {
             return false;
         }
 
-        this._bForVertex = true;
         return true;
     }
 
-    checkForPixelUsage(): boolean {
-        var isGood: boolean = true;
 
-        isGood = this.checkReturnTypeForPixelUsage();
-        if (!isGood) {
-            this._bForPixel = false;
-            return false;
-        }
+    static checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+        let returnType = <IVariableTypeInstruction>funcDef.returnType;
+        let isGood = true;
 
-        isGood = this.checkArgumentsForPixelUsage();
-        if (!isGood) {
-            this._bForPixel = false;
-            return false;
-        }
-
-        this._bForPixel = true;
-        return true;
-    }
-
-    private checkReturnTypeForVertexUsage(): boolean {
-        var pReturnType: IVariableTypeInstruction = this._returnType;
-        var isGood: boolean = true;
-
-        if (pReturnType.isEqual(Effect.findSystemType("void"))) {
+        if (returnType.isEqual(Effect.findSystemType("void"))) {
             return true;
         }
 
-        if (pReturnType.isComplex()) {
-            isGood = !pReturnType.hasFieldWithoutSemantics();
+        if (returnType.isComplex()) {
+            isGood = !returnType.hasFieldWithoutSemantics();
             if (!isGood) {
                 return false;
             }
 
-            isGood = pReturnType.hasAllUniqueSemantics();
+            isGood = returnType.hasAllUniqueSemantics();
             if (!isGood) {
                 return false;
             }
 
-            // isGood = pReturnType._hasFieldWithSematic("POSITION");
+            // isGood = returnType._hasFieldWithSematic("POSITION");
             // if(!isGood){
             // 	return false;
             // }
 
-            isGood = !pReturnType.isContainSampler();
+            isGood = !returnType.isContainSampler();
             if (!isGood) {
                 return false;
             }
 
-            isGood = !pReturnType.isContainComplexType();
+            isGood = !returnType.isContainComplexType();
             if (!isGood) {
                 return false;
             }
 
             return true;
-        }
-        else {
-            isGood = pReturnType.isEqual(Effect.findSystemType("float4"));
+        } else {
+            isGood = returnType.isEqual(Effect.findSystemType("float4"));
             if (!isGood) {
                 return false;
             }
 
-            isGood = (this.semantics === "POSITION");
+            isGood = (funcDef.semantics === "POSITION");
             if (!isGood) {
                 return false;
             }
@@ -262,25 +173,27 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         }
     }
 
-    private checkReturnTypeForPixelUsage(): boolean {
-        var pReturnType: IVariableTypeInstruction = this._returnType;
-        var isGood: boolean = true;
+    // todo: add support for dual source blending
+    // todo: add support for MRT
+    static checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+        let returnType = <IVariableTypeInstruction>funcDef.returnType;
+        let isGood: boolean = true;
 
-        if (pReturnType.isEqual(Effect.findSystemType("void"))) {
+        if (returnType.isEqual(Effect.findSystemType("void"))) {
             return true;
         }
 
-        isGood = pReturnType.isBase();
+        isGood = returnType.isBase();
         if (!isGood) {
             return false;
         }
 
-        isGood = pReturnType.isEqual(Effect.findSystemType("float4"));
+        isGood = returnType.isEqual(Effect.findSystemType("float4"));
         if (!isGood) {
             return false;
         }
 
-        isGood = this.semantics === "COLOR";
+        isGood = funcDef.semantics === "COLOR";
         if (!isGood) {
             return false;
         }
@@ -289,37 +202,67 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    private checkArgumentsForVertexUsage(): boolean {
-        var params: IVariableDeclInstruction[] = this._parameterList;
-        var isAttributeByStruct: boolean = false;
-        var isAttributeByParams: boolean = false;
-        var isStartAnalyze: boolean = false;
+    // should be called only after checkArgumentsFor[Vertex|Pixel]Usage
+    static fetchShaderInput(funcDef: IFunctionDefInstruction): IVariableDeclInstruction[] {
+        let params = funcDef.paramList;
+        let shaderInput: IVariableDeclInstruction[] = [];
 
-        this._paramListForShaderInput = [];
-        this._paramListForShaderCompile = [];
+        for (let i: number = 0; i < params.length; i++) {
+            let param = params[i];
+            if (param.isUniform()) {
+                continue;
+            }
+            shaderInput.push(param);
+        }
 
-        for (var i: number = 0; i < params.length; i++) {
-            var pParam: IVariableDeclInstruction = params[i];
+        return shaderInput;
+    }
 
-            if (pParam.isUniform()) {
-                this._paramListForShaderCompile.push(pParam);
+    static hasComplexShaderInput(funcDef: IFunctionDefInstruction): boolean {
+        let params = funcDef.paramList;
+
+        for (let i: number = 0; i < params.length; i++) {
+            let param = params[i];
+            if (param.isUniform()) {
+                continue;
+            }
+         
+            if (isNull(param.semantics)) {
+                return true;
+            } 
+        }
+
+        return false;
+    }
+
+    /*
+    static checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+        let params = funcDef.arguments;
+        let isAttributeByStruct = false;
+        let isAttributeByParams = false;
+        let isStartAnalyze = false;
+
+        for (let i: number = 0; i < params.length; i++) {
+            let param = params[i];
+
+            if (param.isUniform()) {
+                this._paramListForShaderCompile.push(param);
                 continue;
             }
 
             if (!isStartAnalyze) {
-                if (pParam.semantics === "") {
-                    if (pParam.type.isBase() ||
-                        pParam.type.hasFieldWithoutSemantics() ||
-                        !pParam.type.hasAllUniqueSemantics()) {
+                if (isNull(param.semantics)) {
+                    if (param.type.isBase() ||
+                        param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics()) {
                         return false;
                     }
 
                     isAttributeByStruct = true;
-                }
-                else if (pParam.semantics !== "") {
-                    if (pParam.type.isComplex() &&
-                        (pParam.type.hasFieldWithoutSemantics() ||
-                            !pParam.type.hasAllUniqueSemantics())) {
+                } else if (!isNull(param.semantics)) {
+                    if (param.type.isComplex() &&
+                        (param.type.hasFieldWithoutSemantics() ||
+                            !param.type.hasAllUniqueSemantics())) {
                         return false;
                     }
 
@@ -327,23 +270,21 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
 
                 isStartAnalyze = true;
-            }
-            else if (isAttributeByStruct) {
+            } else if (isAttributeByStruct) {
                 return false;
-            }
-            else if (isAttributeByParams) {
-                if (pParam.semantics === "") {
+            } else if (isAttributeByParams) {
+                if (param.semantics === "") {
                     return false;
                 }
 
-                if (pParam.type.isComplex() &&
-                    (pParam.type.hasFieldWithoutSemantics() ||
-                        !pParam.type.hasAllUniqueSemantics())) {
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
                     return false;
                 }
             }
 
-            this._paramListForShaderInput.push(pParam);
+            this._paramListForShaderInput.push(param);
         }
 
         if (isAttributeByStruct) {
@@ -353,43 +294,41 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return true;
     }
 
+
     private checkArgumentsForPixelUsage(): boolean {
-        var params: IVariableDeclInstruction[] = this._parameterList;
-        var isVaryingsByStruct: boolean = false;
-        var isVaryingsByParams: boolean = false;
-        var isStartAnalyze: boolean = false;
+        let params: IVariableDeclInstruction[] = this._parameterList;
+        let isVaryingsByStruct: boolean = false;
+        let isVaryingsByParams: boolean = false;
+        let isStartAnalyze: boolean = false;
 
-        this._paramListForShaderInput = [];
-        this._paramListForShaderCompile = [];
+        for (let i: number = 0; i < params.length; i++) {
+            let param: IVariableDeclInstruction = params[i];
 
-        for (var i: number = 0; i < params.length; i++) {
-            var pParam: IVariableDeclInstruction = params[i];
-
-            if (pParam.isUniform()) {
-                this._paramListForShaderCompile.push(pParam);
+            if (param.isUniform()) {
+                this._paramListForShaderCompile.push(param);
                 continue;
             }
 
             if (!isStartAnalyze) {
-                if (pParam.semantics === "") {
-                    if (pParam.type.isBase() ||
-                        pParam.type.hasFieldWithoutSemantics() ||
-                        !pParam.type.hasAllUniqueSemantics() ||
-                        pParam.type.isContainSampler()) {
+                if (param.semantics === "") {
+                    if (param.type.isBase() ||
+                        param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics() ||
+                        param.type.isContainSampler()) {
                         return false;
                     }
 
                     isVaryingsByStruct = true;
                 }
-                else if (pParam.semantics !== "") {
-                    if (pParam.type.isContainSampler() ||
-                        Effect.isSamplerType(pParam.type)) {
+                else if (param.semantics !== "") {
+                    if (param.type.isContainSampler() ||
+                        Effect.isSamplerType(param.type)) {
                         return false;
                     }
 
-                    if (pParam.type.isComplex() &&
-                        (pParam.type.hasFieldWithoutSemantics() ||
-                            !pParam.type.hasAllUniqueSemantics())) {
+                    if (param.type.isComplex() &&
+                        (param.type.hasFieldWithoutSemantics() ||
+                            !param.type.hasAllUniqueSemantics())) {
                         return false;
                     }
 
@@ -402,23 +341,23 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 return false;
             }
             else if (isVaryingsByParams) {
-                if (pParam.semantics === "") {
+                if (param.semantics === "") {
                     return false;
                 }
 
-                if (pParam.type.isContainSampler() ||
-                    Effect.isSamplerType(pParam.type)) {
+                if (param.type.isContainSampler() ||
+                    Effect.isSamplerType(param.type)) {
                     return false;
                 }
 
-                if (pParam.type.isComplex() &&
-                    (pParam.type.hasFieldWithoutSemantics() ||
-                        !pParam.type.hasAllUniqueSemantics())) {
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
                     return false;
                 }
             }
 
-            this._paramListForShaderInput.push(pParam);
+            this._paramListForShaderInput.push(param);
         }
 
         if (isVaryingsByStruct) {
@@ -428,11 +367,121 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return true;
     }
 
-    $makeShader() {
-        this._bShaderDef = true;
+    */
+
+    static checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+        let params = funcDef.paramList;
+        let isAttributeByStruct = false;
+        let isAttributeByParams = false;
+        let isStartAnalyze = false;
+
+        for (let i: number = 0; i < params.length; i++) {
+            let param = params[i];
+
+            if (param.isUniform()) {
+                continue;
+            }
+
+            if (!isStartAnalyze) {
+                if (isNull(param.semantics)) {
+                    if (param.type.isBase() ||
+                        param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics()) {
+                        return false;
+                    }
+
+                    isAttributeByStruct = true;
+                } else if (!isNull(param.semantics)) {
+                    if (param.type.isComplex() &&
+                        (param.type.hasFieldWithoutSemantics() ||
+                            !param.type.hasAllUniqueSemantics())) {
+                        return false;
+                    }
+
+                    isAttributeByParams = true;
+                }
+
+                isStartAnalyze = true;
+            } else if (isAttributeByStruct) {
+                return false;
+            } else if (isAttributeByParams) {
+                if (isNull(param.semantics)) {
+                    return false;
+                }
+
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
-    $overwriteType(): void {
-        this._bShaderDef = true;
+
+    static checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+        let params = funcDef.paramList;
+        let isVaryingsByStruct = false;
+        let isVaryingsByParams = false;
+        let isStartAnalyze = false;
+
+        for (let i: number = 0; i < params.length; i++) {
+            let param: IVariableDeclInstruction = params[i];
+
+            if (param.isUniform()) {
+                continue;
+            }
+
+            if (!isStartAnalyze) {
+                if (param.semantics === "") {
+                    if (param.type.isBase() ||
+                        param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics() ||
+                        param.type.isContainSampler()) {
+                        return false;
+                    }
+
+                    isVaryingsByStruct = true;
+                } else if (param.semantics !== "") {
+                    if (param.type.isContainSampler() ||
+                        Effect.isSamplerType(param.type)) {
+                        return false;
+                    }
+
+                    if (param.type.isComplex() &&
+                        (param.type.hasFieldWithoutSemantics() ||
+                            !param.type.hasAllUniqueSemantics())) {
+                        return false;
+                    }
+
+                    isVaryingsByParams = true;
+                }
+
+                isStartAnalyze = true;
+            }
+            else if (isVaryingsByStruct) {
+                return false;
+            }
+            else if (isVaryingsByParams) {
+                if (param.semantics === "") {
+                    return false;
+                }
+
+                if (param.type.isContainSampler() ||
+                    Effect.isSamplerType(param.type)) {
+                    return false;
+                }
+
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

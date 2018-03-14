@@ -96,11 +96,6 @@ export class Instruction implements IInstruction {
     }
 
 
-    prepareFor(eUsedType: EFunctionType): void {
-        console.error("pure virtual method!");
-    }
-
-
     /**
      * Check that instuction is valid.
      */

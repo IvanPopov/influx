@@ -37,13 +37,6 @@ export class PostfixPointInstruction extends ExprInstruction {
         return this._postfix;
     }
 
-
-
-    prepareFor(eUsedMode: EFunctionType) {
-        this.element.prepareFor(eUsedMode);
-        this.postfix.prepareFor(eUsedMode);
-    }
-
     
     toCode(): string {
         var code: string = '';

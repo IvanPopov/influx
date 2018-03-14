@@ -305,7 +305,7 @@ function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDe
     }
 
     if (iDepth === 0) {
-        for (let i: number = 0; i < pLiterals.length; i++) {
+        for (let i = 0; i < pLiterals.length; i++) {
             pOutput[pLiterals[i]] = true;
         }
 
@@ -314,7 +314,7 @@ function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDe
 
     const pOutputKeys: string[] = Object.keys(pOutput);
 
-    for (let i: number = 0; i < pLiterals.length; i++) {
+    for (let i = 0; i < pLiterals.length; i++) {
         for (let j: number = 0; j < pOutputKeys.length; j++) {
             if (pOutputKeys[j].indexOf(pLiterals[i]) !== -1) {
                 pOutput[pOutputKeys[j] + pLiterals[i]] = false;
@@ -461,7 +461,7 @@ function generateSystemFunction(name: string,
     let builtIn = true;
 
     if (!isNull(templateTypes)) {
-        for (let i: number = 0; i < templateTypes.length; i++) {
+        for (let i = 0; i < templateTypes.length; i++) {
             let argTypes: ITypeInstruction[] = [];
             let functionHash = name + "(";
             let returnType = (returnTypeName === TEMPLATE_TYPE) ?
@@ -509,7 +509,7 @@ function generateSystemFunction(name: string,
         let argTypes = [];
         let functionHash = name + "(";
 
-        for (let i: number = 0; i < argsTypes.length; i++) {
+        for (let i = 0; i < argsTypes.length; i++) {
             if (argsTypes[i] === TEMPLATE_TYPE) {
                 logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
@@ -559,7 +559,7 @@ function generateNotBuiltInSystemFuction(name: string, definition: string, imple
     let usedExtSystemFunctions: IFunctionDeclInstruction[] = [];
 
     if (!isNull(usedTypes)) {
-        for (let i: number = 0; i < usedTypes.length; i++) {
+        for (let i = 0; i < usedTypes.length; i++) {
             let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>findSystemType(usedTypes[i]).parent;
             if (!isNull(typeDecl)) {
                 usedExtSystemTypes.push(typeDecl);
@@ -568,7 +568,7 @@ function generateNotBuiltInSystemFuction(name: string, definition: string, imple
     }
 
     if (!isNull(usedFunctions)) {
-        for (let i: number = 0; i < usedFunctions.length; i++) {
+        for (let i = 0; i < usedFunctions.length; i++) {
             let pFindFunction: IFunctionDeclInstruction = findSystemFunction(usedFunctions[i], null);
             usedExtSystemFunctions.push(pFindFunction);
         }
@@ -811,7 +811,7 @@ function findShaderFunction(program: ProgramScope, functionName: string,
 
 
 function findFunctionByDef(program: ProgramScope, pDef: FunctionDefInstruction): IFunctionDeclInstruction {
-    return findFunction(program, pDef.name, pDef.arguments);
+    return findFunction(program, pDef.name, pDef.paramList);
 }
 
 
@@ -961,7 +961,7 @@ function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast:
 //         initExpr.push(analyzeExpr(context, program, children[0]), true);
 //     }
 //     else {
-//         for (let i: number = 0; i < children.length; i++) {
+//         for (let i = 0; i < children.length; i++) {
 //             if (children[i].name === 'InitExpr') {
 //                 initExpr.push(analyzeInitExpr(context, program, children[i]), true);
 //             }
@@ -1058,7 +1058,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 //         isNewDelete = false;
 
 //         mainFor:
-//         for (let i: number = 0; i < funcList.length; i++) {
+//         for (let i = 0; i < funcList.length; i++) {
 //             let testedFunction: IFunctionDeclInstruction = funcList[i];
 //             let usedFunctionList: IFunctionDeclInstruction[] = testedFunction.usedFunctionList;
 
@@ -1120,7 +1120,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 //         isNewDelete = false;
 
 //         mainFor:
-//         for (let i: number = 0; i < funcList.length; i++) {
+//         for (let i = 0; i < funcList.length; i++) {
 //             let testedFunction: IFunctionDeclInstruction = funcList[i];
 //             let usedFunctionList: IFunctionDeclInstruction[] = testedFunction.usedFunctionList;
 
@@ -1190,7 +1190,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 // function generateInfoAboutUsedData(context: Context): void {
 //     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
 
-//     for (let i: number = 0; i < funcList.length; i++) {
+//     for (let i = 0; i < funcList.length; i++) {
 //         funcList[i].generateInfoAboutUsedData();
 //     }
 // }
@@ -1199,7 +1199,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 // function generateShadersFromFunctions(context: Context): void {
 //     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
 
-//     for (let i: number = 0; i < funcList.length; i++) {
+//     for (let i = 0; i < funcList.length; i++) {
 
 //         if (funcList[i].isUsedAsVertex()) {
 //             funcList[i].convertToVertexShader();
@@ -3498,7 +3498,7 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
 
     let annotation: IAnnotationInstruction = null;
     let semantics: string = null;
-    let passList: IPassInstruction[] = [];
+    let passList: IPassInstruction[] = null;
 
     for (let i: number = children.length - 3; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
@@ -3506,7 +3506,7 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
         } else if (children[i].name === 'Semantic') {
             semantics = analyzeSemantic(children[i]);
         } else {
-            analyzeTechniqueBodyForImports(context, program, children[i], technique);
+            passList = analyzeTechnique(context, program, children[i]);
         }
     }
 
@@ -3516,12 +3516,15 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
 
 
 
-function analyzeTechniqueBodyForImports(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction): void {
+function analyzeTechnique(context: Context, program: ProgramScope, node: IParseNode): IPassInstruction[] {
     const children = node.children;
-
+    let passList: IPassInstruction[] = [];
     for (let i: number = children.length - 2; i >= 1; i--) {
-        analyzePassDecl(context, program, children[i], technique);
+        let pass = analyzePassDecl(context, program, children[i]);
+        assert(!isNull(pass));
+        passList.push(pass);
     }
+    return passList;
 }
 
 /**
@@ -3532,8 +3535,7 @@ function analyzeTechniqueBodyForImports(context: Context, program: ProgramScope,
  *         T_NON_TYPE_ID = 'name'
  *         T_KW_PASS = 'pass'
  */
-function analyzePassDecl(context: Context, program: ProgramScope, 
-    sourceNode: IParseNode, technique: ITechniqueInstruction): IPassInstruction {
+function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction {
 
     const children = sourceNode.children;
     const entry = analyzePassStateBlockForShaders(context, program, children[0]);
@@ -3543,7 +3545,8 @@ function analyzePassDecl(context: Context, program: ProgramScope,
         sourceNode, 
         renderStates, 
         pixelShader: entry.pixel, 
-        vertexShader: entry.vertex });
+        vertexShader: entry.vertex 
+    });
     //TODO: add annotation and id
 
     return pass;
@@ -3602,22 +3605,21 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
     const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
 
     return null;
-    const compileExpr: CompileExprInstruction = <CompileExprInstruction>null;//analyzeExpr(context, program, exprNode);
+    const compileExpr: CompileExprInstruction = analyzeExpr(context, program, exprNode);
     const shaderFunc: IFunctionDeclInstruction = compileExpr.function;
 
     if (shaderType === EFunctionType.k_Vertex) {
-        if (!shaderFunc.definition.checkForVertexUsage()) {
+        if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
             _error(context, node, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
         }
     }
     else {
-        if (!shaderFunc.definition.checkForPixelUsage()) {
+        if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
             _error(context, node, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
         }
     }
 
-    shaderFunc.markUsedAs(shaderType);
-    shaderFunc.$overwriteType(shaderType); // todo: check this cond!!!
+    shaderFunc.$overwriteType(shaderType);
     return shaderFunc;
 }
 
@@ -3891,7 +3893,7 @@ function analyzeTechniqueImports(context: Context, program: ProgramScope, ast: I
 
 
 // function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
-//     for (let i: number = 0; i < context.functionWithImplementationList.length; i++) {
+//     for (let i = 0; i < context.functionWithImplementationList.length; i++) {
 //         resumeFunctionAnalysis(context, program, context.functionWithImplementationList[i]);
 //     }
 

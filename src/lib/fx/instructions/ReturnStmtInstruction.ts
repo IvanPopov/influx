@@ -32,25 +32,6 @@ export class ReturnStmtInstruction extends StmtInstruction {
     }
 
 
-    prepareFor(eUsedMode: EFunctionType): void {
-        var expr: ITypedInstruction = <ITypedInstruction>this.expr;
-        if (isNull(expr)) {
-            return;
-        }
-
-        if (eUsedMode === EFunctionType.k_Vertex) {
-            if (expr.type.isBase()) {
-                // this._isPositionReturn = true;
-            }
-            else {
-                // this._isOnlyReturn = true;
-            }
-        }
-        else if (eUsedMode === EFunctionType.k_Pixel) {
-            // this._isColorReturn = true;
-        }
-    }
-
     toCode(): string {
         if (this.expr) {
             return "return " + this.expr.toCode() + ";";

@@ -44,12 +44,6 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
         return false;
     }
 
-
-    prepareFor(usedMode: EFunctionType): void {
-       console.error("@not_implemented");
-    }
-
-
     toCode(): string {
         var scode: string = "";
         if (this.visible) {

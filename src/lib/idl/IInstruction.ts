@@ -187,8 +187,6 @@ export interface IInstruction {
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
 
-    prepareFor(type: EFunctionType): void;
-
     toString(): string;
     toCode(): string;
 
@@ -301,32 +299,10 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly returnType: ITypeInstruction; 
     readonly functionName: IIdInstruction;
     readonly name: string;
-    readonly arguments: IVariableDeclInstruction[];
-
+    readonly paramList: IVariableDeclInstruction[];
     readonly numArgsRequired: number;
-    readonly shaderInput: IVariableDeclInstruction[];
-    
-    // moved to effect.fx
-    // addParameter(pParam: IVariableDeclInstruction, useStrict?: boolean): boolean;
-    
-    /** Determines if the function has a complex type on the input of the shader. */
-    isComplexShaderInput(): boolean; // << todo: rename! 
-    
-    canUsedAsFunction(): boolean;
-    checkForVertexUsage(): boolean;
-    checkForPixelUsage(): boolean;
 
-    toString(): string;  // << declaration with uniq name
-
-    isShader(): boolean;
-
-    $makeShader(): void;
-
-    // TODO: move it to properly place
-
-    /** Additional markers */
-    readonly vertex: boolean; // << Is it vertex compatible?
-    readonly pixel: boolean;
+    toString(): string;              // << declaration with uniq name
 }
 
 
@@ -353,54 +329,9 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
     readonly implementation: IStmtInstruction;
     readonly functionType: EFunctionType;
-    // readonly arguments: IVariableDeclInstruction[];
-
-    readonly vertexShader: IFunctionDeclInstruction;
-    readonly pixelShader: IFunctionDeclInstruction;
-    
-    readonly attributeVariableMap: IMap<IVariableDeclInstruction>;
-    readonly varyingVariableMap: IMap<IVariableDeclInstruction>;
-    readonly uniformVariableMap: IMap<IVariableDeclInstruction>;
-    readonly textureVariableMap: IMap<IVariableDeclInstruction>;
-    readonly usedComplexTypeMap: IMap<ITypeInstruction>;
-
-    readonly extSystemFunctionList: IFunctionDeclInstruction[];
-    readonly extSystemTypeList: ITypeDeclInstruction[];
-    
-
-    isUsedAs(type: EFunctionType): boolean;
-    isUsedAsFunction(): boolean;
-    isUsedAsVertex(): boolean;
-    isUsedAsPixel(): boolean;
-    isUsed(): boolean;
-    isUsedInVertex(): boolean;
-    isUsedInPixel(): boolean;
-    canUsedAsFunction(): boolean;
-
-    checkVertexUsage(): boolean;
-    checkPixelUsage(): boolean;
-
-    /**
-     * Active API
-     */
-
-    // todo: remove
-    markUsedAs(type: EFunctionType): void;
-    markUsedInVertex(): void;
-    markUsedInPixel(): void;
-
-    checkDefinitionForVertexUsage(): boolean;
-    checkDefinitionForPixelUsage(): boolean;
-
-    convertToVertexShader(): IFunctionDeclInstruction;
-    convertToPixelShader(): IFunctionDeclInstruction;
-
-    prepareForVertex(): void;
-    prepareForPixel(): void;
-
-    generateInfoAboutUsedData(): void;
 
     $overwriteType(type: EFunctionType): void;
+    $linkToImplementationScope(scope: IScope): void;
 }
 
 
