@@ -63,7 +63,8 @@ export enum EInstructionTypes {
     k_ReturnStmtInstruction,
     k_SemicolonStmtInstruction,
     k_PassInstruction,
-    k_TechniqueInstruction
+    k_TechniqueInstruction,
+    k_ProvideInstruction
 }
 
 
@@ -126,6 +127,8 @@ export enum EExtractExprType {
 
 
 export enum EScopeType {
+    k_System,
+    k_Global,
     k_Default,
     k_Struct,
     k_Annotation
@@ -134,7 +137,6 @@ export enum EScopeType {
 export interface IScope {
     strictMode: boolean;
 
-    readonly index: number;
     readonly parent: IScope;
     readonly type: EScopeType;
 
@@ -148,7 +150,7 @@ export interface IScope {
     findVariable(variableName: string): IVariableDeclInstruction;
     findTypeDecl(typeName: string): ITypeDeclInstruction;
     findType(typeName: string): ITypeInstruction;
-    findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction | null | undefined;
+    findFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findTechique(techName: string): ITechniqueInstruction | null;
 
@@ -166,8 +168,6 @@ export interface IScope {
     addType(type: ITypeDeclInstruction): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
-
-    isGlobal(): boolean;
 }
 
 
@@ -210,8 +210,14 @@ export interface IInstructionCollector extends IInstruction {
 
 
 export interface ISimpleInstruction extends IInstruction {
-    value: string;
+    readonly value: string;
 }
+
+
+export interface IProvideInstruction extends IInstruction {
+    readonly moduleName: string;
+}
+
 
 
 export interface ITypeInstruction extends IInstruction {
@@ -264,7 +270,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly padding: number;
 
     isUniform(): boolean;
-    hasUsage(sUsageName: string): boolean;
+    hasUsage(usageName: string): boolean;
 
     // for structures internal usage
     $overwritePadding(val: number): void;
@@ -318,7 +324,7 @@ export interface ISamplerStateInstruction extends IInstruction {
 }
 
 
-export interface IVariableDeclInstruction extends IDeclInstruction {
+export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstruction {
     readonly id: IIdInstruction;
     readonly type: IVariableTypeInstruction;
     readonly initExpr: IInitExprInstruction;

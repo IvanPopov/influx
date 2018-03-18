@@ -3,13 +3,13 @@ import { EInstructionTypes, IInstructionCollector, IInstruction } from "../../id
 import { IParseNode } from "../../idl/parser/IParser";
 
 export interface IInstructionCollectorSettings extends IInstructionSettings {
-    instructions: IInstruction[];
+    instructions?: IInstruction[];
 }
 
 export class InstructionCollector extends Instruction implements IInstructionCollector {
     protected _instructions: IInstruction[];
 
-    constructor({ instructions, ...settings }: IInstructionCollectorSettings) {
+    constructor({ instructions = [], ...settings }: IInstructionCollectorSettings) {
         super({ instrType: EInstructionTypes.k_InstructionCollector, ...settings });
 
         this._instructions = instructions;
@@ -20,13 +20,15 @@ export class InstructionCollector extends Instruction implements IInstructionCol
         return this._instructions;
     }
 
+    push(instr: IInstruction): void {
+        this._instructions.push(instr);
+    }
 
     toCode(): string {
-        var sCode: string = "";
+        var code: string = "";
         for (var i: number = 0; i < this.instructions.length; i++) {
-            sCode += this.instructions[i].toCode();
+            code += this.instructions[i].toCode();
         }
-
-        return sCode;
+        return code;
     }
 }

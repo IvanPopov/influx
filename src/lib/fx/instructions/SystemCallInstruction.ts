@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IVariableDeclInstruction, EInstructionTypes, IFunctionDeclInstruction, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IAnalyzedInstruction, IExprInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
+import { IVariableDeclInstruction, EInstructionTypes, IFunctionDeclInstruction, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IAnalyzedInstruction, IExprInstruction, IVariableTypeInstruction, IFunctionCallInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -8,7 +8,7 @@ import { IInstructionSettings } from "./Instruction";
 
 
 export interface ISystemCallInstructionSettings extends IInstructionSettings {
-    func: SystemFunctionInstruction;
+    decl: SystemFunctionInstruction;
     args?: IExprInstruction[];
 }
 
@@ -17,51 +17,50 @@ export interface ISystemCallInstructionSettings extends IInstructionSettings {
  * Respresnt system_func(arg1,..., argn)
  * EMPTY_OPERATOR SimpleInstruction ... SimpleInstruction 
  */
-export class SystemCallInstruction extends ExprInstruction {
+export class SystemCallInstruction extends ExprInstruction implements IFunctionCallInstruction {
     protected _args: IExprInstruction[];
     // protected _samplerDecl: IVariableDeclInstruction;
     
     // helpers
-    protected _func: SystemFunctionInstruction;
+    protected _decl: SystemFunctionInstruction;
 
-    constructor({ func, args = [], ...settings }: ISystemCallInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SystemCallInstruction, type: func.type, ...settings });
+    constructor({ decl, args = [], ...settings }: ISystemCallInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_SystemCallInstruction, type: decl.type, ...settings });
         
-        this._func = func;
+        this._decl = decl;
         // this._samplerDecl = null;
-        this._args = <IExprInstruction[]>this._func.closeArguments(args).map(arg => arg.$withParent(this));
+        this._args = <IExprInstruction[]>this._decl.closeArguments(args).map(arg => arg.$withParent(this));
     }
 
 
-    get func(): IFunctionDeclInstruction {
-        return this._func as IFunctionDeclInstruction;
+    // todo: rename as resolve()
+    get declaration(): IFunctionDeclInstruction {
+        return this._decl as IFunctionDeclInstruction;
     }
 
 
-    get arguments(): IExprInstruction[] {
+    get args(): IExprInstruction[] {
         return this._args;
     }
 
 
     toCode(): string {
         let code: string = '';
-        for (let i: number = 0; i < this.arguments.length; i++) {
-            code += this.arguments[i].toCode();
+        for (let i: number = 0; i < this.args.length; i++) {
+            code += this.args[i].toCode();
         }
         return code;
     }
 
 
-
-
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
+    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
         eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        let pInstructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.arguments;
-        for (let i: number = 0; i < this.arguments.length; i++) {
-            if (pInstructionList[i].instructionType !== EInstructionTypes.k_SimpleInstruction) {
-                pInstructionList[i].addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-                if ((<IExprInstruction>pInstructionList[i]).type.isSampler) {
-                    // this._samplerDecl = (<IExprInstruction>pInstructionList[i]).type.parentVarDecl;
+        let instructionList = <IAnalyzedInstruction[]>this.args;
+        for (let i = 0; i < this.args.length; i++) {
+            if (instructionList[i].instructionType !== EInstructionTypes.k_SimpleInstruction) {
+                instructionList[i].addUsedData(usedDataCollector, EVarUsedMode.k_Read);
+                if ((<IExprInstruction>instructionList[i]).type.isSampler) {
+                    // this._samplerDecl = (<IExprInstruction>instructionList[i]).type.parentVarDecl;
                 }
             }
         }

@@ -8,7 +8,6 @@ import { IMap } from "../idl/IMap";
 
 
 export interface IScopeSettings {
-    index: number;
     type?: EScopeType;
     parent?: IScope;
     strictMode?: boolean;
@@ -17,7 +16,6 @@ export interface IScopeSettings {
 export class Scope implements IScope {
     strictMode: boolean;
 
-    readonly index: number;
     readonly parent: IScope;
     readonly type: EScopeType;
 
@@ -26,8 +24,7 @@ export class Scope implements IScope {
     readonly functionMap: IMap<IFunctionDeclInstruction[]>;
     readonly techniqueMap: IMap<ITechniqueInstruction>;
 
-    constructor({ index, type = EScopeType.k_Default, parent = null, strictMode = false }: IScopeSettings) {
-        this.index = index;
+    constructor({ type = EScopeType.k_Default, parent = null, strictMode = false }: IScopeSettings) {
         this.type = type;
         this.parent = parent;
         this.strictMode = strictMode;
@@ -38,6 +35,7 @@ export class Scope implements IScope {
         this.techniqueMap = {};
     }
 
+
     isStrict(): boolean {
         let scope: Scope = this;
         while (!isNull(scope)) {
@@ -47,11 +45,6 @@ export class Scope implements IScope {
             scope = scope.parent;
         }
         return false;
-    }
-
-
-    isGlobal(): boolean  {
-        return this.index === ProgramScope.GLOBAL_SCOPE;
     }
 
 
@@ -99,7 +92,7 @@ export class Scope implements IScope {
      *   'undefined'if there more then one function; 
      *    function if all is ok;
      */
-    findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction | null | undefined {
+    findFunction(funcName: string, args: ITypedInstruction[] = null): IFunctionDeclInstruction | null | undefined {
         let scope: Scope = this;
         let func: IFunctionDeclInstruction = null;
 
@@ -107,7 +100,7 @@ export class Scope implements IScope {
             let funcList = scope.functionMap[funcName];
 
             if (isDef(funcList)) {
-                for (let i: number = 0; i < funcList.length; i++) {
+                for (let i = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
                     let testedArguments = testedFunction.definition.paramList;
 
@@ -170,7 +163,7 @@ export class Scope implements IScope {
             let funcList = scope.functionMap[funcName];
 
             if (isDef(funcList)) {
-                for (let i: number = 0; i < funcList.length; i++) {
+                for (let i = 0; i < funcList.length; i++) {
                     let testedFunction: IFunctionDeclInstruction = funcList[i];
                     let testedArguments: IVariableDeclInstruction[] =
                         <IVariableDeclInstruction[]>testedFunction.definition.paramList;
@@ -250,7 +243,7 @@ export class Scope implements IScope {
     }
 
 
-    hasFunction(funcName: string, argTypes: ITypedInstruction[]): boolean {
+    hasFunction(funcName: string, argTypes: ITypedInstruction[] = []): boolean {
         let scope: Scope = this;
 
         while (!isNull(scope)) {
@@ -364,7 +357,7 @@ export class Scope implements IScope {
             assert(variable.scope === this);
         }
         else {
-            console.error(`letiable '${varName}' already exists in scope ${this.index}`);
+            console.error(`letiable '${varName}' already exists in scope:`, this);
         }
     
         return true;
@@ -389,7 +382,7 @@ export class Scope implements IScope {
 
 
     addFunction(func: IFunctionDeclInstruction): boolean {
-        assert(this.index === ProgramScope.GLOBAL_SCOPE);
+        assert(this.type <= EScopeType.k_Global);
 
         let scope: Scope = this;
         let funcMap = scope.functionMap;
@@ -411,7 +404,7 @@ export class Scope implements IScope {
 
 
     addTechnique(technique: ITechniqueInstruction): boolean {
-        assert(this.index === ProgramScope.GLOBAL_SCOPE);
+        assert(this.type <= EScopeType.k_Global);
 
         let scope: Scope = this;
         let techMap = scope.techniqueMap;
@@ -429,73 +422,49 @@ export class Scope implements IScope {
 }
 
 export class ProgramScope {
+    globalScope: IScope;
+    currentScope: IScope;
 
-    private _namespace: string;
-    private _scopeList: Scope[];
-    private _currentScope: number;
 
     constructor() {
-        this._namespace = null;
-        this._scopeList = [];
-        this._currentScope = -1;
+        this.globalScope = null;
+        this.currentScope = null;
     }
 
 
-    get currentScope(): Scope {
-        if (this._currentScope == -1) {
-            return null;
-        }
-        return this._scopeList[this._currentScope];
+    begin(systemScope: IScope = null): void {
+        assert(systemScope !== null);
+        assert(this.currentScope === null);
+
+        let type = EScopeType.k_Global;
+        let parent = systemScope;
+        this.globalScope = new Scope({ parent, type });
+        this.currentScope = this.globalScope;
     }
 
 
-    get globalScope(): Scope {
-        return this._scopeList[ProgramScope.GLOBAL_SCOPE] || null;
+    end(): void {
+        assert(this.currentScope === this.globalScope);
+        this.currentScope = null;
+        this.globalScope = null;
     }
 
-    get namespace(): string {
-        return this._namespace;
-    }
-
-    specifyNamespace(name: string) {
-        this._namespace = name;
-    }
 
     push(type: EScopeType = EScopeType.k_Default): void {
+        assert(this.currentScope !== null);
+        assert(type >= EScopeType.k_Default);
+
         let parent = this.currentScope;
-        let index = this._scopeList.length;
+        let scope = new Scope({ parent, type });
 
-        let newScope = new Scope({ parent, index, type });
-
-        this._scopeList.push(newScope);
-        this._currentScope = index;
-    }
-
-
-    restore(): void {
-        if (this._scopeList.length === 0) {
-            return;
-        }
-
-        this._currentScope = this._scopeList.length - 1;
+        this.currentScope = scope;
     }
 
 
     pop(): void {
-        console.assert(this._currentScope != -1);
-        if (this._currentScope == -1) {
-            return;
-        }
-
-        let pOldScope = this._scopeList[this._currentScope];
-        let pNewScope = pOldScope.parent;
-
-        if (isNull(pNewScope)) {
-            this._currentScope = -1;
-        }
-        else {
-            this._currentScope = pNewScope.index;
-        }
+        assert(this.currentScope !== null);
+        this.currentScope = this.currentScope.parent;
+        assert(this.currentScope !== null);
     }
 
 
@@ -509,9 +478,17 @@ export class ProgramScope {
     }
 
 
+    findShaderFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction {
+        return this.globalScope.findShaderFunction(funcName, args);
+    }
+
+
     findVariable(varName: string): IVariableDeclInstruction {
         return this.currentScope.findVariable(varName);
     }
+    
 
-    public static GLOBAL_SCOPE = 0;
+    findType(typeName: string): ITypeInstruction {
+        return this.currentScope.findType(typeName);
+    }
 }

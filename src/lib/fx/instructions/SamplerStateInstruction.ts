@@ -14,7 +14,7 @@ export class SamplerStateInstruction extends Instruction implements ISamplerStat
     protected _value: IInstruction;
 
     constructor({ name, value, ...settings }: ISamplerStateInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SimpleInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_SamplerStateInstruction, ...settings });
         
         this._name = name;
         this._value = value.$withParent(this);

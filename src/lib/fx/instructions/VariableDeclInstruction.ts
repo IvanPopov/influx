@@ -1,6 +1,6 @@
 import { DeclInstruction } from './DeclInstruction';
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction } from "./../../idl/IInstruction";
+import { IAnnotationInstruction, ITypeUseInfoContainer, EVarUsedMode } from "./../../idl/IInstruction";
 import * as Effect from '../Effect';
 import { IExprInstruction, IInstruction, EInstructionTypes,
     IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction,
@@ -163,6 +163,11 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     $makePixelCompatible(val: boolean): void {
         this._bForPixel = val;
+    }
+
+    
+    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void {
+        console.error("@not_implemented");
     }
 
 }

@@ -6,6 +6,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export interface ICompileExprInstructionSettings extends IExprInstructionSettings {
     operand: IFunctionDeclInstruction;
+    args?: IExprInstruction[];
 }
 
 /**
@@ -14,12 +15,14 @@ export interface ICompileExprInstructionSettings extends IExprInstructionSetting
   */
 export class CompileExprInstruction extends ExprInstruction implements ICompileExprInstruction {
     protected _operand: IFunctionDeclInstruction;
+    protected _args: IExprInstruction[];
 
 
-    constructor({ operand, ...settings }: ICompileExprInstructionSettings) {
+    constructor({ operand, args = null, ...settings }: ICompileExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CompileExprInstruction, ...settings });
 
         this._operand = operand.$withParent(this);
+        this._args = (args || []).map(arg => arg.$withParent(this));
     }
 
     

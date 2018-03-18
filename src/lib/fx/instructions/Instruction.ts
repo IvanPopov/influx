@@ -6,7 +6,7 @@ import { ProgramScope } from "../ProgramScope";
 
 
 export interface IInstructionSettings {
-    scope?: IScope;
+    scope: IScope;
     
     sourceNode?: IParseNode;
     visible?: boolean;
@@ -26,11 +26,11 @@ export class Instruction implements IInstruction {
     private static INSTRUCTION_COUNTER: number = 0;
 
     constructor({
-        instrType = EInstructionTypes.k_Instruction,
+        scope,
+        instrType/* = EInstructionTypes.k_Instruction*/,
         sourceNode = null,
-        scope = null,
         visible = true
-    }: IInstructionSettings = {}) {
+    }: IInstructionSettings) {
 
         this._visible = true;
         this._sourceNode = sourceNode;

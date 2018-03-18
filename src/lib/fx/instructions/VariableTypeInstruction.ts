@@ -1,5 +1,5 @@
 import { Instruction, IInstructionSettings } from "./Instruction";
-import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction } from '../../idl/IInstruction';
+import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction, IScope } from '../../idl/IInstruction';
 import { IMap } from "../../idl/IMap";
 import { isNull, isNumber, isDef } from '../../common';
 import { IdInstruction } from "./IdInstruction";
@@ -65,7 +65,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
-            this._arrayElementType = (new VariableTypeInstruction({ type: this.subType, usages: this._usageList })).$withParent(this);
+            this._arrayElementType = (new VariableTypeInstruction({ scope: this.scope, type: this.subType, usages: this._usageList })).$withParent(this);
             this._arrayIndexExpr = arrayIndex.$withParent(this);
         }
     }
@@ -377,16 +377,18 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        let subField: IVariableDeclInstruction = this.subType.getField(sFieldName);
+        const scope = this.scope;
+
+        let subField = this.subType.getField(sFieldName);
         let id = subField.id;
         let type = subField.type;
         let padding = subField.type.padding;
         let semantics = subField.semantics;
 
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ type });
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ scope, type });
         fieldType.$overwritePadding(padding);
 
-        let field: IVariableDeclInstruction = new VariableDeclInstruction({ id, type: fieldType, semantics });
+        let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType, semantics });
         return field.$withParent(this);
     }
 
@@ -400,10 +402,12 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         // todo: review this code!
 
+        const scope = this.scope;
+
         let padding = subField.type.padding;
         let id = subField.id;
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ type: subField.type });
-        let field: IVariableDeclInstruction = new VariableDeclInstruction({ id, type: fieldType });
+        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ scope, type: subField.type });
+        let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType });
         return field.$withParent(this);
     }
 
@@ -470,25 +474,25 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return [];
         }
 
-        let pDeclList: IVariableDeclInstruction[] = [];
+        let declList: IVariableDeclInstruction[] = [];
         let i: number = 0;
 
         if (this.isComplex()) {
-            let pFieldNameList: string[] = this.fieldNames;
+            let fieldNameList = this.fieldNames;
 
-            for (i = 0; i < pFieldNameList.length; i++) {
-                const field: IVariableDeclInstruction = this.getField(pFieldNameList[i]);
-                const pFieldSubDeclList: IVariableDeclInstruction[] = field.type.fields;
+            for (i = 0; i < fieldNameList.length; i++) {
+                const field: IVariableDeclInstruction = this.getField(fieldNameList[i]);
+                const fieldSubDeclList = field.type.fields;
 
-                if (!isNull(pFieldSubDeclList)) {
-                    for (let j: number = 0; j < pFieldSubDeclList.length; j++) {
-                        pDeclList.push(pFieldSubDeclList[j]);
+                if (!isNull(fieldSubDeclList)) {
+                    for (let j: number = 0; j < fieldSubDeclList.length; j++) {
+                        declList.push(fieldSubDeclList[j]);
                     }
                 }
             }
         }
 
-        return pDeclList;
+        return declList;
     }
 
 
@@ -606,5 +610,22 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return VariableTypeInstruction.findMainVariable(<IVariableTypeInstruction>type.parent.parent);
         }
         return VariableTypeInstruction.findParentVariableDecl(type);
+    }
+
+
+    static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
+        return new VariableTypeInstruction({ type, scope: scope });
+    }
+
+
+    static fieldToExpr(type: IVariableTypeInstruction, fieldName: string): IIdExprInstruction {
+        if (!type.hasField(fieldName)) {
+            return null;
+        }
+
+        var field = type.getField(fieldName);
+        var expr = new IdExprInstruction({ scope: null, id: field.id, decl: field });
+
+        return expr;
     }
 }

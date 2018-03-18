@@ -24,10 +24,10 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
     protected _ctor: IVariableTypeInstruction;
     
 
-    constructor({ ctor, args = [], ...settings }: IConstructorCallInstructionSettings) {
+    constructor({ ctor, args = null, ...settings }: IConstructorCallInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ConstructorCallInstruction, type: ctor.subType, ...settings });
 
-        this._args = args.map(arg => arg.$withParent(this));
+        this._args = (args || []).map(arg => arg.$withParent(this));
         this._ctor = ctor.$withParent(this);
     }
 

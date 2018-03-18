@@ -29,9 +29,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _bBuiltIn: boolean;
     protected _declaration: string;
 
-    // just a cache
-    protected _variableTypeWrapper: IVariableTypeInstruction;
-
     constructor({
         name, 
         elementType = null, 
@@ -55,8 +52,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bBuiltIn = builtIn;
 
         fields.forEach(field => this.addField(field));
-
-        this._variableTypeWrapper = new VariableTypeInstruction({ type: this });
     }
 
 
@@ -252,10 +247,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         return null;
     }
 
-
-    asVarType(): IVariableTypeInstruction {
-        return this._variableTypeWrapper;
-    }
 
     addField(field: IVariableDeclInstruction): void {
         console.assert(this.getField(field.name) === null);
