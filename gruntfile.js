@@ -1,7 +1,7 @@
-const buildPath         = './build';
-const sandboxPath       = './src/sandbox';
-const semanticLessPath  = './node_modules/semantic-ui-less';
-const codemirrorPath    = './node_modules/codemirror';
+const build         = './build';
+const sandbox       = './src/sandbox';
+const semanticLess  = './node_modules/semantic-ui-less';
+// const codemirror    = './node_modules/codemirror';
 
 module.exports = function (grunt) {
     grunt.initConfig({
@@ -10,12 +10,12 @@ module.exports = function (grunt) {
                 tsconfig: 'tsconfig.json'
             },
             live: {
-                watch: `${sandboxPath}`,
+                watch: `${sandbox}`,
                 tsconfig: 'tsconfig.json'
             }
         },
         clean: {
-            debug: [`${buildPath}`]
+            debug: [`${build}`]
         },
         pug: {
             debug: {
@@ -27,7 +27,7 @@ module.exports = function (grunt) {
                     }
                 },
                 files: {
-                    [`${buildPath}/index.html`]: `${sandboxPath}/index.pug`
+                    [`${build}/sandbox.html`]: `${sandbox}/index.pug`
                 }
             }
         },
@@ -36,39 +36,39 @@ module.exports = function (grunt) {
                 files: [
                     { 
                         expand: true, 
-                        cwd: `${sandboxPath}/assets/`, 
+                        cwd: `${sandbox}/assets/`, 
                         src: ['**'], 
-                        dest: `${buildPath}/assets` 
+                        dest: `${build}/assets` 
                     },
                     { 
                         expand: true, 
-                        cwd: `${sandboxPath}/deps/`, 
+                        cwd: `${sandbox}/deps/`, 
                         src: ['react-ace/lib/*', 'react-ace/package.json', 'brace/index.js', 'brace/ext/*', 'brace/theme/*', 'brace/mode/*', 'brace/package.json'], 
-                        dest: `${buildPath}/sandbox/deps` 
+                        dest: `${build}/sandbox/deps` 
                     },
+                    // {
+                    //     expand: true,
+                    //     cwd: `${codemirror}/lib/`,
+                    //     src: ['codemirror.css'],
+                    //     dest: `${build}/assets/codemirror`
+                    // },
+                    // {
+                    //     expand: true,
+                    //     cwd: `${codemirror}/theme/`,
+                    //     src: ['**'],
+                    //     dest: `${build}/assets/codemirror/theme`
+                    // },
                     {
                         expand: true,
-                        cwd: `${codemirrorPath}/lib/`,
-                        src: ['codemirror.css'],
-                        dest: `${buildPath}/assets/codemirror`
-                    },
-                    {
-                        expand: true,
-                        cwd: `${codemirrorPath}/theme/`,
+                        cwd: `${semanticLess}/themes/default/assets`,
                         src: ['**'],
-                        dest: `${buildPath}/assets/codemirror/theme`
+                        dest: `${build}/assets/themes/default/assets`
                     },
                     {
                         expand: true,
-                        cwd: `${semanticLessPath}/themes/default/assets`,
+                        cwd: `${semanticLess}/themes/github/assets`,
                         src: ['**'],
-                        dest: `${buildPath}/assets/themes/default/assets`
-                    },
-                    {
-                        expand: true,
-                        cwd: `${semanticLessPath}/themes/github/assets`,
-                        src: ['**'],
-                        dest: `${buildPath}/assets/themes/github/assets`
+                        dest: `${build}/assets/themes/github/assets`
                     }
                 ]
             }
@@ -77,12 +77,9 @@ module.exports = function (grunt) {
             debug: {
                 options: {
                     sourceMap: true,
-                    // rootpath: `${sandboxPath}`,
-                    // relativeUrls: true,
-                    // paths: [`${sandboxPath}/site/globals`, `${semanticLessPath}/`]
                 },
                 files: {
-                    [`${buildPath}/assets/themes/default/semantic.css`]: `${semanticLessPath}/semantic.less`
+                    [`${build}/assets/themes/default/semantic.css`]: `${semanticLess}/semantic.less`
                 }
             }
         }
