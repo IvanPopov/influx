@@ -6,7 +6,7 @@ import { ExprInstruction } from "./ExprInstruction";
 
 
 export interface ICastExprInstructionSettings extends IExprInstructionSettings {
-    sourceExr: IInstruction;
+    sourceExpr: IInstruction;
 }
 
 
@@ -17,10 +17,10 @@ export interface ICastExprInstructionSettings extends IExprInstructionSettings {
 export class CastExprInstruction extends ExprInstruction {
     private _srcExpr: IInstruction;
 
-    constructor({ sourceExr, ...settings }: ICastExprInstructionSettings) {
+    constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
 
-        this._srcExpr = sourceExr.$withParent(this);
+        this._srcExpr = sourceExpr.$withParent(this);
     }
 
     get expr(): IInstruction {

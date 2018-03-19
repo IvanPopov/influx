@@ -37,9 +37,9 @@ import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
 import { ConstructorCallInstruction } from './instructions/ConstructorCallInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
-import { UnaryExprInstruction } from './instructions/UnaryExprInstruction';
+import { UnaryExprInstruction, UnaryOperator } from './instructions/UnaryExprInstruction';
 import { ConditionalExprInstruction } from './instructions/ConditionalExprInstruction';
-import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
+import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { CastExprInstruction } from './instructions/CastExprInstruction'
 import { LogicalExprInstruction } from './instructions/LogicalExprInstruction'
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
@@ -872,23 +872,32 @@ function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast:
 }
 
 
-// function analyzeInitExpr(context: Context, program: ProgramScope, node: IParseNode): IInitExprInstruction {
-//     let children: IParseNode[] = node.children;
-//     let initExpr: IInitExprInstruction = new InitExprInstruction(node);
+/**
+ * AST example:
+ *    InitExpr
+ *         T_UINT = '0'
+ */
+function analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IInitExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    
+    let args: IExprInstruction[] = [];
 
-//     if (children.length === 1) {
-//         initExpr.push(analyzeExpr(context, program, children[0]), true);
-//     }
-//     else {
-//         for (let i = 0; i < children.length; i++) {
-//             if (children[i].name === 'InitExpr') {
-//                 initExpr.push(analyzeInitExpr(context, program, children[i]), true);
-//             }
-//         }
-//     }
+    if (children.length === 1) {
+        args.push(analyzeExpr(context, program, children[0]));
+    }
+    else {
+        for (let i = 0; i < children.length; i++) {
+            if (children[i].name === 'InitExpr') {
+                args.push(analyzeInitExpr(context, program, children[i]));
+            }
+        }
+    }
 
-//     return initExpr;
-// }
+    // todo: determ type!!
+    const initExpr: IInitExprInstruction = new InitExprInstruction({ scope, sourceNode, args, type: null });
+    return initExpr;
+}
 
 
 
@@ -1414,142 +1423,141 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
 
 
 
-// /**
-//  * Проверят возможность использования оператора между двумя типами.
-//  * Возращает тип получаемый в результате приминения опрератора, или, если применить его невозможно - null.
-//  *
-//  * @operator {string} Один из операторов: + - * / % += -= *= /= %= = < > <= >= == != =
-//  * @leftType {IVariableTypeInstruction} Тип левой части выражения
-//  * @rightType {IVariableTypeInstruction} Тип правой части выражения
-//  */
-// function checkTwoOperandExprTypes(
-//     context: Context,
-//     operator: string,
-//     leftType: IVariableTypeInstruction,
-//     rightType: IVariableTypeInstruction): IVariableTypeInstruction {
+/**
+ * Проверят возможность использования оператора между двумя типами.
+ * Возращает тип получаемый в результате приминения опрератора, или, если применить его невозможно - null.
+ *
+ * @operator {string} Один из операторов: + - * / % += -= *= /= %= = < > <= >= == != =
+ * @leftType {IVariableTypeInstruction} Тип левой части выражения
+ * @rightType {IVariableTypeInstruction} Тип правой части выражения
+ */
+function checkTwoOperandExprTypes(
+    context: Context,
+    operator: string,
+    leftType: IVariableTypeInstruction,
+    rightType: IVariableTypeInstruction): IVariableTypeInstruction {
+        
+    const isComplex = leftType.isComplex() || rightType.isComplex();
+    const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
+    const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
+    const boolType = <IVariableTypeInstruction>systemScope.findType('bool');
 
-//     const isComplex: boolean = leftType.isComplex() || rightType.isComplex();
-//     const isArray: boolean = leftType.isNotBaseArray() || rightType.isNotBaseArray();
-//     const isSampler: boolean = isSamplerType(leftType) || isSamplerType(rightType);
-//     const boolType: IVariableTypeInstruction = getSystemType('bool').variableType;
+    if (isArray || isSampler) {
+        return null;
+    }
 
-//     if (isArray || isSampler) {
-//         return null;
-//     }
+    if (operator === '%' || operator === '%=') {
+        return null;
+    }
 
-//     if (operator === '%' || operator === '%=') {
-//         return null;
-//     }
+    if (isAssignmentOperator(operator)) {
+        if (!leftType.writable) {
+            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
+            return null;
+        }
 
-//     if (isAssignmentOperator(operator)) {
-//         if (!leftType.writable) {
-//             _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
-//             return null;
-//         }
+        if (!rightType.readable) {
+            _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            return null;
+        }
 
-//         if (!rightType.readable) {
-//             _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//             return null;
-//         }
+        if (operator !== '=' && !leftType.readable) {
+            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        }
+    }
+    else {
+        if (!leftType.readable) {
+            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            return null;
+        }
 
-//         if (operator !== '=' && !leftType.readable) {
-//             _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//         }
-//     }
-//     else {
-//         if (!leftType.readable) {
-//             _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//             return null;
-//         }
+        if (!rightType.readable) {
+            _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            return null;
+        }
+    }
 
-//         if (!rightType.readable) {
-//             _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//             return null;
-//         }
-//     }
+    if (isComplex) {
+        if (operator === '=' && leftType.isEqual(rightType)) {
+            return <IVariableTypeInstruction>leftType;
+        }
+        else if (isEqualOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
+            return boolType;
+        }
+        else {
+            return null;
+        }
+    }
 
-//     if (isComplex) {
-//         if (operator === '=' && leftType.isEqual(rightType)) {
-//             return <IVariableTypeInstruction>leftType;
-//         }
-//         else if (isEqualOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
-//             return boolType;
-//         }
-//         else {
-//             return null;
-//         }
-//     }
-
-//     // let returnType: IVariableTypeInstruction = null;
-//     const pLeftBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>leftType.baseType).variableType;
-//     const pRightBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>rightType.baseType).variableType;
+    const leftBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>leftType.baseType).variableType;
+    const rightBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>rightType.baseType).variableType;
 
 
-//     if (leftType.isConst() && isAssignmentOperator(operator)) {
-//         return null;
-//     }
+    if (leftType.isConst() && isAssignmentOperator(operator)) {
+        return null;
+    }
 
-//     if (leftType.isEqual(rightType)) {
-//         if (isArithmeticalOperator(operator)) {
-//             if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
-//                 return pLeftBaseType;
-//             }
-//             else {
-//                 return null;
-//             }
-//         }
-//         else if (isRelationalOperator(operator)) {
-//             if (isScalarType(leftType)) {
-//                 return boolType;
-//             }
-//             else {
-//                 return null;
-//             }
-//         }
-//         else if (isEqualOperator(operator)) {
-//             return boolType;
-//         }
-//         else if (operator === '=') {
-//             return pLeftBaseType;
-//         }
-//         else {
-//             return null;
-//         }
+    if (leftType.isEqual(rightType)) {
+        if (isArithmeticalOperator(operator)) {
+            if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
+                return leftBaseType;
+            }
+            else {
+                return null;
+            }
+        }
+        else if (isRelationalOperator(operator)) {
+            if (isScalarType(leftType)) {
+                return boolType;
+            }
+            else {
+                return null;
+            }
+        }
+        else if (isEqualOperator(operator)) {
+            return boolType;
+        }
+        else if (operator === '=') {
+            return leftBaseType;
+        }
+        else {
+            return null;
+        }
 
-//     }
+    }
 
-//     if (isArithmeticalOperator(operator)) {
-//         if (isBoolBasedType(leftType) || isBoolBasedType(rightType) ||
-//             isFloatBasedType(leftType) !== isFloatBasedType(rightType) ||
-//             isIntBasedType(leftType) !== isIntBasedType(rightType)) {
-//             return null;
-//         }
+    if (isArithmeticalOperator(operator)) {
+        if (isBoolBasedType(leftType) || isBoolBasedType(rightType) ||
+            isFloatBasedType(leftType) !== isFloatBasedType(rightType) ||
+            isIntBasedType(leftType) !== isIntBasedType(rightType)) {
+            return null;
+        }
 
-//         if (isScalarType(leftType)) {
-//             return pRightBaseType;
-//         }
+        if (isScalarType(leftType)) {
+            return rightBaseType;
+        }
 
-//         if (isScalarType(rightType)) {
-//             return pLeftBaseType;
-//         }
+        if (isScalarType(rightType)) {
+            return leftBaseType;
+        }
 
-//         if (operator === '*' || operator === '*=') {
-//             if (isMatrixType(leftType) && isVectorType(rightType) &&
-//                 leftType.length === rightType.length) {
-//                 return pRightBaseType;
-//             }
-//             else if (isMatrixType(rightType) && isVectorType(leftType) &&
-//                 leftType.length === rightType.length) {
-//                 return pLeftBaseType;
-//             }
-//             else {
-//                 return null;
-//             }
-//         }
-//     }
+        if (operator === '*' || operator === '*=') {
+            if (isMatrixType(leftType) && isVectorType(rightType) &&
+                leftType.length === rightType.length) {
+                return rightBaseType;
+            }
+            else if (isMatrixType(rightType) && isVectorType(leftType) &&
+                leftType.length === rightType.length) {
+                return leftBaseType;
+            }
+            else {
+                return null;
+            }
+        }
+    }
 
-//     return null;
-// }
+    return null;
+}
 
 
 /**
@@ -1742,99 +1750,144 @@ function analyzeUsage(sourceNode: IParseNode): string {
 }
 
 
-// function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
-//     let children: IParseNode[] = sourceNode.children;
+function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+ 
+    let annotation: IAnnotationInstruction = null;
+    let semantics: string = '';
+    let init: IInitExprInstruction = null;
 
-//     let varDecl: IVariableDeclInstruction = new VariableDeclInstruction(sourceNode);
-//     let variableType: IVariableTypeInstruction = new VariableTypeInstruction(sourceNode);
-//     let annotation: IAnnotationInstruction = null;
-//     let semantics: string = '';
-//     let initExpr: IInitExprInstruction = null;
+    let id = analyzeVariableDimId(context, program, children[children.length - 1]);
+    let arrayIndex = analyzeVariableDimArrayIndex(context, program, children[children.length - 1]);
+    let type = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
 
-//     varDecl.push(variableType, true);
-//     variableType.pushType(generalType);
-//     varDecl.scope = (program.current);
-
-//     analyzeVariableDim(context, program, children[children.length - 1], varDecl);
-
-//     let i: number = 0;
-//     for (i = children.length - 2; i >= 0; i--) {
-//         if (children[i].name === 'Annotation') {
-//             annotation = analyzeAnnotation(children[i]);
-//             varDecl.annotation = (annotation);
-//         }
-//         else if (children[i].name === 'Semantic') {
-//             semantics = analyzeSemantic(children[i]);
-//             varDecl.semantics = (semantics);
-//             varDecl.nameID.realName = (semantics);
-//         }
-//         else if (children[i].name === 'Initializer') {
-//             initExpr = analyzeInitializer(context, program, children[i]);
-//             if (!initExpr.optimizeForVariableType(variableType)) {
-//                 _error(context, sourceNode, EEffectErrors.BAD_VARIABLE_INITIALIZER, { varName: varDecl.name });
-//                 return null;
-//             }
-//             varDecl.push(initExpr, true);
-//         }
-//     }
-
-//     checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
-//     addVariableDecl(context, program, varDecl);
-//     varDecl.fillNameIndex();
-
-//     return varDecl;
-// }
+    for (let i = children.length - 2; i >= 0; i--) {
+        if (children[i].name === 'Annotation') {
+            annotation = analyzeAnnotation(children[i]);
+        } else if (children[i].name === 'Semantic') {
+            semantics = analyzeSemantic(children[i]);
+        } else if (children[i].name === 'Initializer') {
+            init = analyzeInitializer(context, program, children[i]);
+            if (!init.optimizeForVariableType(type)) {
+                _error(context, sourceNode, EEffectErrors.BAD_VARIABLE_INITIALIZER, { varName: id.name });
+                return null;
+            }
+        }
+    }
+    
+    const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation });
+    varDecl.fillNameIndex();
+    addVariableDecl(context, program, varDecl);
+    return checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeVariableDim(context: Context, program: ProgramScope, node: IParseNode, variableDecl: IVariableDeclInstruction): void {
-//     let children: IParseNode[] = node.children;
-//     let variableType: IVariableTypeInstruction = <IVariableTypeInstruction>variableDecl.type;
+/**
+ * AST example:
+ *    VariableDim
+ *         T_PUNCTUATOR_93 = ']'
+ *         T_NON_TYPE_ID = 'N'
+ *         T_PUNCTUATOR_91 = '['
+ *       + VariableDim 
+ *    VariableDim
+ *         T_NON_TYPE_ID = 'x'
+ */
+function analyzeVariableDimId(context: Context, program: ProgramScope, sourceNode: IParseNode): IIdInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-//     if (children.length === 1) {
-//         let name: IIdInstruction = new IdInstruction(node);
-//         name.name = (children[0].value);
-//         variableDecl.push(name, true);
-//         return;
-//     }
+    if (children.length === 1) {
+        const name = children[0].value;
+        return new IdInstruction({ scope, sourceNode, name });
+    }
 
-//     analyzeVariableDim(context, program, children[children.length - 1], variableDecl);
-
-//     {
-//         let indexExpr: IExprInstruction = analyzeExpr(context, program, children[children.length - 3]);
-//         variableType.addArrayIndex(indexExpr);
-//     }
-// }
+    return null;
+}
 
 
+/**
+ * AST example:
+ *    VariableDim
+ *         T_PUNCTUATOR_93 = ']'
+ *         T_NON_TYPE_ID = 'N'
+ *         T_PUNCTUATOR_91 = '['
+ *       + VariableDim 
+ */
+function analyzeVariableDimArrayIndex(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+
+    if (children.length === 1) {
+        return null;
+    }
+
+    return analyzeExpr(context, program, children[children.length - 3]);
+}
+
+
+/**
+ * AST example:
+ *    Annotation
+ *         T_PUNCTUATOR_62 = '>'
+ *         T_PUNCTUATOR_60 = '<'
+ */
 function analyzeAnnotation(sourceNode: IParseNode): IAnnotationInstruction {
     // todo
     return null;
 }
 
 
+/**
+ * AST example:
+ *    Semantic
+ *         T_NON_TYPE_ID = 'SEMANTICS'
+ *         T_PUNCTUATOR_58 = ':'
+ */
 function analyzeSemantic(sourceNode: IParseNode): string {
     let semantics: string = sourceNode.children[0].value;
     return semantics;
 }
 
 
-// function analyzeInitializer(context: Context, program: ProgramScope, node: IParseNode): IInitExprInstruction {
-//     let children: IParseNode[] = node.children;
-//     let initExpr: IInitExprInstruction = new InitExprInstruction(node);
+/**
+ * AST example:
+ *    Initializer
+ *         T_UINT = '10'
+ *         T_PUNCTUATOR_61 = '='
+ *    Initializer
+ *       + CastExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *    Initializer
+ *         T_PUNCTUATOR_125 = '}'
+ *       + InitExpr 
+ *         T_PUNCTUATOR_44 = ','
+ *       + InitExpr 
+ *         T_PUNCTUATOR_123 = '{'
+ *         T_PUNCTUATOR_61 = '='
+ */
+function analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode): IInitExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-//     if (children.length === 2) {
-//         initExpr.push(analyzeExpr(context, program, children[0]), true);
-//     }
-//     else {
-//         for (let i: number = children.length - 3; i >= 1; i--) {
-//             if (children[i].name === 'InitExpr') {
-//                 initExpr.push(analyzeInitExpr(context, program, children[i]), true);
-//             }
-//         }
-//     }
+    let args: IExprInstruction[] = [];
 
-//     return initExpr;
-// }
+    if (children.length === 2) {
+        args.push(analyzeExpr(context, program, children[0]));
+    }
+    else {
+        for (let i: number = children.length - 3; i >= 1; i--) {
+            if (children[i].name === 'InitExpr') {
+                args.push(analyzeInitExpr(context, program, children[i]));
+            }
+        }
+    }
+    
+    // todo: determ type!
+    let initExpr = new InitExprInstruction({ scope, sourceNode, args, type: null });
+    return initExpr;
+}
+
 
 
 function analyzeExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
@@ -1938,7 +1991,7 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
         return null;
     }
 
-    let type =  VariableTypeInstruction.wrap(<IVariableTypeInstruction>shaderFunc.definition.returnType);
+    let type =  VariableTypeInstruction.wrap(<IVariableTypeInstruction>shaderFunc.definition.returnType, scope);
 
     let expr = new CompileExprInstruction({ args, scope, type, operand: shaderFunc });
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2080,7 +2133,7 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
         sourceNode, 
         scope, 
         name: stateType, 
-        value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue }); 
+        value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue })
     });
 }
 
@@ -2351,7 +2404,7 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const indexExpr = analyzeExpr(context, program, children[children.length - 3]);
     const indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
-    const intType = scope.findType('int');
+    const intType = systemScope.findType('int');
 
     if (!indexExprType.isEqual(intType)) {
         _error(context, sourceNode, EEffectErrors.BAD_POSTIX_NOT_INT_INDEX, { typeName: indexExprType.toString() });
@@ -2415,160 +2468,152 @@ function analyzePostfixArithmetic(context: Context, program: ProgramScope, sourc
 }
 
 
-// function analyzeUnaryExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    UnaryExpr
+ *         T_NON_TYPE_ID = 'x'
+ *         T_PUNCTUATOR_33 = '!'
+ */
+function analyzeUnaryExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
 
-//     let children: IParseNode[] = node.children;
-//     let operator: string = children[1].value;
-//     let expr: UnaryExprInstruction = new UnaryExprInstruction(node);
-//     let unaryExpr: IExprInstruction;
-//     let exprType: IVariableTypeInstruction;
-//     let unaryExprType: IVariableTypeInstruction;
+    const children = sourceNode.children;
+    const operator = <UnaryOperator>children[1].value;
+    const scope = program.currentScope;
 
-//     unaryExpr = analyzeExpr(context, program, children[0]);
-//     unaryExprType = <IVariableTypeInstruction>unaryExpr.type;
+    let expr = analyzeExpr(context, program, children[0]);
+    let exprType = checkOneOperandExprType(context, sourceNode, operator, expr.type);
 
-//     exprType = checkOneOperandExprType(context, node, operator, unaryExprType);
+    if (isNull(exprType)) {
+        _error(context, sourceNode, EEffectErrors.BAD_UNARY_OPERATION, <IEffectErrorInfo>{
+            operator: operator,
+            tyename: expr.type.toString()
+        });
+        return null;
+    }
 
-//     if (isNull(exprType)) {
-//         _error(context, node, EEffectErrors.BAD_UNARY_OPERATION, <IEffectErrorInfo>{
-//             operator: operator,
-//             tyename: unaryExprType.toString()
-//         });
-//         return null;
-//     }
-
-//     expr.operator = (operator);
-//     expr.type = (exprType);
-//     expr.push(unaryExpr, true);
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    let unaryExpr = new UnaryExprInstruction({ scope, sourceNode, expr, operator });
+    return checkInstruction(context, unaryExpr, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeCastExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
 
-//     let children: IParseNode[] = node.children;
-//     let expr: CastExprInstruction = new CastExprInstruction(node);
-//     let exprType: IVariableTypeInstruction;
-//     let castedExpr: IExprInstruction;
+/**
+ * AST example:
+ *    CastExpr
+ *         T_NON_TYPE_ID = 'y'
+ *         T_PUNCTUATOR_41 = ')'
+ *       + ConstType 
+ *         T_PUNCTUATOR_40 = '('
+ */
+function analyzeCastExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
 
-//     exprType = analyzeConstTypeDim(context, program, children[2]);
-//     castedExpr = analyzeExpr(context, program, children[0]);
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-//     if (!(<IVariableTypeInstruction>castedExpr.type).readable) {
-//         _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
+    const type = analyzeConstTypeDim(context, program, children[2]);
+    const sourceExpr = analyzeExpr(context, program, children[0]);
 
-//     expr.type = (exprType);
-//     expr.push(exprType, true);
-//     expr.push(castedExpr, true);
+    if (!(<IVariableTypeInstruction>sourceExpr.type).readable) {
+        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
 
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
-
-
-// function analyzeConditionalExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-
-//     let children: IParseNode[] = node.children;
-//     let expr: ConditionalExprInstruction = new ConditionalExprInstruction(node);
-//     let conditionExpr: IExprInstruction;
-//     let trueExpr: IExprInstruction;
-//     let falseExpr: IExprInstruction;
-//     let conditionType: IVariableTypeInstruction;
-//     let trueExprType: IVariableTypeInstruction;
-//     let falseExprType: IVariableTypeInstruction;
-//     let boolType: ITypeInstruction;
-
-//     conditionExpr = analyzeExpr(context, program, children[children.length - 1]);
-//     trueExpr = analyzeExpr(context, program, children[children.length - 3]);
-//     falseExpr = analyzeExpr(context, program, children[0]);
-
-//     conditionType = <IVariableTypeInstruction>conditionExpr.type;
-//     trueExprType = <IVariableTypeInstruction>trueExpr.type;
-//     falseExprType = <IVariableTypeInstruction>falseExpr.type;
-
-//     boolType = getSystemType('bool');
-
-//     if (!conditionType.isEqual(boolType)) {
-//         _error(context, conditionExpr.sourceNode, EEffectErrors.BAD_CONDITION_TYPE, { typeName: conditionType.toString() });
-//         return null;
-//     }
-
-//     if (!trueExprType.isEqual(falseExprType)) {
-//         _error(context, trueExprType.sourceNode, EEffectErrors.BAD_CONDITION_VALUE_TYPES, <IEffectErrorInfo>{
-//             leftTypeName: trueExprType.toString(),
-//             rightTypeName: falseExprType.toString()
-//         });
-//         return null;
-//     }
-
-//     if (!conditionType.readable) {
-//         _error(context, conditionType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
-
-//     if (!trueExprType.readable) {
-//         _error(context, trueExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
-
-//     if (!falseExprType.readable) {
-//         _error(context, falseExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
-
-//     expr.type = (trueExprType);
-//     expr.push(conditionExpr, true);
-//     expr.push(trueExpr, true);
-//     expr.push(falseExpr, true);
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    const expr = new CastExprInstruction({ scope, sourceNode, sourceExpr, type });
+    return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);;
+}
 
 
-// function analyzeArithmeticExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    ConditionalExpr
+ *         T_KW_FALSE = 'false'
+ *         T_PUNCTUATOR_58 = ':'
+ *         T_KW_TRUE = 'true'
+ *         T_PUNCTUATOR_63 = '?'
+ *         T_NON_TYPE_ID = 'isOk'
+ */
+function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
 
-//     let children: IParseNode[] = node.children;
-//     let operator: string = node.children[1].value;
-//     let expr: ArithmeticExprInstruction = new ArithmeticExprInstruction(node);
-//     let leftExpr: IExprInstruction = null;
-//     let rightExpr: IExprInstruction = null;
-//     let leftType: IVariableTypeInstruction = null;
-//     let rightType: IVariableTypeInstruction = null;
-//     let exprType: IVariableTypeInstruction = null;
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, program, children[0]);
 
-//     leftType = <IVariableTypeInstruction>leftExpr.type;
-//     rightType = <IVariableTypeInstruction>rightExpr.type;
+    const conditionExpr = analyzeExpr(context, program, children[children.length - 1]);
+    const leftExpr = analyzeExpr(context, program, children[children.length - 3]);
+    const rightExpr = analyzeExpr(context, program, children[0]);
 
-//     exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+    const conditionType = <IVariableTypeInstruction>conditionExpr.type;
+    const leftExprType = <IVariableTypeInstruction>leftExpr.type;
+    const rightExprType = <IVariableTypeInstruction>rightExpr.type;
 
-//     if (isNull(exprType)) {
-//         _error(context, node, EEffectErrors.BAD_ARITHMETIC_OPERATION, <IEffectErrorInfo>{
-//             operator: operator,
-//             leftTypeName: leftType.toString(),
-//             rightTypeName: rightType.toString()
-//         });
-//         return null;
-//     }
+    const boolType = systemScope.findType('bool');
 
-//     expr.operator = (operator);
-//     expr.type = (exprType);
-//     expr.push(leftExpr, true);
-//     expr.push(rightExpr, true);
+    if (!conditionType.isEqual(boolType)) {
+        _error(context, conditionExpr.sourceNode, EEffectErrors.BAD_CONDITION_TYPE, { typeName: conditionType.toString() });
+        return null;
+    }
 
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-//     return expr;
-// }
+    if (!leftExprType.isEqual(rightExprType)) {
+        _error(context, leftExprType.sourceNode, EEffectErrors.BAD_CONDITION_VALUE_TYPES, <IEffectErrorInfo>{
+            leftTypeName: leftExprType.toString(),
+            rightTypeName: rightExprType.toString()
+        });
+        return null;
+    }
+
+    if (!conditionType.readable) {
+        _error(context, conditionType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
+
+    if (!leftExprType.readable) {
+        _error(context, leftExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
+
+    if (!rightExprType.readable) {
+        _error(context, rightExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
+
+    const condExpr = new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr});
+    return  checkInstruction(context, condExpr, ECheckStage.CODE_TARGET_SUPPORT);;
+}
+
+
+/**
+ * AST example:
+ *    AddExpr
+ *         T_NON_TYPE_ID = 'b'
+ *         T_PUNCTUATOR_43 = '+'
+ *         T_NON_TYPE_ID = 'a'
+ */
+function analyzeArithmeticExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+
+    const children = sourceNode.children;
+    const scope = program.currentScope
+    const operator = <ArithmeticOperator>sourceNode.children[1].value;
+
+    const left = analyzeExpr(context, program, children[children.length - 1]);
+    const right = analyzeExpr(context, program, children[0]);
+
+    const leftType = <IVariableTypeInstruction>left.type;
+    const rightType = <IVariableTypeInstruction>right.type;
+
+    const type = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+
+    if (isNull(type)) {
+        _error(context, sourceNode, EEffectErrors.BAD_ARITHMETIC_OPERATION, <IEffectErrorInfo>{
+            operator: operator,
+            leftTypeName: leftType.toString(),
+            rightTypeName: rightType.toString()
+        });
+        return null;
+    }
+
+    const arithmeticExpr = new ArithmeticExprInstruction({ scope, sourceNode, left, right, operator, type });
+    return checkInstruction(context, arithmeticExpr, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
 // function analyzeRelationExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
@@ -2768,28 +2813,28 @@ function analyzeSimpleExpr(context: Context, program: ProgramScope, sourceNode: 
 }
 
 
+/**
+ * AST example:
+ *    ConstType
+ *       + Type 
+ */
+function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
 
-// function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+    const children = node.children;
 
-//     const children = node.children;
+    if (children.length > 1) {
+        _error(context, node, EEffectErrors.BAD_CAST_TYPE_USAGE);
+        return null;
+    }
 
-//     if (children.length > 1) {
-//         _error(context, node, EEffectErrors.BAD_CAST_TYPE_USAGE);
-//         return null;
-//     }
+    const type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
 
-//     let type: IVariableTypeInstruction;
+    if (!type.isBase()) {
+        _error(context, node, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
+    }
 
-//     type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
-
-//     if (!type.isBase()) {
-//         _error(context, node, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
-//     }
-
-//     checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return type;
-// }
+    return checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
 // function analyzeVarStructDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {

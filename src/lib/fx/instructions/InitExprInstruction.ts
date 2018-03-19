@@ -1,6 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IExprInstructionSettings } from "./ExprInstruction";
-import { IInitExprInstruction, ITypeInstruction, EInstructionTypes, IExprInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
+import { IInitExprInstruction, ITypeInstruction, EInstructionTypes, IExprInstruction, IVariableTypeInstruction, EScopeType } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { Instruction } from "./Instruction";
 import * as Effect from "../Effect";
@@ -75,7 +75,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
     }
 
     optimizeForVariableType(pType: IVariableTypeInstruction): boolean {
-        if ((pType.isNotBaseArray() && pType.scope.isGlobal()) ||
+        if ((pType.isNotBaseArray() && pType.scope.type <= EScopeType.k_Global) ||
             (pType.isArray() && this.arguments.length > 1)) {
 
 
