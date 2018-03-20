@@ -1,4 +1,5 @@
 ﻿import { IPosition } from "./../idl/parser/IParser";
+import { AssigmentOperator } from "./instructions/AssignmentExprInstruction";
 import { IProvideInstructionSettings, ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ISamplerStateInstructionSettings, SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
 import { IParseNode, IParseTree } from '../idl/parser/IParser';
@@ -8,7 +9,7 @@ import {
     IVariableTypeInstruction, IIdInstruction, ITypeInstruction, ITypeDeclInstruction,
     IInstructionError, IExprInstruction, EFunctionType, EInstructionTypes, ECheckStage,
     IAnnotationInstruction, IInitExprInstruction, IIdExprInstruction, IStmtInstruction,
-    IDeclInstruction, ILiteralInstruction, ISamplerStateInstruction, IInstructionCollector, IProvideInstruction, EScopeType, IFunctionCallInstruction, IConstructorCallInstruction
+    IDeclInstruction, ILiteralInstruction, ISamplerStateInstruction, IInstructionCollector, IProvideInstruction, EScopeType, IFunctionCallInstruction, IConstructorCallInstruction, IScope
 } from '../idl/IInstruction';
 import { IMap } from '../idl/IMap';
 import { time } from '../time';
@@ -41,7 +42,7 @@ import { UnaryExprInstruction, UnaryOperator } from './instructions/UnaryExprIns
 import { ConditionalExprInstruction } from './instructions/ConditionalExprInstruction';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { CastExprInstruction } from './instructions/CastExprInstruction'
-import { LogicalExprInstruction } from './instructions/LogicalExprInstruction'
+import { LogicalExprInstruction, LogicalOperator } from './instructions/LogicalExprInstruction'
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
 import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
@@ -55,7 +56,7 @@ import { IfStmtInstruction } from './instructions/IfStmtInstruction';
 import { AssignmentExprInstruction } from './instructions/AssignmentExprInstruction';
 import { SimpleInstruction } from './instructions/SimpleInstruction';
 import { TypeDeclInstruction } from './instructions/TypeDeclInstruction'
-import { RelationalExprInstruction } from './instructions/RelationalExprInstruction';
+import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
 import { StringInstruction } from './instructions/StringInstruction';
 import { FloatInstruction } from './instructions/FloatInstruction';
@@ -493,13 +494,13 @@ function generateSystemFunction(name: string,
                 _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
             }
 
-            
+
             let id = new IdInstruction({ scope, name });
             let func = new SystemFunctionInstruction({ scope, id, returnType, exprTranslator, argTypes, builtIn });
-            
+
             func.$makeVertexCompatible(isForVertex);
             func.$makePixelCompatible(isForPixel);
-            
+
             systemFunctionHashMap[funcHash] = true;
             systemScope.addFunction(func);
         }
@@ -852,24 +853,24 @@ function analyzeProvideDecl(context: Context, program: ProgramScope, node: IPars
         assert(children[2].name === 'T_KW_PROVIDE');
         return new ProvideInstruction({ moduleName, scope });
     }
-    
+
     _error(context, node, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
     return null;
 }
 
 
 
-
-function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
-    let children: IParseNode[] = ast.getRoot().children;
-    let i: number = 0;
-
-    for (i = children.length - 1; i >= 0; i--) {
+function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): IProvideInstruction[] {
+    const children = ast.getRoot().children;
+    const provideList: IProvideInstruction[] = [];
+    for (let i = children.length - 1; i >= 0; i--) {
         if (children[i].name === 'ProvideDecl') {
-            analyzeProvideDecl(context, program, children[i]);
+            provideList.push(analyzeProvideDecl(context, program, children[i]));
         }
     }
+    return provideList;
 }
+
 
 
 /**
@@ -880,7 +881,7 @@ function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast:
 function analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IInitExprInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    
+
     let args: IExprInstruction[] = [];
 
     if (children.length === 1) {
@@ -915,42 +916,17 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 }
 
 
-// function addVariableDecl(context: Context, program: ProgramScope, variable: IVariableDeclInstruction): void {
-//     if (isSystemVariable(variable)) {
-//         _error(context, variable.sourceNode, EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: variable.name });
-//     }
 
-//     let isVarAdded: boolean = program.addVariable(variable);
+function addTypeDecl(context: Context, scope: IScope, type: ITypeDeclInstruction): void {
+    if (systemScope.findTypeDecl(type.name)) {
+        _error(context, type.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: type.name });
+    }
 
-//     if (!isVarAdded) {
-//         let eScopeType: EScopeType = program.type;
-
-//         switch (eScopeType) {
-//             case EScopeType.k_Default:
-//                 _error(context, variable.sourceNode, EEffectErrors.REDEFINE_VARIABLE, { varName: variable.name });
-//                 break;
-//             case EScopeType.k_Struct:
-//                 _error(context, variable.sourceNode, EEffectErrors.BAD_NEW_FIELD_FOR_STRUCT_NAME, { fieldName: variable.name });
-//                 break;
-//             case EScopeType.k_Annotation:
-//                 _error(context, variable.sourceNode, EEffectErrors.BAD_NEW_ANNOTATION_VAR, { varName: variable.name });
-//                 break;
-//         }
-//     }
-// }
-
-
-// function addTypeDecl(context: Context, program: ProgramScope, type: ITypeDeclInstruction): void {
-//     if (isSystemType(type)) {
-//         _error(context, type.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: type.name });
-//     }
-
-//     let isTypeAdded: boolean = program.addType(type);
-
-//     if (!isTypeAdded) {
-//         _error(context, type.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: type.name });
-//     }
-// }
+    let isAdded = scope.addType(type);
+    if (!isAdded) {
+        _error(context, type.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: type.name });
+    }
+}
 
 
 // function addFunctionDecl(context: Context, program: ProgramScope, node: IParseNode, func: IFunctionDeclInstruction): void {
@@ -1436,7 +1412,7 @@ function checkTwoOperandExprTypes(
     operator: string,
     leftType: IVariableTypeInstruction,
     rightType: IVariableTypeInstruction): IVariableTypeInstruction {
-        
+
     const isComplex = leftType.isComplex() || rightType.isComplex();
     const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
     const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
@@ -1489,8 +1465,8 @@ function checkTwoOperandExprTypes(
         }
     }
 
-    const leftBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>leftType.baseType).variableType;
-    const rightBaseType: IVariableTypeInstruction = (<SystemTypeInstruction>rightType.baseType).variableType;
+    const leftBaseType: IVariableTypeInstruction = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, systemScope);
+    const rightBaseType: IVariableTypeInstruction = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, systemScope);
 
 
     if (leftType.isConst() && isAssignmentOperator(operator)) {
@@ -1643,31 +1619,31 @@ function isEqualOperator(operator: string): boolean {
 }
 
 
-function analyzeVariableDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
-    let children: IParseNode[] = node.children;
-    let generalType: IVariableTypeInstruction = null;
-    let variable: IVariableDeclInstruction = null;
-    let i: number = 0;
+/**
+ * AST example:
+ *    VariableDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + Variable 
+ *         T_PUNCTUATOR_44 = ','
+ *       + Variable 
+ *         T_PUNCTUATOR_44 = ','
+ *       + Variable 
+ *       + UsageType 
+ */
+function analyzeVariableDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction[] {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-    generalType = analyzeUsageType(context, program, children[children.length - 1]);
+    let generalType = analyzeUsageType(context, program, children[children.length - 1]);
+    let vars: IVariableDeclInstruction[] = [];
 
-    for (i = children.length - 2; i >= 1; i--) {
+    for (let i = children.length - 2; i >= 1; i--) {
         if (children[i].name === 'Variable') {
-            variable = analyzeVariable(context, program, children[i], generalType);
-
-            if (!isNull(instruction)) {
-                instruction.push(variable, true);
-                if (instruction.instructionType === EInstructionTypes.k_DeclStmtInstruction) {
-                    let variableSubDecls: IVariableDeclInstruction[] = variable.vars;
-                    if (!isNull(variableSubDecls)) {
-                        for (let j: number = 0; j < variableSubDecls.length; j++) {
-                            instruction.push(variableSubDecls[j], false);
-                        }
-                    }
-                }
-            }
+            vars.push(analyzeVariable(context, program, children[i], generalType));
         }
     }
+
+    return vars;
 }
 
 
@@ -1680,7 +1656,7 @@ function analyzeVariableDecl(context: Context, program: ProgramScope, node: IPar
 function analyzeUsageType(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    
+
     let type: ITypeInstruction = null;
     let usages: string[] = [];
 
@@ -1753,13 +1729,13 @@ function analyzeUsage(sourceNode: IParseNode): string {
 function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
- 
+
     let annotation: IAnnotationInstruction = null;
     let semantics: string = '';
     let init: IInitExprInstruction = null;
 
-    let id = analyzeVariableDimId(context, program, children[children.length - 1]);
-    let arrayIndex = analyzeVariableDimArrayIndex(context, program, children[children.length - 1]);
+    let id = analyzeVariableId(context, program, children[children.length - 1]);
+    let arrayIndex = analyzeVariableIndex(context, program, children[children.length - 1]);
     let type = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
 
     for (let i = children.length - 2; i >= 0; i--) {
@@ -1775,10 +1751,29 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
             }
         }
     }
-    
+
     const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation });
-    varDecl.fillNameIndex();
-    addVariableDecl(context, program, varDecl);
+    assert(scope.type != EScopeType.k_System);
+
+    if (systemScope.hasVariableInScope(varDecl.name)) {
+        _error(context, sourceNode, EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: varDecl.name });
+    }
+
+    const isAdded = scope.addVariable(varDecl);
+    if (!isAdded) {
+        switch (scope.type) {
+            case EScopeType.k_Default:
+                _error(context, sourceNode, EEffectErrors.REDEFINE_VARIABLE, { varName: varDecl.name });
+                break;
+            case EScopeType.k_Struct:
+                _error(context, sourceNode, EEffectErrors.BAD_NEW_FIELD_FOR_STRUCT_NAME, { fieldName: varDecl.name });
+                break;
+            case EScopeType.k_Annotation:
+                _error(context, sourceNode, EEffectErrors.BAD_NEW_ANNOTATION_VAR, { varName: varDecl.name });
+                break;
+        }
+    }
+
     return checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
@@ -1792,8 +1787,9 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
  *       + VariableDim 
  *    VariableDim
  *         T_NON_TYPE_ID = 'x'
+ *         ^^^^^^^^^^^^^^^^^^
  */
-function analyzeVariableDimId(context: Context, program: ProgramScope, sourceNode: IParseNode): IIdInstruction {
+function analyzeVariableId(context: Context, program: ProgramScope, sourceNode: IParseNode): IIdInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
 
@@ -1814,7 +1810,7 @@ function analyzeVariableDimId(context: Context, program: ProgramScope, sourceNod
  *         T_PUNCTUATOR_91 = '['
  *       + VariableDim 
  */
-function analyzeVariableDimArrayIndex(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+function analyzeVariableIndex(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
 
@@ -1882,7 +1878,7 @@ function analyzeInitializer(context: Context, program: ProgramScope, sourceNode:
             }
         }
     }
-    
+
     // todo: determ type!
     let initExpr = new InitExprInstruction({ scope, sourceNode, args, type: null });
     return initExpr;
@@ -1971,7 +1967,7 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
     const children = sourceNode.children;
     const shaderFuncName = children[children.length - 2].value;
     const scope = program.currentScope;
-    
+
     let args: IExprInstruction[] = null;
 
     if (children.length > 4) {
@@ -1991,7 +1987,7 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
         return null;
     }
 
-    let type =  VariableTypeInstruction.wrap(<IVariableTypeInstruction>shaderFunc.definition.returnType, scope);
+    let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>shaderFunc.definition.returnType, scope);
 
     let expr = new CompileExprInstruction({ args, scope, type, operand: shaderFunc });
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2012,14 +2008,14 @@ function analyzeSamplerStateBlock(context: Context, program: ProgramScope, sourc
     let operator: SamplerOperator = "sampler_state";
     let texture = null;
     let params = <ISamplerStateInstruction[]>[];
-    
+
     for (let i = children.length - 2; i >= 1; i--) {
         let param = analyzeSamplerState(context, program, children[i]);
         if (!isNull(param)) {
             params.push(param);
         }
     }
-    
+
     let expr = new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2075,7 +2071,7 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
             let texDecl = scope.findVariable(texName);
             let texId = new IdInstruction({ scope, sourceNode: texNameNode, name: texName });
             let tex = new IdExprInstruction({ scope, sourceNode: texNameNode, id: texId, decl: texDecl });
-    
+
             return new SamplerStateInstruction({ scope, sourceNode, name: stateType, value: tex });
         case 'ADDRESSU': /* WRAP_S */
         case 'ADDRESSV': /* WRAP_T */
@@ -2129,10 +2125,10 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
             return null;
     }
 
-    return new SamplerStateInstruction({ 
-        sourceNode, 
-        scope, 
-        name: stateType, 
+    return new SamplerStateInstruction({
+        sourceNode,
+        scope,
+        name: stateType,
         value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue })
     });
 }
@@ -2171,9 +2167,9 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
     const globalScope = program.globalScope;
 
     let expr: IFunctionCallInstruction = null;
-    
+
     // let currentAnalyzedFunction = context.currentFunction;
-    
+
     let args: IExprInstruction[] = null;
     if (children.length > 3) {
         let argumentExpr: IExprInstruction;
@@ -2198,7 +2194,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
         return null;
     }
 
-    
+
     // if (!isNull(currentAnalyzedFunction)) {
     //     if (func.functionType != EFunctionType.k_Pixel) {
     //         assert(currentAnalyzedFunction.functionType != EFunctionType.k_Vertex);
@@ -2212,7 +2208,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
 
     if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction) {
         if (!isNull(args)) {
-        
+
             const funcArguments = func.definition.paramList;
 
             for (let i = 0; i < args.length; i++) {
@@ -2244,7 +2240,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
             // }
 
         }
-       
+
 
         const type = VariableTypeInstruction.wrap(func.definition.returnType, scope);
         let funcCallExpr = new FunctionCallInstruction({ scope, type, decl: func, args });
@@ -2272,7 +2268,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
         //     currentAnalyzedFunction.addUsedFunction(func);
         // }
 
-        const systemCallExpr = new SystemCallInstruction({ scope, decl: <SystemFunctionInstruction>func, args  });
+        const systemCallExpr = new SystemCallInstruction({ scope, decl: <SystemFunctionInstruction>func, args });
         expr = systemCallExpr;
     }
 
@@ -2298,7 +2294,7 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
         _error(context, sourceNode, EEffectErrors.BAD_COMPLEX_NOT_TYPE);
         return null;
     }
-    
+
     let args: IExprInstruction[] = null;
     if (children.length > 3) {
         let argumentExpr: IExprInstruction = null;
@@ -2338,10 +2334,10 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
 function analyzeSimpleComplexExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    
+
     let expr = analyzeExpr(context, program, children[1]);
     let type = <IVariableTypeInstruction>expr.type;
-    
+
     let complexExpr = new ComplexExprInstruction({ scope, sourceNode, expr });
     return checkInstruction(context, complexExpr, ECheckStage.CODE_TARGET_SUPPORT);
 }
@@ -2576,8 +2572,8 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
         return null;
     }
 
-    const condExpr = new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr});
-    return  checkInstruction(context, condExpr, ECheckStage.CODE_TARGET_SUPPORT);;
+    const condExpr = new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr });
+    return checkInstruction(context, condExpr, ECheckStage.CODE_TARGET_SUPPORT);;
 }
 
 
@@ -2616,178 +2612,166 @@ function analyzeArithmeticExpr(context: Context, program: ProgramScope, sourceNo
 }
 
 
-// function analyzeRelationExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    RelationalExpr
+ *         T_NON_TYPE_ID = 'b'
+ *         T_PUNCTUATOR_60 = '<'
+ *         T_NON_TYPE_ID = 'a'
+ */
+function analyzeRelationExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const operator = <RelationOperator>sourceNode.children[1].value;
 
-//     let children: IParseNode[] = node.children;
-//     let operator: string = node.children[1].value;
-//     let expr: RelationalExprInstruction = new RelationalExprInstruction(node);
-//     let leftExpr: IExprInstruction;
-//     let rightExpr: IExprInstruction;
-//     let leftType: IVariableTypeInstruction;
-//     let rightType: IVariableTypeInstruction;
-//     let exprType: IVariableTypeInstruction;
+    const left = analyzeExpr(context, program, children[children.length - 1]);
+    const right = analyzeExpr(context, program, children[0]);
 
-//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, program, children[0]);
+    const leftType = <IVariableTypeInstruction>left.type;
+    const rightType = <IVariableTypeInstruction>right.type;
 
-//     leftType = <IVariableTypeInstruction>leftExpr.type;
-//     rightType = <IVariableTypeInstruction>rightExpr.type;
+    const exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
 
-//     exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+    if (isNull(exprType)) {
+        _error(context, sourceNode, EEffectErrors.BAD_RELATIONAL_OPERATION, <IEffectErrorInfo>{
+            operator: operator,
+            leftTypeName: leftType.hash,
+            rightTypeName: rightType.hash
+        });
+        return null;
+    }
 
-//     if (isNull(exprType)) {
-//         _error(context, node, EEffectErrors.BAD_RELATIONAL_OPERATION, <IEffectErrorInfo>{
-//             operator: operator,
-//             leftTypeName: leftType.hash,
-//             rightTypeName: rightType.hash
-//         });
-//         return null;
-//     }
-
-//     expr.operator = (operator);
-//     expr.type = (exprType);
-//     expr.push(leftExpr, true);
-//     expr.push(rightExpr, true);
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    const relationExpr = new RelationalExprInstruction({ sourceNode, scope, left, right, operator });
+    return checkInstruction(context, relationExpr, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeLogicalExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    OrExpr
+ *         T_NON_TYPE_ID = 'b'
+ *         T_OP_OR = '||'
+ *         T_NON_TYPE_ID = 'a'
+ */
+function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const operator = <LogicalOperator>sourceNode.children[1].value;
 
-//     let children: IParseNode[] = node.children;
-//     let operator: string = node.children[1].value;
-//     let expr: LogicalExprInstruction = new LogicalExprInstruction(node);
-//     let leftExpr: IExprInstruction;
-//     let rightExpr: IExprInstruction;
-//     let leftType: IVariableTypeInstruction;
-//     let rightType: IVariableTypeInstruction;
-//     let boolType: ITypeInstruction;
+    const left = analyzeExpr(context, program, children[children.length - 1]);
+    const right = analyzeExpr(context, program, children[0]);
 
-//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, program, children[0]);
+    const leftType = <IVariableTypeInstruction>left.type;
+    const rightType = <IVariableTypeInstruction>right.type;
 
-//     leftType = <IVariableTypeInstruction>leftExpr.type;
-//     rightType = <IVariableTypeInstruction>rightExpr.type;
+    const boolType = systemScope.findType('bool');
 
-//     boolType = getSystemType('bool');
+    if (!leftType.isEqual(boolType)) {
+        _error(context, leftType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
+            operator: operator,
+            typeName: leftType.toString()
+        });
+        return null;
+    }
+    if (!rightType.isEqual(boolType)) {
+        _error(context, rightType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
+            operator: operator,
+            typeName: rightType.toString()
+        });
+        return null;
+    }
 
-//     if (!leftType.isEqual(boolType)) {
-//         _error(context, leftType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
-//             operator: operator,
-//             typeName: leftType.toString()
-//         });
-//         return null;
-//     }
-//     if (!rightType.isEqual(boolType)) {
-//         _error(context, rightType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
-//             operator: operator,
-//             typeName: rightType.toString()
-//         });
-//         return null;
-//     }
+    if (!leftType.readable) {
+        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
 
-//     if (!leftType.readable) {
-//         _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
+    if (!rightType.readable) {
+        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        return null;
+    }
 
-//     if (!rightType.readable) {
-//         _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
-//         return null;
-//     }
-
-//     expr.operator = (operator);
-//     expr.type = ((<SystemTypeInstruction>boolType).variableType);
-//     expr.push(leftExpr, true);
-//     expr.push(rightExpr, true);
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    let logicalExpr = new LogicalExprInstruction({ scope, sourceNode, left, right, operator });
+    return checkInstruction(context, logicalExpr, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeAssignmentExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    AssignmentExpr
+ *         T_UINT = '10'
+ *         T_OP_AE = '+='
+ *         T_NON_TYPE_ID = 'x'
+ */
+function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const operator = <AssigmentOperator>children[1].value;
 
-//     let children: IParseNode[] = node.children;
-//     let operator: string = children[1].value;
-//     let expr: AssignmentExprInstruction = new AssignmentExprInstruction(node);
-//     let leftExpr: IExprInstruction;
-//     let rightExpr: IExprInstruction;
-//     let leftType: IVariableTypeInstruction;
-//     let rightType: IVariableTypeInstruction;
-//     let exprType: IVariableTypeInstruction;
+    const left = analyzeExpr(context, program, children[children.length - 1]);
+    const right = analyzeExpr(context, program, children[0]);
 
-//     leftExpr = analyzeExpr(context, program, children[children.length - 1]);
-//     rightExpr = analyzeExpr(context, program, children[0]);
+    const leftType = <IVariableTypeInstruction>left.type;
+    const rightType = <IVariableTypeInstruction>right.type;
 
-//     leftType = <IVariableTypeInstruction>leftExpr.type;
-//     rightType = <IVariableTypeInstruction>rightExpr.type;
+    let exprType: IVariableTypeInstruction = null;
 
-//     if (operator !== '=') {
-//         exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
-//         if (isNull(exprType)) {
-//             _error(context, node, EEffectErrors.BAD_ARITHMETIC_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
-//                 operator: operator,
-//                 leftTypeName: leftType.hash,
-//                 rightTypeName: rightType.hash
-//             });
-//         }
-//     }
-//     else {
-//         exprType = rightType;
-//     }
+    if (operator !== '=') {
+        exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+        if (isNull(exprType)) {
+            _error(context, sourceNode, EEffectErrors.BAD_ARITHMETIC_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
+                operator: operator,
+                leftTypeName: leftType.hash,
+                rightTypeName: rightType.hash
+            });
+        }
+    } else {
+        exprType = rightType;
+    }
 
-//     exprType = checkTwoOperandExprTypes(context, '=', leftType, exprType);
+    exprType = checkTwoOperandExprTypes(context, '=', leftType, exprType);
 
-//     if (isNull(exprType)) {
-//         _error(context, node, EEffectErrors.BAD_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
-//             leftTypeName: leftType.hash,
-//             rightTypeName: rightType.hash
-//         });
-//     }
+    if (isNull(exprType)) {
+        _error(context, sourceNode, EEffectErrors.BAD_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
+            leftTypeName: leftType.hash,
+            rightTypeName: rightType.hash
+        });
+    }
 
-//     expr.operator = (operator);
-//     expr.type = (exprType);
-//     expr.push(leftExpr, true);
-//     expr.push(rightExpr, true);
-
-//     checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return expr;
-// }
+    let assigmentExpr = new AssignmentExprInstruction({ scope, sourceNode, left, right, operator });
+    return checkInstruction(context, assigmentExpr, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeIdExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
+/**
+ * AST example:
+ *    T_NON_TYPE_ID = 'name'
+ */
+function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const scope = program.currentScope;
 
-//     let name: string = node.value;
-//     let variable: IVariableDeclInstruction = getVariable(scope, name);
+    let name = sourceNode.value;
+    let variable = scope.findVariable(name);
 
-//     if (isNull(variable)) {
-//         _error(context, node, EEffectErrors.UNKNOWN_VARNAME, { varName: name });
-//         return null;
-//     }
+    if (isNull(variable)) {
+        _error(context, sourceNode, EEffectErrors.UNKNOWN_VARNAME, { varName: name });
+        return null;
+    }
 
-//     if (!isNull(context.currentFunction)) {
-//         // TODO: rewrite this!
-//         if (!variable.pixel) {
-//             context.currentFunction.pixel = false;
-//         }
-//         if (!variable.vertex) {
-//             context.currentFunction.vertex = false;
-//         }
-//     }
+    if (!isNull(context.currentFunction)) {
+        // todo: rewrite this!
+        if (!variable.$canBeUsedInPixelShader()) {
+            context.currentFunction.$overwriteType(EFunctionType.k_Function);
+        }
 
-//     let varId: IdExprInstruction = new IdExprInstruction(node);
-//     varId.push(variable.nameID, false);
+        if (!variable.$canBeUsedInVertexShader()) {
+            context.currentFunction.$overwriteType(EFunctionType.k_Function);
+        }
+    }
 
-//     checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return varId;
-// }
+    let varId = new IdExprInstruction({ scope, sourceNode, id: variable.id, decl: variable });
+    return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
 function analyzeSimpleExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
@@ -2796,7 +2780,6 @@ function analyzeSimpleExpr(context: Context, program: ProgramScope, sourceNode: 
     const scope = program.currentScope;
 
     switch (name) {
-        // case 'T_INT': // << todo
         case 'T_UINT':
             return new IntInstruction({ scope, sourceNode, value });
         case 'T_FLOAT':
@@ -2837,80 +2820,99 @@ function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IPar
 }
 
 
-// function analyzeVarStructDecl(context: Context, program: ProgramScope, node: IParseNode, instruction: IInstruction = null): void {
+/**
+ * AST example:
+ *    VariableDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + Variable 
+ *       + UsageType 
+ */
+function analyzeVarStructDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction[] {
+    const children = sourceNode.children;
 
-//     const children = node.children;
-//     let usageType: IVariableTypeInstruction = null;
-//     let variable: IVariableDeclInstruction = null;
-//     let i: number = 0;
+    let usageType = analyzeUsageStructDecl(context, program, children[children.length - 1]);
+    let vars: IVariableDeclInstruction[] = [];
 
-//     usageType = analyzeUsageStructDecl(context, program, children[children.length - 1]);
+    for (let i = children.length - 2; i >= 1; i--) {
+        if (children[i].name === 'Variable') {
+            vars = vars.concat(analyzeVariable(context, program, children[i], usageType));
+        }
+    }
 
-//     for (i = children.length - 2; i >= 1; i--) {
-//         if (children[i].name === 'Variable') {
-//             variable = analyzeVariable(context, program, children[i], usageType);
-
-//             if (!isNull(instruction)) {
-//                 instruction.push(variable, true);
-//             }
-//         }
-//     }
-// }
-
-
-// function analyzeUsageStructDecl(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
-
-//     let children: IParseNode[] = node.children;
-//     let i: number = 0;
-//     let type: IVariableTypeInstruction = new VariableTypeInstruction(node);
-
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'StructDecl') {
-//             const mainType: ITypeInstruction = analyzeStructDecl(context, program, children[i]);
-//             type.pushType(mainType);
-
-//             const typeDecl: ITypeDeclInstruction = new TypeDeclInstruction(null);
-//             typeDecl.push(mainType, true);
-
-//             addTypeDecl(context, program, typeDecl);
-//         }
-//         else if (children[i].name === 'Usage') {
-//             const usage: string = analyzeUsage(children[i]);
-//             type.addUsage(usage);
-//         }
-//     }
-
-//     checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
-//     return type;
-// }
+    return vars;
+}
 
 
-function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
-    const children = node.children;
+function analyzeUsageStructDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
 
-    const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
-    const fieldCollector: IInstruction = new InstructionCollector();
+    let usages: string[] = [];
+    let type: ITypeInstruction = null;
+
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].name === 'StructDecl') {
+            type = analyzeStructDecl(context, program, children[i]);
+            const typeDecl = new TypeDeclInstruction({ scope, sourceNode: children[i], type });
+            addTypeDecl(context, scope, typeDecl);
+        } else if (children[i].name === 'Usage') {
+            const usage = analyzeUsage(children[i]);
+            usages.push(usage);
+        }
+    }
+
+    assert(!isNull(type));
+    let varType = new VariableTypeInstruction({ scope, sourceNode, usages, type });
+    return checkInstruction(context, varType, ECheckStage.CODE_TARGET_SUPPORT);
+}
+
+
+/**
+ * AST example:
+ *    StructDecl
+ *         T_PUNCTUATOR_125 = '}'
+ *       + VariableDecl 
+ *       + VariableDecl 
+ *       + VariableDecl 
+ *         T_PUNCTUATOR_123 = '{'
+ *         T_NON_TYPE_ID = 'S'
+ *         T_KW_STRUCT = 'struct'
+ *    Struct
+ *         T_PUNCTUATOR_125 = '}'
+ *       + VariableDecl 
+ *         T_PUNCTUATOR_123 = '{'
+ *         T_KW_STRUCT = 'struct'
+ */
+function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+
+    let name: string = null;
+    if (children[children.length - 2].name === 'T_NON_TYPE_ID') {
+        name = children[children.length - 2].value;
+    }
+
+    let fields: IVariableDeclInstruction[] = [];
 
     program.push(EScopeType.k_Struct);
 
     let i: number = 0;
     for (i = children.length - 4; i >= 1; i--) {
         if (children[i].name === 'VariableDecl') {
-            analyzeVariableDecl(context, program, children[i], fieldCollector);
+            fields = fields.concat(analyzeVariableDecl(context, program, children[i]));
         }
     }
 
     program.pop();
-    struct.addFields(fieldCollector, true);
 
-    checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
-    return struct;
+    const struct = new ComplexTypeInstruction({ scope, sourceNode, fields, name });
+    return checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
 
-// function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, node: IParseNode): IFunctionDeclInstruction {
+// function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionDeclInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     let func: FunctionDeclInstruction = null;
 //     let funcDef: FunctionDefInstruction = null;
 //     let annotation: IAnnotationInstruction = null;
@@ -2921,12 +2923,12 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //     func = <FunctionDeclInstruction>findFunctionByDef(scope, funcDef);
 
 //     if (!isDef(func)) {
-//         _error(context, node, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: func.nameID.toString() });
+//         _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: func.nameID.toString() });
 //         return null;
 //     }
 
 //     if (!isNull(func) && func.implementation) {
-//         _error(context, node, EEffectErrors.BAD_REDEFINE_FUNCTION, { funcName: func.nameID.toString() });
+//         _error(context, sourceNode, EEffectErrors.BAD_REDEFINE_FUNCTION, { funcName: func.nameID.toString() });
 //         return null;
 //     }
 
@@ -2936,7 +2938,7 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //     }
 //     else {
 //         if (!func.returnType.isEqual(funcDef.returnType)) {
-//             _error(context, node, EEffectErrors.BAD_FUNCTION_DEF_RETURN_TYPE, { funcName: func.nameID.toString() });
+//             _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DEF_RETURN_TYPE, { funcName: func.nameID.toString() });
 //             return null;
 //         }
 
@@ -2960,7 +2962,7 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //     program.pop();
 
 //     if (bNeedAddFunction) {
-//         addFunctionDecl(context, program, node, func);
+//         addFunctionDecl(context, program, sourceNode, func);
 //     }
 
 //     return func;
@@ -2969,11 +2971,11 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 
 // function resumeFunctionAnalysis(context: Context, program: ProgramScope, pAnalzedFunction: IFunctionDeclInstruction): void {
 //     const func: FunctionDeclInstruction = <FunctionDeclInstruction>pAnalzedFunction;
-//     const node: IParseNode = func.sourceNode;
+//     const sourceNode: IParseNode = func.sourceNode;
 
 //     program.current = func.implementationScope;
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     let stmtBlock: StmtBlockInstruction = null;
 
 //     context.currentFunction = func;
@@ -2983,7 +2985,7 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //     func.implementation = <IStmtInstruction>stmtBlock;
 
 //     if (!func.returnType.isEqual(getSystemType('void')) && !context.haveCurrentFunctionReturnOccur) {
-//         _error(context, node, EEffectErrors.BAD_FUNCTION_DONT_HAVE_RETURN_STMT, { funcName: func.nameID.toString() })
+//         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DONT_HAVE_RETURN_STMT, { funcName: func.nameID.toString() })
 //     }
 
 //     context.currentFunction = null;
@@ -2995,9 +2997,9 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeFunctionDef(context: Context, program: ProgramScope, node: IParseNode): FunctionDefInstruction {
-//     const children = node.children;
-//     const funcDef: FunctionDefInstruction = new FunctionDefInstruction(node);
+// function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode: IParseNode): FunctionDefInstruction {
+//     const children = sourceNode.children;
+//     const funcDef: FunctionDefInstruction = new FunctionDefInstruction(sourceNode);
 //     let returnType: IVariableTypeInstruction = null;
 //     let funcName: IIdInstruction = null;
 //     const nameNode = children[children.length - 2];
@@ -3035,9 +3037,9 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeParamList(context: Context, program: ProgramScope, node: IParseNode, funcDef: FunctionDefInstruction): void {
+// function analyzeParamList(context: Context, program: ProgramScope, sourceNode: IParseNode, funcDef: FunctionDefInstruction): void {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     let param: IVariableDeclInstruction;
 
 //     let i: number = 0;
@@ -3052,9 +3054,9 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeParameterDecl(context: Context, program: ProgramScope, node: IParseNode): IVariableDeclInstruction {
+// function analyzeParameterDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     let type: IVariableTypeInstruction = null;
 //     let param: IVariableDeclInstruction = null;
 
@@ -3065,10 +3067,10 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeParamUsageType(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
-//     const children = node.children;
+// function analyzeParamUsageType(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
+//     const children = sourceNode.children;
 //     let i: number = 0;
-//     const type: IVariableTypeInstruction = new VariableTypeInstruction(node);
+//     const type: IVariableTypeInstruction = new VariableTypeInstruction(sourceNode);
 
 //     for (i = children.length - 1; i >= 0; i--) {
 //         if (children[i].name === 'Type') {
@@ -3087,10 +3089,10 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeStmtBlock(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
-//     const stmtBlock: StmtBlockInstruction = new StmtBlockInstruction(node);
+//     const children = sourceNode.children;
+//     const stmtBlock: StmtBlockInstruction = new StmtBlockInstruction(sourceNode);
 //     let stmt: IStmtInstruction;
 //     let i: number = 0;
 
@@ -3113,9 +3115,9 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3125,27 +3127,27 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //             analyzeUseDecl(context, program, children[0]);
 //             return null;
 //         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, program, node);
+//             return analyzeWhileStmt(context, program, sourceNode);
 //         case 'T_KW_FOR':
-//             return analyzeForStmt(context, program, node);
+//             return analyzeForStmt(context, program, sourceNode);
 //         case 'T_KW_IF':
-//             return analyzeIfStmt(context, program, node);
+//             return analyzeIfStmt(context, program, sourceNode);
 //     }
 //     return null;
 // }
 
 
-// function analyzeSimpleStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'T_KW_RETURN':
-//             return analyzeReturnStmt(context, program, node);
+//             return analyzeReturnStmt(context, program, sourceNode);
 
 //         case 'T_KW_DO':
-//             return analyzeWhileStmt(context, program, node);
+//             return analyzeWhileStmt(context, program, sourceNode);
 
 //         case 'StmtBlock':
 //             return analyzeStmtBlock(context, program, children[0]);
@@ -3153,7 +3155,7 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //         case 'T_KW_DISCARD':
 //         case 'T_KW_BREAK':
 //         case 'T_KW_CONTINUE':
-//             return analyzeBreakStmt(context, program, node);
+//             return analyzeBreakStmt(context, program, sourceNode);
 
 //         case 'TypeDecl':
 //         case 'VariableDecl':
@@ -3162,30 +3164,30 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 
 //         default:
 //             if (children.length === 2) {
-//                 return analyzeExprStmt(context, program, node);
+//                 return analyzeExprStmt(context, program, sourceNode);
 //             }
 //             else {
-//                 return new SemicolonStmtInstruction(node);
+//                 return new SemicolonStmtInstruction(sourceNode);
 //             }
 //     }
 // }
 
 
-// function analyzeReturnStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
-//     const pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction(node);
+//     const children = sourceNode.children;
+//     const pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction(sourceNode);
 
 //     const funcReturnType: IVariableTypeInstruction = context.currentFunction.returnType;
 
 //     context.haveCurrentFunctionReturnOccur = true;
 
 //     if (funcReturnType.isEqual(getSystemType('void')) && children.length === 3) {
-//         _error(context, node, EEffectErrors.BAD_RETURN_STMT_VOID);
+//         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_VOID);
 //         return null;
 //     }
 //     else if (!funcReturnType.isEqual(getSystemType('void')) && children.length === 2) {
-//         _error(context, node, EEffectErrors.BAD_RETURN_STMT_EMPTY);
+//         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_EMPTY);
 //         return null;
 //     }
 
@@ -3193,7 +3195,7 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 //         const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
 
 //         if (!funcReturnType.isEqual(exprInstruction.type)) {
-//             _error(context, node, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
+//             _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
 //             return null;
 //         }
 
@@ -3206,10 +3208,10 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeBreakStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeBreakStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
-//     const pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction(node);
+//     const children = sourceNode.children;
+//     const pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction(sourceNode);
 //     const sOperatorName: string = children[1].value;
 
 //     pBreakStmtInstruction.operator = (sOperatorName);
@@ -3224,21 +3226,21 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 // }
 
 
-// function analyzeDeclStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeDeclStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     // let children: IParseNode[] = node.children;
-//     const sNodeName: string = node.name;
-//     const pDeclStmtInstruction: DeclStmtInstruction = new DeclStmtInstruction(node);
+//     // let children: IParseNode[] = sourceNode.children;
+//     const sNodeName: string = sourceNode.name;
+//     const pDeclStmtInstruction: DeclStmtInstruction = new DeclStmtInstruction(sourceNode);
 
 //     switch (sNodeName) {
 //         case 'TypeDecl':
-//             analyzeTypeDecl(context, program, node, pDeclStmtInstruction);
+//             analyzeTypeDecl(context, program, sourceNode, pDeclStmtInstruction);
 //             break;
 //         case 'VariableDecl':
-//             analyzeVariableDecl(context, program, node, pDeclStmtInstruction);
+//             analyzeVariableDecl(context, program, sourceNode, pDeclStmtInstruction);
 //             break;
 //         case 'VarStructDecl':
-//             analyzeVarStructDecl(context, program, node, pDeclStmtInstruction);
+//             analyzeVarStructDecl(context, program, sourceNode, pDeclStmtInstruction);
 //             break;
 //     }
 
@@ -3460,11 +3462,11 @@ function analyzeStruct(context: Context, program: ProgramScope, node: IParseNode
 
 
 
-function analyzeTechniqueForImport(context: Context, program: ProgramScope, node: IParseNode): void {
+function analyzeTechniqueDecl(context: Context, program: ProgramScope, node: IParseNode): ITechniqueInstruction {
     const children = node.children;
-    const name: string = analyzeComplexName(children[children.length - 2]);
+    const name = analyzeComplexName(children[children.length - 2]);
     // Specifies whether name should be interpreted as globalNamespace.name or just a name;
-    const isComplexName: boolean = children[children.length - 2].children.length !== 1;
+    const isComplexName = children[children.length - 2].children.length !== 1;
     const scope = program.currentScope;
 
     let annotation: IAnnotationInstruction = null;
@@ -3483,6 +3485,7 @@ function analyzeTechniqueForImport(context: Context, program: ProgramScope, node
 
     const technique = new TechniqueInstruction({ name, semantics, annotation, passList, scope });
     addTechnique(context, program, technique);
+    return technique;
 }
 
 
@@ -3511,7 +3514,7 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
     const children = sourceNode.children;
     const scope = program.currentScope;
     const entry = analyzePassStateBlockForShaders(context, program, children[0]);
-    const renderStates = {};
+    const renderStates = analyzePassStateBlock(context, program, children[0]);;
 
     const pass = new PassInstruction({
         scope,
@@ -3556,9 +3559,9 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
 
 
 function analyzePassStateForShader(context: Context, program: ProgramScope,
-    node: IParseNode): IFunctionDeclInstruction {
+    sourceNode: IParseNode): IFunctionDeclInstruction {
 
-    const children = node.children;
+    const children = sourceNode.children;
 
     const shaderTypeName = children[children.length - 1].value.toUpperCase();
     let shaderType = EFunctionType.k_Vertex;
@@ -3582,12 +3585,12 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 
     if (shaderType === EFunctionType.k_Vertex) {
         if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
-            _error(context, node, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
         }
     }
     else {
         if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
-            _error(context, node, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
         }
     }
 
@@ -3596,45 +3599,51 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 }
 
 
-function resumeTechniqueAnalysis(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
-    const passList: IPassInstruction[] = technique.passList;
-    for (let i = 0; i < passList.length; i++) {
-        resumePassAnalysis(context, program, passList[i]);
-    }
-}
 
 
-function resumePassAnalysis(context: Context, program: ProgramScope, pPass: IPassInstruction): void {
-    const node: IParseNode = pPass.sourceNode;
-    const children = node.children;
-    analyzePassStateBlock(context, program, children[0], pPass);
-    pPass.finalizePass(); // << generate info about used variables.
-}
 
-
-function analyzePassStateBlock(context: Context, program: ProgramScope, node: IParseNode, pPass: IPassInstruction): void {
-    const children = node.children;
+/**
+ * AST example:
+ *    PassStateBlock
+ *         T_PUNCTUATOR_125 = '}'
+ *       + PassState 
+ *       + PassState 
+ *       + PassState 
+ *         T_PUNCTUATOR_123 = '{'
+ */
+function analyzePassStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<ERenderStateValues> {
+    const children = sourceNode.children;
+    let states: IMap<ERenderStateValues> = {}
     for (let i = children.length - 2; i >= 1; i--) {
-        // analyzePassState(context, program, children[i], pPass);
+        states = { ...states, ...analyzePassState(context, program, children[i]) };
     }
+    return states;
 }
 
 
-function analyzePassState(context: Context, program: ProgramScope, node: IParseNode): IMap<ERenderStateValues> {
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'ZWRITE'
+ */
+function analyzePassState(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<ERenderStateValues> {
 
-    let renderStates: IMap<ERenderStateValues> = {};
-    const children = node.children;
-
+    const children = sourceNode.children;
+    
     const stateType: string = children[children.length - 1].value.toUpperCase();
     const stateName: ERenderStates = getRenderState(stateType);
     const stateExprNode: IParseNode = children[children.length - 3];
     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-
+    
     if (isNull(exprNode.value) || isNull(stateName)) {
         logger.warn('Pass state is incorrect.');
         return {};
     }
-
+    
+    let renderStates: IMap<ERenderStateValues> = {};
     if (exprNode.value === '{' && stateExprNode.children.length > 3) {
         const values: ERenderStateValues[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
         for (let i: number = stateExprNode.children.length - 2, j: number = 0; i >= 1; i -= 2, j++) {
@@ -3712,107 +3721,110 @@ function analyzePassState(context: Context, program: ProgramScope, node: IParseN
     return renderStates;
 }
 
+/**
+ * AST example:
+ *    ImportDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + ComplexNameOpt 
+ *         T_KW_IMPORT = 'import'
+ */
+// todo: restore functionality! 
+function analyzeImportDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): null {
+    const children = sourceNode.children;
+    const componentName = analyzeComplexName(children[children.length - 2]);
 
-function analyzeImportDecl(context: Context, program: ProgramScope, node: IParseNode, technique: ITechniqueInstruction = null): void {
-    const children = node.children;
-    const sComponentName: string = analyzeComplexName(children[children.length - 2]);
-    // let iShift: number = 0;
+    // if (!isNull(technique)) {
+    //     //We can import techniques from the same file, but on this stage they don`t have component yet.
+    //     //So we need special mehanism to add them on more belated stage
+    //     // let sShortedComponentName: string = componentName;
+    //     if (!isNull(context.moduleName)) {
+    //         // sShortedComponentName = componentName.replace(_sProvideNameSpace + ".", "");
+    //     }
 
-    if (children[0].name === 'ExtOpt') {
-        logger.warn('We don`t suppor ext-commands for import');
-    }
-    if (children.length !== 2) {
-        // iShift = analyzeShiftOpt(children[0]);
-    }
+    //     throw null;
+    //     // let pTechniqueFromSameEffect: ITechniqueInstruction = _pTechniqueMap[componentName] || _pTechniqueMap[sShortedComponentName];
+    //     // if (isDefAndNotNull(pTechniqueFromSameEffect)) {
+    //     //     technique._addTechniqueFromSameEffect(pTechniqueFromSameEffect, iShift);
+    //     //     return;
+    //     // }
+    // }
 
-    if (!isNull(technique)) {
-        //We can import techniques from the same file, but on this stage they don`t have component yet.
-        //So we need special mehanism to add them on more belated stage
-        // let sShortedComponentName: string = sComponentName;
-        if (!isNull(context.moduleName)) {
-            // sShortedComponentName = sComponentName.replace(_sProvideNameSpace + ".", "");
-        }
-
-        throw null;
-        // let pTechniqueFromSameEffect: ITechniqueInstruction = _pTechniqueMap[sComponentName] || _pTechniqueMap[sShortedComponentName];
-        // if (isDefAndNotNull(pTechniqueFromSameEffect)) {
-        //     technique._addTechniqueFromSameEffect(pTechniqueFromSameEffect, iShift);
-        //     return;
-        // }
-    }
-
-    const sourceTechnique: ITechniqueInstruction = null;//fx.techniques[sComponentName];
+    const sourceTechnique: ITechniqueInstruction = null;//fx.techniques[componentName];
     if (!sourceTechnique) {
-        _error(context, node, EEffectErrors.BAD_IMPORTED_COMPONENT_NOT_EXIST, { componentName: sComponentName });
-        return;
+        _error(context, sourceNode, EEffectErrors.BAD_IMPORTED_COMPONENT_NOT_EXIST, { componentName: componentName });
+        return null;
     }
 
-    throw null;
+    return null;
 }
 
 
-// function analyzeStructDecl(context: Context, program: ProgramScope, node: IParseNode): ITypeInstruction {
-//     const children = node.children;
+/**
+ * AST example:
+ *    StructDecl
+ *         T_PUNCTUATOR_125 = '}'
+ *       + VariableDecl 
+ *         T_PUNCTUATOR_123 = '{'
+ *         T_NON_TYPE_ID = 'S'
+ *         T_KW_STRUCT = 'struct'
+ */
+function analyzeStructDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const name = children[children.length - 2].value;
 
-//     const struct: ComplexTypeInstruction = new ComplexTypeInstruction(node);
-//     const fieldCollector: IInstruction = new InstructionCollector();
+    program.push(EScopeType.k_Struct);
 
-//     const name: string = children[children.length - 2].value;
+    let fields: IVariableDeclInstruction[] = [];
+    for (let i = children.length - 4; i >= 1; i--) {
+        if (children[i].name === 'VariableDecl') {
+            fields = fields.concat(analyzeVariableDecl(context, program, children[i]));
+        }
+    }
 
-//     struct.name = name;
+    program.pop();
 
-//     program.push(EScopeType.k_Struct);
-
-//     let i: number = 0;
-//     for (i = children.length - 4; i >= 1; i--) {
-//         if (children[i].name === 'VariableDecl') {
-//             analyzeVariableDecl(context, program, children[i], fieldCollector);
-//         }
-//     }
-
-//     program.pop();
-
-//     struct.addFields(fieldCollector, true);
-
-//     checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
-//     return struct;
-// }
-
-
-// function analyzeTypeDecl(context: Context, program: ProgramScope, node: IParseNode, pParentInstruction: IInstruction = null): ITypeDeclInstruction {
-//     let children: IParseNode[] = node.children;
-
-//     let typeDeclInstruction: ITypeDeclInstruction = new TypeDeclInstruction(node);
-
-//     if (children.length === 2) {
-//         const pStructInstruction: ComplexTypeInstruction = <ComplexTypeInstruction>analyzeStructDecl(context, program, children[1]);
-//         typeDeclInstruction.push(pStructInstruction, true);
-//     }
-//     else {
-//         _error(context, node, EEffectErrors.UNSUPPORTED_TYPEDECL);
-//     }
-
-//     checkInstruction(context, typeDeclInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-//     addTypeDecl(context, program, typeDeclInstruction);
-
-//     if (!isNull(pParentInstruction)) {
-//         pParentInstruction.push(typeDeclInstruction, true);
-//     }
-
-//     return typeDeclInstruction;
-// }
+    const struct = new ComplexTypeInstruction({ scope, sourceNode, name, fields });
+    return checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
+}
 
 
-// function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
-//     let children: IParseNode[] = ast.getRoot().children;
-//     let i: number = 0;
+/**
+ * AST example:
+ *    TypeDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + StructDecl 
+ */
+function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeDeclInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    
+    let type: ITypeInstruction = null;
+    if (children.length === 2) {
+        type = analyzeStructDecl(context, program, children[1]);
+    }
+    else {
+        _error(context, sourceNode, EEffectErrors.UNSUPPORTED_TYPEDECL);
+    }
 
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'TypeDecl') {
-//             analyzeTypeDecl(context, program, children[i]);
-//         }
-//     }
-// }
+    
+    let typeDecl = new TypeDeclInstruction({ scope, sourceNode, type });
+    addTypeDecl(context, scope, typeDecl);
+    return checkInstruction(context, typeDecl, ECheckStage.CODE_TARGET_SUPPORT);
+}
+
+
+function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): ITypeDeclInstruction[] {
+    const children = ast.getRoot().children;
+
+    let typeList: ITypeDeclInstruction[] = [];
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].name === 'TypeDecl') {
+            typeList.push(analyzeTypeDecl(context, program, children[i]));
+        }
+    }
+    return typeList;
+}
 
 
 // function analyzeFunctionDefinitions(context: Context, program: ProgramScope, ast: IParseTree): void {
@@ -3827,41 +3839,49 @@ function analyzeImportDecl(context: Context, program: ProgramScope, node: IParse
 // }
 
 
-// function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): void {
-//     let children: IParseNode[] = ast.getRoot().children;
-//     let i: number = 0;
+function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): null[] {
+    let children = ast.getRoot().children;
 
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'ImportDecl') {
-//             analyzeImportDecl(context, children[i], null);
-//         }
-//     }
-// }
-
-
-function analyzeTechniqueImports(context: Context, program: ProgramScope, ast: IParseTree): void {
-    let children: IParseNode[] = ast.getRoot().children;
+    // todo: add IImportInstruction type!
+    let importList: null[] = [];
     for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'TechniqueDecl') {
-            analyzeTechniqueForImport(context, program, children[i]);
+        if (children[i].name === 'ImportDecl') {
+            importList.push(analyzeImportDecl(context, program, children[i]));
         }
     }
+
+    return importList;
 }
 
 
-// function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
-//     let children: IParseNode[] = ast.getRoot().children;
-//     let i: number = 0;
 
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'VariableDecl') {
-//             analyzeVariableDecl(context, program, children[i]);
-//         }
-//         else if (children[i].name === 'VarStructDecl') {
-//             analyzeVarStructDecl(context, program, children[i]);
-//         }
-//     }
-// }
+function analyzeGlobalTechniques(context: Context, program: ProgramScope, ast: IParseTree): ITechniqueInstruction[] {
+    const children = ast.getRoot().children;
+
+    let techniqueList: ITechniqueInstruction[] = [];
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].name === 'TechniqueDecl') {
+            techniqueList.push(analyzeTechniqueDecl(context, program, children[i]));
+        }
+    }
+    return techniqueList;
+}
+
+
+function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): IVariableDeclInstruction[] {
+    const children = ast.getRoot().children;
+
+    let declList: IVariableDeclInstruction[] = [];
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].name === 'VariableDecl') {
+            declList = declList.concat(analyzeVariableDecl(context, program, children[i]));
+        }
+        else if (children[i].name === 'VarStructDecl') {
+            declList = declList.concat(analyzeVarStructDecl(context, program, children[i]));
+        }
+    }
+    return declList;
+}
 
 
 // function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
@@ -3876,13 +3896,6 @@ function analyzeTechniqueImports(context: Context, program: ProgramScope, ast: I
 // }
 
 
-function analyzeTechniques(context: Context, program: ProgramScope): void {
-    for (let name in program.globalScope.techniqueMap) {
-        resumeTechniqueAnalysis(context, program, program.globalScope.techniqueMap[name]);
-    }
-}
-
-
 initSystemTypes();
 initSystemFunctions();
 initSystemVariables();
@@ -3890,7 +3903,7 @@ initSystemVariables();
 
 class Context {
     readonly filename: string | null = null;
-    
+
     moduleName: string | null;
     currentFunction: IFunctionDeclInstruction | null;
     haveCurrentFunctionReturnOccur: boolean;
@@ -3913,9 +3926,9 @@ export interface IAnalyzeResult {
 }
 
 export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
-    
+
     let success = true;
-    
+
     const program = new ProgramScope();
     const context = new Context(filename);
 
@@ -3931,13 +3944,12 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
 
         analyzeGlobalUseDecls(context, program, ast);
         analyzeGlobalProvideDecls(context, program, ast);
-        // analyzeGlobalTypeDecls(context, program, ast);
+        analyzeGlobalTypeDecls(context, program, ast);
         // analyzeFunctionDefinitions(context, program, ast);
-        // analyzeGlobalImports(context, program, ast);
-        analyzeTechniqueImports(context, program, ast);
-        // analyzeVariableDecls(context, program, ast);
+        analyzeGlobalImports(context, program, ast);
+        analyzeGlobalTechniques(context, program, ast);
+        analyzeVariableDecls(context, program, ast);
         // analyzeFunctionDecls(context, scope);
-        analyzeTechniques(context, program);
 
         program.end();
     }

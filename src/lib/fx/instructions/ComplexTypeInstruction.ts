@@ -10,7 +10,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
-    name: string;
+    name?: string;
     fields: IVariableDeclInstruction[]; // << todo: replace this Array<Instruction>;
 }
 
@@ -23,7 +23,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     protected _isContainSampler: boolean;
     protected _isContainComplexType: boolean;
 
-    constructor({ name, fields, ...settings }: IComplexTypeInstructionSettings) {
+    constructor({ name = null, fields, ...settings }: IComplexTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexTypeInstruction, ...settings });
 
         this._name = null;

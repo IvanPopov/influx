@@ -330,13 +330,23 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly initExpr: IInitExprInstruction;
     readonly defaultValue: any;
     readonly nameIndex: number;
+
+    /**
+     * Helper:
+     *  Returns 'structName.fieldName' for structs;
+     *  Returns 'varName' for variables;
+     */
     readonly fullName: string;
 
     isUniform(): boolean;
     isField(): boolean;
     isSampler(): boolean;
     isVarying(): boolean;
+
+    $canBeUsedInVertexShader(): boolean;
+    $canBeUsedInPixelShader(): boolean;
 }
+
 
 export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
@@ -475,9 +485,9 @@ export interface IPassInstruction extends IDeclInstruction {
     readonly renderStates: IMap<ERenderStateValues>;
 
 
-    finalizePass(): void;
-    evaluate(pEngineStates: any, pForeigns: any, pUniforms: any): boolean;
-    getState(eType: ERenderStates): ERenderStateValues;
+    getState(type: ERenderStates): ERenderStateValues;
+
+    $finalizePass(): void;
 }
 
 

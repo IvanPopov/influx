@@ -41,7 +41,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
     }
 
 
-    get operator(): string {
+    get operator(): RelationOperator {
         return this._operator;
     }
 

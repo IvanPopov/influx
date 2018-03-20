@@ -4,11 +4,12 @@ import { ITypedInstruction } from "./../../idl/IInstruction";
 import { IParseNode } from "./../../idl/parser/IParser";
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstruction, IInstruction, IAssignmentExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
+import { IInstructionSettings } from "./Instruction";
 
 
 export type AssigmentOperator = "=" | "+=" | "-=" | "/=" | "*=" | "%=";
 
-export interface IAssignmentExprInstructionSettings extends IExprInstructionSettings {
+export interface IAssignmentExprInstructionSettings extends IInstructionSettings {
     left: ITypedInstruction;
     right: ITypedInstruction;
     operator: AssigmentOperator;
@@ -25,7 +26,7 @@ export class AssignmentExprInstruction extends ExprInstruction implements IAssig
     protected _operator: AssigmentOperator;
 
     constructor({ left, right, operator, ...settings }: IAssignmentExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_AssignmentExprInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_AssignmentExprInstruction, type: left.type, ...settings });
 
         this._leftValue = left.$withParent(this);
         this._rightValue = right.$withParent(this);

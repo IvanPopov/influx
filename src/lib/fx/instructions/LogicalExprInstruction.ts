@@ -6,10 +6,12 @@ import * as Effect from '../Effect';
 import { IInstructionSettings } from "./Instruction";
 
 
+export type LogicalOperator = "&&" | "||";
+
 export interface ILogicalExprInstructionSettings extends IInstructionSettings {
     left: IExprInstruction;
     right: IExprInstruction;
-    operator: string;
+    operator: LogicalOperator;
 }
 
 
@@ -18,12 +20,12 @@ export interface ILogicalExprInstructionSettings extends IInstructionSettings {
  * (&& | ||) Instruction Instruction
  */
 export class LogicalExprInstruction extends ExprInstruction {
-    protected _operator: string;
+    protected _operator: LogicalOperator;
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
 
     constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: Effect.findSystemType("bool").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: scope.findType("bool"), ...settings });
 
         this._leftOperand = left.$withParent(this);
         this._rightOperand = right.$withParent(this);
@@ -31,7 +33,7 @@ export class LogicalExprInstruction extends ExprInstruction {
     }
 
 
-    get operator(): string {
+    get operator(): LogicalOperator {
         return this._operator;
     }
 

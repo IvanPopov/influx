@@ -86,16 +86,15 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         if (this.isField() &&
             VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>this.parent).visible) {
 
-            var sName: string = '';
-            var eParentType: EInstructionTypes = this.parent.instructionType;
+            var name = '';
+            var parentType = this.parent.instructionType;
 
-            if (eParentType === EInstructionTypes.k_VariableTypeInstruction) {
-                sName = VariableTypeInstruction.resolveVariableDeclFullName(<IVariableTypeInstruction>this.parent);
+            if (parentType === EInstructionTypes.k_VariableTypeInstruction) {
+                name = VariableTypeInstruction.resolveVariableDeclFullName(<IVariableTypeInstruction>this.parent);
             }
 
-            sName += '.' + this.name;
-
-            return sName;
+            name += '.' + this.name;
+            return name;
         }
         else {
             return this.name;
@@ -163,6 +162,16 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     $makePixelCompatible(val: boolean): void {
         this._bForPixel = val;
+    }
+
+    
+    $canBeUsedInVertexShader(): boolean {
+        return this._bForVertex;
+    }
+
+
+    $canBeUsedInPixelShader(): boolean {
+        return this._bForPixel;
     }
 
     
