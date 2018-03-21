@@ -59,7 +59,7 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
         usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
         let args: IExprInstruction[] = <IExprInstruction[]>this.args;
         let func: IFunctionDeclInstruction = this.declaration;
-        let argsDecl: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>func.definition.arguments;
+        let argsDecl: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>func.definition.paramList;
 
         // this.nameID.addUsedData(usedDataCollector, usedMode);
 

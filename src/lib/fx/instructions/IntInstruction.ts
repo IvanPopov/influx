@@ -1,9 +1,9 @@
 import { ILiteralInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
+import * as SystemScope from "../SystemScope";
 
 export interface IIntInstructionSettings extends IInstructionSettings {
     value: string;
@@ -15,7 +15,7 @@ export class IntInstruction extends ExprInstruction implements ILiteralInstructi
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor({ value, ...settings }: IIntInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_IntInstruction, type: Effect.findSystemType("number").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_IntInstruction, type: SystemScope.T_INT, ...settings });
         
         this._value = ((<number><any>value) * 1);
     }

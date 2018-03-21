@@ -3,8 +3,8 @@ import { IExprInstructionSettings } from "./ExprInstruction";
 import { IInitExprInstruction, ITypeInstruction, EInstructionTypes, IExprInstruction, IVariableTypeInstruction, EScopeType } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { Instruction } from "./Instruction";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
+import * as SystemScope from "../SystemScope";
 
 /**
  * Represents:
@@ -104,7 +104,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     }
                 }
                 else {
-                    if (Effect.isSamplerType(arrayElementType)) {
+                    if (SystemScope.isSamplerType(arrayElementType)) {
                         if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockInstruction) {
                             return false;
                         }
@@ -127,7 +127,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             if (this.arguments.length === 1 &&
                 firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
 
-                if (Effect.isSamplerType(pType)) {
+                if (SystemScope.isSamplerType(pType)) {
                     if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockInstruction) {
                         return true;
                     }
@@ -187,7 +187,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             pRes = pEvalInstruction.getEvalValue();
         }
         else {
-            let pJSTypeCtor: any = Effect.getExternalType(this.type);
+            let pJSTypeCtor: any = SystemScope.getExternalType(this.type);
             let pArguments: any[] = new Array(this.arguments.length);
 
             if (isNull(pJSTypeCtor)) {
@@ -195,7 +195,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             }
 
             try {
-                if (Effect.isScalarType(this.type)) {
+                if (SystemScope.isScalarType(this.type)) {
                     let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[1];
                     if (this.arguments.length > 2 || !testedInstruction.evaluate()) {
                         return false;

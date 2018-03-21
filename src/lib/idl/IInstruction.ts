@@ -152,7 +152,7 @@ export interface IScope {
     findType(typeName: string): ITypeInstruction;
     findFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
-    findTechique(techName: string): ITechniqueInstruction | null;
+    findTechnique(techName: string): ITechniqueInstruction | null;
 
     hasVariable(variableName: string): boolean;
     hasType(typeName: string): boolean;

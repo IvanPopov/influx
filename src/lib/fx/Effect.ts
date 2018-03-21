@@ -22,7 +22,6 @@ import { VariableDeclInstruction } from './instructions/VariableDeclInstruction'
 import { IdInstruction } from './instructions/IdInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
-import { ExprTemplateTranslator } from './ExprTemplateTranslator';
 import { EEffectErrors, EEffectTempErrors } from '../idl/EEffectErrors';
 import { logger } from '../logger';
 import { ISourceLocation, ILoggerEntity } from '../idl/ILogger';
@@ -68,691 +67,24 @@ import { IEffectErrorInfo } from '../idl/IEffectErrorInfo';
 import { ProgramScope, Scope } from './ProgramScope';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
 
-
-const TEMPLATE_TYPE = 'template';
+import * as SystemScope from './SystemScope';
 
 
 function validate(instr: IInstruction, expectedType: EInstructionTypes) {
     assert(instr.instructionType === expectedType);
 }
 
-function resolveNodeSourceLocation(node: IParseNode): IPosition | null {
-    if (!isDefAndNotNull(node)) {
+function resolveNodeSourceLocation(sourceNode: IParseNode): IPosition | null {
+    if (!isDefAndNotNull(sourceNode)) {
         return null;
     }
 
-    if (isDef(node.loc)) {
-        return { line: node.loc.start.line, column: node.loc.start.column };
+    if (isDef(sourceNode.loc)) {
+        return { line: sourceNode.loc.start.line, column: sourceNode.loc.start.column };
     }
 
-    return resolveNodeSourceLocation(node.children[node.children.length - 1]);
+    return resolveNodeSourceLocation(sourceNode.children[sourceNode.children.length - 1]);
 }
-
-
-const systemScope = new Scope({ type: EScopeType.k_System });
-const systemFunctionHashMap: IMap<boolean> = {};
-
-
-function generateSystemType(name: string, elementType: ITypeInstruction = null,
-    length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
-
-    if (getSystemType(name)) {
-        console.error(`type already exists: ${name}`);
-        return null;
-    }
-
-    const scope = systemScope;
-    const type = new SystemTypeInstruction({ scope, name, elementType, length, fields });
-    const decl = new TypeDeclInstruction({ scope, type: VariableTypeInstruction.wrap(type, scope) });
-    systemScope.addType(decl);
-
-    return type;
-}
-
-
-
-function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
-    for (let suffix in suffixMap) {
-        const fieldTypeName = baseType + ((suffix.length > 1) ? suffix.length.toString() : '');
-        const fieldBaseType = getSystemType(fieldTypeName);
-
-        assert(fieldBaseType);
-
-        const scope = systemScope;
-        const fieldId = new IdInstruction({ scope, name: suffix });
-        const fieldType = new VariableTypeInstruction({ scope, type: fieldBaseType, writable: suffixMap[suffix] })
-
-        fields.push(new VariableDeclInstruction({ scope, id: fieldId, type: fieldType }));
-    }
-}
-
-
-function addSystemTypeScalar(): void {
-    generateSystemType('void');
-    generateSystemType('int');
-    generateSystemType('bool');
-    generateSystemType('float');
-    generateSystemType('string');
-    generateSystemType('texture');
-    generateSystemType('sampler');
-    generateSystemType('sampler2D');
-    generateSystemType('samplerCUBE');
-}
-
-
-function addSystemTypeVector(): void {
-    let XYSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let XYZSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let XYZWSuffix: IMap<boolean> = <IMap<boolean>>{};
-
-    let RGSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let RGBSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let RGBASuffix: IMap<boolean> = <IMap<boolean>>{};
-
-    let STSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let STPSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let STPQSuffix: IMap<boolean> = <IMap<boolean>>{};
-
-    generateSuffixLiterals(['x', 'y'], XYSuffix);
-    generateSuffixLiterals(['x', 'y', 'z'], XYZSuffix);
-    generateSuffixLiterals(['x', 'y', 'z', 'w'], XYZWSuffix);
-
-    generateSuffixLiterals(['r', 'g'], RGSuffix);
-    generateSuffixLiterals(['r', 'g', 'b'], RGBSuffix);
-    generateSuffixLiterals(['r', 'g', 'b', 'a'], RGBASuffix);
-
-    generateSuffixLiterals(['s', 't'], STSuffix);
-    generateSuffixLiterals(['s', 't', 'p'], STPSuffix);
-    generateSuffixLiterals(['s', 't', 'p', 'q'], STPQSuffix);
-
-
-    let float = getSystemType('float');
-    let int = getSystemType('int');
-    let bool = getSystemType('bool');
-
-    let float2 = generateSystemType('float2', float, 2);
-    let float3 = generateSystemType('float3', float, 3);
-    let float4 = generateSystemType('float4', float, 4);
-
-    let int2 = generateSystemType('int2', int, 2);
-    let int3 = generateSystemType('int3', int, 3);
-    let int4 = generateSystemType('int4', int, 4);
-
-    let bool2 = generateSystemType('bool2', bool, 2);
-    let bool3 = generateSystemType('bool3', bool, 3);
-    let bool4 = generateSystemType('bool4', bool, 4);
-
-    {
-        let suf2f: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf2f, STSuffix, 'float');
-        suf2f.forEach(field => float2.addField(field));
-    }
-
-    {
-        let suf3f: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, 'float');
-        suf3f.forEach(field => float3.addField(field));
-    }
-
-    {
-        let suf4f: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, 'float');
-        addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, 'float');
-        suf4f.forEach(field => float4.addField(field));
-    }
-
-    {
-        let suf2i: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf2i, XYSuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf2i, RGSuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf2i, STSuffix, 'int');
-        suf2i.forEach(field => int2.addField(field));
-    }
-
-    {
-        let suf3i: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf3i, XYZSuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf3i, RGBSuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf3i, STPSuffix, 'int');
-        suf3i.forEach(field => int3.addField(field));
-    }
-
-    {
-        let suf4i: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf4i, XYZWSuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf4i, RGBASuffix, 'int');
-        addFieldsToVectorFromSuffixObject(suf4i, STPQSuffix, 'int');
-        suf4i.forEach(field => int4.addField(field));
-    }
-
-    {
-        let suf2b: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf2b, RGSuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf2b, STSuffix, 'bool');
-        suf2b.forEach(field => bool2.addField(field));
-    }
-
-    {
-        let suf3b: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf3b, XYZSuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf3b, RGBSuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf3b, STPSuffix, 'bool');
-        suf3b.forEach(field => bool3.addField(field));
-    }
-
-    {
-        let suf4b: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf4b, XYZWSuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf4b, RGBASuffix, 'bool');
-        addFieldsToVectorFromSuffixObject(suf4b, STPQSuffix, 'bool');
-        suf4b.forEach(field => bool4.addField(field));
-    }
-}
-
-
-function addSystemTypeMatrix(): void {
-    let float2 = getSystemType('float2');
-    let float3 = getSystemType('float3');
-    let float4 = getSystemType('float4');
-
-    let int2 = getSystemType('int2');
-    let int3 = getSystemType('int3');
-    let int4 = getSystemType('int4');
-
-    let bool2 = getSystemType('bool2');
-    let bool3 = getSystemType('bool3');
-    let bool4 = getSystemType('bool4');
-
-    generateSystemType('float2x2', float2, 2);
-    generateSystemType('float2x3', float2, 3);
-    generateSystemType('float2x4', float2, 4);
-
-    generateSystemType('float3x2', float3, 2);
-    generateSystemType('float3x3', float3, 3);
-    generateSystemType('float3x4', float3, 4);
-
-    generateSystemType('float4x2', float4, 2);
-    generateSystemType('float4x3', float4, 3);
-    generateSystemType('float4x4', float4, 4);
-
-    generateSystemType('int2x2', int2, 2);
-    generateSystemType('int2x3', int2, 3);
-    generateSystemType('int2x4', int2, 4);
-
-    generateSystemType('int3x2', int3, 2);
-    generateSystemType('int3x3', int3, 3);
-    generateSystemType('int3x4', int3, 4);
-
-    generateSystemType('int4x2', int4, 2);
-    generateSystemType('int4x3', int4, 3);
-    generateSystemType('int4x4', int4, 4);
-
-    generateSystemType('bool2x2', bool2, 2);
-    generateSystemType('bool2x3', bool2, 3);
-    generateSystemType('bool2x4', bool2, 4);
-
-    generateSystemType('bool3x2', bool3, 2);
-    generateSystemType('bool3x3', bool3, 3);
-    generateSystemType('bool3x4', bool3, 4);
-
-    generateSystemType('bool4x2', bool4, 2);
-    generateSystemType('bool4x3', bool4, 3);
-    generateSystemType('bool4x4', bool4, 4);
-}
-
-
-function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDepth: number = 0): void {
-    if (iDepth >= pLiterals.length) {
-        return;
-    }
-
-    if (iDepth === 0) {
-        for (let i = 0; i < pLiterals.length; i++) {
-            pOutput[pLiterals[i]] = true;
-        }
-
-        iDepth = 1;
-    }
-
-    const pOutputKeys: string[] = Object.keys(pOutput);
-
-    for (let i = 0; i < pLiterals.length; i++) {
-        for (let j: number = 0; j < pOutputKeys.length; j++) {
-            if (pOutputKeys[j].indexOf(pLiterals[i]) !== -1) {
-                pOutput[pOutputKeys[j] + pLiterals[i]] = false;
-            }
-            else {
-                pOutput[pOutputKeys[j] + pLiterals[i]] = (pOutput[pOutputKeys[j]] === false) ? false : true;
-            }
-        }
-    }
-
-    iDepth++;
-
-    generateSuffixLiterals(pLiterals, pOutput, iDepth);
-}
-
-
-export function getExternalType(type: ITypeInstruction): any {
-    if (type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('float'))) {
-        return Number;
-    }
-    else if (type.isEqual(getSystemType('bool'))) {
-        return 'Boolean';
-    }
-    else if (type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('int2'))) {
-        return 'Vec2';
-    }
-    else if (type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('int3'))) {
-        return 'Vec3';
-    }
-    else if (type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('int4'))) {
-        return 'Vec4';
-    }
-    else if (type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('int2x2'))) {
-        return 'Vec2';
-    }
-    else if (type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('int3x3'))) {
-        return 'Mat3';
-    }
-    else if (type.isEqual(getSystemType('float4x4')) ||
-        type.isEqual(getSystemType('bool4x4')) ||
-        type.isEqual(getSystemType('int4x4'))) {
-        return 'Mat4';
-    }
-    else {
-        return null;
-    }
-}
-
-
-export function isMatrixType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('float4x4')) ||
-        type.isEqual(getSystemType('int2x2')) ||
-        type.isEqual(getSystemType('int3x3')) ||
-        type.isEqual(getSystemType('int4x4')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('bool4x4'));
-}
-
-
-export function isVectorType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('int2')) ||
-        type.isEqual(getSystemType('int3')) ||
-        type.isEqual(getSystemType('int4'));
-}
-
-
-export function isScalarType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('bool')) ||
-        type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('float'));
-}
-
-
-export function isFloatBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('float')) ||
-        type.isEqual(getSystemType('float2')) ||
-        type.isEqual(getSystemType('float3')) ||
-        type.isEqual(getSystemType('float4')) ||
-        type.isEqual(getSystemType('float2x2')) ||
-        type.isEqual(getSystemType('float3x3')) ||
-        type.isEqual(getSystemType('float4x4'));
-}
-
-
-export function isIntBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('int')) ||
-        type.isEqual(getSystemType('int2')) ||
-        type.isEqual(getSystemType('int3')) ||
-        type.isEqual(getSystemType('int4')) ||
-        type.isEqual(getSystemType('int2x2')) ||
-        type.isEqual(getSystemType('int3x3')) ||
-        type.isEqual(getSystemType('int4x4'));
-}
-
-
-export function isBoolBasedType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('bool')) ||
-        type.isEqual(getSystemType('bool2')) ||
-        type.isEqual(getSystemType('bool3')) ||
-        type.isEqual(getSystemType('bool4')) ||
-        type.isEqual(getSystemType('bool2x2')) ||
-        type.isEqual(getSystemType('bool3x3')) ||
-        type.isEqual(getSystemType('bool4x4'));
-}
-
-
-export function isSamplerType(type: ITypeInstruction): boolean {
-    return type.isEqual(getSystemType('sampler')) ||
-        type.isEqual(getSystemType('sampler2D')) ||
-        type.isEqual(getSystemType('samplerCUBE'));
-}
-
-
-function generateSystemFunction(name: string,
-    translationExpr: string,
-    returnTypeName: string,
-    argsTypes: string[],
-    templateTypes: string[],
-    isForVertex: boolean = true,
-    isForPixel: boolean = true): void {
-
-    const scope = systemScope;
-    const exprTranslator = new ExprTemplateTranslator(translationExpr);
-    const builtIn = true;
-
-    if (!isNull(templateTypes)) {
-        for (let i = 0; i < templateTypes.length; i++) {
-            let argTypes: ITypeInstruction[] = [];
-            let funcHash = name + "(";
-            let returnType = (returnTypeName === TEMPLATE_TYPE) ?
-                getSystemType(templateTypes[i]) :
-                getSystemType(returnTypeName);
-
-
-            for (let j: number = 0; j < argsTypes.length; j++) {
-                if (argsTypes[j] === TEMPLATE_TYPE) {
-                    argTypes.push(getSystemType(templateTypes[i]));
-                    funcHash += templateTypes[i] + ",";
-                }
-                else {
-                    argTypes.push(getSystemType(argsTypes[j]));
-                    funcHash += argsTypes[j] + ","
-                }
-            }
-
-            funcHash += ")";
-
-            if (systemFunctionHashMap[funcHash]) {
-                _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
-            }
-
-
-            let id = new IdInstruction({ scope, name });
-            let func = new SystemFunctionInstruction({ scope, id, returnType, exprTranslator, argTypes, builtIn });
-
-            func.$makeVertexCompatible(isForVertex);
-            func.$makePixelCompatible(isForPixel);
-
-            systemFunctionHashMap[funcHash] = true;
-            systemScope.addFunction(func);
-        }
-    }
-    else {
-        if (returnTypeName === TEMPLATE_TYPE) {
-            logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
-        }
-
-        let returnType = getSystemType(returnTypeName);
-        let argTypes = [];
-        let functionHash = name + "(";
-
-        for (let i = 0; i < argsTypes.length; i++) {
-            if (argsTypes[i] === TEMPLATE_TYPE) {
-                logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
-            }
-            else {
-                argTypes.push(getSystemType(argsTypes[i]));
-                functionHash += argsTypes[i] + ",";
-            }
-        }
-
-        functionHash += ")";
-
-        if (systemFunctionHashMap[functionHash]) {
-            _error(null, null, EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
-        }
-
-        let id = new IdInstruction({ scope, name });
-        let func = new SystemFunctionInstruction({ scope, id, returnType, exprTranslator, argTypes, builtIn });
-
-        func.$makeVertexCompatible(isForVertex);
-        func.$makePixelCompatible(isForPixel);
-
-        systemFunctionHashMap[functionHash] = true;
-        systemScope.addFunction(func);
-    }
-}
-
-
-function generateNotBuiltInSystemFuction(name: string, definition: string, implementation: string,
-    returnTypeName: string,
-    usedTypes: string[],
-    usedFunctions: string[]): void {
-
-    if (systemScope.hasFunction(name)) {
-        console.warn(`Builtin function ${name} already exists.`);
-        return;
-    }
-
-    const scope = systemScope;
-
-    let builtIn = false;
-    let returnType = getSystemType(returnTypeName);
-    let id = new IdInstruction({ scope, name })
-    let func = new SystemFunctionInstruction({ scope, id, returnType, definition, implementation, builtIn });
-
-    let usedExtSystemTypes: ITypeDeclInstruction[] = [];
-    let usedExtSystemFunctions: IFunctionDeclInstruction[] = [];
-
-    if (!isNull(usedTypes)) {
-        for (let i = 0; i < usedTypes.length; i++) {
-            let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(usedTypes[i]).parent;
-            if (!isNull(typeDecl)) {
-                usedExtSystemTypes.push(typeDecl);
-            }
-        }
-    }
-
-    if (!isNull(usedFunctions)) {
-        for (let i = 0; i < usedFunctions.length; i++) {
-            let pFindFunction: IFunctionDeclInstruction = systemScope.findFunction(usedFunctions[i]);
-            usedExtSystemFunctions.push(pFindFunction);
-        }
-    }
-
-    func.$setUsedSystemData(usedExtSystemTypes, usedExtSystemFunctions);
-    func.$closeSystemDataInfo();
-
-    systemScope.addFunction(func);
-}
-
-
-function addSystemFunctions(): void {
-    generateSystemFunction('dot', 'dot($1,$2)', 'float', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('mul', '$1*$2', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'int', 'float2', 'float3', 'float4']);
-    generateSystemFunction('mod', 'mod($1,$2)', 'float', ['float', 'float'], null);
-    generateSystemFunction('floor', 'floor($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('ceil', 'ceil($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('fract', 'fract($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('abs', 'abs($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('sign', 'sign($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('normalize', 'normalize($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('length', 'length($1)', 'float', [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('cross', 'cross($1, $2)', 'float3', ['float3', 'float3'], null);
-    generateSystemFunction('reflect', 'reflect($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('max', 'max($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('max', 'max($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, 'float'], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('min', 'min($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('min', 'min($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, 'float'], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('mix', 'mix($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('mix', 'mix($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, 'float'], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('clamp', 'clamp($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('clamp', 'clamp($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, 'float', 'float'], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('pow', 'pow($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('mod', 'mod($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'float3', 'float4']);
-    generateSystemFunction('mod', 'mod($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, 'float'], ['float2', 'float3', 'float4']);
-    generateSystemFunction('exp', 'exp($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('exp2', 'exp2($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('log', 'log($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('log2', 'log2($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('inversesqrt', 'inversesqrt($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('sqrt', 'sqrt($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-
-    generateSystemFunction('all', 'all($1)', 'bool', [TEMPLATE_TYPE], ['bool2', 'bool3', 'bool4']);
-    generateSystemFunction('any', 'any($1)', 'bool', [TEMPLATE_TYPE], ['bool2', 'bool3', 'bool4']);
-    generateSystemFunction('not', 'not($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['bool2', 'bool3', 'bool4']);
-
-    generateSystemFunction('distance', 'distance($1,$2)', 'float', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-
-    generateSystemFunction('lessThan', 'lessThan($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('lessThan', 'lessThan($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('lessThan', 'lessThan($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-
-    generateSystemFunction('lessThanEqual', 'lessThanEqual($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('lessThanEqual', 'lessThanEqual($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('lessThanEqual', 'lessThanEqual($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-
-    generateSystemFunction('equal', 'equal($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('equal', 'equal($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('equal', 'equal($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-    generateSystemFunction('equal', 'equal($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['bool2', 'bool3', 'bool4']);
-
-    generateSystemFunction('notEqual', 'notEqual($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('notEqual', 'notEqual($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('notEqual', 'notEqual($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-    generateSystemFunction('notEqual', 'notEqual($1,$2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['bool2', 'bool3', 'bool4']);
-
-    generateSystemFunction('greaterThan', 'greaterThan($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('greaterThan', 'greaterThan($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('greaterThan', 'greaterThan($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-
-    generateSystemFunction('greaterThanEqual', 'greaterThanEqual($1,$2)', 'bool2', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float2', 'int2']);
-    generateSystemFunction('greaterThanEqual', 'greaterThanEqual($1,$2)', 'bool3', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float3', 'int3']);
-    generateSystemFunction('greaterThanEqual', 'greaterThanEqual($1,$2)', 'bool4', [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float4', 'int4']);
-
-
-    generateSystemFunction('radians', 'radians($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('degrees', 'degrees($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('sin', 'sin($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('cos', 'cos($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('tan', 'tan($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('asin', 'asin($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('acos', 'acos($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('atan', 'atan($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('atan', 'atan($1, $2)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-
-    generateSystemFunction('tex2D', 'texture2D($1,$2)', 'float4', ['sampler', 'float2'], null);
-    generateSystemFunction('tex2D', 'texture2D($1,$2)', 'float4', ['sampler2D', 'float2'], null);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2)', 'float4', ['sampler', 'float3'], null);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2)', 'float4', ['sampler2D', 'float3'], null);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2)', 'float4', ['sampler', 'float4'], null);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2)', 'float4', ['sampler2D', 'float4'], null);
-    generateSystemFunction('texCUBE', 'textureCube($1,$2)', 'float4', ['sampler', 'float3'], null);
-    generateSystemFunction('texCUBE', 'textureCube($1,$2)', 'float4', ['samplerCUBE', 'float3'], null);
-
-    generateSystemFunction('tex2D', 'texture2D($1,$2,$3)', 'float4', ['sampler', 'float2', 'float'], null, false, true);
-    generateSystemFunction('tex2D', 'texture2D($1,$2,$3)', 'float4', ['sampler2D', 'float2', 'float'], null, false, true);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2,$3)', 'float4', ['sampler', 'float3', 'float'], null, false, true);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2,$3)', 'float4', ['sampler2D', 'float3', 'float'], null, false, true);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2,$3)', 'float4', ['sampler', 'float4', 'float'], null, false, true);
-    generateSystemFunction('tex2DProj', 'texture2DProj($1,$2,$3)', 'float4', ['sampler2D', 'float4', 'float'], null, false, true);
-    generateSystemFunction('texCUBE', 'textureCube($1,$2,$3)', 'float4', ['sampler', 'float3', 'float'], null, false, true);
-    generateSystemFunction('texCUBE', 'textureCube($1,$2,$3)', 'float4', ['samplerCUBE', 'float3', 'float'], null, false, true);
-
-    generateSystemFunction('tex2DLod', 'texture2DLod($1,$2,$3)', 'float4', ['sampler', 'float2', 'float'], null, true, false);
-    generateSystemFunction('tex2DLod', 'texture2DLod($1,$2,$3)', 'float4', ['sampler2D', 'float2', 'float'], null, true, false);
-    generateSystemFunction('tex2DProjLod', 'texture2DProjLod($1,$2,$3)', 'float4', ['sampler', 'float3', 'float'], null, true, false);
-    generateSystemFunction('tex2DProjLod', 'texture2DProjLod($1,$2,$3)', 'float4', ['sampler2D', 'float3', 'float'], null, true, false);
-    generateSystemFunction('tex2DProjLod', 'texture2DProjLod($1,$2,$3)', 'float4', ['sampler', 'float4', 'float'], null, true, false);
-    generateSystemFunction('tex2DProjLod', 'texture2DProjLod($1,$2,$3)', 'float4', ['sampler2D', 'float4', 'float'], null, true, false);
-    generateSystemFunction('texCUBELod', 'textureCubeLod($1,$2,$3)', 'float4', ['sampler', 'float3', 'float'], null, true, false);
-    generateSystemFunction('texCUBELod', 'textureCubeLod($1,$2,$3)', 'float4', ['samplerCUBE', 'float3', 'float'], null, true, false);
-
-    //OES_standard_derivatives
-
-    generateSystemFunction('dFdx', 'dFdx($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('dFdy', 'dFdy($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('width', 'width($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('fwidth', 'fwidth($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    // generateSystemFunction("smoothstep", "smoothstep($1, $2, $3)", "float3", ["float3", "float3", "float3"], null);
-
-    generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('smoothstep', 'smoothstep($1, $2, $3)', TEMPLATE_TYPE, ['float', 'float', TEMPLATE_TYPE], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('frac', 'fract($1)', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('lerp', 'mix($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-    generateSystemFunction('lerp', 'mix($1,$2,$3)', TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, 'float'], ['float2', 'float3', 'float4']);
-
-    generateSystemFunction('saturate', 'max(0., min(1., $1))', TEMPLATE_TYPE, [TEMPLATE_TYPE], ['float', 'float2', 'float3', 'float4']);
-}
-
-
-function initSystemTypes(): void {
-    addSystemTypeScalar();
-    addSystemTypeVector();
-    addSystemTypeMatrix();
-}
-
-
-function initSystemFunctions(): void {
-    addSystemFunctions();
-}
-
-
-function generateSystemVariable(name: string, typeName: string,
-    isForVertex: boolean, isForPixel: boolean, readonly: boolean): void {
-
-    const scope = systemScope;
-
-    if (systemScope.hasVariable(name)) {
-        return;
-    }
-
-    let id = new IdInstruction({ scope, name });
-    let type = new VariableTypeInstruction({ scope, type: getSystemType(typeName), writable: readonly });
-    let variableDecl = new VariableDeclInstruction({ scope, id, type, builtIn: true });
-
-    variableDecl.$makeVertexCompatible(isForVertex);
-    variableDecl.$makePixelCompatible(isForPixel);
-
-    systemScope.addVariable(variableDecl);
-}
-
-
-function addSystemVariables(): void {
-    // generateSystemVariable('fragColor', 'gl_FragColor', 'float4', false, true, true);
-    // generateSystemVariable('fragCoord', 'gl_FragCoord', 'float4', false, true, true);
-    // generateSystemVariable('frontFacing', 'gl_FrontFacing', 'bool', false, true, true);
-    // generateSystemVariable('pointCoord', 'gl_PointCoord', 'float2', false, true, true);
-}
-
-
-function initSystemVariables(): void {
-    addSystemVariables();
-}
-
 
 
 function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVariableTypeInstruction {
@@ -760,24 +92,11 @@ function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVar
 }
 
 
-function findFunctionByDef(program: ProgramScope, pDef: FunctionDefInstruction): IFunctionDeclInstruction {
-    return program.findFunction(pDef.name, pDef.paramList);
-}
-
-
-
-function getSystemType(typeName: string): SystemTypeInstruction {
-    //boolean, string, float and others
-    let type = systemScope.findType(typeName);
-    validate(type, EInstructionTypes.k_SystemTypeInstruction);
-    return <SystemTypeInstruction>type;
-}
-
 
 // todo: rewrite it!
-function _error(context: Context, node: IParseNode, code: number, info: IEffectErrorInfo = {}): void {
+function _error(context: Context, sourceNode: IParseNode, code: number, info: IEffectErrorInfo = {}): void {
     let location: ISourceLocation = <ISourceLocation>{ file: context ? context.filename : null, line: 0 };
-    let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(node);
+    let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(sourceNode);
 
     switch (code) {
         default:
@@ -798,13 +117,13 @@ function _error(context: Context, node: IParseNode, code: number, info: IEffectE
 }
 
 
-function analyzeUseDecl(context: Context, program: ProgramScope, node: IParseNode): void {
+function analyzeUseDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): void {
     program.currentScope.strictMode = true;
 }
 
 
-function analyzeComplexName(node: IParseNode): string {
-    const children = node.children;
+function analyzeComplexName(sourceNode: IParseNode): string {
+    const children = sourceNode.children;
     let name: string = '';
 
     for (let i: number = children.length - 1; i >= 0; i--) {
@@ -840,8 +159,8 @@ function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IPa
  *       + ComplexNameOpt 
  *         T_KW_PROVIDE = 'provide'
  */
-function analyzeProvideDecl(context: Context, program: ProgramScope, node: IParseNode): IProvideInstruction {
-    const children = node.children;
+function analyzeProvideDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IProvideInstruction {
+    const children = sourceNode.children;
     const scope = program.currentScope;
 
     if (children.length === 3) {
@@ -854,7 +173,7 @@ function analyzeProvideDecl(context: Context, program: ProgramScope, node: IPars
         return new ProvideInstruction({ moduleName, scope });
     }
 
-    _error(context, node, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
+    _error(context, sourceNode, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
     return null;
 }
 
@@ -902,8 +221,8 @@ function analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IP
 
 
 
-function _errorFromInstruction(context: Context, node: IParseNode, pError: IInstructionError): void {
-    _error(context, node, pError.code, isNull(pError.info) ? {} : pError.info);
+function _errorFromInstruction(context: Context, sourceNode: IParseNode, pError: IInstructionError): void {
+    _error(context, sourceNode, pError.code, isNull(pError.info) ? {} : pError.info);
 }
 
 
@@ -918,7 +237,7 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 
 
 function addTypeDecl(context: Context, scope: IScope, type: ITypeDeclInstruction): void {
-    if (systemScope.findTypeDecl(type.name)) {
+    if (SystemScope.findTypeDecl(type.name)) {
         _error(context, type.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: type.name });
     }
 
@@ -929,15 +248,15 @@ function addTypeDecl(context: Context, scope: IScope, type: ITypeDeclInstruction
 }
 
 
-// function addFunctionDecl(context: Context, program: ProgramScope, node: IParseNode, func: IFunctionDeclInstruction): void {
+// function addFunctionDecl(context: Context, program: ProgramScope, sourceNode: IParseNode, func: IFunctionDeclInstruction): void {
 //     if (isSystemFunction(func)) {
-//         _error(context, node, EEffectErrors.REDEFINE_SYSTEM_FUNCTION, { funcName: func.name });
+//         _error(context, sourceNode, EEffectErrors.REDEFINE_SYSTEM_FUNCTION, { funcName: func.name });
 //     }
 
 //     let isFunctionAdded: boolean = program.addFunction(func);
 
 //     if (!isFunctionAdded) {
-//         _error(context, node, EEffectErrors.REDEFINE_FUNCTION, { funcName: func.name });
+//         _error(context, sourceNode, EEffectErrors.REDEFINE_FUNCTION, { funcName: func.name });
 //     }
 // }
 
@@ -989,19 +308,19 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 
 //                 for (let k: number = 0; k < addedUsedFunctionList.length; k++) {
 //                     let addedFunction: IFunctionDeclInstruction = addedUsedFunctionList[k];
-//                     let node = addedFunction.sourceNode;
+//                     let sourceNode = addedFunction.sourceNode;
 
 //                     if (testedFunction === addedFunction) {
 //                         testedFunction.addToBlackList();
 //                         isNewDelete = true;
-//                         _error(context, node, EEffectErrors.BAD_FUNCTION_USAGE_RECURSION, { funcDef: testedFunction.stringDef });
+//                         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_RECURSION, { funcDef: testedFunction.stringDef });
 //                         continue mainFor;
 //                     }
 
 //                     if (addedFunction.isBlackListFunction() ||
 //                         !addedFunction.canUsedAsFunction()) {
 //                         testedFunction.addToBlackList();
-//                         _error(context, node, EEffectErrors.BAD_FUNCTION_USAGE_BLACKLIST, { funcDef: testedFunction.stringDef });
+//                         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_BLACKLIST, { funcDef: testedFunction.stringDef });
 //                         isNewDelete = true;
 //                         continue mainFor;
 //                     }
@@ -1415,8 +734,8 @@ function checkTwoOperandExprTypes(
 
     const isComplex = leftType.isComplex() || rightType.isComplex();
     const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
-    const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
-    const boolType = <IVariableTypeInstruction>systemScope.findType('bool');
+    const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
+    const boolType = <IVariableTypeInstruction>SystemScope.T_BOOL;
 
     if (isArray || isSampler) {
         return null;
@@ -1465,8 +784,8 @@ function checkTwoOperandExprTypes(
         }
     }
 
-    const leftBaseType: IVariableTypeInstruction = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, systemScope);
-    const rightBaseType: IVariableTypeInstruction = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, systemScope);
+    const leftBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, SystemScope.SCOPE);
+    const rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
 
 
     if (leftType.isConst() && isAssignmentOperator(operator)) {
@@ -1475,7 +794,7 @@ function checkTwoOperandExprTypes(
 
     if (leftType.isEqual(rightType)) {
         if (isArithmeticalOperator(operator)) {
-            if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
+            if (!SystemScope.isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
                 return leftBaseType;
             }
             else {
@@ -1483,7 +802,7 @@ function checkTwoOperandExprTypes(
             }
         }
         else if (isRelationalOperator(operator)) {
-            if (isScalarType(leftType)) {
+            if (SystemScope.isScalarType(leftType)) {
                 return boolType;
             }
             else {
@@ -1503,26 +822,26 @@ function checkTwoOperandExprTypes(
     }
 
     if (isArithmeticalOperator(operator)) {
-        if (isBoolBasedType(leftType) || isBoolBasedType(rightType) ||
-            isFloatBasedType(leftType) !== isFloatBasedType(rightType) ||
-            isIntBasedType(leftType) !== isIntBasedType(rightType)) {
+        if (SystemScope.isBoolBasedType(leftType) || SystemScope.isBoolBasedType(rightType) ||
+            SystemScope.isFloatBasedType(leftType) !== SystemScope.isFloatBasedType(rightType) ||
+            SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType)) {
             return null;
         }
 
-        if (isScalarType(leftType)) {
+        if (SystemScope.isScalarType(leftType)) {
             return rightBaseType;
         }
 
-        if (isScalarType(rightType)) {
+        if (SystemScope.isScalarType(rightType)) {
             return leftBaseType;
         }
 
         if (operator === '*' || operator === '*=') {
-            if (isMatrixType(leftType) && isVectorType(rightType) &&
+            if (SystemScope.isMatrixType(leftType) && SystemScope.isVectorType(rightType) &&
                 leftType.length === rightType.length) {
                 return rightBaseType;
             }
-            else if (isMatrixType(rightType) && isVectorType(leftType) &&
+            else if (SystemScope.isMatrixType(rightType) && SystemScope.isVectorType(leftType) &&
                 leftType.length === rightType.length) {
                 return leftBaseType;
             }
@@ -1548,7 +867,7 @@ function checkOneOperandExprType(context: Context, sourceNode: IParseNode, opera
 
     const isComplex = type.isComplex();
     const isArray = type.isNotBaseArray();
-    const isSampler = isSamplerType(type);
+    const isSampler = SystemScope.isSamplerType(type);
 
     if (isComplex || isArray || isSampler) {
         return null;
@@ -1570,7 +889,7 @@ function checkOneOperandExprType(context: Context, sourceNode: IParseNode, opera
     }
 
     if (operator === '!') {
-        const boolType = <IVariableTypeInstruction>systemScope.findType('bool');
+        const boolType = <IVariableTypeInstruction>SystemScope.T_BOOL;
         validate(boolType, EInstructionTypes.k_VariableDeclInstruction);
 
         if (type.isEqual(boolType)) {
@@ -1581,7 +900,7 @@ function checkOneOperandExprType(context: Context, sourceNode: IParseNode, opera
         }
     }
     else {
-        if (isBoolBasedType(type)) {
+        if (SystemScope.isBoolBasedType(type)) {
             return null;
         }
         else {
@@ -1693,7 +1012,7 @@ function analyzeType(context: Context, program: ProgramScope, sourceNode: IParse
             break;
 
         case 'T_KW_VOID':
-            type = scope.findType('void');
+            type = SystemScope.T_VOID;
             break;
 
         case 'ScalarType':
@@ -1755,7 +1074,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
     const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation });
     assert(scope.type != EScopeType.k_System);
 
-    if (systemScope.hasVariableInScope(varDecl.name)) {
+    if (SystemScope.hasVariable(varDecl.name)) {
         _error(context, sourceNode, EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: varDecl.name });
     }
 
@@ -1941,14 +1260,14 @@ function analyzeExpr(context: Context, program: ProgramScope, sourceNode: IParse
  *         T_NON_TYPE_ID = 'fs_skybox'
  *         T_KW_COMPILE = 'compile'
  */
-function analyzeObjectExpr(context: Context, program: ProgramScope, node: IParseNode): IExprInstruction {
-    let name = node.children[node.children.length - 1].name;
+function analyzeObjectExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    let name = sourceNode.children[sourceNode.children.length - 1].name;
 
     switch (name) {
         case 'T_KW_COMPILE':
-            return analyzeCompileExpr(context, program, node);
+            return analyzeCompileExpr(context, program, sourceNode);
         case 'T_KW_SAMPLER_STATE':
-            return analyzeSamplerStateBlock(context, program, node);
+            return analyzeSamplerStateBlock(context, program, sourceNode);
         default:
     }
     return null;
@@ -2160,8 +1479,8 @@ function analyzeComplexExpr(context: Context, program: ProgramScope, sourceNode:
 }
 
 
-function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: IParseNode): IFunctionCallInstruction {
-    const children = node.children;
+function analyzeFunctionCallExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionCallInstruction {
+    const children = sourceNode.children;
     const funcName = children[children.length - 1].value;
     const scope = program.currentScope;
     const globalScope = program.globalScope;
@@ -2185,12 +1504,12 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
     let func = globalScope.findFunction(funcName, args);
 
     if (isNull(func)) {
-        _error(context, node, EEffectErrors.BAD_COMPLEX_NOT_FUNCTION, { funcName: funcName });
+        _error(context, sourceNode, EEffectErrors.BAD_COMPLEX_NOT_FUNCTION, { funcName: funcName });
         return null;
     }
 
     if (!isDef(func)) {
-        _error(context, node, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: funcName });
+        _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: funcName });
         return null;
     }
 
@@ -2214,22 +1533,22 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
                     if (!args[i].type.writable) {
-                        _error(context, node, EEffectErrors.BAD_TYPE_FOR_WRITE);
+                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
                         return null;
                     }
                 } else if (funcArguments[i].type.hasUsage('inout')) {
                     if (!args[i].type.writable) {
-                        _error(context, node, EEffectErrors.BAD_TYPE_FOR_WRITE);
+                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
                         return null;
                     }
 
                     if (!args[i].type.readable) {
-                        _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
+                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
                         return null;
                     }
                 } else {
                     if (!args[i].type.readable) {
-                        _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
+                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
                         return null;
                     }
                 }
@@ -2258,7 +1577,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, node: 
         {
             for (let i = 0; i < args.length; i++) {
                 if (!args[i].type.readable) {
-                    _error(context, node, EEffectErrors.BAD_TYPE_FOR_READ);
+                    _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
                     return null;
                 }
             }
@@ -2309,6 +1628,7 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
         }
     }
 
+    // todo: add correct implementation! 
     const exprType = findConstructor(ctorType, args);
 
     if (isNull(exprType)) {
@@ -2400,9 +1720,7 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const indexExpr = analyzeExpr(context, program, children[children.length - 3]);
     const indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
-    const intType = systemScope.findType('int');
-
-    if (!indexExprType.isEqual(intType)) {
+    if (!indexExprType.isEqual(SystemScope.T_INT)) {
         _error(context, sourceNode, EEffectErrors.BAD_POSTIX_NOT_INT_INDEX, { typeName: indexExprType.toString() });
         return null;
     }
@@ -2542,7 +1860,7 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
     const leftExprType = <IVariableTypeInstruction>leftExpr.type;
     const rightExprType = <IVariableTypeInstruction>rightExpr.type;
 
-    const boolType = systemScope.findType('bool');
+    const boolType = SystemScope.T_BOOL;
 
     if (!conditionType.isEqual(boolType)) {
         _error(context, conditionExpr.sourceNode, EEffectErrors.BAD_CONDITION_TYPE, { typeName: conditionType.toString() });
@@ -2664,7 +1982,7 @@ function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode:
     const leftType = <IVariableTypeInstruction>left.type;
     const rightType = <IVariableTypeInstruction>right.type;
 
-    const boolType = systemScope.findType('bool');
+    const boolType = SystemScope.T_BOOL;
 
     if (!leftType.isEqual(boolType)) {
         _error(context, leftType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
@@ -2801,19 +2119,19 @@ function analyzeSimpleExpr(context: Context, program: ProgramScope, sourceNode: 
  *    ConstType
  *       + Type 
  */
-function analyzeConstTypeDim(context: Context, program: ProgramScope, node: IParseNode): IVariableTypeInstruction {
+function analyzeConstTypeDim(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
 
-    const children = node.children;
+    const children = sourceNode.children;
 
     if (children.length > 1) {
-        _error(context, node, EEffectErrors.BAD_CAST_TYPE_USAGE);
+        _error(context, sourceNode, EEffectErrors.BAD_CAST_TYPE_USAGE);
         return null;
     }
 
     const type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
 
     if (!type.isBase()) {
-        _error(context, node, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
+        _error(context, sourceNode, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
     }
 
     return checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2984,7 +2302,7 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 //     stmtBlock = <StmtBlockInstruction>analyzeStmtBlock(context, program, children[0]);
 //     func.implementation = <IStmtInstruction>stmtBlock;
 
-//     if (!func.returnType.isEqual(getSystemType('void')) && !context.haveCurrentFunctionReturnOccur) {
+//     if (!func.returnType.isEqual(SystemScope.T_VOID) && !context.haveCurrentFunctionReturnOccur) {
 //         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DONT_HAVE_RETURN_STMT, { funcName: func.nameID.toString() })
 //     }
 
@@ -3182,11 +2500,11 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 
 //     context.haveCurrentFunctionReturnOccur = true;
 
-//     if (funcReturnType.isEqual(getSystemType('void')) && children.length === 3) {
+//     if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
 //         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_VOID);
 //         return null;
 //     }
-//     else if (!funcReturnType.isEqual(getSystemType('void')) && children.length === 2) {
+//     else if (!funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 2) {
 //         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_EMPTY);
 //         return null;
 //     }
@@ -3250,10 +2568,10 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeExprStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeExprStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
-//     const exprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction(node);
+//     const children = sourceNode.children;
+//     const exprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction(sourceNode);
 //     const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
 
 //     exprStmtInstruction.push(exprInstruction, true);
@@ -3264,16 +2582,16 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeWhileStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const isDoWhile: boolean = (children[children.length - 1].value === 'do');
-//     const isNonIfStmt: boolean = (node.name === 'NonIfStmt') ? true : false;
+//     const isNonIfStmt: boolean = (sourceNode.name === 'NonIfStmt') ? true : false;
 
-//     const whileStmt: WhileStmtInstruction = new WhileStmtInstruction(node);
+//     const whileStmt: WhileStmtInstruction = new WhileStmtInstruction(sourceNode);
 //     let condition: IExprInstruction = null;
 //     let conditionType: IVariableTypeInstruction = null;
-//     const boolType: ITypeInstruction = getSystemType('bool');
+//     const boolType: ITypeInstruction = SystemScope.T_BOOL;
 //     let stmt: IStmtInstruction = null;
 
 //     if (isDoWhile) {
@@ -3282,7 +2600,7 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 //         conditionType = <IVariableTypeInstruction>condition.type;
 
 //         if (!conditionType.isEqual(boolType)) {
-//             _error(context, node, EEffectErrors.BAD_DO_WHILE_CONDITION, { typeName: conditionType.toString() });
+//             _error(context, sourceNode, EEffectErrors.BAD_DO_WHILE_CONDITION, { typeName: conditionType.toString() });
 //             return null;
 //         }
 
@@ -3294,7 +2612,7 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 //         conditionType = <IVariableTypeInstruction>condition.type;
 
 //         if (!conditionType.isEqual(boolType)) {
-//             _error(context, node, EEffectErrors.BAD_WHILE_CONDITION, { typeName: conditionType.toString() });
+//             _error(context, sourceNode, EEffectErrors.BAD_WHILE_CONDITION, { typeName: conditionType.toString() });
 //             return null;
 //         }
 
@@ -3315,21 +2633,21 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const isIfElse: boolean = (children.length === 7);
 
-//     const ifStmtInstruction: IfStmtInstruction = new IfStmtInstruction(node);
+//     const ifStmtInstruction: IfStmtInstruction = new IfStmtInstruction(sourceNode);
 //     const condition: IExprInstruction = analyzeExpr(context, program, children[children.length - 3]);
 //     const conditionType: IVariableTypeInstruction = <IVariableTypeInstruction>condition.type;
-//     const boolType: ITypeInstruction = getSystemType('bool');
+//     const boolType: ITypeInstruction = SystemScope.T_BOOL;
 
 //     let ifStmt: IStmtInstruction = null;
 //     let elseStmt: IStmtInstruction = null;
 
 //     if (!conditionType.isEqual(boolType)) {
-//         _error(context, node, EEffectErrors.BAD_IF_CONDITION, { typeName: conditionType.toString() });
+//         _error(context, sourceNode, EEffectErrors.BAD_IF_CONDITION, { typeName: conditionType.toString() });
 //         return null;
 //     }
 
@@ -3356,28 +2674,28 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeNonIfStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeNonIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
 //         case 'SimpleStmt':
 //             return analyzeSimpleStmt(context, program, children[0]);
 //         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, program, node);
+//             return analyzeWhileStmt(context, program, sourceNode);
 //         case 'T_KW_FOR':
-//             return analyzeForStmt(context, program, node);
+//             return analyzeForStmt(context, program, sourceNode);
 //     }
 //     return null;
 // }
 
 
-// function analyzeForStmt(context: Context, program: ProgramScope, node: IParseNode): IStmtInstruction {
+// function analyzeForStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
 
-//     const children = node.children;
-//     const isNonIfStmt: boolean = (node.name === 'NonIfStmt');
-//     const pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction(node);
+//     const children = sourceNode.children;
+//     const isNonIfStmt: boolean = (sourceNode.name === 'NonIfStmt');
+//     const pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction(sourceNode);
 //     let stmt: IStmtInstruction = null;
 
 //     program.push();
@@ -3410,9 +2728,9 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeForInit(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForInit(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const firstNodeName: string = children[children.length - 1].name;
 
 //     switch (firstNodeName) {
@@ -3433,9 +2751,9 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeForCond(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForCond(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 
 //     if (children.length === 1) {
 //         pForStmtInstruction.push(null);
@@ -3449,9 +2767,9 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 // }
 
 
-// function analyzeForStep(context: Context, program: ProgramScope, node: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
+// function analyzeForStep(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
 
-//     const children = node.children;
+//     const children = sourceNode.children;
 //     const pSteexpr: IExprInstruction = analyzeExpr(context, program, children[0]);
 
 //     pForStmtInstruction.push(pSteexpr, true);
@@ -3462,8 +2780,8 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 
 
 
-function analyzeTechniqueDecl(context: Context, program: ProgramScope, node: IParseNode): ITechniqueInstruction {
-    const children = node.children;
+function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITechniqueInstruction {
+    const children = sourceNode.children;
     const name = analyzeComplexName(children[children.length - 2]);
     // Specifies whether name should be interpreted as globalNamespace.name or just a name;
     const isComplexName = children[children.length - 2].children.length !== 1;
@@ -3490,8 +2808,8 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, node: IPa
 
 
 
-function analyzeTechnique(context: Context, program: ProgramScope, node: IParseNode): IPassInstruction[] {
-    const children = node.children;
+function analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction[] {
+    const children = sourceNode.children;
     let passList: IPassInstruction[] = [];
     for (let i: number = children.length - 2; i >= 1; i--) {
         let pass = analyzePassDecl(context, program, children[i]);
@@ -3530,9 +2848,9 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
 
 
 function analyzePassStateBlockForShaders(context: Context, program: ProgramScope,
-    node: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
+    sourceNode: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
 
-    const children = node.children;
+    const children = sourceNode.children;
 
     let pixel: IFunctionDeclInstruction = null;
     let vertex: IFunctionDeclInstruction = null;
@@ -3896,11 +3214,6 @@ function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IPar
 // }
 
 
-initSystemTypes();
-initSystemFunctions();
-initSystemVariables();
-
-
 class Context {
     readonly filename: string | null = null;
 
@@ -3938,7 +3251,7 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     let root: IInstructionCollector = null;
 
     try {
-        program.begin(systemScope);
+        program.begin(SystemScope.SCOPE);
 
         root = new InstructionCollector({ scope: program.currentScope });
 

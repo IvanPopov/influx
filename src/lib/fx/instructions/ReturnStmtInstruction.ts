@@ -19,7 +19,7 @@ export class ReturnStmtInstruction extends StmtInstruction {
     protected _operator: ReturnOperator;
     protected _expr: IExprInstruction;
 
-    constructor({ expr = null, ...settings }) {
+    constructor({ expr = null, ...settings }: IReturnStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ReturnStmtInstruction, ...settings });
         
         this._operator = "return";

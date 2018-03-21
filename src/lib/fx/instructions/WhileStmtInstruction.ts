@@ -24,7 +24,7 @@ export class WhileStmtInstruction extends StmtInstruction {
     protected _body: IStmtInstruction;
 
     
-    constructor({ cond, body, operator, ...settings }) {
+    constructor({ cond, body, operator, ...settings }: IWhileStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_WhileStmtInstruction, ...settings });
         
         this._cond = cond.$withParent(this);

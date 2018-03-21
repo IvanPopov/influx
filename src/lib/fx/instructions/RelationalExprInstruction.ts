@@ -2,8 +2,8 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IPairedExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
-import * as Effect from '../Effect';
 import { IInstructionSettings } from "./Instruction";
+import * as SystemScope from '../SystemScope';
 
 export type RelationOperator = "==" | "!=" | "<" | ">" | "<=" | ">=";
 
@@ -24,7 +24,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
 
 
     constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: Effect.findSystemType('bool').asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: SystemScope.T_BOOL, ...settings });
         this._leftOperand = left;
         this._rightOperand = right;
         this._operator = operator;

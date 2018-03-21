@@ -12,7 +12,6 @@ import { EEffectTempErrors } from "../../idl/EEffectErrors";
 import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
 import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import * as Effect from "../Effect";
 
 
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {

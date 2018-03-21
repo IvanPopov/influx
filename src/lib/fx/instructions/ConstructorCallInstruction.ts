@@ -4,10 +4,9 @@ import { ITypeInstruction, IInstruction, IVariableTypeInstruction } from "./../.
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction, IExprInstruction, IConstructorCallInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
-
+import * as SystemScope from "../SystemScope";
 
 export interface IConstructorCallInstructionSettings extends IInstructionSettings {
     ctor: IVariableTypeInstruction;
@@ -87,7 +86,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
         }
 
         var res: any = null;
-        var jsTypeCtor: any = Effect.getExternalType(this.type);
+        var jsTypeCtor: any = SystemScope.getExternalType(this.type);
         var args: any[] = new Array(this.arguments.length);
 
         if (isNull(jsTypeCtor)) {
@@ -95,7 +94,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
         }
 
         try {
-            if (Effect.isScalarType(this.type)) {
+            if (SystemScope.isScalarType(this.type)) {
                 var pTestedInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
                 if (this.arguments.length > 1 || !pTestedInstruction.evaluate()) {
                     return false;

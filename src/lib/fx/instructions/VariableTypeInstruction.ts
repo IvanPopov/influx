@@ -31,10 +31,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, ...settings }: IVariableTypeInstructionSettings) {
+    constructor({ type, usages = null, arrayIndex = null, writable = true, readable = true, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableTypeInstruction, ...settings });
 
-        usages.forEach( usage => this.addUsage(usage) );
+        this._usageList = [];
+        (usages || []).forEach( usage => this.addUsage(usage) );
 
         type = type.$withNoParent();
 
@@ -44,12 +45,12 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             this._subType = type;
         }
         else {
-            let pVarType: IVariableTypeInstruction = <IVariableTypeInstruction>type;
+            let varType = <IVariableTypeInstruction>type;
             // todo: review this code
-            if (!pVarType.isNotBaseArray()) {
-                let usages: string[] = pVarType.usageList;
+            if (!varType.isNotBaseArray()) {
+                let usages = varType.usageList;
                 usages.forEach( usage => this.addUsage(usage) )
-                this._subType = pVarType.subType;
+                this._subType = varType.subType;
             }
             else {
                 this._subType = type;
@@ -225,10 +226,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     toCode(): string {
         let code: string = "";
         if (!isNull(this._usageList)) {
-            {
-                for (let i: number = 0; i < this._usageList.length; i++) {
-                    code += this._usageList[i] + " ";
-                }
+            for (let i: number = 0; i < this._usageList.length; i++) {
+                code += this._usageList[i] + " ";
             }
         }
 

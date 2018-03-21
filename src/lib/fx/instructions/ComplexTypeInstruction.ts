@@ -5,9 +5,8 @@ import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruc
 import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
 import { EEffectErrors } from "../../idl/EEffectErrors";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
-
+import * as SystemScope from "../SystemScope";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name?: string;
@@ -199,7 +198,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
             this._isContainArray = true;
         }
 
-        if (Effect.isSamplerType(type) || type.isContainSampler()) {
+        if (SystemScope.isSamplerType(type) || type.isContainSampler()) {
             this._isContainSampler = true;
         }
 

@@ -1,5 +1,4 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { findSystemType } from "./../Effect";
 import { IMap } from "./../../idl/IMap";
 import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction, ISamplerStateInstruction } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
@@ -7,7 +6,7 @@ import { ISamplerState } from "../../idl/ISamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
-import * as Effect from '../Effect';
+import * as SystemScope from '../SystemScope';
 
 export type SamplerOperator = "sampler_state";
 
@@ -27,7 +26,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
 
     constructor({ operator, params = [], ...settings }: ISamplerStateBlockInstructionSettings) {
         // todo: resolve type from texture type!
-        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: Effect.findSystemType("sampler").asVarType(), ...settings } );
+        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: SystemScope.T_SAMPLER, ...settings } );
         
         this._samplerParams = params.map(param => param.$withParent(this));
         this._operator = operator;

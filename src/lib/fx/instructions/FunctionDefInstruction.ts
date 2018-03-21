@@ -3,7 +3,7 @@ import { IParseNode } from "./../../idl/parser/IParser";
 import { IVariableDeclInstruction, IAnnotationInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { EEffectErrors } from "../../idl/EEffectErrors";
-import * as Effect from "../Effect";
+import * as SystemScope from "../SystemScope";
 import { isNull } from "../../common";
 
 
@@ -127,7 +127,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         let returnType = <IVariableTypeInstruction>funcDef.returnType;
         let isGood = true;
 
-        if (returnType.isEqual(Effect.findSystemType("void"))) {
+        if (returnType.isEqual(SystemScope.T_VOID)) {
             return true;
         }
 
@@ -159,7 +159,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
             return true;
         } else {
-            isGood = returnType.isEqual(Effect.findSystemType("float4"));
+            isGood = returnType.isEqual(SystemScope.T_FLOAT4);
             if (!isGood) {
                 return false;
             }
@@ -179,7 +179,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         let returnType = <IVariableTypeInstruction>funcDef.returnType;
         let isGood: boolean = true;
 
-        if (returnType.isEqual(Effect.findSystemType("void"))) {
+        if (returnType.isEqual(SystemScope.T_VOID)) {
             return true;
         }
 
@@ -188,7 +188,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             return false;
         }
 
-        isGood = returnType.isEqual(Effect.findSystemType("float4"));
+        isGood = returnType.isEqual(SystemScope.T_FLOAT4);
         if (!isGood) {
             return false;
         }
@@ -446,7 +446,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                     isVaryingsByStruct = true;
                 } else if (param.semantics !== "") {
                     if (param.type.isContainSampler() ||
-                        Effect.isSamplerType(param.type)) {
+                        SystemScope.isSamplerType(param.type)) {
                         return false;
                     }
 
@@ -470,7 +470,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 }
 
                 if (param.type.isContainSampler() ||
-                    Effect.isSamplerType(param.type)) {
+                    SystemScope.isSamplerType(param.type)) {
                     return false;
                 }
 

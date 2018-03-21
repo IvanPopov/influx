@@ -5,7 +5,7 @@ import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IInstructionSettings } from "./Instruction";
 
-export interface IDeclStmtInstruction extends IInstructionSettings {
+export interface IDeclStmtInstructionSettings extends IInstructionSettings {
     declList?: IDeclInstruction[];
 }
 
@@ -17,10 +17,10 @@ export class DeclStmtInstruction extends StmtInstruction {
     private _declList: IDeclInstruction[];
 
     
-    constructor({ declList, ...settings }) {
+    constructor({ declList = null, ...settings }: IDeclStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclStmtInstruction, ...settings });
         
-        this._declList = declList.map(decl => decl.$withParent(this));
+        this._declList = (declList || []).map(decl => decl.$withParent(this));
     }
 
 

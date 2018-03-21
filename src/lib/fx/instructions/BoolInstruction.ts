@@ -3,9 +3,9 @@ import { IExprInstructionSettings } from "./ExprInstruction";
 import { IVariableTypeInstruction, ITypeInstruction } from "./../../idl/IInstruction";
 import { ILiteralInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
+import * as SystemScope from "../SystemScope";
 
 export interface IBoolInstructionSettings extends IInstructionSettings {
     value: "true" | "false";
@@ -15,7 +15,7 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
     protected _value: boolean;
 
     constructor({ value, ...settings }: IBoolInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_BoolInstruction, type: Effect.findSystemType("bool").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_BoolInstruction, type: SystemScope.T_BOOL, ...settings });
 
         this._value = value === "true";
     }

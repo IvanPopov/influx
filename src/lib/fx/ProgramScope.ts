@@ -220,7 +220,7 @@ export class Scope implements IScope {
     }
 
 
-    findTechique(techName: string): ITechniqueInstruction | null | undefined {
+    findTechnique(techName: string): ITechniqueInstruction | null | undefined {
         let scope: Scope = this;
         while (!isNull(scope)) {
             let technique = scope.techniqueMap[techName];
@@ -288,7 +288,7 @@ export class Scope implements IScope {
 
 
     hasTechnique(techName: string): boolean {
-        return !isNull(this.findTechique(techName));
+        return !isNull(this.findTechnique(techName));
     }
 
 
@@ -432,7 +432,7 @@ export class ProgramScope {
     }
 
 
-    begin(systemScope: IScope = null): void {
+    begin(systemScope: IScope): void {
         assert(systemScope !== null);
         assert(this.currentScope === null);
 
@@ -469,7 +469,7 @@ export class ProgramScope {
 
 
     findTechnique(techName: string): ITechniqueInstruction {
-        return this.globalScope.findTechique(techName);
+        return this.globalScope.findTechnique(techName);
     }
 
 

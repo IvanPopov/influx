@@ -2,8 +2,8 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
-import * as Effect from '../Effect';
 import { IInstructionSettings } from "./Instruction";
+import * as SystemScope from '../SystemScope';
 
 
 export type LogicalOperator = "&&" | "||";
@@ -25,7 +25,7 @@ export class LogicalExprInstruction extends ExprInstruction {
     protected _rightOperand: IExprInstruction;
 
     constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: scope.findType("bool"), ...settings });
+        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: SystemScope.T_BOOL, ...settings });
 
         this._leftOperand = left.$withParent(this);
         this._rightOperand = right.$withParent(this);

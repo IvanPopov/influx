@@ -7,6 +7,7 @@ import { IMap } from "../../idl/IMap";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 import { ExprTemplateTranslator } from "../ExprTemplateTranslator"
 import { TypedInstruction } from "./TypedInstruction";
+import * as SystemScope from "../SystemScope";
 
 
 export interface ISystemFunctionInstructionSettings extends IDeclInstructionSettings {
@@ -45,7 +46,7 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
         this._id = id.$withParent(this);
         this._returnType = returnType.$withNoParent();
         this._args = argTypes.map(type => {
-            let arg = new TypedInstruction({ type });
+            let arg = new TypedInstruction({ type, scope: SystemScope.SCOPE });
             return arg.$withParent(this);
         });
 
@@ -90,6 +91,11 @@ export class SystemFunctionInstruction extends DeclInstruction implements IFunct
 
     get type(): IVariableTypeInstruction {
         return this.returnType;
+    }
+
+
+    get name(): string {
+        return this.id.name;
     }
 
 

@@ -2,6 +2,7 @@ import { IMap } from "../idl/IMap";
 import { ISimpleInstruction, IInstruction } from "../idl/IInstruction";
 import { isNull } from "../common";
 import { SimpleInstruction } from "./instructions/SimpleInstruction";
+import * as SystemScope from './SystemScope';
 
 export class ExprTemplateTranslator {
     private _inToOutArgsMap: IMap<number> = null;
@@ -11,11 +12,11 @@ export class ExprTemplateTranslator {
         this._inToOutArgsMap = <IMap<number>>{};
         this._exprPart = <ISimpleInstruction[]>[];
 
-        let parts: string[] = exprTemplate.split(/(\$\d+)/);
-        for (let i: number = 0; i < parts.length; i++) {
+        let parts = exprTemplate.split(/(\$\d+)/);
+        for (let i = 0; i < parts.length; i++) {
             if (parts[i]) {
                 if (parts[i][0] !== '$') {
-                    this._exprPart.push(new SimpleInstruction({ value: parts[i] }));
+                    this._exprPart.push(new SimpleInstruction({ value: parts[i], scope: SystemScope.SCOPE /* todo: use proper scope*/ }));
                 }
                 else {
                     this._exprPart.push(null);

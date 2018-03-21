@@ -140,7 +140,7 @@ export class Instruction implements IInstruction {
 
     // An auxiliary function created to maintain the clarity of the code.
     $withNoParent<T extends IInstruction>(): T {
-        return this.$withParent(null);
+        return <any>this;
     }
 
 
@@ -152,7 +152,10 @@ export class Instruction implements IInstruction {
     }
 
     static $withNoParent<T extends IInstruction>(child: T): T | null {
-        return Instruction.$withParent(child, null);
+        if (isNull(child)) {
+            return null;
+        }
+        return child.$withNoParent();
     }
 
 

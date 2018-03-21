@@ -1,9 +1,9 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IInstructionSettings } from "./Instruction";
 import { ILiteralInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
-import * as Effect from "../Effect";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
+import * as SystemScope from "../SystemScope";
 
 export interface IFloatInstructionSettings extends IInstructionSettings {
     value: string;
@@ -15,7 +15,7 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor({ value, ...settings }: IFloatInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FloatInstruction, type: Effect.findSystemType("float").asVarType(), ...settings });
+        super({ instrType: EInstructionTypes.k_FloatInstruction, type: SystemScope.T_FLOAT, ...settings });
         this._value = ((<number><any>value) * 1.0);
     }
 

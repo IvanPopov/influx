@@ -1,7 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { ILiteralInstruction, IInstruction, EInstructionTypes } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
-import * as Effect from "../Effect";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
 
@@ -17,8 +16,8 @@ export class StringInstruction extends ExprInstruction implements ILiteralInstru
 	/**
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
-    constructor({ value, ...settings }: IStringInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_StringInstruction, type: Effect.findSystemType("string").asVarType(), ...settings });
+    constructor({ value, scope, ...settings }: IStringInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_StringInstruction, type: scope.findType("string"), scope, ...settings });
         this._value = value;
     }
 
