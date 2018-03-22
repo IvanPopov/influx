@@ -7,7 +7,7 @@ import { IExprInstruction, IInstruction, EInstructionTypes,
     IIdInstruction } from '../../idl/IInstruction';
 import { IdExprInstruction } from './IdExprInstruction';
 import { IdInstruction } from './IdInstruction';
-import { isNull } from '../../common';
+import { isNull, isString } from '../../common';
 import { IMap } from '../../idl/IMap';
 import { StringDictionary } from '../../stringUtils/StringDictionary'
 import { VariableTypeInstruction } from './VariableTypeInstruction';
@@ -165,12 +165,12 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
     
-    $canBeUsedInVertexShader(): boolean {
+    checkVertexUsage(): boolean {
         return this._bForVertex;
     }
 
 
-    $canBeUsedInPixelShader(): boolean {
+    checkPixelUsage(): boolean {
         return this._bForPixel;
     }
 

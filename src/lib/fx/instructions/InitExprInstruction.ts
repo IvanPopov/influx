@@ -90,11 +90,11 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 this._isArray = true;
             }
 
-            let arrayElementType: IVariableTypeInstruction = <IVariableTypeInstruction>pType.arrayElementType;
+            let arrayElementType = <IVariableTypeInstruction>pType.arrayElementType;
+            let isOk = false;
             let testedInstruction: IExprInstruction = null;
-            let isOk: boolean = false;
 
-            for (let i: number = 0; i < this.arguments.length; i++) {
+            for (let i = 0; i < this.arguments.length; i++) {
                 testedInstruction = (<IExprInstruction>this.arguments[i]);
 
                 if (testedInstruction.instructionType === EInstructionTypes.k_InitExprInstruction) {
@@ -122,7 +122,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return true;
         }
         else {
-            let firstInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
+            let firstInstruction = <IExprInstruction>this.arguments[0];
 
             if (this.arguments.length === 1 &&
                 firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
@@ -147,10 +147,10 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 return false;
             }
 
-            let args: IInitExprInstruction[] = <IInitExprInstruction[]>this.arguments;
-            let fieldNameList: string[] = pType.fieldNames;
+            let args = <IInitExprInstruction[]>this.arguments;
+            let fieldNameList = pType.fieldNames;
 
-            for (let i: number = 0; i < args.length; i++) {
+            for (let i = 0; i < args.length; i++) {
                 let pFieldType: IVariableTypeInstruction = pType.getField(fieldNameList[i]).type;
                 if (!args[i].optimizeForVariableType(pFieldType)) {
                     return false;

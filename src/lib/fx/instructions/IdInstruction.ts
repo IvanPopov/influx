@@ -1,6 +1,6 @@
 import { Instruction } from "./Instruction";
 import { IInstructionSettings } from "./Instruction";
-import { IIdInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
+import { IIdInstruction, EInstructionTypes, IInstruction, IScope } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 

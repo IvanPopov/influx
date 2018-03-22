@@ -9,7 +9,6 @@ import { assert, isNull } from "../common";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { VariableDeclInstruction } from "./instructions/VariableDeclInstruction";
 import { IMap } from "../idl/IMap";
-import { ExprTemplateTranslator } from "./ExprTemplateTranslator";
 import { logger } from "../logger";
 import { SystemFunctionInstruction } from "./instructions/SystemFunctionInstruction";
 import { IEffectErrorInfo } from "../idl/IEffectErrorInfo";
@@ -43,8 +42,7 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null,
     }
 
     const type = new SystemTypeInstruction({ scope, name, elementType, length, fields });
-    const decl = new TypeDeclInstruction({ scope, type: VariableTypeInstruction.wrap(type, scope) });
-    scope.addType(decl);
+    scope.addType(type);
 
     return type;
 }
@@ -278,34 +276,54 @@ function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDe
 }
 
 
-function generateSystemFunction(name: string,
+function generateSystemFunctionInstance(type: ITypeInstruction, name: string, paramTypes: ITypeInstruction[], vertex: boolean, pixel: boolean) {
+    let paramList = paramTypes.map((type, n) => {
+        return new VariableDeclInstruction({ 
+            type: new VariableTypeInstruction({ type, scope }), 
+            id: new IdInstruction({ name: `p${n}`, scope }), 
+            scope });
+    });
+
+    let returnType = new VariableTypeInstruction({ type, scope });
+    let id = new IdInstruction({ scope, name });
+    let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+    let func = new SystemFunctionInstruction({ scope, definition, pixel, vertex });
+
+    scope.addFunction(func);
+}
+
+/**
+ * Exampler:
+ *  generateSystemFunction("dot", "dot($1,$2)",   "float",    [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+ *                         ^^^^^  ^^^^^^^^^^^^    ^^^^^^^     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ *                         name   translationExpr returnType  argsTypes                       templateTypes
+ */
+function generateSystemFunction(
+    name: string,
     translationExpr: string,
     returnTypeName: string,
-    argsTypes: string[],
+    paramTypeNames: string[],
     templateTypes: string[],
     isForVertex: boolean = true,
     isForPixel: boolean = true): void {
-
-    const exprTranslator = new ExprTemplateTranslator(translationExpr);
     const builtIn = true;
 
     if (!isNull(templateTypes)) {
         for (let i = 0; i < templateTypes.length; i++) {
-            let argTypes: ITypeInstruction[] = [];
             let funcHash = name + "(";
             let returnType = (returnTypeName === TEMPLATE_TYPE) ?
                 getSystemType(templateTypes[i]) :
                 getSystemType(returnTypeName);
+            let paramTypes: ITypeInstruction[] = [];
 
-
-            for (let j = 0; j < argsTypes.length; j++) {
-                if (argsTypes[j] === TEMPLATE_TYPE) {
-                    argTypes.push(getSystemType(templateTypes[i]));
+            for (let j = 0; j < paramTypeNames.length; j++) {
+                if (paramTypeNames[j] === TEMPLATE_TYPE) {
+                    paramTypes.push(getSystemType(templateTypes[i]));
                     funcHash += templateTypes[i] + ",";
                 }
                 else {
-                    argTypes.push(getSystemType(argsTypes[j]));
-                    funcHash += argsTypes[j] + ","
+                    paramTypes.push(getSystemType(paramTypeNames[j]));
+                    funcHash += paramTypeNames[j] + ","
                 }
             }
 
@@ -315,18 +333,8 @@ function generateSystemFunction(name: string,
                 _error(EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
             }
 
-
-            let id = new IdInstruction({ scope, name });
-            let func = new SystemFunctionInstruction({ scope, id, returnType, exprTranslator, argTypes, builtIn });
-
-            let funcDef = new FunctionDefInstruction({ scope, returnType, id, args: null });
-            let func2 = new FunctionDeclInstruction({ scope, definition: null, implementation: null });
-
-            func.$makeVertexCompatible(isForVertex);
-            func.$makePixelCompatible(isForPixel);
-
+            generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);
             systemFunctionHashMap[funcHash] = true;
-            scope.addFunction(func);
         }
     }
     else {
@@ -334,77 +342,71 @@ function generateSystemFunction(name: string,
             logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
+        let funcHash = name + "(";
         let returnType = getSystemType(returnTypeName);
-        let argTypes = [];
-        let functionHash = name + "(";
+        let paramTypes: ITypeInstruction[] = [];
 
-        for (let i = 0; i < argsTypes.length; i++) {
-            if (argsTypes[i] === TEMPLATE_TYPE) {
+        for (let i = 0; i < paramTypeNames.length; i++) {
+            if (paramTypeNames[i] === TEMPLATE_TYPE) {
                 logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
-                argTypes.push(getSystemType(argsTypes[i]));
-                functionHash += argsTypes[i] + ",";
+                paramTypes.push(getSystemType(paramTypeNames[i]));
+                funcHash += paramTypeNames[i] + ",";
             }
         }
 
-        functionHash += ")";
+        funcHash += ")";
 
-        if (systemFunctionHashMap[functionHash]) {
-            _error(EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: functionHash });
+        if (systemFunctionHashMap[funcHash]) {
+            _error(EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
         }
 
-        let id = new IdInstruction({ scope, name });
-        let func = new SystemFunctionInstruction({ scope, id, returnType, exprTranslator, argTypes, builtIn });
-
-        func.$makeVertexCompatible(isForVertex);
-        func.$makePixelCompatible(isForPixel);
-
-        systemFunctionHashMap[functionHash] = true;
-        scope.addFunction(func);
+        generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);
+        systemFunctionHashMap[funcHash] = true;
     }
 }
 
 
-function generateNotBuiltInSystemFuction(name: string, definition: string, implementation: string,
-    returnTypeName: string,
-    usedTypes: string[],
-    usedFunctions: string[]): void {
+// function generateNotBuiltInSystemFunction(name: string, definition: string, implementation: string,
+//     returnTypeName: string,
+//     usedTypes: string[],
+//     usedFunctions: string[]): void {
 
-    if (scope.hasFunction(name)) {
-        console.warn(`Builtin function ${name} already exists.`);
-        return;
-    }
+//     if (scope.hasFunction(name)) {
+//         console.warn(`Builtin function ${name} already exists.`);
+//         return;
+//     }
 
-    let builtIn = false;
-    let returnType = getSystemType(returnTypeName);
-    let id = new IdInstruction({ scope, name })
-    let func = new SystemFunctionInstruction({ scope, id, returnType, definition, implementation, builtIn });
+//     let builtIn = false;
+//     let returnType = getSystemType(returnTypeName);
+//     let id = new IdInstruction({ scope, name })
+//     let func = new SystemFunctionInstruction({ scope, id, returnType, definition, implementation, builtIn });
 
-    let usedExtSystemTypes: ITypeDeclInstruction[] = [];
-    let usedExtSystemFunctions: IFunctionDeclInstruction[] = [];
+//     let usedExtSystemTypes: ITypeDeclInstruction[] = [];
+//     let usedExtSystemFunctions: IFunctionDeclInstruction[] = [];
 
-    if (!isNull(usedTypes)) {
-        for (let i = 0; i < usedTypes.length; i++) {
-            let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(usedTypes[i]).parent;
-            if (!isNull(typeDecl)) {
-                usedExtSystemTypes.push(typeDecl);
-            }
-        }
-    }
+//     if (!isNull(usedTypes)) {
+//         for (let i = 0; i < usedTypes.length; i++) {
+//             let typeDecl: ITypeDeclInstruction = <ITypeDeclInstruction>getSystemType(usedTypes[i]).parent;
+//             if (!isNull(typeDecl)) {
+//                 usedExtSystemTypes.push(typeDecl);
+//             }
+//         }
+//     }
 
-    if (!isNull(usedFunctions)) {
-        for (let i = 0; i < usedFunctions.length; i++) {
-            let pFindFunction: IFunctionDeclInstruction = scope.findFunction(usedFunctions[i]);
-            usedExtSystemFunctions.push(pFindFunction);
-        }
-    }
+//     if (!isNull(usedFunctions)) {
+//         for (let i = 0; i < usedFunctions.length; i++) {
+//             let pFindFunction: IFunctionDeclInstruction = scope.findFunction(usedFunctions[i]);
+//             usedExtSystemFunctions.push(pFindFunction);
+//         }
+//     }
 
-    func.$setUsedSystemData(usedExtSystemTypes, usedExtSystemFunctions);
-    func.$closeSystemDataInfo();
+//     func.$setUsedSystemData(usedExtSystemTypes, usedExtSystemFunctions);
+//     func.$closeSystemDataInfo();
 
-    scope.addFunction(func);
-}
+//     scope.addFunction(func);
+// }
 
 
 function addSystemFunctions(): void {
@@ -550,11 +552,10 @@ function generateSystemVariable(name: string, typeName: string,
 }
 
 
-function getSystemType(typeName: string): IVariableTypeInstruction {
+function getSystemType(typeName: string): SystemTypeInstruction {
     //boolean, string, float and others
-    let type = <IVariableTypeInstruction>scope.findType(typeName);
-    assert(!type || (type.instructionType === EInstructionTypes.k_VariableTypeInstruction && 
-        type.baseType.instructionType === EInstructionTypes.k_SystemTypeInstruction));
+    let type = <SystemTypeInstruction>scope.findType(typeName);
+    assert(!type || (type.instructionType === EInstructionTypes.k_SystemTypeInstruction));
     return type;
 }
 
@@ -628,7 +629,6 @@ export const T_SAMPLER_2D = scope.findType("sampler2D");
 export const T_SAMPLER_CUBE = scope.findType("samplerCUBE");
 
 export const findType = (typeName: string) => scope.findType(typeName);
-export const findTypeDecl = (typeName: string) => scope.findTypeDecl(typeName);
 export const findVariable = (varName: string) => scope.findVariable(varName);
 export const findTechnique = (techName: string) => scope.findTechnique(techName);
 export const findFunction = (funcName: string, args?: ITypedInstruction[]) => scope.findFunction(funcName, args);

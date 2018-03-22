@@ -129,7 +129,7 @@ export class Instruction implements IInstruction {
 
     $withParent<T extends IInstruction>(parent: IInstruction | null): T {
         console.assert(this._parent == null, "parent redefenition detected!");
-        if ((this as any).name === 'float' && this._parent == null && parent != null) {
+        if (this.instructionType === EInstructionTypes.k_SystemTypeInstruction && (this as any).name === 'float' && this._parent == null && parent != null) {
             debugger;
         }
         this._parent = parent;

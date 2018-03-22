@@ -28,7 +28,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     protected _definition: IFunctionDefInstruction;
     protected _implementation: IStmtBlockInstruction;
     protected _functionType: EFunctionType;
-    protected _implementationScope: IScope;
 
     constructor({ definition, implementation = null, ...settings }: IFunctionDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDeclInstruction, ...settings });
@@ -36,17 +35,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         this._definition = Instruction.$withParent(definition, this);
         this._implementation = Instruction.$withParent(implementation, this);
         this._functionType = EFunctionType.k_Function;
-        this._implementationScope = null;
     }
 
 
     get functionType(): EFunctionType {
         return this._functionType;
-    }
-
-
-    get implementationScope(): IScope {
-        return this._implementationScope;
     }
 
 
@@ -63,6 +56,18 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     get arguments(): IVariableDeclInstruction[] {
         console.error("@not_implemented");
         return null;
+    }
+
+
+    checkVertexUsage(): boolean {
+        // todo: implement it!
+        return true;
+    }
+
+
+    checkPixelUsage(): boolean {
+        // todo: implement it!
+        return true;
     }
 
 
@@ -368,8 +373,4 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         this._functionType = type;
     }
 
-
-    $linkToImplementationScope(scope: IScope) {
-        this._implementationScope = scope;
-    }
 }

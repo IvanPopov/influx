@@ -10,7 +10,7 @@ import { isNull } from "../../common";
 export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
     returnType: IVariableTypeInstruction;
     id: IIdInstruction;
-    args?: IVariableDeclInstruction[];
+    paramList?: IVariableDeclInstruction[];
 }
 
 
@@ -23,10 +23,10 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     protected _returnType: IVariableTypeInstruction;
     protected _id: IIdInstruction;
 
-    constructor({ returnType, id, args = [], ...settings }: IFunctionDefInstructionSettings) {
+    constructor({ returnType, id, paramList = [], ...settings }: IFunctionDefInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
 
-        this._parameterList = args.map(arg => arg.$withParent(this));
+        this._parameterList = paramList.map(param => param.$withParent(this));
         this._returnType = returnType.$withParent(this);
         this._id = id.$withParent(this);
     }

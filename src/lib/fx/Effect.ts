@@ -32,7 +32,6 @@ import { SamplerStateBlockInstruction, SamplerOperator } from './instructions/Sa
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
 import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
-import { SystemCallInstruction } from './instructions/SystemCallInstruction';
 import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
 import { ConstructorCallInstruction } from './instructions/ConstructorCallInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
@@ -126,7 +125,7 @@ function analyzeComplexName(sourceNode: IParseNode): string {
     const children = sourceNode.children;
     let name: string = '';
 
-    for (let i: number = children.length - 1; i >= 0; i--) {
+    for (let i = children.length - 1; i >= 0; i--) {
         name += children[i].value;
     }
 
@@ -140,7 +139,7 @@ function analyzeComplexName(sourceNode: IParseNode): string {
  *         T_KW_STRICT = 'strict'
  *         T_KW_USE = 'use'
  */
-function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): void {
+function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
     let children: IParseNode[] = ast.getRoot().children;
     let i: number = 0;
 
@@ -149,6 +148,9 @@ function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IPa
             analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
         }
     }
+
+    // todo: return "use" instructions.
+    return [];
 }
 
 
@@ -236,14 +238,14 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 
 
 
-function addTypeDecl(context: Context, scope: IScope, type: ITypeDeclInstruction): void {
-    if (SystemScope.findTypeDecl(type.name)) {
-        _error(context, type.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: type.name });
+function addTypeDecl(context: Context, scope: IScope, typeDecl: ITypeDeclInstruction): void {
+    if (SystemScope.findType(typeDecl.name)) {
+        _error(context, typeDecl.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: typeDecl.name });
     }
 
-    let isAdded = scope.addType(type);
+    let isAdded = scope.addType(typeDecl.type);
     if (!isAdded) {
-        _error(context, type.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: type.name });
+        _error(context, typeDecl.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: typeDecl.name });
     }
 }
 
@@ -1191,7 +1193,7 @@ function analyzeInitializer(context: Context, program: ProgramScope, sourceNode:
         args.push(analyzeExpr(context, program, children[0]));
     }
     else {
-        for (let i: number = children.length - 3; i >= 1; i--) {
+        for (let i = children.length - 3; i >= 1; i--) {
             if (children[i].name === 'InitExpr') {
                 args.push(analyzeInitExpr(context, program, children[i]));
             }
@@ -1525,9 +1527,9 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
     //     }
     // }
 
-    if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction) {
+    if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction || 
+        func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
-
             const funcArguments = func.definition.paramList;
 
             for (let i = 0; i < args.length; i++) {
@@ -1572,23 +1574,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         expr = funcCallExpr;
     }
     else {
-
-        // if (!isNull(currentAnalyzedFunction)) 
-        {
-            for (let i = 0; i < args.length; i++) {
-                if (!args[i].type.readable) {
-                    _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
-                    return null;
-                }
-            }
-        }
-
-        // if (!func.builtIn && !isNull(currentAnalyzedFunction)) {
-        //     currentAnalyzedFunction.addUsedFunction(func);
-        // }
-
-        const systemCallExpr = new SystemCallInstruction({ scope, decl: <SystemFunctionInstruction>func, args });
-        expr = systemCallExpr;
+        console.error("@undefined_behavior");
     }
 
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2078,11 +2064,11 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
 
     if (!isNull(context.currentFunction)) {
         // todo: rewrite this!
-        if (!variable.$canBeUsedInPixelShader()) {
+        if (!variable.checkPixelUsage()) {
             context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
 
-        if (!variable.$canBeUsedInVertexShader()) {
+        if (!variable.checkVertexUsage()) {
             context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
     }
@@ -2791,7 +2777,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
     let semantics: string = null;
     let passList: IPassInstruction[] = null;
 
-    for (let i: number = children.length - 3; i >= 0; i--) {
+    for (let i = children.length - 3; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
             annotation = analyzeAnnotation(children[i]);
         } else if (children[i].name === 'Semantic') {
@@ -2811,7 +2797,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
 function analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction[] {
     const children = sourceNode.children;
     let passList: IPassInstruction[] = [];
-    for (let i: number = children.length - 2; i >= 1; i--) {
+    for (let i = children.length - 2; i >= 1; i--) {
         let pass = analyzePassDecl(context, program, children[i]);
         assert(!isNull(pass));
         passList.push(pass);
@@ -2855,7 +2841,7 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
     let pixel: IFunctionDeclInstruction = null;
     let vertex: IFunctionDeclInstruction = null;
 
-    for (let i: number = children.length - 2; i >= 1; i--) {
+    for (let i = children.length - 2; i >= 1; i--) {
         let func = analyzePassStateForShader(context, program, children[i]);
         switch (func.functionType) {
             case EFunctionType.k_Vertex:
@@ -2964,7 +2950,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
     let renderStates: IMap<ERenderStateValues> = {};
     if (exprNode.value === '{' && stateExprNode.children.length > 3) {
         const values: ERenderStateValues[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
-        for (let i: number = stateExprNode.children.length - 2, j: number = 0; i >= 1; i -= 2, j++) {
+        for (let i = stateExprNode.children.length - 2, j = 0; i >= 1; i -= 2, j++) {
             values[j] = getRenderStateValue(stateName, stateExprNode.children[i].value.toUpperCase());
         }
 
@@ -3239,29 +3225,26 @@ export interface IAnalyzeResult {
 }
 
 export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
-
-    let success = true;
-
     const program = new ProgramScope();
     const context = new Context(filename);
 
     console.time(`analyze(${filename})`);
 
 
-    let root: IInstructionCollector = null;
+    let list: IInstruction[] = [];
 
     try {
         program.begin(SystemScope.SCOPE);
 
-        root = new InstructionCollector({ scope: program.currentScope });
+       
 
-        analyzeGlobalUseDecls(context, program, ast);
-        analyzeGlobalProvideDecls(context, program, ast);
-        analyzeGlobalTypeDecls(context, program, ast);
+        list = list.concat(analyzeGlobalUseDecls(context, program, ast));
+        list = list.concat(analyzeGlobalProvideDecls(context, program, ast));
+        list = list.concat(analyzeGlobalTypeDecls(context, program, ast));
         // analyzeFunctionDefinitions(context, program, ast);
-        analyzeGlobalImports(context, program, ast);
-        analyzeGlobalTechniques(context, program, ast);
-        analyzeVariableDecls(context, program, ast);
+        list = list.concat(analyzeGlobalImports(context, program, ast));
+        list = list.concat(analyzeGlobalTechniques(context, program, ast));
+        list = list.concat(analyzeVariableDecls(context, program, ast));
         // analyzeFunctionDecls(context, scope);
 
         program.end();
@@ -3271,7 +3254,7 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     }
 
     console.timeEnd(`analyze(${filename})`);
-    return { success, root: root };
+    return { success: true, root:  new InstructionCollector({ scope: program.currentScope, instructions: list }) };
 }
 
 

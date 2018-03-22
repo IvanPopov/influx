@@ -16,7 +16,12 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
     constructor({ type, ...settings }: ITypedInstructionSettings) {
         super({ instrType: EInstructionTypes.k_TypedInstruction, ...settings });
         
-        this._type = type.$withNoParent();
+        this._type = Instruction.$withNoParent(type);
+
+        // todo: remove this check
+        if (isNull(this._type)) {
+            console.warn("Something goes wrong! Type is not specified!", this);
+        }
     }
 
 

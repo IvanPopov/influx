@@ -42,7 +42,6 @@ export enum EInstructionTypes {
     k_PostfixArithmeticInstruction,
     k_ComplexExprInstruction,
     k_FunctionCallInstruction,
-    k_SystemCallInstruction,
     k_ConstructorCallInstruction,
     k_CompileExprInstruction,
     k_InitExprInstruction,
@@ -50,7 +49,7 @@ export enum EInstructionTypes {
     k_SamplerStateInstruction,
     k_FunctionDeclInstruction,
     k_ShaderFunctionInstruction,
-    k_SystemFunctionInstruction,
+    k_SystemFunctionDeclInstruction,
     k_FunctionDefInstruction,
     k_StmtInstruction,
     k_StmtBlockInstruction,
@@ -141,14 +140,13 @@ export interface IScope {
     readonly type: EScopeType;
 
     readonly variableMap: IMap<IVariableDeclInstruction>;
-    readonly typeMap: IMap<ITypeDeclInstruction>;
+    readonly typeMap: IMap<ITypeInstruction>;
     readonly functionMap: IMap<IFunctionDeclInstruction[]>;
     readonly techniqueMap: IMap<ITechniqueInstruction>;
 
     isStrict(): boolean;
 
     findVariable(variableName: string): IVariableDeclInstruction;
-    findTypeDecl(typeName: string): ITypeDeclInstruction;
     findType(typeName: string): ITypeInstruction;
     findFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
@@ -165,7 +163,7 @@ export interface IScope {
     hasTechniqueInScope(tech: ITechniqueInstruction): boolean;
 
     addVariable(variable: IVariableDeclInstruction): boolean;
-    addType(type: ITypeDeclInstruction): boolean;
+    addType(type: ITypeInstruction): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
 }
@@ -343,8 +341,8 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     isSampler(): boolean;
     isVarying(): boolean;
 
-    $canBeUsedInVertexShader(): boolean;
-    $canBeUsedInPixelShader(): boolean;
+    checkVertexUsage(): boolean;
+    checkPixelUsage(): boolean;
 }
 
 
@@ -353,8 +351,10 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly implementation: IStmtInstruction;
     readonly functionType: EFunctionType;
 
+    checkVertexUsage(): boolean;
+    checkPixelUsage(): boolean;
+
     $overwriteType(type: EFunctionType): void;
-    $linkToImplementationScope(scope: IScope): void;
 }
 
 

@@ -1,4 +1,6 @@
 import { Instruction, IInstructionSettings } from "./Instruction";
+import { isDefAndNotNull } from "./../../common";
+import { assert } from "./../../common";
 import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction, IScope } from '../../idl/IInstruction';
 import { IMap } from "../../idl/IMap";
 import { isNull, isNumber, isDef } from '../../common';
@@ -34,10 +36,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     constructor({ type, usages = null, arrayIndex = null, writable = true, readable = true, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableTypeInstruction, ...settings });
 
-        this._usageList = [];
-        (usages || []).forEach( usage => this.addUsage(usage) );
-
         type = type.$withNoParent();
+        this._usageList = [];
 
         let instrType: EInstructionTypes = type.instructionType;
         if (instrType === EInstructionTypes.k_SystemTypeInstruction ||
@@ -48,14 +48,16 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             let varType = <IVariableTypeInstruction>type;
             // todo: review this code
             if (!varType.isNotBaseArray()) {
-                let usages = varType.usageList;
-                usages.forEach( usage => this.addUsage(usage) )
                 this._subType = varType.subType;
+                varType.usageList.forEach( usage => this.addUsage(usage) )
             }
             else {
                 this._subType = type;
             }
         }
+
+        assert(isDefAndNotNull(this._subType));
+        assert(isDefAndNotNull(this._usageList));
 
         this._isWritable = writable;
         this._isReadable = readable;
@@ -69,6 +71,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             this._arrayElementType = (new VariableTypeInstruction({ scope: this.scope, type: this.subType, usages: this._usageList })).$withParent(this);
             this._arrayIndexExpr = arrayIndex.$withParent(this);
         }
+
+        (usages || []).forEach( usage => this.addUsage(usage) );
     }
 
 
@@ -157,7 +161,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return 0;
         }
 
-        if (this.isNotBaseArray() && !this.isArray()) {
+        if (this.isNotBaseArray() && isNull(this._arrayElementType)) {
             return this.subType.length;
         }
         
@@ -243,7 +247,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     isBase(): boolean {
-        return this.subType.isBase() && !this.isArray();
+        return this.subType.isBase() && isNull(this._arrayElementType);
     }
 
 
@@ -253,7 +257,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     isNotBaseArray(): boolean {
-        return this.isArray() || this.subType.isNotBaseArray();
+        return !isNull(this._arrayElementType) || this.subType.isNotBaseArray();
     }
 
 
@@ -412,11 +416,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     hasUsage(sUsageName: string): boolean {
-        if (isNull(this._usageList)) {
-            return false;
-        }
-
-        for (let i: number = 0; i < this._usageList.length; i++) {
+        for (let i = 0; i < this._usageList.length; i++) {
             if (this._usageList[i] === sUsageName) {
                 return true;
             }
@@ -432,7 +432,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     private calcHash(): string {
         let hash: string = this.subType.hash;
-        if (this.isArray()) {
+        if (!isNull(this._arrayElementType)) {
             hash += "[";
 
             const iLength: number = this.length;
