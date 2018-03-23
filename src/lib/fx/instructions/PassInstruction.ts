@@ -1,4 +1,5 @@
 import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
+import { IIdInstruction } from "./../../idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 import { IDeclInstructionSettings } from "./DeclInstruction";
 import { IAnnotationInstruction } from "./../../idl/IInstruction";
@@ -16,6 +17,7 @@ export interface IPassInstructionSettings extends IDeclInstructionSettings {
     vertexShader?: IFunctionDeclInstruction;
     pixelShader?: IFunctionDeclInstruction;
     renderStates?: IMap<ERenderStateValues>;
+    id?: IIdInstruction;
 }
 
 
@@ -23,6 +25,8 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _vertexShader: IFunctionDeclInstruction;
     protected _pixelShader: IFunctionDeclInstruction;
     protected _passStateMap: IMap<ERenderStateValues>;
+    protected _id: IIdInstruction;
+    protected _annotation: IAnnotationInstruction;
 
     protected _uniformVariableMapV: IMap<IVariableDeclInstruction>;
     protected _textureVariableMapV: IMap<IVariableDeclInstruction>;
@@ -36,7 +40,7 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
     protected _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
 
-    constructor({ vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
+    constructor({ id = null, vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PassInstruction, ...settings });
 
         this._passStateMap = {};
@@ -46,8 +50,10 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         this._vertexShader = Instruction.$withParent(vertexShader, this);
         this._pixelShader = Instruction.$withParent(pixelShader, this);
 
-        console.assert(vertexShader.functionType === EFunctionType.k_Vertex);
-        console.assert(pixelShader.functionType === EFunctionType.k_Pixel);
+        this._id = id;
+
+        console.assert(isNull(vertexShader) || vertexShader.functionType === EFunctionType.k_Vertex);
+        console.assert(isNull(pixelShader) || pixelShader.functionType === EFunctionType.k_Pixel);
 
         this._uniformVariableMapV = {};
         this._textureVariableMapV = {};
@@ -60,6 +66,20 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         this._fullUniformVariableMap = {};
         this._fullTextureVariableMap = {};
     }
+
+
+    get id(): IIdInstruction {
+        return this._id;
+    }
+
+
+    get name(): string {
+        if (isNull(this._id)) {
+            return null;
+        }
+        return this._id.name;
+    }
+
 
     get uniformVariableMapV(): IMap<IVariableDeclInstruction> {
         return this._uniformVariableMapV;

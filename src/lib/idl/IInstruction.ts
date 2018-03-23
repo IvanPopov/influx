@@ -184,6 +184,7 @@ export interface IInstruction {
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
+    readonly instructionName: string;
 
     toString(): string;
     toCode(): string;
@@ -469,6 +470,8 @@ export interface IStmtBlockInstruction extends IStmtInstruction {
 }
 
 export interface IPassInstruction extends IDeclInstruction {
+    readonly id: IIdInstruction;
+
     readonly uniformVariableMapV: IMap<IVariableDeclInstruction>;
     readonly textureVariableMapV: IMap<IVariableDeclInstruction>;
     readonly usedComplexTypeMapV: IMap<ITypeInstruction>;

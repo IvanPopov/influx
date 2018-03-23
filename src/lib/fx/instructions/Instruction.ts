@@ -53,6 +53,10 @@ export class Instruction implements IInstruction {
         return this._instructionType;
     }
 
+    get instructionName(): string {
+        return EInstructionTypes[this.instructionType];
+    }
+
 
     get instructionID(): number {
         return this._instructionID;

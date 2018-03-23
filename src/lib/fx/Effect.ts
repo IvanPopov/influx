@@ -99,9 +99,11 @@ function _error(context: Context, sourceNode: IParseNode, code: number, info: IE
 
     switch (code) {
         default:
-            info.line = lineColumn.line + 1;
-            info.column = lineColumn.column + 1;
-            location.line = lineColumn.line + 1;
+            if (isDefAndNotNull(lineColumn)) {
+                info.line = lineColumn.line + 1;
+                info.column = lineColumn.column + 1;
+                location.line = lineColumn.line + 1;
+            }
             break;
     }
 
@@ -2818,12 +2820,21 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
     const children = sourceNode.children;
     const scope = program.currentScope;
     const entry = analyzePassStateBlockForShaders(context, program, children[0]);
-    const renderStates = analyzePassStateBlock(context, program, children[0]);;
+    const renderStates = analyzePassStateBlock(context, program, children[0]);
+    
+    let id: IIdInstruction = null;
+    for (let i = 0; i < children.length; ++ i) {
+        if (children[i].name === "T_NON_TYPE_ID") {
+            let name = children[i].value;
+            id = new IdInstruction({ name, scope });
+        }
+    }
 
     const pass = new PassInstruction({
         scope,
         sourceNode,
         renderStates,
+        id,
         pixelShader: entry.pixel,
         vertexShader: entry.vertex
     });

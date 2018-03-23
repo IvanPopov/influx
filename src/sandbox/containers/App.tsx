@@ -95,7 +95,7 @@ class App extends React.Component<IAppProps> {
                     <Tab.Pane key="source">
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
-                                <Grid.Column width="10">
+                                <Grid.Column computer="10" tablet="8" mobile="6">
                                     <SourceEditor
                                         name="source-code"
                                         content={ props.sourceFile.content }
@@ -103,7 +103,7 @@ class App extends React.Component<IAppProps> {
                                         markers={ props.sourceFile.markers }
                                     />
                                 </Grid.Column>
-                                <Grid.Column width="6">
+                                <Grid.Column computer="6" tablet="8" mobile="10">
                                     <Tab menu={ { secondary: true } } panes={ analysisResults } renderActiveOnly={ false } />
                                 </Grid.Column>
                             </Grid.Row>

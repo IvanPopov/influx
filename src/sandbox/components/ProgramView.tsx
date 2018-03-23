@@ -1,6 +1,7 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import * as copy from 'copy-to-clipboard';
+import { connect } from 'react-redux';
 
 import { Divider, Breadcrumb } from 'semantic-ui-react';
 import { List, Message } from 'semantic-ui-react'
@@ -9,87 +10,121 @@ import { EffectParser } from '../../lib/fx/EffectParser';
 import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
 import { ISourceLocation } from '../../lib/idl/ILogger';
 import { analyze } from '../../lib/fx/Effect';
-import { isNull } from '../../lib/common';
-import { ITechniqueInstruction, IPassInstruction, IInstructionCollector } from '../../lib/idl/IInstruction';
+import { isNull, isDefAndNotNull } from '../../lib/common';
+import { ITechniqueInstruction, IPassInstruction, IInstructionCollector, IProvideInstruction, EInstructionTypes } from '../../lib/idl/IInstruction';
+import { ProvideInstruction } from '../../lib/fx/instructions/ProvideInstruction';
+import { isArray } from 'util';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
+
 type InstrView<T> = React.StatelessComponent<T>;
 
-const Namespace: InstrView<{ ns: string; }> = ({ ns }) => {
-    let nsList = ns.split('.');
-    return (
-        <Breadcrumb size='tiny'>
-            {
-                nsList.map((part, i) => {
-                    if (i < nsList.length - 1) {
-                        return (
-                            [
-                                (<Breadcrumb.Section key={ `ns-${part}` }>{ part }</Breadcrumb.Section>),
-                                (<Breadcrumb.Divider key={ `ns-div-${part}` } icon="right chevron" />),
-                            ]
-                        )
-                    }
-                    return <Breadcrumb.Section key={ `ns-${part}` } active>{ part }</Breadcrumb.Section>;
-                })
+// const Namespace: InstrView<{ ns: string; }> = ({ ns }) => {
+//     let nsList = ns.split('.');
+//     return (
+//         <Breadcrumb size='tiny'>
+//             {
+//                 nsList.map((part, i) => {
+//                     if (i < nsList.length - 1) {
+//                         return (
+//                             [
+//                                 (<Breadcrumb.Section key={ `ns-${part}` }>{ part }</Breadcrumb.Section>),
+//                                 (<Breadcrumb.Divider key={ `ns-div-${part}` } icon="right chevron" />),
+//                             ]
+//                         )
+//                     }
+//                     return <Breadcrumb.Section key={ `ns-${part}` } active>{ part }</Breadcrumb.Section>;
+//                 })
+//             }
+//         </Breadcrumb>
+//     );
+// };
+
+
+const Property: InstrView<{ name?: any; value?: any; }> = ({ name, value, children }) => (
+    <List.Item className="astnode">
+        <List.Icon name={ isDefAndNotNull(children) ? `chevron down` : `code` } />
+        <List.Content>
+            { isDefAndNotNull(name) &&
+                <List.Header>{ name }:</List.Header>
             }
-        </Breadcrumb>
-    );
+            { isDefAndNotNull(value) &&
+                <List.Description>{ value }</List.Description>
+            }
+            { isDefAndNotNull(children) &&
+                <List.List>
+                    { children }
+                </List.List>
+            }
+        </List.Content>
+    </List.Item>
+);
+
+
+const isNotEmptyArray = (arr) => (!isArray(arr) || (arr).length > 0);
+
+const PropertyOpt: InstrView<{ name?: any; value?: any; }> = ({ name, value, children }) => {
+    if (isDefAndNotNull(value) || (isDefAndNotNull(children) && isNotEmptyArray(children))) {
+        return <Property name={ name } value={ value }>{ children }</Property>;
+    }
+    return null;
 };
 
 
-const Pass: InstrView<{ pass: IPassInstruction }> = ({ pass }) => (
-    <List.Item>
-        <List.Content>
-            <List.Header>{ pass.name || '[unnamed]' }</List.Header>
-        </List.Content>
-    </List.Item>
+const Technique: InstrView<{ instr: ITechniqueInstruction }> = ({ instr }) => (
+    <Property name={ instr.instructionName }>
+        <Property name={ "name" } value={ instr.name } />
+        <PropertyOpt name={ "semantics" } value={ instr.semantics } />
+        <PropertyOpt name={ "passes" }>
+            { instr.passList.map((pass) => <Pass instr={ pass } />) }
+        </PropertyOpt>
+    </Property>
 );
 
 
-const Technique: InstrView<{ tech: ITechniqueInstruction }> = ({ tech }) => (
-    <List.Item>
-        <List.Icon name={ `zap` as any } />
-        <List.Content>
-            <List.Header>{ tech.name }</List.Header>
-            <List.List>
-                { tech.passList.map((pass) => <Pass pass={ pass } />) }
-            </List.List>
-        </List.Content>
-    </List.Item>
-);
+const ProvideDecl: InstrView<{ instr: IProvideInstruction }> = (({ instr }) => (
+    <Property name={ instr.instructionName } >
+        <Property name={ "moduleName" } value={ instr.moduleName } />
+    </Property>
+));
 
-const NotImplemented: InstrView<{}> = ({ }) => (
-    <List.Item>
-        <List.Content>
-            <List.Header>
-                <Message size="mini" color="red">
-                    <Message.Content>
-                        <Message.Header>Not implemented</Message.Header>
-                    </Message.Content>
-                </Message>
-            </List.Header>
-        </List.Content>
-    </List.Item>
+
+const Pass: InstrView<{ instr: IPassInstruction }> = ({ instr }) => (
+    <Property name={ instr.instructionName }>
+        <PropertyOpt name={ "name" } value={ instr.name } />
+    </Property>
 );
 
 
-const InstructionCollector: InstrView<{ collector: IInstructionCollector }> = ({ collector }) => (
-    <List.Item>
-        <List.Content>
-            <List.List>
-                { collector.instructions.map((instr) => {
-                    switch (instr.instructionType) {
-                        default:
-                            return <NotImplemented />;
-                    }
-                }) }
-            </List.List>
-        </List.Content>
-    </List.Item>
+const NotImplemented: InstrView<{ text: string }> = ({ text }) => (
+    <Property name={
+        <Message size="mini" color="red">
+            <Message.Content>
+                <Message.Header>Not implemented</Message.Header>
+                <p>{ text }</p>
+            </Message.Content>
+        </Message>
+    } />
+);
+
+
+const InstructionCollector: InstrView<{ instr: IInstructionCollector; }> = ({ instr }) => (
+    <PropertyOpt name={ "Program" }>
+        { instr.instructions.map((instr) => {
+            switch (instr.instructionType) {
+                case EInstructionTypes.k_ProvideInstruction:
+                    return <ProvideDecl instr={ instr as IProvideInstruction } />
+                case EInstructionTypes.k_TechniqueInstruction:
+                    return <Technique instr={ instr as ITechniqueInstruction } />
+                default:
+                    return <NotImplemented text={ EInstructionTypes[instr.instructionType] } />;
+            }
+        }) }
+    </PropertyOpt>
 );
 
 export interface IProgramViewProps {
@@ -139,10 +174,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             return null;
         }
 
+        const style = {
+            height: 'calc(100vh - 205px)',
+            overflowY: 'auto'
+        };
+
         return (
             <div>
-                <List selection size="small">
-                    <InstructionCollector collector={ root } />
+                <List style={ style } selection size="small">
+                    <InstructionCollector instr={ root } />
                 </List>
             </div>
         );
