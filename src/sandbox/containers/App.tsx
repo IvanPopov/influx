@@ -10,6 +10,7 @@ import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { IParseTree } from '../../lib/idl/parser/IParser';
+import { IInstruction } from '../../lib/idl/IInstruction';
 
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -61,9 +62,16 @@ class App extends React.Component<IAppProps> {
                 menuItem: 'Program',
                 pane: (
                     <Tab.Pane attached={ false } key="program-view">
-                        <ProgramView 
+                        <ProgramView
                             filename={ props.sourceFile.filename }
-                            ast={ state.ast } 
+                            ast={ state.ast }
+
+                            onNodeOver={ (instr: IInstruction) => props.actions.addMarker({
+                                name: `ast-range-${instr.instructionID}`,
+                                range: instr.sourceNode.loc,
+                                type: `marker`
+                            }) }
+                            onNodeOut={ (instr: IInstruction) => props.actions.removeMarker(`ast-range-${instr.instructionID}`) }
                         />
                     </Tab.Pane>
                 )

@@ -174,7 +174,7 @@ function analyzeProvideDecl(context: Context, program: ProgramScope, sourceNode:
         }
         context.moduleName = moduleName;
         assert(children[2].name === 'T_KW_PROVIDE');
-        return new ProvideInstruction({ moduleName, scope });
+        return new ProvideInstruction({ sourceNode, moduleName, scope });
     }
 
     _error(context, sourceNode, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
@@ -2789,7 +2789,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
         }
     }
 
-    const technique = new TechniqueInstruction({ name, semantics, annotation, passList, scope });
+    const technique = new TechniqueInstruction({ sourceNode, name, semantics, annotation, passList, scope });
     addTechnique(context, program, technique);
     return technique;
 }

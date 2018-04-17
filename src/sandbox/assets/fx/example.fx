@@ -35,7 +35,7 @@ technique T2 : SOME_SEMANTICS {
 }
 
 /* technique with annotation and semantics */
-technique T2 : SOME_SEMANTICS <int x = 1;> {
+technique T3 : SOME_SEMANTICS <int x = 1;> {
 
 }
 
