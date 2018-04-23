@@ -10,6 +10,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 
 export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     name: string;
+    size: number;
     elementType?: ITypeInstruction;
     length?: number;
     fields?: IVariableDeclInstruction[];
@@ -21,6 +22,7 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
     protected _name: string;
+    protected _size: number;
     protected _elementType: ITypeInstruction;
     protected _length: number;
     protected _fields: IVariableDeclInstruction[];
@@ -31,6 +33,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     constructor({
         name, 
+        size = 0,
         elementType = null, 
         length = 1, 
         fields = [],
@@ -43,6 +46,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         super({ instrType: EInstructionTypes.k_SystemTypeInstruction, ...settings });
 
         this._name = name;
+        this._size = size;
         this._elementType = Instruction.$withNoParent(elementType);
         this._length = length;
         this._fields = [];
@@ -91,7 +95,10 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     get size(): number {
-        return this.arrayElementType.size * this.length;
+        if (this.isArray()) {
+            return this.arrayElementType.size * this.length;
+        }
+        return this._size;
     }
 
 

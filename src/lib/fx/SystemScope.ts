@@ -33,7 +33,7 @@ function _error(code: number, info: IEffectErrorInfo = {}): void {
     // throw new Error(code.toString());
 }
 
-function generateSystemType(name: string, elementType: ITypeInstruction = null,
+function generateSystemType(name: string, size: number = 0, elementType: ITypeInstruction = null,
     length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
 
     if (getSystemType(name)) {
@@ -41,7 +41,7 @@ function generateSystemType(name: string, elementType: ITypeInstruction = null,
         return null;
     }
 
-    const type = new SystemTypeInstruction({ scope, name, elementType, length, fields });
+    const type = new SystemTypeInstruction({ scope, name, elementType, length, fields, size });
     scope.addType(type);
 
     return type;
@@ -65,10 +65,10 @@ function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], s
 
 
 function addSystemTypeScalar(): void {
-    generateSystemType("void");
-    generateSystemType("int");
-    generateSystemType("bool");
-    generateSystemType("float");
+    generateSystemType("void", 0);
+    generateSystemType("int", 4);
+    generateSystemType("bool", 4);
+    generateSystemType("float", 4);
     generateSystemType("string");
     generateSystemType("texture");
     generateSystemType("sampler");
@@ -107,17 +107,17 @@ function addSystemTypeVector(): void {
     let int = getSystemType("int");
     let bool = getSystemType("bool");
 
-    let float2 = generateSystemType("float2", float, 2);
-    let float3 = generateSystemType("float3", float, 3);
-    let float4 = generateSystemType("float4", float, 4);
+    let float2 = generateSystemType("float2", -1, float, 2);
+    let float3 = generateSystemType("float3", -1, float, 3);
+    let float4 = generateSystemType("float4", -1, float, 4);
 
-    let int2 = generateSystemType("int2", int, 2);
-    let int3 = generateSystemType("int3", int, 3);
-    let int4 = generateSystemType("int4", int, 4);
+    let int2 = generateSystemType("int2", -1, int, 2);
+    let int3 = generateSystemType("int3", -1, int, 3);
+    let int4 = generateSystemType("int4", -1, int, 4);
 
-    let bool2 = generateSystemType("bool2", bool, 2);
-    let bool3 = generateSystemType("bool3", bool, 3);
-    let bool4 = generateSystemType("bool4", bool, 4);
+    let bool2 = generateSystemType("bool2", -1, bool, 2);
+    let bool3 = generateSystemType("bool3", -1, bool, 3);
+    let bool4 = generateSystemType("bool4", -1, bool, 4);
 
     {
         let suf2f: IVariableDeclInstruction[] = [];
@@ -206,41 +206,41 @@ function addSystemTypeMatrix(): void {
     let bool3 = getSystemType("bool3");
     let bool4 = getSystemType("bool4");
 
-    generateSystemType("float2x2", float2, 2);
-    generateSystemType("float2x3", float2, 3);
-    generateSystemType("float2x4", float2, 4);
+    generateSystemType("float2x2", -1, float2, 2);
+    generateSystemType("float2x3", -1, float2, 3);
+    generateSystemType("float2x4", -1, float2, 4);
 
-    generateSystemType("float3x2", float3, 2);
-    generateSystemType("float3x3", float3, 3);
-    generateSystemType("float3x4", float3, 4);
+    generateSystemType("float3x2", -1, float3, 2);
+    generateSystemType("float3x3", -1, float3, 3);
+    generateSystemType("float3x4", -1, float3, 4);
 
-    generateSystemType("float4x2", float4, 2);
-    generateSystemType("float4x3", float4, 3);
-    generateSystemType("float4x4", float4, 4);
+    generateSystemType("float4x2", -1, float4, 2);
+    generateSystemType("float4x3", -1, float4, 3);
+    generateSystemType("float4x4", -1, float4, 4);
 
-    generateSystemType("int2x2", int2, 2);
-    generateSystemType("int2x3", int2, 3);
-    generateSystemType("int2x4", int2, 4);
+    generateSystemType("int2x2", -1, int2, 2);
+    generateSystemType("int2x3", -1, int2, 3);
+    generateSystemType("int2x4", -1, int2, 4);
 
-    generateSystemType("int3x2", int3, 2);
-    generateSystemType("int3x3", int3, 3);
-    generateSystemType("int3x4", int3, 4);
+    generateSystemType("int3x2", -1, int3, 2);
+    generateSystemType("int3x3", -1, int3, 3);
+    generateSystemType("int3x4", -1, int3, 4);
 
-    generateSystemType("int4x2", int4, 2);
-    generateSystemType("int4x3", int4, 3);
-    generateSystemType("int4x4", int4, 4);
+    generateSystemType("int4x2", -1, int4, 2);
+    generateSystemType("int4x3", -1, int4, 3);
+    generateSystemType("int4x4", -1, int4, 4);
 
-    generateSystemType("bool2x2", bool2, 2);
-    generateSystemType("bool2x3", bool2, 3);
-    generateSystemType("bool2x4", bool2, 4);
+    generateSystemType("bool2x2", -1, bool2, 2);
+    generateSystemType("bool2x3", -1, bool2, 3);
+    generateSystemType("bool2x4", -1, bool2, 4);
 
-    generateSystemType("bool3x2", bool3, 2);
-    generateSystemType("bool3x3", bool3, 3);
-    generateSystemType("bool3x4", bool3, 4);
+    generateSystemType("bool3x2", -1, bool3, 2);
+    generateSystemType("bool3x3", -1, bool3, 3);
+    generateSystemType("bool3x4", -1, bool3, 4);
 
-    generateSystemType("bool4x2", bool4, 2);
-    generateSystemType("bool4x3", bool4, 3);
-    generateSystemType("bool4x4", bool4, 4);
+    generateSystemType("bool4x2", -1, bool4, 2);
+    generateSystemType("bool4x3", -1, bool4, 3);
+    generateSystemType("bool4x4", -1, bool4, 4);
 }
 
 

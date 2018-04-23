@@ -25,7 +25,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     constructor({ name = null, fields, ...settings }: IComplexTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexTypeInstruction, ...settings });
 
-        this._name = null;
+        this._name = name;
         this._fields = {};
 
         this._isContainArray = false;
@@ -208,8 +208,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
     private addFields(fields: IVariableDeclInstruction[]): void {
-
-        for (var i: number = 0; i < this.fields.length; i++) {
+        for (var i = 0; i < fields.length; i++) {
             this.addField(fields[i]);
         }
 
@@ -263,22 +262,22 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
 
     private calcHash(): string {
-        let sHash: string = "{";
-        for (let i: number = 0; i < this.fields.length; i++) {
-            sHash += this.fields[i].type.hash + ";";
+        let hash = "{";
+        for (let i = 0; i < this.fields.length; i++) {
+            hash += this.fields[i].type.hash + ";";
         }
-        sHash += "}";
-        return sHash;
+        hash += "}";
+        return hash;
     }
 
 
     private calcStrongHash(): string {
-        let sStrongHash: string = "{";
-        for (let i: number = 0; i < this.fields.length; i++) {
-            sStrongHash += this.fields[i].type.strongHash + ";";
+        let hash = "{";
+        for (let i = 0; i < this.fields.length; i++) {
+            hash += this.fields[i].type.strongHash + ";";
         }
-        sStrongHash += "}";
-        return sStrongHash;
+        hash += "}";
+        return hash;
     }
 
 

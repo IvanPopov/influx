@@ -137,7 +137,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get size(): number {
-        if (this.isArray()) {
+        if (!isNull(this._arrayElementType)) {
             let size: number = this._arrayElementType.size;
             let length: number = this.length;
             if (length === Instruction.UNDEFINE_LENGTH || size === Instruction.UNDEFINE_SIZE) {

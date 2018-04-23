@@ -15,6 +15,7 @@ import { ITechniqueInstruction, IPassInstruction, IInstructionCollector, IProvid
 import { ProvideInstruction } from '../../lib/fx/instructions/ProvideInstruction';
 import { isArray } from 'util';
 import { IMap } from '../../lib/idl/IMap';
+import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -22,24 +23,55 @@ function deepEqual(a: Object, b: Object): boolean {
 }
 
 
-type InstrView<T> = React.StatelessComponent<T>;
-
-const PropertySelectedStyle = {
-    backgroundColor: `rgba(128, 128, 128, 0.125)`,
-    boxShadow: `0 0 3px rgba(55, 55, 55, 0.33)`,
-    borderRadius: `2px`
+const PropertyStyles = {
+    selected: {
+        backgroundColor: `rgba(128, 128, 128, 0.125)`,
+        boxShadow: `0 0 3px rgba(55, 55, 55, 0.33)`,
+        borderRadius: `2px`
+    },
+    system: {
+        // opacity: '0.75'
+    }
 };
 
-const Property: InstrView<{ name?: any; value?: any; onMouseOver?: Function; onMouseOut?: Function; selected?: boolean; }> =
-    ({ name, value, children, onMouseOver, onMouseOut, selected }) => {
+
+function PropertyStyle(names: Object) {
+    let styles = {};
+    for (let k in names) {
+        if (names[k] && PropertyStyles[k]) {
+            styles = { ...styles, ...PropertyStyles[k] };
+        }
+    }
+    return styles;
+}
+
+
+interface PropertyProps {
+    name?: any;
+    value?: any;
+    onMouseOver?: any;
+    onMouseOut?: any;
+    onClick?: any;
+    selected?: boolean;
+    system?: boolean;
+}
+
+
+type PropertyComponent = React.StatelessComponent<PropertyProps>;
+
+
+
+const Property: PropertyComponent =
+    ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, system }) => {
         return (
             <List.Item
                 className="astnode"
                 onMouseOver={ onMouseOver }
                 onMouseOut={ onMouseOut }
-                style={ selected ? PropertySelectedStyle : {} }
+                onClick={ onClick }
+                style={ PropertyStyle({ selected, system }) }
             >
-                <List.Icon name={ isDefAndNotNull(children) ? `chevron down` : `code` } />
+                <List.Icon name={ system ? `gear` as any : (isDefAndNotNull(children) ? `chevron down` : `code`) } />
                 <List.Content>
                     { isDefAndNotNull(name) &&
                         <List.Header>{ name }:</List.Header>
@@ -60,23 +92,24 @@ const Property: InstrView<{ name?: any; value?: any; onMouseOver?: Function; onM
 
 const isNotEmptyArray = (arr) => (!isArray(arr) || (arr).length > 0);
 
-const PropertyOpt: InstrView<{ name?: any; value?: any; onMouseOver?: Function; onMouseOut?: Function; selected?: boolean; }> =
-    ({ name, value, children, onMouseOver, onMouseOut, selected }) => {
-        if (isDefAndNotNull(value) || (isDefAndNotNull(children) && isNotEmptyArray(children))) {
-            return (
-                <Property
-                    name={ name }
-                    value={ value }
-                    onMouseOver={ onMouseOver }
-                    onMouseOut={ onMouseOut }
-                    selected={ selected }
-                >
-                    { children }
-                </Property>
-            );
-        }
-        return null;
-    };
+const PropertyOpt: PropertyComponent = (props) => {
+    const { value, children } = props;
+    if (isDefAndNotNull(value) || (isDefAndNotNull(children) && isNotEmptyArray(children))) {
+        return (
+            <Property { ...props } />
+        );
+    }
+    return null;
+};
+
+
+const SystemProperty: PropertyComponent = (props) => {
+    return (
+        <PropertyOpt { ...props } system={ true }>
+            { props.children }
+        </PropertyOpt>
+    );
+}
 
 export interface IProgramViewProps {
     ast: IParseTree;
@@ -147,71 +180,129 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <div>
                 <List style={ style } selection size="small">
-                    { this.InstructionCollector({ instr: root }) }
+                    { this.InstructionCollector(root) }
                 </List>
             </div>
         );
     }
 
-    InstructionCollector({ instr }) {
+
+    Unknown(instr) {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_InstructionCollector:
+                return this.InstructionCollector(instr);
+            case EInstructionTypes.k_TypeDeclInstruction:
+                return this.TypeDecl(instr);
+            case EInstructionTypes.k_ComplexTypeInstruction:
+                return this.ComplexType(instr);
+            case EInstructionTypes.k_ProvideInstruction:
+                return this.ProvideDecl(instr);
+            case EInstructionTypes.k_TechniqueInstruction:
+                return this.Technique(instr);
+            default:
+                return this.NotImplemented(instr);
+        }
+    }
+
+
+    InstructionCollector(instr) {
         return (
-            <PropertyOpt { ...this.bindProps(instr) } name={ "Program" }>
-                { instr.instructions.map((instr) => {
-                    switch (instr.instructionType) {
-                        case EInstructionTypes.k_ProvideInstruction:
-                            return this.ProvideDecl({ instr });
-                        case EInstructionTypes.k_TechniqueInstruction:
-                            return this.Technique({ instr });
-                        default:
-                            return this.NotImplemented({ instr });
-                    }
-                }) }
+            <PropertyOpt { ...this.bindProps(instr) } name="Program">
+                { instr.instructions.map((instr) => this.Unknown(instr)) }
             </PropertyOpt>
         );
     }
-    instr
 
-    ProvideDecl({ instr }) {
+
+    ProvideDecl(instr) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
-                <Property name={ "moduleName" } value={ instr.moduleName } />
+                <Property name="moduleName" value={ instr.moduleName } />
             </Property>
         );
     }
 
 
-    Pass({ instr }) {
+    TypeDecl(instr) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
-                <PropertyOpt name={ "name" } value={ instr.name } />
+                <Property name={ "type" } >
+                    { this.Unknown(instr.type) }
+                </Property>
+                <SystemProperty name="name" value={ instr.name } />
             </Property>
         );
     }
 
 
-    Technique({ instr }) {
+    ComplexType(instr: ComplexTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
-                <Property name={ "name" } value={ instr.name } />
-                <PropertyOpt name={ "semantics" } value={ instr.semantics } />
-                <PropertyOpt name={ "passes" }>
-                    { instr.passList.map((pass) => this.Pass({ instr: pass })) }
+                <Property name="name" value={ instr.name } />
+                <PropertyOpt name="fields">
+                    { instr.fields.map((field) => this.Unknown(field)) }
+                </PropertyOpt>
+                { this.typeInfo(instr) }
+            </Property>
+        );
+    }
+
+
+    typeInfo(instr) {
+        return (
+            <SystemProperty name="type info">
+                <SystemProperty name="writable" value={ `${instr.writable}` } />
+                <SystemProperty name="readable" value={ `${instr.readable}` } />
+                <SystemProperty name="builtIn" value={ `${instr.builtIn}` } />
+                <SystemProperty name="hash" value={ `${instr.hash}` } />
+                <SystemProperty name="strongHash" value={ `${instr.strongHash}` } />
+                <SystemProperty name="size" value={ `${instr.size} bytes` } />
+                <SystemProperty name="length" value={ `${instr.length}` } />
+                <SystemProperty name="base" value={ `${instr.isBase()}` } />
+                <SystemProperty name="array" value={ `${instr.isArray()}` } />
+                <SystemProperty name="complex" value={ `${instr.isComplex()}` } />
+                <SystemProperty name="const" value={ `${instr.isConst()}` } />
+            </SystemProperty>
+        );
+    }
+
+
+    Pass(instr) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <PropertyOpt name="name" value={ instr.name } />
+            </Property>
+        );
+    }
+
+
+    Technique(instr) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <Property name="name" value={ instr.name } />
+                <PropertyOpt name="semantics" value={ instr.semantics } />
+                <PropertyOpt name="passes">
+                    { instr.passList.map((pass) => this.Pass(pass)) }
                 </PropertyOpt>
             </Property>
         );
     }
 
 
-    NotImplemented({ instr }) {
+    NotImplemented(instr) {
         return (
-            <Property { ...this.bindProps(instr) } name={
-                <Message size="mini" color="red">
-                    <Message.Content>
-                        <Message.Header>Not implemented</Message.Header>
-                        <p>{ EInstructionTypes[instr.instructionType] }</p>
-                    </Message.Content>
-                </Message>
-            } key={ instr.instructionID } />
+            <Property { ...this.bindProps(instr) }
+                onClick={ () => console.log(instr) }
+                name={
+                    <Message size="mini" color="red">
+                        <Message.Content>
+                            <Message.Header>Not implemented</Message.Header>
+                            <p>{ EInstructionTypes[instr.instructionType] }</p>
+                        </Message.Content>
+                    </Message>
+                }
+                key={ instr.instructionID }
+            />
         );
     }
 

@@ -85,7 +85,10 @@ class App extends React.Component<IAppProps> {
                             parserParams={ props.parserParams }
                             content={ props.sourceFile.content }
 
-                            onNodeOver={ (idx, node) => props.actions.addMarker({ name: `ast-range-${idx}`, range: node.loc, type: 'marker' }) }
+                            onNodeOver={ (idx, node) => props.actions.addMarker({ 
+                                name: `ast-range-${idx}`, 
+                                range: node.loc, 
+                                type: 'marker' }) }
                             onNodeOut={ (idx) => props.actions.removeMarker(`ast-range-${idx}`) }
                             onError={ (range, message) => props.actions.addMarker({ name: "syntax-error", range, type: 'error', tooltip: message }) }
                             onComplete={ (ast) => { this.setState({ ast }) } }
