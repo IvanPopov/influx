@@ -1,21 +1,15 @@
-import autobind from 'autobind-decorator';
 import * as React from 'react';
-import * as copy from 'copy-to-clipboard';
-import { connect } from 'react-redux';
-
-import { Divider, Breadcrumb } from 'semantic-ui-react';
-import { List, Message } from 'semantic-ui-react'
-
-import { EffectParser } from '../../lib/fx/EffectParser';
-import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
-import { ISourceLocation } from '../../lib/idl/ILogger';
-import { analyze } from '../../lib/fx/Effect';
-import { isNull, isDefAndNotNull } from '../../lib/common';
-import { ITechniqueInstruction, IPassInstruction, IInstructionCollector, IProvideInstruction, EInstructionTypes, IInstruction } from '../../lib/idl/IInstruction';
-import { ProvideInstruction } from '../../lib/fx/instructions/ProvideInstruction';
+import { List, Message } from 'semantic-ui-react';
 import { isArray } from 'util';
-import { IMap } from '../../lib/idl/IMap';
+import { isDefAndNotNull, isNull } from '../../lib/common';
+import { analyze } from '../../lib/fx/Effect';
 import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
+import { EInstructionTypes, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction } from '../../lib/idl/IInstruction';
+import { IMap } from '../../lib/idl/IMap';
+import { IParseTree } from '../../lib/idl/parser/IParser';
+import { SystemTypeInstruction } from '../../lib/fx/instructions/SystemTypeInstruction';
+
+
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -53,6 +47,7 @@ interface PropertyProps {
     onMouseOut?: any;
     onClick?: any;
     selected?: boolean;
+    opened?: boolean;
     system?: boolean;
 }
 
@@ -62,7 +57,15 @@ type PropertyComponent = React.StatelessComponent<PropertyProps>;
 
 
 const Property: PropertyComponent =
-    ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, system }) => {
+    ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, opened, system }) => {
+        let iconName = system ? `gear` as any : (isDefAndNotNull(children) ? `chevron down` : `code`);
+        if (!children) {
+            opened = true;
+        }
+        if (opened === false) {
+            iconName = 'chevron right';
+            children = null;
+        }
         return (
             <List.Item
                 className="astnode"
@@ -71,10 +74,10 @@ const Property: PropertyComponent =
                 onClick={ onClick }
                 style={ PropertyStyle({ selected, system }) }
             >
-                <List.Icon name={ system ? `gear` as any : (isDefAndNotNull(children) ? `chevron down` : `code`) } />
+                <List.Icon name={ iconName } />
                 <List.Content>
                     { isDefAndNotNull(name) &&
-                        <List.Header>{ name }:</List.Header>
+                        <List.Header>{ name }{ opened? ':' : '' }</List.Header>
                     }
                     { isDefAndNotNull(value) &&
                         <List.Description>{ value }</List.Description>
@@ -117,6 +120,7 @@ export interface IProgramViewProps {
 
     onNodeOut?: (instr: IInstruction) => void;
     onNodeOver?: (instr: IInstruction) => void;
+    onNodeClick?: (instr: IInstruction) => void;
 }
 
 class ProgramView extends React.Component<IProgramViewProps, {}> {
@@ -199,13 +203,21 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ProvideDecl(instr);
             case EInstructionTypes.k_TechniqueInstruction:
                 return this.Technique(instr);
+            case EInstructionTypes.k_VariableDeclInstruction:
+                return this.VariableDecl(instr);
+            case EInstructionTypes.k_VariableTypeInstruction:
+                return this.VariableType(instr);
+            case EInstructionTypes.k_InitExprInstruction:
+                return this.InitExpr(instr);
+            case EInstructionTypes.k_SystemTypeInstruction:
+                return this.SystemType(instr);
             default:
                 return this.NotImplemented(instr);
         }
     }
 
 
-    InstructionCollector(instr) {
+    InstructionCollector(instr: IInstructionCollector) {
         return (
             <PropertyOpt { ...this.bindProps(instr) } name="Program">
                 { instr.instructions.map((instr) => this.Unknown(instr)) }
@@ -214,7 +226,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    ProvideDecl(instr) {
+    ProvideDecl(instr: IProvideInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
                 <Property name="moduleName" value={ instr.moduleName } />
@@ -223,10 +235,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    TypeDecl(instr) {
+    TypeDecl(instr: ITypeDeclInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
-                <Property name={ "type" } >
+                <Property { ...this.bindProps(instr) } name={ "type" } >
                     { this.Unknown(instr.type) }
                 </Property>
                 <SystemProperty name="name" value={ instr.name } />
@@ -239,7 +251,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
                 <Property name="name" value={ instr.name } />
-                <PropertyOpt name="fields">
+                <PropertyOpt { ...this.bindProps(instr) } name="fields">
                     { instr.fields.map((field) => this.Unknown(field)) }
                 </PropertyOpt>
                 { this.typeInfo(instr) }
@@ -248,9 +260,19 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    // todo: implement it properly
+    SystemType(instr: SystemTypeInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                { this.typeInfo(instr) }
+            </Property>
+        );
+    }
+
+
     typeInfo(instr) {
         return (
-            <SystemProperty name="type info">
+            <SystemProperty { ...this.bindProps(instr) } name="type info">
                 <SystemProperty name="writable" value={ `${instr.writable}` } />
                 <SystemProperty name="readable" value={ `${instr.readable}` } />
                 <SystemProperty name="builtIn" value={ `${instr.builtIn}` } />
@@ -267,7 +289,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    Pass(instr) {
+    Pass(instr: IPassInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
                 <PropertyOpt name="name" value={ instr.name } />
@@ -276,7 +298,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    Technique(instr) {
+    Technique(instr: ITechniqueInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
                 <Property name="name" value={ instr.name } />
@@ -289,7 +311,42 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    NotImplemented(instr) {
+    VariableDecl(instr: IVariableDeclInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <Property name="id" value={ instr.id.toString() } />
+                <Property { ...this.bindProps(instr) } name="type">
+                    { this.VariableType(instr.type) }
+                </Property>
+                <PropertyOpt { ...this.bindProps(instr) } name="init">
+                    { this.InitExpr(instr.initExpr) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
+    VariableType(instr: IVariableTypeInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <PropertyOpt name="usages">
+                    { instr.usageList }
+                </PropertyOpt>
+                <PropertyOpt name="subType">
+                    { this.Unknown(instr.subType) }
+                </PropertyOpt>
+                { this.typeInfo(instr) }
+            </Property>
+        );
+    }
+
+    InitExpr(instr: IInitExprInstruction) {
+        // todo: write implementation
+        return null;
+    }
+
+
+    NotImplemented(instr: IInstruction) {
         return (
             <Property { ...this.bindProps(instr) }
                 onClick={ () => console.log(instr) }
@@ -313,7 +370,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return {
             onMouseOver: this.handleMouseOver.bind(this, instr),
             onMouseOut: this.handleMouseOut.bind(this, instr),
-            selected: instrState ? !!instrState.selected : false
+            onClick: this.handleMouseClick.bind(this, instr),
+            selected: instrState ? !!instrState.selected : false,
+            opened: instrState ? !!instrState.opened : false
         }
     }
 
@@ -321,7 +380,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseOver(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
-        this.invertSelection(instr);
+        this.invertProperty(instr, "selected");
 
         if (instr.sourceNode)
             this.props.onNodeOver(instr);
@@ -331,17 +390,28 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseOut(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
-        this.invertSelection(instr);
+        this.invertProperty(instr, "selected");
 
         if (instr.sourceNode)
             this.props.onNodeOut(instr);
     }
 
 
-    invertSelection(instr: IInstruction) {
+    handleMouseClick(instr: IInstruction, e: MouseEvent) {
+        e.stopPropagation();
+
+        this.invertProperty(instr, "opened");
+
+        if (instr.sourceNode) {
+            this.props.onNodeClick(instr);
+        }
+    }
+
+
+    invertProperty(instr: IInstruction, prop: string) {
         let { instrList } = this.state;
         let instrState = { opened: false, selected: false, ...instrList[instr.instructionID] };
-        instrState.selected = !instrState.selected;
+        instrState[prop] = !instrState[prop];
         instrList = { ...instrList, [instr.instructionID]: instrState };
         this.setState({ instrList });
     }

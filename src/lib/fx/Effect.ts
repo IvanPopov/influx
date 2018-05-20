@@ -137,27 +137,6 @@ function analyzeComplexName(sourceNode: IParseNode): string {
 
 /**
  * AST example:
- *    UseDecl
- *         T_KW_STRICT = 'strict'
- *         T_KW_USE = 'use'
- */
-function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
-    let children: IParseNode[] = ast.getRoot().children;
-    let i: number = 0;
-
-    for (i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'UseDecl') {
-            analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
-        }
-    }
-
-    // todo: return "use" instructions.
-    return [];
-}
-
-
-/**
- * AST example:
  *    ProvideDecl
  *         T_PUNCTUATOR_59 = ';'
  *       + ComplexNameOpt 
@@ -180,20 +159,6 @@ function analyzeProvideDecl(context: Context, program: ProgramScope, sourceNode:
     _error(context, sourceNode, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
     return null;
 }
-
-
-
-function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): IProvideInstruction[] {
-    const children = ast.getRoot().children;
-    const provideList: IProvideInstruction[] = [];
-    for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'ProvideDecl') {
-            provideList.push(analyzeProvideDecl(context, program, children[i]));
-        }
-    }
-    return provideList;
-}
-
 
 
 /**
@@ -3129,17 +3094,17 @@ function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IP
 }
 
 
-function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): ITypeDeclInstruction[] {
-    const children = ast.getRoot().children;
+// function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): ITypeDeclInstruction[] {
+//     const children = ast.getRoot().children;
 
-    let typeList: ITypeDeclInstruction[] = [];
-    for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'TypeDecl') {
-            typeList.push(analyzeTypeDecl(context, program, children[i]));
-        }
-    }
-    return typeList;
-}
+//     let typeList: ITypeDeclInstruction[] = [];
+//     for (let i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'TypeDecl') {
+//             typeList.push(analyzeTypeDecl(context, program, children[i]));
+//         }
+//     }
+//     return typeList;
+// }
 
 
 // function analyzeFunctionDefinitions(context: Context, program: ProgramScope, ast: IParseTree): void {
@@ -3154,49 +3119,116 @@ function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IP
 // }
 
 
-function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): null[] {
-    let children = ast.getRoot().children;
-
-    // todo: add IImportInstruction type!
-    let importList: null[] = [];
-    for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'ImportDecl') {
-            importList.push(analyzeImportDecl(context, program, children[i]));
-        }
-    }
-
-    return importList;
-}
+// function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): IProvideInstruction[] {
+//     const children = ast.getRoot().children;
+//     const provideList: IProvideInstruction[] = [];
+//     for (let i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'ProvideDecl') {
+//             provideList.push(analyzeProvideDecl(context, program, children[i]));
+//         }
+//     }
+//     return provideList;
+// }
 
 
 
-function analyzeGlobalTechniques(context: Context, program: ProgramScope, ast: IParseTree): ITechniqueInstruction[] {
+// function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): null[] {
+//     let children = ast.getRoot().children;
+
+//     // todo: add IImportInstruction type!
+//     let importList: null[] = [];
+//     for (let i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'ImportDecl') {
+//             importList.push(analyzeImportDecl(context, program, children[i]));
+//         }
+//     }
+
+//     return importList;
+// }
+
+
+// /**
+//  * AST example:
+//  *    UseDecl
+//  *         T_KW_STRICT = 'strict'
+//  *         T_KW_USE = 'use'
+//  */
+// function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
+//     let children: IParseNode[] = ast.getRoot().children;
+//     let i: number = 0;
+
+//     for (i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'UseDecl') {
+//             analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
+//         }
+//     }
+
+//     // todo: return "use" instructions.
+//     return [];
+// }
+
+
+// function analyzeGlobalTechniques(context: Context, program: ProgramScope, ast: IParseTree): ITechniqueInstruction[] {
+//     const children = ast.getRoot().children;
+
+//     let techniqueList: ITechniqueInstruction[] = [];
+//     for (let i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'TechniqueDecl') {
+//             techniqueList.push(analyzeTechniqueDecl(context, program, children[i]));
+//         }
+//     }
+//     return techniqueList;
+// }
+
+
+function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
     const children = ast.getRoot().children;
+    let globals: IInstruction[] = [];
 
-    let techniqueList: ITechniqueInstruction[] = [];
     for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'TechniqueDecl') {
-            techniqueList.push(analyzeTechniqueDecl(context, program, children[i]));
+        switch (children[i].name) {
+            case 'TechniqueDecl':
+                globals.push(analyzeTechniqueDecl(context, program, children[i]));
+                break;
+            case 'UseDecl':
+                analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
+                break;
+            case 'ImportDecl':
+                globals.push(analyzeImportDecl(context, program, children[i]));
+                break;
+            case 'ProvideDecl':
+                globals.push(analyzeProvideDecl(context, program, children[i]));
+                break;
+            case 'TypeDecl':
+                globals.push(analyzeTypeDecl(context, program, children[i]));
+                break;
+            case 'VariableDecl':
+                globals = globals.concat(analyzeVariableDecl(context, program, children[i]));
+                break;
+            case 'VarStructDecl':
+                globals = globals.concat(analyzeVarStructDecl(context, program, children[i]));
+                break;
         }
     }
-    return techniqueList;
+
+    return globals;
 }
 
 
-function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): IVariableDeclInstruction[] {
-    const children = ast.getRoot().children;
+// function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): IVariableDeclInstruction[] {
+//     const children = ast.getRoot().children;
 
-    let declList: IVariableDeclInstruction[] = [];
-    for (let i = children.length - 1; i >= 0; i--) {
-        if (children[i].name === 'VariableDecl') {
-            declList = declList.concat(analyzeVariableDecl(context, program, children[i]));
-        }
-        else if (children[i].name === 'VarStructDecl') {
-            declList = declList.concat(analyzeVarStructDecl(context, program, children[i]));
-        }
-    }
-    return declList;
-}
+//     let declList: IVariableDeclInstruction[] = [];
+//     for (let i = children.length - 1; i >= 0; i--) {
+//         if (children[i].name === 'VariableDecl') {
+//             declList = declList.concat(analyzeVariableDecl(context, program, children[i]));
+//         }
+//         else if (children[i].name === 'VarStructDecl') {
+//             declList = declList.concat(analyzeVarStructDecl(context, program, children[i]));
+//         }
+//     }
+//     return declList;
+// }
 
 
 // function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
@@ -3242,21 +3274,20 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     console.time(`analyze(${filename})`);
 
 
-    let list: IInstruction[] = [];
+    let list: IInstruction[] = null;
 
     try {
         program.begin(SystemScope.SCOPE);
 
-       
-
-        list = list.concat(analyzeGlobalUseDecls(context, program, ast));
-        list = list.concat(analyzeGlobalProvideDecls(context, program, ast));
-        list = list.concat(analyzeGlobalTypeDecls(context, program, ast));
+        // list = list.concat(analyzeGlobalUseDecls(context, program, ast));
+        // list = list.concat(analyzeGlobalProvideDecls(context, program, ast));
+        // list = list.concat(analyzeGlobalTypeDecls(context, program, ast));
         // analyzeFunctionDefinitions(context, program, ast);
-        list = list.concat(analyzeGlobalImports(context, program, ast));
-        list = list.concat(analyzeGlobalTechniques(context, program, ast));
-        list = list.concat(analyzeVariableDecls(context, program, ast));
+        // list = list.concat(analyzeGlobalImports(context, program, ast));
+        // list = list.concat(analyzeGlobalTechniques(context, program, ast));
+        // list = list.concat(analyzeVariableDecls(context, program, ast));
         // analyzeFunctionDecls(context, scope);
+        list = analyzeGlobals(context, program, ast);
 
         program.end();
     }

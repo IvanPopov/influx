@@ -72,6 +72,7 @@ class App extends React.Component<IAppProps> {
                                 type: `marker`
                             }) }
                             onNodeOut={ (instr: IInstruction) => props.actions.removeMarker(`ast-range-${instr.instructionID}`) }
+                            onNodeClick={ (instr: IInstruction) => {} }
                         />
                     </Tab.Pane>
                 )
