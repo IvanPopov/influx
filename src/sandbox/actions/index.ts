@@ -7,7 +7,7 @@ import IStoreState from '../store/IStoreState';
 import { bindActionCreators } from 'redux';
 import { IMarkerDesc } from './ActionTypes';
 
-export type IDispatch = Dispatch<IStoreState>;
+export type IDispatch = Dispatch<any>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
 
 export const parser = {

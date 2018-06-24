@@ -17,7 +17,7 @@ import IStoreState from './store/IStoreState';
 // todo: add support for retail configuration
 const middleware: Middleware[] = [ thunk, /*logger, */reduxImmutableStateInvariant() ];
 
-const store = createStore<IStoreState>(
+const store = createStore<IStoreState, any, any, any>(
   reducer,
   applyMiddleware(...middleware)
 );

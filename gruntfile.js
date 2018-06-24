@@ -1,7 +1,6 @@
 const build         = './build';
 const sandbox       = './src/sandbox';
 const semanticLess  = './node_modules/semantic-ui-less';
-// const codemirror    = './node_modules/codemirror';
 
 module.exports = function (grunt) {
     grunt.initConfig({
@@ -46,18 +45,6 @@ module.exports = function (grunt) {
                         src: ['react-ace/lib/*', 'react-ace/package.json', 'brace/index.js', 'brace/ext/*', 'brace/theme/*', 'brace/mode/*', 'brace/package.json'], 
                         dest: `${build}/sandbox/deps` 
                     },
-                    // {
-                    //     expand: true,
-                    //     cwd: `${codemirror}/lib/`,
-                    //     src: ['codemirror.css'],
-                    //     dest: `${build}/assets/codemirror`
-                    // },
-                    // {
-                    //     expand: true,
-                    //     cwd: `${codemirror}/theme/`,
-                    //     src: ['**'],
-                    //     dest: `${build}/assets/codemirror/theme`
-                    // },
                     {
                         expand: true,
                         cwd: `${semanticLess}/themes/default/assets`,
@@ -77,6 +64,7 @@ module.exports = function (grunt) {
             debug: {
                 options: {
                     sourceMap: true,
+                    // strictImports: true
                 },
                 files: {
                     [`${build}/assets/themes/default/semantic.css`]: `${semanticLess}/semantic.less`
