@@ -962,6 +962,11 @@ function analyzeUsageType(context: Context, program: ProgramScope, sourceNode: I
 }
 
 
+/**
+ * AST example:
+ *    Type
+ *         T_TYPE_ID = 'float3'
+ */
 function analyzeType(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
@@ -2180,64 +2185,76 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
     return checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
+/**
+ * AST example:
+ *    FunctionDecl
+ *       + StmtBlock 
+ *       + FunctionDef 
+ */
+/**
+ * AST example:
+ *    FunctionDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + FunctionDef 
+ */
+/**
+ * AST example:
+ *    FunctionDecl
+ *       + StmtBlock 
+ *       + Annotation 
+ *       + FunctionDef 
+ */
+function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionDeclInstruction {
 
-// function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionDeclInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const globalScope = program.globalScope;
+    const lastNodeValue = children[0].value;
 
-//     const children = sourceNode.children;
-//     let func: FunctionDeclInstruction = null;
-//     let funcDef: FunctionDefInstruction = null;
-//     let annotation: IAnnotationInstruction = null;
-//     const sLastNodeValue: string = children[0].value;
-//     let bNeedAddFunction: boolean = false;
+    let annotation: IAnnotationInstruction = null;
 
-//     funcDef = analyzeFunctionDef(context, program, children[children.length - 1]);
-//     func = <FunctionDeclInstruction>findFunctionByDef(scope, funcDef);
+    let definition = analyzeFunctionDef(context, program, children[children.length - 1]);
+    let func = globalScope.findFunction(definition.name, definition.paramList);
 
-//     if (!isDef(func)) {
-//         _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: func.nameID.toString() });
-//         return null;
-//     }
+    if (!isDef(func)) {
+        _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: definition.name });
+        return null;
+    }
 
-//     if (!isNull(func) && func.implementation) {
-//         _error(context, sourceNode, EEffectErrors.BAD_REDEFINE_FUNCTION, { funcName: func.nameID.toString() });
-//         return null;
-//     }
+    if (!isNull(func) && func.implementation) {
+        _error(context, sourceNode, EEffectErrors.BAD_REDEFINE_FUNCTION, { funcName: definition.name });
+        return null;
+    }
 
-//     if (isNull(func)) {
-//         func = new FunctionDeclInstruction(null);
-//         bNeedAddFunction = true;
-//     }
-//     else {
-//         if (!func.returnType.isEqual(funcDef.returnType)) {
-//             _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DEF_RETURN_TYPE, { funcName: func.nameID.toString() });
-//             return null;
-//         }
+    if (!isNull(func)) {
+        if (!func.definition.returnType.isEqual(definition.returnType)) {
+            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DEF_RETURN_TYPE, { funcName: definition.name });
+            return null;
+        }
+    }
 
-//         bNeedAddFunction = false;
-//     }
+    // program.restore();
 
-//     func.definition = (<IDeclInstruction>funcDef);
+    if (children.length === 3) {
+        annotation = analyzeAnnotation(children[1]);
+    }
 
-//     program.restore();
+    if (lastNodeValue !== ';') {
+        // func.implementationScope = (program.current);
+        // context.functionWithImplementationList.push(func);
+    }
 
-//     if (children.length === 3) {
-//         annotation = analyzeAnnotation(children[1]);
-//         func.annotation = (annotation);
-//     }
+    program.pop();
 
-//     if (sLastNodeValue !== ';') {
-//         func.implementationScope = (program.current);
-//         context.functionWithImplementationList.push(func);
-//     }
+    if (isNull(func)) {
+        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation: null, annotation });
+        if (!globalScope.addFunction(func)) {
+            this._error(EEffectErrors.REDEFINE_FUNCTION, { funcName: definition.name });
+        }
+    }
 
-//     program.pop();
-
-//     if (bNeedAddFunction) {
-//         addFunctionDecl(context, program, sourceNode, func);
-//     }
-
-//     return func;
-// }
+    return func;
+}
 
 
 // function resumeFunctionAnalysis(context: Context, program: ProgramScope, pAnalzedFunction: IFunctionDeclInstruction): void {
@@ -2267,97 +2284,119 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
 //     checkInstruction(context, func, ECheckStage.CODE_TARGET_SUPPORT);
 // }
 
+/**
+ * AST example:
+ *    FunctionDef
+ *       + ParamList 
+ *         T_NON_TYPE_ID = 'bar'
+ *       + UsageType 
+ */
+function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode: IParseNode): FunctionDefInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const globalScope = program.globalScope;
 
-// function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode: IParseNode): FunctionDefInstruction {
-//     const children = sourceNode.children;
-//     const funcDef: FunctionDefInstruction = new FunctionDefInstruction(sourceNode);
-//     let returnType: IVariableTypeInstruction = null;
-//     let funcName: IIdInstruction = null;
-//     const nameNode = children[children.length - 2];
-//     const funcName: string = nameNode.value;
+    // const funcDef: FunctionDefInstruction = new FunctionDefInstruction(sourceNode);
+    const nameNode = children[children.length - 2];
+    const name = nameNode.value;
 
-//     const pRetTypeNode = children[children.length - 1];
-//     returnType = analyzeUsageType(context, program, pRetTypeNode);
+    const retTypeNode = children[children.length - 1];
+    let returnType = analyzeUsageType(context, program, retTypeNode);
 
-//     if (returnType.isContainSampler()) {
-//         _error(context, pRetTypeNode, EEffectErrors.BAD_RETURN_TYPE_FOR_FUNCTION, { funcName: funcName });
-//         return null;
-//     }
+    // todo: is it really needed?
+    if (returnType.isContainSampler()) {
+        _error(context, retTypeNode, EEffectErrors.BAD_RETURN_TYPE_FOR_FUNCTION, { funcName: name });
+        return null;
+    }
 
-//     funcName = new IdInstruction(nameNode);
-//     funcName.name = (funcName);
-//     funcName.realName = (funcName + '_' + '0000'); // TODO: use uniq guid <<
+    let id = new IdInstruction({ scope, name, sourceNode: nameNode });
 
-//     funcDef.returnType = (returnType);
-//     funcDef.functionName = (funcName);
+    let semantics: string = null;
+    if (children.length === 4) {
+        semantics = analyzeSemantic(children[0]);
+    }
 
-//     if (children.length === 4) {
-//         const semantics: string = analyzeSemantic(children[0]);
-//         funcDef.semantics = (semantics);
-//     }
+    // TODO: Check scope!!!!
+    program.push(EScopeType.k_Default);
 
-//     program.push(EScopeType.k_Default);
+    let paramList = analyzeParamList(context, program, children[children.length - 3]);
 
-//     analyzeParamList(context, program, children[children.length - 3], funcDef);
+    program.pop();
 
-//     program.pop();
+    let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList })
 
-//     checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
+    checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
 
-//     return funcDef;
-// }
+    return funcDef;
+}
 
+/**
+ * AST example:
+ *    ParamList
+ *         T_PUNCTUATOR_41 = ')'
+ *       + ParameterDecl 
+ *         T_PUNCTUATOR_44 = ','
+ *       + ParameterDecl 
+ *         T_PUNCTUATOR_40 = '('
+ */
+function analyzeParamList(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction[] {
 
-// function analyzeParamList(context: Context, program: ProgramScope, sourceNode: IParseNode, funcDef: FunctionDefInstruction): void {
+    const children = sourceNode.children;
+    let paramList: IVariableDeclInstruction[] = [];
 
-//     const children = sourceNode.children;
-//     let param: IVariableDeclInstruction;
+    for (let i = children.length - 2; i >= 1; i--) {
+        if (children[i].name === 'ParameterDecl') {
+            let param = analyzeParameterDecl(context, program, children[i]);
+            paramList.push(param);
+        }
+    }
 
-//     let i: number = 0;
-
-//     for (i = children.length - 2; i >= 1; i--) {
-//         if (children[i].name === 'ParameterDecl') {
-//             param = analyzeParameterDecl(context, program, children[i]);
-//             param.scope = (program.current);
-//             funcDef.addParameter(param, program.isStrictMode());
-//         }
-//     }
-// }
-
-
-// function analyzeParameterDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
-
-//     const children = sourceNode.children;
-//     let type: IVariableTypeInstruction = null;
-//     let param: IVariableDeclInstruction = null;
-
-//     type = analyzeParamUsageType(context, program, children[1]);
-//     param = analyzeVariable(context, program, children[0], type);
-
-//     return param;
-// }
+    return paramList;
+}
 
 
-// function analyzeParamUsageType(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
-//     const children = sourceNode.children;
-//     let i: number = 0;
-//     const type: IVariableTypeInstruction = new VariableTypeInstruction(sourceNode);
+/**
+ * AST example:
+ *    ParameterDecl
+ *       + Variable 
+ *       + ParamUsageType 
+ */
+function analyzeParameterDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
+    const children = sourceNode.children;
 
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'Type') {
-//             const mainType: ITypeInstruction = analyzeType(context, program, children[i]);
-//             type.pushType(mainType);
-//         }
-//         else if (children[i].name === 'ParamUsage') {
-//             const usage: string = analyzeUsage(children[i]);
-//             type.addUsage(usage);
-//         }
-//     }
+    let type = analyzeParamUsageType(context, program, children[1]);
+    let param = analyzeVariable(context, program, children[0], type);
 
-//     checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
+    return param;
+}
 
-//     return type;
-// }
+/**
+ * AST example:
+ *    ParamUsageType
+ *       + Type 
+ *       + ParamUsage 
+ */
+function analyzeParamUsageType(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableTypeInstruction {
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+
+    let usages: string[] = [];
+    let type: ITypeInstruction = null;
+
+    for (let i = children.length - 1; i >= 0; i--) {
+        if (children[i].name === 'Type') {
+            type = analyzeType(context, program, children[i]);
+        }
+        else if (children[i].name === 'ParamUsage') {
+            usages.push(analyzeUsage(children[i]));
+        }
+    }
+
+    let paramType = new VariableTypeInstruction({ scope, sourceNode, type, usages });
+    checkInstruction(context, paramType, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return paramType;
+}
 
 
 // function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
@@ -3207,6 +3246,9 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
                 break;
             case 'VarStructDecl':
                 globals = globals.concat(analyzeVarStructDecl(context, program, children[i]));
+                break;
+            case 'FunctionDecl':
+                globals.push(analyzeFunctionDeclOnlyDefinition(context, program, children[i]));
                 break;
         }
     }
