@@ -8,7 +8,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface IForStmtInstructionSettings extends IInstructionSettings {
-    init?: IExprInstruction;
+    init?: ITypedInstruction;
     cond?: IExprInstruction;
     step?: IExprInstruction;
     body?: IStmtInstruction;
@@ -20,7 +20,7 @@ export interface IForStmtInstructionSettings extends IInstructionSettings {
  * for ExprInstruction or VarDeclInstruction ExprInstruction ExprInstruction StmtInstruction
  */
 export class ForStmtInstruction extends StmtInstruction {
-    protected _init: IExprInstruction;
+    protected _init: ITypedInstruction;
     protected _cond: IExprInstruction;
     protected _step: IExprInstruction;
     protected _body: IStmtInstruction;
@@ -35,7 +35,7 @@ export class ForStmtInstruction extends StmtInstruction {
     }
 
 
-    get init(): IExprInstruction {
+    get init(): ITypedInstruction {
         return this._init;
     }
 

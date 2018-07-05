@@ -3,7 +3,7 @@ import { EInstructionTypes } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings } from "./Instruction";
 
-export type BreakOperator = "break";
+export type BreakOperator = "break" | "discard";
 
 export interface IBreakStmtInstructionSettings extends IInstructionSettings {
     operator?: BreakOperator;

@@ -9,7 +9,7 @@ import {
     IVariableTypeInstruction, IIdInstruction, ITypeInstruction, ITypeDeclInstruction,
     IInstructionError, IExprInstruction, EFunctionType, EInstructionTypes, ECheckStage,
     IAnnotationInstruction, IInitExprInstruction, IIdExprInstruction, IStmtInstruction,
-    IDeclInstruction, ILiteralInstruction, ISamplerStateInstruction, IInstructionCollector, IProvideInstruction, EScopeType, IFunctionCallInstruction, IConstructorCallInstruction, IScope
+    IDeclInstruction, ILiteralInstruction, ISamplerStateInstruction, IInstructionCollector, IProvideInstruction, EScopeType, IFunctionCallInstruction, IConstructorCallInstruction, IScope, IStmtBlockInstruction, IFunctionDefInstruction
 } from '../idl/IInstruction';
 import { IMap } from '../idl/IMap';
 import { time } from '../time';
@@ -60,8 +60,8 @@ import { StringInstruction } from './instructions/StringInstruction';
 import { FloatInstruction } from './instructions/FloatInstruction';
 import { IntInstruction } from './instructions/IntInstruction';
 import { DeclStmtInstruction } from './instructions/DeclStmtInstruction';
-import { BreakStmtInstruction } from './instructions/BreakStmtInstruction';
-import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
+import { BreakStmtInstruction, BreakOperator } from './instructions/BreakStmtInstruction';
+import { WhileStmtInstruction, DoWhileOperator } from './instructions/WhileStmtInstruction';
 import { IEffectErrorInfo } from '../idl/IEffectErrorInfo';
 import { ProgramScope, Scope } from './ProgramScope';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
@@ -2037,11 +2037,11 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
     if (!isNull(context.currentFunction)) {
         // todo: rewrite this!
         if (!variable.checkPixelUsage()) {
-            context.currentFunction.$overwriteType(EFunctionType.k_Function);
+            // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
 
         if (!variable.checkVertexUsage()) {
-            context.currentFunction.$overwriteType(EFunctionType.k_Function);
+            // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
     }
 
@@ -2212,6 +2212,7 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
     const lastNodeValue = children[0].value;
 
     let annotation: IAnnotationInstruction = null;
+    let implementation: IStmtBlockInstruction = null;
 
     let definition = analyzeFunctionDef(context, program, children[children.length - 1]);
     let func = globalScope.findFunction(definition.name, definition.paramList);
@@ -2233,6 +2234,10 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
         }
     }
 
+    console.assert(context.currentFunction === null);
+    context.currentFunction = definition;
+    context.haveCurrentFunctionReturnOccur = false;
+
     // program.restore();
 
     if (children.length === 3) {
@@ -2240,18 +2245,22 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
     }
 
     if (lastNodeValue !== ';') {
+        implementation = analyzeStmtBlock(context, program, children[0]);
         // func.implementationScope = (program.current);
         // context.functionWithImplementationList.push(func);
     }
 
-    program.pop();
+    // program.pop();
 
     if (isNull(func)) {
-        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation: null, annotation });
+        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
         if (!globalScope.addFunction(func)) {
             this._error(EEffectErrors.REDEFINE_FUNCTION, { funcName: definition.name });
         }
     }
+
+    // todo: check haveCurrentFunctionReturnOccur value!!
+    context.currentFunction = null;
 
     return func;
 }
@@ -2296,7 +2305,6 @@ function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode:
     const scope = program.currentScope;
     const globalScope = program.globalScope;
 
-    // const funcDef: FunctionDefInstruction = new FunctionDefInstruction(sourceNode);
     const nameNode = children[children.length - 2];
     const name = nameNode.value;
 
@@ -2398,378 +2406,437 @@ function analyzeParamUsageType(context: Context, program: ProgramScope, sourceNo
     return paramType;
 }
 
-
-// function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const stmtBlock: StmtBlockInstruction = new StmtBlockInstruction(sourceNode);
-//     let stmt: IStmtInstruction;
-//     let i: number = 0;
-
-//     stmtBlock.scope = (program.current);
-
-//     program.push(EScopeType.k_Default);
-
-//     for (i = children.length - 2; i > 0; i--) {
-//         stmt = analyzeStmt(context, program, children[i]);
-//         if (!isNull(stmt)) {
-//             stmtBlock.push(stmt);
-//         }
-//     }
-
-//     program.pop();
-
-//     checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return stmtBlock;
-// }
-
-
-// function analyzeStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const firstNodeName: string = children[children.length - 1].name;
-
-//     switch (firstNodeName) {
-//         case 'SimpleStmt':
-//             return analyzeSimpleStmt(context, program, children[0]);
-//         case 'UseDecl':
-//             analyzeUseDecl(context, program, children[0]);
-//             return null;
-//         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, program, sourceNode);
-//         case 'T_KW_FOR':
-//             return analyzeForStmt(context, program, sourceNode);
-//         case 'T_KW_IF':
-//             return analyzeIfStmt(context, program, sourceNode);
-//     }
-//     return null;
-// }
-
-
-// function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const firstNodeName: string = children[children.length - 1].name;
-
-//     switch (firstNodeName) {
-//         case 'T_KW_RETURN':
-//             return analyzeReturnStmt(context, program, sourceNode);
-
-//         case 'T_KW_DO':
-//             return analyzeWhileStmt(context, program, sourceNode);
-
-//         case 'StmtBlock':
-//             return analyzeStmtBlock(context, program, children[0]);
-
-//         case 'T_KW_DISCARD':
-//         case 'T_KW_BREAK':
-//         case 'T_KW_CONTINUE':
-//             return analyzeBreakStmt(context, program, sourceNode);
-
-//         case 'TypeDecl':
-//         case 'VariableDecl':
-//         case 'VarStructDecl':
-//             return analyzeDeclStmt(context, program, children[0]);
-
-//         default:
-//             if (children.length === 2) {
-//                 return analyzeExprStmt(context, program, sourceNode);
-//             }
-//             else {
-//                 return new SemicolonStmtInstruction(sourceNode);
-//             }
-//     }
-// }
-
-
-// function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const pReturnStmtInstruction: ReturnStmtInstruction = new ReturnStmtInstruction(sourceNode);
-
-//     const funcReturnType: IVariableTypeInstruction = context.currentFunction.returnType;
-
-//     context.haveCurrentFunctionReturnOccur = true;
-
-//     if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
-//         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_VOID);
-//         return null;
-//     }
-//     else if (!funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 2) {
-//         _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_EMPTY);
-//         return null;
-//     }
-
-//     if (children.length === 3) {
-//         const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
-
-//         if (!funcReturnType.isEqual(exprInstruction.type)) {
-//             _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
-//             return null;
-//         }
-
-//         pReturnStmtInstruction.push(exprInstruction, true);
-//     }
-
-//     checkInstruction(context, pReturnStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return pReturnStmtInstruction;
-// }
-
-
-// function analyzeBreakStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const pBreakStmtInstruction: BreakStmtInstruction = new BreakStmtInstruction(sourceNode);
-//     const sOperatorName: string = children[1].value;
-
-//     pBreakStmtInstruction.operator = (sOperatorName);
-
-//     if (sOperatorName === 'discard' && !isNull(context.currentFunction)) {
-//         context.currentFunction.vertex = (false);
-//     }
-
-//     checkInstruction(context, pBreakStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return pBreakStmtInstruction;
-// }
-
-
-// function analyzeDeclStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     // let children: IParseNode[] = sourceNode.children;
-//     const sNodeName: string = sourceNode.name;
-//     const pDeclStmtInstruction: DeclStmtInstruction = new DeclStmtInstruction(sourceNode);
-
-//     switch (sNodeName) {
-//         case 'TypeDecl':
-//             analyzeTypeDecl(context, program, sourceNode, pDeclStmtInstruction);
-//             break;
-//         case 'VariableDecl':
-//             analyzeVariableDecl(context, program, sourceNode, pDeclStmtInstruction);
-//             break;
-//         case 'VarStructDecl':
-//             analyzeVarStructDecl(context, program, sourceNode, pDeclStmtInstruction);
-//             break;
-//     }
-
-//     checkInstruction(context, pDeclStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return pDeclStmtInstruction;
-// }
-
-
-// function analyzeExprStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const exprStmtInstruction: ExprStmtInstruction = new ExprStmtInstruction(sourceNode);
-//     const exprInstruction: IExprInstruction = analyzeExpr(context, program, children[1]);
-
-//     exprStmtInstruction.push(exprInstruction, true);
-
-//     checkInstruction(context, exprStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return exprStmtInstruction;
-// }
-
-
-// function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const isDoWhile: boolean = (children[children.length - 1].value === 'do');
-//     const isNonIfStmt: boolean = (sourceNode.name === 'NonIfStmt') ? true : false;
-
-//     const whileStmt: WhileStmtInstruction = new WhileStmtInstruction(sourceNode);
-//     let condition: IExprInstruction = null;
-//     let conditionType: IVariableTypeInstruction = null;
-//     const boolType: ITypeInstruction = SystemScope.T_BOOL;
-//     let stmt: IStmtInstruction = null;
-
-//     if (isDoWhile) {
-//         whileStmt.operator = ('do_while');
-//         condition = analyzeExpr(context, program, children[2]);
-//         conditionType = <IVariableTypeInstruction>condition.type;
-
-//         if (!conditionType.isEqual(boolType)) {
-//             _error(context, sourceNode, EEffectErrors.BAD_DO_WHILE_CONDITION, { typeName: conditionType.toString() });
-//             return null;
-//         }
-
-//         stmt = analyzeStmt(context, program, children[0]);
-//     }
-//     else {
-//         whileStmt.operator = ('while');
-//         condition = analyzeExpr(context, program, children[2]);
-//         conditionType = <IVariableTypeInstruction>condition.type;
-
-//         if (!conditionType.isEqual(boolType)) {
-//             _error(context, sourceNode, EEffectErrors.BAD_WHILE_CONDITION, { typeName: conditionType.toString() });
-//             return null;
-//         }
-
-//         if (isNonIfStmt) {
-//             stmt = analyzeNonIfStmt(context, program, children[0]);
-//         }
-//         else {
-//             stmt = analyzeStmt(context, program, children[0]);
-//         }
-
-//         whileStmt.push(condition, true);
-//         whileStmt.push(stmt, true);
-//     }
-
-//     checkInstruction(context, whileStmt, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return whileStmt;
-// }
-
-
-// function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const isIfElse: boolean = (children.length === 7);
-
-//     const ifStmtInstruction: IfStmtInstruction = new IfStmtInstruction(sourceNode);
-//     const condition: IExprInstruction = analyzeExpr(context, program, children[children.length - 3]);
-//     const conditionType: IVariableTypeInstruction = <IVariableTypeInstruction>condition.type;
-//     const boolType: ITypeInstruction = SystemScope.T_BOOL;
-
-//     let ifStmt: IStmtInstruction = null;
-//     let elseStmt: IStmtInstruction = null;
-
-//     if (!conditionType.isEqual(boolType)) {
-//         _error(context, sourceNode, EEffectErrors.BAD_IF_CONDITION, { typeName: conditionType.toString() });
-//         return null;
-//     }
-
-//     ifStmtInstruction.push(condition, true);
-
-//     if (isIfElse) {
-//         ifStmtInstruction.operator = ('if_else');
-//         ifStmt = analyzeNonIfStmt(context, program, children[2]);
-//         elseStmt = analyzeStmt(context, program, children[0]);
-
-//         ifStmtInstruction.push(ifStmt, true);
-//         ifStmtInstruction.push(elseStmt, true);
-//     }
-//     else {
-//         ifStmtInstruction.operator = ('if');
-//         ifStmt = analyzeNonIfStmt(context, program, children[0]);
-
-//         ifStmtInstruction.push(ifStmt, true);
-//     }
-
-//     checkInstruction(context, ifStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return ifStmtInstruction;
-// }
-
-
-// function analyzeNonIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const firstNodeName: string = children[children.length - 1].name;
-
-//     switch (firstNodeName) {
-//         case 'SimpleStmt':
-//             return analyzeSimpleStmt(context, program, children[0]);
-//         case 'T_KW_WHILE':
-//             return analyzeWhileStmt(context, program, sourceNode);
-//         case 'T_KW_FOR':
-//             return analyzeForStmt(context, program, sourceNode);
-//     }
-//     return null;
-// }
-
-
-// function analyzeForStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
-//     const children = sourceNode.children;
-//     const isNonIfStmt: boolean = (sourceNode.name === 'NonIfStmt');
-//     const pForStmtInstruction: ForStmtInstruction = new ForStmtInstruction(sourceNode);
-//     let stmt: IStmtInstruction = null;
-
-//     program.push();
-
-//     analyzeForInit(context, program, children[children.length - 3], pForStmtInstruction);
-//     analyzeForCond(context, program, children[children.length - 4], pForStmtInstruction);
-
-//     if (children.length === 7) {
-//         analyzeForStep(context, program, children[2], pForStmtInstruction);
-//     }
-//     else {
-//         pForStmtInstruction.push(null);
-//     }
-
-
-//     if (isNonIfStmt) {
-//         stmt = analyzeNonIfStmt(context, program, children[0]);
-//     }
-//     else {
-//         stmt = analyzeStmt(context, program, children[0]);
-//     }
-
-//     pForStmtInstruction.push(stmt, true);
-
-//     program.pop();
-
-//     checkInstruction(context, pForStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-//     return pForStmtInstruction;
-// }
-
-
-// function analyzeForInit(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
-
-//     const children = sourceNode.children;
-//     const firstNodeName: string = children[children.length - 1].name;
-
-//     switch (firstNodeName) {
-//         case 'VariableDecl':
-//             analyzeVariableDecl(context, program, children[0], pForStmtInstruction);
-//             break;
-//         case 'Expr':
-//             const expr: IExprInstruction = analyzeExpr(context, program, children[0]);
-//             pForStmtInstruction.push(expr, true);
-//             break;
-//         default:
-//             // ForInit : ';'
-//             pForStmtInstruction.push(null);
-//             break;
-//     }
-
-//     return;
-// }
-
-
-// function analyzeForCond(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
-
-//     const children = sourceNode.children;
-
-//     if (children.length === 1) {
-//         pForStmtInstruction.push(null);
-//         return;
-//     }
-
-//     const conditionExpr: IExprInstruction = analyzeExpr(context, program, children[1]);
-
-//     pForStmtInstruction.push(conditionExpr, true);
-//     return;
-// }
-
-
-// function analyzeForStep(context: Context, program: ProgramScope, sourceNode: IParseNode, pForStmtInstruction: ForStmtInstruction): void {
-
-//     const children = sourceNode.children;
-//     const pSteexpr: IExprInstruction = analyzeExpr(context, program, children[0]);
-
-//     pForStmtInstruction.push(pSteexpr, true);
-
-//     return;
-// }
-
-
+/**
+ * AST example:
+ *    StmtBlock
+ *         T_PUNCTUATOR_125 = '}'
+ *       + Stmt 
+ *       + Stmt 
+ *         T_PUNCTUATOR_123 = '{'
+ */
+function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtBlockInstruction {
+
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    
+    program.push(EScopeType.k_Default);
+
+    let stmtList: IStmtInstruction[] = [];
+    for (let i = children.length - 2; i > 0; i--) {
+        let stmt = analyzeStmt(context, program, children[i]);
+        if (!isNull(stmt)) {
+            stmtList.push(stmt);
+        }
+    }
+    
+    program.pop();
+    
+    const stmtBlock = new StmtBlockInstruction({ sourceNode, scope, stmtList });
+    checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return stmtBlock;
+}
+
+
+function analyzeStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const children = sourceNode.children;
+    const firstNodeName: string = children[children.length - 1].name;
+
+    switch (firstNodeName) {
+        case 'SimpleStmt':
+            return analyzeSimpleStmt(context, program, children[0]);
+        case 'UseDecl':
+            analyzeUseDecl(context, program, children[0]);
+            return null;
+        case 'T_KW_WHILE':
+            return analyzeWhileStmt(context, program, sourceNode);
+        case 'T_KW_FOR':
+            return analyzeForStmt(context, program, sourceNode);
+        case 'T_KW_IF':
+            return analyzeIfStmt(context, program, sourceNode);
+    }
+    return null;
+}
+
+
+function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const scope = program.currentScope;
+    const children = sourceNode.children;
+    const firstNodeName: string = children[children.length - 1].name;
+
+    switch (firstNodeName) {
+        case 'T_KW_RETURN':
+            return analyzeReturnStmt(context, program, sourceNode);
+
+        case 'T_KW_DO':
+            return analyzeWhileStmt(context, program, sourceNode);
+
+        case 'StmtBlock':
+            return analyzeStmtBlock(context, program, children[0]);
+
+        case 'T_KW_DISCARD':
+        case 'T_KW_BREAK':
+        case 'T_KW_CONTINUE':
+            return analyzeBreakStmt(context, program, sourceNode);
+
+        case 'TypeDecl':
+        case 'VariableDecl':
+        case 'VarStructDecl':
+            return analyzeDeclStmt(context, program, children[0]);
+
+        default:
+            if (children.length === 2) {
+                return analyzeExprStmt(context, program, sourceNode);
+            }
+        
+            return new SemicolonStmtInstruction({ sourceNode, scope });
+    }
+}
+
+/**
+ * AST example:
+ *    SimpleStmt
+ *         T_PUNCTUATOR_59 = ';'
+ *         T_NON_TYPE_ID = 'y'
+ *         T_KW_RETURN = 'return'
+ */
+function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+   
+
+    const funcReturnType = context.currentFunction.returnType;
+    context.haveCurrentFunctionReturnOccur = true;
+
+    if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
+        _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_VOID);
+        return null;
+    }
+    else if (!funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 2) {
+        _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_EMPTY);
+        return null;
+    }
+
+    let expr: IExprInstruction = null;
+    if (children.length === 3) {
+        expr = analyzeExpr(context, program, children[1]);
+
+        if (!funcReturnType.isEqual(expr.type)) {
+            _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
+            return null;
+        }
+    }
+
+    const returnStmtInstruction = new ReturnStmtInstruction({ sourceNode, scope, expr });
+    checkInstruction(context, returnStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return returnStmtInstruction;
+}
+
+/**
+ * AST example:
+ *    SimpleStmt
+ *         T_PUNCTUATOR_59 = ';'
+ *         T_KW_BREAK = 'break'
+ */
+function analyzeBreakStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+
+    const operator: BreakOperator = <BreakOperator>children[1].value;
+    
+    if (operator === 'discard' && !isNull(context.currentFunction)) {
+        // context.currentFunction.vertex = (false);
+    }
+    
+    const breakStmtInstruction = new BreakStmtInstruction({ sourceNode, scope, operator });
+    checkInstruction(context, breakStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return breakStmtInstruction;
+}
+
+
+/**
+ * AST example:
+ *    VariableDecl
+ *         T_PUNCTUATOR_59 = ';'
+ *       + Variable 
+ *         T_PUNCTUATOR_44 = ','
+ *       + Variable 
+ *         T_PUNCTUATOR_44 = ','
+ *       + Variable 
+ *       + UsageType 
+ */
+function analyzeDeclStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const nodeName = sourceNode.name;
+    
+    let declList: IDeclInstruction[] = [];
+
+    switch (nodeName) {
+        case 'TypeDecl':
+        declList.push(analyzeTypeDecl(context, program, sourceNode));
+        break;
+        case 'VariableDecl':
+        declList = declList.concat(analyzeVariableDecl(context, program, sourceNode));
+        break;
+        case 'VarStructDecl':
+        declList = declList.concat(analyzeVarStructDecl(context, program, sourceNode));
+        break;
+    }
+    
+    const declStmtInstruction = new DeclStmtInstruction({ sourceNode, scope });
+    checkInstruction(context, declStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return declStmtInstruction;
+}
+
+
+function analyzeExprStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+    const scope = program.currentScope;
+    const children = sourceNode.children;
+    const expr = analyzeExpr(context, program, children[1]);
+    
+    const exprStmt = new ExprStmtInstruction({ sourceNode, scope, expr });
+    checkInstruction(context, exprStmt, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return exprStmt;
+}
+
+
+/**
+ * AST example:
+ *    Stmt
+ *       + Stmt 
+ *         T_PUNCTUATOR_41 = ')'
+ *         T_UINT = '1'
+ *         T_PUNCTUATOR_40 = '('
+ *         T_KW_WHILE = 'while'
+ *    SimpleStmt
+ *         T_PUNCTUATOR_59 = ';'
+ *         T_PUNCTUATOR_41 = ')'
+ *         T_UINT = '1'
+ *         T_PUNCTUATOR_40 = '('
+ *         T_KW_WHILE = 'while'
+ *       + Stmt 
+ *         T_KW_DO = 'do'
+ */
+function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+    const scope = program.currentScope;
+    const children = sourceNode.children;
+    const isDoWhile = (children[children.length - 1].value === 'do');
+    const isNonIfStmt = (sourceNode.name === 'NonIfStmt') ? true : false;
+    const boolType = SystemScope.T_BOOL;
+
+    
+    let cond: IExprInstruction = null;
+    let conditionType: IVariableTypeInstruction = null;
+    let body: IStmtInstruction = null;
+    let operator: DoWhileOperator = "do";
+
+    if (isDoWhile) {
+        operator = "do";
+        cond = analyzeExpr(context, program, children[2]);
+        conditionType = <IVariableTypeInstruction>cond.type;
+
+        if (!conditionType.isEqual(boolType)) {
+            _error(context, sourceNode, EEffectErrors.BAD_DO_WHILE_CONDITION, { typeName: conditionType.toString() });
+            return null;
+        }
+
+        body = analyzeStmt(context, program, children[0]);
+    }
+    else {
+        operator = "while";
+        cond = analyzeExpr(context, program, children[2]);
+        conditionType = <IVariableTypeInstruction>cond.type;
+
+        if (!conditionType.isEqual(boolType)) {
+            _error(context, sourceNode, EEffectErrors.BAD_WHILE_CONDITION, { typeName: conditionType.toString() });
+            return null;
+        }
+
+        if (isNonIfStmt) {
+            body = analyzeNonIfStmt(context, program, children[0]);
+        }
+        else {
+            body = analyzeStmt(context, program, children[0]);
+        }
+    }
+
+    const whileStmt = new WhileStmtInstruction({ sourceNode, scope, cond, body, operator});
+    checkInstruction(context, whileStmt, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return whileStmt;
+}
+
+/**
+ * AST example:
+ *    Stmt
+ *       + Stmt 
+ *         T_KW_ELSE = 'else'
+ *       + NonIfStmt 
+ *         T_PUNCTUATOR_41 = ')'
+ *         T_UINT = '1'
+ *         T_PUNCTUATOR_40 = '('
+ *         T_KW_IF = 'if'
+ */
+function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+    const scope = program.currentScope;
+    const children = sourceNode.children;
+    const isIfElse = (children.length === 7);
+
+    const cond = analyzeExpr(context, program, children[children.length - 3]);
+    const conditionType = <IVariableTypeInstruction>cond.type;
+    const boolType = SystemScope.T_BOOL;
+    
+    let conseq: IStmtInstruction = null;
+    let contrary: IStmtInstruction = null;
+    let operator: string = null;
+    
+    if (!conditionType.isEqual(boolType)) {
+        _error(context, sourceNode, EEffectErrors.BAD_IF_CONDITION, { typeName: conditionType.toString() });
+        return null;
+    }
+    
+    if (isIfElse) {
+        operator = 'if_else';
+        conseq = analyzeNonIfStmt(context, program, children[2]);
+        contrary = analyzeStmt(context, program, children[0]);
+    }
+    else {
+        operator = 'if';
+        conseq = analyzeNonIfStmt(context, program, children[0]);
+    }
+    
+    const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary });
+    checkInstruction(context, ifStmt, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return ifStmt;
+}
+
+
+/**
+ * AST example:
+ *    NonIfStmt
+ *       + SimpleStmt 
+ */
+function analyzeNonIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+
+    const children = sourceNode.children;
+    const firstNodeName = children[children.length - 1].name;
+
+    switch (firstNodeName) {
+        case 'SimpleStmt':
+            return analyzeSimpleStmt(context, program, children[0]);
+        case 'T_KW_WHILE':
+            return analyzeWhileStmt(context, program, sourceNode);
+        case 'T_KW_FOR':
+            return analyzeForStmt(context, program, sourceNode);
+    }
+    return null;
+}
+
+
+function analyzeForStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+    const scope = program.currentScope;
+    const children = sourceNode.children;
+    const isNonIfStmt = (sourceNode.name === 'NonIfStmt');
+
+    let body: IStmtInstruction = null;
+    
+    program.push();
+    
+    let init: ITypedInstruction = analyzeForInit(context, program, children[children.length - 3]);
+    let cond: IExprInstruction = analyzeForCond(context, program, children[children.length - 4]);
+    let step: IExprInstruction = null;
+    
+    if (children.length === 7) {
+        step = analyzeForStep(context, program, children[2]);
+    }
+    
+    
+    if (isNonIfStmt) {
+        body = analyzeNonIfStmt(context, program, children[0]);
+    }
+    else {
+        body = analyzeStmt(context, program, children[0]);
+    }
+    
+    program.pop();
+    
+    const pForStmtInstruction = new ForStmtInstruction({ sourceNode, scope, init, cond, step, body });
+    checkInstruction(context, pForStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
+
+    return pForStmtInstruction;
+}
+
+
+/**
+ * AST example:
+ *    ForInit
+ *         T_PUNCTUATOR_59 = ';'
+ *       + AssignmentExpr 
+ *    ForInit
+ *       + VariableDecl 
+ *    ForInit
+ *         T_PUNCTUATOR_59 = ';'
+ *       + Expr 
+ */
+function analyzeForInit(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypedInstruction {
+
+    const children = sourceNode.children;
+    const firstNodeName = children[children.length - 1].name;
+
+    switch (firstNodeName) {
+        case 'VariableDecl':
+            // TODO: fixme!! 
+            // add support for expressions like "a = 1, b = 2, c = 3"
+            return analyzeVariableDecl(context, program, children[0])[0] || null;
+        case 'Expr':
+            // TODO: fixme!! 
+            // add support for expressions like "a = 1, b = 2, c = 3"
+            return analyzeExpr(context, program, children[0]);
+    }
+
+    // ForInit : ';'
+    return null;
+}
+
+
+/**
+ * AST example:
+ *    ForCond
+ *         T_PUNCTUATOR_59 = ';'
+ *       + RelationalExpr 
+ */
+function analyzeForCond(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+
+    if (children.length === 1) {
+        return null;
+    }
+
+    return analyzeExpr(context, program, children[1]);
+}
+
+
+/**
+ * AST example:
+ *    ForStep
+ *       + UnaryExpr 
+ */
+function analyzeForStep(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    const children = sourceNode.children;
+    const step = analyzeExpr(context, program, children[0]);
+    return step;
+}
 
 
 function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITechniqueInstruction {
@@ -3133,93 +3200,6 @@ function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IP
 }
 
 
-// function analyzeGlobalTypeDecls(context: Context, program: ProgramScope, ast: IParseTree): ITypeDeclInstruction[] {
-//     const children = ast.getRoot().children;
-
-//     let typeList: ITypeDeclInstruction[] = [];
-//     for (let i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'TypeDecl') {
-//             typeList.push(analyzeTypeDecl(context, program, children[i]));
-//         }
-//     }
-//     return typeList;
-// }
-
-
-// function analyzeFunctionDefinitions(context: Context, program: ProgramScope, ast: IParseTree): void {
-//     let children: IParseNode[] = ast.getRoot().children;
-//     let i: number = 0;
-
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'FunctionDecl') {
-//             analyzeFunctionDeclOnlyDefinition(context, program, children[i]);
-//         }
-//     }
-// }
-
-
-// function analyzeGlobalProvideDecls(context: Context, program: ProgramScope, ast: IParseTree): IProvideInstruction[] {
-//     const children = ast.getRoot().children;
-//     const provideList: IProvideInstruction[] = [];
-//     for (let i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'ProvideDecl') {
-//             provideList.push(analyzeProvideDecl(context, program, children[i]));
-//         }
-//     }
-//     return provideList;
-// }
-
-
-
-// function analyzeGlobalImports(context: Context, program: ProgramScope, ast: IParseTree): null[] {
-//     let children = ast.getRoot().children;
-
-//     // todo: add IImportInstruction type!
-//     let importList: null[] = [];
-//     for (let i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'ImportDecl') {
-//             importList.push(analyzeImportDecl(context, program, children[i]));
-//         }
-//     }
-
-//     return importList;
-// }
-
-
-// /**
-//  * AST example:
-//  *    UseDecl
-//  *         T_KW_STRICT = 'strict'
-//  *         T_KW_USE = 'use'
-//  */
-// function analyzeGlobalUseDecls(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
-//     let children: IParseNode[] = ast.getRoot().children;
-//     let i: number = 0;
-
-//     for (i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'UseDecl') {
-//             analyzeUseDecl(context, program, children[i]); // << always 'use strict' by default!
-//         }
-//     }
-
-//     // todo: return "use" instructions.
-//     return [];
-// }
-
-
-// function analyzeGlobalTechniques(context: Context, program: ProgramScope, ast: IParseTree): ITechniqueInstruction[] {
-//     const children = ast.getRoot().children;
-
-//     let techniqueList: ITechniqueInstruction[] = [];
-//     for (let i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'TechniqueDecl') {
-//             techniqueList.push(analyzeTechniqueDecl(context, program, children[i]));
-//         }
-//     }
-//     return techniqueList;
-// }
-
-
 function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
     const children = ast.getRoot().children;
     let globals: IInstruction[] = [];
@@ -3257,21 +3237,6 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
 }
 
 
-// function analyzeVariableDecls(context: Context, program: ProgramScope, ast: IParseTree): IVariableDeclInstruction[] {
-//     const children = ast.getRoot().children;
-
-//     let declList: IVariableDeclInstruction[] = [];
-//     for (let i = children.length - 1; i >= 0; i--) {
-//         if (children[i].name === 'VariableDecl') {
-//             declList = declList.concat(analyzeVariableDecl(context, program, children[i]));
-//         }
-//         else if (children[i].name === 'VarStructDecl') {
-//             declList = declList.concat(analyzeVarStructDecl(context, program, children[i]));
-//         }
-//     }
-//     return declList;
-// }
-
 
 // function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
 //     for (let i = 0; i < context.functionWithImplementationList.length; i++) {
@@ -3289,16 +3254,15 @@ class Context {
     readonly filename: string | null = null;
 
     moduleName: string | null;
-    currentFunction: IFunctionDeclInstruction | null;
+    currentFunction: IFunctionDefInstruction | null;
     haveCurrentFunctionReturnOccur: boolean;
-
 
     constructor(filename: string, ) {
         this.filename = filename;
 
         this.moduleName = null;
         this.currentFunction = null;
-        this.haveCurrentFunctionReturnOccur = null;
+        this.haveCurrentFunctionReturnOccur = false;
     }
 }
 
@@ -3320,14 +3284,7 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
 
     try {
         program.begin(SystemScope.SCOPE);
-
-        // list = list.concat(analyzeGlobalUseDecls(context, program, ast));
-        // list = list.concat(analyzeGlobalProvideDecls(context, program, ast));
-        // list = list.concat(analyzeGlobalTypeDecls(context, program, ast));
         // analyzeFunctionDefinitions(context, program, ast);
-        // list = list.concat(analyzeGlobalImports(context, program, ast));
-        // list = list.concat(analyzeGlobalTechniques(context, program, ast));
-        // list = list.concat(analyzeVariableDecls(context, program, ast));
         // analyzeFunctionDecls(context, scope);
         list = analyzeGlobals(context, program, ast);
 
