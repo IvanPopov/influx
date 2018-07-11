@@ -58,6 +58,16 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         return null;
     }
 
+    // shortcut for definition.name
+    get name(): string {
+        return this.definition.name;
+    }
+
+
+    // shortcut for definition.id
+    get id(): IIdInstruction {
+        return this.definition.id;
+    }
 
     checkVertexUsage(): boolean {
         // todo: implement it!

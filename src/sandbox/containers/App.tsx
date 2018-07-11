@@ -151,7 +151,7 @@ class App extends React.Component<IAppProps> {
                     <Sidebar
                         as={ Segment }
                         animation='overlay'
-                        onHide={ this.hideFileBrowser }
+                        // onHide={ this.hideFileBrowser }
                         vertical
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarHotfix }

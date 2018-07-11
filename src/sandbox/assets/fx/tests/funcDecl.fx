@@ -17,3 +17,16 @@ void func_c() {}
 float func_d();
 // error: invalid function implementation
 int func_d() {}
+
+
+float fmod(float a, float b)
+{
+    return (a - b * floor(a / b));
+}
+
+
+int inc(inout int src, int count = 1)
+{
+    src += count;
+    return src;
+}

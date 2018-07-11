@@ -87,12 +87,12 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         if (!folder || !folder.path || !folder.totalFiles) return null;
 
         return (
-            <List.Item>
+            <List.Item key={folder.path}>
                 <List.Icon name={ FileDirectoryIcon } />
                 <List.Content>
                     <List.Header onClick={ () => { folder.shown = !folder.shown; this.forceUpdate(); } }>{ path.basename(folder.path) }</List.Header>
                     { folder.shown && (isArray(folder.folders) || isArray(folder.files)) &&
-                        <List.List selection>
+                        <List.List>
                             { (folder.folders || []).map(folder => this.renderFolder(folder)) }
                             { (folder.files || []).map(file => this.renderFile(file)) }
                         </List.List>
@@ -106,7 +106,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         if (!file) return null;
 
         return (
-            <List.Item onClick={ () => this.props.onFileClick(file) }>
+            <List.Item onClick={ () => this.props.onFileClick(file) } key={file}>
                 <List.Icon name={ FileCodeIcon } />
                 <List.Content>
                     <List.Header>{ path.basename(file) }</List.Header>

@@ -29,5 +29,5 @@ render(
   document.getElementById('app')
 );
 
-store.dispatch(sourceCode.openFile('assets/fx/example.fx'));
+store.dispatch(sourceCode.openFile('assets/fx/tests/funcDecl.fx'));
 store.dispatch(parser.openGrammar('assets/HLSL.gr'));

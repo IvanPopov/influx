@@ -305,6 +305,7 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly functionName: IIdInstruction;
     readonly name: string;
     readonly paramList: IVariableDeclInstruction[];
+    // todo: remove it.
     readonly numArgsRequired: number;
 
     toString(): string;              // << declaration with uniq name

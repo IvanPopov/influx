@@ -113,7 +113,7 @@ function _error(context: Context, sourceNode: IParseNode, code: number, info: IE
         location: location
     };
 
-    logger.critical(logEntity);
+    logger.error(logEntity);
     // throw new Error(code.toString());
 }
 
@@ -2204,7 +2204,7 @@ function analyzeStruct(context: Context, program: ProgramScope, sourceNode: IPar
  *       + Annotation 
  *       + FunctionDef 
  */
-function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionDeclInstruction {
+function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionDeclInstruction {
 
     const children = sourceNode.children;
     const scope = program.currentScope;
@@ -2213,6 +2213,8 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
 
     let annotation: IAnnotationInstruction = null;
     let implementation: IStmtBlockInstruction = null;
+
+    program.push(EScopeType.k_Default);
 
     let definition = analyzeFunctionDef(context, program, children[children.length - 1]);
     let func = globalScope.findFunction(definition.name, definition.paramList);
@@ -2235,10 +2237,10 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
     }
 
     console.assert(context.currentFunction === null);
+
+    // todo: rewrite context ?
     context.currentFunction = definition;
     context.haveCurrentFunctionReturnOccur = false;
-
-    // program.restore();
 
     if (children.length === 3) {
         annotation = analyzeAnnotation(children[1]);
@@ -2246,16 +2248,14 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
 
     if (lastNodeValue !== ';') {
         implementation = analyzeStmtBlock(context, program, children[0]);
-        // func.implementationScope = (program.current);
-        // context.functionWithImplementationList.push(func);
     }
 
-    // program.pop();
+    program.pop();
 
     if (isNull(func)) {
         func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
         if (!globalScope.addFunction(func)) {
-            this._error(EEffectErrors.REDEFINE_FUNCTION, { funcName: definition.name });
+            _error(context, sourceNode, EEffectErrors.REDEFINE_FUNCTION, { funcName: definition.name });
         }
     }
 
@@ -2303,7 +2303,6 @@ function analyzeFunctionDeclOnlyDefinition(context: Context, program: ProgramSco
 function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode: IParseNode): FunctionDefInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    const globalScope = program.globalScope;
 
     const nameNode = children[children.length - 2];
     const name = nameNode.value;
@@ -2324,13 +2323,7 @@ function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode:
         semantics = analyzeSemantic(children[0]);
     }
 
-    // TODO: Check scope!!!!
-    program.push(EScopeType.k_Default);
-
     let paramList = analyzeParamList(context, program, children[children.length - 3]);
-
-    program.pop();
-
     let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList })
 
     checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
@@ -3228,7 +3221,7 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
                 globals = globals.concat(analyzeVarStructDecl(context, program, children[i]));
                 break;
             case 'FunctionDecl':
-                globals.push(analyzeFunctionDeclOnlyDefinition(context, program, children[i]));
+                globals.push(analyzeFunctionDecl(context, program, children[i]));
                 break;
         }
     }
