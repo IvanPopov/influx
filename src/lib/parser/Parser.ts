@@ -168,7 +168,6 @@ export class Parser implements IParser {
     //Input
 
     private _sSource: string;
-    // private _iIndex: number;
     private _sFileName: string;
 
     //Output

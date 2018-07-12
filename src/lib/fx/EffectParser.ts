@@ -59,11 +59,6 @@ export class EffectParser extends Parser {
         //cuttin qoutes
         let sIncludeURL: string = sFile.substr(1, sFile.length - 2);
 
-        // if (uri.parse(this.getParseFileName()).getScheme() === "blob:") {
-
-        //     sIncludeURL = deps.resolve(sIncludeURL, this.getParseFileName());
-        // }
-
         sFile = uri.resolve(sIncludeURL, this.getParseFileName());
 
         if (this._pIncludedFilesMap[sFile]) {
