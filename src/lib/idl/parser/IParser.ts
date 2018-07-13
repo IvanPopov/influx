@@ -1,5 +1,6 @@
 import { IMap } from '../IMap';
 import { ILoggerEntity } from '../ILogger';
+import { IDiagnosticReport } from '../../util/Diagnostics';
 
 export enum ENodeCreateMode {
     k_Default,
@@ -118,6 +119,8 @@ export interface ILexer {
     getIndex(): number;
     setSource(sSource: string): void;
     setIndex(iIndex: number): void;
+
+    getDiagnostics(): IDiagnosticReport;
 }
 
 export interface IParserState {

@@ -1,21 +1,11 @@
-import { ILoggerEntity, ISourceLocation } from '../idl/ILogger';
 import { IMap } from '../idl/IMap';
-import { ETokenType, ILexer, IParser, IToken, IPosition, IRange } from '../idl/parser/IParser';
-import { logger } from '../logger';
+import { ETokenType, ILexer, IToken, IPosition, IRange } from '../idl/parser/IParser';
 import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
-import { DiagnosticReport } from '../util/Diagnostics';
+import { Diagnostics, IDiagnosticReport } from '../util/Diagnostics';
 
 
-const LEXER_UNKNOWN_TOKEN = 2101;
-const LEXER_BAD_TOKEN = 2102;
-
-logger.registerCodeFamily(2000, 2199, "ParserSyntaxErrors");
-
-logger.registerCode(LEXER_UNKNOWN_TOKEN, "Unknown token: {tokenValue}");
-logger.registerCode(LEXER_BAD_TOKEN, "Bad token: {tokenValue}");
-
-interface ILexerError extends ISourceLocation {
-    code: number;
+interface ILexerDiagDesc {
+    file: string;
     token: IToken;
 }
 
@@ -25,9 +15,26 @@ enum ELexerErrors {
     InvalidToken = 2102
 };
 
-const LexerDiagnostics = {
-    [ELexerErrors.UnknownToken] : "Unknown token: {tokenValue}",
-    [ELexerErrors.InvalidToken] : "Invalid token: {tokenValue}"
+
+class LexerDiagnostics extends Diagnostics<ILexerDiagDesc> {
+    constructor() {
+        super("Lexer Diagnostics");
+    }
+
+    protected resolveFilename(desc: ILexerDiagDesc): string {
+        return desc.file;
+    }
+
+    protected resolveRange(desc: ILexerDiagDesc): IRange {
+        return desc.token.loc;
+    }
+
+    protected diagnosticMessages() {
+        return {
+            [ELexerErrors.UnknownToken] : "Unknown token: {token.value}",
+            [ELexerErrors.InvalidToken] : "Invalid token: {token.value}"
+        };
+    }
 }
 
 
@@ -36,21 +43,25 @@ export class Lexer implements ILexer {
     private _columnNumber: number;
     private _source: string;
     private _index: number;
-    private _parser: IParser;
     private _punctuatorsMap: IMap<string>;
     private _keywordsMap: IMap<string>;
     private _punctuatorsFirstSymbols: IMap<boolean>;
+    private _diag: LexerDiagnostics;
+    private _onResolveTypeID: (value: string) => boolean;
+    private _onResolveFilename: () => string; // optional, only for debug diagnostics
 
 
-    constructor(parser: IParser) {
+    constructor({ onResolveFilename, onResolveTypeId }: { onResolveFilename?: () => string; onResolveTypeId: (value: string) => boolean; }) {
         this._lineNumber = 0;
         this._columnNumber = 0;
         this._source = '';
         this._index = 0;
-        this._parser = parser;
         this._punctuatorsMap = <IMap<string>>{};
         this._keywordsMap = <IMap<string>>{};
         this._punctuatorsFirstSymbols = <IMap<boolean>>{};
+        this._diag = new LexerDiagnostics;
+        this._onResolveTypeID = onResolveTypeId;
+        this._onResolveFilename = onResolveFilename;
     }
 
 
@@ -58,6 +69,9 @@ export class Lexer implements ILexer {
         return "T_PUNCTUATOR_" + value.charCodeAt(0);
     }
 
+    getDiagnostics(): IDiagnosticReport {
+        return this._diag.resolve();
+    }
 
     addPunctuator(value: string, sName: string = Lexer.getPunctuatorName(value)): string {
         this._punctuatorsMap[value] = sName;
@@ -136,9 +150,8 @@ export class Lexer implements ILexer {
                 token = this.getNextToken();
                 break;
             default:
-                Lexer.error({
-                    ...this.loc(),
-                    code: LEXER_UNKNOWN_TOKEN,
+                this.critical(ELexerErrors.UnknownToken, {
+                    file: this._onResolveFilename(),
                     token: {
                         name: UNKNOWN_TOKEN,
                         value: ch + this._source[this._index + 1],
@@ -153,8 +166,8 @@ export class Lexer implements ILexer {
     }
 
 
-    private loc(): ISourceLocation {
-        return { line: this._lineNumber, file: this._parser.getParseFileName() };
+    private loc() {
+        return { line: this._lineNumber, file: this._onResolveFilename() };
     }
 
 
@@ -181,17 +194,8 @@ export class Lexer implements ILexer {
     }
 
 
-    private static error(pError: ILexerError): void {
-        const { token, code, file, line } = pError;
-        let info: Object = {
-            tokenValue: token.value,
-            tokenType: token.type
-        };
-
-        const logEntity: ILoggerEntity = <ILoggerEntity>{ code, info, location: { file, line } };
-        logger.error(logEntity);
-
-        throw new Error(code.toString());
+    private critical(code: number, desc: ILexerDiagDesc): void {
+        this._diag.critical(code, desc);
     }
 
 
@@ -357,9 +361,8 @@ export class Lexer implements ILexer {
             }
             value += ch;
 
-            Lexer.error({
-                ...this.loc(),
-                code: LEXER_BAD_TOKEN,
+            this.critical(ELexerErrors.InvalidToken, {
+                file: this._onResolveFilename(),
                 token: {
                     type: ETokenType.k_StringLiteral,
                     value: value,
@@ -478,9 +481,8 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             value += ch;
-            Lexer.error({
-                ...this.loc(),
-                code: LEXER_BAD_TOKEN,
+            this.critical(ELexerErrors.InvalidToken, {
+                file: this._onResolveFilename(),
                 token: {
                     type: ETokenType.k_NumericLiteral,
                     value: value,
@@ -526,7 +528,7 @@ export class Lexer implements ILexer {
                 };
             }
             else {
-                let sName = this._parser.isTypeId(value) ? T_TYPE_ID : T_NON_TYPE_ID;
+                let sName = this._onResolveTypeID(value) ? T_TYPE_ID : T_NON_TYPE_ID;
                 return <IToken>{
                     name: sName,
                     value: value,
@@ -542,9 +544,8 @@ export class Lexer implements ILexer {
                 ch = EOF;
             }
             value += ch;
-            Lexer.error({
-                ...this.loc(),
-                code: LEXER_BAD_TOKEN,
+            this.critical(ELexerErrors.InvalidToken, {
+                file: this._onResolveFilename(),
                 token: {
                     type: ETokenType.k_IdentifierLiteral,
                     value: value,
@@ -650,9 +651,8 @@ export class Lexer implements ILexer {
                     ch = EOF;
                 }
                 value += ch;
-                Lexer.error({
-                    ...this.loc(),
-                    code: LEXER_BAD_TOKEN,
+                this.critical(ELexerErrors.InvalidToken, {
+                    file: this._onResolveFilename(),
                     token: {
                         type: ETokenType.k_CommentLiteral,
                         value: value,

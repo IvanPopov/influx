@@ -299,7 +299,7 @@ export class Parser implements IParser {
     init(sGrammar: string, eMode: EParseMode = EParseMode.k_AllNode, eType: EParserType = EParserType.k_LALR): boolean {
         try {
             this._eType = eType;
-            this._pLexer = new Lexer(this);
+            this._pLexer = new Lexer({ onResolveFilename: () => this.getParseFileName(), onResolveTypeId: (val: string) => this.isTypeId(val) });
             this._eParseMode = eMode;
             this.generateRules(sGrammar);
             this.buildSyntaxTable();
@@ -399,6 +399,8 @@ export class Parser implements IParser {
                 }
             }
         } catch (e) {
+            console.log(e);
+            console.log(this._pLexer.getDiagnostics());
             this._sFileName = "stdin";
             return EParserCode.k_Error;
         }
