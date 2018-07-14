@@ -3,17 +3,14 @@ import * as React from 'react';
 import * as copy from 'copy-to-clipboard';
 
 import { EffectParser } from '../../lib/fx/EffectParser';
-import { EParseMode, EParserCode, EParserType, IParseTree, IParseNode, IPosition, IRange } from '../../lib/idl/parser/IParser';
+import { EParserCode, IParseTree, IParseNode, IRange } from '../../lib/idl/parser/IParser';
 import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
-import { IStoreState } from '../store';
-import { PARSER_SYNTAX_ERROR } from '../../lib/parser/Parser';
-import { ISourceLocation } from '../../lib/idl/ILogger';
-import { IMarkerDesc } from '../actions/ActionTypes';
 
 
 import * as Effect from '../../lib/fx/Effect';
 import { IParserParams } from '../store/IStoreState';
+import { DiagnosticException } from '../../lib/util/Diagnostics';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -111,7 +108,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private parse(props: IASTViewProps): void {
+    private async parse(props: IASTViewProps): Promise<void> {
         const { content, filename } = props;
         const { parser } = this.state.parser;
 
@@ -119,40 +116,47 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             return; 
         }
 
-        try {
-            parser.setParseFileName(filename);
-            parser.parse(content, this.handleParserResult);
-        } catch (e) {
-            alert("@unhandled_error");
-            console.error(e);
-        }
-    }
+        parser.setParseFileName(filename);
+        // All diagnostic exceptions should be already handled inside parser.
+        let res = await parser.parse(content);
 
-
-    @autobind
-    private handleParserResult(result: EParserCode, parser: EffectParser) {
-        const { props } = this;
-
-        if (result === EParserCode.k_Ok) {
+        if (res == EParserCode.k_Ok) {
             const ast = parser.getSyntaxTree();
             props.onComplete(ast);
             this.setState({ parseTree: ast });
-        } else {
-            this.handleParserError(parser);
+            return;
         }
+
+        //         const loc: IRange = err.info.loc;
+        //         this.props.onError(loc, err.message || null);
+        console.log(parser.getDiagnostics());
     }
 
 
-    private handleParserError(parser: EffectParser) {
-        let err = parser.getLastError();
+    // @autobind
+    // private handleParserResult(result: EParserCode, parser: EffectParser) {
+    //     const { props } = this;
 
-        if (err.code == PARSER_SYNTAX_ERROR) {
-            const loc: IRange = err.info.loc;
-            this.props.onError(loc, err.message || null);
-        } else {
-            console.error(err);
-        }
-    }
+    //     if (result === EParserCode.k_Ok) {
+    //         const ast = parser.getSyntaxTree();
+    //         props.onComplete(ast);
+    //         this.setState({ parseTree: ast });
+    //     } else {
+    //         this.handleParserError(parser);
+    //     }
+    // }
+
+
+    // private handleParserError(parser: EffectParser) {
+       
+
+    //     if (err.code == PARSER_SYNTAX_ERROR) {
+    //         const loc: IRange = err.info.loc;
+    //         this.props.onError(loc, err.message || null);
+    //     } else {
+    //         console.error(err);
+    //     }
+    // }
 
 
     private renderASTNode(node: IParseNode, idx = '0') {

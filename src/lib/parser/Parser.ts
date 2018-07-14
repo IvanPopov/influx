@@ -1,8 +1,8 @@
-import { logger } from "../logger";
-import { IRange } from "./../idl/parser/IParser";
+import { IRange, IPosition } from "./../idl/parser/IParser";
+import { IDiagnosticReport } from "./../util/Diagnostics";
 import { ISourceLocation, ILoggerEntity, ELogLevel } from "../idl/ILogger";
 import { isDef, isNull, isDefAndNotNull } from "../common";
-import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, IFinishFunc, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
+import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
 import { IMap, IDMap } from "../idl/IMap";
 import { IState } from "../idl/parser/IState";
 import { IItem } from "../idl/parser/IItem";
@@ -12,118 +12,74 @@ import { ParseTree } from "./ParseTree";
 import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, END_SYMBOL, START_SYMBOL, FLAG_RULE_CREATE_NODE, END_POSITION, UNUSED_SYMBOL, INLINE_COMMENT_SYMBOL } from "./symbols";
 import { Item } from "./Item";
 import { State } from "./State";
+import { Diagnostics, DiagnosticException } from "../util/Diagnostics";
 
-export const PARSER_GRAMMAR_ADD_OPERATION = 2001;
-export const PARSER_GRAMMAR_ADD_STATE_LINK = 2002;
-export const PARSER_GRAMMAR_UNEXPECTED_SYMBOL = 2003;
-export const PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME = 2004;
-export const PARSER_GRAMMAR_BAD_KEYWORD = 2005;
-export const PARSER_SYNTAX_ERROR = 2051;
 
-interface IError {
-    code: number;
-}
 
-interface IGrammarAddOperationError extends IError {
-    stateIndex: number;
-    grammarSymbol: string;
-    oldOperation: IOperation;
-    newOperation: IOperation;
-}
+export enum EParserErrors {
+    GrammarAddOperation = 2001,
+    GrammarAddStateLink,
+    GrammarUnexpectedSymbol,
+    GrammarInvalidAdditionalFuncName,
+    GrammarInvalidKeyword,
+    SyntaxError = 2051,
 
-interface IGrammarAddStateLinkError extends IError {
-    stateIndex: number;
-    oldNextStateIndex: IState;
-    newNextStateIndex: number;
-    grammarSymbol: string;
-}
+    GeneralCouldNotReadFile = 2200
+};
 
-interface IGrammarUnexpectedSymbolError extends IError {
-    unexpectedSymbol: string;
-    expectedSymbol: string;
-    grammarLine: number;
-}
 
-interface IGrammarBadAdditionalFuncName extends IError {
-    grammarLine: number;
-}
-
-interface IGrammarBadKeyword extends IError {
-    grammarLine: number;
-    badKeyword: string;
-}
-
-interface ISyntaxError extends IError {
-    token: IToken;
-    filename: string;
-}
-
-type IParserError = IGrammarAddOperationError | IGrammarAddStateLinkError | IGrammarBadKeyword | 
-    IGrammarUnexpectedSymbolError | IGrammarBadAdditionalFuncName | ISyntaxError;
-
-logger.registerCode(PARSER_GRAMMAR_ADD_OPERATION, "Grammar not LALR(1)! Cannot to generate syntax table. Add operation error.\n" +
-    "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
-    "Old operation: {oldOperation}\n" +
-    "New operation: {newOperation}\n" +
-    "For more info init parser in debug-mode and see syntax table and list of states.");
-
-logger.registerCode(PARSER_GRAMMAR_ADD_STATE_LINK, "Grammar not LALR(1)! Cannot to generate syntax table. Add state link error.\n" +
-    "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
-    "Old next state: {oldNextStateIndex}\n" +
-    "New next state: {newNextStateIndex}\n" +
-    "For more info init parser in debug-mode and see syntax table and list of states.");
-
-logger.registerCode(PARSER_GRAMMAR_UNEXPECTED_SYMBOL, "Grammar error. Can`t generate rules from grammar\n" +
-    "Unexpected symbol: {unexpectedSymbol}\n" +
-    "Expected: {expectedSymbol}");
-
-logger.registerCode(PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, "Grammar error. Empty additional function name.");
-logger.registerCode(PARSER_GRAMMAR_BAD_KEYWORD, "Grammar error. Bad keyword: {badKeyword}\n" +
-    "All keyword must be define in lexer rule block.");
-
-logger.registerCode(PARSER_SYNTAX_ERROR, "Syntax error during parsing. Token: '{tokenValue}'\n" +
-    "Line: {line}. Column: {column}.");
-
-function sourceLocationToString(pLocation: ISourceLocation): string {
-    var sLocation: string = "[" + pLocation.file + ":" + pLocation.line.toString() + "]: ";
-    return sLocation;
-}
-
-class SyntaxError extends Error {
-    // filename: string;
-    // line: number;
-    // column: number;
-    // tokenValue: string;
-    logEntry: ILoggerEntity;
-
-    constructor(message, logEntry: ILoggerEntity) {
-        super(message);
-        this.name = 'SyntaxError';
-        this.logEntry = logEntry;
+export class ParserDiagnostics extends Diagnostics<IMap<any>> {
+    constructor() {
+        super("Parser Diagnostics", 'P');
     }
-}
 
 
-function syntaxErrorLogRoutine(pLogEntity: ILoggerEntity): void {
-    var sPosition: string = sourceLocationToString(pLogEntity.location);
-    var sError: string = "Code: " + pLogEntity.code.toString() + ". ";
-    var pParseMessage: string[] = (<string>pLogEntity.message).split(/\{(\w+)\}/);
-    var pInfo: any = pLogEntity.info;
+    protected resolveFilename(code: number, desc: IMap<any>): string {
+        return desc.file;
+    }
 
-    for (var i = 0; i < pParseMessage.length; i++) {
-        if (isDef(pInfo[pParseMessage[i]])) {
-            pParseMessage[i] = <string><any>pInfo[pParseMessage[i]];
+
+    protected resolveRange(code: number, desc: IMap<any>): IRange {
+        if (code == EParserErrors.SyntaxError) {
+            return desc.token.loc;
         }
+        return null;
     }
 
-    var sMessage = sPosition + sError + pParseMessage.join("");
 
-    console.error.call(console, sMessage);
-    // throw new SyntaxError(sMessage, pLogEntity);
+    protected resolvePosition(code: number, desc: IMap<any>): IPosition {
+        console.assert(code != EParserErrors.SyntaxError);
+        return { line: desc.line, column: 0 };
+    }
+
+    
+    protected diagnosticMessages() {
+        return {
+            [EParserErrors.GrammarAddOperation]: "Grammar not LALR(1)! Cannot to generate syntax table. Add operation error.\n" +
+                "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
+                "Old operation: {oldOperation}\n" +
+                "New operation: {newOperation}\n" +
+                "For more info init parser in debug-mode and see syntax table and list of states.",
+            [EParserErrors.GrammarAddStateLink]: "Grammar not LALR(1)! Cannot to generate syntax table. Add state link error.\n" +
+                "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
+                "Old next state: {oldNextStateIndex}\n" +
+                "New next state: {newNextStateIndex}\n" +
+                "For more info init parser in debug-mode and see syntax table and list of states.",
+            [EParserErrors.GrammarUnexpectedSymbol]: "Grammar error. Can`t generate rules from grammar\n" +
+                "Unexpected symbol: {unexpectedSymbol}\n" +
+                "Expected: {expectedSymbol}",
+            [EParserErrors.GrammarInvalidAdditionalFuncName]: "Grammar error. Empty additional function name.",
+            [EParserErrors.GrammarInvalidKeyword]: "Grammar error. Bad keyword: {badKeyword}\n" +
+                "All keyword must be define in lexer rule block.",
+            [EParserErrors.SyntaxError]: "Syntax error during parsing. Token: '{token.value}'\n" +
+                "Line: {token.loc.start.line}. Column: {token.loc.start.column}.",
+            [EParserErrors.GeneralCouldNotReadFile]: "Could not read file '{target}'."
+        };
+    }
 }
 
 
-logger.setCodeFamilyRoutine("ParserSyntaxErrors", syntaxErrorLogRoutine, ELogLevel.ERROR);
+////
 
 interface IOperation {
     type: EOperationType;
@@ -167,128 +123,115 @@ interface IAdditionalFuncInfo {
 export class Parser implements IParser {
     //Input
 
-    private _sSource: string;
-    private _sFileName: string;
+    private _source: string;
+    private _filename: string;
 
     //Output
 
-    private _pSyntaxTree: IParseTree | null;
-    private _pTypeIdMap: IMap<boolean> | null;
+    private _syntaxTree: IParseTree | null;
+    private _typeIdMap: IMap<boolean> | null;
 
     //Process params
 
-    private _pLexer: ILexer | null;
-    private _pStack: number[];
-    private _pToken: IToken | null;
+    private _lexer: ILexer | null;
+    private _stack: number[];
+    private _token: IToken | null;
 
-    //For async loading of files work fine
-
-    private _fnFinishCallback: IFinishFunc | null;
 
     //Grammar Info
 
-    private _pSymbolMap: IMap<boolean>;
-    private _pSyntaxTable: IOperationDMap | null;
-    private _pReduceOperationsMap: IOperationMap | null;
-    private _pShiftOperationsMap: IOperationMap | null;
-    private _pSuccessOperation: IOperation | null;
+    private _symbolMap: IMap<boolean>;
+    private _syntaxTable: IOperationDMap | null;
+    private _reduceOperationsMap: IOperationMap | null;
+    private _shiftOperationsMap: IOperationMap | null;
+    private _successOperation: IOperation | null;
 
-    private _pFirstTerminalsDMap: IDMap<boolean> | null;
-    private _pFollowTerminalsDMap: IDMap<boolean> | null;
+    private _firstTerminalsDMap: IDMap<boolean> | null;
+    private _followTerminalsDMap: IDMap<boolean> | null;
 
-    private _pRulesDMap: IRuleDMap | null;
-    private _pStateList: IState[] | null;
+    private _rulesDMap: IRuleDMap | null;
+    private _stateList: IState[] | null;
     private _nRules: number;
 
-    private _pAdditionalFuncInfoList: IAdditionalFuncInfo[] | null;
-    private _pAdditionalFunctionsMap: IRuleFunctionMap | null;
+    private _additionalFuncInfoList: IAdditionalFuncInfo[] | null;
+    private _additionalFunctionsMap: IRuleFunctionMap | null;
 
-    private _pAdidtionalFunctByStateDMap: IRuleFunctionDMap | null;
+    private _adidtionalFunctByStateDMap: IRuleFunctionDMap | null;
 
     private _eType: EParserType;
 
-    private _pGrammarSymbols: IMap<string>;
+    private _grammarSymbols: IMap<string>;
 
     //Additioanal info
 
-    private _pRuleCreationModeMap: IMap<number> | null;
-    private _eParseMode: EParseMode;
-
-    // private _isSync: boolean;
+    private _ruleCreationModeMap: IMap<number> | null;
+    private _parseMode: EParseMode;
 
     //Temp
 
-    private _pStatesTempMap: IMap<IState> | null;
-    private _pBaseItemList: IItem[] | null;
-    private _pExpectedExtensionDMap: IDMap<boolean> | null;
+    private _statesTempMap: IMap<IState> | null;
+    private _baseItemList: IItem[] | null;
+    private _expectedExtensionDMap: IDMap<boolean> | null;
 
-
-    // todo: rewrite error handling mechanics!
-    private _pLastError: ILoggerEntity = null;
+    private _diag: ParserDiagnostics;
 
     constructor() {
-        this._sSource = "";
+        this._source = "";
         // this._iIndex = 0;
 
-        this._pSyntaxTree = null;
-        this._pTypeIdMap = null;
+        this._syntaxTree = null;
+        this._typeIdMap = null;
 
-        this._pLexer = null;
-        this._pStack = <number[]>[];
-        this._pToken = null;
+        this._lexer = null;
+        this._stack = <number[]>[];
+        this._token = null;
 
-        this._fnFinishCallback = null;
+        this._symbolMap = <IMap<boolean>><any>{ END_SYMBOL: true };
+        this._syntaxTable = null;
+        this._reduceOperationsMap = null;
+        this._shiftOperationsMap = null;
+        this._successOperation = null;
 
-        this._pSymbolMap = <IMap<boolean>><any>{ END_SYMBOL: true };
-        this._pSyntaxTable = null;
-        this._pReduceOperationsMap = null;
-        this._pShiftOperationsMap = null;
-        this._pSuccessOperation = null;
-
-        this._pFirstTerminalsDMap = null;
-        this._pFollowTerminalsDMap = null;
-        this._pRulesDMap = null;
-        this._pStateList = null;
+        this._firstTerminalsDMap = null;
+        this._followTerminalsDMap = null;
+        this._rulesDMap = null;
+        this._stateList = null;
         this._nRules = 0;
-        this._pAdditionalFuncInfoList = null;
-        this._pAdditionalFunctionsMap = null;
-        this._pAdidtionalFunctByStateDMap = null;
+        this._additionalFuncInfoList = null;
+        this._additionalFunctionsMap = null;
+        this._adidtionalFunctByStateDMap = null;
 
         this._eType = EParserType.k_LR0;
 
-        this._pRuleCreationModeMap = null;
-        this._eParseMode = EParseMode.k_AllNode;
+        this._ruleCreationModeMap = null;
+        this._parseMode = EParseMode.k_AllNode;
 
         // this._isSync = false;
 
-        this._pStatesTempMap = null;
-        this._pBaseItemList = null;
+        this._statesTempMap = null;
+        this._baseItemList = null;
 
-        this._pExpectedExtensionDMap = null;
+        this._expectedExtensionDMap = null;
 
-        this._sFileName = "stdin";
-    }
-
-
-    getLastError(): ILoggerEntity {
-        return this._pLastError;
+        this._filename = "stdin";
+        this._diag = new ParserDiagnostics;
     }
 
 
     isTypeId(sValue: string): boolean {
-        return !!(this._pTypeIdMap[sValue]);
+        return !!(this._typeIdMap[sValue]);
     }
 
-    returnCode(pNode: IParseNode): string {
-        if (pNode) {
-            if (pNode.value) {
-                return pNode.value + " ";
+    returnCode(node: IParseNode): string {
+        if (node) {
+            if (node.value) {
+                return node.value + " ";
             }
-            else if (pNode.children) {
+            else if (node.children) {
                 var sCode: string = "";
                 var i: number = 0;
-                for (i = pNode.children.length - 1; i >= 0; i--) {
-                    sCode += this.returnCode(pNode.children[i]);
+                for (i = node.children.length - 1; i >= 0; i--) {
+                    sCode += this.returnCode(node.children[i]);
                 }
                 return sCode;
             }
@@ -296,98 +239,88 @@ export class Parser implements IParser {
         return "";
     }
 
-    init(sGrammar: string, eMode: EParseMode = EParseMode.k_AllNode, eType: EParserType = EParserType.k_LALR): boolean {
+    init(grammar: string, mode: EParseMode = EParseMode.k_AllNode, type: EParserType = EParserType.k_LALR): boolean {
         try {
-            this._eType = eType;
-            this._pLexer = new Lexer({ onResolveFilename: () => this.getParseFileName(), onResolveTypeId: (val: string) => this.isTypeId(val) });
-            this._eParseMode = eMode;
-            this.generateRules(sGrammar);
+            this._eType = type;
+            this._lexer = new Lexer({
+                onResolveFilename: () => this.getParseFileName(),
+                onResolveTypeId: (val: string) => this.isTypeId(val)
+            });
+            this._parseMode = mode;
+            this.generateRules(grammar);
             this.buildSyntaxTable();
             this.generateFunctionByStateMap();
-            if (!bf.testAll(eMode, EParseMode.k_DebugMode)) {
+            if (!bf.testAll(mode, EParseMode.k_DebugMode)) {
                 this.clearMem();
             }
-            return true;
+        } catch (e) {
+            if (e instanceof DiagnosticException) {
+                return false;
+            }
+            throw e;
         }
-        catch (e) {
-            logger.log(e.stack);
-            // error("Could`not initialize parser. Error with code has occurred: " + e.message + ". See log for more info.");
-            return false;
-        }
+
+        return true;
     }
 
-    parse(sSource: string, fnFinishCallback: IFinishFunc = null): EParserCode {
+
+    async parse(source: string): Promise<EParserCode> {
         try {
             this.defaultInit();
-            this._sSource = sSource;
-            this._pLexer.init(sSource);
+            this._source = source;
+            this._lexer.init(source);
 
-            this._fnFinishCallback = fnFinishCallback;
+            var tree = this._syntaxTree;
+            var stack = this._stack;
+            var syntaxTable = this._syntaxTable;
 
-            var pTree: IParseTree = this._pSyntaxTree;
-            var pStack: number[] = this._pStack;
-            var pSyntaxTable: IOperationDMap = this._pSyntaxTable;
+            var isStop = false;
+            var isError = false;
+            var token = this.readToken();
+            var stateIndex = 0;
 
-            var isStop: boolean = false;
-            var isError: boolean = false;
-            var isPause: boolean = false;
-            var pToken: IToken = this.readToken();
-
-            var pOperation: IOperation;
-            var iRuleLength: number;
-
-            var eAdditionalOperationCode: EOperationType;
-            var iStateIndex: number = 0;
+            var operation: IOperation;
+            var ruleLength: number;
+            var additionalOperationCode: EOperationType;
 
             while (!isStop) {
-                pOperation = pSyntaxTable[pStack[pStack.length - 1]][pToken.name];
-                if (isDef(pOperation)) {
-                    switch (pOperation.type) {
+                operation = syntaxTable[stack[stack.length - 1]][token.name];
+                if (isDef(operation)) {
+                    switch (operation.type) {
                         case EOperationType.k_Success:
                             isStop = true;
                             break;
 
                         case EOperationType.k_Shift:
 
-                            iStateIndex = pOperation.index;
-                            pStack.push(iStateIndex);
-                            pTree.addToken(pToken);
+                            stateIndex = operation.index;
+                            stack.push(stateIndex);
+                            tree.addToken(token);
 
-                            eAdditionalOperationCode = this.operationAdditionalAction(iStateIndex, pToken.name);
+                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
 
-                            if (eAdditionalOperationCode === EOperationType.k_Error) {
+                            if (additionalOperationCode === EOperationType.k_Error) {
                                 isError = true;
                                 isStop = true;
                             }
-                            else if (eAdditionalOperationCode === EOperationType.k_Pause) {
-                                this._pToken = null;
-                                isStop = true;
-                                isPause = true;
+                            else if (additionalOperationCode === EOperationType.k_Ok) {
+                                token = this.readToken();
                             }
-                            else if (eAdditionalOperationCode === EOperationType.k_Ok) {
-                                pToken = this.readToken();
-                            }
-
                             break;
 
                         case EOperationType.k_Reduce:
 
-                            iRuleLength = pOperation.rule.right.length;
-                            pStack.length -= iRuleLength;
-                            iStateIndex = pSyntaxTable[pStack[pStack.length - 1]][pOperation.rule.left].index;
-                            pStack.push(iStateIndex);
-                            pTree.reduceByRule(pOperation.rule, this._pRuleCreationModeMap[pOperation.rule.left]);
+                            ruleLength = operation.rule.right.length;
+                            stack.length -= ruleLength;
+                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].index;
+                            stack.push(stateIndex);
+                            tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
 
-                            eAdditionalOperationCode = this.operationAdditionalAction(iStateIndex, pOperation.rule.left);
+                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
-                            if (eAdditionalOperationCode === EOperationType.k_Error) {
+                            if (additionalOperationCode === EOperationType.k_Error) {
                                 isError = true;
                                 isStop = true;
-                            }
-                            else if (eAdditionalOperationCode === EOperationType.k_Pause) {
-                                this._pToken = pToken;
-                                isStop = true;
-                                isPause = true;
                             }
 
                             break;
@@ -399,279 +332,245 @@ export class Parser implements IParser {
                 }
             }
         } catch (e) {
-            console.log(e);
-            console.log(this._pLexer.getDiagnostics());
-            this._sFileName = "stdin";
-            return EParserCode.k_Error;
-        }
+            if (e instanceof DiagnosticException) {
+                return EParserCode.k_Error;
+            }
 
-        if (isPause) {
-            return EParserCode.k_Pause;
+            throw e;
         }
 
         if (!isError) {
-            pTree.finishTree();
-            if (!isNull(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Ok, this);
-            }
-            this._sFileName = "stdin";
+            tree.finishTree();
             return EParserCode.k_Ok;
         }
         else {
-            this.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
-            if (!isNull(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Error, this);
-            }
-            this._sFileName = "stdin";
+            this.syntaxError(EParserErrors.SyntaxError, token);
             return EParserCode.k_Error;
         }
     }
 
-    setParseFileName(sFileName: string): void {
-        this._sFileName = sFileName;
+    
+    setParseFileName(filename: string): void {
+        this._filename = filename;
     }
 
+    
     getParseFileName(): string {
-        return this._sFileName;
+        return this._filename;
     }
-
-    pause(): EParserCode {
-        return EParserCode.k_Pause;
-    }
-
-    resume(): EParserCode {
-        return this.resumeParse();
-    }
+    
 
     printStates(isBaseOnly: boolean = true): void {
-        if (!isDef(this._pStateList)) {
-            logger.log("It`s impossible to print states. You must init parser in debug-mode");
+        if (!isDef(this._stateList)) {
+            console.warn("It`s impossible to print states. You must init parser in debug-mode");
             return;
         }
-        var sMsg: string = "\n" + this.statesToString(isBaseOnly);
-        logger.log(sMsg);
+        var mesg: string = "\n" + this.statesToString(isBaseOnly);
+        console.log(mesg);
     }
 
-    printState(iStateIndex: number, isBaseOnly: boolean = true): void {
-        if (!isDef(this._pStateList)) {
-            logger.log("It`s impossible to print states. You must init parser in debug-mode");
+    
+    printState(stateIndex: number, isBaseOnly: boolean = true): void {
+        if (!isDef(this._stateList)) {
+            console.log("It`s impossible to print states. You must init parser in debug-mode");
             return;
         }
 
-        var pState: IState = this._pStateList[iStateIndex];
-        if (!isDef(pState)) {
-            logger.log("Can not print stete with index: " + iStateIndex.toString());
+        var state: IState = this._stateList[stateIndex];
+        if (!isDef(state)) {
+            console.log("Can not print stete with index: " + stateIndex.toString());
             return;
         }
 
-        var sMsg: string = "\n" + pState.toString(isBaseOnly);
-        logger.log(sMsg);
+        var mesg: string = "\n" + state.toString(isBaseOnly);
+        console.log(mesg);
     }
+
 
     getGrammarSymbols(): IMap<string> {
-        return this._pGrammarSymbols;
+        return this._grammarSymbols;
     }
+
 
     getSyntaxTree(): IParseTree | null {
-        return this._pSyntaxTree;
+        return this._syntaxTree;
     }
 
-    _saveState(): IParserState {
+
+    protected saveState(): IParserState {
         return <IParserState>{
-            source: this._sSource,
-            index: (<ILexer>this._pLexer).getIndex(),
-            fileName: this._sFileName,
-            tree: this._pSyntaxTree,
-            types: this._pTypeIdMap,
-            stack: this._pStack,
-            token: this._pToken,
-            fnCallback: this._fnFinishCallback
+            source: this._source,
+            index: (<ILexer>this._lexer).getIndex(),
+            fileName: this._filename,
+            tree: this._syntaxTree,
+            types: this._typeIdMap,
+            stack: this._stack,
+            token: this._token
         };
     }
 
-    _loadState(pState: IParserState): void {
-        this._sSource = pState.source;
-        // this._iIndex = pState.index;
-        this._sFileName = pState.fileName;
-        this._pSyntaxTree = pState.tree;
-        this._pTypeIdMap = pState.types;
-        this._pStack = pState.stack;
-        this._pToken = pState.token;
-        this._fnFinishCallback = pState.fnCallback;
 
-        this._pLexer.setSource(pState.source);
-        this._pLexer.setIndex(pState.index);
+    protected loadState(state: IParserState): void {
+        this._source = state.source;
+        // this._iIndex = state.index;
+        this._filename = state.fileName;
+        this._syntaxTree = state.tree;
+        this._typeIdMap = state.types;
+        this._stack = state.stack;
+        this._token = state.token;
+
+        this._lexer.setSource(state.source);
+        this._lexer.setIndex(state.index);
     }
+
 
     addAdditionalFunction(sFuncName: string, fnRuleFunction: IRuleFunction): void {
-        if (isNull(this._pAdditionalFunctionsMap)) {
-            this._pAdditionalFunctionsMap = <IRuleFunctionMap>{};
+        if (isNull(this._additionalFunctionsMap)) {
+            this._additionalFunctionsMap = <IRuleFunctionMap>{};
         }
-        this._pAdditionalFunctionsMap[sFuncName] = fnRuleFunction;
+        this._additionalFunctionsMap[sFuncName] = fnRuleFunction;
     }
+
 
     addTypeId(sIdentifier: string): void {
-        if (isNull(this._pTypeIdMap)) {
-            this._pTypeIdMap = <IMap<boolean>>{};
+        if (isNull(this._typeIdMap)) {
+            this._typeIdMap = <IMap<boolean>>{};
         }
-        this._pTypeIdMap[sIdentifier] = true;
+        this._typeIdMap[sIdentifier] = true;
     }
 
-    defaultInit(): void {
-        // this._iIndex = 0;
-        this._pStack = [0];
-        this._pSyntaxTree = new ParseTree();
-        this._pTypeIdMap = <IMap<boolean>>{};
 
-        this._pSyntaxTree.setOptimizeMode(bf.testAll(this._eParseMode, EParseMode.k_Optimize));
+    protected defaultInit(): void {
+        this._stack = [0];
+        this._syntaxTree = new ParseTree();
+        this._typeIdMap = <IMap<boolean>>{};
+
+        this._syntaxTree.setOptimizeMode(bf.testAll(this._parseMode, EParseMode.k_Optimize));
     }
 
-    private error(pError: IParserError): void {
-        const pLocation: ISourceLocation = <ISourceLocation>{};
 
-        const pInfo: any = {
-            tokenValue: null,
-            loc: null,
-            stateIndex: null,
-            oldNextStateIndex: null,
-            newNextStateIndex: null,
-            grammarSymbol: null,
-            newOperation: null,
-            oldOperation: null,
-            expectedSymbol: null,
-            unexpectedSymbol: null,
-            badKeyword: null
-        };
-
-        const eCode = pError.code;
-        const pLogEntity: ILoggerEntity = <ILoggerEntity>{ code: eCode, info: pInfo, location: pLocation };
-
-        if (eCode === PARSER_SYNTAX_ERROR) {
-            const { token, filename } = (pError as ISyntaxError);
-
-            pInfo.tokenValue = token.value;
-            pInfo.loc = { ...token.loc };
-
-            pLocation.file = filename;
-            pLocation.line = pInfo.loc.start.line;
-        }
-        else if (eCode === PARSER_GRAMMAR_ADD_OPERATION) {
-            const { stateIndex, grammarSymbol, oldOperation, newOperation } = (pError as IGrammarAddOperationError); 
-
-            pInfo.stateIndex = stateIndex;
-            pInfo.grammarSymbol = grammarSymbol;
-            pInfo.oldOperation = Parser.operationToString(oldOperation);
-            pInfo.newOperation = Parser.operationToString(newOperation);
-
-            pLocation.file = "GRAMMAR";
-            pLocation.line = 0;
-        }
-        else if (eCode === PARSER_GRAMMAR_ADD_STATE_LINK) {
-            const { stateIndex, grammarSymbol, oldNextStateIndex, newNextStateIndex } = (pError as IGrammarAddStateLinkError);
-
-            pInfo.stateIndex = stateIndex;
-            pInfo.grammarSymbol = grammarSymbol;
-            pInfo.oldNextStateIndex = oldNextStateIndex;
-            pInfo.newNextStateIndex = newNextStateIndex;
-
-            pLocation.file = "GRAMMAR";
-            pLocation.line = 0;
-        }
-        else if (eCode === PARSER_GRAMMAR_UNEXPECTED_SYMBOL) {
-            const { grammarLine, expectedSymbol, unexpectedSymbol } = (pError as IGrammarUnexpectedSymbolError);
-
-            pInfo.expectedSymbol = expectedSymbol;
-            pInfo.unexpectedSymbol = unexpectedSymbol;
-
-            pLocation.file = "GRAMMAR";
-            pLocation.line = grammarLine || 0;
-        }
-        else if (eCode === PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME) {
-            const { grammarLine } = (pError as IGrammarBadAdditionalFuncName);
-            pLocation.file = "GRAMMAR";
-            pLocation.line = grammarLine || 0;
-        }
-        else if (eCode === PARSER_GRAMMAR_BAD_KEYWORD) {
-            const { grammarLine, badKeyword } = (pError as IGrammarBadKeyword);
-            pInfo.badKeyword = badKeyword;
-
-            pLocation.file = "GRAMMAR";
-            pLocation.line = grammarLine || 0;
-        }
-
-        this._pLastError = pLogEntity;
-
-        logger.error(pLogEntity);
+    private syntaxError(code: number, token: IToken) {
+        this.critical(code, { file: this.getParseFileName(), token });
     }
+
+
+    private grammarError(code: number, desc) {
+        let file = "grammar";
+
+        switch (code) {
+            case EParserErrors.GrammarAddOperation:
+                {
+                    const { stateIndex, grammarSymbol, oldOperation, newOperation } = desc;
+                    this.critical(code, {
+                        file, line: 0, stateIndex, grammarSymbol,
+                        oldOperation: Parser.operationToString(oldOperation),
+                        newOperation: Parser.operationToString(newOperation)
+                    });
+                }
+                break;
+            case EParserErrors.GrammarAddStateLink:
+                {
+                    const { stateIndex, grammarSymbol, oldNextStateIndex, newNextStateIndex } = desc;
+                    this.critical(code, { file, line: 0, stateIndex, grammarSymbol, oldNextStateIndex, newNextStateIndex });
+                }
+                break;
+            case EParserErrors.GrammarUnexpectedSymbol:
+                {
+                    const { grammarLine, expectedSymbol, unexpectedSymbol } = desc;
+                    this.critical(code, { file, line: grammarLine, expectedSymbol, unexpectedSymbol });
+                }
+                break;
+            case EParserErrors.GrammarInvalidAdditionalFuncName:
+                {
+                    const { grammarLine } = desc;
+                    this.critical(code, { file, line: grammarLine });
+                }
+                break;
+            case EParserErrors.GrammarInvalidKeyword:
+                {
+                    const { grammarLine, badKeyword } = desc;
+                    this.critical(code, { file, line: grammarLine, badKeyword })
+                }
+                break;
+            default:
+                throw "invalid case!!!!";
+        }
+    }
+
 
     private clearMem(): void {
-        delete this._pFirstTerminalsDMap;
-        delete this._pFollowTerminalsDMap;
-        delete this._pRulesDMap;
-        delete this._pStateList;
-        delete this._pReduceOperationsMap;
-        delete this._pShiftOperationsMap;
-        delete this._pSuccessOperation;
-        delete this._pStatesTempMap;
-        delete this._pBaseItemList;
-        delete this._pExpectedExtensionDMap;
+        delete this._firstTerminalsDMap;
+        delete this._followTerminalsDMap;
+        delete this._rulesDMap;
+        delete this._stateList;
+        delete this._reduceOperationsMap;
+        delete this._shiftOperationsMap;
+        delete this._successOperation;
+        delete this._statesTempMap;
+        delete this._baseItemList;
+        delete this._expectedExtensionDMap;
     }
 
-    private hasState(pState: IState, eType: EParserType) {
-        var pStateList: IState[] = this._pStateList;
-        var i: number = 0;
 
-        for (i = 0; i < pStateList.length; i++) {
-            if (pStateList[i].isEqual(pState, eType)) {
-                return pStateList[i];
+    private hasState(state: IState, eType: EParserType) {
+        let stateList: IState[] = this._stateList;
+
+        for (let i = 0; i < stateList.length; i++) {
+            if (stateList[i].isEqual(state, eType)) {
+                return stateList[i];
             }
         }
 
         return null;
     }
 
-    private isTerminal(sSymbol: string): boolean {
-        return !(this._pRulesDMap[sSymbol]);
+    
+    private isTerminal(symbolVal: string): boolean {
+        return !(this._rulesDMap[symbolVal]);
     }
 
-    private pushState(pState: IState): void {
-        pState.setIndex(this._pStateList.length);
-        this._pStateList.push(pState);
+
+    private pushState(state: IState): void {
+        state.setIndex(this._stateList.length);
+        this._stateList.push(state);
     }
 
-    private pushBaseItem(pItem: IItem): void {
-        pItem.setIndex(this._pBaseItemList.length);
-        this._pBaseItemList.push(pItem);
+
+    private pushBaseItem(item: IItem): void {
+        item.setIndex(this._baseItemList.length);
+        this._baseItemList.push(item);
     }
 
-    private tryAddState(pState: IState, eType: EParserType): IState {
-        var pRes = this.hasState(pState, eType);
 
-        if (isNull(pRes)) {
+    private tryAddState(state: IState, eType: EParserType): IState {
+        var res = this.hasState(state, eType);
+
+        if (isNull(res)) {
             if (eType === EParserType.k_LR0) {
-                var pItems = pState.getItems();
+                var pItems = state.getItems();
                 for (var i = 0; i < pItems.length; i++) {
                     this.pushBaseItem(pItems[i]);
                 }
             }
 
-            this.pushState(pState);
-            this.closure(pState, eType);
+            this.pushState(state);
+            this.closure(state, eType);
 
-            return pState;
+            return state;
         }
 
-        return pRes;
+        return res;
     }
 
-    private hasEmptyRule(sSymbol: string): boolean {
-        if (this.isTerminal(sSymbol)) {
+
+    private hasEmptyRule(symbolVal: string): boolean {
+        if (this.isTerminal(symbolVal)) {
             return false;
         }
 
-        var pRulesDMap: IRuleDMap = this._pRulesDMap;
-        for (var i in pRulesDMap[sSymbol]) {
-            if (pRulesDMap[sSymbol][i].right.length === 0) {
+        var pRulesDMap: IRuleDMap = this._rulesDMap;
+        for (var i in pRulesDMap[symbolVal]) {
+            if (pRulesDMap[symbolVal][i].right.length === 0) {
                 return true;
             }
         }
@@ -679,77 +578,77 @@ export class Parser implements IParser {
         return false;
     }
 
-    private pushInSyntaxTable(iIndex: number, sSymbol: string, pOperation: IOperation): void {
-        var pSyntaxTable: IOperationDMap = this._pSyntaxTable;
-        if (!pSyntaxTable[iIndex]) {
-            pSyntaxTable[iIndex] = <IOperationMap>{};
+
+    private pushInSyntaxTable(iIndex: number, symbolVal: string, operation: IOperation): void {
+        var syntaxTable: IOperationDMap = this._syntaxTable;
+        if (!syntaxTable[iIndex]) {
+            syntaxTable[iIndex] = <IOperationMap>{};
         }
-        if (isDef(pSyntaxTable[iIndex][sSymbol])) {
-            this.error({
-                code: PARSER_GRAMMAR_ADD_OPERATION,
+        if (isDef(syntaxTable[iIndex][symbolVal])) {
+            this.grammarError(EParserErrors.GrammarAddOperation, {
                 stateIndex: iIndex,
-                grammarSymbol: this.convertGrammarSymbol(sSymbol),
-                oldOperation: this._pSyntaxTable[iIndex][sSymbol],
-                newOperation: pOperation
+                grammarSymbol: this.convertGrammarSymbol(symbolVal),
+                oldOperation: this._syntaxTable[iIndex][symbolVal],
+                newOperation: operation
             });
-        }``
-        pSyntaxTable[iIndex][sSymbol] = pOperation;
+        }
+        syntaxTable[iIndex][symbolVal] = operation;
     }
 
-    private addStateLink(pState: IState, pNextState: IState, sSymbol: string): void {
-        var isAddState: boolean = pState.addNextState(sSymbol, pNextState);
+
+    private addStateLink(state: IState, pNextState: IState, symbolVal: string): void {
+        var isAddState: boolean = state.addNextState(symbolVal, pNextState);
         if (!isAddState) {
-            this.error({
-                code: PARSER_GRAMMAR_ADD_STATE_LINK,
-                stateIndex: pState.getIndex(),
-                oldNextStateIndex: pState.getNextStateBySymbol(sSymbol),
+            this.grammarError(EParserErrors.GrammarAddStateLink, {
+                stateIndex: state.getIndex(),
+                oldNextStateIndex: state.getNextStateBySymbol(symbolVal),
                 newNextStateIndex: pNextState.getIndex(),
-                grammarSymbol: this.convertGrammarSymbol(sSymbol)
+                grammarSymbol: this.convertGrammarSymbol(symbolVal)
             });
         }
     }
 
-    private firstTerminal(sSymbol: string): IMap<boolean> {
-        if (this.isTerminal(sSymbol)) {
+    private firstTerminal(symbolVal: string): IMap<boolean> {
+        if (this.isTerminal(symbolVal)) {
             return null;
         }
 
-        if (isDef(this._pFirstTerminalsDMap[sSymbol])) {
-            return this._pFirstTerminalsDMap[sSymbol];
+        if (isDef(this._firstTerminalsDMap[symbolVal])) {
+            return this._firstTerminalsDMap[symbolVal];
         }
 
-        var sRule: string, sName: string;
-        var pNames: string[];
+        var ruleVal: string, sName: string;
+        var names: string[];
         var i: number = 0, j: number = 0, k: number = 0;
-        var pRulesMap: IRuleMap = this._pRulesDMap[sSymbol];
+        var rulesMap: IRuleMap = this._rulesDMap[symbolVal];
 
         var pTempRes: IMap<boolean> = <IMap<boolean>>{};
-        var pRes: IMap<boolean>;
+        var res: IMap<boolean>;
 
-        var pRight: string[];
+        var right: string[];
         var isFinish: boolean;
 
-        pRes = this._pFirstTerminalsDMap[sSymbol] = <IMap<boolean>>{};
+        res = this._firstTerminalsDMap[symbolVal] = <IMap<boolean>>{};
 
-        if (this.hasEmptyRule(sSymbol)) {
-            pRes[T_EMPTY] = true;
+        if (this.hasEmptyRule(symbolVal)) {
+            res[T_EMPTY] = true;
         }
 
-        if (isNull(pRulesMap)) {
-            return pRes;
+        if (isNull(rulesMap)) {
+            return res;
         }
 
-        var pRuleNames: string[] = Object.keys(pRulesMap);
+        var pRuleNames: string[] = Object.keys(rulesMap);
 
         for (i = 0; i < pRuleNames.length; ++i) {
-            sRule = pRuleNames[i];
+            ruleVal = pRuleNames[i];
 
             isFinish = false;
-            pRight = pRulesMap[sRule].right;
+            right = rulesMap[ruleVal].right;
 
-            for (j = 0; j < pRight.length; j++) {
-                if (pRight[j] === sSymbol) {
-                    if (pRes[T_EMPTY]) {
+            for (j = 0; j < right.length; j++) {
+                if (right[j] === symbolVal) {
+                    if (res[T_EMPTY]) {
                         continue;
                     }
 
@@ -757,61 +656,61 @@ export class Parser implements IParser {
                     break;
                 }
 
-                pTempRes = this.firstTerminal(pRight[j]);
+                pTempRes = this.firstTerminal(right[j]);
 
                 if (isNull(pTempRes)) {
-                    pRes[pRight[j]] = true;
+                    res[right[j]] = true;
                 }
                 else {
-                    for (pNames = Object.keys(pTempRes), k = 0; k < pNames.length; ++k) {
-                        sName = pNames[k];
-                        pRes[sName] = true;
+                    for (names = Object.keys(pTempRes), k = 0; k < names.length; ++k) {
+                        sName = names[k];
+                        res[sName] = true;
                     }
                 }
 
-                if (!this.hasEmptyRule(pRight[j])) {
+                if (!this.hasEmptyRule(right[j])) {
                     isFinish = true;
                     break;
                 }
             }
 
             if (!isFinish) {
-                pRes[T_EMPTY] = true;
+                res[T_EMPTY] = true;
             }
         }
 
-        return pRes;
+        return res;
     }
 
-    // private followTerminal(sSymbol: string): IMap<boolean> {
-    //     if (isDef(this._pFollowTerminalsDMap[sSymbol])) {
-    //         return this._pFollowTerminalsDMap[sSymbol];
+    // private followTerminal(symbolVal: string): IMap<boolean> {
+    //     if (isDef(this._followTerminalsDMap[symbolVal])) {
+    //         return this._followTerminalsDMap[symbolVal];
     //     }
 
     //     var i: number = 0, j: number = 0, k: number = 0, l: number = 0, m: number = 0;
-    //     var pRulesDMap: IRuleDMap = this._pRulesDMap;
-    //     var pRulesDMapKeys: string[], pRulesMapKeys: string[];
+    //     var pRulesDMap: IRuleDMap = this._rulesDMap;
+    //     var rulesDMapKeys: string[], pRulesMapKeys: string[];
 
-    //     var pRule: IRule;
+    //     var rule: IRule;
     //     var pTempRes: IMap<boolean>;
     //     var pTempKeys: string[];
-    //     var pRes: IMap<boolean>;
+    //     var res: IMap<boolean>;
 
-    //     var pRight: string[];
+    //     var right: string[];
     //     var isFinish: boolean;
 
     //     var sFirstKey: string;
     //     var sSecondKey: string;
 
-    //     pRes = this._pFollowTerminalsDMap[sSymbol] = <IMap<boolean>>{};
+    //     res = this._followTerminalsDMap[symbolVal] = <IMap<boolean>>{};
 
     //     if (isNull(pRulesDMap)) {
-    //         return pRes;
+    //         return res;
     //     }
 
-    //     pRulesDMapKeys = Object.keys(pRulesDMap);
-    //     for (i = 0; i < pRulesDMapKeys.length; i++) {
-    //         sFirstKey = pRulesDMapKeys[i];
+    //     rulesDMapKeys = Object.keys(pRulesDMap);
+    //     for (i = 0; i < rulesDMapKeys.length; i++) {
+    //         sFirstKey = rulesDMapKeys[i];
 
     //         if (isNull(pRulesDMap[sFirstKey])) {
     //             continue;
@@ -820,34 +719,34 @@ export class Parser implements IParser {
     //         pRulesMapKeys = Object.keys(pRulesDMap[sFirstKey]);
 
     //         for (j = 0; j < pRulesMapKeys.length; j++) {
-    //             pRule = pRulesDMap[sFirstKey][sSecondKey];
-    //             pRight = pRule.right;
+    //             rule = pRulesDMap[sFirstKey][sSecondKey];
+    //             right = rule.right;
 
-    //             for (k = 0; k < pRight.length; k++) {
-    //                 if (pRight[k] === sSymbol) {
-    //                     if (k === pRight.length - 1) {
-    //                         pTempRes = this.followTerminal(pRule.left);
+    //             for (k = 0; k < right.length; k++) {
+    //                 if (right[k] === symbolVal) {
+    //                     if (k === right.length - 1) {
+    //                         pTempRes = this.followTerminal(rule.left);
 
     //                         pTempKeys = Object.keys(pTempRes);
     //                         for (m = 0; m < pTempKeys.length; i++) {
-    //                             pRes[pTempKeys[m]] = true;
+    //                             res[pTempKeys[m]] = true;
     //                         }
     //                     }
     //                     else {
     //                         isFinish = false;
 
-    //                         for (l = k + 1; l < pRight.length; l++) {
-    //                             pTempRes = this.firstTerminal(pRight[l]);
+    //                         for (l = k + 1; l < right.length; l++) {
+    //                             pTempRes = this.firstTerminal(right[l]);
 
     //                             if (isNull(pTempRes)) {
-    //                                 pRes[pRight[l]] = true;
+    //                                 res[right[l]] = true;
     //                                 isFinish = true;
     //                                 break;
     //                             }
     //                             else {
     //                                 pTempKeys = Object.keys(pTempRes);
     //                                 for (m = 0; m < pTempKeys.length; i++) {
-    //                                     pRes[pTempKeys[m]] = true;
+    //                                     res[pTempKeys[m]] = true;
     //                                 }
     //                             }
 
@@ -858,11 +757,11 @@ export class Parser implements IParser {
     //                         }
 
     //                         if (!isFinish) {
-    //                             pTempRes = this.followTerminal(pRule.left);
+    //                             pTempRes = this.followTerminal(rule.left);
 
     //                             pTempKeys = Object.keys(pTempRes);
     //                             for (m = 0; m < pTempKeys.length; i++) {
-    //                                 pRes[pTempKeys[m]] = true;
+    //                                 res[pTempKeys[m]] = true;
     //                             }
     //                         }
     //                     }
@@ -871,14 +770,14 @@ export class Parser implements IParser {
     //         }
     //     }
 
-    //     return pRes;
+    //     return res;
     // }
 
     private firstTerminalForSet(pSet: string[], pExpected: IMap<boolean>): IMap<boolean> {
         var i: number = 0, j: number = 0;
 
         var pTempRes: IMap<boolean>;
-        var pRes: IMap<boolean> = <IMap<boolean>>{};
+        var res: IMap<boolean> = <IMap<boolean>>{};
 
         var isEmpty: boolean;
 
@@ -889,9 +788,9 @@ export class Parser implements IParser {
             pTempRes = this.firstTerminal(pSet[i]);
 
             if (isNull(pTempRes)) {
-                pRes[pSet[i]] = true;
+                res[pSet[i]] = true;
 
-                return pRes;
+                return res;
             }
 
             isEmpty = false;
@@ -906,12 +805,12 @@ export class Parser implements IParser {
                     isEmpty = true;
                     continue;
                 }
-                pRes[sKey] = true;
+                res[sKey] = true;
 
             }
 
             if (!isEmpty) {
-                return pRes;
+                return res;
             }
         }
 
@@ -919,277 +818,271 @@ export class Parser implements IParser {
         if (!isNull(pExpected)) {
             pKeys = Object.keys(pExpected);
             for (j = 0; j < pKeys.length; j++) {
-                pRes[pKeys[j]] = true;
+                res[pKeys[j]] = true;
             }
         }
 
-        return pRes;
+        return res;
     }
 
-    private generateRules(sGrammarSource: string): void {
-        var pAllRuleList: string[] = sGrammarSource.split(/\r?\n/);
-        var pTempRule: string[];
-        var pRule: IRule;
+
+    private generateRules(grammarSource: string): void {
+        var allRuleList: string[] = grammarSource.split(/\r?\n/);
+        var tempRule: string[];
+        var rule: IRule;
         var isLexerBlock: boolean = false;
 
-        this._pRulesDMap = <IRuleDMap>{};
-        this._pAdditionalFuncInfoList = <IAdditionalFuncInfo[]>[];
-        this._pRuleCreationModeMap = <IMap<number>>{};
-        this._pGrammarSymbols = <IMap<string>>{};
+        this._rulesDMap = <IRuleDMap>{};
+        this._additionalFuncInfoList = <IAdditionalFuncInfo[]>[];
+        this._ruleCreationModeMap = <IMap<number>>{};
+        this._grammarSymbols = <IMap<string>>{};
 
-        var i: number = 0, j: number = 0;
+        var i = 0, j = 0;
 
-        var isAllNodeMode: boolean = bf.testAll(<number>this._eParseMode, <number>EParseMode.k_AllNode);
-        var isNegateMode: boolean = bf.testAll(<number>this._eParseMode, <number>EParseMode.k_Negate);
-        var isAddMode: boolean = bf.testAll(<number>this._eParseMode, <number>EParseMode.k_Add);
+        var isAllNodeMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_AllNode);
+        var isNegateMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Negate);
+        var isAddMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Add);
 
-        var pSymbolsWithNodeMap: IMap<number> = this._pRuleCreationModeMap;
+        var symbolsWithNodeMap: IMap<number> = this._ruleCreationModeMap;
 
         var sName: string;
 
-        for (i = 0; i < pAllRuleList.length; i++) {
-            if (pAllRuleList[i] === "" || pAllRuleList[i] === "\r") {
+        for (i = 0; i < allRuleList.length; i++) {
+            if (allRuleList[i] === "" || allRuleList[i] === "\r") {
                 continue;
             }
 
-            pTempRule = pAllRuleList[i].split(/\s* \s*/);
+            tempRule = allRuleList[i].split(/\s* \s*/);
 
             if (isLexerBlock) {
-                if ((pTempRule.length === 3 || (pTempRule.length === 4 && pTempRule[3] === "")) &&
-                    ((pTempRule[2][0] === "\"" || pTempRule[2][0] === "'") && pTempRule[2].length > 3)) {
+                if ((tempRule.length === 3 || (tempRule.length === 4 && tempRule[3] === "")) &&
+                    ((tempRule[2][0] === "\"" || tempRule[2][0] === "'") && tempRule[2].length > 3)) {
 
                     //TERMINALS
-                    if (pTempRule[2][0] !== pTempRule[2][pTempRule[2].length - 1]) {
-                        this.error({
-                            code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
-                            unexpectedSymbol: pTempRule[2][pTempRule[2].length - 1],
-                            expectedSymbol: pTempRule[2][0],
+                    if (tempRule[2][0] !== tempRule[2][tempRule[2].length - 1]) {
+                        this.grammarError(EParserErrors.GrammarUnexpectedSymbol, {
+                            unexpectedSymbol: tempRule[2][tempRule[2].length - 1],
+                            expectedSymbol: tempRule[2][0],
                             grammarLine: i
                         });
                     }
 
-                    pTempRule[2] = pTempRule[2].slice(1, pTempRule[2].length - 1);
+                    tempRule[2] = tempRule[2].slice(1, tempRule[2].length - 1);
 
-                    var ch: string = pTempRule[2][0];
+                    var ch: string = tempRule[2][0];
 
 
                     if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
-                        sName = this._pLexer.addKeyword(pTempRule[2], pTempRule[0]);
+                        sName = this._lexer.addKeyword(tempRule[2], tempRule[0]);
                     }
                     else {
-                        sName = this._pLexer.addPunctuator(pTempRule[2], pTempRule[0]);
+                        sName = this._lexer.addPunctuator(tempRule[2], tempRule[0]);
                     }
 
-                    this._pGrammarSymbols[sName] = pTempRule[2];
+                    this._grammarSymbols[sName] = tempRule[2];
                 }
 
                 continue;
             }
 
-            if (pTempRule[0] === LEXER_RULES) {
+            if (tempRule[0] === LEXER_RULES) {
                 isLexerBlock = true;
                 continue;
             }
 
-            if (pTempRule[0][0] == INLINE_COMMENT_SYMBOL) {
+            if (tempRule[0][0] == INLINE_COMMENT_SYMBOL) {
                 continue;
             }
 
             //NON TERMNINAL RULES
-            if (isDef(this._pRulesDMap[pTempRule[0]]) === false) {
-                this._pRulesDMap[pTempRule[0]] = <IRuleMap>{};
+            if (isDef(this._rulesDMap[tempRule[0]]) === false) {
+                this._rulesDMap[tempRule[0]] = <IRuleMap>{};
             }
 
-            pRule = <IRule>{
-                left: pTempRule[0],
+            rule = <IRule>{
+                left: tempRule[0],
                 right: <string[]>[],
                 index: 0
             };
-            this._pSymbolMap[pTempRule[0]] = true;
-            this._pGrammarSymbols[pTempRule[0]] = pTempRule[0];
+            this._symbolMap[tempRule[0]] = true;
+            this._grammarSymbols[tempRule[0]] = tempRule[0];
 
             if (isAllNodeMode) {
-                pSymbolsWithNodeMap[pTempRule[0]] = ENodeCreateMode.k_Default;
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Default;
             }
-            else if (isNegateMode && !isDef(pSymbolsWithNodeMap[pTempRule[0]])) {
-                pSymbolsWithNodeMap[pTempRule[0]] = ENodeCreateMode.k_Default;
+            else if (isNegateMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Default;
             }
-            else if (isAddMode && !isDef(pSymbolsWithNodeMap[pTempRule[0]])) {
-                pSymbolsWithNodeMap[pTempRule[0]] = ENodeCreateMode.k_Not;
+            else if (isAddMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Not;
             }
 
-            for (j = 2; j < pTempRule.length; j++) {
-                if (pTempRule[j] === "") {
+            for (j = 2; j < tempRule.length; j++) {
+                if (tempRule[j] === "") {
                     continue;
                 }
-                if (pTempRule[j] === FLAG_RULE_CREATE_NODE) {
+                if (tempRule[j] === FLAG_RULE_CREATE_NODE) {
                     if (isAddMode) {
-                        pSymbolsWithNodeMap[pTempRule[0]] = ENodeCreateMode.k_Necessary;
+                        symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Necessary;
                     }
                     continue;
                 }
-                if (pTempRule[j] === FLAG_RULE_NOT_CREATE_NODE) {
+                if (tempRule[j] === FLAG_RULE_NOT_CREATE_NODE) {
                     if (isNegateMode && !isAllNodeMode) {
-                        pSymbolsWithNodeMap[pTempRule[0]] = ENodeCreateMode.k_Not;
+                        symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Not;
                     }
                     continue;
                 }
-                if (pTempRule[j] === FLAG_RULE_FUNCTION) {
-                    if ((!pTempRule[j + 1] || pTempRule[j + 1].length === 0)) {
-                        this.error({ code: PARSER_GRAMMAR_BAD_ADDITIONAL_FUNC_NAME, grammarLine: i });
+                if (tempRule[j] === FLAG_RULE_FUNCTION) {
+                    if ((!tempRule[j + 1] || tempRule[j + 1].length === 0)) {
+                        this.grammarError(EParserErrors.GrammarInvalidAdditionalFuncName, { grammarLine: i });
                     }
 
-                    var pFuncInfo: IAdditionalFuncInfo = <IAdditionalFuncInfo>{
-                        name: pTempRule[j + 1],
-                        position: pRule.right.length,
-                        rule: pRule
+                    var funcInfo: IAdditionalFuncInfo = <IAdditionalFuncInfo>{
+                        name: tempRule[j + 1],
+                        position: rule.right.length,
+                        rule: rule
                     };
-                    this._pAdditionalFuncInfoList.push(pFuncInfo);
+                    this._additionalFuncInfoList.push(funcInfo);
                     j++;
                     continue;
                 }
-                if (pTempRule[j][0] === "'" || pTempRule[j][0] === "\"") {
-                    if (pTempRule[j].length !== 3) {
-                        this.error({
-                            code: PARSER_GRAMMAR_BAD_KEYWORD,
-                            badKeyword: pTempRule[j],
+                if (tempRule[j][0] === "'" || tempRule[j][0] === "\"") {
+                    if (tempRule[j].length !== 3) {
+                        this.grammarError(EParserErrors.GrammarInvalidKeyword, {
+                            badKeyword: tempRule[j],
                             grammarLine: i
                         });
                     }
-                    if (pTempRule[j][0] !== pTempRule[j][2]) {
-                        this.error({
-                            code: PARSER_GRAMMAR_UNEXPECTED_SYMBOL,
-                            unexpectedSymbol: pTempRule[j][2],
-                            expectedSymbol: pTempRule[j][0],
+                    if (tempRule[j][0] !== tempRule[j][2]) {
+                        this.grammarError(EParserErrors.GrammarUnexpectedSymbol, {
+                            unexpectedSymbol: tempRule[j][2],
+                            expectedSymbol: tempRule[j][0],
                             grammarLine: i
                         });
-                        //this._error("Can`t generate rules from grammar! Unexpected symbol! Must be");
                     }
 
-                    sName = this._pLexer.addPunctuator(pTempRule[j][1]);
-                    pRule.right.push(sName);
-                    this._pSymbolMap[sName] = true;
+                    sName = this._lexer.addPunctuator(tempRule[j][1]);
+                    rule.right.push(sName);
+                    this._symbolMap[sName] = true;
                 }
                 else {
-                    pRule.right.push(pTempRule[j]);
-                    this._pSymbolMap[pTempRule[j]] = true;
+                    rule.right.push(tempRule[j]);
+                    this._symbolMap[tempRule[j]] = true;
                 }
             }
 
-            pRule.index = this._nRules;
-            this._pRulesDMap[pTempRule[0]][pRule.index] = pRule;
+            rule.index = this._nRules;
+            this._rulesDMap[tempRule[0]][rule.index] = rule;
             this._nRules += 1;
         }
     }
 
+
     private generateFunctionByStateMap(): void {
-        if (isNull(this._pAdditionalFunctionsMap)) {
+        if (isNull(this._additionalFunctionsMap)) {
             return;
         }
 
-        var pStateList: IState[] = this._pStateList;
-        var pFuncInfoList: IAdditionalFuncInfo[] = this._pAdditionalFuncInfoList;
-        var pFuncInfo: IAdditionalFuncInfo;
-        var pRule: IRule;
-        var iPos: number = 0;
-        var pFunc: IRuleFunction;
-        var sGrammarSymbol: string;
+        var stateList = this._stateList;
+        var funcInfoList = this._additionalFuncInfoList;
+        var funcInfo: IAdditionalFuncInfo;
+        var rule: IRule;
+        var pos = 0;
+        var func: IRuleFunction;
+        var grammarSymbol: string;
 
         var i: number = 0, j: number = 0;
 
         var pFuncByStateDMap: IRuleFunctionDMap = <IRuleFunctionDMap>{};
-        pFuncByStateDMap = this._pAdidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
+        pFuncByStateDMap = this._adidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
 
-        for (i = 0; i < pFuncInfoList.length; i++) {
-            pFuncInfo = pFuncInfoList[i];
+        for (i = 0; i < funcInfoList.length; i++) {
+            funcInfo = funcInfoList[i];
 
-            pFunc = this._pAdditionalFunctionsMap[pFuncInfo.name];
-            if (!isDef(pFunc)) {
+            func = this._additionalFunctionsMap[funcInfo.name];
+            if (!isDef(func)) {
                 continue;
             }
 
-            pRule = pFuncInfo.rule;
-            iPos = pFuncInfo.position;
-            sGrammarSymbol = pRule.right[iPos - 1];
+            rule = funcInfo.rule;
+            pos = funcInfo.position;
+            grammarSymbol = rule.right[pos - 1];
 
-            for (j = 0; j < pStateList.length; j++) {
-                if (pStateList[j].hasRule(pRule, iPos)) {
+            for (j = 0; j < stateList.length; j++) {
+                if (stateList[j].hasRule(rule, pos)) {
 
-                    if (!isDef(pFuncByStateDMap[pStateList[j].getIndex()])) {
-                        pFuncByStateDMap[pStateList[j].getIndex()] = <IRuleFunctionMap>{};
+                    if (!isDef(pFuncByStateDMap[stateList[j].getIndex()])) {
+                        pFuncByStateDMap[stateList[j].getIndex()] = <IRuleFunctionMap>{};
                     }
 
-                    pFuncByStateDMap[pStateList[j].getIndex()][sGrammarSymbol] = pFunc;
+                    pFuncByStateDMap[stateList[j].getIndex()][grammarSymbol] = func;
                 }
             }
         }
     }
 
-    // private generateFirstState(eType: EParserType): void {
-    //     if (eType === EParserType.k_LR0) {
-    //         this.generateFirstState_LR0();
-    //     }
-    //     else {
-    //         this.generateFirstState_LR();
-    //     }
-    // }
 
     private generateFirstState_LR0(): void {
-        var pState: IState = new State();
-        var pItem: IItem = new Item(this._pRulesDMap[START_SYMBOL][0], 0);
+        var state: IState = new State();
+        var item: IItem = new Item(this._rulesDMap[START_SYMBOL][0], 0);
 
-        this.pushBaseItem(pItem);
-        pState.push(pItem);
+        this.pushBaseItem(item);
+        state.push(item);
 
-        this.closure_LR0(pState);
-        this.pushState(pState);
+        this.closure_LR0(state);
+        this.pushState(state);
     }
 
+
     private generateFirstState_LR(): void {
-        var pState: IState = new State();
+        var state: IState = new State();
         var pExpected: IMap<boolean> = <IMap<boolean>>{};
         pExpected[END_SYMBOL] = true;
 
-        pState.push(new Item(this._pRulesDMap[START_SYMBOL][0], 0, pExpected));
+        state.push(new Item(this._rulesDMap[START_SYMBOL][0], 0, pExpected));
 
-        this.closure_LR(pState);
-        this.pushState(pState);
+        this.closure_LR(state);
+        this.pushState(state);
     }
 
-    private closure(pState: IState, eType: EParserType): IState {
+
+    private closure(state: IState, eType: EParserType): IState {
         if (eType === EParserType.k_LR0) {
-            return this.closure_LR0(pState);
+            return this.closure_LR0(state);
         }
         else {
 
-            return this.closure_LR(pState);
+            return this.closure_LR(state);
         }
     }
 
-    private closure_LR0(pState: IState): IState {
-        var pItemList: IItem[] = pState.getItems();
+
+    private closure_LR0(state: IState): IState {
+        var itemList: IItem[] = state.getItems();
         var i: number = 0, j: number = 0;
-        var sSymbol: string;
+        var symbolVal: string;
         var pKeys: string[];
 
-        for (i = 0; i < pItemList.length; i++) {
-            sSymbol = pItemList[i].mark();
+        for (i = 0; i < itemList.length; i++) {
+            symbolVal = itemList[i].mark();
 
-            if (sSymbol !== END_POSITION && (!this.isTerminal(sSymbol))) {
+            if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
 
-                pKeys = Object.keys(this._pRulesDMap[sSymbol]);
+                pKeys = Object.keys(this._rulesDMap[symbolVal]);
                 for (j = 0; j < pKeys.length; j++) {
-                    pState.tryPush_LR0(this._pRulesDMap[sSymbol][pKeys[j]], 0);
+                    state.tryPush_LR0(this._rulesDMap[symbolVal][pKeys[j]], 0);
                 }
             }
         }
-        return pState;
+        return state;
     }
 
-    private closure_LR(pState: IState): IState {
-        var pItemList: IItem[] = <IItem[]>(pState.getItems());
+
+    private closure_LR(state: IState): IState {
+        var itemList: IItem[] = <IItem[]>(state.getItems());
         var i: number = 0, j: number = 0, k: number = 0;
-        var sSymbol: string;
+        var symbolVal: string;
         var pSymbols: IMap<boolean>;
         var pTempSet: string[];
         var isNewExpected: boolean = false;
@@ -1198,25 +1091,25 @@ export class Parser implements IParser {
         var pRulesMapKeys: string[], pSymbolsKeys: string[];
 
         while (true) {
-            if (i === pItemList.length) {
+            if (i === itemList.length) {
                 if (!isNewExpected) {
                     break;
                 }
                 i = 0;
                 isNewExpected = false;
             }
-            sSymbol = pItemList[i].mark();
+            symbolVal = itemList[i].mark();
 
-            if (sSymbol !== END_POSITION && (!this.isTerminal(sSymbol))) {
-                pTempSet = pItemList[i].getRule().right.slice(pItemList[i].getPosition() + 1);
-                pSymbols = this.firstTerminalForSet(pTempSet, pItemList[i].getExpectedSymbols());
+            if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
+                pTempSet = itemList[i].getRule().right.slice(itemList[i].getPosition() + 1);
+                pSymbols = this.firstTerminalForSet(pTempSet, itemList[i].getExpectedSymbols());
 
-                pRulesMapKeys = Object.keys(this._pRulesDMap[sSymbol]);
+                pRulesMapKeys = Object.keys(this._rulesDMap[symbolVal]);
                 pSymbolsKeys = Object.keys(pSymbols);
 
                 for (j = 0; j < pRulesMapKeys.length; j++) {
                     for (k = 0; k < pSymbolsKeys.length; k++) {
-                        if (pState.tryPush_LR(this._pRulesDMap[sSymbol][pRulesMapKeys[j]], 0, pSymbolsKeys[k])) {
+                        if (state.tryPush_LR(this._rulesDMap[symbolVal][pRulesMapKeys[j]], 0, pSymbolsKeys[k])) {
                             isNewExpected = true;
                         }
                     }
@@ -1226,114 +1119,111 @@ export class Parser implements IParser {
             i++;
         }
 
-        return pState;
+        return state;
     }
 
-    // private nexeState(pState: IState, sSymbol: string, eType: EParserType): IState {
-    //     if (eType === EParserType.k_LR0) {
-    //         return this.nextState_LR0(pState, sSymbol);
-    //     }
-    //     else {
-    //         return this.nextState_LR(pState, sSymbol);
-    //     }
-    // }
-
-    private nextState_LR0(pState: IState, sSymbol: string): IState {
-        var pItemList: IItem[] = pState.getItems();
+    
+    private nextState_LR0(state: IState, symbolVal: string): IState {
+        var itemList: IItem[] = state.getItems();
         var i: number = 0;
         var pNewState: IState = new State();
 
-        for (i = 0; i < pItemList.length; i++) {
-            if (sSymbol === pItemList[i].mark()) {
-                pNewState.push(new Item(pItemList[i].getRule(), pItemList[i].getPosition() + 1));
+        for (i = 0; i < itemList.length; i++) {
+            if (symbolVal === itemList[i].mark()) {
+                pNewState.push(new Item(itemList[i].getRule(), itemList[i].getPosition() + 1));
             }
         }
 
         return pNewState;
     }
 
-    private nextState_LR(pState: IState, sSymbol: string): IState {
-        var pItemList: IItem[] = <IItem[]>pState.getItems();
+
+    private nextState_LR(state: IState, symbolVal: string): IState {
+        var itemList: IItem[] = <IItem[]>state.getItems();
         var i: number = 0;
         var pNewState: IState = new State();
 
-        for (i = 0; i < pItemList.length; i++) {
-            if (sSymbol === pItemList[i].mark()) {
-                pNewState.push(new Item(pItemList[i].getRule(), pItemList[i].getPosition() + 1, pItemList[i].getExpectedSymbols()));
+        for (i = 0; i < itemList.length; i++) {
+            if (symbolVal === itemList[i].mark()) {
+                pNewState.push(new Item(itemList[i].getRule(), itemList[i].getPosition() + 1, itemList[i].getExpectedSymbols()));
             }
         }
 
         return pNewState;
     }
+
 
     private deleteNotBaseItems(): void {
         var i: number = 0;
-        for (i = 0; i < this._pStateList.length; i++) {
-            this._pStateList[i].deleteNotBase();
+        for (i = 0; i < this._stateList.length; i++) {
+            this._stateList[i].deleteNotBase();
         }
     }
 
-    private closureForItem(pRule: IRule, iPos: number): IState {
-        var sIndex: string = "";
-        sIndex += pRule.index + "_" + iPos;
 
-        var pState: IState = this._pStatesTempMap[sIndex];
-        if (isDef(pState)) {
-            return pState;
+    private closureForItem(rule: IRule, pos: number): IState {
+        var indexVal = "";
+        indexVal += rule.index + "_" + pos;
+
+        var state: IState = this._statesTempMap[indexVal];
+        if (isDef(state)) {
+            return state;
         }
         else {
             var pExpected: IMap<boolean> = <IMap<boolean>>{};
             pExpected[UNUSED_SYMBOL] = true;
 
-            pState = new State();
-            pState.push(new Item(pRule, iPos, pExpected));
+            state = new State();
+            state.push(new Item(rule, pos, pExpected));
 
-            this.closure_LR(pState);
-            this._pStatesTempMap[sIndex] = pState;
+            this.closure_LR(state);
+            this._statesTempMap[indexVal] = state;
 
-            return pState;
+            return state;
         }
     }
 
-    private addLinkExpected(pItem: IItem, pItemX: IItem): void {
-        var pTable: IDMap<boolean> = this._pExpectedExtensionDMap;
-        var iIndex: number = pItem.getIndex();
 
-        if (!isDef(pTable[iIndex])) {
-            pTable[iIndex] = <IMap<boolean>>{};
+    private addLinkExpected(item: IItem, pItemX: IItem): void {
+        var table: IDMap<boolean> = this._expectedExtensionDMap;
+        var iIndex: number = item.getIndex();
+
+        if (!isDef(table[iIndex])) {
+            table[iIndex] = <IMap<boolean>>{};
         }
 
-        pTable[iIndex][pItemX.getIndex()] = true;
+        table[iIndex][pItemX.getIndex()] = true;
     }
 
-    private determineExpected(pTestState: IState, sSymbol: string): void {
-        var pStateX = pTestState.getNextStateBySymbol(sSymbol);
+
+    private determineExpected(pTestState: IState, symbolVal: string): void {
+        var pStateX = pTestState.getNextStateBySymbol(symbolVal);
 
         if (isNull(pStateX)) {
             return;
         }
 
         var pItemListX: IItem[] = <IItem[]>pStateX.getItems();
-        var pItemList: IItem[] = <IItem[]>pTestState.getItems();
-        var pState: IState;
-        var pItem: IItem;
+        var itemList: IItem[] = <IItem[]>pTestState.getItems();
+        var state: IState;
+        var item: IItem;
         var i: number = 0, j: number = 0, k: string;
 
         var nBaseItemTest = pTestState.getNumBaseItems();
         var nBaseItemX = pStateX.getNumBaseItems();
 
         for (i = 0; i < nBaseItemTest; i++) {
-            pState = this.closureForItem(pItemList[i].getRule(), pItemList[i].getPosition());
+            state = this.closureForItem(itemList[i].getRule(), itemList[i].getPosition());
 
             for (j = 0; j < nBaseItemX; j++) {
-                pItem = <IItem>pState.hasChildItem(pItemListX[j]);
+                item = <IItem>state.hasChildItem(pItemListX[j]);
 
-                if (pItem) {
-                    var pExpected: IMap<boolean> = pItem.getExpectedSymbols();
+                if (item) {
+                    var pExpected: IMap<boolean> = item.getExpectedSymbols();
 
                     for (k in pExpected) {
                         if (k === UNUSED_SYMBOL) {
-                            this.addLinkExpected(pItemList[i], pItemListX[j]);
+                            this.addLinkExpected(itemList[i], pItemListX[j]);
                         }
                         else {
                             pItemListX[j].addExpected(k);
@@ -1344,31 +1234,33 @@ export class Parser implements IParser {
         }
     }
 
+
     private generateLinksExpected(): void {
         var i: number = 0, j: number = 0;
-        var pStates: IState[] = this._pStateList;
+        var pStates: IState[] = this._stateList;
         var pKeys: string[];
 
         for (i = 0; i < pStates.length; i++) {
-            pKeys = Object.keys(this._pSymbolMap);
+            pKeys = Object.keys(this._symbolMap);
             for (j = 0; j < pKeys.length; j++) {
                 this.determineExpected(pStates[i], pKeys[j]);
             }
         }
     }
 
-    private expandExpected(): void {
-        var pItemList: IItem[] = <IItem[]>this._pBaseItemList;
-        var pTable: IDMap<boolean> = this._pExpectedExtensionDMap;
-        var i: number = 0, j: number = 0, k: number = 0;
-        var sSymbol: string = "";
-        var isNewExpected: boolean = false;
 
-        pItemList[0].addExpected(END_SYMBOL);
-        pItemList[0].setIsNewExpected(true);
+    private expandExpected(): void {
+        var itemList = <IItem[]>this._baseItemList;
+        var table = this._expectedExtensionDMap;
+        var i = 0, j = 0, k = 0;
+        var symbolVal = "";
+        var isNewExpected = false;
+
+        itemList[0].addExpected(END_SYMBOL);
+        itemList[0].setIsNewExpected(true);
 
         while (true) {
-            if (i === pItemList.length) {
+            if (i === itemList.length) {
                 if (!isNewExpected) {
                     break;
                 }
@@ -1376,24 +1268,25 @@ export class Parser implements IParser {
                 i = 0;
             }
 
-            if (pItemList[i].getIsNewExpected() && isDefAndNotNull(pTable[i]) && isDefAndNotNull(pItemList[i].getExpectedSymbols())) {
-                var pExpectedSymbols: string[] = Object.keys(pItemList[i].getExpectedSymbols());
-                var pKeys: string[] = Object.keys(pTable[i]);
+            if (itemList[i].getIsNewExpected() && isDefAndNotNull(table[i]) && isDefAndNotNull(itemList[i].getExpectedSymbols())) {
+                var pExpectedSymbols: string[] = Object.keys(itemList[i].getExpectedSymbols());
+                var pKeys: string[] = Object.keys(table[i]);
 
                 for (j = 0; j < pExpectedSymbols.length; j++) {
-                    sSymbol = pExpectedSymbols[j];
+                    symbolVal = pExpectedSymbols[j];
                     for (k = 0; k < pKeys.length; k++) {
-                        if (pItemList[<number><any>pKeys[k]].addExpected(sSymbol)) {
+                        if (itemList[<number><any>pKeys[k]].addExpected(symbolVal)) {
                             isNewExpected = true;
                         }
                     }
                 }
             }
 
-            pItemList[i].setIsNewExpected(false);
+            itemList[i].setIsNewExpected(false);
             i++;
         }
     }
+
 
     private generateStates(eType: EParserType): void {
         if (eType === EParserType.k_LR0) {
@@ -1407,56 +1300,58 @@ export class Parser implements IParser {
         }
     }
 
+
     private generateStates_LR0(): void {
         this.generateFirstState_LR0();
 
         var i: number = 0, j: number = 0;
-        var pStateList: IState[] = this._pStateList;
-        var sSymbol: string = "";
-        var pState: IState;
-        var pSymbols: string[] = Object.keys(this._pSymbolMap);
+        var stateList: IState[] = this._stateList;
+        var symbolVal: string = "";
+        var state: IState;
+        var pSymbols: string[] = Object.keys(this._symbolMap);
 
-        for (i = 0; i < pStateList.length; i++) {
+        for (i = 0; i < stateList.length; i++) {
             for (j = 0; j < pSymbols.length; j++) {
-                sSymbol = pSymbols[j];
-                pState = this.nextState_LR0(pStateList[i], sSymbol);
+                symbolVal = pSymbols[j];
+                state = this.nextState_LR0(stateList[i], symbolVal);
 
-                if (!pState.isEmpty()) {
-                    pState = this.tryAddState(pState, EParserType.k_LR0);
-                    this.addStateLink(pStateList[i], pState, sSymbol);
+                if (!state.isEmpty()) {
+                    state = this.tryAddState(state, EParserType.k_LR0);
+                    this.addStateLink(stateList[i], state, symbolVal);
                 }
             }
         }
     }
 
+
     private generateStates_LR(): void {
-        this._pFirstTerminalsDMap = <IDMap<boolean>>{};
+        this._firstTerminalsDMap = <IDMap<boolean>>{};
         this.generateFirstState_LR();
 
         var i: number = 0, j: number = 0;
-        var pStateList: IState[] = this._pStateList;
-        var sSymbol: string = "";
-        let pState: IState;
-        let pSymbols: string[] = Object.keys(this._pSymbolMap);
+        var stateList: IState[] = this._stateList;
+        var symbolVal: string = "";
+        let state: IState;
+        let pSymbols: string[] = Object.keys(this._symbolMap);
 
-        for (i = 0; i < pStateList.length; i++) {
+        for (i = 0; i < stateList.length; i++) {
             for (j = 0; j < pSymbols.length; j++) {
-                sSymbol = pSymbols[j];
-                pState = this.nextState_LR(pStateList[i], sSymbol);
+                symbolVal = pSymbols[j];
+                state = this.nextState_LR(stateList[i], symbolVal);
 
-                if (!pState.isEmpty()) {
-                    pState = this.tryAddState(pState, EParserType.k_LR1);
-                    this.addStateLink(pStateList[i], pState, sSymbol);
+                if (!state.isEmpty()) {
+                    state = this.tryAddState(state, EParserType.k_LR1);
+                    this.addStateLink(stateList[i], state, symbolVal);
                 }
             }
         }
     }
 
     private generateStates_LALR(): void {
-        this._pStatesTempMap = <IMap<IState>>{};
-        this._pBaseItemList = <IItem[]>[];
-        this._pExpectedExtensionDMap = <IDMap<boolean>>{};
-        this._pFirstTerminalsDMap = <IDMap<boolean>>{};
+        this._statesTempMap = <IMap<IState>>{};
+        this._baseItemList = <IItem[]>[];
+        this._expectedExtensionDMap = <IDMap<boolean>>{};
+        this._firstTerminalsDMap = <IDMap<boolean>>{};
 
         this.generateStates_LR0();
         this.deleteNotBaseItems();
@@ -1464,174 +1359,165 @@ export class Parser implements IParser {
         this.expandExpected();
 
         let i: number = 0;
-        let pStateList: IState[] = this._pStateList;
+        let stateList: IState[] = this._stateList;
 
-        for (i = 0; i < pStateList.length; i++) {
-            this.closure_LR(pStateList[i]);
+        for (i = 0; i < stateList.length; i++) {
+            this.closure_LR(stateList[i]);
         }
     }
 
 
-    private addReducing(pState: IState): void {
+    private addReducing(state: IState): void {
         let i: number = 0, j: number = 0;
-        let pItemList: IItem[] = pState.getItems();
+        let itemList: IItem[] = state.getItems();
 
-        for (i = 0; i < pItemList.length; i++) {
-            if (pItemList[i].mark() === END_POSITION) {
-                if (pItemList[i].getRule().left === START_SYMBOL) {
-                    this.pushInSyntaxTable(pState.getIndex(), END_SYMBOL, this._pSuccessOperation);
+        for (i = 0; i < itemList.length; i++) {
+            if (itemList[i].mark() === END_POSITION) {
+                if (itemList[i].getRule().left === START_SYMBOL) {
+                    this.pushInSyntaxTable(state.getIndex(), END_SYMBOL, this._successOperation);
                 }
                 else {
-                    let pExpected = pItemList[i].getExpectedSymbols();
+                    let pExpected = itemList[i].getExpectedSymbols();
 
                     let pKeys: string[] = Object.keys(pExpected);
                     for (j = 0; j < pKeys.length; j++) {
-                        this.pushInSyntaxTable(pState.getIndex(), pKeys[j], this._pReduceOperationsMap[pItemList[i].getRule().index]);
+                        this.pushInSyntaxTable(state.getIndex(), pKeys[j], this._reduceOperationsMap[itemList[i].getRule().index]);
                     }
                 }
             }
         }
     }
 
-    private addShift(pState: IState) {
+    private addShift(state: IState) {
         let i: number = 0;
-        let pStateMap: IMap<IState> = pState.getNextStates();
+        let pStateMap: IMap<IState> = state.getNextStates();
 
         let pStateKeys: string[] = Object.keys(pStateMap);
 
         for (i = 0; i < pStateKeys.length; i++) {
-            let sSymbol: string = pStateKeys[i];
-            this.pushInSyntaxTable(pState.getIndex(), sSymbol, this._pShiftOperationsMap[pStateMap[sSymbol].getIndex()]);
+            let symbolVal: string = pStateKeys[i];
+            this.pushInSyntaxTable(state.getIndex(), symbolVal, this._shiftOperationsMap[pStateMap[symbolVal].getIndex()]);
         }
     }
 
     private buildSyntaxTable(): void {
-        this._pStateList = <IState[]>[];
+        this._stateList = <IState[]>[];
 
-        let pStateList: IState[] = this._pStateList;
-        let pState: IState;
+        let stateList: IState[] = this._stateList;
+        let state: IState;
 
         //Generate states
         this.generateStates(this._eType);
 
         //Init necessary properties
-        this._pSyntaxTable = <IOperationDMap>{};
-        this._pReduceOperationsMap = <IOperationMap>{};
-        this._pShiftOperationsMap = <IOperationMap>{};
+        this._syntaxTable = <IOperationDMap>{};
+        this._reduceOperationsMap = <IOperationMap>{};
+        this._shiftOperationsMap = <IOperationMap>{};
 
-        this._pSuccessOperation = <IOperation>{ type: EOperationType.k_Success };
+        this._successOperation = <IOperation>{ type: EOperationType.k_Success };
 
         let i: number = 0, j: number = 0, k: number = 0;
 
-        for (i = 0; i < pStateList.length; i++) {
-            this._pShiftOperationsMap[pStateList[i].getIndex()] = <IOperation>{
+        for (i = 0; i < stateList.length; i++) {
+            this._shiftOperationsMap[stateList[i].getIndex()] = <IOperation>{
                 type: EOperationType.k_Shift,
-                index: pStateList[i].getIndex()
+                index: stateList[i].getIndex()
             };
         }
 
-        let pRulesDMapKeys: string[] = Object.keys(this._pRulesDMap);
-        for (j = 0; j < pRulesDMapKeys.length; j++) {
-            let pRulesMapKeys: string[] = Object.keys(this._pRulesDMap[pRulesDMapKeys[j]]);
+        let rulesDMapKeys: string[] = Object.keys(this._rulesDMap);
+        for (j = 0; j < rulesDMapKeys.length; j++) {
+            let pRulesMapKeys: string[] = Object.keys(this._rulesDMap[rulesDMapKeys[j]]);
             for (k = 0; k < pRulesMapKeys.length; k++) {
-                let sSymbol: string = pRulesMapKeys[k];
-                let pRule: IRule = this._pRulesDMap[pRulesDMapKeys[j]][sSymbol];
+                let symbolVal: string = pRulesMapKeys[k];
+                let rule: IRule = this._rulesDMap[rulesDMapKeys[j]][symbolVal];
 
-                this._pReduceOperationsMap[sSymbol] = <IOperation>{
+                this._reduceOperationsMap[symbolVal] = <IOperation>{
                     type: EOperationType.k_Reduce,
-                    rule: pRule
+                    rule: rule
                 };
             }
         }
 
         //Build syntax table
-        for (i = 0; i < pStateList.length; i++) {
-            pState = pStateList[i];
-            this.addReducing(pState);
-            this.addShift(pState);
+        for (i = 0; i < stateList.length; i++) {
+            state = stateList[i];
+            this.addReducing(state);
+            this.addShift(state);
         }
     }
 
     private readToken(): IToken {
-        return this._pLexer.getNextToken();
+        return this._lexer.getNextToken();
     }
 
-    private operationAdditionalAction(iStateIndex: number, sGrammarSymbol: string): EOperationType {
-        let pFuncDMap: IRuleFunctionDMap = this._pAdidtionalFunctByStateDMap;
 
-        if (!isNull(this._pAdidtionalFunctByStateDMap) &&
-            isDef(pFuncDMap[iStateIndex]) &&
-            isDef(pFuncDMap[iStateIndex][sGrammarSymbol])) {
-            return pFuncDMap[iStateIndex][sGrammarSymbol]();
+    private async operationAdditionalAction(stateIndex: number, grammarSymbol: string): Promise<EOperationType> {
+        let funcDMap: IRuleFunctionDMap = this._adidtionalFunctByStateDMap;
+
+        if (!isNull(this._adidtionalFunctByStateDMap) &&
+            isDef(funcDMap[stateIndex]) &&
+            isDef(funcDMap[stateIndex][grammarSymbol])) {
+            return await funcDMap[stateIndex][grammarSymbol]();
         }
 
         return EOperationType.k_Ok;
     }
 
-    private resumeParse(): EParserCode {
-        let isStop: boolean = false;
-        let isError: boolean = false;
-        let isPause: boolean = false;
-        let pToken: IToken = isNull(this._pToken) ? this.readToken() : this._pToken;
-        let pTree: IParseTree = this._pSyntaxTree;
-        let pStack: number[] = this._pStack;
-        let pSyntaxTable: IOperationDMap = this._pSyntaxTable;
-        try {
-            let pOperation: IOperation;
-            let iRuleLength: number;
 
-            let eAdditionalOperationCode: EOperationType;
-            let iStateIndex: number = 0;
+    protected async resumeParse(): Promise<EParserCode> {
+        let isStop = false;
+        let isError = false;
+        let token = isNull(this._token) ? this.readToken() : this._token;
+        let tree = this._syntaxTree;
+        let stack = this._stack;
+        let syntaxTable = this._syntaxTable;
+        try {
+            let operation: IOperation;
+            let ruleLength: number;
+
+            let additionalOperationCode: EOperationType;
+            let stateIndex: number = 0;
 
             while (!isStop) {
-                pOperation = pSyntaxTable[pStack[pStack.length - 1]][pToken.name];
-                if (isDef(pOperation)) {
-                    switch (pOperation.type) {
+                operation = syntaxTable[stack[stack.length - 1]][token.name];
+                if (isDef(operation)) {
+                    switch (operation.type) {
                         case EOperationType.k_Success:
                             isStop = true;
                             break;
 
                         case EOperationType.k_Shift:
 
-                            iStateIndex = pOperation.index;
-                            pStack.push(iStateIndex);
-                            pTree.addToken(pToken);
+                            stateIndex = operation.index;
+                            stack.push(stateIndex);
+                            tree.addToken(token);
 
-                            eAdditionalOperationCode = this.operationAdditionalAction(iStateIndex, pToken.name);
+                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
 
-                            if (eAdditionalOperationCode === EOperationType.k_Error) {
+                            if (additionalOperationCode === EOperationType.k_Error) {
                                 isError = true;
                                 isStop = true;
                             }
-                            else if (eAdditionalOperationCode === EOperationType.k_Pause) {
-                                this._pToken = null;
-                                isStop = true;
-                                isPause = true;
-                            }
-                            else if (eAdditionalOperationCode === EOperationType.k_Ok) {
-                                pToken = this.readToken();
+                            else if (additionalOperationCode === EOperationType.k_Ok) {
+                                token = this.readToken();
                             }
 
                             break;
 
                         case EOperationType.k_Reduce:
 
-                            iRuleLength = pOperation.rule.right.length;
-                            pStack.length -= iRuleLength;
-                            iStateIndex = pSyntaxTable[pStack[pStack.length - 1]][pOperation.rule.left].index;
-                            pStack.push(iStateIndex);
-                            pTree.reduceByRule(pOperation.rule, this._pRuleCreationModeMap[pOperation.rule.left]);
+                            ruleLength = operation.rule.right.length;
+                            stack.length -= ruleLength;
+                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].index;
+                            stack.push(stateIndex);
+                            tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
 
-                            eAdditionalOperationCode = this.operationAdditionalAction(iStateIndex, pOperation.rule.left);
+                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
-                            if (eAdditionalOperationCode === EOperationType.k_Error) {
+                            if (additionalOperationCode === EOperationType.k_Error) {
                                 isError = true;
                                 isStop = true;
-                            }
-                            else if (eAdditionalOperationCode === EOperationType.k_Pause) {
-                                this._pToken = pToken;
-                                isStop = true;
-                                isPause = true;
                             }
                             break;
                         default:
@@ -1644,78 +1530,85 @@ export class Parser implements IParser {
             }
         }
         catch (e) {
-            this._sFileName = "stdin";
-            return EParserCode.k_Error;
-        }
-        if (isPause) {
-            return EParserCode.k_Pause;
+            if (e instanceof DiagnosticException) {
+                return EParserCode.k_Error;
+            }
+
+            throw e;
         }
 
         if (!isError) {
-            pTree.finishTree();
-            if (isDef(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Ok, this);
-            }
-            this._sFileName = "stdin";
+            tree.finishTree();
             return EParserCode.k_Ok;
         }
         else {
-            this.error({ code: PARSER_SYNTAX_ERROR, token: pToken, filename: this.getParseFileName() });
-            if (isDef(this._fnFinishCallback)) {
-                this._fnFinishCallback(EParserCode.k_Error, this);
-            }
-            this._sFileName = "stdin";
+            this.syntaxError(EParserErrors.SyntaxError, token);
             return EParserCode.k_Error;
         }
     }
 
+
     private statesToString(isBaseOnly: boolean = true): string {
-        if (!isDef(this._pStateList)) {
+        if (!isDef(this._stateList)) {
             return "";
         }
 
-        let sMsg: string = "";
+        let mesg: string = "";
         let i: number = 0;
 
-        for (i = 0; i < this._pStateList.length; i++) {
-            sMsg += this._pStateList[i].toString(isBaseOnly);
-            sMsg += " ";
+        for (i = 0; i < this._stateList.length; i++) {
+            mesg += this._stateList[i].toString(isBaseOnly);
+            mesg += " ";
         }
 
-        return sMsg;
+        return mesg;
     }
 
-    private static operationToString(pOperation: IOperation): string {
-        let sOperation: string = "";
+    
+    private static operationToString(operation: IOperation): string {
+        let opVal: string = "";
 
-        switch (pOperation.type) {
+        switch (operation.type) {
             case EOperationType.k_Shift:
-                sOperation = "SHIFT to state " + pOperation.index.toString();
+                opVal = "SHIFT to state " + operation.index.toString();
                 break;
             case EOperationType.k_Reduce:
-                sOperation = "REDUCE by rule { " + Parser.ruleToString(pOperation.rule) + " }";
+                opVal = "REDUCE by rule { " + Parser.ruleToString(operation.rule) + " }";
                 break;
             case EOperationType.k_Success:
-                sOperation = "SUCCESS";
+                opVal = "SUCCESS";
                 break;
         }
 
-        return sOperation;
+        return opVal;
     }
 
-    private static ruleToString(pRule: IRule): string {
-        let sRule: string;
 
-        sRule = pRule.left + " : " + pRule.right.join(" ");
+    private static ruleToString(rule: IRule): string {
+        let ruleVal: string;
 
-        return sRule;
+        ruleVal = rule.left + " : " + rule.right.join(" ");
+
+        return ruleVal;
     }
 
-    private convertGrammarSymbol(sSymbol: string): string {
-        if (!this.isTerminal(sSymbol)) {
-            return sSymbol;
+    
+    private convertGrammarSymbol(symbolVal: string): string {
+        if (!this.isTerminal(symbolVal)) {
+            return symbolVal;
         } else {
-            return this._pLexer.getTerminalValueByName(sSymbol);
+            return this._lexer.getTerminalValueByName(symbolVal);
         }
+    }
+
+
+    getDiagnostics(): IDiagnosticReport {
+        let parserReport = this._diag.resolve();
+        let lexerReport = this._lexer.getDiagnostics();
+        return Diagnostics.mergeReports([ lexerReport, parserReport ]);
+    }
+
+    protected critical(code, desc) {
+        this._diag.critical(code, desc);
     }
 }

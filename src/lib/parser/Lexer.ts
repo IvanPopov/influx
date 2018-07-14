@@ -18,21 +18,21 @@ enum ELexerErrors {
 
 class LexerDiagnostics extends Diagnostics<ILexerDiagDesc> {
     constructor() {
-        super("Lexer Diagnostics");
+        super("Lexer Diagnostics", 'L');
     }
 
-    protected resolveFilename(desc: ILexerDiagDesc): string {
+    protected resolveFilename(code: number, desc: ILexerDiagDesc): string {
         return desc.file;
     }
 
-    protected resolveRange(desc: ILexerDiagDesc): IRange {
+    protected resolveRange(code: number, desc: ILexerDiagDesc): IRange {
         return desc.token.loc;
     }
 
     protected diagnosticMessages() {
         return {
-            [ELexerErrors.UnknownToken] : "Unknown token: {token.value}",
-            [ELexerErrors.InvalidToken] : "Invalid token: {token.value}"
+            [ELexerErrors.UnknownToken] : "Unknown token: {token.value}.",
+            [ELexerErrors.InvalidToken] : "Invalid token: {token.value}."
         };
     }
 }
@@ -289,11 +289,6 @@ export class Lexer implements ILexer {
     private isLineTerminator(symbol: string): boolean {
         return (symbol === "\n" || symbol === "\r" || symbol === "\u2028" || symbol === "\u2029");
     }
-
-
-    // private isWhiteSpace(sSymbol: string): boolean {
-    //     return (sSymbol === " ") || (sSymbol === "\t");
-    // }
 
 
     private isKeyword(value: string): boolean {

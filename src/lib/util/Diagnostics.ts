@@ -17,19 +17,17 @@ interface IDiagnosticEntry<DESC_T> {
 
 type IDiagnosticDescription = string;
 
-export interface DiagnosticMessage {
+export interface IDiagnosticMessage {
     code: number;
     category: EDiagnosticCategory;
     content: string;
 }
 
 export interface IDiagnosticReport {
-    name: string;
-
     errors: number;
     warnings: number;
 
-    messages: DiagnosticMessage[];
+    messages: IDiagnosticMessage[];
 }
 
 export interface IFileLine {
@@ -63,20 +61,31 @@ function fillPattern(pattern: string, desc: Object): string {
     });
 }
 
+export class DiagnosticException<DESC_T> extends Error {
+    host: Diagnostics<DESC_T>;
+
+    constructor(host: Diagnostics<DESC_T>, mesg: IDiagnosticMessage) {
+        super(mesg.content);
+        Error.captureStackTrace(this, DiagnosticException);
+    }
+}
+
 export class Diagnostics <DESC_T>{
     protected _name: string;
+    protected _codePrefix: string;
     protected _entries: IDiagnosticEntry<DESC_T>[] = [];
 
-    constructor(diagName: string) {
-        this._name = diagName;
+    constructor(name: string, codePrefix: string) {
+        this._name = name;
+        this._codePrefix = (codePrefix || '').toUpperCase();
     }
 
-    protected emitException(mesg: string = "critical occured"): void {
-        throw new Error(mesg);
+    protected emitException(): void {
+        throw new DiagnosticException<DESC_T>(this, this.getLastError());
     }
 
     resolve(): IDiagnosticReport {
-        let report = { name: this._name, errors: 0, warnings: 0, messages: [] };
+        let report: IDiagnosticReport = { errors: 0, warnings: 0, messages: [] };
 
         for (let entry of this._entries) {
             let message = this.resolveEntry(entry);
@@ -95,34 +104,34 @@ export class Diagnostics <DESC_T>{
         return report;
     }
 
-    private resolveEntry(entry: IDiagnosticEntry<DESC_T>): DiagnosticMessage {
+    private resolveEntry(entry: IDiagnosticEntry<DESC_T>): IDiagnosticMessage {
         let { code, category, desc } = entry;
 
         let categoryName = (EDiagnosticCategory[category]).toLowerCase();
-        let range = this.resolveRange(desc);
+        let range = this.resolveRange(code, desc);
         let loc: string = null;
 
         if (range) {
             loc = rangeToString(range);
         } 
         else {
-            loc = locToString(this.resolvePosition(desc));
+            loc = locToString(this.resolvePosition(code, desc));
         }
 
-        let content = `${this.resolveFilename(desc)}(${loc}): ${categoryName} ${code}: ${this.resolveDescription(code, desc)}.`;
+        let content = `${this.resolveFilename(code, desc)}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, desc)}`;
 
         return { code, category, content };
     }
 
-    protected resolveFilename(desc: DESC_T): string {
+    protected resolveFilename(code: number, desc: DESC_T): string {
         return '[unknown]';
     }
 
-    protected resolvePosition(desc: DESC_T): IPosition {
+    protected resolvePosition(code: number, desc: DESC_T): IPosition {
         return { line: 0, column: 0 };
     }
 
-    protected resolveRange(desc: DESC_T): IRange {
+    protected resolveRange(code: number, desc: DESC_T): IRange {
         return null;
     }
 
@@ -164,5 +173,26 @@ export class Diagnostics <DESC_T>{
 
     hasErrors(): boolean {
         return this._entries.filter(entry => entry.category === EDiagnosticCategory.ERROR).length > 0;
+    }
+
+    getLastError(): IDiagnosticMessage {
+        for (let i = this._entries.length - 1; i >= 0; --i) {
+            if (this._entries[i].category === EDiagnosticCategory.ERROR) {
+                return this.resolveEntry(this._entries[i]);
+            }
+        }
+        return null;
+    }
+
+    static mergeReports(reportList: IDiagnosticReport[]): IDiagnosticReport {
+        let result: IDiagnosticReport = { errors: 0, warnings: 0, messages: [] };
+
+        reportList.forEach((report) => {
+            result.errors += report.errors;
+            result.warnings += report.warnings;
+            result.messages = result.messages.concat(report.messages);
+        });
+
+        return result;
     }
 }

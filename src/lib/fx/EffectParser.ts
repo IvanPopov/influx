@@ -1,12 +1,16 @@
-import { Parser } from "../parser/Parser";
+import { Parser, EParserErrors } from "../parser/Parser";
+import { EParserCode } from "./../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 import { EOperationType, IParseTree, IParseNode, IParserState } from '../idl/parser/IParser';
 import * as uri from "../uri/uri"
 import { logger } from "../logger";
 import * as fs from "fs";
+import { promisify } from "util";
+
+const readFile = promisify(fs.readFile);
 
 export class EffectParser extends Parser {
-    private _pIncludedFilesMap: IMap<boolean> = null;
+    private _includedFilesMap: IMap<boolean> = null;
 
     constructor() {
         super();
@@ -34,67 +38,64 @@ export class EffectParser extends Parser {
         this.addTypeId("bool3");
         this.addTypeId("bool4");
 
-        this._pIncludedFilesMap = <IMap<boolean>>{};
-        this._pIncludedFilesMap[this.getParseFileName()] = true;
+        this._includedFilesMap = <IMap<boolean>>{};
+        this._includedFilesMap[this.getParseFileName()] = true;
     }
 
-    _addIncludedFile(sFileName: string): void {
-        this._pIncludedFilesMap[sFileName] = true;
+    protected addIncludedFile(filename: string): void {
+        this._includedFilesMap[filename] = true;
     }
 
     private _addType(): EOperationType {
-        let pTree: IParseTree = this.getSyntaxTree();
-        let pNode: IParseNode = pTree.getLastNode();
-        let sTypeId: string = pNode.children[pNode.children.length - 2].value;
+        let tree = this.getSyntaxTree();
+        let node = tree.getLastNode();
+        let typeId = node.children[node.children.length - 2].value;
 
-        this.addTypeId(sTypeId);
+        this.addTypeId(typeId);
         return EOperationType.k_Ok;
     }
 
-    private _includeCode(): EOperationType {
-        let pTree: IParseTree = this.getSyntaxTree();
-        let pNode: IParseNode = pTree.getLastNode();
-        let sFile: string = pNode.value;
+    private async _includeCode(): Promise<EOperationType> {
+        let tree = this.getSyntaxTree();
+        let node = tree.getLastNode();
+        let file = node.value;
 
         //cuttin qoutes
-        let sIncludeURL: string = sFile.substr(1, sFile.length - 2);
+        let includeURL = file.substr(1, file.length - 2);
 
-        sFile = uri.resolve(sIncludeURL, this.getParseFileName());
+        file = uri.resolve(includeURL, this.getParseFileName());
 
-        if (this._pIncludedFilesMap[sFile]) {
+        if (this._includedFilesMap[file]) {
             return EOperationType.k_Ok;
         }
-        else {
-            let pParserState: IParserState = this._saveState();
+        
+        let parserState = this._saveState();
 
-            fs.readFile(sFile, (err, data: Buffer) => {
-                let sData = data.toString('utf8');
+        try {
+            let dataVal = (await readFile(file)).toString('utf8');
+            parserState.source = parserState.source.substr(0, parserState.index) +
+            dataVal + parserState.source.substr(parserState.index);
 
-                if (err) {
-                    logger.error(`Cannot read file: ${sFile}`);
-                }
-                else {
-                    pParserState.source = pParserState.source.substr(0, pParserState.index) +
-                        sData + pParserState.source.substr(pParserState.index);
+            this.loadState(parserState);
+            this.addIncludedFile(file);
+            let result = await this.resumeParse();
 
-                    this._loadState(pParserState);
-                    this._addIncludedFile(sFile);
-                    this.resume();
-                }
-            });
-
-            return EOperationType.k_Pause;
+            return result == EParserCode.k_Ok? EOperationType.k_Ok : EOperationType.k_Error;
+        } catch (e) {
+            this.critical(EParserErrors.GeneralCouldNotReadFile, { target: file });
         }
+
+        return EOperationType.k_Error;
     }
 
     _saveState(): IParserState {
-        let pState: IParserState = super._saveState();
-        pState.includeFiles = this._pIncludedFilesMap;
+        let pState: IParserState = super.saveState();
+        pState.includeFiles = this._includedFilesMap;
         return pState;
     }
 
     public _loadState(pState: IParserState): void {
-        super._loadState(pState);
-        this._pIncludedFilesMap = <IMap<boolean>>pState["includeFiles"];
+        super.loadState(pState);
+        this._includedFilesMap = <IMap<boolean>>pState["includeFiles"];
     }
 }

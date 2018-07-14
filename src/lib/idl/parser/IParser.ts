@@ -9,7 +9,7 @@ export enum ENodeCreateMode {
 }
 
 export enum EParserCode {
-    k_Pause,
+    // k_Pause,
     k_Ok,
     k_Error
 }
@@ -65,14 +65,11 @@ export interface IRule {
     index: number;
 }
 
-export type IFinishFunc = (eCode: EParserCode, pParser: IParser) => void;
-
 export enum EOperationType {
     k_Error = 100,
     k_Shift,
     k_Reduce,
     k_Success,
-    k_Pause,
     k_Ok
 }
 
@@ -131,56 +128,24 @@ export interface IParserState {
     types: IMap<boolean>;
     stack: number[];
     token: IToken;
-    fnCallback: IFinishFunc;
     caller: any;
     includeFiles?: IMap<boolean>;
 }
 
 export interface IParser {
-
     isTypeId(sValue: string): boolean;
-
     returnCode(pNode: IParseNode): string;
 
     init(sGrammar: string, eMode?: EParseMode, eType?: EParserType): boolean;
-    defaultInit(): void;
-
-    parse(sSource: string, fnFinishCallback?: IFinishFunc): EParserCode;
+    parse(sSource: string): Promise<EParserCode>;
 
     setParseFileName(sFileName: string): void;
     getParseFileName(): string;
 
-    pause(): EParserCode;
-    resume(): EParserCode;
-
     getSyntaxTree(): IParseTree;
+    getGrammarSymbols(): IMap<string>;
+    getDiagnostics(): IDiagnosticReport;
 
     printStates(isPrintOnlyBase?: boolean): void;
     printState(iStateIndex: number, isPrintOnlyBase?: boolean): void;
-
-    getGrammarSymbols(): IMap<string>;
-
-    _saveState(): IParserState;
-    _loadState(pState: IParserState): void;
-
-    getLastError(): ILoggerEntity;
-
-    // _getLexer(): ILexer;
-    // _getSource(): string;
-    // _getIndex(): number;
-    // _getTypeMap(): BoolMap;
-    // _getStack(): number[];
-    // _getToken(): IToken;
-    // _getCallback(): IFinishFunc;
-    // _getCaller(): any;
-
-    // _setParserState(sSource: string,
-    //                 iIndex: number,
-    //                 sFileName: string,
-    //                 pTree: IParseTree,
-    //                 pTypes: BoolMap,
-    //                 pStack: number[],
-    //                 pToken: IToken,
-    //                 fnCallback: IFinishFunc,
-    //                 pCaller: any): void;
 }
