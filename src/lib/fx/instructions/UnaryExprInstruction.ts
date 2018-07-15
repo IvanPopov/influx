@@ -2,7 +2,7 @@ import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContaine
 import { IMap } from '../../idl/IMap';
 import { ExprInstruction, IExprInstructionSettings } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
-import * as Effect from '../Effect';
+import * as Analyzer from '../Analyzer';
 import { IInstructionSettings } from './Instruction';
 
 

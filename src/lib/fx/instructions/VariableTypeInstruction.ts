@@ -1,6 +1,6 @@
 import { Instruction, IInstructionSettings } from "./Instruction";
-import { isDefAndNotNull } from "./../../common";
-import { assert } from "./../../common";
+import { isDefAndNotNull } from "../../common";
+import { assert } from "../../common";
 import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction, IScope } from '../../idl/IInstruction';
 import { IMap } from "../../idl/IMap";
 import { isNull, isNumber, isDef } from '../../common';
@@ -8,7 +8,7 @@ import { IdInstruction } from "./IdInstruction";
 import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { IntInstruction } from "./IntInstruction";
 import { IdExprInstruction } from "./IdExprInstruction"
-import * as Effect from "../Effect"
+import * as Analyzer from "../Analyzer"
 import { IParseNode } from "../../idl/parser/IParser";
 
 

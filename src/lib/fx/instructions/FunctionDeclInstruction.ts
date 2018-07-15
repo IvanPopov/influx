@@ -1,5 +1,5 @@
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
-import { IFunctionDefInstruction, IStmtBlockInstruction, IScope } from "./../../idl/IInstruction";
+import { IFunctionDefInstruction, IStmtBlockInstruction, IScope } from "../../idl/IInstruction";
 import { IFunctionDeclInstruction, EFunctionType, IVariableDeclInstruction, ITypeUseInfoContainer, ITypeDeclInstruction, ISimpleInstruction, EInstructionTypes, ITypeInstruction, IIdInstruction, IVariableTypeInstruction, IDeclInstruction, IStmtInstruction, IInstruction, IInitExprInstruction } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";

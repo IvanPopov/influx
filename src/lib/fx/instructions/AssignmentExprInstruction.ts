@@ -1,7 +1,7 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IExprInstructionSettings } from "./ExprInstruction";
-import { ITypedInstruction } from "./../../idl/IInstruction";
-import { IParseNode } from "./../../idl/parser/IParser";
+import { ITypedInstruction } from "../../idl/IInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstruction, IInstruction, IAssignmentExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IInstructionSettings } from "./Instruction";

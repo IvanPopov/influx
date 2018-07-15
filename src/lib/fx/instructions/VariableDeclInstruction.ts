@@ -1,7 +1,7 @@
 import { DeclInstruction } from './DeclInstruction';
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction, ITypeUseInfoContainer, EVarUsedMode } from "./../../idl/IInstruction";
-import * as Effect from '../Effect';
+import { IAnnotationInstruction, ITypeUseInfoContainer, EVarUsedMode } from "../../idl/IInstruction";
+import * as Analyzer from '../Analyzer';
 import { IExprInstruction, IInstruction, EInstructionTypes,
     IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction,
     IIdInstruction } from '../../idl/IInstruction';

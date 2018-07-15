@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { IExprInstruction } from "./../../idl/IInstruction";
+import { IExprInstruction } from "../../idl/IInstruction";
 import { EInstructionTypes, EFunctionType, ITypedInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";

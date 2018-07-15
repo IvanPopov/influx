@@ -1,6 +1,6 @@
 import { ERenderStates } from "./ERenderStates";
-import { IDispatch } from "./../../sandbox/actions/index";
-import { IdExprInstruction } from "./../fx/instructions/IdExprInstruction";
+import { IDispatch } from "../../sandbox/actions";
+import { IdExprInstruction } from "../fx/instructions/IdExprInstruction";
 import { ERenderStateValues } from "./ERenderStateValues";
 import { IMap } from "./IMap";
 import { IParseNode } from "./parser/IParser";

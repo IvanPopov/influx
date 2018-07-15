@@ -1,5 +1,5 @@
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
-import { IParseNode } from "./../../idl/parser/IParser";
+import { IParseNode } from "../../idl/parser/IParser";
 import { IVariableDeclInstruction, IAnnotationInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';

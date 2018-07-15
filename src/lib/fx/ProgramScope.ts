@@ -1,6 +1,6 @@
 ﻿import { isNull, isDef, assert } from "../common";
-import { isDefAndNotNull } from "./../common";
-import { IDispatch } from "./../../sandbox/actions/index";
+import { isDefAndNotNull } from "../common";
+import { IDispatch } from "../../sandbox/actions";
 import { IVariableDeclInstruction, ITypedInstruction, IFunctionDeclInstruction, 
          IFunctionDeclListMap, ITypeDeclInstruction, ITypeInstruction, ITechniqueInstruction, 
          EScopeType, IScope, IVariableTypeInstruction } from "../idl/IInstruction";

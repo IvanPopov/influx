@@ -1,10 +1,10 @@
 import { IIdExprInstruction, IVariableTypeInstruction, EInstructionTypes, IVariableDeclInstruction, EFunctionType, IInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
-import { IFunctionDeclInstruction } from "./../../idl/IInstruction";
+import { IFunctionDeclInstruction } from "../../idl/IInstruction";
 import { IInstructionSettings } from "./Instruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import { IDeclInstruction } from "./../../idl/IInstruction";
-import { IIdInstruction } from "./../../idl/IInstruction";
-import { IParseNode } from "./../../idl/parser/IParser";
+import { IDeclInstruction } from "../../idl/IInstruction";
+import { IIdInstruction } from "../../idl/IInstruction";
+import { IParseNode } from "../../idl/parser/IParser";
 import { ExprInstruction } from "./ExprInstruction";
 import { isNull, isDef } from "../../common";
 import { IMap } from "../../idl/IMap";
@@ -25,7 +25,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
 
-        this._id = id.$withParent(this);
+        this._id = id.$withNoParent();
         this._decl = decl;
     }
 

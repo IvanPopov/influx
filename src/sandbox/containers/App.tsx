@@ -84,6 +84,8 @@ class App extends React.Component<IAppProps> {
                             }) }
                             onNodeOut={ (instr: IInstruction) => props.actions.removeMarker(`ast-range-${instr.instructionID}`) }
                             onNodeClick={ (instr: IInstruction) => { } }
+
+                            onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
                         />
                     </Tab.Pane>
                 )

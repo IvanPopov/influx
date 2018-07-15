@@ -59,7 +59,7 @@ function readKey(desc: Object, key: string) {
 
 
 function fillPattern(pattern: string, desc: Object): string {
-    return pattern.replace(/{([a-z.]+)}/g, (match, key) => {
+    return pattern.replace(/{([a-zA-Z.]+)}/g, (match, key) => {
         return readKey(desc, key);
     });
 }
@@ -211,5 +211,16 @@ export class Diagnostics <DESC_T>{
 
     static stringify(report: IDiagnosticReport): string {
         return report.messages.map(mesg => mesg.content).join('\n');
+    }
+
+    static asRange(mesg: IDiagnosticMessage): IRange {
+        let range: IRange = { start: mesg.start, end: mesg.end };
+
+        if (!range.end) {
+            range.end = { ...range.start };
+            range.end.column += 1;
+        }
+
+        return range;
     }
 }

@@ -8,7 +8,7 @@ import { List } from 'semantic-ui-react'
 import { IMap } from '../../lib/idl/IMap';
 
 
-import * as Effect from '../../lib/fx/Effect';
+import * as Analyzer from '../../lib/fx/Analyzer';
 import { IParserParams } from '../store/IStoreState';
 import { DiagnosticException, Diagnostics, EDiagnosticCategory } from '../../lib/util/Diagnostics';
 
@@ -130,16 +130,9 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         let report = parser.getDiagnostics();
 
         report.messages.forEach(mesg => {
-            if (mesg.category == EDiagnosticCategory.ERROR) {
-                let range: IRange = { start: mesg.start, end: mesg.end };
-
-                if (!range.end) {
-                    range.end = { ...range.start };
-                    range.end.column += 1;
-                }
-                
-                this.props.onError(range, mesg.content);
-            }
+            // if (mesg.category == EDiagnosticCategory.ERROR) {
+                this.props.onError(Diagnostics.asRange(mesg), mesg.content);
+            // }
         });
 
         console.log(Diagnostics.stringify(parser.getDiagnostics()));

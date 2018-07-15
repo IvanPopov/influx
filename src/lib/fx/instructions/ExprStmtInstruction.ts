@@ -1,6 +1,6 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { IInstructionSettings } from "./Instruction";
-import { IParseNode } from "./../../idl/parser/IParser";
+import { IParseNode } from "../../idl/parser/IParser";
 import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IInstruction";
 
 

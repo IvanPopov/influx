@@ -1,5 +1,5 @@
 import { IStmtInstruction, EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction } from "../../idl/IInstruction";
-import { IParseNode } from "./../../idl/parser/IParser";
+import { IParseNode } from "../../idl/parser/IParser";
 import { Instruction, IInstructionSettings } from "./Instruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";

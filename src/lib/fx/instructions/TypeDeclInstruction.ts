@@ -1,7 +1,7 @@
 import { DeclInstruction } from "./DeclInstruction";
-import { assert, isDef, isNull } from "./../../common";
+import { assert, isDef, isNull } from "../../common";
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction } from "./../../idl/IInstruction";
+import { IAnnotationInstruction } from "../../idl/IInstruction";
 import { ITypeDeclInstruction, EInstructionTypes, ITypeInstruction, IInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";

@@ -328,7 +328,7 @@ function generateSystemFunction(
             funcHash += ")";
 
             if (systemFunctionHashMap[funcHash]) {
-                _error(EAnalyzerErrors.InvalidSystemFunctionRedefinition, { funcName: funcHash });
+                _error(EAnalyzerErrors.SystemFunctionRedefinition, { funcName: funcHash });
             }
 
             generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);
@@ -357,7 +357,7 @@ function generateSystemFunction(
         funcHash += ")";
 
         if (systemFunctionHashMap[funcHash]) {
-            _error(EAnalyzerErrors.InvalidSystemFunctionRedefinition, { funcName: funcHash });
+            _error(EAnalyzerErrors.SystemFunctionRedefinition, { funcName: funcHash });
         }
 
         generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);

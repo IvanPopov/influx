@@ -1,6 +1,6 @@
 import { isNull } from '../../common';
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction } from "./../../idl/IInstruction";
+import { IAnnotationInstruction } from "../../idl/IInstruction";
 import { EInstructionTypes, IPassInstruction, ITechniqueInstruction } from '../../idl/IInstruction';
 import { DeclInstruction } from './DeclInstruction';
 import { PassInstruction } from './PassInstruction';

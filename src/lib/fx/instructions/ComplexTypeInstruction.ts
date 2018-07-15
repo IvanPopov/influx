@@ -1,5 +1,5 @@
 
-import { isDefAndNotNull } from "./../../common";
+import { isDefAndNotNull } from "../../common";
 import { Instruction, IInstructionSettings } from "./Instruction";
 import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";

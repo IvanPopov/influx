@@ -1,8 +1,8 @@
 import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
-import { IIdInstruction } from "./../../idl/IInstruction";
+import { IIdInstruction } from "../../idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction } from "./../../idl/IInstruction";
+import { IAnnotationInstruction } from "../../idl/IInstruction";
 import { ERenderStateValues } from "../../idl/ERenderStateValues";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";

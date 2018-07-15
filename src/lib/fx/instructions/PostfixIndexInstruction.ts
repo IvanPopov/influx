@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IDispatch } from "./../../../sandbox/actions/index";
+import { IDispatch } from "../../../sandbox/actions";
 import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, IExprInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";

@@ -1,4 +1,5 @@
-﻿import { IPosition, IRange } from "./../idl/parser/IParser";
+﻿import { IPosition, IRange } from "../idl/parser/IParser";
+import { IDiagnosticReport } from "../util/Diagnostics";
 import { AssigmentOperator } from "./instructions/AssignmentExprInstruction";
 import { IProvideInstructionSettings, ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ISamplerStateInstructionSettings, SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
@@ -114,13 +115,20 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
     }
 
     protected diagnosticMessages() {
-        // TODO: !!
+        // todo: fill all errors.
         return {
-            
+            [EErrors.InvalidReturnStmtEmpty]: 'Invalid return statement. Expression with \'*type*\' type expected.', // todo: specify type
+            [EErrors.InvalidReturnStmtVoid]: 'Invalid return statement. Expression with \'void\' type expected.',
+            [EErrors.FunctionRedefinition]: 'Function redefinition. Function with name \'{info.funcName}\' already declared.', // todo: add location where function declared before
+            [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.' // todo: specify prev type and location
         };
     }
 
     protected resolveDescription(code: number, desc: IAnalyzerDiagDesc): string {
+        let descList = this.diagnosticMessages();
+        if (isDefAndNotNull(descList[code])) {
+            return super.resolveDescription(code, desc);
+        }
         return `error: ${EErrors[code]} (${JSON.stringify(desc)})`;
     }
 }
@@ -259,7 +267,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
     let name: string = technique.name;
 
     if (program.globalScope.hasTechnique(name)) {
-        _error(context, technique.sourceNode, EErrors.InvalidTechniqueNameRedefinition, { techName: name });
+        _error(context, technique.sourceNode, EErrors.TechniqueNameRedefinition, { techName: name });
         return;
     }
 
@@ -2236,6 +2244,8 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     const globalScope = program.globalScope;
     const lastNodeValue = children[0].value;
 
+    console.assert(scope == globalScope);
+
     let annotation: IAnnotationInstruction = null;
     let implementation: IStmtBlockInstruction = null;
 
@@ -2246,17 +2256,20 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 
     if (!isDef(func)) {
         _error(context, sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
+        program.pop();
         return null;
     }
 
     if (!isNull(func) && func.implementation) {
-        _error(context, sourceNode, EErrors.InvalidFunctionRedefinition, { funcName: definition.name });
+        _error(context, sourceNode, EErrors.FunctionRedefinition, { funcName: definition.name });
+        program.pop();
         return null;
     }
 
     if (!isNull(func)) {
         if (!func.definition.returnType.isEqual(definition.returnType)) {
-            _error(context, sourceNode, EErrors.InvalidFuncDefenitionReternType, { funcName: definition.name });
+            _error(context, sourceNode, EErrors.InvalidFuncDefenitionReturnType, { funcName: definition.name });
+            program.pop();
             return null;
         }
     }
@@ -2278,6 +2291,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     program.pop();
 
     if (isNull(func)) {
+        console.assert(scope == globalScope);
         func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
         if (!globalScope.addFunction(func)) {
             _error(context, sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
@@ -2989,12 +3003,12 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 
     if (shaderType === EFunctionType.k_Vertex) {
         if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
-            _error(context, sourceNode, EErrors.InvalidFunctionVertexRedefinition, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EErrors.FunctionVertexRedefinition, { funcDef: shaderFunc.toString() });
         }
     }
     else {
         if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
-            _error(context, sourceNode, EErrors.InvalidFunctionPixelRedefinition, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EErrors.FunctionPixelRedefinition, { funcDef: shaderFunc.toString() });
         }
     }
 
@@ -3285,10 +3299,8 @@ class Context {
 }
 
 export interface IAnalyzeResult {
-    success: boolean;
     root: IInstructionCollector;
-    // errors: any[];
-    // warnings: any[];
+    diag: IDiagnosticReport;
 }
 
 export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
@@ -3315,7 +3327,7 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     }
 
     console.timeEnd(`analyze(${filename})`);
-    return { success: true, root:  new InstructionCollector({ scope: program.currentScope, instructions: list }) };
+    return { diag: diag.resolve(), root:  new InstructionCollector({ scope: program.currentScope, instructions: list }) };
 }
 
 

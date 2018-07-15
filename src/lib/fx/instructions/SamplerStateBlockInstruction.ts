@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IMap } from "./../../idl/IMap";
+import { IMap } from "../../idl/IMap";
 import { IVariableDeclInstruction, EInstructionTypes, ISamplerStateBlockInstruction, ISamplerStateInstruction } from "../../idl/IInstruction";
 import { isNull, isDef } from "../../common";
 import { ISamplerState } from "../../idl/ISamplerState"

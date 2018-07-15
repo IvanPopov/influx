@@ -1,6 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IConditionalExprInstructionSettings } from "./ConditionalExprInstruction";
-import { ITypeInstruction, IInstruction, IVariableTypeInstruction } from "./../../idl/IInstruction";
+import { ITypeInstruction, IInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction, IExprInstruction, IConstructorCallInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";

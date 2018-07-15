@@ -2,12 +2,13 @@ import * as React from 'react';
 import { List, Message } from 'semantic-ui-react';
 import { isArray } from 'util';
 import { isDefAndNotNull, isNull } from '../../lib/common';
-import { analyze } from '../../lib/fx/Effect';
+import { analyze } from '../../lib/fx/Analyzer';
 import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
 import { EInstructionTypes, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction } from '../../lib/idl/IInstruction';
 import { IMap } from '../../lib/idl/IMap';
-import { IParseTree } from '../../lib/idl/parser/IParser';
+import { IParseTree, IRange } from '../../lib/idl/parser/IParser';
 import { SystemTypeInstruction } from '../../lib/fx/instructions/SystemTypeInstruction';
+import { Diagnostics } from '../../lib/util/Diagnostics';
 
 
 
@@ -121,6 +122,8 @@ export interface IProgramViewProps {
     onNodeOut?: (instr: IInstruction) => void;
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
+
+    onError: (loc: IRange , message: string) => void;
 }
 
 class ProgramView extends React.Component<IProgramViewProps, {}> {
@@ -149,9 +152,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         }
 
         const result = analyze(nextProps.filename, nextProps.ast);
-        if (result.success) {
-            this.setState({ root: result.root });
-        }
+        this.setState({ root: result.root });
+        
+        result.diag.messages.forEach(mesg => {
+            this.props.onError(Diagnostics.asRange(mesg), mesg.content);
+        });
+
+        console.log(Diagnostics.stringify(result.diag));
     }
 
 

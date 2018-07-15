@@ -1,6 +1,6 @@
 import { EParserType, IRange } from '../../lib/idl/parser/IParser';
 import { IMap } from '../../lib/idl/IMap';
-import { AnyAction } from '../../../node_modules/redux';
+import { AnyAction } from 'redux';
 
 export interface IMarker {
     range: IRange;

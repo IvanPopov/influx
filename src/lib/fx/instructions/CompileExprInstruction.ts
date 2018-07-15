@@ -1,6 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IExprInstructionSettings } from "./ExprInstruction";
-import { IExprInstruction } from "./../../idl/IInstruction";
+import { IExprInstruction } from "../../idl/IInstruction";
 import { EInstructionTypes, IFunctionDeclInstruction, ICompileExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
