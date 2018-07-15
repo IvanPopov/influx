@@ -1,4 +1,4 @@
-﻿import { IPosition } from "./../idl/parser/IParser";
+﻿import { IPosition, IRange } from "./../idl/parser/IParser";
 import { AssigmentOperator } from "./instructions/AssignmentExprInstruction";
 import { IProvideInstructionSettings, ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ISamplerStateInstructionSettings, SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
@@ -22,9 +22,6 @@ import { VariableDeclInstruction } from './instructions/VariableDeclInstruction'
 import { IdInstruction } from './instructions/IdInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
-import { EEffectErrors, EEffectTempErrors } from '../idl/EEffectErrors';
-import { logger } from '../logger';
-import { ISourceLocation, ILoggerEntity } from '../idl/ILogger';
 import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
 import { InitExprInstruction } from './instructions/InitExprInstruction';
 import { CompileExprInstruction } from './instructions/CompileExprInstruction';
@@ -62,24 +59,25 @@ import { IntInstruction } from './instructions/IntInstruction';
 import { DeclStmtInstruction } from './instructions/DeclStmtInstruction';
 import { BreakStmtInstruction, BreakOperator } from './instructions/BreakStmtInstruction';
 import { WhileStmtInstruction, DoWhileOperator } from './instructions/WhileStmtInstruction';
-import { IEffectErrorInfo } from '../idl/IEffectErrorInfo';
 import { ProgramScope, Scope } from './ProgramScope';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
+import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '../idl/EAnalyzerErrors';
 
 import * as SystemScope from './SystemScope';
+import { Diagnostics } from "../util/Diagnostics";
 
 
 function validate(instr: IInstruction, expectedType: EInstructionTypes) {
     assert(instr.instructionType === expectedType);
 }
 
-function resolveNodeSourceLocation(sourceNode: IParseNode): IPosition | null {
+function resolveNodeSourceLocation(sourceNode: IParseNode): IRange {
     if (!isDefAndNotNull(sourceNode)) {
         return null;
     }
 
     if (isDef(sourceNode.loc)) {
-        return { line: sourceNode.loc.start.line, column: sourceNode.loc.start.column };
+        return sourceNode.loc;
     }
 
     return resolveNodeSourceLocation(sourceNode.children[sourceNode.children.length - 1]);
@@ -90,33 +88,60 @@ function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVar
     return new VariableTypeInstruction({ type, scope: null });
 }
 
-
-
-// todo: rewrite it!
-function _error(context: Context, sourceNode: IParseNode, code: number, info: IEffectErrorInfo = {}): void {
-    let location: ISourceLocation = <ISourceLocation>{ file: context ? context.filename : null, line: 0 };
-    let lineColumn: { line: number; column: number; } = resolveNodeSourceLocation(sourceNode);
-
-    switch (code) {
-        default:
-            if (isDefAndNotNull(lineColumn)) {
-                info.line = lineColumn.line + 1;
-                info.column = lineColumn.column + 1;
-                location.line = lineColumn.line + 1;
-            }
-            break;
-    }
-
-    let logEntity: ILoggerEntity = <ILoggerEntity>{
-        code: code,
-        info: info,
-        location: location
-    };
-
-    logger.error(logEntity);
-    // throw new Error(code.toString());
+interface IAnalyzerDiagDesc {
+    file: string;
+    loc: IRange;
+    info: any; // todo: fixme
 }
 
+type IErrorInfo = IMap<any>; 
+type IWarningInfo = IMap<any>;
+
+
+
+
+export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
+    constructor() {
+        super("Analyzer Diagnostics", 'A');
+    }
+
+    protected resolveFilename(code: number, desc: IAnalyzerDiagDesc): string {
+        return desc.file;
+    }
+
+    protected resolveRange(code: number, desc: IAnalyzerDiagDesc): IRange {
+        return desc.loc;
+    }
+
+    protected diagnosticMessages() {
+        // TODO: !!
+        return {
+            
+        };
+    }
+
+    protected resolveDescription(code: number, desc: IAnalyzerDiagDesc): string {
+        return `error: ${EErrors[code]} (${JSON.stringify(desc)})`;
+    }
+}
+
+
+const diag = new AnalyzerDiagnostics;
+
+
+function _error(context: Context, sourceNode: IParseNode, code: number, info: IErrorInfo = {}): void {
+    let file = context ? context.filename : null;
+    let loc = resolveNodeSourceLocation(sourceNode);
+
+    diag.error(code, { file, loc, info });
+}
+
+function _warning(context: Context, sourceNode: IParseNode, code: number, info: IErrorInfo = {}): void {
+    let file = context ? context.filename : null;
+    let loc = resolveNodeSourceLocation(sourceNode);
+
+    diag.error(code, { file, loc, info });
+}
 
 function analyzeUseDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): void {
     program.currentScope.strictMode = true;
@@ -156,7 +181,7 @@ function analyzeProvideDecl(context: Context, program: ProgramScope, sourceNode:
         return new ProvideInstruction({ sourceNode, moduleName, scope });
     }
 
-    _error(context, sourceNode, EEffectTempErrors.UNSUPPORTED_PROVIDE_AS);
+    _error(context, sourceNode, EErrors.UnsupportedProvideAs);
     return null;
 }
 
@@ -207,25 +232,25 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 
 function addTypeDecl(context: Context, scope: IScope, typeDecl: ITypeDeclInstruction): void {
     if (SystemScope.findType(typeDecl.name)) {
-        _error(context, typeDecl.sourceNode, EEffectErrors.REDEFINE_SYSTEM_TYPE, { typeName: typeDecl.name });
+        _error(context, typeDecl.sourceNode, EErrors.SystemTypeRedefinition, { typeName: typeDecl.name });
     }
 
     let isAdded = scope.addType(typeDecl.type);
     if (!isAdded) {
-        _error(context, typeDecl.sourceNode, EEffectErrors.REDEFINE_TYPE, { typeName: typeDecl.name });
+        _error(context, typeDecl.sourceNode, EErrors.TypeRedefinition, { typeName: typeDecl.name });
     }
 }
 
 
 // function addFunctionDecl(context: Context, program: ProgramScope, sourceNode: IParseNode, func: IFunctionDeclInstruction): void {
 //     if (isSystemFunction(func)) {
-//         _error(context, sourceNode, EEffectErrors.REDEFINE_SYSTEM_FUNCTION, { funcName: func.name });
+//         _error(context, sourceNode, EErrors.SystemFunctionRedefinition, { funcName: func.name });
 //     }
 
 //     let isFunctionAdded: boolean = program.addFunction(func);
 
 //     if (!isFunctionAdded) {
-//         _error(context, sourceNode, EEffectErrors.REDEFINE_FUNCTION, { funcName: func.name });
+//         _error(context, sourceNode, EErrors.FunctionRedifinition, { funcName: func.name });
 //     }
 // }
 
@@ -234,7 +259,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
     let name: string = technique.name;
 
     if (program.globalScope.hasTechnique(name)) {
-        _error(context, technique.sourceNode, EEffectErrors.BAD_TECHNIQUE_REDEFINE_NAME, { techName: name });
+        _error(context, technique.sourceNode, EErrors.InvalidTechniqueNameRedefinition, { techName: name });
         return;
     }
 
@@ -282,14 +307,14 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 //                     if (testedFunction === addedFunction) {
 //                         testedFunction.addToBlackList();
 //                         isNewDelete = true;
-//                         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_RECURSION, { funcDef: testedFunction.stringDef });
+//                         _error(context, sourceNode, EErrors.InvalidFunctionUsageRecursion, { funcDef: testedFunction.stringDef });
 //                         continue mainFor;
 //                     }
 
 //                     if (addedFunction.isBlackListFunction() ||
 //                         !addedFunction.canUsedAsFunction()) {
 //                         testedFunction.addToBlackList();
-//                         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_BLACKLIST, { funcDef: testedFunction.stringDef });
+//                         _error(context, sourceNode, EErrors.InvalidFunctionUsageBlackList, { funcDef: testedFunction.stringDef });
 //                         isNewDelete = true;
 //                         continue mainFor;
 //                     }
@@ -327,14 +352,14 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 //             }
 
 //             if (!testedFunction.checkVertexUsage()) {
-//                 _error(context, testedFunction.sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_VERTEX, { funcDef: testedFunction.stringDef });
+//                 _error(context, testedFunction.sourceNode, EErrors.InvalidFunctionUsageVertex, { funcDef: testedFunction.stringDef });
 //                 testedFunction.addToBlackList();
 //                 isNewDelete = true;
 //                 continue mainFor;
 //             }
 
 //             if (!testedFunction.checkPixelUsage()) {
-//                 _error(context, testedFunction.sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_PIXEL, { funcDef: testedFunction.stringDef });
+//                 _error(context, testedFunction.sourceNode, EErrors.InvalidFunctionUsagePixel, { funcDef: testedFunction.stringDef });
 //                 testedFunction.addToBlackList();
 //                 isNewDelete = true;
 //                 continue mainFor;
@@ -349,7 +374,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 
 //                 if (testedFunction.isUsedInVertex()) {
 //                     if (!usedFunction.vertex) {
-//                         _error(context, usedFunction.sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_VERTEX, { funcDef: testedFunction.stringDef });
+//                         _error(context, usedFunction.sourceNode, EErrors.InvalidFunctionUsageVertex, { funcDef: testedFunction.stringDef });
 //                         testedFunction.addToBlackList();
 //                         isNewDelete = true;
 //                         continue mainFor;
@@ -364,7 +389,7 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 
 //                 if (testedFunction.isUsedInPixel()) {
 //                     if (!usedFunction.pixel) {
-//                         _error(context, usedFunction.sourceNode, EEffectErrors.BAD_FUNCTION_USAGE_PIXEL, { funcDef: testedFunction.stringDef });
+//                         _error(context, usedFunction.sourceNode, EErrors.InvalidFunctionUsagePixel, { funcDef: testedFunction.stringDef });
 //                         testedFunction.addToBlackList();
 //                         isNewDelete = true;
 //                         continue mainFor;
@@ -413,107 +438,107 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 
 
 
-function getRenderState(sState: string): ERenderStates {
-    let eType: ERenderStates = null;
+function getRenderState(state: string): ERenderStates {
+    let type: ERenderStates = null;
 
-    switch (sState) {
+    switch (state) {
         case 'BLENDENABLE':
-            eType = ERenderStates.BLENDENABLE;
+            type = ERenderStates.BLENDENABLE;
             break;
         case 'CULLFACEENABLE':
-            eType = ERenderStates.CULLFACEENABLE;
+            type = ERenderStates.CULLFACEENABLE;
             break;
         case 'ZENABLE':
-            eType = ERenderStates.ZENABLE;
+            type = ERenderStates.ZENABLE;
             break;
         case 'ZWRITEENABLE':
-            eType = ERenderStates.ZWRITEENABLE;
+            type = ERenderStates.ZWRITEENABLE;
             break;
         case 'DITHERENABLE':
-            eType = ERenderStates.DITHERENABLE;
+            type = ERenderStates.DITHERENABLE;
             break;
         case 'SCISSORTESTENABLE':
-            eType = ERenderStates.SCISSORTESTENABLE;
+            type = ERenderStates.SCISSORTESTENABLE;
             break;
         case 'STENCILTESTENABLE':
-            eType = ERenderStates.STENCILTESTENABLE;
+            type = ERenderStates.STENCILTESTENABLE;
             break;
         case 'POLYGONOFFSETFILLENABLE':
-            eType = ERenderStates.POLYGONOFFSETFILLENABLE;
+            type = ERenderStates.POLYGONOFFSETFILLENABLE;
             break;
         case 'CULLFACE':
-            eType = ERenderStates.CULLFACE;
+            type = ERenderStates.CULLFACE;
             break;
         case 'FRONTFACE':
-            eType = ERenderStates.FRONTFACE;
+            type = ERenderStates.FRONTFACE;
             break;
 
         case 'SRCBLENDCOLOR':
-            eType = ERenderStates.SRCBLENDCOLOR;
+            type = ERenderStates.SRCBLENDCOLOR;
             break;
         case 'DESTBLENDCOLOR':
-            eType = ERenderStates.DESTBLENDCOLOR;
+            type = ERenderStates.DESTBLENDCOLOR;
             break;
         case 'SRCBLENDALPHA':
-            eType = ERenderStates.SRCBLENDALPHA;
+            type = ERenderStates.SRCBLENDALPHA;
             break;
         case 'DESTBLENDALPHA':
-            eType = ERenderStates.DESTBLENDALPHA;
+            type = ERenderStates.DESTBLENDALPHA;
             break;
 
         case 'BLENDEQUATIONCOLOR':
-            eType = ERenderStates.BLENDEQUATIONCOLOR;
+            type = ERenderStates.BLENDEQUATIONCOLOR;
             break;
         case 'BLENDEQUATIONALPHA':
-            eType = ERenderStates.BLENDEQUATIONALPHA;
+            type = ERenderStates.BLENDEQUATIONALPHA;
             break;
 
         case 'SRCBLEND':
-            eType = ERenderStates.SRCBLEND;
+            type = ERenderStates.SRCBLEND;
             break;
         case 'DESTBLEND':
-            eType = ERenderStates.DESTBLEND;
+            type = ERenderStates.DESTBLEND;
             break;
         case 'BLENDFUNC':
-            eType = ERenderStates.BLENDFUNC;
+            type = ERenderStates.BLENDFUNC;
             break;
         case 'BLENDFUNCSEPARATE':
-            eType = ERenderStates.BLENDFUNCSEPARATE;
+            type = ERenderStates.BLENDFUNCSEPARATE;
             break;
 
         case 'BLENDEQUATION':
-            eType = ERenderStates.BLENDEQUATION;
+            type = ERenderStates.BLENDEQUATION;
             break;
         case 'BLENDEQUATIONSEPARATE':
-            eType = ERenderStates.BLENDEQUATIONSEPARATE;
+            type = ERenderStates.BLENDEQUATIONSEPARATE;
             break;
 
         case 'ZFUNC':
-            eType = ERenderStates.ZFUNC;
+            type = ERenderStates.ZFUNC;
             break;
         case 'ALPHABLENDENABLE':
-            eType = ERenderStates.ALPHABLENDENABLE;
+            type = ERenderStates.ALPHABLENDENABLE;
             break;
         case 'ALPHATESTENABLE':
-            eType = ERenderStates.ALPHATESTENABLE;
+            type = ERenderStates.ALPHATESTENABLE;
             break;
 
         default:
-            logger.warn('Unsupported render state type used: ' + sState + '. WebGl...');
+            _warning(null, null, EWarnings.UnsupportedRenderStateTypeUsed, { state });
             break;
     }
 
-    return eType;
+    return type;
 }
 
 
-function getRenderStateValue(eState: ERenderStates, value: string): ERenderStateValues {
+function getRenderStateValue(state: ERenderStates, value: string): ERenderStateValues {
     let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
 
-    switch (eState) {
+    switch (state) {
         case ERenderStates.ALPHABLENDENABLE:
         case ERenderStates.ALPHATESTENABLE:
-            logger.warn('ALPHABLENDENABLE/ALPHATESTENABLE not supported in WebGL.');
+            console.warn('ALPHABLENDENABLE/ALPHATESTENABLE not supported in WebGL.');
             return ERenderStateValues.UNDEF;
 
         case ERenderStates.BLENDENABLE:
@@ -533,7 +558,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     break;
 
                 default:
-                    logger.warn('Unsupported render state ALPHABLENDENABLE/ZENABLE/ZWRITEENABLE/DITHERENABLE value used: '
+                    console.warn('Unsupported render state ALPHABLENDENABLE/ZENABLE/ZWRITEENABLE/DITHERENABLE value used: '
                         + value + '.');
                     return eValue;
             }
@@ -552,7 +577,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     break;
 
                 default:
-                    logger.warn('Unsupported render state CULLFACE value used: ' + value + '.');
+                    console.warn('Unsupported render state CULLFACE value used: ' + value + '.');
                     return eValue;
             }
             break;
@@ -567,7 +592,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     break;
 
                 default:
-                    logger.warn('Unsupported render state FRONTFACE value used: ' + value + '.');
+                    console.warn('Unsupported render state FRONTFACE value used: ' + value + '.');
                     return eValue;
             }
             break;
@@ -616,7 +641,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     break;
 
                 default:
-                    logger.warn('Unsupported render state SRCBLEND/DESTBLEND value used: ' + value + '.');
+                    console.warn('Unsupported render state SRCBLEND/DESTBLEND value used: ' + value + '.');
                     return eValue;
             }
             break;
@@ -639,7 +664,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     eValue = ERenderStateValues.FUNCREVERSESUBTRACT;
                     break;
                 default:
-                    logger.warn('Unsupported render state BLENDEQUATION/BLENDEQUATIONSEPARATE value used: ' + value + '.');
+                    console.warn('Unsupported render state BLENDEQUATION/BLENDEQUATIONSEPARATE value used: ' + value + '.');
                     return eValue;
             }
             break;
@@ -672,7 +697,7 @@ function getRenderStateValue(eState: ERenderStates, value: string): ERenderState
                     break;
 
                 default:
-                    logger.warn('Unsupported render state ZFUNC value used: ' +
+                    console.warn('Unsupported render state ZFUNC value used: ' +
                         value + '.');
                     return eValue;
             }
@@ -716,27 +741,27 @@ function checkTwoOperandExprTypes(
 
     if (isAssignmentOperator(operator)) {
         if (!leftType.writable) {
-            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
+            _error(context, leftType.sourceNode, EErrors.InvalidTypeForWriting);
             return null;
         }
 
         if (!rightType.readable) {
-            _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            _error(context, rightType.sourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
 
         if (operator !== '=' && !leftType.readable) {
-            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            _error(context, leftType.sourceNode, EErrors.InvalidTypeForReading);
         }
     }
     else {
         if (!leftType.readable) {
-            _error(context, leftType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            _error(context, leftType.sourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
 
         if (!rightType.readable) {
-            _error(context, rightType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+            _error(context, rightType.sourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
     }
@@ -843,14 +868,14 @@ function checkOneOperandExprType(context: Context, sourceNode: IParseNode, opera
     }
 
     if (!type.readable) {
-        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
 
     if (operator === '++' || operator === '--') {
         if (!type.writable) {
-            _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
+            _error(context, sourceNode, EErrors.InvalidTypeForWriting);
             return null;
         }
 
@@ -978,7 +1003,7 @@ function analyzeType(context: Context, program: ProgramScope, sourceNode: IParse
             type = scope.findType(sourceNode.value);
 
             if (isNull(type)) {
-                _error(context, sourceNode, EEffectErrors.BAD_TYPE_NAME_NOT_TYPE, { typeName: sourceNode.value });
+                _error(context, sourceNode, EErrors.InvalidTypeNameNotType, { typeName: sourceNode.value });
             }
             break;
         case 'Struct':
@@ -994,14 +1019,14 @@ function analyzeType(context: Context, program: ProgramScope, sourceNode: IParse
             type = scope.findType(children[children.length - 1].value);
 
             if (isNull(type)) {
-                _error(context, sourceNode, EEffectErrors.BAD_TYPE_NAME_NOT_TYPE, { typeName: children[children.length - 1].value });
+                _error(context, sourceNode, EErrors.InvalidTypeNameNotType, { typeName: children[children.length - 1].value });
             }
 
             break;
 
         case 'VectorType':
         case 'MatrixType':
-            _error(context, sourceNode, EEffectErrors.BAD_TYPE_VECTOR_MATRIX);
+            _error(context, sourceNode, EErrors.InvalidTypeVectorMatrix);
             break;
 
         case 'BaseType':
@@ -1039,7 +1064,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         } else if (children[i].name === 'Initializer') {
             init = analyzeInitializer(context, program, children[i]);
             if (!init.optimizeForVariableType(type)) {
-                _error(context, sourceNode, EEffectErrors.BAD_VARIABLE_INITIALIZER, { varName: id.name });
+                _error(context, sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
                 return null;
             }
         }
@@ -1049,20 +1074,20 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
     assert(scope.type != EScopeType.k_System);
 
     if (SystemScope.hasVariable(varDecl.name)) {
-        _error(context, sourceNode, EEffectErrors.REDEFINE_SYSTEM_VARIABLE, { varName: varDecl.name });
+        _error(context, sourceNode, EErrors.SystemVariableRedefinition, { varName: varDecl.name });
     }
 
     const isAdded = scope.addVariable(varDecl);
     if (!isAdded) {
         switch (scope.type) {
             case EScopeType.k_Default:
-                _error(context, sourceNode, EEffectErrors.REDEFINE_VARIABLE, { varName: varDecl.name });
+                _error(context, sourceNode, EErrors.VariableRedefinition, { varName: varDecl.name });
                 break;
             case EScopeType.k_Struct:
-                _error(context, sourceNode, EEffectErrors.BAD_NEW_FIELD_FOR_STRUCT_NAME, { fieldName: varDecl.name });
+                _error(context, sourceNode, EErrors.InvalidNewFieldForStructName, { fieldName: varDecl.name });
                 break;
             case EScopeType.k_Annotation:
-                _error(context, sourceNode, EEffectErrors.BAD_NEW_ANNOTATION_VAR, { varName: varDecl.name });
+                _error(context, sourceNode, EErrors.InvalidNewAnnotationVar, { varName: varDecl.name });
                 break;
         }
     }
@@ -1215,7 +1240,7 @@ function analyzeExpr(context: Context, program: ProgramScope, sourceNode: IParse
         case 'T_KW_FALSE':
             return analyzeSimpleExpr(context, program, sourceNode);
         default:
-            _error(context, sourceNode, EEffectErrors.UNSUPPORTED_EXPR, { exprName: name });
+            _error(context, sourceNode, EErrors.UnsupportedExpr, { exprName: name });
             break;
     }
 
@@ -1276,7 +1301,7 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
     let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
 
     if (isNull(shaderFunc)) {
-        _error(context, sourceNode, EEffectErrors.BAD_COMPILE_NOT_FUNCTION, { funcName: shaderFuncName });
+        _error(context, sourceNode, EErrors.InvalidCompileNotFunction, { funcName: shaderFuncName });
         return null;
     }
 
@@ -1332,7 +1357,7 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
     let children = sourceNode.children;
 
     if (children[children.length - 2].name === 'StateIndex') {
-        _error(context, sourceNode, EEffectErrors.NOT_SUPPORT_STATE_INDEX);
+        _error(context, sourceNode, EErrors.UnsupportedStateIndex);
         return null;
     }
 
@@ -1343,21 +1368,21 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
     let scope = program.currentScope;
 
     if (isNull(subStateExprNode.value)) {
-        _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+        _error(context, subStateExprNode, EErrors.InvalidSamplerTexture);
         return null;
     }
 
     switch (stateType) {
         case 'TEXTURE':
             if (stateExprNode.children.length !== 3 || subStateExprNode.value === '{') {
-                _error(context, subStateExprNode, EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+                _error(context, subStateExprNode, EErrors.InvalidSamplerTexture);
                 return null;
             }
 
             let texNameNode = stateExprNode.children[1];
             let texName = texNameNode.value;
             if (isNull(texName) || !program.findVariable(texName)) {
-                _error(context, stateExprNode.children[1], EEffectErrors.BAD_TEXTURE_FOR_SAMLER);
+                _error(context, stateExprNode.children[1], EErrors.InvalidSamplerTexture);
                 return null;
             }
 
@@ -1376,7 +1401,7 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
                     break;
                 default:
                     // todo: move to errors
-                    logger.warn('Webgl don`t support this wrapmode: ' + stateValue);
+                    // console.warn('Webgl don`t support this wrapmode: ' + stateValue);
                     return null;
             }
             break;
@@ -1407,14 +1432,14 @@ function analyzeSamplerState(context: Context, program: ProgramScope, sourceNode
                     break;
                 default:
                     // todo: move to erros api
-                    logger.warn('Webgl don`t support this texture filter: ' + stateValue);
+                    // console.warn('Webgl don`t support this texture filter: ' + stateValue);
                     return null;
             }
             break;
 
         default:
             // todo: move to erros api
-            logger.warn('Don`t support this texture param: ' + stateType);
+            console.warn('Don`t support this texture param: ' + stateType);
             return null;
     }
 
@@ -1478,12 +1503,12 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
     let func = globalScope.findFunction(funcName, args);
 
     if (isNull(func)) {
-        _error(context, sourceNode, EEffectErrors.BAD_COMPLEX_NOT_FUNCTION, { funcName: funcName });
+        _error(context, sourceNode, EErrors.InvalidComplexNotFunction, { funcName: funcName });
         return null;
     }
 
     if (!isDef(func)) {
-        _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: funcName });
+        _error(context, sourceNode, EErrors.CannotChooseFunction, { funcName: funcName });
         return null;
     }
 
@@ -1507,22 +1532,22 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
                     if (!args[i].type.writable) {
-                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
+                        _error(context, sourceNode, EErrors.InvalidTypeForWriting);
                         return null;
                     }
                 } else if (funcArguments[i].type.hasUsage('inout')) {
                     if (!args[i].type.writable) {
-                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_WRITE);
+                        _error(context, sourceNode, EErrors.InvalidTypeForWriting);
                         return null;
                     }
 
                     if (!args[i].type.readable) {
-                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+                        _error(context, sourceNode, EErrors.InvalidTypeForReading);
                         return null;
                     }
                 } else {
                     if (!args[i].type.readable) {
-                        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+                        _error(context, sourceNode, EErrors.InvalidTypeForReading);
                         return null;
                     }
                 }
@@ -1568,7 +1593,7 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
     const ctorType = analyzeType(context, program, children[children.length - 1]);
 
     if (isNull(ctorType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_COMPLEX_NOT_TYPE);
+        _error(context, sourceNode, EErrors.InvalidComplexNotType);
         return null;
     }
 
@@ -1590,14 +1615,14 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
     const exprType = findConstructor(ctorType, args);
 
     if (isNull(exprType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_COMPLEX_NOT_CONSTRUCTOR, { typeName: ctorType.toString() });
+        _error(context, sourceNode, EErrors.InvalidComplexNotConstructor, { typeName: ctorType.toString() });
         return null;
     }
 
     if (!isNull(args)) {
         for (let i = 0; i < args.length; i++) {
             if (!args[i].type.readable) {
-                _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+                _error(context, sourceNode, EErrors.InvalidTypeForReading);
                 return null;
             }
         }
@@ -1671,7 +1696,7 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
     if (!postfixExprType.isArray()) {
-        _error(context, sourceNode, EEffectErrors.BAD_POSTIX_NOT_ARRAY, { typeName: postfixExprType.toString() });
+        _error(context, sourceNode, EErrors.InvalidPostfixNotArray, { typeName: postfixExprType.toString() });
         return null;
     }
 
@@ -1679,7 +1704,7 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
     if (!indexExprType.isEqual(SystemScope.T_INT)) {
-        _error(context, sourceNode, EEffectErrors.BAD_POSTIX_NOT_INT_INDEX, { typeName: indexExprType.toString() });
+        _error(context, sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: indexExprType.toString() });
         return null;
     }
 
@@ -1705,7 +1730,7 @@ function analyzePostfixPoint(context: Context, program: ProgramScope, sourceNode
     const fieldNameExpr = VariableTypeInstruction.fieldToExpr(postfixExprType, fieldName);
 
     if (isNull(fieldNameExpr)) {
-        _error(context, sourceNode, EEffectErrors.BAD_POSTIX_NOT_FIELD, {
+        _error(context, sourceNode, EErrors.InvalidPostfixNotField, {
             typeName: postfixExprType.toString(),
             fieldName
         });
@@ -1728,7 +1753,7 @@ function analyzePostfixArithmetic(context: Context, program: ProgramScope, sourc
     const exprType = checkOneOperandExprType(context, sourceNode, operator, postfixExprType);
 
     if (isNull(exprType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_POSTIX_ARITHMETIC, {
+        _error(context, sourceNode, EErrors.InvalidPostfixArithmetic, {
             operator: operator,
             typeName: postfixExprType.toString()
         });
@@ -1756,7 +1781,7 @@ function analyzeUnaryExpr(context: Context, program: ProgramScope, sourceNode: I
     let exprType = checkOneOperandExprType(context, sourceNode, operator, expr.type);
 
     if (isNull(exprType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_UNARY_OPERATION, <IEffectErrorInfo>{
+        _error(context, sourceNode, EErrors.InvalidUnaryOperation, {
             operator: operator,
             tyename: expr.type.toString()
         });
@@ -1786,7 +1811,7 @@ function analyzeCastExpr(context: Context, program: ProgramScope, sourceNode: IP
     const sourceExpr = analyzeExpr(context, program, children[0]);
 
     if (!(<IVariableTypeInstruction>sourceExpr.type).readable) {
-        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
@@ -1821,12 +1846,12 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
     const boolType = SystemScope.T_BOOL;
 
     if (!conditionType.isEqual(boolType)) {
-        _error(context, conditionExpr.sourceNode, EEffectErrors.BAD_CONDITION_TYPE, { typeName: conditionType.toString() });
+        _error(context, conditionExpr.sourceNode, EErrors.InvalidConditionType, { typeName: conditionType.toString() });
         return null;
     }
 
     if (!leftExprType.isEqual(rightExprType)) {
-        _error(context, leftExprType.sourceNode, EEffectErrors.BAD_CONDITION_VALUE_TYPES, <IEffectErrorInfo>{
+        _error(context, leftExprType.sourceNode, EErrors.InvalidConditonValueTypes, {
             leftTypeName: leftExprType.toString(),
             rightTypeName: rightExprType.toString()
         });
@@ -1834,17 +1859,17 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
     }
 
     if (!conditionType.readable) {
-        _error(context, conditionType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, conditionType.sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
     if (!leftExprType.readable) {
-        _error(context, leftExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, leftExprType.sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
     if (!rightExprType.readable) {
-        _error(context, rightExprType.sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, rightExprType.sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
@@ -1875,7 +1900,7 @@ function analyzeArithmeticExpr(context: Context, program: ProgramScope, sourceNo
     const type = checkTwoOperandExprTypes(context, operator, leftType, rightType);
 
     if (isNull(type)) {
-        _error(context, sourceNode, EEffectErrors.BAD_ARITHMETIC_OPERATION, <IEffectErrorInfo>{
+        _error(context, sourceNode, EErrors.InvalidArithmeticOperation, {
             operator: operator,
             leftTypeName: leftType.toString(),
             rightTypeName: rightType.toString()
@@ -1909,7 +1934,7 @@ function analyzeRelationExpr(context: Context, program: ProgramScope, sourceNode
     const exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
 
     if (isNull(exprType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_RELATIONAL_OPERATION, <IEffectErrorInfo>{
+        _error(context, sourceNode, EErrors.InvalidRelationalOperation, {
             operator: operator,
             leftTypeName: leftType.hash,
             rightTypeName: rightType.hash
@@ -1943,14 +1968,14 @@ function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode:
     const boolType = SystemScope.T_BOOL;
 
     if (!leftType.isEqual(boolType)) {
-        _error(context, leftType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
+        _error(context, leftType.sourceNode, EErrors.InvalidLogicOperation, {
             operator: operator,
             typeName: leftType.toString()
         });
         return null;
     }
     if (!rightType.isEqual(boolType)) {
-        _error(context, rightType.sourceNode, EEffectErrors.BAD_LOGICAL_OPERATION, {
+        _error(context, rightType.sourceNode, EErrors.InvalidLogicOperation, {
             operator: operator,
             typeName: rightType.toString()
         });
@@ -1958,12 +1983,12 @@ function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode:
     }
 
     if (!leftType.readable) {
-        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
     if (!rightType.readable) {
-        _error(context, sourceNode, EEffectErrors.BAD_TYPE_FOR_READ);
+        _error(context, sourceNode, EErrors.InvalidTypeForReading);
         return null;
     }
 
@@ -1995,7 +2020,7 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
     if (operator !== '=') {
         exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
         if (isNull(exprType)) {
-            _error(context, sourceNode, EEffectErrors.BAD_ARITHMETIC_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
+            _error(context, sourceNode, EErrors.InvalidArithmeticAssigmentOperation, {
                 operator: operator,
                 leftTypeName: leftType.hash,
                 rightTypeName: rightType.hash
@@ -2008,7 +2033,7 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
     exprType = checkTwoOperandExprTypes(context, '=', leftType, exprType);
 
     if (isNull(exprType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_ASSIGNMENT_OPERATION, <IEffectErrorInfo>{
+        _error(context, sourceNode, EErrors.InvalidAssigmentOperation, {
             leftTypeName: leftType.hash,
             rightTypeName: rightType.hash
         });
@@ -2030,7 +2055,7 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
     let variable = scope.findVariable(name);
 
     if (isNull(variable)) {
-        _error(context, sourceNode, EEffectErrors.UNKNOWN_VARNAME, { varName: name });
+        _error(context, sourceNode, EErrors.UnknownVarName, { varName: name });
         return null;
     }
 
@@ -2082,14 +2107,14 @@ function analyzeConstTypeDim(context: Context, program: ProgramScope, sourceNode
     const children = sourceNode.children;
 
     if (children.length > 1) {
-        _error(context, sourceNode, EEffectErrors.BAD_CAST_TYPE_USAGE);
+        _error(context, sourceNode, EErrors.InvalidCastTypeUsage);
         return null;
     }
 
     const type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
 
     if (!type.isBase()) {
-        _error(context, sourceNode, EEffectErrors.BAD_CAST_TYPE_NOT_BASE, { typeName: type.toString() });
+        _error(context, sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: type.toString() });
     }
 
     return checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2220,18 +2245,18 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     let func = globalScope.findFunction(definition.name, definition.paramList);
 
     if (!isDef(func)) {
-        _error(context, sourceNode, EEffectErrors.BAD_CANNOT_CHOOSE_FUNCTION, { funcName: definition.name });
+        _error(context, sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
         return null;
     }
 
     if (!isNull(func) && func.implementation) {
-        _error(context, sourceNode, EEffectErrors.BAD_REDEFINE_FUNCTION, { funcName: definition.name });
+        _error(context, sourceNode, EErrors.InvalidFunctionRedefinition, { funcName: definition.name });
         return null;
     }
 
     if (!isNull(func)) {
         if (!func.definition.returnType.isEqual(definition.returnType)) {
-            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DEF_RETURN_TYPE, { funcName: definition.name });
+            _error(context, sourceNode, EErrors.InvalidFuncDefenitionReternType, { funcName: definition.name });
             return null;
         }
     }
@@ -2255,7 +2280,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     if (isNull(func)) {
         func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
         if (!globalScope.addFunction(func)) {
-            _error(context, sourceNode, EEffectErrors.REDEFINE_FUNCTION, { funcName: definition.name });
+            _error(context, sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
         }
     }
 
@@ -2282,7 +2307,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 //     func.implementation = <IStmtInstruction>stmtBlock;
 
 //     if (!func.returnType.isEqual(SystemScope.T_VOID) && !context.haveCurrentFunctionReturnOccur) {
-//         _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_DONT_HAVE_RETURN_STMT, { funcName: func.nameID.toString() })
+//         _error(context, sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: func.nameID.toString() })
 //     }
 
 //     context.currentFunction = null;
@@ -2312,7 +2337,7 @@ function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode:
 
     // todo: is it really needed?
     if (returnType.isContainSampler()) {
-        _error(context, retTypeNode, EEffectErrors.BAD_RETURN_TYPE_FOR_FUNCTION, { funcName: name });
+        _error(context, retTypeNode, EErrors.InvalidFunctionReturnType, { funcName: name });
         return null;
     }
 
@@ -2505,11 +2530,11 @@ function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: 
     context.haveCurrentFunctionReturnOccur = true;
 
     if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
-        _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_VOID);
+        _error(context, sourceNode, EErrors.InvalidReturnStmtVoid);
         return null;
     }
     else if (!funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 2) {
-        _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_EMPTY);
+        _error(context, sourceNode, EErrors.InvalidReturnStmtEmpty);
         return null;
     }
 
@@ -2518,7 +2543,7 @@ function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: 
         expr = analyzeExpr(context, program, children[1]);
 
         if (!funcReturnType.isEqual(expr.type)) {
-            _error(context, sourceNode, EEffectErrors.BAD_RETURN_STMT_NOT_EQUAL_TYPES);
+            _error(context, sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
             return null;
         }
     }
@@ -2639,7 +2664,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
         conditionType = <IVariableTypeInstruction>cond.type;
 
         if (!conditionType.isEqual(boolType)) {
-            _error(context, sourceNode, EEffectErrors.BAD_DO_WHILE_CONDITION, { typeName: conditionType.toString() });
+            _error(context, sourceNode, EErrors.InvalidDoWhileCondition, { typeName: conditionType.toString() });
             return null;
         }
 
@@ -2651,7 +2676,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
         conditionType = <IVariableTypeInstruction>cond.type;
 
         if (!conditionType.isEqual(boolType)) {
-            _error(context, sourceNode, EEffectErrors.BAD_WHILE_CONDITION, { typeName: conditionType.toString() });
+            _error(context, sourceNode, EErrors.InvalidWhileCondition, { typeName: conditionType.toString() });
             return null;
         }
 
@@ -2694,7 +2719,7 @@ function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IPar
     let operator: string = null;
     
     if (!conditionType.isEqual(boolType)) {
-        _error(context, sourceNode, EEffectErrors.BAD_IF_CONDITION, { typeName: conditionType.toString() });
+        _error(context, sourceNode, EErrors.InvalidIfCondition, { typeName: conditionType.toString() });
         return null;
     }
     
@@ -2964,12 +2989,12 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 
     if (shaderType === EFunctionType.k_Vertex) {
         if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
-            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_VERTEX_DEFENITION, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EErrors.InvalidFunctionVertexRedefinition, { funcDef: shaderFunc.toString() });
         }
     }
     else {
         if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
-            _error(context, sourceNode, EEffectErrors.BAD_FUNCTION_PIXEL_DEFENITION, { funcDef: shaderFunc.toString() });
+            _error(context, sourceNode, EErrors.InvalidFunctionPixelRedefinition, { funcDef: shaderFunc.toString() });
         }
     }
 
@@ -3018,7 +3043,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
     
     if (isNull(exprNode.value) || isNull(stateName)) {
-        logger.warn('Pass state is incorrect.');
+        console.warn('Pass state is incorrect.'); // todo: move to warnings
         return {};
     }
     
@@ -3032,7 +3057,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
         switch (stateName) {
             case ERenderStates.BLENDFUNC:
                 if (values.length !== 2) {
-                    logger.warn('Pass state are incorrect.');
+                    console.warn('Pass state are incorrect.');
                     return {};
                 }
                 renderStates[ERenderStates.SRCBLENDCOLOR] = values[0];
@@ -3043,7 +3068,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
 
             case ERenderStates.BLENDFUNCSEPARATE:
                 if (values.length !== 4) {
-                    logger.warn('Pass state are incorrect.');
+                    console.warn('Pass state are incorrect.');
                     return {};
                 }
                 renderStates[ERenderStates.SRCBLENDCOLOR] = values[0];
@@ -3054,7 +3079,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
 
             case ERenderStates.BLENDEQUATIONSEPARATE:
                 if (values.length !== 2) {
-                    logger.warn('Pass state are incorrect.');
+                    console.warn('Pass state are incorrect.');
                     return {};
                 }
                 renderStates[ERenderStates.BLENDEQUATIONCOLOR] = values[0];
@@ -3062,7 +3087,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
                 break;
 
             default:
-                logger.warn('Pass state is incorrect.');
+                console.warn('Pass state is incorrect.');
                 return {};
         }
     }
@@ -3130,7 +3155,7 @@ function analyzeImportDecl(context: Context, program: ProgramScope, sourceNode: 
 
     const sourceTechnique: ITechniqueInstruction = null;//fx.techniques[componentName];
     if (!sourceTechnique) {
-        _error(context, sourceNode, EEffectErrors.BAD_IMPORTED_COMPONENT_NOT_EXIST, { componentName: componentName });
+        _error(context, sourceNode, EErrors.ImportedComponentNotExists, { componentName: componentName });
         return null;
     }
 
@@ -3183,7 +3208,7 @@ function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IP
         type = analyzeStructDecl(context, program, children[1]);
     }
     else {
-        _error(context, sourceNode, EEffectErrors.UNSUPPORTED_TYPEDECL);
+        _error(context, sourceNode, EErrors.UnsupportedTypeDecl);
     }
 
     
@@ -3269,6 +3294,8 @@ export interface IAnalyzeResult {
 export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     const program = new ProgramScope();
     const context = new Context(filename);
+
+    diag.reset();
 
     console.time(`analyze(${filename})`);
 

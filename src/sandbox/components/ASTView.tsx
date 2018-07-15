@@ -10,7 +10,7 @@ import { IMap } from '../../lib/idl/IMap';
 
 import * as Effect from '../../lib/fx/Effect';
 import { IParserParams } from '../store/IStoreState';
-import { DiagnosticException } from '../../lib/util/Diagnostics';
+import { DiagnosticException, Diagnostics, EDiagnosticCategory } from '../../lib/util/Diagnostics';
 
 // todo: use common func
 function deepEqual(a: Object, b: Object): boolean {
@@ -127,9 +127,22 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             return;
         }
 
-        //         const loc: IRange = err.info.loc;
-        //         this.props.onError(loc, err.message || null);
-        console.log(parser.getDiagnostics());
+        let report = parser.getDiagnostics();
+
+        report.messages.forEach(mesg => {
+            if (mesg.category == EDiagnosticCategory.ERROR) {
+                let range: IRange = { start: mesg.start, end: mesg.end };
+
+                if (!range.end) {
+                    range.end = { ...range.start };
+                    range.end.column += 1;
+                }
+                
+                this.props.onError(range, mesg.content);
+            }
+        });
+
+        console.log(Diagnostics.stringify(parser.getDiagnostics()));
     }
 
 

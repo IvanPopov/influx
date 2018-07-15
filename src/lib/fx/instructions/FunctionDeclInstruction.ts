@@ -8,7 +8,7 @@ import { isNull, isDef, isDefAndNotNull } from "../../common";
 import { IdInstruction } from "./IdInstruction";
 import { FunctionDefInstruction } from "./FunctionDefInstruction";
 import { StmtBlockInstruction } from "./StmtBlockInstruction";
-import { EEffectTempErrors } from "../../idl/EEffectErrors";
+import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
 import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
 import { VariableDeclInstruction } from "./VariableDeclInstruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";

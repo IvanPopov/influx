@@ -53,9 +53,9 @@ class App extends React.Component<IAppProps> {
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
-        if (props.sourceFile.markers["syntax-error"]) {
+        if (Object.keys(props.sourceFile.markers).length > 0) {
             // cleanup error highlighting before render
-            this.props.actions.removeMarker("syntax-error");
+            this.props.actions.cleanupMarkers();
             return false;
         }
 
@@ -103,7 +103,7 @@ class App extends React.Component<IAppProps> {
                                 type: 'marker'
                             }) }
                             onNodeOut={ (idx) => props.actions.removeMarker(`ast-range-${idx}`) }
-                            onError={ (range, message) => props.actions.addMarker({ name: "syntax-error", range, type: 'error', tooltip: message }) }
+                            onError={ (range, message) => props.actions.addMarker({ name: `syntax-error-${message}`, range, type: 'error', tooltip: message }) }
                             onComplete={ (ast) => { this.setState({ ast }) } }
                         />
                     </Tab.Pane>

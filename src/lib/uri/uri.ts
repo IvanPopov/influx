@@ -1,133 +1,131 @@
-import { IURI } from "../idl/IURI";
 import { isString, isNull, isDef } from "../common";
-import { logger } from "../logger";
 import * as path from "../path/path"
 import { IDataURI } from "../idl/IDataURI";
 
-class URI implements IURI {
-    private sScheme: string = null;
-    private sUserinfo: string = null;
-    private sHost: string = null;
-    private nPort: number = 0;
-    private sPath: string = null;
-    private sQuery: string = null;
-    private sFragment: string = null;
+class URI {
+    private _scheme: string = null;
+    private _userinfo: string = null;
+    private _host: string = null;
+    private _port: number = 0;
+    private _path: string = null;
+    private _query: string = null;
+    private _fragment: string = null;
 
-    getURN(): string {
-        return (this.sPath ? this.sPath : "") +
-            (this.sQuery ? '?' + this.sQuery : "") +
-            (this.sFragment ? '#' + this.sFragment : "");
+    get urn(): string {
+        return (this._path ? this._path : "") +
+            (this._query ? '?' + this._query : "") +
+            (this._fragment ? '#' + this._fragment : "");
     }
 
-    getURL(): string {
-        return (this.sScheme ? this.sScheme : "") + this.getAuthority();
+    get url(): string {
+        return (this._scheme ? this._scheme : "") + this.authority;
     }
 
-    getAuthority(): string {
-        return (this.sHost ? '//' + (this.sUserinfo ? this.sUserinfo + '@' : "") +
-            this.sHost + (this.nPort ? ':' + this.nPort : "") : "");
+    get authority(): string {
+        return (this._host ? '//' + (this._userinfo ? this._userinfo + '@' : "") +
+            this._host + (this._port ? ':' + this._port : "") : "");
     }
 
-    getScheme(): string {
-        return this.sScheme;
+    get scheme(): string {
+        return this._scheme;
     }
 
-    getProtocol(): string {
-        if (!this.sScheme) {
-            return this.sScheme;
+    get protocol(): string {
+        if (!this._scheme) {
+            return this._scheme;
         }
 
-        return (this.sScheme.substr(0, this.sScheme.lastIndexOf(':')));
+        return (this._scheme.substr(0, this._scheme.lastIndexOf(':')));
     }
 
-    getUserInfo(): string {
-        return this.sUserinfo;
+    get userInfo(): string {
+        return this._userinfo;
     }
 
-    getHost(): string {
-        return this.sHost;
+    get host(): string {
+        return this._host;
     }
 
-    setHost(sHost: string): void {
+    set host(sHost: string) {
         //TODO: check host format
-        this.sHost = sHost;
+        this._host = sHost;
     }
 
-    getPort(): number {
-        return this.nPort;
+    get port(): number {
+        return this._port;
     }
 
-    setPort(iPort: number): void {
-        this.nPort = iPort;
+    set port(iPort: number) {
+        this._port = iPort;
     }
 
-    getPath(): string {
-        return this.sPath;
+    get path(): string {
+        return this._path;
     }
 
-    setPath(sPath: string): void {
+    set path(sPath: string) {
         // debug_assert(!isNull(sPath.match(new RegExp("^(/(?:[a-z0-9-._~!$&'()*+,;=:@/]|%[0-9A-F]{2})*)$"))), 
         //     "invalid path used: " + sPath);
         //TODO: check path format
-        this.sPath = sPath;
+        this._path = sPath;
     }
 
-    getQuery(): string {
+    get query(): string {
         //TODO: check query format
-        return this.sQuery;
+        return this._query;
     }
 
-    setQuery(sQuery: string): void {
-        this.sQuery = sQuery;
+    set query(sQuery: string) {
+        this._query = sQuery;
     }
 
-    getFragment(): string {
-        return this.sFragment;
+    get fragment(): string {
+        return this._fragment;
     }
 
 
-    constructor(pUri: URI);
-    constructor(sUri: string);
-    constructor(pUri?) {
-        if (pUri) {
-            this.set(pUri);
+    constructor(uri: URI);
+    constructor(uri: string);
+    constructor(uri?) {
+        if (uri) {
+            this.set(uri);
         }
     }
 
-    set(pUri: URI);
-    set(sUri: string);
-    set(pData?): URI {
-        if (isString(pData)) {
-            var pUri: RegExpExecArray = URI.uriExp.exec(<string>pData);
+    set(uri: URI);
+    set(uri: string);
+    set(data?): URI {
+        if (isString(data)) {
+            var uri: RegExpExecArray = URI.uriExp.exec(<string>data);
 
-            logger.assert(pUri !== null, 'Invalid URI format used.\nused uri: ' + pData);
+            console.assert(uri !== null, 'Invalid URI format used.\nused uri: ' + data);
 
-            if (!pUri) {
+            if (!uri) {
                 return null;
             }
 
-            this.sScheme = pUri[1] || null;
-            this.sUserinfo = pUri[2] || null;
-            this.sHost = pUri[3] || null;
-            this.nPort = parseInt(pUri[4]) || null;
-            this.sPath = pUri[5] || pUri[6] || null;
-            this.sQuery = pUri[7] || null;
-            this.sFragment = pUri[8] || null;
+            this._scheme = uri[1] || null;
+            this._userinfo = uri[2] || null;
+            this._host = uri[3] || null;
+            this._port = parseInt(uri[4]) || null;
+            this._path = uri[5] || uri[6] || null;
+            this._query = uri[7] || null;
+            this._fragment = uri[8] || null;
 
             return this;
 
         }
-        else if (pData instanceof URI) {
-            return this.set(pData.toString());
+        else if (data instanceof URI) {
+            return this.set(data.toString());
         }
 
-        logger.error('Unexpected data type was used.');
+        console.error('Unexpected data type was used.');
 
         return null;
     }
 
     toString(): string {
-        return this.getURL() + this.getURN();
+        return this.url + this.urn;
     }
 
     //------------------------------------------------------------------//
@@ -175,46 +173,47 @@ class URI implements IURI {
 }
 
 
-function normalizeURIPath(pFile: IURI): IURI {
-    if (!isNull(pFile.getPath())) {
-        if (pFile.getScheme() === "filesystem:") {
-            var pUri: IURI = parse(pFile.getPath());
+function normalizeURIPath(file: URI): URI {
+    if (!isNull(file.path)) {
+        if (file.scheme === "filesystem:") {
+            var uri = parse(file.path);
 
-            pUri.setPath(path.normalize(pUri.getPath()));
-            pFile.setPath(pUri.toString());
+            uri.path = path.normalize(uri.path);
+            file.path = uri.toString();
         }
         else {
-            pFile.setPath(path.normalize(pFile.getPath()));
+            file.path = path.normalize(file.path);
         }
     }
 
-    return pFile;
+    return file;
 }
 
 
 
-export function resolve(sFrom: string, sTo: string = document.location.href): string {
-    var pCurrentPath: IURI = parse(sTo);
-    var pFile: IURI = parse(sFrom);
-    var sDirname: string;
+export function resolve(from: string, to: string = document.location.href): string {
+    var currentPath = parse(to);
+    var file = parse(from);
+    var dirname: string;
 
-    normalizeURIPath(pFile);
-    normalizeURIPath(pCurrentPath);
+    normalizeURIPath(file);
+    normalizeURIPath(currentPath);
 
-    if (!isNull(pFile.getScheme()) || !isNull(pFile.getHost()) || path.parse(pFile.getPath()).isAbsolute()) {
+    if (!isNull(file.scheme) || !isNull(file.host) || path.parse(file.path).isAbsolute()) {
         //another server or absolute path
-        return sFrom;
+        return from;
     }
 
-    sDirname = path.parse(pCurrentPath.getPath()).getDirName();
-    pCurrentPath.setPath(sDirname ? (sDirname + "/" + sFrom) : sFrom);
+    dirname = path.parse(currentPath.path).dirname;
+    currentPath.path = dirname ? (dirname + "/" + from) : from;
 
-    return normalizeURIPath(pCurrentPath).toString();
+    return normalizeURIPath(currentPath).toString();
 }
 
-export function parseDataURI(sUri: string): IDataURI {
+
+export function parseDataURI(uri: string): IDataURI {
     var re: RegExp = /^data:([\w\d\-\/]+)?(;charset=[\w\d\-]*)?(;base64)?,(.*)$/;
-    var m: string[] = sUri.match(re);
+    var m: string[] = uri.match(re);
 
     return {
         //like [text/plain]
@@ -228,25 +227,28 @@ export function parseDataURI(sUri: string): IDataURI {
 }
 
 
-export function parse(sUri: string): IURI {
-    return new URI(sUri);
+export function parse(uri: string): URI {
+    return new URI(uri);
 }
+
 
 export function currentScript(): HTMLScriptElement {
     if (isDef(document['currentScript'])) {
         return <HTMLScriptElement>document['currentScript'];
     }
 
-    var pScripts: NodeListOf<HTMLScriptElement> = document.getElementsByTagName("script");
-    return pScripts[pScripts.length - 1];
+    var scripts: NodeListOf<HTMLScriptElement> = document.getElementsByTagName("script");
+    return scripts[scripts.length - 1];
 }
+
 
 export function currentPath(): string {
-    var pUri = parse(currentScript().src);
-    let sDirname: string = path.parse(pUri.getPath()).getDirName();
-    return pUri.getURL() + sDirname + "/";
+    var uri = parse(currentScript().src);
+    let dirname = path.parse(uri.path).dirname;
+    return uri.url + dirname + "/";
 }
 
-export function here(): IURI {
+
+export function here(): URI {
     return new URI(document.location.href);
 }

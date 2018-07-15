@@ -3,7 +3,6 @@ import { EParserCode } from "./../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 import { EOperationType, IParseTree, IParseNode, IParserState } from '../idl/parser/IParser';
 import * as uri from "../uri/uri"
-import { logger } from "../logger";
 import * as fs from "fs";
 import { promisify } from "util";
 

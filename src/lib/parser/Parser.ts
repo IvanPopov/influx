@@ -22,7 +22,8 @@ export enum EParserErrors {
     GrammarUnexpectedSymbol,
     GrammarInvalidAdditionalFuncName,
     GrammarInvalidKeyword,
-    SyntaxError = 2051,
+    SyntaxUnknownError = 2051,
+    SyntaxUnexpectedEOF,
 
     GeneralCouldNotReadFile = 2200
 };
@@ -40,7 +41,9 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
 
 
     protected resolveRange(code: number, desc: IMap<any>): IRange {
-        if (code == EParserErrors.SyntaxError) {
+        switch (code) {
+        case EParserErrors.SyntaxUnknownError:
+        case EParserErrors.SyntaxUnexpectedEOF:
             return desc.token.loc;
         }
         return null;
@@ -48,11 +51,11 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
 
 
     protected resolvePosition(code: number, desc: IMap<any>): IPosition {
-        console.assert(code != EParserErrors.SyntaxError);
+        console.assert(code != EParserErrors.SyntaxUnknownError);
         return { line: desc.line, column: 0 };
     }
 
-    
+
     protected diagnosticMessages() {
         return {
             [EParserErrors.GrammarAddOperation]: "Grammar not LALR(1)! Cannot to generate syntax table. Add operation error.\n" +
@@ -71,8 +74,9 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
             [EParserErrors.GrammarInvalidAdditionalFuncName]: "Grammar error. Empty additional function name.",
             [EParserErrors.GrammarInvalidKeyword]: "Grammar error. Bad keyword: {badKeyword}\n" +
                 "All keyword must be define in lexer rule block.",
-            [EParserErrors.SyntaxError]: "Syntax error during parsing. Token: '{token.value}'\n" +
+            [EParserErrors.SyntaxUnknownError]: "Syntax error during parsing. Token: '{token.value}'\n" +
                 "Line: {token.loc.start.line}. Column: {token.loc.start.column}.",
+            [EParserErrors.SyntaxUnexpectedEOF]: "Syntax error. Unexpected EOF.",
             [EParserErrors.GeneralCouldNotReadFile]: "Could not read file '{target}'."
         };
     }
@@ -270,25 +274,25 @@ export class Parser implements IParser {
             this._source = source;
             this._lexer.init(source);
 
-            var tree = this._syntaxTree;
-            var stack = this._stack;
-            var syntaxTable = this._syntaxTable;
+            let tree = this._syntaxTree;
+            let stack = this._stack;
+            let syntaxTable = this._syntaxTable;
 
-            var isStop = false;
-            var isError = false;
-            var token = this.readToken();
-            var stateIndex = 0;
+            let breakProcessing = false;
+            let errorFound = false;
+            let token = this.readToken();
+            let stateIndex = 0;
 
-            var operation: IOperation;
-            var ruleLength: number;
-            var additionalOperationCode: EOperationType;
+            let operation: IOperation;
+            let ruleLength: number;
+            let additionalOperationCode: EOperationType;
 
-            while (!isStop) {
+            while (!breakProcessing) {
                 operation = syntaxTable[stack[stack.length - 1]][token.name];
                 if (isDef(operation)) {
                     switch (operation.type) {
                         case EOperationType.k_Success:
-                            isStop = true;
+                            breakProcessing = true;
                             break;
 
                         case EOperationType.k_Shift:
@@ -300,8 +304,8 @@ export class Parser implements IParser {
                             additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
 
                             if (additionalOperationCode === EOperationType.k_Error) {
-                                isError = true;
-                                isStop = true;
+                                errorFound = true;
+                                breakProcessing = true;
                             }
                             else if (additionalOperationCode === EOperationType.k_Ok) {
                                 token = this.readToken();
@@ -319,46 +323,50 @@ export class Parser implements IParser {
                             additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
                             if (additionalOperationCode === EOperationType.k_Error) {
-                                isError = true;
-                                isStop = true;
+                                errorFound = true;
+                                breakProcessing = true;
                             }
 
                             break;
                     }
                 }
                 else {
-                    isError = true;
-                    isStop = true;
+                    errorFound = true;
+                    breakProcessing = true;
                 }
             }
+
+            if (errorFound) {
+                if (token.value == END_SYMBOL) {
+                    this.syntaxError(EParserErrors.SyntaxUnexpectedEOF, token);
+                } 
+                else {
+                    this.syntaxError(EParserErrors.SyntaxUnknownError, token);
+                }
+                return EParserCode.k_Error;
+            };
+
+            tree.finishTree();
         } catch (e) {
             if (e instanceof DiagnosticException) {
                 return EParserCode.k_Error;
             }
-
             throw e;
         }
 
-        if (!isError) {
-            tree.finishTree();
-            return EParserCode.k_Ok;
-        }
-        else {
-            this.syntaxError(EParserErrors.SyntaxError, token);
-            return EParserCode.k_Error;
-        }
+        return EParserCode.k_Ok
     }
 
-    
+
     setParseFileName(filename: string): void {
         this._filename = filename;
     }
 
-    
+
     getParseFileName(): string {
         return this._filename;
     }
-    
+
 
     printStates(isBaseOnly: boolean = true): void {
         if (!isDef(this._stateList)) {
@@ -369,7 +377,7 @@ export class Parser implements IParser {
         console.log(mesg);
     }
 
-    
+
     printState(stateIndex: number, isBaseOnly: boolean = true): void {
         if (!isDef(this._stateList)) {
             console.log("It`s impossible to print states. You must init parser in debug-mode");
@@ -446,6 +454,7 @@ export class Parser implements IParser {
         this._typeIdMap = <IMap<boolean>>{};
 
         this._syntaxTree.setOptimizeMode(bf.testAll(this._parseMode, EParseMode.k_Optimize));
+        this._diag.reset();
     }
 
 
@@ -524,7 +533,7 @@ export class Parser implements IParser {
         return null;
     }
 
-    
+
     private isTerminal(symbolVal: string): boolean {
         return !(this._rulesDMap[symbolVal]);
     }
@@ -1122,7 +1131,7 @@ export class Parser implements IParser {
         return state;
     }
 
-    
+
     private nextState_LR0(state: IState, symbolVal: string): IState {
         var itemList: IItem[] = state.getItems();
         var i: number = 0;
@@ -1466,12 +1475,13 @@ export class Parser implements IParser {
 
 
     protected async resumeParse(): Promise<EParserCode> {
-        let isStop = false;
-        let isError = false;
+        let breakProcessing = false;
+        let errorFound = false;
         let token = isNull(this._token) ? this.readToken() : this._token;
         let tree = this._syntaxTree;
         let stack = this._stack;
         let syntaxTable = this._syntaxTable;
+
         try {
             let operation: IOperation;
             let ruleLength: number;
@@ -1479,12 +1489,12 @@ export class Parser implements IParser {
             let additionalOperationCode: EOperationType;
             let stateIndex: number = 0;
 
-            while (!isStop) {
+            while (!breakProcessing) {
                 operation = syntaxTable[stack[stack.length - 1]][token.name];
                 if (isDef(operation)) {
                     switch (operation.type) {
                         case EOperationType.k_Success:
-                            isStop = true;
+                            breakProcessing = true;
                             break;
 
                         case EOperationType.k_Shift:
@@ -1496,8 +1506,8 @@ export class Parser implements IParser {
                             additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
 
                             if (additionalOperationCode === EOperationType.k_Error) {
-                                isError = true;
-                                isStop = true;
+                                errorFound = true;
+                                breakProcessing = true;
                             }
                             else if (additionalOperationCode === EOperationType.k_Ok) {
                                 token = this.readToken();
@@ -1516,18 +1526,25 @@ export class Parser implements IParser {
                             additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
                             if (additionalOperationCode === EOperationType.k_Error) {
-                                isError = true;
-                                isStop = true;
+                                errorFound = true;
+                                breakProcessing = true;
                             }
                             break;
                         default:
                     }
                 }
                 else {
-                    isError = true;
-                    isStop = true;
+                    errorFound = true;
+                    breakProcessing = true;
                 }
             }
+
+            if (errorFound) {
+                this.syntaxError(EParserErrors.SyntaxUnknownError, token);
+                return EParserCode.k_Error;
+            }
+
+            tree.finishTree();
         }
         catch (e) {
             if (e instanceof DiagnosticException) {
@@ -1537,14 +1554,7 @@ export class Parser implements IParser {
             throw e;
         }
 
-        if (!isError) {
-            tree.finishTree();
-            return EParserCode.k_Ok;
-        }
-        else {
-            this.syntaxError(EParserErrors.SyntaxError, token);
-            return EParserCode.k_Error;
-        }
+        return EParserCode.k_Ok;
     }
 
 
@@ -1564,7 +1574,7 @@ export class Parser implements IParser {
         return mesg;
     }
 
-    
+
     private static operationToString(operation: IOperation): string {
         let opVal: string = "";
 
@@ -1592,7 +1602,7 @@ export class Parser implements IParser {
         return ruleVal;
     }
 
-    
+
     private convertGrammarSymbol(symbolVal: string): string {
         if (!this.isTerminal(symbolVal)) {
             return symbolVal;
@@ -1605,7 +1615,7 @@ export class Parser implements IParser {
     getDiagnostics(): IDiagnosticReport {
         let parserReport = this._diag.resolve();
         let lexerReport = this._lexer.getDiagnostics();
-        return Diagnostics.mergeReports([ lexerReport, parserReport ]);
+        return Diagnostics.mergeReports([lexerReport, parserReport]);
     }
 
     protected critical(code, desc) {

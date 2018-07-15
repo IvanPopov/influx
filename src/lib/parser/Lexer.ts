@@ -110,6 +110,7 @@ export class Lexer implements ILexer {
         this._lineNumber = 0;
         this._columnNumber = 0;
         this._index = 0;
+        this._diag.reset();
     }
 
 

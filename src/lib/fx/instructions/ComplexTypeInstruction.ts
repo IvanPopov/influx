@@ -4,7 +4,7 @@ import { Instruction, IInstructionSettings } from "./Instruction";
 import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull, isDef } from "../../common";
-import { EEffectErrors } from "../../idl/EEffectErrors";
+import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
 import { IParseNode } from "../../idl/parser/IParser";
 import * as SystemScope from "../SystemScope";
 
@@ -327,7 +327,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
             let varSize: number = varType.size;
 
             if (varSize === Instruction.UNDEFINE_SIZE) {
-                this._setError(EEffectErrors.CANNOT_CALCULATE_PADDINGS, { typeName: this.name });
+                this._setError(EAnalyzerErrors.CannotCalcPadding, { typeName: this.name });
                 return;
             }
 

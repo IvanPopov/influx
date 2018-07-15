@@ -1,100 +1,98 @@
-import { IPathinfo } from "../idl/IPathinfo";
 import { isString, isDef, isNull } from "../common";
-import { logger } from "../logger";
 
-class Info implements IPathinfo {
-    private _sDirname: string = null;
-    private _sExtension: string = null;
-    private _sFilename: string = null;
+class Pathinfo {
+    private _dirname: string = null;
+    private _extension: string = null;
+    private _filename: string = null;
 
-    getPath(): string {
+    get path(): string {
         return this.toString();
     }
 
-    setPath(sPath: string): void {
-        this.set(sPath);
+    set path(path: string) {
+        this.set(path);
     }
 
-    getDirName(): string {
-        return this._sDirname;
+    get dirname(): string {
+        return this._dirname;
     }
 
-    setDirName(sDirname: string): void {
-        this._sDirname = sDirname;
+    set dirname(dirname: string) {
+        this._dirname = dirname;
     }
 
-    getFileName(): string {
-        return this._sFilename;
+    get filename(): string {
+        return this._filename;
     }
 
-    setFileName(sFilename: string): void {
-        this._sFilename = sFilename;
+    set filename(filename: string) {
+        this._filename = filename;
     }
 
-    getExt(): string {
-        return this._sExtension;
+    get ext(): string {
+        return this._extension;
     }
 
-    setExt(sExtension: string): void {
-        this._sExtension = sExtension;
+    set ext(extension: string) {
+        this._extension = extension;
     }
 
-    getBaseName(): string {
-        return (this._sFilename ? this._sFilename + (this._sExtension ? "." + this._sExtension : "") : "");
+    get basename(): string {
+        return (this._filename ? this._filename + (this._extension ? "." + this._extension : "") : "");
     }
 
-    setBaseName(sBasename: string): void {
-        var nPos: number = sBasename.lastIndexOf(".");
+    set basename(basename: string) {
+        var nPos: number = basename.lastIndexOf(".");
 
         if (nPos < 0) {
-            this._sFilename = sBasename.substr(0);
-            this._sExtension = null;
+            this._filename = basename.substr(0);
+            this._extension = null;
         }
         else {
-            this._sFilename = sBasename.substr(0, nPos);
-            this._sExtension = sBasename.substr(nPos + 1);
+            this._filename = basename.substr(0, nPos);
+            this._extension = basename.substr(nPos + 1);
         }
     }
 
 
-    constructor(pPath: IPathinfo);
-    constructor(sPath: string);
-    constructor(pPath?: any) {
-        if (isDef(pPath)) {
-            this.set(<string>pPath);
+    constructor(path: Pathinfo);
+    constructor(path: string);
+    constructor(path?: any) {
+        if (isDef(path)) {
+            this.set(<string>path);
         }
     }
 
 
-    set(sPath: string): void;
-    set(pPath: IPathinfo): void;
-    set(sPath?: any) {
-        if (isString(sPath)) {
-            var pParts: string[] = sPath.replace('\\', '/').split('/');
+    set(path: string): void;
+    set(path: Pathinfo): void;
+    set(path?: any) {
+        if (isString(path)) {
+            var pParts: string[] = path.replace('\\', '/').split('/');
 
-            this.setBaseName(pParts.pop());
+            this.basename = (pParts.pop());
 
-            this._sDirname = pParts.join('/');
+            this._dirname = pParts.join('/');
         }
-        else if (sPath instanceof Info) {
-            this._sDirname = sPath.getDirName();
-            this._sFilename = sPath.getFileName();
-            this._sExtension = sPath.getExt();
+        else if (path instanceof Pathinfo) {
+            this._dirname = path.dirname;
+            this._filename = path.filename;
+            this._extension = path.ext;
         }
-        else if (isNull(sPath)) {
+        else if (isNull(path)) {
             return null;
         }
         else {
             //critical_error
-            logger.error("Unexpected data type was used.", sPath);
+            throw new Error(`Unexpected data type was used: ${path}`);
         }
     }
 
-    isAbsolute(): boolean { return this._sDirname[0] === "/"; }
+    isAbsolute(): boolean { return this._dirname[0] === "/"; }
 
 
     toString(): string {
-        return (this._sDirname ? this._sDirname + "/" : "") + (this.getBaseName());
+        return (this._dirname ? this._dirname + "/" : "") + (this.basename);
     }
 }
 
@@ -125,10 +123,10 @@ function normalizeArray(parts, allowAboveRoot) {
 }
 
 
-export function normalize(sPath: string): string {
-    var info: IPathinfo = parse(sPath);
+export function normalize(path: string): string {
+    var info: Pathinfo = parse(path);
     var isAbsolute: boolean = info.isAbsolute();
-    var tail: string = info.getDirName();
+    var tail: string = info.dirname;
     var trailingSlash: boolean = /[\\\/]$/.test(tail);
 
     tail = normalizeArray(tail.split(/[\\\/]+/).filter(function (p) {
@@ -139,13 +137,13 @@ export function normalize(sPath: string): string {
         tail += "/";
     }
 
-    info.setDirName((isAbsolute ? "/" : "") + tail);
+    info.dirname = ((isAbsolute ? "/" : "") + tail);
 
     return info.toString();
 }
 
-export function parse(pPath: IPathinfo): IPathinfo;
-export function parse(sPath: string): IPathinfo;
-export function parse(path?): IPathinfo {
-    return new Info(path);
+export function parse(path: Pathinfo): Pathinfo;
+export function parse(path: string): Pathinfo;
+export function parse(path?): Pathinfo {
+    return new Pathinfo(path);
 }

@@ -2,7 +2,7 @@ import { StmtInstruction } from "./StmtInstruction";
 import { EInstructionTypes, ECheckStage, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IVariableDeclInstruction, IStmtInstruction, IVariableTypeInstruction, ITypedInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
-import { EEffectErrors } from "../../idl/EEffectErrors";
+import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings, Instruction } from "./Instruction";
 
@@ -67,27 +67,27 @@ export class ForStmtInstruction extends StmtInstruction {
 
     check(stage: ECheckStage, info: any = null): boolean {
         if (isNull(this._step)) {
-            this._setError(EEffectErrors.BAD_FOR_STEP_EMPTY);
+            this._setError(EAnalyzerErrors.InvalidForStepEmpty);
             return false;
         }
 
         if (isNull(this._init)) {
-            this._setError(EEffectErrors.BAD_FOR_INIT_EMPTY_ITERATOR);
+            this._setError(EAnalyzerErrors.InvalidForInitEmptyIterator);
             return false;
         }
 
         if (this._init.instructionType !== EInstructionTypes.k_VariableDeclInstruction) {
-            this._setError(EEffectErrors.BAD_FOR_INIT_EXPR);
+            this._setError(EAnalyzerErrors.InvalidForInitExpr);
             return false;
         }
 
         if (isNull(this._cond)) {
-            this._setError(EEffectErrors.BAD_FOR_COND_EMPTY);
+            this._setError(EAnalyzerErrors.InvalidForConditionEmpty);
             return false;
         }
 
         if (this._cond.instructionType !== EInstructionTypes.k_RelationalExprInstruction) {
-            this._setError(EEffectErrors.BAD_FOR_COND_RELATION);
+            this._setError(EAnalyzerErrors.InvalidForConditionRelation);
             return false;
         }
 
@@ -99,12 +99,12 @@ export class ForStmtInstruction extends StmtInstruction {
             // var sOperator: string = this._step.operator;
             // if (sOperator !== "++" && sOperator !== "--" &&
             //     sOperator !== "+=" && sOperator !== "-=") {
-            //     this._setError(EEffectErrors.BAD_FOR_STEP_OPERATOR, { operator: sOperator });
+            //     this._setError(EAnalyzerErrors.BAD_FOR_STEP_OPERATOR, { operator: sOperator });
             //     return false;
             // }
         }
         else {
-            this._setError(EEffectErrors.BAD_FOR_STEP_EXPRESSION);
+            this._setError(EAnalyzerErrors.InvalidForStepExpr);
             return false;
         }
 

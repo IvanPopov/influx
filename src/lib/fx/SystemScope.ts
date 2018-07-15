@@ -9,11 +9,9 @@ import { assert, isNull } from "../common";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { VariableDeclInstruction } from "./instructions/VariableDeclInstruction";
 import { IMap } from "../idl/IMap";
-import { logger } from "../logger";
 import { SystemFunctionInstruction } from "./instructions/SystemFunctionInstruction";
-import { IEffectErrorInfo } from "../idl/IEffectErrorInfo";
 import { ILoggerEntity } from "../idl/ILogger";
-import { EEffectErrors } from "../idl/EEffectErrors";
+import { EAnalyzerErrors, EAnalyzerWarnings } from '../idl/EAnalyzerErrors';
 import { FunctionDeclInstruction } from "./instructions/FunctionDeclInstruction";
 import { FunctionDefInstruction } from "./instructions/FunctionDefInstruction";
 
@@ -22,16 +20,16 @@ const scope = new Scope({ type: EScopeType.k_System });
 const systemFunctionHashMap: IMap<boolean> = {};
 const TEMPLATE_TYPE = "template";
 
-// todo: rewrite it!
-function _error(code: number, info: IEffectErrorInfo = {}): void {
-    let logEntity: ILoggerEntity = <ILoggerEntity>{
-        code: code,
-        info: info
-    };
 
-    logger.critical(logEntity);
-    // throw new Error(code.toString());
+function _emitException(message: string) {
+    throw new Error(message);
 }
+
+// todo: rewrite it!
+function _error(code: number, info = {}): void {
+    _emitException(EAnalyzerErrors[code]);
+}
+
 
 function generateSystemType(name: string, size: number = 0, elementType: ITypeInstruction = null,
     length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
@@ -330,7 +328,7 @@ function generateSystemFunction(
             funcHash += ")";
 
             if (systemFunctionHashMap[funcHash]) {
-                _error(EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
+                _error(EAnalyzerErrors.InvalidSystemFunctionRedefinition, { funcName: funcHash });
             }
 
             generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);
@@ -339,7 +337,7 @@ function generateSystemFunction(
     }
     else {
         if (returnTypeName === TEMPLATE_TYPE) {
-            logger.critical("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
+            _emitException("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
         let funcHash = name + "(";
@@ -348,7 +346,7 @@ function generateSystemFunction(
 
         for (let i = 0; i < paramTypeNames.length; i++) {
             if (paramTypeNames[i] === TEMPLATE_TYPE) {
-                logger.critical("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
+                _emitException("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
                 paramTypes.push(getSystemType(paramTypeNames[i]));
@@ -359,7 +357,7 @@ function generateSystemFunction(
         funcHash += ")";
 
         if (systemFunctionHashMap[funcHash]) {
-            _error(EEffectErrors.BAD_SYSTEM_FUNCTION_REDEFINE, { funcName: funcHash });
+            _error(EAnalyzerErrors.InvalidSystemFunctionRedefinition, { funcName: funcHash });
         }
 
         generateSystemFunctionInstance(returnType, name, paramTypes, isForVertex, isForPixel);

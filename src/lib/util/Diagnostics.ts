@@ -2,7 +2,7 @@ import { IPosition, IRange } from "../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 
 
-enum EDiagnosticCategory {
+export enum EDiagnosticCategory {
     WARNING,
     ERROR
 }
@@ -20,6 +20,9 @@ type IDiagnosticDescription = string;
 export interface IDiagnosticMessage {
     code: number;
     category: EDiagnosticCategory;
+    start?: IPosition;
+    end?: IPosition;
+    file?: string;
     content: string;
 }
 
@@ -56,7 +59,7 @@ function readKey(desc: Object, key: string) {
 
 
 function fillPattern(pattern: string, desc: Object): string {
-    return pattern.replace(/{([a-z.]+)}/, (match, key) => {
+    return pattern.replace(/{([a-z.]+)}/g, (match, key) => {
         return readKey(desc, key);
     });
 }
@@ -73,15 +76,20 @@ export class DiagnosticException<DESC_T> extends Error {
 export class Diagnostics <DESC_T>{
     protected _name: string;
     protected _codePrefix: string;
-    protected _entries: IDiagnosticEntry<DESC_T>[] = [];
+    protected _entries: IDiagnosticEntry<DESC_T>[];
 
     constructor(name: string, codePrefix: string) {
         this._name = name;
         this._codePrefix = (codePrefix || '').toUpperCase();
+        this.reset();
     }
 
     protected emitException(): void {
         throw new DiagnosticException<DESC_T>(this, this.getLastError());
+    }
+
+    reset() {
+        this._entries = [];
     }
 
     resolve(): IDiagnosticReport {
@@ -108,19 +116,24 @@ export class Diagnostics <DESC_T>{
         let { code, category, desc } = entry;
 
         let categoryName = (EDiagnosticCategory[category]).toLowerCase();
-        let range = this.resolveRange(code, desc);
         let loc: string = null;
+        let range: IRange;
+        let start: IPosition;
+        let end: IPosition;
+        let file = this.resolveFilename(code, desc);
 
-        if (range) {
+        if (range = this.resolveRange(code, desc)) {
+            ({ start, end } = range);
             loc = rangeToString(range);
         } 
         else {
-            loc = locToString(this.resolvePosition(code, desc));
+            start = this.resolvePosition(code, desc);
+            loc = locToString(start);
         }
 
-        let content = `${this.resolveFilename(code, desc)}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, desc)}`;
+        let content = `${file}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, desc)}`;
 
-        return { code, category, content };
+        return { code, category, content, file, start, end };
     }
 
     protected resolveFilename(code: number, desc: DESC_T): string {
@@ -194,5 +207,9 @@ export class Diagnostics <DESC_T>{
         });
 
         return result;
+    }
+
+    static stringify(report: IDiagnosticReport): string {
+        return report.messages.map(mesg => mesg.content).join('\n');
     }
 }

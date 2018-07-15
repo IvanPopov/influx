@@ -58,6 +58,10 @@ export const sourceCode = {
 
     removeMarker (name: string) {
         return { type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } };
+    },
+
+    cleanupMarkers () {
+        return { type: evt.SOURCE_CODE_CLEANUP_MARKERS, payload: {} };
     }
 };
 
