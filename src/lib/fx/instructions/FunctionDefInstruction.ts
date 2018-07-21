@@ -54,7 +54,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     get numArgsRequired(): number {
         // todo: check order!!
-        return this._parameterList.filter((param) => !!param.initExpr).length;
+        return this._parameterList.filter((param) => !param.initExpr).length;
     }
 
 

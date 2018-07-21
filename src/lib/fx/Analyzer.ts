@@ -120,7 +120,8 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
             [EErrors.InvalidReturnStmtEmpty]: 'Invalid return statement. Expression with \'*type*\' type expected.', // todo: specify type
             [EErrors.InvalidReturnStmtVoid]: 'Invalid return statement. Expression with \'void\' type expected.',
             [EErrors.FunctionRedefinition]: 'Function redefinition. Function with name \'{info.funcName}\' already declared.', // todo: add location where function declared before
-            [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.' // todo: specify prev type and location
+            [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.', // todo: specify prev type and location
+            [EErrors.InvalidFunctionReturnStmtNotFound]: 'Return statement expected.' // todo: specify func name and return type details.
         };
     }
 
@@ -2290,6 +2291,24 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 
     program.pop();
 
+    let hasVoidType = definition.returnType.isEqual(SystemScope.T_VOID);
+
+    // validate unreachable code.
+    if (!isNull(implementation)) {
+        let stmtList = implementation.stmtList;
+
+        // stmtList = stmtList.slice().reverse();
+        for (let i = stmtList.length - 1; i >= 0; --i) {
+            if (stmtList[i].instructionType == EInstructionTypes.k_ReturnStmtInstruction) {
+                if (i != stmtList.length - 1) {
+                    _error(context, stmtList[i + 1].sourceNode, EErrors.UnreachableCode);
+                }
+                break;
+            }
+        }
+    }
+
+
     if (isNull(func)) {
         console.assert(scope == globalScope);
         func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
@@ -2298,7 +2317,10 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         }
     }
 
-    // todo: check haveCurrentFunctionReturnOccur value!!
+    if (!hasVoidType && !context.haveCurrentFunctionReturnOccur) {
+        _error(context, sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: definition.name });
+    }
+
     context.currentFunction = null;
 
     return func;

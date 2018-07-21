@@ -68,7 +68,8 @@ export enum EAnalyzerErrors {
     CannotCalcPadding = 2272,
     ImportedComponentNotExists = 2277,
     InvalidFunctionReturnStmtNotFound = 2279,
-    UnsupportedProvideAs = 2303
+    UnsupportedProvideAs = 2303,
+    UnreachableCode = 2280,
 };
 
 export enum EAnalyzerWarnings {
