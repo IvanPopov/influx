@@ -53,41 +53,5 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
         }
         return scode;
     }
-
-
-    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
-        usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(this.type)) {
-            return;
-        }
-
-        var info: ITypeUseInfoContainer = null;
-        info = usedDataCollector[this.type.instructionID];
-
-        if (!isDef(info)) {
-            info = <ITypeUseInfoContainer>{
-                type: this.type,
-                isRead: false,
-                isWrite: false,
-                numRead: 0,
-                numWrite: 0,
-                numUsed: 0
-            }
-
-            usedDataCollector[this.type.instructionID] = info;
-        }
-
-        if (usedMode !== EVarUsedMode.k_Write && usedMode !== EVarUsedMode.k_Undefined) {
-            info.isRead = true;
-            info.numRead++;
-        }
-
-        if (usedMode === EVarUsedMode.k_Write || usedMode === EVarUsedMode.k_ReadWrite) {
-            info.isWrite = true;
-            info.numWrite++;
-        }
-
-        info.numUsed++;
-    }
 }
 

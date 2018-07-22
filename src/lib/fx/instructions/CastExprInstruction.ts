@@ -36,11 +36,6 @@ export class CastExprInstruction extends ExprInstruction {
         return code;
     }
 
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this._srcExpr;
-        pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    }
 
     isConst(): boolean {
         return (<IExprInstruction>this._srcExpr).isConst();

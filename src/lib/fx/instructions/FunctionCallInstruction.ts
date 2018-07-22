@@ -53,28 +53,6 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
 
         return code;
     }
-
-
-    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
-        usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        let args: IExprInstruction[] = <IExprInstruction[]>this.args;
-        let func: IFunctionDeclInstruction = this.declaration;
-        let argsDecl: IVariableDeclInstruction[] = <IVariableDeclInstruction[]>func.definition.paramList;
-
-        // this.nameID.addUsedData(usedDataCollector, usedMode);
-
-        for (let i: number = 0; i < argsDecl.length; i++) {
-            if (argsDecl[i].type.hasUsage("out")) {
-                args[i].addUsedData(usedDataCollector, EVarUsedMode.k_Write);
-            }
-            else if (argsDecl[i].type.hasUsage("inout")) {
-                args[i].addUsedData(usedDataCollector, EVarUsedMode.k_ReadWrite);
-            }
-            else {
-                args[i].addUsedData(usedDataCollector, EVarUsedMode.k_Read);
-            }
-        }
-    }
 }
 
 

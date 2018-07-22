@@ -48,13 +48,6 @@ export class PostfixPointInstruction extends ExprInstruction {
         return code;
     }
 
-    
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        this._element.addUsedData(pUsedDataCollector, EVarUsedMode.k_Undefined);
-        this._postfix.addUsedData(pUsedDataCollector, eUsedMode);
-    }
-
 
     isConst(): boolean {
         return (<IExprInstruction>this.element).isConst();

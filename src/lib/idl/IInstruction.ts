@@ -276,7 +276,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
 }
 
 
-export interface ITypedInstruction extends IAnalyzedInstruction {
+export interface ITypedInstruction extends IInstruction {
     readonly type: ITypeInstruction;
 }
 
@@ -350,7 +350,7 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
 
 export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
-    readonly implementation: IStmtInstruction;
+    readonly implementation: IStmtBlockInstruction;
     readonly functionType: EFunctionType;
 
     checkVertexUsage(): boolean;
@@ -378,12 +378,7 @@ export interface IKeywordInstruction extends IInstruction {
 }
 
 
-export interface IAnalyzedInstruction extends IInstruction {
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void;
-}
-
-
-export interface IExprInstruction extends ITypedInstruction, IAnalyzedInstruction {
+export interface IExprInstruction extends ITypedInstruction {
     readonly type: IVariableTypeInstruction;
 
     evaluate(): boolean;
@@ -430,8 +425,8 @@ export interface IInitExprInstruction extends IExprInstruction {
     isArray(): boolean;
     isConst(): boolean;
     
+    // todo: refactor this!!
     optimizeForVariableType(type: IVariableTypeInstruction): boolean;
-    
 }
 
 
@@ -456,7 +451,7 @@ export interface IAnnotationInstruction extends IInstruction {
 }
 
 
-export interface IStmtInstruction extends IInstruction, IAnalyzedInstruction {
+export interface IStmtInstruction extends IInstruction {
 }
 
 export interface IIfStmtInstruction extends IStmtInstruction {

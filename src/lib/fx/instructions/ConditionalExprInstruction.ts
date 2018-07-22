@@ -58,14 +58,6 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
         return code;
     }
 
-
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        this._cond.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-        this._leftValue.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-        this._rightValue.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    }
-
     
     isConst(): boolean {
         return (<IExprInstruction>this.condition).isConst() &&

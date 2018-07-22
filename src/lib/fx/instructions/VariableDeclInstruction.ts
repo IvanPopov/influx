@@ -174,10 +174,5 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return this._bForPixel;
     }
 
-    
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode): void {
-        console.error("@not_implemented");
-    }
-
 }
 

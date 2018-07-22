@@ -52,21 +52,5 @@ export class AssignmentExprInstruction extends ExprInstruction implements IAssig
         code += this.right.toCode();
         return code;
     }
-
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var sOperator: string = this.operator;
-        var pSubExprLeft: IExprInstruction = <IExprInstruction>this.left;
-        var pSubExprRight: IExprInstruction = <IExprInstruction>this.right;
-
-        if (eUsedMode === EVarUsedMode.k_Read || sOperator !== "=") {
-            pSubExprLeft.addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
-        }
-        else {
-            pSubExprLeft.addUsedData(pUsedDataCollector, EVarUsedMode.k_Write);
-        }
-
-        pSubExprRight.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    }
 }
 

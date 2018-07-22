@@ -1,14 +1,16 @@
 import * as React from 'react';
 import { List, Message } from 'semantic-ui-react';
-import { isArray } from 'util';
+import { isArray, isFunction } from '../../lib/common';
 import { isDefAndNotNull, isNull } from '../../lib/common';
 import { analyze } from '../../lib/fx/Analyzer';
 import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction } from '../../lib/idl/IInstruction';
+import { EInstructionTypes, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction, IScope, IStmtBlockInstruction, IDeclInstruction } from '../../lib/idl/IInstruction';
 import { IMap } from '../../lib/idl/IMap';
 import { IParseTree, IRange } from '../../lib/idl/parser/IParser';
 import { SystemTypeInstruction } from '../../lib/fx/instructions/SystemTypeInstruction';
 import { Diagnostics } from '../../lib/util/Diagnostics';
+import { DeclStmtInstruction } from '../../lib/fx/instructions/DeclStmtInstruction';
+import { ReturnStmtInstruction } from '../../lib/fx/instructions/ReturnStmtInstruction';
 
 
 
@@ -123,7 +125,8 @@ export interface IProgramViewProps {
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
 
-    onError: (loc: IRange , message: string) => void;
+    onError?: (loc: IRange , message: string) => void;
+    onComplete?: (scope: IScope, root: IInstructionCollector) => void;
 }
 
 class ProgramView extends React.Component<IProgramViewProps, {}> {
@@ -159,6 +162,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         });
 
         console.log(Diagnostics.stringify(result.diag));
+
+        if (isFunction(props.onComplete)) {
+            props.onComplete(result.scope, result.root);
+        }
     }
 
 
@@ -232,7 +239,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     InstructionCollector(instr: IInstructionCollector) {
         return (
-            <PropertyOpt { ...this.bindProps(instr) } name="Program">
+            <PropertyOpt { ...this.bindProps(instr) } name="Program" opened={ true } >
                 { instr.instructions.map((instr) => this.Unknown(instr)) }
             </PropertyOpt>
         );
@@ -328,10 +335,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
                 <Property name="id" value={ instr.id.toString() } />
-                <Property { ...this.bindProps(instr) } name="type">
+                <Property name="type">
                     { this.VariableType(instr.type) }
                 </Property>
-                <PropertyOpt { ...this.bindProps(instr) } name="init">
+                <PropertyOpt name="init">
                     { this.InitExpr(instr.initExpr) }
                 </PropertyOpt>
             </Property>
@@ -342,8 +349,12 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     FunctionDecl(instr: IFunctionDeclInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
-                { this.FunctionDefinition(instr.definition) }
-                { this.StmtInstruction(instr.implementation) }
+                <Property name="definition" >
+                    { this.FunctionDefinition(instr.definition) }
+                </Property>
+                <PropertyOpt name="implementation" >
+                    { this.StmtBlock(instr.implementation) }
+                </PropertyOpt>
             </Property>
         )
     }
@@ -363,8 +374,44 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    StmtInstruction(instr: IStmtInstruction) {
+    StmtBlock(instr: IStmtBlockInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                { instr.stmtList.map( stmt => this.Stmt(stmt) ) }
+            </Property>
+        );
+    }
+
+    Stmt(instr: IStmtInstruction) {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_DeclStmtInstruction:
+                return this.DeclStmt(instr as DeclStmtInstruction);
+            break;
+        }
+
         return this.NotImplemented(instr); // TODO: remove it
+    }
+
+
+    DeclStmt(instr: DeclStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <Property name="declarations">
+                    { instr.declList.map( decl => this.Unknown(decl) ) }
+                </Property>
+            </Property>
+        );
+    }
+
+
+    ReturnStmt(instr: ReturnStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                <PropertyOpt name="value">
+                    { this.Unknown(instr.expr) }
+                </PropertyOpt>
+            </Property>
+        );
     }
 
 
@@ -383,8 +430,19 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
     InitExpr(instr: IInitExprInstruction) {
-        // todo: write implementation
-        return null;
+        if (isNull(instr)) {
+            return null;
+        }
+
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.instructionName } key={ instr.instructionID }>
+                 <Property name="const" value={ String(instr.isConst()) } />
+                 <Property name="array" value={ String(instr.isArray()) } />
+                 <Property name="arguments">
+                    { instr.arguments.map( arg => this.Unknown(arg) ) }
+                 </Property>
+            </Property>
+        );
     }
 
 
@@ -425,7 +483,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseOver(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
-        this.invertProperty(instr, "selected");
+        this.invertInstructionProperty(instr, "selected");
 
         if (instr.sourceNode)
             this.props.onNodeOver(instr);
@@ -435,7 +493,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseOut(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
-        this.invertProperty(instr, "selected");
+        this.invertInstructionProperty(instr, "selected");
 
         if (instr.sourceNode)
             this.props.onNodeOut(instr);
@@ -445,7 +503,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseClick(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
-        this.invertProperty(instr, "opened");
+        this.invertInstructionProperty(instr, "opened");
 
         if (instr.sourceNode) {
             this.props.onNodeClick(instr);
@@ -453,7 +511,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    invertProperty(instr: IInstruction, prop: string) {
+    invertInstructionProperty(instr: IInstruction, prop: string) {
         let { instrList } = this.state;
         let instrState = { opened: false, selected: false, ...instrList[instr.instructionID] };
         instrState[prop] = !instrState[prop];

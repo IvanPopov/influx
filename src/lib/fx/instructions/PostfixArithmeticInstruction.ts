@@ -51,13 +51,6 @@ export class PostfixArithmeticInstruction extends ExprInstruction {
     }
 
 
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this.expr;
-        pSubExpr.addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
-    }
-    
-
     isConst(): boolean {
         return (<IExprInstruction>this.expr).isConst();
     }

@@ -28,9 +28,4 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
     get type(): ITypeInstruction {
         return this._type;
     }
-
-    
-    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>, usedMode?: EVarUsedMode): void {
-        console.error("@pure_virtual");
-    }
 }

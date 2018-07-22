@@ -50,15 +50,6 @@ export class UnaryExprInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-                 eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        if (this.operator === '++' || this.operator === '--') {
-            (<IExprInstruction>this.expr).addUsedData(pUsedDataCollector, EVarUsedMode.k_ReadWrite);
-        } else {
-            (<IExprInstruction>this.expr).addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-        }
-    }
-
     isConst(): boolean {
         return (<IExprInstruction>this.expr).isConst();
     }

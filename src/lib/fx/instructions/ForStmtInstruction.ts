@@ -110,27 +110,4 @@ export class ForStmtInstruction extends StmtInstruction {
 
         return true;
     }
-
-    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
-        usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var forInit: IExprInstruction = <IExprInstruction>this._init;
-        var forCondition: IExprInstruction = <IExprInstruction>this._cond;
-        var forStep: IExprInstruction = <IExprInstruction>this._step;
-        var forStmt: IStmtInstruction = <IStmtInstruction>this._body;
-
-        var pIteratorType: IVariableTypeInstruction = forInit.type;
-
-        usedDataCollector[pIteratorType.instructionID] = <ITypeUseInfoContainer>{
-            type: pIteratorType,
-            isRead: false,
-            isWrite: true,
-            numRead: 0,
-            numWrite: 1,
-            numUsed: 1
-        };
-
-        forCondition.addUsedData(usedDataCollector, usedMode);
-        forStep.addUsedData(usedDataCollector, usedMode);
-        forStmt.addUsedData(usedDataCollector, usedMode);
-    }
 }

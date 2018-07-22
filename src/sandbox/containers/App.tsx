@@ -10,7 +10,9 @@ import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { IParseTree } from '../../lib/idl/parser/IParser';
-import { IInstruction } from '../../lib/idl/IInstruction';
+import { IInstruction, IScope, IFunctionDeclInstruction } from '../../lib/idl/IInstruction';
+import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
+import { isDefAndNotNull, isNull } from '../../lib/common';
 
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -43,16 +45,50 @@ class App extends React.Component<IAppProps> {
 
     state: {
         ast: IParseTree;
+        scope: IScope;
         showFileBrowser: boolean;
     };
 
     constructor(props) {
         super(props);
-        this.state = { ast: null, showFileBrowser: false };
+        this.state = { ast: null, scope: null, showFileBrowser: false };
+    }
+
+
+    $printCodeFlow_Function (func: IFunctionDeclInstruction): void {
+        let flow = analyzeFlow(func);
+        console.log(flow);
+    }
+
+
+    $printCodeFlow(scope: IScope): void {
+        if (!isDefAndNotNull(scope)) {
+            return;
+        }
+
+        for (let funcName in scope.functionMap) {
+            for (let i = 0; i < scope.functionMap[funcName].length; ++ i) {
+                let func = scope.functionMap[funcName][i];
+
+                if (isNull(func)) {
+                    // todo: print error
+                    continue;
+                }
+
+                this.$printCodeFlow_Function(func);
+            }
+        }
+    
     }
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
+
+        /////
+        // todo: remove it from here
+        this.$printCodeFlow(nextState.scope);
+        /////
+
         if (Object.keys(props.sourceFile.markers).length > 0) {
             // cleanup error highlighting before render
             this.props.actions.cleanupMarkers();
@@ -86,6 +122,7 @@ class App extends React.Component<IAppProps> {
                             onNodeClick={ (instr: IInstruction) => { } }
 
                             onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
+                            onComplete= { scope => { this.setState({ scope }) } }
                         />
                     </Tab.Pane>
                 )
@@ -104,9 +141,9 @@ class App extends React.Component<IAppProps> {
                                 range: node.loc,
                                 type: 'marker'
                             }) }
-                            onNodeOut={ (idx) => props.actions.removeMarker(`ast-range-${idx}`) }
+                            onNodeOut={ idx => props.actions.removeMarker(`ast-range-${idx}`) }
                             onError={ (range, message) => props.actions.addMarker({ name: `syntax-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete={ (ast) => { this.setState({ ast }) } }
+                            onComplete={ ast => { this.setState({ ast }) } }
                         />
                     </Tab.Pane>
                 )

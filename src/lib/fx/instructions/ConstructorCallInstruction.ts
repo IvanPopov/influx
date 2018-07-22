@@ -1,7 +1,7 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IConditionalExprInstructionSettings } from "./ConditionalExprInstruction";
 import { ITypeInstruction, IInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
-import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IAnalyzedInstruction, IExprInstruction, IConstructorCallInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstruction, IConstructorCallInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -57,15 +57,6 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
         code += ")";
 
         return code;
-    }
-
-
-    addUsedData(usedDataCollector: IMap<ITypeUseInfoContainer>,
-        usedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var instructionList: IAnalyzedInstruction[] = <IAnalyzedInstruction[]>this.arguments;
-        for (var i: number = 0; i < instructionList.length; i++) {
-            instructionList[i].addUsedData(usedDataCollector, EVarUsedMode.k_Read);
-        }
     }
 
 

@@ -41,12 +41,7 @@ export class ArithmeticExprInstruction extends ExprInstruction {
     get operator(): string {
         return this._operator;
     }
-
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        this._leftOperand.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-        this._rightOperand.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    }
+    
 
     evaluate(): boolean {
         var pValL: any = this._leftOperand.evaluate() ? this._leftOperand.getEvalValue() : null;

@@ -142,33 +142,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     // }
 
 
-    // generateInfoAboutUsedData(): void {
-    //     if (!isNull(this._usedVarTypeMap)) {
-    //         return;
-    //     }
-
-    //     let usedData: IMap<ITypeUseInfoContainer> = <IMap<ITypeUseInfoContainer>>{};
-
-    //     this._implementation.addUsedData(usedData);
-    //     this._usedVarTypeMap = usedData;
-
-    //     for (let i in usedData) {
-    //         let analyzedInfo: ITypeUseInfoContainer = usedData[i];
-    //         let analyzedType: IVariableTypeInstruction = analyzedInfo.type;
-
-    //         if (analyzedType.scope.isGlobal()) {
-    //             this.addGlobalVariableType(analyzedType, analyzedInfo.isWrite, analyzedInfo.isRead);
-    //         } else if (analyzedType.isUniform()) {
-    //             this.addUniformParameter(analyzedType);
-    //         }
-    //     }
-
-    //     for (let j in this._usedFunctionMap) {
-    //         this.addUsedInfoFromFunction(this._usedFunctionMap[j]);
-    //     }
-    // }
-
-
     // private generatesVertexAttrubutes(): void {
     //     throw null;
 

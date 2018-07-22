@@ -1,4 +1,4 @@
-import { EInstructionTypes, IExprInstruction, IVariableTypeInstruction, IInstruction, EVarUsedMode, IAnalyzedInstruction, ITypeUseInfoContainer, ITypeInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IVariableTypeInstruction, IInstruction, EVarUsedMode, ITypeUseInfoContainer, ITypeInstruction } from "../../idl/IInstruction";
 import { TypedInstruction, ITypedInstructionSettings } from "./TypedInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
@@ -32,9 +32,5 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
     isConst(): boolean {
         console.error("@pure_virtual");
         return false;
-    }
-
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>, eUsedMode?: EVarUsedMode) {
-        console.error("@pure_virtual");
     }
 }

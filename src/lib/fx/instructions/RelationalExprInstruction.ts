@@ -55,12 +55,6 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
     }
 
     
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        super.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-    }
-
-
     isConst(): boolean {
         return (<IExprInstruction>this.left).isConst() &&
             (<IExprInstruction>this.right).isConst();

@@ -57,20 +57,7 @@ export class PostfixIndexInstruction extends ExprInstruction {
         return sCode;
     }
 
-    addUsedData(pUsedDataCollector: IMap<ITypeUseInfoContainer>,
-        eUsedMode: EVarUsedMode = EVarUsedMode.k_Undefined): void {
-        var pSubExpr: IExprInstruction = <IExprInstruction>this.element;
-        var pIndex: IExprInstruction = <IExprInstruction>this.index;
-
-        pSubExpr.addUsedData(pUsedDataCollector, eUsedMode);
-        pIndex.addUsedData(pUsedDataCollector, EVarUsedMode.k_Read);
-
-        
-        if (VariableTypeInstruction.isInheritedFromVariableDecl(pSubExpr.type) && pSubExpr.type.isSampler()) {
-            // this._samplerArrayDecl = pSubExpr.type.parentVarDecl;
-        }
-    }
-
+    
     isConst(): boolean {
         return (<IExprInstruction>this.element).isConst() &&
             (<IExprInstruction>this.index).isConst();

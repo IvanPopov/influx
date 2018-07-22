@@ -2,7 +2,8 @@ import * as React from 'react';
 import { List } from 'semantic-ui-react'
 import * as fs1 from 'fs';
 import * as path from 'path';
-import { promisify, isArray } from 'util';
+import { promisify } from 'util';
+import { isArray } from '../../lib/common'
 
 interface IFileListViewProps {
     path: string;

@@ -415,15 +415,8 @@ export class ProgramScope {
     currentScope: IScope;
 
 
-    constructor() {
-        this.globalScope = null;
-        this.currentScope = null;
-    }
-
-
-    begin(systemScope: IScope): void {
+    constructor(systemScope: IScope) {
         assert(systemScope !== null);
-        assert(this.currentScope === null);
 
         let type = EScopeType.k_Global;
         let parent = systemScope;
@@ -432,10 +425,8 @@ export class ProgramScope {
     }
 
 
-    end(): void {
+    validate(): void {
         assert(this.currentScope === this.globalScope);
-        this.currentScope = null;
-        this.globalScope = null;
     }
 
 
@@ -454,30 +445,5 @@ export class ProgramScope {
         assert(this.currentScope !== null);
         this.currentScope = this.currentScope.parent;
         assert(this.currentScope !== null);
-    }
-
-
-    findTechnique(techName: string): ITechniqueInstruction {
-        return this.globalScope.findTechnique(techName);
-    }
-
-
-    findFunction(funcName: string, args: IVariableDeclInstruction[]): IFunctionDeclInstruction {
-        return this.globalScope.findFunction(funcName, args);
-    }
-
-
-    findShaderFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction {
-        return this.globalScope.findShaderFunction(funcName, args);
-    }
-
-
-    findVariable(varName: string): IVariableDeclInstruction {
-        return this.currentScope.findVariable(varName);
-    }
-    
-
-    findType(typeName: string): ITypeInstruction {
-        return this.currentScope.findType(typeName);
     }
 }
