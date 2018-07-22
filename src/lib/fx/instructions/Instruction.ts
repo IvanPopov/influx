@@ -148,6 +148,29 @@ export class Instruction implements IInstruction {
     }
 
 
+    static isExpression(instr: IInstruction): boolean {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_ConditionalExprInstruction:
+            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_PostfixArithmeticInstruction:
+            case EInstructionTypes.k_PostfixIndexInstruction:
+            case EInstructionTypes.k_PostfixPointInstruction:
+            // todo: add other types!!!
+            return true;
+        }
+
+        return false;
+    }
+
+
     static $withParent<T extends IInstruction>(child: T, parent: IInstruction): T | null {
         if (isNull(child)) {
             return null;

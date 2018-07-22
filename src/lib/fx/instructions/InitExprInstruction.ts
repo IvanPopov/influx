@@ -168,29 +168,29 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return false;
         }
 
-        let pRes: any = null;
+        let res: any = null;
 
         if (this._isArray) {
-            pRes = new Array(this.arguments.length);
+            res = new Array(this.arguments.length);
 
             for (let i: number = 0; i < this.arguments.length; i++) {
-                let pEvalInstruction = (<IExprInstruction>this.arguments[i]);
+                let evalInstruction = (<IExprInstruction>this.arguments[i]);
 
-                if (pEvalInstruction.evaluate()) {
-                    pRes[i] = pEvalInstruction.getEvalValue();
+                if (evalInstruction.evaluate()) {
+                    res[i] = evalInstruction.getEvalValue();
                 }
             }
         }
         else if (this.arguments.length === 1) {
             let pEvalInstruction = (<IExprInstruction>this.arguments[0]);
             pEvalInstruction.evaluate();
-            pRes = pEvalInstruction.getEvalValue();
+            res = pEvalInstruction.getEvalValue();
         }
         else {
-            let pJSTypeCtor: any = SystemScope.getExternalType(this.type);
-            let pArguments: any[] = new Array(this.arguments.length);
+            let jsTypeCtor: any = SystemScope.getExternalType(this.type);
+            let args: any[] = new Array(this.arguments.length);
 
-            if (isNull(pJSTypeCtor)) {
+            if (isNull(jsTypeCtor)) {
                 return false;
             }
 
@@ -201,22 +201,22 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                         return false;
                     }
 
-                    pRes = pJSTypeCtor(testedInstruction.getEvalValue());
+                    res = jsTypeCtor(testedInstruction.getEvalValue());
                 }
                 else {
                     for (let i: number = 0; i < this.arguments.length; i++) {
                         let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[i];
 
                         if (testedInstruction.evaluate()) {
-                            pArguments[i] = testedInstruction.getEvalValue();
+                            args[i] = testedInstruction.getEvalValue();
                         }
                         else {
                             return false;
                         }
                     }
 
-                    pRes = new pJSTypeCtor;
-                    pRes.set.apply(pRes, pArguments);
+                    res = new jsTypeCtor;
+                    res.set.apply(res, args);
                 }
             }
             catch (e) {
@@ -224,7 +224,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             }
         }
 
-        this._evalResult = pRes;
+        this._evalResult = res;
         return true;
     }
 }
