@@ -1220,7 +1220,7 @@ function analyzeExpr(context: Context, program: ProgramScope, sourceNode: IParse
         case 'T_KW_FALSE':
             return analyzeSimpleExpr(context, program, sourceNode);
         default:
-            context.error(sourceNode, EErrors.UnsupportedExpr, { exprName: name });
+            context.critical(sourceNode, EErrors.UnsupportedExpr, { exprName: name });
             break;
     }
 
@@ -2549,6 +2549,11 @@ function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: 
     if (children.length === 3) {
         expr = analyzeExpr(context, program, children[1]);
 
+        if (isNull(expr)) {
+            context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
+            return null;
+        }
+
         if (!funcReturnType.isEqual(expr.type)) {
             context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
             return null;
@@ -3300,6 +3305,14 @@ class Context {
     }
 
 
+    critical(sourceNode: IParseNode, code: number, info: IErrorInfo = {}): void {
+        let loc = this.resolveNodeSourceLocation(sourceNode);
+        let file = this.filename;
+
+        this.diagnostics.critical(code, { file, loc, info });
+    }
+
+
     warn(sourceNode: IParseNode, code: number, info: IWarningInfo = {}): void {
         let loc = this.resolveNodeSourceLocation(sourceNode);
         let file = this.filename;
@@ -3330,11 +3343,17 @@ export interface IAnalyzeResult {
 export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     console.time(`analyze(${filename})`);
 
+    
     const program = new ProgramScope(SystemScope.SCOPE);
     const context = new Context(filename);
-    const globals = analyzeGlobals(context, program, ast);
-
-    program.validate();
+    
+    let globals: IInstruction[] = null;
+    try {
+        globals = analyzeGlobals(context, program, ast);
+        program.validate();
+    } catch (e) {
+        // critical errors were occured
+    }
     
     console.timeEnd(`analyze(${filename})`);
     

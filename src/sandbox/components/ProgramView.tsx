@@ -240,7 +240,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     InstructionCollector(instr: IInstructionCollector) {
         return (
             <PropertyOpt { ...this.bindProps(instr) } name="Program" opened={ true } >
-                { instr.instructions.map((instr) => this.Unknown(instr)) }
+                { (instr.instructions || []).map((instr) => this.Unknown(instr)) }
             </PropertyOpt>
         );
     }

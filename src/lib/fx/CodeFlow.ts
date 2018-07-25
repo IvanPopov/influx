@@ -18,6 +18,9 @@ interface INode {
 }
 
 function dotName(node: INode) {
+    if (isNull(node)) {
+        return `node_undefined`;
+    }
     return `node_${node.id}`;
 }
 
