@@ -43,7 +43,9 @@ export class Instruction implements IInstruction {
 
 
     get parent(): IInstruction {
-        console.assert(this._parent, "Parent is not defined!");
+        if (!this._parent) {
+            console.warn("Parent is not defined!");
+        }
         return this._parent;
     }
 
