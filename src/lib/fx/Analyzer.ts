@@ -2043,25 +2043,26 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
     const scope = program.currentScope;
 
     let name = sourceNode.value;
-    let variable = scope.findVariable(name);
+    let decl = scope.findVariable(name);
 
-    if (isNull(variable)) {
+    if (isNull(decl)) {
         context.error(sourceNode, EErrors.UnknownVarName, { varName: name });
         return null;
     }
 
     if (context.func) {
         // todo: rewrite this!
-        if (!variable.checkPixelUsage()) {
+        if (!decl.checkPixelUsage()) {
             // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
 
-        if (!variable.checkVertexUsage()) {
+        if (!decl.checkVertexUsage()) {
             // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
     }
 
-    let varId = new IdExprInstruction({ scope, sourceNode, id: variable.id, decl: variable });
+    // todo: make a copy of ID instruction
+    let varId = new IdExprInstruction({ scope, sourceNode, id: decl.id, decl });
     return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
 }
 

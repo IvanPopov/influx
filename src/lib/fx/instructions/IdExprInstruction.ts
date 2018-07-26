@@ -25,6 +25,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
 
+        // todo: id should be inherit from this expr!
         this._id = id.$withNoParent();
         this._decl = decl;
     }
