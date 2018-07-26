@@ -106,7 +106,7 @@ class App extends React.Component<IAppProps> {
 
         const analysisResults = [
             {
-                menuItem: 'Program',
+                menuItem: (<Menu.Item>semantics<br/>analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
@@ -128,7 +128,7 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: 'AST',
+                menuItem: (<Menu.Item>syntax<br/>analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="ast-view">
                         <ASTView
@@ -167,7 +167,7 @@ class App extends React.Component<IAppProps> {
                                     />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
-                                    <Tab menu={ { secondary: true } } panes={ analysisResults } renderActiveOnly={ false } />
+                                    <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
                                 </Grid.Column>
                             </Grid.Row>
                         </Grid>

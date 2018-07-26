@@ -3,7 +3,7 @@
  */
 .ui.selection.list .list > .item.astnode,
 .ui.selection.list > .item.astnode {
-  padding: 0.05em 0.05em;
+  padding: 0.01em 0.01em;
 
   .header {
     display: inline-block;
@@ -14,4 +14,9 @@
     margin-left: 0.25em;
     color: lighten(@itemDescriptionColor, 10%);
   }
+}
+
+.ui.selection.list .list.astlist,
+.ui.selection.list.astlist {
+  padding: 0em 0em;
 }

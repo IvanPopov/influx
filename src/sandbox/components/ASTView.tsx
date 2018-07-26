@@ -80,7 +80,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         };
 
         return (
-            <List style={ style } selection size="small">
+            <List style={ style } selection size="small" className="astlist">
                 { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
             </List>
         );
@@ -193,7 +193,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         else {
             let children = null;
             if (show) {
-                children = (<List.List> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
+                children = (<List.List className="astlist"> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
             }
             return (
                 <List.Item key={ idx } 
