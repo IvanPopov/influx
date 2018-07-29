@@ -1,16 +1,23 @@
 import * as React from 'react';
-import { List, Message, Icon } from 'semantic-ui-react';
+import { List, Message, Icon, Popup, Button } from 'semantic-ui-react';
 import { isArray, isFunction } from '../../lib/common';
 import { isDefAndNotNull, isNull } from '../../lib/common';
 import { analyze } from '../../lib/fx/Analyzer';
 import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction, IScope, IStmtBlockInstruction, IDeclInstruction } from '../../lib/idl/IInstruction';
+import { EInstructionTypes, IIdExprInstruction, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction, IScope, IStmtBlockInstruction, IDeclInstruction, IAssignmentExprInstruction } from '../../lib/idl/IInstruction';
 import { IMap } from '../../lib/idl/IMap';
 import { IParseTree, IRange } from '../../lib/idl/parser/IParser';
 import { SystemTypeInstruction } from '../../lib/fx/instructions/SystemTypeInstruction';
 import { Diagnostics } from '../../lib/util/Diagnostics';
 import { DeclStmtInstruction } from '../../lib/fx/instructions/DeclStmtInstruction';
 import { ReturnStmtInstruction } from '../../lib/fx/instructions/ReturnStmtInstruction';
+import { ExprStmtInstruction } from 'lib/fx/instructions/ExprStmtInstruction';
+import { IntInstruction } from 'lib/fx/instructions/IntInstruction';
+import { PostfixArithmeticInstruction } from 'lib/fx/instructions/PostfixArithmeticInstruction';
+import { ArithmeticExprInstruction } from 'lib/fx/instructions/ArithmeticExprInstruction';
+import { FloatInstruction } from 'lib/fx/instructions/FloatInstruction';
+import { BoolInstruction } from 'lib/fx/instructions/BoolInstruction';
+import { StringInstruction } from 'lib/fx/instructions/StringInstruction';
 
 
 
@@ -78,7 +85,7 @@ const Property: PropertyComponent =
             children = null;
         }
         const isHelper = !onClick;
-        const simpleProperty = (value && !children);
+        const simpleProperty = (value && !children) && !parent;
         const helperProperty = (!value && children) && isHelper;
         const showIcon = !simpleProperty && !helperProperty;
         return (
@@ -94,11 +101,11 @@ const Property: PropertyComponent =
                 }
                 <List.Content>
                     { isDefAndNotNull(name) &&
-                        <List.Header style={ helperProperty? { fontSize: '85%' }: {} }>
-                            { helperProperty? `[${name}]`: name }
+                        <List.Header style={ helperProperty? { fontSize: '85%', color: '#ccc' }: {} }>
                             { parent &&
                                 <span> <a style={ { color: 'rgba(0,0,0,0.3)' } } onClick={ onParentClick }><Icon name={ `git pull request` as any } size="small"/></a></span>
                             }
+                            { helperProperty? `[${name}]`: name }
                         </List.Header>
 
                     }
@@ -251,6 +258,22 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.SystemType(instr);
             case EInstructionTypes.k_FunctionDeclInstruction:
                 return this.FunctionDecl(instr);
+            case EInstructionTypes.k_IdExprInstruction:
+                return this.IdExpr(instr);
+            case EInstructionTypes.k_AssignmentExprInstruction:
+                return this.Assigment(instr);
+            case EInstructionTypes.k_PostfixArithmeticInstruction:
+                return this.PostfixArithmetic(instr);
+            case EInstructionTypes.k_IntInstruction:
+                return this.Int(instr);
+            case EInstructionTypes.k_FloatInstruction:
+                return this.Float(instr);
+            case EInstructionTypes.k_StringInstruction:
+                return this.String(instr);
+            case EInstructionTypes.k_BoolInstruction:
+                return this.Bool(instr);
+            case EInstructionTypes.k_ArithmeticExprInstruction:
+                return this.ArithmeticExpr(instr);
             default:
                 return this.NotImplemented(instr);
         }
@@ -259,7 +282,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     InstructionCollector(instr: IInstructionCollector) {
         return (
-            <PropertyOpt { ...this.bindProps(instr) } name="Program" opened={ true } >
+            <PropertyOpt { ...this.bindProps(instr, true) } name="Program" >
                 { (instr.instructions || []).map((instr) => this.Unknown(instr)) }
             </PropertyOpt>
         );
@@ -312,7 +335,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     typeInfo(instr) {
         return (
-            <SystemProperty { ...this.bindProps(instr) } name="description">
+            <SystemProperty { ...this.bindProps(instr, false) } name={ instr.strongHash }>
                 <SystemProperty name="writable" value={ `${instr.writable}` } />
                 <SystemProperty name="readable" value={ `${instr.readable}` } />
                 <SystemProperty name="builtIn" value={ `${instr.builtIn}` } />
@@ -355,10 +378,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name="id" value={ instr.id.toString() } />
-                <Property name="type">
+                <Property name="type" opened={ true }>
                     { this.VariableType(instr.type) }
                 </Property>
-                <PropertyOpt name="init">
+                <PropertyOpt name="init" opened={ true }>
                     { this.InitExpr(instr.initExpr) }
                 </PropertyOpt>
             </Property>
@@ -368,7 +391,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     FunctionDecl(instr: IFunctionDeclInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr, true) } >
                 <Property name="definition" >
                     { this.FunctionDefinition(instr.definition) }
                 </Property>
@@ -380,12 +403,87 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    FunctionDefinition(instr: IFunctionDefInstruction) {
+    IdExpr(instr: IIdExprInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name="name" value={ instr.name } />
+            </Property>
+        )
+    }
+
+
+    Assigment(instr: IAssignmentExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name="lval">
+                    { this.Unknown(instr.left) }
+                </Property>
+                <Property name="rval">
+                    { this.Unknown(instr.right) }
+                </Property>
+            </Property>
+        )
+    }
+
+
+    PostfixArithmetic(instr: PostfixArithmeticInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name="operator" value={ instr.operator } />
+                <Property name="expr">
+                    { this.Unknown(instr.expr) }
+                </Property>
+            </Property>
+        )
+    }
+
+
+    ArithmeticExpr(instr: ArithmeticExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } >
+                <Property name="operator" value={ instr.operator } />
+                <Property name="operands">
+                    { this.Unknown(instr.left) }
+                    { this.Unknown(instr.right) }
+                </Property>
+            </Property>
+        );
+    }
+
+
+    Int(instr: IntInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+        );
+    }
+
+    Float(instr: FloatInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+        );
+    }
+
+
+    Bool(instr: BoolInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+        );
+    }
+
+
+    String(instr: StringInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+        );
+    }
+
+
+    FunctionDefinition(instr: IFunctionDefInstruction) {
+        return (
+            <Property { ...this.bindProps(instr, true) }>
+                <Property name="name" value={ instr.name } />
                 <Property name="type" value={ instr.returnType.name } />
-                <Property name="numArgsRequired" value={ instr.numArgsRequired } />
+                <Property name="numArgsRequired" value={ String(instr.numArgsRequired) } />
                 <PropertyOpt name="arguments">
                     { instr.paramList.map((param) => this.VariableDecl(param)) }
                 </PropertyOpt>
@@ -396,7 +494,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     StmtBlock(instr: IStmtBlockInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr, true) }>
                 { instr.stmtList.map( stmt => this.Stmt(stmt) ) }
             </Property>
         );
@@ -406,7 +504,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         switch (instr.instructionType) {
             case EInstructionTypes.k_DeclStmtInstruction:
                 return this.DeclStmt(instr as DeclStmtInstruction);
-            break;
+            case EInstructionTypes.k_ReturnStmtInstruction:
+                return this.ReturnStmt(instr as ReturnStmtInstruction);
+            case EInstructionTypes.k_StmtBlockInstruction:
+                return this.StmtBlock(instr as IStmtBlockInstruction);
+            case EInstructionTypes.k_ExprStmtInstruction:
+                return this.ExprStmt(instr as ExprStmtInstruction);
+            break;  
         }
 
         return this.NotImplemented(instr); // TODO: remove it
@@ -415,7 +519,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     DeclStmt(instr: DeclStmtInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr, true) }>
                 <Property name="declarations">
                     { instr.declList.map( decl => this.Unknown(decl) ) }
                 </Property>
@@ -426,7 +530,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     ReturnStmt(instr: ReturnStmtInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr, true) }>
                 <PropertyOpt name="value">
                     { this.Unknown(instr.expr) }
                 </PropertyOpt>
@@ -435,13 +539,22 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    ExprStmt(instr: ExprStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr, true) }>
+                { this.Unknown(instr.expr) }
+            </Property>
+        );
+    }
+
+
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
-                <PropertyOpt name="usages">
+                <PropertyOpt name="usages" opened={ false }>
                     { instr.usageList.join(' ') }
                 </PropertyOpt>
-                <PropertyOpt name="subType">
+                <PropertyOpt name="subType" opened={ false }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>
                 { this.typeInfo(instr) }
@@ -487,8 +600,14 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    bindProps(instr: IInstruction) {
-        const instrState = this.state.instrList[instr.instructionID];
+    bindProps(instr: IInstruction, opened: boolean = false) {
+        const { instrList } = this.state;
+        const instrState = instrList[instr.instructionID];
+
+        if (!instrState) {
+            instrList[instr.instructionID] = { opened, selected: false };
+            return this.bindProps(instr, opened);
+        }
 
         return {
             name: `${prettifyEName(instr.instructionName)}`,
@@ -496,8 +615,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             onMouseOver: this.handleMouseOver.bind(this, instr),
             onMouseOut: this.handleMouseOut.bind(this, instr),
             onClick: this.handleMouseClick.bind(this, instr),
-            selected: instrState ? !!instrState.selected : false,
-            opened: instrState ? !!instrState.opened : false,
+            selected: !!instrState.selected,
+            opened: !!instrState.opened,
             parent: instr.parent && `I${instr.parent.instructionID}`,
             onParentClick: this.handleParentClick.bind(this, instr)
         }

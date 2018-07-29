@@ -256,6 +256,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    // Returns true if the type is user defined array.
+    // like an ordinary array: int a[5]
+    // not a base array like: float4/int3 etc.
     isNotBaseArray(): boolean {
         return !isNull(this._arrayElementType) || this.subType.isNotBaseArray();
     }

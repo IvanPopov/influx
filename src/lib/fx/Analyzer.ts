@@ -91,7 +91,8 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
             [EErrors.InvalidReturnStmtVoid]: 'Invalid return statement. Expression with \'void\' type expected.',
             [EErrors.FunctionRedefinition]: 'Function redefinition. Function with name \'{info.funcName}\' already declared.', // todo: add location where function declared before
             [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.', // todo: specify prev type and location
-            [EErrors.InvalidFunctionReturnStmtNotFound]: 'Return statement expected.' // todo: specify func name and return type details.
+            [EErrors.InvalidFunctionReturnStmtNotFound]: 'Return statement expected.', // todo: specify func name and return type details.
+            [EErrors.InvalidVariableInitializing]: 'Invalid variable initializing.',
         };
     }
 
@@ -1007,6 +1008,7 @@ function analyzeUsage(sourceNode: IParseNode): string {
 }
 
 
+
 /**
  * AST example:
  *    Variable
@@ -1032,7 +1034,9 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         } else if (children[i].name === 'Semantic') {
             semantics = analyzeSemantic(children[i]);
         } else if (children[i].name === 'Initializer') {
-            init = analyzeInitializer(context, program, children[i]);
+            let args = analyzeInitializerArguments(context, program, children[i]);
+            init = new InitExprInstruction({ scope, sourceNode: children[i], args, type });
+   
             if (!init.optimizeForVariableType(type)) {
                 context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
                 return null;
@@ -1160,7 +1164,7 @@ function analyzeSemantic(sourceNode: IParseNode): string {
  *         T_PUNCTUATOR_123 = '{'
  *         T_PUNCTUATOR_61 = '='
  */
-function analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode): IInitExprInstruction {
+function analyzeInitializerArguments(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction[] {
     const children = sourceNode.children;
     const scope = program.currentScope;
 
@@ -1177,9 +1181,7 @@ function analyzeInitializer(context: Context, program: ProgramScope, sourceNode:
         }
     }
 
-    // todo: determ type!
-    let initExpr = new InitExprInstruction({ scope, sourceNode, args, type: null });
-    return initExpr;
+    return args;
 }
 
 
@@ -2032,25 +2034,26 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
     const scope = program.currentScope;
 
     let name = sourceNode.value;
-    let variable = scope.findVariable(name);
+    let decl = scope.findVariable(name);
 
-    if (isNull(variable)) {
+    if (isNull(decl)) {
         context.error(sourceNode, EErrors.UnknownVarName, { varName: name });
         return null;
     }
 
     if (!isNull(context.currentFunction)) {
         // todo: rewrite this!
-        if (!variable.checkPixelUsage()) {
+        if (!decl.checkPixelUsage()) {
             // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
 
-        if (!variable.checkVertexUsage()) {
+        if (!decl.checkVertexUsage()) {
             // context.currentFunction.$overwriteType(EFunctionType.k_Function);
         }
     }
 
-    let varId = new IdExprInstruction({ scope, sourceNode, id: variable.id, decl: variable });
+    let id = new IdInstruction({ sourceNode, name, scope });
+    let varId = new IdExprInstruction({ scope, sourceNode, id, decl });
     return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
 }
 

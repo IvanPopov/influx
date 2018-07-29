@@ -13,20 +13,26 @@ import * as SystemScope from "../SystemScope";
  */
 
 export interface IInitExprInstructionSettings extends IExprInstructionSettings {
+    type: IVariableTypeInstruction;
     args?: IExprInstruction[];
 }
 
 export class InitExprInstruction extends ExprInstruction implements IInitExprInstruction {
     private _args: IExprInstruction[];
 
-    // todo: remove
-    private _isArray: boolean;
+    // Returns true if it is user-defined array.
+    private _isArray: boolean; // todo: remove
 
-    constructor({ args = [], ...settings }: IInitExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_InitExprInstruction, ...settings });
+    constructor({ type, args = [], ...settings }: IInitExprInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_InitExprInstruction, type, ...settings });
 
         this._isArray = false;
         this._args = args.map((arg) => arg.$withParent(this));
+
+        // if (!this.optimizeForVariableType(type)) {
+        //     context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
+        //     return null;
+        // }
     }
 
 
@@ -74,23 +80,27 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         return true;
     }
 
-    optimizeForVariableType(pType: IVariableTypeInstruction): boolean {
-        if ((pType.isNotBaseArray() && pType.scope.type <= EScopeType.k_Global) ||
-            (pType.isArray() && this.arguments.length > 1)) {
+    /**
+     * 
+     * @param type The type of the variable for which the initializer was created.
+     */
+    optimizeForVariableType(type: IVariableTypeInstruction): boolean {
+        // It's a global user defined array or just not unit array;
+        // Trying to exclude types like float1.
+        if ((type.isNotBaseArray() && type.scope.type <= EScopeType.k_Global) ||
+            (type.isArray() && this.arguments.length > 1)) {
 
-
-            if (pType.length === Instruction.UNDEFINE_LENGTH ||
-                (pType.isNotBaseArray() && this.arguments.length !== pType.length) ||
-                (!pType.isNotBaseArray() && this.arguments.length !== pType.baseType.length)) {
-
+            if (type.length === Instruction.UNDEFINE_LENGTH ||
+                (type.isNotBaseArray() && this.arguments.length !== type.length) ||
+                (!type.isNotBaseArray() && this.arguments.length !== type.baseType.length)) {
                 return false;
             }
 
-            if (pType.isNotBaseArray()) {
+            if (type.isNotBaseArray()) {
                 this._isArray = true;
             }
 
-            let arrayElementType = <IVariableTypeInstruction>pType.arrayElementType;
+            let arrayElementType = <IVariableTypeInstruction>type.arrayElementType;
             let isOk = false;
             let testedInstruction: IExprInstruction = null;
 
@@ -118,7 +128,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 }
             }
 
-            this._type = pType.baseType;
+            this._type = type.baseType;
             return true;
         }
         else {
@@ -127,7 +137,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             if (this.arguments.length === 1 &&
                 firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
 
-                if (SystemScope.isSamplerType(pType)) {
+                if (SystemScope.isSamplerType(type)) {
                     if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockInstruction) {
                         return true;
                     }
@@ -136,7 +146,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     }
                 }
 
-                if (firstInstruction.type.isEqual(pType)) {
+                if (firstInstruction.type.isEqual(type)) {
                     return true;
                 }
                 else {
@@ -148,16 +158,16 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             }
 
             let args = <IInitExprInstruction[]>this.arguments;
-            let fieldNameList = pType.fieldNames;
+            let fieldNameList = type.fieldNames;
 
             for (let i = 0; i < args.length; i++) {
-                let pFieldType: IVariableTypeInstruction = pType.getField(fieldNameList[i]).type;
+                let pFieldType: IVariableTypeInstruction = type.getField(fieldNameList[i]).type;
                 if (!args[i].optimizeForVariableType(pFieldType)) {
                     return false;
                 }
             }
 
-            this._type = pType.baseType;
+            this._type = type.baseType;
             return true;
         }
     }

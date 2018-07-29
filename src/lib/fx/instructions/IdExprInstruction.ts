@@ -25,7 +25,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
 
-        this._id = id.$withNoParent();
+        this._id = id.$withParent(this);
         this._decl = decl;
     }
 
@@ -33,23 +33,32 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     get declaration(): IDeclInstruction {
         return this._decl;
     }
-
     
+
+    get id(): IIdInstruction {
+        return this._id;
+    }
+
+
+    get name(): string {
+        return this.id.name;
+    }
+
+
     isConst(): boolean {
         return this.type.isConst();
     }
 
-    
+
     evaluate(): boolean {
         return false;
     }
 
+
     toCode(): string {
-        var scode: string = "";
+        var scode = "";
         if (this.visible) {
-            {
-                scode += this._decl.id.toCode();
-            }
+            scode += this._decl.id.toCode();
         }
         return scode;
     }

@@ -238,12 +238,17 @@ export interface ITypeInstruction extends IInstruction {
 
     isBase(): boolean;
     isArray(): boolean;
+    // Returns true is type is user defined array.
+    // an user defined array like: float f[4]
+    // not: float4 
     isNotBaseArray(): boolean;
     isComplex(): boolean;
     isConst(): boolean;
+
     isSampler(): boolean;
     isSamplerCube(): boolean;
     isSampler2D(): boolean;
+    
     isContainArray(): boolean;
     isContainSampler(): boolean;
     isContainComplexType(): boolean;
@@ -381,7 +386,9 @@ export interface IKeywordInstruction extends IInstruction {
 export interface IExprInstruction extends ITypedInstruction {
     readonly type: IVariableTypeInstruction;
 
+    /** @deprecated */
     evaluate(): boolean;
+    /** @deprecated */
     getEvalValue(): any;
 
     isConst(): boolean;
@@ -431,6 +438,10 @@ export interface IInitExprInstruction extends IExprInstruction {
 
 
 export interface IIdExprInstruction extends IExprInstruction {
+    readonly name: string;
+    readonly id: IIdInstruction;
+
+    /** @helpers */
     readonly type: IVariableTypeInstruction;
     readonly declaration: IDeclInstruction;
 }

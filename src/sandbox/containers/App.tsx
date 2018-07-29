@@ -86,7 +86,7 @@ class App extends React.Component<IAppProps> {
 
         /////
         // todo: remove it from here
-        this.$printCodeFlow(nextState.scope);
+        // this.$printCodeFlow(nextState.scope);
         /////
 
         if (Object.keys(props.sourceFile.markers).length > 0) {
