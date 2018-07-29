@@ -18,6 +18,7 @@ import { ArithmeticExprInstruction } from 'lib/fx/instructions/ArithmeticExprIns
 import { FloatInstruction } from 'lib/fx/instructions/FloatInstruction';
 import { BoolInstruction } from 'lib/fx/instructions/BoolInstruction';
 import { StringInstruction } from 'lib/fx/instructions/StringInstruction';
+import { ForStmtInstruction } from 'lib/fx/instructions/ForStmtInstruction';
 
 
 
@@ -510,6 +511,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.StmtBlock(instr as IStmtBlockInstruction);
             case EInstructionTypes.k_ExprStmtInstruction:
                 return this.ExprStmt(instr as ExprStmtInstruction);
+            case EInstructionTypes.k_ForStmtInstruction:
+                return this.ForStmt(instr as ForStmtInstruction);
             break;  
         }
 
@@ -548,13 +551,30 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    ForStmt(instr: ForStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr, true) }>
+                <PropertyOpt name="init">
+                    { this.Unknown(instr.init) }
+                </PropertyOpt>
+                <PropertyOpt name="cond">
+                    { this.Unknown(instr.cond) }
+                </PropertyOpt>
+                <PropertyOpt name="step">
+                    { this.Unknown(instr.step) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
                 <PropertyOpt name="usages" opened={ false }>
-                    { instr.usageList.join(' ') }
+                    { (instr.usageList.join(' ') || null) }
                 </PropertyOpt>
-                <PropertyOpt name="subType" opened={ false }>
+                <PropertyOpt name="subType" opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>
                 { this.typeInfo(instr) }

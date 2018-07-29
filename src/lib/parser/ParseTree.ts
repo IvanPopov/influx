@@ -1,4 +1,5 @@
 ﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule, IRange, IPosition } from "../idl/parser/IParser";
+import { assert } from "./../common";
 
 function locMin(a: IPosition, b: IPosition): IPosition {
     return {
@@ -15,28 +16,28 @@ function locMax(a: IPosition, b: IPosition): IPosition {
 }
 
 export class ParseTree implements IParseTree {
-    private _pRoot: IParseNode;
-    private _pNodes: IParseNode[];
-    private _pNodesCountStack: number[];
+    private _root: IParseNode;
+    private _nodes: IParseNode[];
+    private _nodesCountStack: number[];
     private _isOptimizeMode: boolean;
 
     getRoot(): IParseNode {
-        return this._pRoot;
+        return this._root;
     }
 
     setRoot(pRoot: IParseNode): void {
-        this._pRoot = pRoot;
+        this._root = pRoot;
     }
 
     constructor() {
-        this._pRoot = null;
-        this._pNodes = <IParseNode[]>[];
-        this._pNodesCountStack = <number[]>[];
+        this._root = null;
+        this._nodes = <IParseNode[]>[];
+        this._nodesCountStack = <number[]>[];
         this._isOptimizeMode = false;
     }
 
     finishTree(): void {
-        this._pRoot = this._pNodes.pop();
+        this._root = this._nodes.pop();
     }
 
     setOptimizeMode(isOptimize: boolean): void {
@@ -44,7 +45,7 @@ export class ParseTree implements IParseTree {
     }
 
     addToken(pToken: IToken): void {
-        let pNode: IParseNode = {
+        let node: IParseNode = {
             name: pToken.name,
             value: pToken.value,
             children: null,
@@ -52,62 +53,75 @@ export class ParseTree implements IParseTree {
             loc: pToken.loc,
         };
 
-        this.addNode(pNode);
+        this.addNode(node);
     }
 
-    addNode(pNode: IParseNode): void {
-        this._pNodes.push(pNode);
-        this._pNodesCountStack.push(1);
+    addNode(node: IParseNode): void {
+        this._nodes.push(node);
+        this._nodesCountStack.push(1);
     }
 
-    reduceByRule(pRule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
+    reduceByRule(rule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
         let iReduceCount: number = 0;
-        let pNodesCountStack: number[] = this._pNodesCountStack;
-        let pNode: IParseNode;
-        let iRuleLength: number = pRule.right.length;
-        let pNodes: IParseNode[] = this._pNodes;
-        let nOptimize: number = this._isOptimizeMode ? 1 : 0;
-        let pTemp: IParseNode;
+        let nodesCountStack: number[] = this._nodesCountStack;
+        let node: IParseNode;
+        let ruleLength: number = rule.right.length;
+        let nodes: IParseNode[] = this._nodes;
+        let optimize: number = this._isOptimizeMode ? 1 : 0;
+        let temp: IParseNode;
 
-        while (iRuleLength) {
-            iReduceCount += pNodesCountStack.pop();
-            iRuleLength--;
+        while (ruleLength) {
+            iReduceCount += nodesCountStack.pop();
+            ruleLength--;
         }
 
-        if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > nOptimize) || (eCreate === ENodeCreateMode.k_Necessary)) {
+        if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || (eCreate === ENodeCreateMode.k_Necessary)) {
+            if (iReduceCount > 0) {
+                temp = nodes.pop();
+                iReduceCount--;
 
-            pTemp = pNodes.pop();
-            iReduceCount--;
+                node = {
+                    name: rule.left,
+                    children: null,
+                    parent: null,
+                    value: '',
+                    loc: {
+                        start: temp.loc.start,
+                        end: temp.loc.end
+                    }
+                };
 
-            pNode = {
-                name: pRule.left,
-                children: null,
-                parent: null,
-                value: '',
-                loc: {
-                    start: pTemp.loc.start,
-                    end: pTemp.loc.end
+                this.addLink(node, temp);
+
+                while (iReduceCount) {
+                    assert(nodes.length > 0);
+                    this.addLink(node, nodes.pop());
+                    iReduceCount --;
                 }
-            };
-
-            this.addLink(pNode, pTemp);
-
-            while (iReduceCount) {
-                this.addLink(pNode, pNodes.pop());
-                iReduceCount --;
+            } else {
+                node = {
+                    name: rule.left,
+                    children: [],
+                    parent: null,
+                    value: '',
+                    loc: {
+                        start: { line: 0, column: 0 },
+                        end: { line: 0, column: 0 }
+                    }
+                };
             }
 
-            pNodes.push(pNode);
-            pNodesCountStack.push(1);
+            nodes.push(node);
+            nodesCountStack.push(1);
         }
         else {
-            pNodesCountStack.push(iReduceCount);
+            nodesCountStack.push(iReduceCount);
         }
     }
 
     toString(): string {
-        if (this._pRoot) {
-            return this.toStringNode(this._pRoot);
+        if (this._root) {
+            return this.toStringNode(this._root);
         }
         else {
             return "";
@@ -116,122 +130,128 @@ export class ParseTree implements IParseTree {
 
     clone(): IParseTree {
         let pTree = new ParseTree();
-        pTree.setRoot(this.cloneNode(this._pRoot));
+        pTree.setRoot(this.cloneNode(this._root));
         return pTree;
     }
 
     getNodes(): IParseNode[] {
-        return this._pNodes;
+        return this._nodes;
     }
 
     getLastNode(): IParseNode {
-        return this._pNodes[this._pNodes.length - 1];
+        return this._nodes[this._nodes.length - 1];
     }
 
-    private addLink(pParent: IParseNode, pNode: IParseNode): void {
-        if (!pParent.children) {
-            pParent.children = <IParseNode[]>[];
+    private addLink(parent: IParseNode, node: IParseNode): void {
+        if (!parent.children) {
+            parent.children = <IParseNode[]>[];
         }
         
-        // todo: remove min/max in order to correct start/end calculation based on node order
-        pParent.loc.start = locMin(pNode.loc.start, pParent.loc.start);
-        pParent.loc.end = locMax(pNode.loc.end, pParent.loc.end);
+        // if (!node) {
+        //     console.warn('node is undefined!');
+        // } 
+        // else 
+        {
+            // todo: remove min/max in order to correct start/end calculation based on node order
+            parent.loc.start = locMin(node.loc.start, parent.loc.start);
+            parent.loc.end = locMax(node.loc.end, parent.loc.end);
 
-        pParent.children.push(pNode);
-        pNode.parent = pParent;
+            parent.children.push(node);
+            node.parent = parent;
+        }
     }
 
-    private cloneNode(pNode: IParseNode): IParseNode {
-        let pNewNode: IParseNode;
-        pNewNode = <IParseNode>{
-            name: pNode.name,
-            value: pNode.value,
+    private cloneNode(node: IParseNode): IParseNode {
+        let newNode: IParseNode;
+        newNode = <IParseNode>{
+            name: node.name,
+            value: node.value,
             children: null,
             parent: null
         };
 
-        let pChildren: IParseNode[] = pNode.children;
-        for (let i = 0; pChildren && i < pChildren.length; i++) {
-            this.addLink(pNewNode, this.cloneNode(pChildren[i]));
+        let children: IParseNode[] = node.children;
+        for (let i = 0; children && i < children.length; i++) {
+            this.addLink(newNode, this.cloneNode(children[i]));
         }
 
-        return pNewNode;
+        return newNode;
     }
 
-    private toStringNode(pNode: IParseNode, sPadding: string = ""): string {
-        let sRes: string = sPadding + "{\n";
-        let sOldPadding: string = sPadding;
-        let sDefaultPadding: string = "  ";
+    private toStringNode(node: IParseNode, padding: string = ""): string {
+        let res: string = padding + "{\n";
+        let oldPadding: string = padding;
+        let defaultPadding: string = "  ";
 
-        sPadding += sDefaultPadding;
+        padding += defaultPadding;
 
-        if (pNode.value) {
-            sRes += sPadding + "name : \"" + pNode.name + "\"" + ",\n";
-            sRes += sPadding + "value : \"" + pNode.value + "\"" + "\n";
+        if (node.value) {
+            res += padding + "name : \"" + node.name + "\"" + ",\n";
+            res += padding + "value : \"" + node.value + "\"" + "\n";
         }
         else {
-            sRes += sPadding + "name : \"" + pNode.name + "\"" + "\n";
-            sRes += sPadding + "children : [";
+            res += padding + "name : \"" + node.name + "\"" + "\n";
+            res += padding + "children : [";
 
-            let pChildren: IParseNode[] = pNode.children;
+            let children: IParseNode[] = node.children;
 
-            if (pChildren) {
-                sRes += "\n";
-                sPadding += sDefaultPadding;
+            if (children) {
+                res += "\n";
+                padding += defaultPadding;
 
-                for (let i = pChildren.length - 1; i >= 0; i--) {
-                    sRes += this.toStringNode(pChildren[i], sPadding);
-                    sRes += ",\n";
+                for (let i = children.length - 1; i >= 0; i--) {
+                    res += this.toStringNode(children[i], padding);
+                    res += ",\n";
                 }
 
-                sRes = sRes.slice(0, sRes.length - 2);
-                sRes += "\n";
-                sRes += sOldPadding + sDefaultPadding + "]\n";
+                res = res.slice(0, res.length - 2);
+                res += "\n";
+                res += oldPadding + defaultPadding + "]\n";
             }
             else {
-                sRes += " ]\n";
+                res += " ]\n";
             }
         }
-        sRes += sOldPadding + "}";
-        return sRes;
+        res += oldPadding + "}";
+        return res;
     }
 
-    toHTMLString(pNode: IParseNode, sPadding: string = "") {
-        pNode = pNode || this.getRoot();
-        let sRes = sPadding + "{\n";
-        let sOldPadding = sPadding;
-        let sDefaultPadding = "  ";
-        sPadding += sDefaultPadding;
-        if (pNode.value) {
-            sRes += sPadding + "<b style=\"color: #458383;\">name</b>: \"" + pNode.name + "\"" + ",\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">value</b>: \"" + pNode.value + "\"" + ",\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">line</b>: \"" + pNode.loc.start.line + "\" - \""  + pNode.loc.end.line + "\"" + "\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">column</b>: \"" + pNode.loc.start.column + "\" - \""  + pNode.loc.end.column + "\"" + "\n";
+    toHTMLString(node: IParseNode, padding: string = "") {
+        node = node || this.getRoot();
+        let res = padding + "{\n";
+        let oldPadding = padding;
+        let defaultPadding = "  ";
+        padding += defaultPadding;
+        if (node.value) {
+            res += padding + "<b style=\"color: #458383;\">name</b>: \"" + node.name + "\"" + ",\n";
+            res += padding + "<b style=\"color: #458383;\">value</b>: \"" + node.value + "\"" + ",\n";
+            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \""  + node.loc.end.line + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \""  + node.loc.end.column + "\"" + "\n";
             // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
         }
         else {
             let i;
-            sRes += sPadding + "<i style=\"color: #8A2BE2;\">name</i>: \"" + pNode.name + "\"" + "\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">line</b>: \"" + pNode.loc.start.line + "\" - \""  + pNode.loc.end.line + "\"" + "\n";
-            sRes += sPadding + "<b style=\"color: #458383;\">column</b>: \"" + pNode.loc.start.column + "\" - \""  + pNode.loc.end.column + "\"" + "\n";
+            res += padding + "<i style=\"color: #8A2BE2;\">name</i>: \"" + node.name + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \""  + node.loc.end.line + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \""  + node.loc.end.column + "\"" + "\n";
             // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
-            sRes += sPadding + "<i style=\"color: #8A2BE2;\">children</i>: [";
-            if (pNode.children) {
-                sRes += "\n";
-                sPadding += sDefaultPadding;
-                for (i = pNode.children.length - 1; i >= 0; i--) {
-                    sRes += this.toHTMLString(pNode.children[i], sPadding);
-                    sRes += ",\n";
+            res += padding + "<i style=\"color: #8A2BE2;\">children</i>: [";
+            if (node.children) {
+                res += "\n";
+                padding += defaultPadding;
+                for (i = node.children.length - 1; i >= 0; i--) {
+                    res += this.toHTMLString(node.children[i], padding);
+                    res += ",\n";
                 }
-                sRes = sRes.slice(0, sRes.length - 2);
-                sRes += "\n";
-                sRes += sOldPadding + sDefaultPadding + "]\n";
+                res = res.slice(0, res.length - 2);
+                res += "\n";
+                res += oldPadding + defaultPadding + "]\n";
             }
             else {
-                sRes += " ]\n";
+                res += " ]\n";
             }
         }
-        sRes += sOldPadding + "}";
-        return sRes;
+        res += oldPadding + "}";
+        return res;
     }
 }

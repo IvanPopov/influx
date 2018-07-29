@@ -2776,7 +2776,6 @@ function analyzeForStmt(context: Context, program: ProgramScope, sourceNode: IPa
         step = analyzeForStep(context, program, children[2]);
     }
     
-    
     if (isNonIfStmt) {
         body = analyzeNonIfStmt(context, program, children[0]);
     }
@@ -2849,6 +2848,9 @@ function analyzeForCond(context: Context, program: ProgramScope, sourceNode: IPa
  */
 function analyzeForStep(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
     const children = sourceNode.children;
+    if (children.length == 0) {
+        return null;
+    }
     const step = analyzeExpr(context, program, children[0]);
     return step;
 }

@@ -29,5 +29,5 @@ render(
   document.getElementById('app')
 );
 
-store.dispatch(sourceCode.openFile('assets/fx/tests/flow.fx'));
+store.dispatch(sourceCode.openFile('assets/fx/tests/forLoop.fx'));
 store.dispatch(parser.openGrammar('assets/HLSL.gr'));
