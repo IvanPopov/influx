@@ -46,7 +46,7 @@ import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
 import { TechniqueInstruction } from './instructions/TechniqueInstruction';
 import { TypeDeclInstruction } from './instructions/TypeDeclInstruction';
 import { UnaryExprInstruction, UnaryOperator } from './instructions/UnaryExprInstruction';
-import { VariableDeclInstruction } from './instructions/VariableDeclInstruction';
+import { VariableDeclInstruction, EVariableUsageFlags } from './instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { DoWhileOperator, WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
@@ -1021,8 +1021,19 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
     const scope = program.currentScope;
 
     let annotation: IAnnotationInstruction = null;
-    let semantics = '';
     let init: IInitExprInstruction = null;
+    let semantics = '';
+    let usageFlags = 0;
+
+    if (!context.func) {
+        usageFlags |= EVariableUsageFlags.k_Global;
+    } else {
+        // All variables found inside function definition are arguments.
+        if (!context.funcDef) {
+            usageFlags |= EVariableUsageFlags.k_Argument;
+        }
+        usageFlags |= EVariableUsageFlags.k_Local;
+    }
 
     let id = analyzeVariableId(context, program, children[children.length - 1]);
     let arrayIndex = analyzeVariableIndex(context, program, children[children.length - 1]);
@@ -1044,7 +1055,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         }
     }
 
-    const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation });
+    const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation, usageFlags });
     assert(scope.type != EScopeType.k_System);
 
     if (SystemScope.hasVariable(varDecl.name)) {
@@ -2041,7 +2052,7 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
         return null;
     }
 
-    if (!isNull(context.currentFunction)) {
+    if (context.func) {
         // todo: rewrite this!
         if (!decl.checkPixelUsage()) {
             // context.currentFunction.$overwriteType(EFunctionType.k_Function);
@@ -2219,8 +2230,6 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     const globalScope = program.globalScope;
     const lastNodeValue = children[0].value;
 
-    console.assert(scope == globalScope);
-
     let annotation: IAnnotationInstruction = null;
     let implementation: IStmtBlockInstruction = null;
 
@@ -2249,17 +2258,17 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         }
     }
 
-    console.assert(context.currentFunction === null);
+    assert(context.funcDef === null);
 
     // todo: rewrite context ?
-    context.currentFunction = definition;
-    context.haveCurrentFunctionReturnOccur = false;
+    context.funcDef = definition;
 
     if (children.length === 3) {
         annotation = analyzeAnnotation(children[1]);
     }
 
     if (lastNodeValue !== ';') {
+        // todo: do to increase scope depth inside stmt block!!
         implementation = analyzeStmtBlock(context, program, children[0]);
     }
 
@@ -2284,7 +2293,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 
 
     if (isNull(func)) {
-        console.assert(scope == globalScope);
+        assert(scope == globalScope);
         func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
         if (!globalScope.addFunction(func)) {
             context.error(sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
@@ -2295,38 +2304,10 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         context.error(sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: definition.name });
     }
 
-    context.currentFunction = null;
-
     return func;
 }
 
 
-// function resumeFunctionAnalysis(context: Context, program: ProgramScope, pAnalzedFunction: IFunctionDeclInstruction): void {
-//     const func: FunctionDeclInstruction = <FunctionDeclInstruction>pAnalzedFunction;
-//     const sourceNode: IParseNode = func.sourceNode;
-
-//     program.current = func.implementationScope;
-
-//     const children = sourceNode.children;
-//     let stmtBlock: StmtBlockInstruction = null;
-
-//     context.currentFunction = func;
-//     context.haveCurrentFunctionReturnOccur = false;
-
-//     stmtBlock = <StmtBlockInstruction>analyzeStmtBlock(context, program, children[0]);
-//     func.implementation = <IStmtInstruction>stmtBlock;
-
-//     if (!func.returnType.isEqual(SystemScope.T_VOID) && !context.haveCurrentFunctionReturnOccur) {
-//         context.error(sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: func.nameID.toString() })
-//     }
-
-//     context.currentFunction = null;
-//     context.haveCurrentFunctionReturnOccur = false;
-
-//     program.pop();
-
-//     checkInstruction(context, func, ECheckStage.CODE_TARGET_SUPPORT);
-// }
 
 /**
  * AST example:
@@ -2447,8 +2428,6 @@ function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: I
     const children = sourceNode.children;
     const scope = program.currentScope;
     
-    program.push(EScopeType.k_Default);
-
     let stmtList: IStmtInstruction[] = [];
     for (let i = children.length - 2; i > 0; i--) {
         let stmt = analyzeStmt(context, program, children[i]);
@@ -2456,8 +2435,6 @@ function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: I
             stmtList.push(stmt);
         }
     }
-    
-    program.pop();
     
     const stmtBlock = new StmtBlockInstruction({ sourceNode, scope, stmtList });
     checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2502,8 +2479,12 @@ function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: 
             return analyzeWhileStmt(context, program, sourceNode);
 
         case 'StmtBlock':
-            return analyzeStmtBlock(context, program, children[0]);
-
+        {
+            program.push(EScopeType.k_Default);
+            let stmtBlock = analyzeStmtBlock(context, program, children[0]);
+            program.pop();
+            return stmtBlock;
+        }
         case 'T_KW_DISCARD':
         case 'T_KW_BREAK':
         case 'T_KW_CONTINUE':
@@ -2535,8 +2516,9 @@ function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: 
     const children = sourceNode.children;
     const scope = program.currentScope;
    
+    assert(context.func);
 
-    const funcReturnType = context.currentFunction.returnType;
+    const funcReturnType = context.funcDef.returnType;
     context.haveCurrentFunctionReturnOccur = true;
 
     if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
@@ -2582,7 +2564,7 @@ function analyzeBreakStmt(context: Context, program: ProgramScope, sourceNode: I
 
     const operator: BreakOperator = <BreakOperator>children[1].value;
     
-    if (operator === 'discard' && !isNull(context.currentFunction)) {
+    if (operator === 'discard' && !isNull(context.funcDef)) {
         // context.currentFunction.vertex = (false);
     }
     
@@ -3261,7 +3243,11 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
                 globals = globals.concat(analyzeVarStructDecl(context, program, children[i]));
                 break;
             case 'FunctionDecl':
+                assert(program.currentScope == program.globalScope);
+
+                context.beginFunc();
                 globals.push(analyzeFunctionDecl(context, program, children[i]));
+                context.endFunc();
                 break;
         }
     }
@@ -3287,16 +3273,31 @@ class Context {
     readonly filename: string | null;
     readonly diagnostics: AnalyzerDiagnostics;
 
+    /** driven from provide declaration */
     moduleName: string | null;
-    currentFunction: IFunctionDefInstruction | null;
-    haveCurrentFunctionReturnOccur: boolean;
+
+    // funct states
+    func: boolean;                              // Are we inside a function analysis?
+    funcDef: IFunctionDefInstruction | null;    // Current function definition.
+    haveCurrentFunctionReturnOccur: boolean;    // todo: replace with array of return statements.
 
     constructor(filename: string, ) {
         this.diagnostics = new AnalyzerDiagnostics;
         this.filename = filename;
         this.moduleName = null;
-        this.currentFunction = null;
+        this.funcDef = null;
         this.haveCurrentFunctionReturnOccur = false;
+    }
+
+
+    beginFunc(): void {
+        this.func = true;
+        this.haveCurrentFunctionReturnOccur = false;
+        this.funcDef = null;
+    }
+
+    endFunc(): void {
+        this.func = false
     }
 
 

@@ -1,10 +1,7 @@
 import { ERenderStates } from "./ERenderStates";
-import { IDispatch } from "../../sandbox/actions";
-import { IdExprInstruction } from "../fx/instructions/IdExprInstruction";
 import { ERenderStateValues } from "./ERenderStateValues";
 import { IMap } from "./IMap";
 import { IParseNode } from "./parser/IParser";
-import { ProgramScope } from "../fx/ProgramScope";
 
 export enum EInstructionTypes {
     k_Instruction = 0,
@@ -333,8 +330,8 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly id: IIdInstruction;
     readonly type: IVariableTypeInstruction;
     readonly initExpr: IInitExprInstruction;
+    
     readonly defaultValue: any;
-    readonly nameIndex: number;
 
     /**
      * Helper:
@@ -343,9 +340,16 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
      */
     readonly fullName: string;
 
-    isUniform(): boolean;
+    isArgument(): boolean;
+    isLocal(): boolean;
+    isGlobal(): boolean;
+
     isField(): boolean;
     isSampler(): boolean;
+
+    /** @deprecated */
+    isUniform(): boolean;
+    /** @deprecated */
     isVarying(): boolean;
 
     checkVertexUsage(): boolean;
