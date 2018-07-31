@@ -19,6 +19,7 @@ import { FloatInstruction } from 'lib/fx/instructions/FloatInstruction';
 import { BoolInstruction } from 'lib/fx/instructions/BoolInstruction';
 import { StringInstruction } from 'lib/fx/instructions/StringInstruction';
 import { ForStmtInstruction } from 'lib/fx/instructions/ForStmtInstruction';
+import { SemicolonStmtInstruction } from 'lib/fx/instructions/SemicolonStmtInstruction';
 
 
 
@@ -241,6 +242,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         switch (instr.instructionType) {
             case EInstructionTypes.k_InstructionCollector:
                 return this.InstructionCollector(instr);
+
             case EInstructionTypes.k_TypeDeclInstruction:
                 return this.TypeDecl(instr);
             case EInstructionTypes.k_ComplexTypeInstruction:
@@ -253,12 +255,17 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.VariableDecl(instr);
             case EInstructionTypes.k_VariableTypeInstruction:
                 return this.VariableType(instr);
+                case EInstructionTypes.k_SystemTypeInstruction:
+                return this.SystemType(instr);
+                case EInstructionTypes.k_FunctionDeclInstruction:
+                return this.FunctionDecl(instr);
+                
+            //
+            // Expressions
+            //
+
             case EInstructionTypes.k_InitExprInstruction:
                 return this.InitExpr(instr);
-            case EInstructionTypes.k_SystemTypeInstruction:
-                return this.SystemType(instr);
-            case EInstructionTypes.k_FunctionDeclInstruction:
-                return this.FunctionDecl(instr);
             case EInstructionTypes.k_IdExprInstruction:
                 return this.IdExpr(instr);
             case EInstructionTypes.k_AssignmentExprInstruction:
@@ -275,6 +282,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.Bool(instr);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 return this.ArithmeticExpr(instr);
+
             default:
                 return this.NotImplemented(instr);
         }
@@ -513,6 +521,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ExprStmt(instr as ExprStmtInstruction);
             case EInstructionTypes.k_ForStmtInstruction:
                 return this.ForStmt(instr as ForStmtInstruction);
+            case EInstructionTypes.k_SemicolonStmtInstruction:
+                return this.SemicolonStmt(instr as SemicolonStmtInstruction);
             break;  
         }
 
@@ -551,6 +561,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    SemicolonStmt(instr: SemicolonStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr, true) } />
+        );
+    }
+
+
     ForStmt(instr: ForStmtInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
@@ -562,6 +579,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </PropertyOpt>
                 <PropertyOpt name="step">
                     { this.Unknown(instr.step) }
+                </PropertyOpt>
+                <PropertyOpt name="body">
+                    { this.Stmt(instr.body) }
                 </PropertyOpt>
             </Property>
         );

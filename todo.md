@@ -1,7 +1,17 @@
 ## TODO (Prioritized)
 ***
 + Refactor for instructions set.
++ Add pure functions and expressions check;
++ Highlight all expressions that don't have any impact.
++ Compute constexpr. 
++ Check type conversions. 
++ Generate tri-addr notation.
++ Mark const/out arguments 
++ Mark dead code after return/break/loops. 
++ Add support for multi-dimensional arrays. 
 + Add binary operations support.
++ Add automaic conversion for numbers. (float to int for ex.)
++ Add test: function evaluation using JS. (translation to js)
 + Add Directx10 sampler state support.
     - https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509644(v=vs.85).aspx
 + Add Sampler1D support.
