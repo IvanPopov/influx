@@ -1014,7 +1014,13 @@ function analyzeUsage(sourceNode: IParseNode): string {
  *    Variable
  *       + Initializer 
  *       + Semantic 
- *       + VariableDim 
+ *       + VariableDim
+ *              T_PUNCTUATOR_93 = ']'
+ *              T_NON_TYPE_ID = 'N'
+ *              T_PUNCTUATOR_91 = '['
+ *            + VariableDim
+ *                   T_NON_TYPE_ID = 'x'
+ *                   ^^^^^^^^^^^^^^^^^^
  */
 function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IParseNode, generalType: IVariableTypeInstruction): IVariableDeclInstruction {
     const children = sourceNode.children;
@@ -1035,9 +1041,32 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         usageFlags |= EVariableUsageFlags.k_Local;
     }
 
-    let id = analyzeVariableId(context, program, children[children.length - 1]);
-    let arrayIndex = analyzeVariableIndex(context, program, children[children.length - 1]);
-    let type = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
+
+    let id: IIdInstruction = null;
+    let arrayIndex: IExprInstruction = null;
+    let type: IVariableTypeInstruction = null;
+
+    let vdimNode = children[children.length - 1];
+    do {
+        let vdimChildren = vdimNode.children;
+
+        if (vdimChildren.length === 1) {
+            const name = children[0].value;
+            id = new IdInstruction({ scope, sourceNode, name });
+            break;
+        }
+    
+        assert (vdimChildren.length == 4);
+
+        if (!isNull(arrayIndex)) {
+            generalType = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
+        }
+
+        arrayIndex = analyzeExpr(context, program, vdimChildren[vdimChildren.length - 3]);
+        vdimNode = vdimChildren[vdimChildren.length - 1];
+    } while (true);
+    
+    type = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
 
     for (let i = children.length - 2; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
@@ -1078,60 +1107,6 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
     }
 
     return checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
-}
-
-
-/**
- * AST example:
- *    VariableDim
- *         T_PUNCTUATOR_93 = ']'
- *         T_NON_TYPE_ID = 'N'
- *         T_PUNCTUATOR_91 = '['
- *       + VariableDim 
- *    VariableDim
- *         T_NON_TYPE_ID = 'x'
- *         ^^^^^^^^^^^^^^^^^^
- */
-function analyzeVariableId(context: Context, program: ProgramScope, sourceNode: IParseNode): IIdInstruction {
-    const children = sourceNode.children;
-    const scope = program.currentScope;
-
-    if (children.length === 1) {
-        const name = children[0].value;
-        return new IdInstruction({ scope, sourceNode, name });
-    }
-
-    if (children.length != 4) {
-        // todo: handle it!!
-        return null;
-    }
-
-    return analyzeVariableId(context, program, children[children.length - 1]);
-}
-
-
-/**
- * AST example:
- *    VariableDim
- *         T_PUNCTUATOR_93 = ']'
- *         T_NON_TYPE_ID = 'N'
- *         T_PUNCTUATOR_91 = '['
- *       + VariableDim 
- */
-function analyzeVariableIndex(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
-    const children = sourceNode.children;
-    const scope = program.currentScope;
-
-    if (children.length === 1) {
-        return null;
-    }
-
-    if (children.length != 4) {
-        // todo: handle it!!
-        return null;
-    }
-
-    return analyzeExpr(context, program, children[children.length - 3]);
 }
 
 
