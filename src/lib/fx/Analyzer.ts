@@ -3337,6 +3337,8 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
     }
     
     console.timeEnd(`analyze(${filename})`);
+
+    assert(program.currentScope == program.globalScope);
     
     const scope = program.globalScope;
     const root = new InstructionCollector({ scope: program.currentScope, instructions: globals });

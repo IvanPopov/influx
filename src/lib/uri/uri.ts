@@ -237,7 +237,7 @@ export function currentScript(): HTMLScriptElement {
         return <HTMLScriptElement>document['currentScript'];
     }
 
-    var scripts: NodeListOf<HTMLScriptElement> = document.getElementsByTagName("script");
+    var scripts: HTMLCollectionOf<HTMLScriptElement> = document.getElementsByTagName("script");
     return scripts[scripts.length - 1];
 }
 
