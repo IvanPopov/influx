@@ -10,9 +10,11 @@ import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
 import { IParseTree } from '../../lib/idl/parser/IParser';
-import { IInstruction, IScope, IFunctionDeclInstruction } from '../../lib/idl/IInstruction';
+import { IInstruction, IScope, IFunctionDeclInstruction, IInstructionCollector } from '../../lib/idl/IInstruction';
 import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
 import { isDefAndNotNull, isNull } from '../../lib/common';
+
+import * as Bytecode from '../../lib/fx/ASM';
 
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -46,48 +48,18 @@ class App extends React.Component<IAppProps> {
     state: {
         ast: IParseTree;
         scope: IScope;
+        root: IInstructionCollector;
         showFileBrowser: boolean;
     };
 
     constructor(props) {
         super(props);
-        this.state = { ast: null, scope: null, showFileBrowser: false };
+        this.state = { ast: null, scope: null, root: null, showFileBrowser: false };
     }
 
-
-    $printCodeFlow_Function (func: IFunctionDeclInstruction): void {
-        let flow = analyzeFlow(func);
-        console.log(flow);
-    }
-
-
-    $printCodeFlow(scope: IScope): void {
-        if (!isDefAndNotNull(scope)) {
-            return;
-        }
-
-        for (let funcName in scope.functionMap) {
-            for (let i = 0; i < scope.functionMap[funcName].length; ++ i) {
-                let func = scope.functionMap[funcName][i];
-
-                if (isNull(func)) {
-                    // todo: print error
-                    continue;
-                }
-
-                this.$printCodeFlow_Function(func);
-            }
-        }
-    
-    }
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
-
-        /////
-        // todo: remove it from here
-        // this.$printCodeFlow(nextState.scope);
-        /////
 
         if (Object.keys(props.sourceFile.markers).length > 0) {
             // cleanup error highlighting before render
@@ -103,6 +75,10 @@ class App extends React.Component<IAppProps> {
 
     render() {
         const { props, state } = this;
+
+        // todo: remove it.
+        console.log(state);
+        Bytecode.translate("main", state.root);
 
         const analysisResults = [
             {
@@ -122,7 +98,7 @@ class App extends React.Component<IAppProps> {
                             onNodeClick={ (instr: IInstruction) => { } }
 
                             onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete= { scope => { this.setState({ scope }) } }
+                            onComplete= { (scope, root) => { this.setState({ scope, root }); } }
                         />
                     </Tab.Pane>
                 )
@@ -157,14 +133,19 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Tab.Pane key="source" className={ props.classes.mainViewHeightHotfix }>
                         <Grid divided={ false }>
-                            <Grid.Row columns={ 2 }>
-                                <Grid.Column computer="10" tablet="8" mobile="6">
+                            <Grid.Row columns={ 3 }>
+                                <Grid.Column computer="5" tablet="4" mobile="3">
                                     <SourceEditor
                                         name="source-code"
                                         content={ props.sourceFile.content }
                                         onChange={ props.actions.setContent }
                                         markers={ props.sourceFile.markers }
                                     />
+                                </Grid.Column>
+                                <Grid.Column  computer="5" tablet="4" mobile="3">
+                                    <span>
+                                        Todo: asm code.
+                                    </span>
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
                                     <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />

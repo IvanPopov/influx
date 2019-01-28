@@ -1,5 +1,21 @@
 ## TODO (Prioritized)
 ***
+
+### General plan
+
+1. Generate the simplest working bytecode! 
+    1. No optimizations
+    2. No vectorization.
+    3. No math optimizations.
+    4. No anything.
+2. Implement test VM in typescript for testing. 
+3. Implement the simplest compute shader.
+4. Implement the simplest ui for node programming
+
+***
+
+### Known Issues
+
 + Refactor for instructions set.
 + Add pure functions and expressions check;
 + Highlight all expressions that don't have any impact.

@@ -1051,7 +1051,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         let vdimChildren = vdimNode.children;
 
         if (vdimChildren.length === 1) {
-            const name = children[0].value;
+            const name = vdimChildren[0].value;
             id = new IdInstruction({ scope, sourceNode, name });
             break;
         }

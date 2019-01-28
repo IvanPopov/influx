@@ -20,7 +20,7 @@ const middleware: Middleware[] = [ thunk, /*logger, */reduxImmutableStateInvaria
 const store = createStore<IStoreState, any, any, any>(
   reducer,
   applyMiddleware(...middleware)
-);
+); 
 // console.log(store);
 render(
   <Provider store={ store }>
@@ -29,5 +29,5 @@ render(
   document.getElementById('app')
 );
 
-store.dispatch(sourceCode.openFile('assets/fx/tests/forLoop.fx'));
+store.dispatch(sourceCode.openFile('assets/fx/tests/simplest_func.fx'));
 store.dispatch(parser.openGrammar('assets/HLSL.gr'));

@@ -1,6 +1,7 @@
 
+import { IFunctionDefInstruction, EInstructionTypes } from "./../idl/IInstruction";
 import { EDiagnosticCategory, Diagnostics } from "./../util/Diagnostics";
-import { IInstructionCollector, IScope } from "./../idl/IInstruction";
+import { IInstructionCollector, IScope, IStmtBlockInstruction } from "./../idl/IInstruction";
 import { isNull } from "util";
 import { isDefAndNotNull } from "../common";
 import { IRange } from "../idl/parser/IParser";
@@ -49,17 +50,29 @@ class FunctionObject {
 
 export function translate(entryPoint: string, program: IInstructionCollector): string {
 
+    if (isNull(program)) {
+        return null;
+    }
+
     let diag = new TranslatorDiagnostics;
     let scope: IScope = program.scope;
 
     try {
-        let entryFunc = scope.findFunction(entryPoint, []);
+        const entryFunc = scope.findFunction(entryPoint, []);
 
         if (!isDefAndNotNull(entryFunc)) {
             diag.critical(EErrors.k_EntryPointNotFound, { entryPoint });
         }
 
-        
+        let def: IFunctionDefInstruction = entryFunc.definition;
+        let impl: IStmtBlockInstruction = entryFunc.implementation;
+
+        for (let stmt of impl.stmtList) {
+            switch (stmt.instructionType) {
+                default:
+                    console.warn(`Unknown statement found: ${EInstructionTypes[stmt.instructionType]}`);
+            }
+        }
 
     } catch (e) {
         console.error(TranslatorDiagnostics.stringify(diag.resolve()));
