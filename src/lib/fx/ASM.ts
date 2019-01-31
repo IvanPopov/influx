@@ -4,20 +4,26 @@ import { IFunctionDefInstruction, EInstructionTypes, IInstruction, ILiteralInstr
 import { EDiagnosticCategory, Diagnostics } from "./../util/Diagnostics";
 import { IInstructionCollector, IScope, IStmtBlockInstruction } from "./../idl/IInstruction";
 import { isNull } from "util";
-import { isDefAndNotNull } from "../common";
+import { isDefAndNotNull, isDef } from "../common";
 import { IRange } from "../idl/parser/IParser";
 import { IDeclStmtInstructionSettings, DeclStmtInstruction } from "./instructions/DeclStmtInstruction";
 import { ArithmeticExprInstruction } from "./instructions/ArithmeticExprInstruction";
+import { IMap } from "lib/idl/IMap";
+import { IntInstruction } from "./instructions/IntInstruction";
 
 enum EErrors {
     k_EntryPointNotFound, // main not found
+
+    k_UnsupportedConstantType,
+    k_UnsupportedExprType
+
 }
 
 type ITranslatorDiagDesc = any;
 
 class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
     constructor() {
-        super("Translator Diagnostics", 'L');
+        super("Translator Diagnostics", 'T');
     }
 
     protected resolveFilename(code: number, desc: ITranslatorDiagDesc): string {
@@ -30,15 +36,12 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 
     protected diagnosticMessages() {
         return {
-            [EErrors.k_EntryPointNotFound] : "Entry point '{entry}' not found.",
+            [EErrors.k_EntryPointNotFound] : "Entry point '{entryPoint}' not found.",
         };
     }
 }
 
-
-function unsupportedError() {
-    throw new Error('unsupported');
-}
+let diag = new TranslatorDiagnostics;
 
 
 enum OPERATION {
@@ -60,15 +63,55 @@ function ref(alias: Alias, addr: Addr) {
 }
 
 
+class Globals {
+    _size: Addr = 0;
+    _intMap: IMap<number> = {};
+
+    checkInt32(int: number): Addr {
+        let addr: Addr = this._intMap[int];
+        if (!isDef(addr)) {
+            this._intMap[int] = this._size;
+            this._size += 4;
+            return this.checkInt32(int);
+        }
+        return addr;
+    }
+
+    print(): void {
+        console.log(this);
+    }
+}
+
+const globals: Globals = new Globals;
+
 // resolve constant (all constants have been placed in global memory)
 function rcost(lit: ILiteralInstruction): Addr {
+    switch (lit.instructionType) {
+        case EInstructionTypes.k_IntInstruction:
+            // assume only int32
+            return globals.checkInt32((lit as IntInstruction).value);
+        break;
+        default:
+            diag.critical(EErrors.k_UnsupportedConstantType, {});
+    }
     return 0;
 }
 
+let instructions = [];
+
 // insert code
 function icode(op: OPERATION, dest: Addr, ...args: Addr[]): void {
-    
+    instructions.push({ op, dest, args });
 }
+
+// stack grows forward
+let stackPointer = 0;
+function alloca(size: number): Addr {
+    let sp = stackPointer;
+    sp += size;
+    return sp;
+}
+
 
 // resolve address => returns address of temprary result of expression
 function raddr(expr: IExprInstruction): Addr {
@@ -78,15 +121,19 @@ function raddr(expr: IExprInstruction): Addr {
                 const init = expr as IInitExprInstruction;
 
                 if (init.isArray()) {
-                    unsupportedError();
+                    diag.critical(EErrors.k_UnsupportedExprType, {});
                 }
 
-                if (!init.isConst()) {
-                    unsupportedError();
+                let arg = init.arguments[0];
+                switch(arg.instructionType) {
+                    case EInstructionTypes.k_ArithmeticExprInstruction:
+                        return raddr(arg);
+                    case EInstructionTypes.k_IntInstruction:
+                        return rcost(arg as ILiteralInstruction);
+                    default:
+                        diag.critical(EErrors.k_UnsupportedExprType, {});
+                        return -1;
                 }
-
-                // constant and not array
-                return rcost(init.arguments[0] as ILiteralInstruction);
             }
         break;
         case EInstructionTypes.k_ArithmeticExprInstruction:
@@ -94,21 +141,20 @@ function raddr(expr: IExprInstruction): Addr {
                 const arithExpr = expr as ArithmeticExprInstruction;
                 switch (arithExpr.operator) {
                     case '+':
-                        icode(OPERATION.k_Add, alloca(arithExpr.type.size), raddr(arithExpr.left), raddr(arithExpr.right));
+                        let dest: Addr = alloca(arithExpr.type.size);
+                        icode(OPERATION.k_Add, dest, raddr(arithExpr.left), raddr(arithExpr.right));
+                        return dest;
                     break;
                     default:
-                        unsupportedError();
+                        diag.critical(EErrors.k_UnsupportedExprType, {});
+                        return -1;
                 }
             }
         break;
         default:
             console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
-            return 0;
+            return -1;
     }
-}
-
-function alloca(size: number): Addr {
-    return 0;
 }
 
 // 
@@ -151,7 +197,7 @@ export function translate(entryPoint: string, program: IInstructionCollector): s
         return null;
     }
 
-    let diag = new TranslatorDiagnostics;
+    
     let scope: IScope = program.scope;
 
     try {
@@ -171,8 +217,12 @@ export function translate(entryPoint: string, program: IInstructionCollector): s
         // pop() // release sub-scope
 
     } catch (e) {
+        throw e;
         console.error(TranslatorDiagnostics.stringify(diag.resolve()));
     }
+
+    globals.print();
+    instructions.forEach(i => console.log(i));
 
     return null;
 }
