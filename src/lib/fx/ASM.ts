@@ -41,9 +41,6 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
     }
 }
 
-let diag = new TranslatorDiagnostics;
-
-
 enum OPERATION {
     k_Add
 };
@@ -52,108 +49,59 @@ type Alias = string;
 type Addr = number;
 
 
-// returns whether the address contains a value or garbage
-function checkAddr(addr: Addr): boolean {
-    return true;
+class GlobalsRow {
+    byteArray: ArrayBuffer;
+    byteLength: number;
+    
+    debugView: {range: number; value: number | string; } [];
+
+    constructor () {
+        this.byteArray = new ArrayBuffer(4);
+        this.byteLength = 0;
+        this.debugView = [];
+    }
+
+    get byteCapacity(): number {
+        return this.byteArray.byteLength;
+    }
+
+    private check(byteSize: number) {
+        if ((this.byteLength + byteSize) <= this.byteCapacity) {
+            return;
+        }
+        // this.byteArray = ArrayBuffer.transfer(this.byteArray, this.byteCapacity * 2);
+        var oldBuffer = this.byteArray;
+        var newBuffer = new ArrayBuffer(this.byteCapacity * 2);
+        new Uint8Array(newBuffer).set(new Uint8Array(oldBuffer));
+
+        this.byteArray = newBuffer;
+    }
+
+    addInt32(i32: number) {
+        this.check(4);
+        new DataView(this.byteArray).setInt32(this.byteLength, i32);
+        this.byteLength += 4;
+
+        this.debugView.push({ range: 4, value: i32 });
+    }
 }
-
-// add referene of the local variable to current scope
-function ref(alias: Alias, addr: Addr) {
-
-}
-
 
 class Globals {
-    _size: Addr = 0;
+    _data: GlobalsRow = new GlobalsRow;
     _intMap: IMap<number> = {};
 
-    checkInt32(int: number): Addr {
-        let addr: Addr = this._intMap[int];
+    checkInt32(i32: number): Addr {
+        let addr: Addr = this._intMap[i32];
         if (!isDef(addr)) {
-            this._intMap[int] = this._size;
-            this._size += 4;
-            return this.checkInt32(int);
+            this._intMap[i32] = this._data.byteLength;
+            this._data.addInt32(i32);
+            return this._intMap[i32];
         }
         return addr;
     }
 
-    print(): void {
-        console.log(this);
-    }
-}
-
-const globals: Globals = new Globals;
-
-// resolve constant (all constants have been placed in global memory)
-function rcost(lit: ILiteralInstruction): Addr {
-    switch (lit.instructionType) {
-        case EInstructionTypes.k_IntInstruction:
-            // assume only int32
-            return globals.checkInt32((lit as IntInstruction).value);
-        break;
-        default:
-            diag.critical(EErrors.k_UnsupportedConstantType, {});
-    }
-    return 0;
-}
-
-let instructions = [];
-
-// insert code
-function icode(op: OPERATION, dest: Addr, ...args: Addr[]): void {
-    instructions.push({ op, dest, args });
-}
-
-// stack grows forward
-let stackPointer = 0;
-function alloca(size: number): Addr {
-    let sp = stackPointer;
-    sp += size;
-    return sp;
-}
-
-
-// resolve address => returns address of temprary result of expression
-function raddr(expr: IExprInstruction): Addr {
-    switch (expr.instructionType) {
-        case EInstructionTypes.k_InitExprInstruction:
-            {
-                const init = expr as IInitExprInstruction;
-
-                if (init.isArray()) {
-                    diag.critical(EErrors.k_UnsupportedExprType, {});
-                }
-
-                let arg = init.arguments[0];
-                switch(arg.instructionType) {
-                    case EInstructionTypes.k_ArithmeticExprInstruction:
-                        return raddr(arg);
-                    case EInstructionTypes.k_IntInstruction:
-                        return rcost(arg as ILiteralInstruction);
-                    default:
-                        diag.critical(EErrors.k_UnsupportedExprType, {});
-                        return -1;
-                }
-            }
-        break;
-        case EInstructionTypes.k_ArithmeticExprInstruction:
-            {
-                const arithExpr = expr as ArithmeticExprInstruction;
-                switch (arithExpr.operator) {
-                    case '+':
-                        let dest: Addr = alloca(arithExpr.type.size);
-                        icode(OPERATION.k_Add, dest, raddr(arithExpr.left), raddr(arithExpr.right));
-                        return dest;
-                    break;
-                    default:
-                        diag.critical(EErrors.k_UnsupportedExprType, {});
-                        return -1;
-                }
-            }
-        break;
-        default:
-            console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
-            return -1;
+    get data(): GlobalsRow {
+        return this._data;
     }
 }
 
@@ -161,24 +109,25 @@ function raddr(expr: IExprInstruction): Addr {
 // Handle all instruction types
 //
 
-function handleVDecl(vdecl: IVariableDeclInstruction) {
+function handleVDecl(ctx: Context, vdecl: IVariableDeclInstruction) {
     if (isNull(vdecl.initExpr)) {
-        ref(vdecl.name, alloca(vdecl.type.size));
+        ctx.ref(vdecl.name, ctx.alloca(vdecl.type.size));
         return;
     }
-    ref(vdecl.name, raddr(vdecl.initExpr));
+    ctx.ref(vdecl.name, ctx.raddr(vdecl.initExpr));
 }
 
-function handleUnkn(instr: IInstruction) {
+
+function handleUnkn(ctx: Context, instr: IInstruction) {
     switch (instr.instructionType) {
         case EInstructionTypes.k_VariableDeclInstruction:
-            handleVDecl(instr as IVariableDeclInstruction);
+            handleVDecl(ctx, instr as IVariableDeclInstruction);
         break;
         case EInstructionTypes.k_DeclStmtInstruction:
             {
                 let stmt = instr as DeclStmtInstruction;
                 for (let decl of stmt.declList) {
-                    handleUnkn(decl);
+                    handleUnkn(ctx, decl);
                 }
             }
         break;
@@ -187,24 +136,123 @@ function handleUnkn(instr: IInstruction) {
     }
 }
 
+class Context {
+    readonly diagnostics: TranslatorDiagnostics;
+    readonly globals: Globals;
+    readonly instructions: Object[]; // todo: use proper class
+    
+    private _stackPointer: number; // stack grows forward
+
+
+    constructor () {
+        this.diagnostics = new TranslatorDiagnostics;
+        this.globals = new Globals;
+        this.instructions = [];
+
+        this._stackPointer = 0;
+    }
+
+    // resolve constant (all constants have been placed in global memory)
+    rcost(lit: ILiteralInstruction): Addr {
+        switch (lit.instructionType) {
+            case EInstructionTypes.k_IntInstruction:
+                // assume only int32
+                return this.globals.checkInt32((lit as IntInstruction).value);
+            break;
+            default:
+                this.critical(EErrors.k_UnsupportedConstantType, {});
+        }
+        return 0;
+    }
+
+    alloca(size: number): Addr {
+        let sp = this._stackPointer;
+        sp += size;
+        return sp;
+    }
+
+    // insert code
+    icode(op: OPERATION, dest: Addr, ...args: Addr[]): void {
+        this.instructions.push({ op, dest, args });
+    }
+
+    // resolve address => returns address of temprary result of expression
+    raddr(expr: IExprInstruction): Addr {
+        switch (expr.instructionType) {
+            case EInstructionTypes.k_InitExprInstruction:
+                {
+                    const init = expr as IInitExprInstruction;
+
+                    if (init.isArray()) {
+                        this.critical(EErrors.k_UnsupportedExprType, {});
+                    }
+
+                    let arg = init.arguments[0];
+                    switch(arg.instructionType) {
+                        case EInstructionTypes.k_ArithmeticExprInstruction:
+                            return this.raddr(arg);
+                        case EInstructionTypes.k_IntInstruction:
+                            return this.rcost(arg as ILiteralInstruction);
+                        default:
+                            this.critical(EErrors.k_UnsupportedExprType, {});
+                            return -1;
+                    }
+                }
+            break;
+            case EInstructionTypes.k_ArithmeticExprInstruction:
+                {
+                    const arithExpr = expr as ArithmeticExprInstruction;
+                    switch (arithExpr.operator) {
+                        case '+':
+                            let dest: Addr = this.alloca(arithExpr.type.size);
+                            this.icode(OPERATION.k_Add, dest, this.raddr(arithExpr.left), this.raddr(arithExpr.right));
+                            return dest;
+                        break;
+                        default:
+                            this.critical(EErrors.k_UnsupportedExprType, {});
+                            return -1;
+                    }
+                }
+            break;
+            default:
+                console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
+                return -1;
+        }
+    }
+
+    // returns whether the address contains a value or garbage
+    checkAddr(addr: Addr): boolean {
+        return true;
+    }
+
+    // add referene of the local variable to current scope
+    ref(alias: Alias, addr: Addr) {
+
+    }
+
+    critical(code: EErrors, desc = {}): void {
+        this.diagnostics.critical(code, desc);
+    }
+}
+
 //
 // 
 //
 
-export function translate(entryPoint: string, program: IInstructionCollector): string {
+export function translate(entryPoint: string, program: IInstructionCollector): Context {
 
     if (isNull(program)) {
         return null;
     }
 
-    
     let scope: IScope = program.scope;
+    let ctx: Context = new Context;
 
     try {
         const entryFunc = scope.findFunction(entryPoint, []);
 
         if (!isDefAndNotNull(entryFunc)) {
-            diag.critical(EErrors.k_EntryPointNotFound, { entryPoint });
+            ctx.critical(EErrors.k_EntryPointNotFound, { entryPoint });
         }
 
         let def: IFunctionDefInstruction = entryFunc.definition;
@@ -212,17 +260,14 @@ export function translate(entryPoint: string, program: IInstructionCollector): s
 
         // push() // begin sub-scope
         for (let stmt of impl.stmtList) {
-            handleUnkn(stmt);
+            handleUnkn(ctx, stmt);
         }
         // pop() // release sub-scope
 
     } catch (e) {
         throw e;
-        console.error(TranslatorDiagnostics.stringify(diag.resolve()));
+        console.error(TranslatorDiagnostics.stringify(ctx.diagnostics.resolve()));
     }
 
-    globals.print();
-    instructions.forEach(i => console.log(i));
-
-    return null;
+    return ctx;
 }
