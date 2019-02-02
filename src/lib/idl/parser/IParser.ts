@@ -1,5 +1,4 @@
 import { IMap } from '../IMap';
-import { ILoggerEntity } from '../ILogger';
 import { IDiagnosticReport } from '../../util/Diagnostics';
 
 export enum ENodeCreateMode {

@@ -1,6 +1,5 @@
 import { IRange, IPosition } from "./../idl/parser/IParser";
 import { IDiagnosticReport } from "./../util/Diagnostics";
-import { ISourceLocation, ILoggerEntity, ELogLevel } from "../idl/ILogger";
 import { isDef, isNull, isDefAndNotNull } from "../common";
 import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
 import { IMap, IDMap } from "../idl/IMap";

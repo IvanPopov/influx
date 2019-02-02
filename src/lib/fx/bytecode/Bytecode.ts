@@ -1,15 +1,17 @@
 
-import { IExprInstruction, IInitExprInstruction } from "./../idl/IInstruction";
-import { IFunctionDefInstruction, EInstructionTypes, IInstruction, ILiteralInstruction, IVariableDeclInstruction } from "./../idl/IInstruction";
-import { EDiagnosticCategory, Diagnostics } from "./../util/Diagnostics";
-import { IInstructionCollector, IScope, IStmtBlockInstruction } from "./../idl/IInstruction";
+import { IExprInstruction, IInitExprInstruction } from "../../idl/IInstruction";
+import { IFunctionDefInstruction, EInstructionTypes, IInstruction, ILiteralInstruction, IVariableDeclInstruction } from "../../idl/IInstruction";
+import { EDiagnosticCategory, Diagnostics } from "../../util/Diagnostics";
+import { IInstructionCollector, IScope, IStmtBlockInstruction } from "../../idl/IInstruction";
 import { isNull } from "util";
-import { isDefAndNotNull, isDef } from "../common";
-import { IRange } from "../idl/parser/IParser";
-import { IDeclStmtInstructionSettings, DeclStmtInstruction } from "./instructions/DeclStmtInstruction";
-import { ArithmeticExprInstruction } from "./instructions/ArithmeticExprInstruction";
-import { IMap } from "lib/idl/IMap";
-import { IntInstruction } from "./instructions/IntInstruction";
+import { isDefAndNotNull, isDef } from "../../common";
+import { IRange } from "../../idl/parser/IParser";
+import { IDeclStmtInstructionSettings, DeclStmtInstruction } from "../instructions/DeclStmtInstruction";
+import { ArithmeticExprInstruction } from "../instructions/ArithmeticExprInstruction";
+import { IMap } from "../../idl/IMap";
+import { IntInstruction } from "../instructions/IntInstruction";
+import { EOperations } from "../../idl/bytecode/EOperations";
+import { IInstruction as IOperation } from "../../idl/bytecode/IInstruction";
 
 enum EErrors {
     k_EntryPointNotFound, // main not found
@@ -41,9 +43,6 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
     }
 }
 
-enum OPERATION {
-    k_Add
-};
 
 type Alias = string;
 type Addr = number;
@@ -136,10 +135,12 @@ function handleUnkn(ctx: Context, instr: IInstruction) {
     }
 }
 
+
+
 class Context {
     readonly diagnostics: TranslatorDiagnostics;
     readonly globals: Globals;
-    readonly instructions: Object[]; // todo: use proper class
+    readonly instructions: IOperation[];
     
     private _stackPointer: number; // stack grows forward
 
@@ -172,7 +173,7 @@ class Context {
     }
 
     // insert code
-    icode(op: OPERATION, dest: Addr, ...args: Addr[]): void {
+    icode(op: EOperations, dest: Addr, ...args: Addr[]): void {
         this.instructions.push({ op, dest, args });
     }
 
@@ -205,7 +206,7 @@ class Context {
                     switch (arithExpr.operator) {
                         case '+':
                             let dest: Addr = this.alloca(arithExpr.type.size);
-                            this.icode(OPERATION.k_Add, dest, this.raddr(arithExpr.left), this.raddr(arithExpr.right));
+                            this.icode(EOperations.k_Add, dest, this.raddr(arithExpr.left), this.raddr(arithExpr.right));
                             return dest;
                         break;
                         default:

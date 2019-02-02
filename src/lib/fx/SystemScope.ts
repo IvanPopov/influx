@@ -10,7 +10,6 @@ import { IdInstruction } from "./instructions/IdInstruction";
 import { VariableDeclInstruction } from "./instructions/VariableDeclInstruction";
 import { IMap } from "../idl/IMap";
 import { SystemFunctionInstruction } from "./instructions/SystemFunctionInstruction";
-import { ILoggerEntity } from "../idl/ILogger";
 import { EAnalyzerErrors, EAnalyzerWarnings } from '../idl/EAnalyzerErrors';
 import { FunctionDeclInstruction } from "./instructions/FunctionDeclInstruction";
 import { FunctionDefInstruction } from "./instructions/FunctionDefInstruction";

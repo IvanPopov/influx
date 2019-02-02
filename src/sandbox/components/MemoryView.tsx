@@ -22,7 +22,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     render() {
         return (
-            <Table unstackable fixed style={{ fontFamily: 'consolas' }}>
+            <Table unstackable fixed style={{ fontFamily: 'consolas', border: '0' }}>
                 <Table.Body>
                     { this.renderContent() }
                 </Table.Body>
@@ -35,13 +35,14 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
         const { props } = this;
         const { binaryData, layout } = props;
 
-        const WIDTH_MAX = 8;
+        const WIDTH_MAX = 12;
         const u8view = new Uint8Array(binaryData);
 
         let n = 0;
         
         let rows = [];
         let columns = [];
+        let colLen = 0;
 
         let leftClosed;
         let rightClosed;
@@ -50,11 +51,11 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
             let written = 0;
             leftClosed = columns.length == 0;
             do {
-                let segWidth = Math.min(section.range - written, WIDTH_MAX - columns.length);
+                let segWidth = Math.min(section.range - written, WIDTH_MAX - colLen);
                 
                 let content = [];
                 for (let i = 0; i < segWidth; ++ i) {
-                    content.push(<div className={ props.classes.memoryVal } 
+                    content.push(<div key={`mvk-d-${n}`} className={ props.classes.memoryVal } 
                         style={ { width: `${100 / segWidth}%` } }>{`${u8view[n] < 16? '0': ''}${ u8view[n++].toString(16).toUpperCase() }`}</div>);
                     written ++;
                 }
@@ -62,18 +63,20 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
                 let style = {
                     padding: 0,
-                    borderLeft: `1px solid ${leftClosed? '#a7a7a7': 'transparent'}`,
-                    borderRight: `1px solid ${rightClosed? '#a7a7a7': 'transparent'}`,
-                    borderTop: `${rows.length == 0? 1: 0}px solid #a7a7a7`,
-                    borderBottom: `1px solid #a7a7a7`,
+                    borderLeft: `1px solid ${leftClosed? '#ccc': 'transparent'}`,
+                    borderRight: `1px solid ${rightClosed? '#ccc': 'transparent'}`,
+                    borderTop: `${rows.length == 0? 1: 0}px solid #ccc`,
+                    borderBottom: `1px solid #ccc`,
                 }
 
-                columns.push(<Table.Cell textAlign="center" colSpan={ segWidth } style={style}>{ content }</Table.Cell>);
+                columns.push(<Table.Cell key={`mvk-tc-${colLen}`} textAlign="center" colSpan={ segWidth } style={style}>{ content }</Table.Cell>);
+                colLen += segWidth;
                 leftClosed = false;
 
                 if (n % WIDTH_MAX == 0) {
-                    rows.push(<Table.Row>{ columns }</Table.Row>);
+                    rows.push(<Table.Row key={`mvk-tc-${rows.length}`}>{ columns }</Table.Row>);
                     columns = [];
+                    colLen = 0;
                 }
             } while (written < section.range);
         });

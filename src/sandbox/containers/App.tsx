@@ -5,7 +5,7 @@ import { Sidebar, Icon, Menu, Tab, Container, Segment, Grid, Table } from 'seman
 import injectSheet from 'react-jss'
 
 
-import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, FileListView, MemoryView } from '../components';
+import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, FileListView, MemoryView, BytecodeView } from '../components';
 import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
@@ -14,7 +14,7 @@ import { IInstruction, IScope, IFunctionDeclInstruction, IInstructionCollector }
 import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
 import { isDefAndNotNull, isNull } from '../../lib/common';
 
-import * as Bytecode from '../../lib/fx/ASM';
+import * as Bytecode from '../../lib/fx/bytecode/Bytecode';
 
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -76,11 +76,24 @@ class App extends React.Component<IAppProps> {
     render() {
         const { props, state } = this;
 
-        // todo: remove it.
-        console.log(state);
+
         let bytecode = Bytecode.translate("main", state.root);
 
         const analysisResults = [
+            {
+                menuItem: (<Menu.Item>Bytecode</Menu.Item>),
+                pane: (
+                    <Tab.Pane attached={ false } key="bytecode-view">
+                        { bytecode && 
+                            <MemoryView binaryData={ bytecode.globals.data.byteArray } layout={bytecode.globals.data.debugView} />
+                        }
+
+                        { bytecode && 
+                            <BytecodeView opList={ bytecode.instructions } />
+                        }
+                    </Tab.Pane>
+                )
+            },
             {
                 menuItem: (<Menu.Item>semantics<br/>analyzer</Menu.Item>),
                 pane: (
@@ -123,7 +136,7 @@ class App extends React.Component<IAppProps> {
                         />
                     </Tab.Pane>
                 )
-            },
+            }
         ];
 
 
@@ -134,18 +147,13 @@ class App extends React.Component<IAppProps> {
                     <Tab.Pane key="source" className={ props.classes.mainViewHeightHotfix }>
                         <Grid divided={ false }>
                             <Grid.Row columns={ 3 }>
-                                <Grid.Column computer="5" tablet="4" mobile="3">
+                                <Grid.Column computer="10" tablet="8" mobile="6">
                                     <SourceEditor
                                         name="source-code"
                                         content={ props.sourceFile.content }
                                         onChange={ props.actions.setContent }
                                         markers={ props.sourceFile.markers }
                                     />
-                                </Grid.Column>
-                                <Grid.Column  computer="5" tablet="4" mobile="3">
-                                    { bytecode && 
-                                        <MemoryView binaryData={ bytecode.globals.data.byteArray } layout={bytecode.globals.data.debugView} />
-                                    }
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
                                     <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
