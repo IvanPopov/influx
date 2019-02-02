@@ -5,7 +5,7 @@ import { Sidebar, Icon, Menu, Tab, Container, Segment, Grid, Table } from 'seman
 import injectSheet from 'react-jss'
 
 
-import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, FileListView } from '../components';
+import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, FileListView, MemoryView } from '../components';
 import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
@@ -143,52 +143,9 @@ class App extends React.Component<IAppProps> {
                                     />
                                 </Grid.Column>
                                 <Grid.Column  computer="5" tablet="4" mobile="3">
-                                        <table>
-                                            <tbody>
-                                                { 
-                                                    (() => {
-                                                        if (!bytecode) {
-                                                            return null;
-                                                        }
-
-                                                        const WIDTH_MAX = 3;
-                                                        const u8view = new Uint8Array(bytecode.globals.data.byteArray);
-
-                                                        let n = 0;
-                                                        
-                                                        let rows = [];
-                                                        let columns = [];
-
-                                                        bytecode.globals.data.debugView.map((section, i) => {
-                                                            let written = 0;
-                                                            do {
-                                                                let segWidth = Math.min(section.range - written, WIDTH_MAX - columns.length);
-                                                                
-                                                                let content = [];
-                                                                for (let i = 0; i < segWidth; ++ i) {
-                                                                    content.push(`0x${ u8view[n++].toString(16).toUpperCase() }`);
-                                                                    written ++;
-                                                                }
-                                                                columns.push(<td colSpan={ segWidth }>{ content.join(' ') }</td>);
-                                                                if (n % WIDTH_MAX == 0) {
-                                                                    rows.push(<tr>{ columns }</tr>);
-                                                                    columns = [];
-                                                                }
-                                                            } while (written < section.range);
-                                                        });
-                                                        if (columns.length > 0) {
-                                                            let cs = WIDTH_MAX - n % WIDTH_MAX;
-                                                            if (cs != WIDTH_MAX) {
-                                                                columns.push(<td colSpan={ cs }></td>);
-                                                            }
-                                                            rows.push(<tr>{ columns }</tr>);
-                                                        }
-                                                        console.log(rows);
-                                                        return rows;
-                                                    })()
-                                                }
-                                            </tbody>
-                                        </table>
+                                    { bytecode && 
+                                        <MemoryView binaryData={ bytecode.globals.data.byteArray } layout={bytecode.globals.data.debugView} />
+                                    }
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
                                     <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
