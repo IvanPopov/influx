@@ -87,7 +87,6 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
             }
             rows.push(<Table.Row>{ columns }</Table.Row>);
         }
-        console.log(rows);
         return rows;
     }
 }

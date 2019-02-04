@@ -1,7 +1,7 @@
 import { EOperations } from "./EOperations";
 
 export interface IInstruction {
-    op: EOperations;
+    code: EOperations;
     dest: number;   // adress
     args: number[];
 }
