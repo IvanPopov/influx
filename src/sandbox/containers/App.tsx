@@ -85,7 +85,7 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
                         { bytecode && 
-                            <MemoryView binaryData={ bytecode.globals.data.byteArray } layout={bytecode.globals.data.debugView} />
+                            <MemoryView binaryData={ bytecode.constants.data.byteArray } layout={bytecode.constants.data.layout} />
                         }
 
                         { bytecode && 

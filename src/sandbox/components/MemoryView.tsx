@@ -83,9 +83,9 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
         if (columns.length > 0) {
             let csRest = WIDTH_MAX - n % WIDTH_MAX;
             if (csRest != WIDTH_MAX) {
-                columns.push(<Table.Cell textAlign="center" colSpan={ csRest } style={{padding: 0}}></Table.Cell>);
+                columns.push(<Table.Cell key={`mvk-tc-${colLen}`} textAlign="center" colSpan={ csRest } style={{padding: 0}}></Table.Cell>);
             }
-            rows.push(<Table.Row>{ columns }</Table.Row>);
+            rows.push(<Table.Row key={`mvk-tc-${rows.length}`}>{ columns }</Table.Row>);
         }
         return rows;
     }
