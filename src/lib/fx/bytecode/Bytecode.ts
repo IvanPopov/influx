@@ -12,11 +12,16 @@ import { DeclStmtInstruction } from "../instructions/DeclStmtInstruction";
 import { IntInstruction } from "../instructions/IntInstruction";
 import { ReturnStmtInstruction } from "../instructions/ReturnStmtInstruction";
 import { assert } from "./../../common";
+import { constants } from "http2";
 
 enum EErrors {
     k_UnsupportedConstantType,
     k_UnsupportedExprType
+}
 
+enum EChunkTypes {
+    k_Constants,
+    k_Code
 }
 
 type ITranslatorDiagDesc = any;
@@ -70,7 +75,7 @@ class ConstantPoolMemory {
 
     addInt32(i32: number) {
         this.check(sizeof.i32());
-        new DataView(this.byteArray).setInt32(this.byteLength, i32);
+        new DataView(this.byteArray).setInt32(this.byteLength, i32, true);
         this.byteLength += sizeof.i32();
 
         this.layout.push({ range: sizeof.i32(), value: i32 });
@@ -93,6 +98,10 @@ class ConstanPool {
 
     get data(): ConstantPoolMemory {
         return this._data;
+    }
+
+    get size(): number {
+        return this._data.byteLength;
     }
 }
 
@@ -150,11 +159,54 @@ class ProgramContext {
     }
 
     private finalize() {
-        // this.instruction = []
         for (let func of this._symbolTable) {
             this.instructions.push({ code: EOperations.k_Label, args: [ new Label(func.name, this.instructions.length) ] });
             this.instructions.push(...func.instructions);
         }
+    }
+
+    binary(): Uint8Array {
+        let chunks = [this.constChunk(), this.codeChunk()].map(ch => new Uint8Array(ch));
+        let byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
+        let data = new Uint8Array(byteLength);
+        let offset = 0;
+        chunks.forEach(ch => {
+            data.set(ch, offset);
+            offset += ch.byteLength;
+        });
+        return data;
+    }
+
+    private constChunk(): ArrayBuffer {
+        let mem = this.constants.data;
+        let size = mem.byteLength >> 2;
+        let chunkHeader = [ EChunkTypes.k_Constants, size ];
+        assert((size << 2) == mem.byteLength);
+        let data = new Uint32Array(chunkHeader.length + size);  
+        data.set(chunkHeader);
+        data.set(new Uint32Array(mem.byteArray), chunkHeader.length);
+        return data.buffer;
+    }
+
+    // todo: use more compact format!!
+    private codeChunk(): ArrayBuffer {
+        let instructions = this.instructions.filter(i => i.code != EOperations.k_Label);
+        let size = instructions.length * 4; // temp solution, each inst. = 4 x uint32
+        let chunkHeader = [ EChunkTypes.k_Code, size ];
+        let data = new Uint32Array(chunkHeader.length + size);
+        data.set(chunkHeader);
+
+        instructions.forEach((ins, i) => {
+            let bv = [ 0x00, 0x00, 0x00, 0x00 ];
+            bv[3] = ins.code;
+            assert((ins.args || []).length <= 3);
+            (ins.args || []).forEach((ia, i) => {
+                bv[i] = ia.valueOf();
+            });
+            data.set(bv, chunkHeader.length + i * 4);
+        });
+
+        return data.buffer; 
     }
 
     //

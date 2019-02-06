@@ -79,6 +79,10 @@ class App extends React.Component<IAppProps> {
 
         let bytecode = Bytecode.translate("main", state.root);
 
+        if (bytecode) {
+            console.log(bytecode.binary());
+        }
+
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
