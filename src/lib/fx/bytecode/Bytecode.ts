@@ -19,7 +19,7 @@ enum EErrors {
     k_UnsupportedExprType
 }
 
-enum EChunkTypes {
+export enum EChunkTypes {
     k_Constants,
     k_Code
 }
@@ -107,8 +107,8 @@ class ConstanPool {
 
 
 
-const REG_INVALID = (-1 >>> 0);
-const REG_RAX = 256;
+export const REG_INVALID = (-1 >>> 0);
+export const REG_RAX = 256;
 
 const REG_NAMES = {
     [REG_RAX] : 'rax' // todo: get register adresses from bytecode generator

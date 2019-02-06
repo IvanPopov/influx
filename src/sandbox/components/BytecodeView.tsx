@@ -1,7 +1,7 @@
 import * as React from 'react';
 import injectSheet from 'react-jss'
 
-import { Table, TableCell } from 'semantic-ui-react'
+import { Table, Button, Icon } from 'semantic-ui-react'
 import { IWithStyles } from './';
 
 import { IInstruction as IOperation } from '../../lib/idl/bytecode/IInstruction';
@@ -9,6 +9,7 @@ import { EOperations } from '../../lib/idl/bytecode/EOperations';
 
 export interface IBytecodeViewProps {
     opList: IOperation[];
+    onRun: () => void;
 }
 
 function minWidth(str: string, len: number = 0, char: string = ' ') {
@@ -43,11 +44,19 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
         
         return (
             // fixed
+            <div>
             <Table size="small" unstackable basic compact style={ { fontFamily: 'consolas' } }>
                 <Table.Body>
                     { opList.map((op, i) => this.renderOp(op)) }
                 </Table.Body>
             </Table>
+            <Button animated onClick={ props.onRun || (() => {}) }>
+                <Button.Content visible>Run</Button.Content>
+                <Button.Content hidden>
+                    <Icon name='rocket' />
+                </Button.Content>
+            </Button>
+            </div>
         );
     }
 

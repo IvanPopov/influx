@@ -15,7 +15,7 @@ import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
 import { isDefAndNotNull, isNull } from '../../lib/common';
 
 import * as Bytecode from '../../lib/fx/bytecode/Bytecode';
-
+import * as VM from '../../lib/fx/bytecode/VM';
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
@@ -79,10 +79,6 @@ class App extends React.Component<IAppProps> {
 
         let bytecode = Bytecode.translate("main", state.root);
 
-        if (bytecode) {
-            console.log(bytecode.binary());
-        }
-
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
@@ -93,7 +89,7 @@ class App extends React.Component<IAppProps> {
                         }
 
                         { bytecode && 
-                            <BytecodeView opList={ bytecode.instructions } />
+                            <BytecodeView opList={ bytecode.instructions } onRun={ () => { VM.evaluate(bytecode.binary()) } } />
                         }
                     </Tab.Pane>
                 )
