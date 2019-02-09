@@ -1,14 +1,14 @@
-import { EOperations } from "./EOperations";
+// import { EOperation } from "./EOperations";
 
-export interface IInstructionArgument {
-    resolve(ctx: any): number;
+// export interface IInstructionArgument {
+//     resolve(ctx: any): number;
 
-    valueOf(): number;
-    toString(): string;
-}
+//     valueOf(): number;
+//     toString(): string;
+// }
 
 
-export interface IInstruction {
-    code: EOperations;
-    args?: IInstructionArgument[];
-}
+// export interface IInstruction {
+//     code: EOperation;
+//     args?: IInstructionArgument[];
+// }

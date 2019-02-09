@@ -89,7 +89,7 @@ class App extends React.Component<IAppProps> {
                         }
 
                         { bytecode && 
-                            <BytecodeView opList={ bytecode.instructions } onRun={ () => { VM.evaluate(bytecode.binary()) } } />
+                            <BytecodeView code={ bytecode.binary() } />
                         }
                     </Tab.Pane>
                 )

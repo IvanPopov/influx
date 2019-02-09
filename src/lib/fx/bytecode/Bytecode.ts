@@ -1,8 +1,8 @@
 
 import { isNull } from "util";
 import { isDef, isDefAndNotNull } from "../../common";
-import { EOperations } from "../../idl/bytecode/EOperations";
-import { IInstruction as IOperation, IInstructionArgument } from "../../idl/bytecode/IInstruction";
+import { EOperation } from "../../idl/bytecode/EOperations";
+// import { IInstruction as IOperation, IInstructionArgument } from "../../idl/bytecode/IInstruction";
 import { EInstructionTypes, IExprInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionDeclInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IRange } from "../../idl/parser/IParser";
@@ -12,14 +12,16 @@ import { DeclStmtInstruction } from "../instructions/DeclStmtInstruction";
 import { IntInstruction } from "../instructions/IntInstruction";
 import { ReturnStmtInstruction } from "../instructions/ReturnStmtInstruction";
 import { assert } from "./../../common";
-import { constants } from "http2";
+import ConstanPool from "./ConstantPool";
+import InstructionList from "./InstructionList";
+import sizeof from "./sizeof";
 
 enum EErrors {
     k_UnsupportedConstantType,
     k_UnsupportedExprType
 }
 
-export enum EChunkTypes {
+export enum EChunkType {
     k_Constants,
     k_Code
 }
@@ -45,65 +47,8 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 }
 
 
-class ConstantPoolMemory {
-    byteArray: ArrayBuffer;
-    byteLength: number;
-    
-    layout: {range: number; value: number | string; } [];
 
-    constructor () {
-        this.byteArray = new ArrayBuffer(4);
-        this.byteLength = 0;
-        this.layout = [];
-    }
 
-    get byteCapacity(): number {
-        return this.byteArray.byteLength;
-    }
-
-    private check(byteSize: number) {
-        if ((this.byteLength + byteSize) <= this.byteCapacity) {
-            return;
-        }
-        // this.byteArray = ArrayBuffer.transfer(this.byteArray, this.byteCapacity * 2);
-        var oldBuffer = this.byteArray;
-        var newBuffer = new ArrayBuffer(this.byteCapacity * 2);
-        new Uint8Array(newBuffer).set(new Uint8Array(oldBuffer));
-
-        this.byteArray = newBuffer;
-    }
-
-    addInt32(i32: number) {
-        this.check(sizeof.i32());
-        new DataView(this.byteArray).setInt32(this.byteLength, i32, true);
-        this.byteLength += sizeof.i32();
-
-        this.layout.push({ range: sizeof.i32(), value: i32 });
-    }
-}
-
-class ConstanPool {
-    _data: ConstantPoolMemory = new ConstantPoolMemory;
-    _intMap: IMap<number> = {};
-
-    checkInt32(i32: number): number {
-        let addr = this._intMap[i32];
-        if (!isDef(addr)) {
-            this._intMap[i32] = this._data.byteLength;
-            this._data.addInt32(i32);
-            return this._intMap[i32];
-        }
-        return addr;
-    }
-
-    get data(): ConstantPoolMemory {
-        return this._data;
-    }
-
-    get size(): number {
-        return this._data.byteLength;
-    }
-}
 
 
 
@@ -111,12 +56,9 @@ export const REG_INVALID = (-1 >>> 0);
 export const REG_RAX = 256;
 
 const REG_NAMES = {
-    [REG_RAX] : 'rax' // todo: get register adresses from bytecode generator
+    [REG_RAX]: 'rax' // todo: get register adresses from bytecode generator
 }
 
-const sizeof = {
-    i32: () => 4
-};
 
 // symbol name id generation;
 const sname = {
@@ -129,7 +71,7 @@ class SymbolTable<SYMBOL_T>  {
     [key: string]: SYMBOL_T;
 
     *[Symbol.iterator]() {
-        for(let i in this) {
+        for (let i in this) {
             yield this[i];
         }
     }
@@ -139,14 +81,14 @@ class SymbolTable<SYMBOL_T>  {
 class ProgramContext {
     readonly diagnostics: TranslatorDiagnostics;
     readonly constants: ConstanPool;
-    readonly instructions: IOperation[];
+    readonly instructions: InstructionList;
 
     private _symbolTable: SymbolTable<FunctionContext>;
 
-    constructor (entry: IFunctionDeclInstruction) {
+    constructor(entry: IFunctionDeclInstruction) {
         this.diagnostics = new TranslatorDiagnostics;
         this.constants = new ConstanPool;
-        this.instructions = [];
+        this.instructions = new InstructionList;
 
         this._symbolTable = new SymbolTable<FunctionContext>();
 
@@ -160,8 +102,7 @@ class ProgramContext {
 
     private finalize() {
         for (let func of this._symbolTable) {
-            this.instructions.push({ code: EOperations.k_Label, args: [ new Label(func.name, this.instructions.length) ] });
-            this.instructions.push(...func.instructions);
+            this.instructions.merge(func.instructions);
         }
     }
 
@@ -180,33 +121,23 @@ class ProgramContext {
     private constChunk(): ArrayBuffer {
         let mem = this.constants.data;
         let size = mem.byteLength >> 2;
-        let chunkHeader = [ EChunkTypes.k_Constants, size ];
+        let chunkHeader = [EChunkType.k_Constants, size];
         assert((size << 2) == mem.byteLength);
-        let data = new Uint32Array(chunkHeader.length + size);  
+        let data = new Uint32Array(chunkHeader.length + size);
         data.set(chunkHeader);
-        data.set(new Uint32Array(mem.byteArray), chunkHeader.length);
+        data.set(new Uint32Array(mem.byteArray, 0, mem.byteLength >> 2), chunkHeader.length);
         return data.buffer;
     }
 
-    // todo: use more compact format!!
+    
     private codeChunk(): ArrayBuffer {
-        let instructions = this.instructions.filter(i => i.code != EOperations.k_Label);
-        let size = instructions.length * 4; // temp solution, each inst. = 4 x uint32
-        let chunkHeader = [ EChunkTypes.k_Code, size ];
-        let data = new Uint32Array(chunkHeader.length + size);
+        let instructions = this.instructions;
+        let chunkHeader = [EChunkType.k_Code, instructions.length];
+        let data = new Uint32Array(chunkHeader.length + instructions.length);
         data.set(chunkHeader);
+        data.set(instructions.data, chunkHeader.length);
 
-        instructions.forEach((ins, i) => {
-            let bv = [ 0x00, 0x00, 0x00, 0x00 ];
-            bv[3] = ins.code;
-            assert((ins.args || []).length <= 3);
-            (ins.args || []).forEach((ia, i) => {
-                bv[i] = ia.valueOf();
-            });
-            data.set(bv, chunkHeader.length + i * 4);
-        });
-
-        return data.buffer; 
+        return data.buffer;
     }
 
     //
@@ -221,7 +152,7 @@ class ProgramContext {
 function minWidth(str: string, len: number = 0, char: string = ' ') {
     for (let i = 0, slen = str.length; i < Math.max(0, len - slen); ++i) {
         str = char + str;
-    } 
+    }
     return str;
 }
 
@@ -231,101 +162,43 @@ const hex4 = (v: number) => `0x${minWidth(v.toString(16), 4, '0')}`;
 // const reg = (v: number) => REG_NAMES[v] || `[${hex2(v >>> 0)}]`;    // register address;
 // const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
 
-class Constant implements IInstructionArgument {
-    protected _value: number;
+// class Register extends Constant {
+//     toString(): string {
+//         let v = this._value;
+//         return REG_NAMES[v] || `[${hex2(v >>> 0)}]`;
+//     }
 
-    constructor(val: number) {
-        this._value = val;
-    }
+//     isValid(): boolean {
+//         return this._value != REG_INVALID;
+//     }
+// }
 
-    resolve(ctx: ProgramContext): number {
-        return this._value;
-    }
-
-    valueOf(): number { 
-        return this._value; 
-    }
-
-    toString(): string {
-        let v = this._value;
-        return String(v);
-    }
-}
-
-class Register extends Constant {
-    toString(): string {
-        let v = this._value;
-        return REG_NAMES[v] || `[${hex2(v >>> 0)}]`;
-    }
-
-    isValid(): boolean {
-        return this._value != REG_INVALID;
-    }
-}
-
-
-
-class Addr extends Constant {
-    toString(): string {
-        let v = this._value;
-        return `%${hex4(v >>> 0)}%`;
-    }
-}
-
-
-class Label implements IInstructionArgument {
-    protected _name: string;    // name of the label (function);
-    protected _value: number;   // instruction address;
-
-    constructor(sname: string, val: number = -1) {
-        this._name = sname;
-        this._value = val;
-    }
-
-    resolve(ctx: ProgramContext): number {
-        if (!this.isValid()) {
-
-        }
-        return this._value;
-    }
-
-    valueOf(): number { 
-        return this._value; 
-    }
-
-    toString(): string {
-        return `${this._name}: `;
-    }
-
-    isValid(): boolean {
-        return this._value != -1;
-    }
-}
-
-const reg = (v: number) => new Register(v);
-const addr = (v: number) => new Addr(v);
-const num = (v: number) => new Constant(v);
-
+// class Addr extends Constant {
+//     toString(): string {
+//         let v = this._value;
+//         return `%${hex4(v >>> 0)}%`;
+//     }
+// }
 
 class FunctionContext {
     readonly ctx: ProgramContext;
-    readonly instructions: IOperation[];
-    
+    readonly instructions: InstructionList;
+
     // same as stack pointer; 
     // counter grows forward;
     private _registerCounter: number;
 
-    private _symbolTable: SymbolTable<Register>;
+    private _symbolTable: SymbolTable<number>;
 
     private _func: IFunctionDeclInstruction;
 
 
-    constructor (ctx: ProgramContext, func: IFunctionDeclInstruction) {
+    constructor(ctx: ProgramContext, func: IFunctionDeclInstruction) {
         this.ctx = ctx;
-        this.instructions = [];
+        this.instructions = new InstructionList;
 
         this._registerCounter = 0;
-        this._symbolTable = new SymbolTable<Register>();
+        this._symbolTable = new SymbolTable<number>();
         this._func = func;
 
         this.translate(func);
@@ -344,42 +217,42 @@ class FunctionContext {
     }
 
     // resolve constant (all constants have been placed in global memory)
-    rcost(lit: ILiteralInstruction): Register {
+    rcost(lit: ILiteralInstruction): number {
         switch (lit.instructionType) {
             // assume only int32
             case EInstructionTypes.k_IntInstruction:
-            {
-                let i32 = (lit as IntInstruction).value;
-                let r = this.deref(sname.i32(i32));
-                if (!r.isValid()) {
-                    r = this.alloca(sizeof.i32());
-                    this.icode(EOperations.k_Load, r, addr(this.constants.checkInt32(i32)), num(sizeof.i32()));
-                    this.ref(sname.i32(i32), r);
+                {
+                    let i32 = (lit as IntInstruction).value;
+                    let r = this.deref(sname.i32(i32));
+                    if (r == REG_INVALID) {
+                        r = this.alloca(sizeof.i32());
+                        this.icode(EOperation.k_Load, r, this.constants.checkInt32(i32), sizeof.i32());
+                        this.ref(sname.i32(i32), r);
+                    }
+                    return r;
                 }
-                return r;
-            }
-            break;
+                break;
             default:
                 this.critical(EErrors.k_UnsupportedConstantType, {});
         }
-        
-        return reg(REG_INVALID); // todo: replace with constant
+
+        return REG_INVALID;
     }
 
     // assuming that all registers for all types are the same memory;
-    alloca(size: number): Register {
+    alloca(size: number): number {
         let rc = this._registerCounter;
         this._registerCounter += size;
-        return reg(rc);
+        return rc;
     }
 
     // insert code
-    icode(code: EOperations, ...args: IInstructionArgument[]): void {
-        this.instructions.push({ code, args });
+    icode(code: EOperation, ...args: number[]): void {
+        this.instructions.add(code, args);
     }
 
     // resolve address => returns address of temprary result of expression
-    raddr(expr: IExprInstruction): Register {
+    raddr(expr: IExprInstruction): number {
         switch (expr.instructionType) {
             case EInstructionTypes.k_InitExprInstruction:
                 {
@@ -392,7 +265,7 @@ class FunctionContext {
                     let arg = init.arguments[0];
                     return this.raddr(arg);
                 }
-            break;
+                break;
             case EInstructionTypes.k_IntInstruction:
                 return this.rcost(expr as ILiteralInstruction);
             case EInstructionTypes.k_IdExprInstruction:
@@ -404,33 +277,41 @@ class FunctionContext {
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
                     const arithExpr = expr as ArithmeticExprInstruction;
-                    switch (arithExpr.operator) {
-                        case '+':
-                            let dest = this.alloca(arithExpr.type.size);
-                            this.icode(EOperations.k_Add, dest, this.raddr(arithExpr.left), this.raddr(arithExpr.right));
-                            return dest;
-                        break;
-                        default:
-                            this.critical(EErrors.k_UnsupportedExprType, {});
-                            return reg(REG_INVALID);
+
+                    const opMap = {
+                        '+': EOperation.k_Add,
+                        '-': EOperation.k_Sub,
+                        '*': EOperation.k_Mul,
+                        '/': EOperation.k_Div
                     }
+
+                    let op: EOperation = opMap[arithExpr.operator];
+
+                    if (!isDef(op)) {
+                        this.critical(EErrors.k_UnsupportedExprType, {});
+                        return REG_INVALID;
+                    }
+
+                    let dest = this.alloca(arithExpr.type.size);
+                    this.icode(op, dest, this.raddr(arithExpr.left), this.raddr(arithExpr.right));
+                    return dest;
                 }
-            break;
+                break;
             default:
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
-                return reg(REG_INVALID);
+                return REG_INVALID;
         }
     }
 
     // add referene of the local variable
-    ref(sname: string, r: Register) {
+    ref(sname: string, r: number) {
         assert(!isDef(this._symbolTable[sname]));
         this._symbolTable[sname] = r;
     }
 
-    deref(sname: string): Register {
+    deref(sname: string): number {
         // is zero register available?
-        return isDef(this._symbolTable[sname])? this._symbolTable[sname] : reg(REG_INVALID);
+        return isDef(this._symbolTable[sname]) ? this._symbolTable[sname] : REG_INVALID;
     }
 
     // 
@@ -464,8 +345,8 @@ class FunctionContext {
                     let ret = instr as ReturnStmtInstruction;
                     if (!isNull(ret.expr)) {
                         // todo: check that the expr type is compatible with RAX register or should moved to stack 
-                        this.icode(EOperations.k_Move, reg(REG_RAX), this.raddr(ret.expr));
-                        this.icode(EOperations.k_Ret);
+                        this.icode(EOperation.k_Move, REG_RAX, this.raddr(ret.expr));
+                        this.icode(EOperation.k_Ret);
                     }
                     return;
                 }
@@ -482,7 +363,7 @@ class FunctionContext {
                     let func = instr as IFunctionDeclInstruction;
                     let def = func.definition; // todo: handle all arguments!!
                     let impl = func.implementation;
-                    
+
                     this.translate(impl);
 
                     return;
@@ -491,7 +372,7 @@ class FunctionContext {
                 console.warn(`Unknown statement found: ${EInstructionTypes[instr.instructionType]}`);
         }
     }
-    
+
     //
     // Auxiliary
     //
