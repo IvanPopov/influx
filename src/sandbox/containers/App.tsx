@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { render } from 'react-dom';
 import { connect } from 'react-redux';
-import { Sidebar, Icon, Menu, Tab, Container, Segment, Grid, Table } from 'semantic-ui-react'
+import { Sidebar, Icon, Menu, Tab, Container, Segment, Grid, Table, Button, Divider, Checkbox } from 'semantic-ui-react'
 import injectSheet from 'react-jss'
 
 
@@ -34,6 +34,9 @@ export const styles = {
     fileBrowserSidebarHotfix: {
         padding: '10px !important',
         background: 'rgba(255,255,255,0.95) !important'
+    },
+    checkboxTiny: {
+        // transform: 'scale(.75)'
     }
 }
 
@@ -49,14 +52,35 @@ class App extends React.Component<IAppProps> {
         ast: IParseTree;
         scope: IScope;
         root: IInstructionCollector;
+        bc: any; // todo: fix type!
         showFileBrowser: boolean;
+        autoCompilation: boolean;
     };
 
     constructor(props) {
         super(props);
-        this.state = { ast: null, scope: null, root: null, showFileBrowser: false };
+        this.state = { 
+            ast: null, 
+            scope: null, 
+            root: null, 
+            bc: null,
+            showFileBrowser: false, 
+            autoCompilation: false 
+        };
     }
 
+    // inject 'updated' bytecode if state changed
+    // todo: rework this logic!!
+    setValidState(state) {
+        let newRoot = isDefAndNotNull(state.root);
+        state = { ...this.state, ...state };
+        if (state.autoCompilation && state.root) {
+            state.bc = Bytecode.translate('main', state.root);
+        } else if (newRoot) {
+            state.bc = null;
+        }
+        this.setState(state);
+    }
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
@@ -70,27 +94,31 @@ class App extends React.Component<IAppProps> {
         return true;
     }
 
+
     handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
     hideFileBrowser = () => this.setState({ showFileBrowser: false })
 
     render() {
         const { props, state } = this;
 
-
-        let bytecode = Bytecode.translate("main", state.root);
-
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
-                        { bytecode && 
-                            <MemoryView binaryData={ bytecode.constants.data.byteArray } layout={bytecode.constants.data.layout} />
-                        }
-
-                        { bytecode && 
-                            <BytecodeView code={ bytecode.binary() } />
-                        }
+            
+                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setValidState({ autoCompilation: data.checked }) } className={props.classes.checkboxTiny}/>
+                        <Divider />
+                        { state.bc ? (
+                            <div>
+                                <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={state.bc.constants.data.layout} />
+                                <BytecodeView code={ state.bc.binary() } />
+                            </div>
+                        ) : (
+                            <Container textAlign="center">
+                                <Button onClick={ () => this.setState({ bc: Bytecode.translate("main", state.root) }) }>Compile</Button>
+                            </Container>
+                        ) } 
                     </Tab.Pane>
                 )
             },
@@ -111,7 +139,7 @@ class App extends React.Component<IAppProps> {
                             onNodeClick={ (instr: IInstruction) => { } }
 
                             onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete= { (scope, root) => { this.setState({ scope, root }); } }
+                            onComplete= { (scope, root) => { this.setValidState({ scope, root }); } }
                         />
                     </Tab.Pane>
                 )
