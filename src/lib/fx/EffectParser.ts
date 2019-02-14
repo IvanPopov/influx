@@ -38,7 +38,7 @@ export class EffectParser extends Parser {
         this.addTypeId("bool4");
 
         this._includedFilesMap = <IMap<boolean>>{};
-        this._includedFilesMap[this.getParseFileName()] = true;
+        this._includedFilesMap[`${this.getParseFileName()}`] = true;
     }
 
     protected addIncludedFile(filename: string): void {
@@ -62,7 +62,7 @@ export class EffectParser extends Parser {
         //cuttin qoutes
         let includeURL = file.substr(1, file.length - 2);
 
-        file = uri.resolve(includeURL, this.getParseFileName());
+        file = uri.resolve(includeURL, `${this.getParseFileName()}`);
 
         if (this._includedFilesMap[file]) {
             return EOperationType.k_Ok;

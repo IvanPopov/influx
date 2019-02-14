@@ -1,4 +1,4 @@
-import { IRange, IPosition } from "./../idl/parser/IParser";
+import { IRange, IPosition, IFile } from "./../idl/parser/IParser";
 import { IDiagnosticReport } from "./../util/Diagnostics";
 import { isDef, isNull, isDefAndNotNull } from "../common";
 import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
@@ -12,6 +12,7 @@ import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, EN
 import { Item } from "./Item";
 import { State } from "./State";
 import { Diagnostics, DiagnosticException } from "../util/Diagnostics";
+import { StringRef } from "../util/StringRef";
 
 
 
@@ -51,7 +52,7 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
 
     protected resolvePosition(code: number, desc: IMap<any>): IPosition {
         console.assert(code != EParserErrors.SyntaxUnknownError);
-        return { line: desc.line, column: 0 };
+        return { line: desc.line, column: 0, file: null };
     }
 
 
@@ -127,7 +128,7 @@ export class Parser implements IParser {
     //Input
 
     private _source: string;
-    private _filename: string;
+    private _filename: IFile;
 
     //Output
 
@@ -216,7 +217,7 @@ export class Parser implements IParser {
 
         this._expectedExtensionDMap = null;
 
-        this._filename = "stdin";
+        this._filename = StringRef.make("stdin");
         this._diag = new ParserDiagnostics;
     }
 
@@ -358,11 +359,11 @@ export class Parser implements IParser {
 
 
     setParseFileName(filename: string): void {
-        this._filename = filename;
+        this._filename = StringRef.make(filename);
     }
 
 
-    getParseFileName(): string {
+    getParseFileName(): IFile {
         return this._filename;
     }
 
@@ -1091,12 +1092,12 @@ export class Parser implements IParser {
         var itemList: IItem[] = <IItem[]>(state.getItems());
         var i: number = 0, j: number = 0, k: number = 0;
         var symbolVal: string;
-        var pSymbols: IMap<boolean>;
+        var symbols: IMap<boolean>;
         var pTempSet: string[];
         var isNewExpected: boolean = false;
 
 
-        var pRulesMapKeys: string[], pSymbolsKeys: string[];
+        var pRulesMapKeys: string[], symbolsKeys: string[];
 
         while (true) {
             if (i === itemList.length) {
@@ -1110,14 +1111,14 @@ export class Parser implements IParser {
 
             if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
                 pTempSet = itemList[i].getRule().right.slice(itemList[i].getPosition() + 1);
-                pSymbols = this.firstTerminalForSet(pTempSet, itemList[i].getExpectedSymbols());
+                symbols = this.firstTerminalForSet(pTempSet, itemList[i].getExpectedSymbols());
 
                 pRulesMapKeys = Object.keys(this._rulesDMap[symbolVal]);
-                pSymbolsKeys = Object.keys(pSymbols);
+                symbolsKeys = Object.keys(symbols);
 
                 for (j = 0; j < pRulesMapKeys.length; j++) {
-                    for (k = 0; k < pSymbolsKeys.length; k++) {
-                        if (state.tryPush_LR(this._rulesDMap[symbolVal][pRulesMapKeys[j]], 0, pSymbolsKeys[k])) {
+                    for (k = 0; k < symbolsKeys.length; k++) {
+                        if (state.tryPush_LR(this._rulesDMap[symbolVal][pRulesMapKeys[j]], 0, symbolsKeys[k])) {
                             isNewExpected = true;
                         }
                     }
@@ -1316,11 +1317,11 @@ export class Parser implements IParser {
         var stateList: IState[] = this._stateList;
         var symbolVal: string = "";
         var state: IState;
-        var pSymbols: string[] = Object.keys(this._symbolMap);
+        var symbols: string[] = Object.keys(this._symbolMap);
 
         for (i = 0; i < stateList.length; i++) {
-            for (j = 0; j < pSymbols.length; j++) {
-                symbolVal = pSymbols[j];
+            for (j = 0; j < symbols.length; j++) {
+                symbolVal = symbols[j];
                 state = this.nextState_LR0(stateList[i], symbolVal);
 
                 if (!state.isEmpty()) {
@@ -1340,11 +1341,11 @@ export class Parser implements IParser {
         var stateList: IState[] = this._stateList;
         var symbolVal: string = "";
         let state: IState;
-        let pSymbols: string[] = Object.keys(this._symbolMap);
+        let symbols: string[] = Object.keys(this._symbolMap);
 
         for (i = 0; i < stateList.length; i++) {
-            for (j = 0; j < pSymbols.length; j++) {
-                symbolVal = pSymbols[j];
+            for (j = 0; j < symbols.length; j++) {
+                symbolVal = symbols[j];
                 state = this.nextState_LR(stateList[i], symbolVal);
 
                 if (!state.isEmpty()) {

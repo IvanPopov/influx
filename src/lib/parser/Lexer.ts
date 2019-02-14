@@ -1,7 +1,8 @@
 import { IMap } from '../idl/IMap';
-import { ETokenType, ILexer, IToken, IPosition, IRange } from '../idl/parser/IParser';
+import { ETokenType, ILexer, IToken, IPosition, IRange, IFile } from '../idl/parser/IParser';
 import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 import { Diagnostics, IDiagnosticReport } from '../util/Diagnostics';
+import { StringRef } from 'lib/util/StringRef';
 
 
 interface ILexerDiagDesc {
@@ -48,10 +49,11 @@ export class Lexer implements ILexer {
     private _punctuatorsFirstSymbols: IMap<boolean>;
     private _diag: LexerDiagnostics;
     private _onResolveTypeID: (value: string) => boolean;
-    private _onResolveFilename: () => string; // optional, only for debug diagnostics
+    // todo: remove this callback in favor of string member; 
+    private _onResolveFilename: () => IFile; // optional, only for debug diagnostics
 
 
-    constructor({ onResolveFilename, onResolveTypeId }: { onResolveFilename?: () => string; onResolveTypeId: (value: string) => boolean; }) {
+    constructor({ onResolveFilename, onResolveTypeId }: { onResolveFilename?: () => IFile; onResolveTypeId: (value: string) => boolean; }) {
         this._lineNumber = 0;
         this._columnNumber = 0;
         this._source = '';
@@ -152,7 +154,7 @@ export class Lexer implements ILexer {
                 break;
             default:
                 this.critical(ELexerErrors.UnknownToken, {
-                    file: this._onResolveFilename(),
+                    file: `${this._onResolveFilename()}`,
                     token: {
                         name: UNKNOWN_TOKEN,
                         value: ch + this._source[this._index + 1],
@@ -189,6 +191,7 @@ export class Lexer implements ILexer {
 
     private pos(n: number = 0): IPosition {
         return {
+            file: this._onResolveFilename(),
             line: this._lineNumber,
             column: this._columnNumber + n
         };
@@ -358,7 +361,7 @@ export class Lexer implements ILexer {
             value += ch;
 
             this.critical(ELexerErrors.InvalidToken, {
-                file: this._onResolveFilename(),
+                file: `${this._onResolveFilename()}`,
                 token: {
                     type: ETokenType.k_StringLiteral,
                     value: value,
@@ -478,7 +481,7 @@ export class Lexer implements ILexer {
             }
             value += ch;
             this.critical(ELexerErrors.InvalidToken, {
-                file: this._onResolveFilename(),
+                file: `${this._onResolveFilename()}`,
                 token: {
                     type: ETokenType.k_NumericLiteral,
                     value: value,
@@ -541,7 +544,7 @@ export class Lexer implements ILexer {
             }
             value += ch;
             this.critical(ELexerErrors.InvalidToken, {
-                file: this._onResolveFilename(),
+                file: `${this._onResolveFilename()}`,
                 token: {
                     type: ETokenType.k_IdentifierLiteral,
                     value: value,
@@ -648,7 +651,7 @@ export class Lexer implements ILexer {
                 }
                 value += ch;
                 this.critical(ELexerErrors.InvalidToken, {
-                    file: this._onResolveFilename(),
+                    file: `${this._onResolveFilename()}`,
                     token: {
                         type: ETokenType.k_CommentLiteral,
                         value: value,

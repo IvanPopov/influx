@@ -2,16 +2,20 @@
 import { assert } from "./../common";
 
 function locMin(a: IPosition, b: IPosition): IPosition {
+    assert(a.file == b.file);
     return {
         line: Math.min(a.line, b.line),
-        column: Math.min(a.column, b.column)
+        column: Math.min(a.column, b.column),
+        file: a.file
     };
 }
 
 function locMax(a: IPosition, b: IPosition): IPosition {
+    assert(a.file == b.file);
     return {
         line: Math.max(a.line, b.line),
-        column: Math.max(a.column, b.column)
+        column: Math.max(a.column, b.column),
+        file: a.file
     };
 }
 
@@ -25,8 +29,8 @@ export class ParseTree implements IParseTree {
         return this._root;
     }
 
-    setRoot(pRoot: IParseNode): void {
-        this._root = pRoot;
+    setRoot(root: IParseNode): void {
+        this._root = root;
     }
 
     constructor() {
@@ -44,13 +48,13 @@ export class ParseTree implements IParseTree {
         this._isOptimizeMode = isOptimize;
     }
 
-    addToken(pToken: IToken): void {
+    addToken(token: IToken): void {
         let node: IParseNode = {
-            name: pToken.name,
-            value: pToken.value,
+            name: token.name,
+            value: token.value,
             children: null,
             parent: null,
-            loc: pToken.loc,
+            loc: token.loc,
         };
 
         this.addNode(node);
@@ -105,8 +109,8 @@ export class ParseTree implements IParseTree {
                     parent: null,
                     value: '',
                     loc: {
-                        start: { line: 0, column: 0 },
-                        end: { line: 0, column: 0 }
+                        start: { file: null, line: 0, column: 0 },
+                        end: { file: null, line: 0, column: 0 }
                     }
                 };
             }

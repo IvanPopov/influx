@@ -52,9 +52,9 @@ class App extends React.Component<IAppProps> {
         ast: IParseTree;
         scope: IScope;
         root: IInstructionCollector;
-        bc: any; // todo: fix type!
+        bc: ReturnType<typeof Bytecode['translate']> // todo: fix type deduction;
         showFileBrowser: boolean;
-        autoCompilation: boolean;
+        autocompile: boolean;
     };
 
     constructor(props) {
@@ -65,22 +65,10 @@ class App extends React.Component<IAppProps> {
             root: null, 
             bc: null,
             showFileBrowser: false, 
-            autoCompilation: false 
+            autocompile: false 
         };
     }
 
-    // inject 'updated' bytecode if state changed
-    // todo: rework this logic!!
-    setValidState(state) {
-        let newRoot = isDefAndNotNull(state.root);
-        state = { ...this.state, ...state };
-        if (state.autoCompilation && state.root) {
-            state.bc = Bytecode.translate('main', state.root);
-        } else if (newRoot) {
-            state.bc = null;
-        }
-        this.setState(state);
-    }
 
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
@@ -98,25 +86,54 @@ class App extends React.Component<IAppProps> {
     handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
     hideFileBrowser = () => this.setState({ showFileBrowser: false })
 
+    compile(force: boolean = false) {
+        const { state } = this;
+
+        if (!isNull(state.bc) && !force) {
+            return;
+        }
+
+        if (!isNull(state.root)) {
+            this.setState({ bc: Bytecode.translate(Bytecode.DEFAULT_ENTRY_POINT_NAME, state.root) });
+        }
+    }
+
+    setAutocompile(val: boolean) {
+        this.setState({ autocompile: val });
+
+        if (val) {
+            this.compile();
+        }
+    }
+
+    setProgram(scope: IScope, root: IInstructionCollector) {
+        const { state } = this;
+        this.setState({ scope, root, bc: null }, () => {
+            if (state.autocompile) {
+                this.compile(true);
+            }
+        });
+    }
+
     render() {
         const { props, state } = this;
-
+        console.log(state.bc && state.bc.cdl);
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
             
-                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setValidState({ autoCompilation: data.checked }) } className={props.classes.checkboxTiny}/>
+                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setAutocompile(data.checked) } className={props.classes.checkboxTiny}/>
                         <Divider />
                         { state.bc ? (
                             <div>
                                 <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={state.bc.constants.data.layout} />
-                                <BytecodeView code={ state.bc.binary() } />
+                                <BytecodeView code={ new Uint8Array(state.bc.code) } />
                             </div>
                         ) : (
                             <Container textAlign="center">
-                                <Button onClick={ () => this.setState({ bc: Bytecode.translate("main", state.root) }) }>Compile</Button>
+                                <Button onClick={ () => this.compile() }>Compile</Button>
                             </Container>
                         ) } 
                     </Tab.Pane>
@@ -139,7 +156,7 @@ class App extends React.Component<IAppProps> {
                             onNodeClick={ (instr: IInstruction) => { } }
 
                             onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete= { (scope, root) => { this.setValidState({ scope, root }); } }
+                            onComplete= { (scope, root) => { this.setProgram(scope, root); } }
                         />
                     </Tab.Pane>
                 )

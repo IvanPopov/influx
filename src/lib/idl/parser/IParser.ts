@@ -1,4 +1,5 @@
 import { IMap } from '../IMap';
+import { StringRef } from "./../../util/StringRef";
 import { IDiagnosticReport } from '../../util/Diagnostics';
 
 export enum ENodeCreateMode {
@@ -39,11 +40,16 @@ export enum ETokenType {
     k_End
 }
 
+
+export type IFile = StringRef;
+
 export interface IPosition {
+    file: IFile;
     line: number; 
     column: number;
 }
 
+// todo: add support for range over multiple files;
 export interface IRange {
     start: IPosition;
     end: IPosition;
@@ -55,7 +61,7 @@ export interface IToken {
     type?: ETokenType;
 
     loc?: IRange;
-    range?: number[];
+    // range?: number[];
 }
 
 export interface IRule {
@@ -88,7 +94,7 @@ export interface IParseTree {
     setOptimizeMode(isOptimize: boolean): void;
 
     addToken(pToken: IToken): void;
-    addNode(pNode: IParseNode): void;
+    addNode(node: IParseNode): void;
     reduceByRule(pRule: IRule, eCreate: ENodeCreateMode): void;
 
     toString(): string;
@@ -100,21 +106,21 @@ export interface IParseTree {
 
     getRoot(): IParseNode;
     setRoot(pRoot: IParseNode): void;
-    toHTMLString(pNode?: IParseNode, padding?: string): string;
+    toHTMLString(node?: IParseNode, padding?: string): string;
 }
 
 export interface ILexer {
-    addPunctuator(sValue: string, sName?: string): string;
-    addKeyword(sValue: string, sName: string): string;
+    addPunctuator(value: string, name?: string): string;
+    addKeyword(value: string, name: string): string;
 
-    getTerminalValueByName(sName: string): string;
+    getTerminalValueByName(name: string): string;
 
-    init(sSource: string): void;
+    init(source: string): void;
 
     getNextToken(): IToken | null;
     getIndex(): number;
-    setSource(sSource: string): void;
-    setIndex(iIndex: number): void;
+    setSource(source: string): void;
+    setIndex(idx: number): void;
 
     getDiagnostics(): IDiagnosticReport;
 }
@@ -122,7 +128,7 @@ export interface ILexer {
 export interface IParserState {
     source: string;
     index: number;
-    fileName: string;
+    fileName: IFile;
     tree: IParseTree;
     types: IMap<boolean>;
     stack: number[];
@@ -132,14 +138,14 @@ export interface IParserState {
 }
 
 export interface IParser {
-    isTypeId(sValue: string): boolean;
-    returnCode(pNode: IParseNode): string;
+    isTypeId(value: string): boolean;
+    returnCode(node: IParseNode): string;
 
     init(sGrammar: string, eMode?: EParseMode, eType?: EParserType): boolean;
-    parse(sSource: string): Promise<EParserCode>;
+    parse(source: string): Promise<EParserCode>;
 
     setParseFileName(sFileName: string): void;
-    getParseFileName(): string;
+    getParseFileName(): IFile;
 
     getSyntaxTree(): IParseTree;
     getGrammarSymbols(): IMap<string>;

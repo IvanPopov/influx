@@ -141,7 +141,7 @@ export class Diagnostics <DESC_T>{
     }
 
     protected resolvePosition(code: number, desc: DESC_T): IPosition {
-        return { line: 0, column: 0 };
+        return { file: null, line: 0, column: 0 };
     }
 
     protected resolveRange(code: number, desc: DESC_T): IRange {
