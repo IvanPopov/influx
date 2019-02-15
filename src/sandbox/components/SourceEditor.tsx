@@ -28,7 +28,7 @@ export const styles = {
         background: 'url(http://i.imgur.com/HlfA2is.gif) bottom repeat-x'
     },
 
-    aceBreakpoint: {
+    breakpoint: {
         background: 'red',
         // borderRadius: '20px 0px 0px 20px',
         // boxShadow: '0px 0px 1px 1px red inset'
@@ -40,8 +40,7 @@ export interface ISourceEditorProps extends IWithStyles<typeof styles> {
     content: string;
     name?: string,
     onChange?: (content: string) => void;
-    onBreakpointSet?: (line: number) => void;
-    onBreakpointRemove?: (line: number) => void;
+    validateBreakpoint: (line: number) => number;
     markers: IMap<IMarker>
 }
 
@@ -168,13 +167,16 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             var row = e.getDocumentPosition().row;
             var breakpointsArray = editor.session.getBreakpoints();
             if (!(row in breakpointsArray)) {
-                editor.session.setBreakpoint(row, props.classes.aceBreakpoint);
-                props.onBreakpointSet && props.onBreakpointSet(row);
+                editor.session.setBreakpoint(props.validateBreakpoint(row), props.classes.breakpoint);
             } else {
                 editor.session.clearBreakpoint(row);
-                props.onBreakpointRemove && props.onBreakpointRemove(row);
             }
             e.stop();
+        });
+
+        editorSession.getBreakpoints().forEach(row => {
+            editorSession.clearBreakpoint(row);
+            editorSession.setBreakpoint(props.validateBreakpoint(row), props.classes.breakpoint);
         });
 
         // editor.on('mousemove', e => {

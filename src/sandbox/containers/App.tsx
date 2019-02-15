@@ -16,6 +16,7 @@ import { isDefAndNotNull, isNull } from '../../lib/common';
 
 import * as Bytecode from '../../lib/fx/bytecode/Bytecode';
 import * as VM from '../../lib/fx/bytecode/VM';
+import { cdlview } from '../../lib/fx/bytecode/DebugLayout';
 import autobind from 'autobind-decorator';
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -198,9 +199,21 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    validateBreakpoint(ln: number) {
+        let { state: { bc } } = this;
+        let cdl = bc && bc.cdl;
+        if (!cdl) {
+            return ln;
+        }
+
+        let view = cdlview(cdl);
+        return view.placeBreakpoint(ln);
+    }
+
     render() {
         const { props, state } = this;
         // console.log(state.bc && state.bc.cdl);
+
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
@@ -268,6 +281,7 @@ class App extends React.Component<IAppProps> {
                             content={ props.sourceFile.content }
                             onChange={ this.handleContentChanges }
                             markers={ props.sourceFile.markers }
+                            validateBreakpoint={ line => this.validateBreakpoint(line) }
                         />
                     </Tab.Pane>
                 )

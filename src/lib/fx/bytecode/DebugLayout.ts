@@ -162,9 +162,17 @@ export function cdlview(cdlRaw: CdlRaw) {
             column: rec.column
         };
     }
+
+    // returns valid breakpoint position from arbitrary line
+    function placeBreakpoint(ln: number): number {
+        // todo: optimize it;
+        let rec = line.layout.find(r => r.line >= ln && (r.flags & EDebugLineFlags.k_NewStatement) != 0);
+        return (rec && rec.line) || -1;
+    }
     
     return {
-        sourceFileFromPc
+        sourceFileFromPc,
+        placeBreakpoint
     }
 }
 
