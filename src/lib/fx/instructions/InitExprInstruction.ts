@@ -27,7 +27,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         super({ instrType: EInstructionTypes.k_InitExprInstruction, type, ...settings });
 
         this._isArray = false;
-        this._args = args.map((arg) => arg.$withParent(this));
+        this._args = args.map(arg => Instruction.$withParent(arg, this));
 
         // if (!this.optimizeForVariableType(type)) {
         //     context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });

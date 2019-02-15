@@ -3,6 +3,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
+import { Instruction } from "./Instruction";
 
 export type ArithmeticOperator = "+" | "-" | "/" | "*" | "%";
 
@@ -25,8 +26,8 @@ export class ArithmeticExprInstruction extends ExprInstruction {
     constructor({ left, right, operator, ...settings }: IArithmeticExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ArithmeticExprInstruction, ...settings });
 
-        this._leftOperand = left.$withParent(this);
-        this._rightOperand = right.$withParent(this);
+        this._leftOperand = Instruction.$withParent(left, this);
+        this._rightOperand = Instruction.$withParent(right, this);
         this._operator = operator;
     }
 

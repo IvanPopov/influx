@@ -22,10 +22,10 @@ export interface IASTViewProps {
     parserParams: IParserParams;
     content: string;
     filename?: string;
-    
-    onNodeOut: (id :string) => void;
+
+    onNodeOut: (id: string) => void;
     onNodeOver: (id: string, node: IParseNode) => void;
-    onError: (loc: IRange , message: string) => void;
+    onUpdate: (errors: { loc: IRange; message: string; }[]) => void;
     onComplete: (ast: IParseTree) => void;
 }
 
@@ -42,9 +42,9 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
     constructor(props) {
         super(props);
-        this.state = { 
-            parser: { showErrors: false, parser: null }, 
-            parseTree: null, 
+        this.state = {
+            parser: { showErrors: false, parser: null },
+            parseTree: null,
             nodeStats: {}
         };
     }
@@ -112,13 +112,16 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         const { content, filename } = props;
         const { parser } = this.state.parser;
 
-        if (!content || !parser) { 
-            return; 
+        if (!content || !parser) {
+            return;
         }
 
         parser.setParseFileName(filename);
         // All diagnostic exceptions should be already handled inside parser.
         let res = await parser.parse(content);
+
+        let report = parser.getDiagnostics();
+        props.onUpdate(report.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content })));
 
         if (res == EParserCode.k_Ok) {
             const ast = parser.getSyntaxTree();
@@ -126,14 +129,6 @@ class ASTView extends React.Component<IASTViewProps, {}> {
             this.setState({ parseTree: ast });
             return;
         }
-
-        let report = parser.getDiagnostics();
-
-        report.messages.forEach(mesg => {
-            // if (mesg.category == EDiagnosticCategory.ERROR) {
-                this.props.onError(Diagnostics.asRange(mesg), mesg.content);
-            // }
-        });
 
         console.log(Diagnostics.stringify(parser.getDiagnostics()));
     }
@@ -154,7 +149,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     // private handleParserError(parser: EffectParser) {
-       
+
 
     //     if (err.code == PARSER_SYNTAX_ERROR) {
     //         const loc: IRange = err.info.loc;
@@ -176,9 +171,9 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         if (node.value) {
             return (
-                <List.Item key={ idx } 
+                <List.Item key={ idx }
                     onClick={ this.handleNodeClick.bind(this, idx, node) }
-                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                     onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                     className="astnode"
                 >
@@ -196,9 +191,9 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                 children = (<List.List className="astlist"> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
             }
             return (
-                <List.Item key={ idx } 
+                <List.Item key={ idx }
                     onClick={ this.handleNodeClick.bind(this, idx, node) }
-                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) } 
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                     onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                     className="astnode"
                 >
@@ -206,7 +201,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                     <List.Content>
                         <List.Header>
                             { node.name }&nbsp;
-                            <a style={ { display: selected ? 'inline' : 'none' } } 
+                            <a style={ { display: selected ? 'inline' : 'none' } }
                                 onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a>
                         </List.Header>
                         { children }
@@ -219,12 +214,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
     private async handleCopyClick(idx: string, node: IParseNode, e: MouseEvent) {
         e.stopPropagation();
-        
+
         let out = [];
         out.push(`/**`);
         out.push(` * AST example:`)
         out.push(` *    ${node.name}`)
-        out = out.concat(node.children.slice().map(node => ` *       ${node.children? '+': ' '} ${node.name} ${node.value? '= ' + '\'' + node.value + '\'': ''}`));
+        out = out.concat(node.children.slice().map(node => ` *       ${node.children ? '+' : ' '} ${node.name} ${node.value ? '= ' + '\'' + node.value + '\'' : ''}`));
         out.push(` */`);
 
         copy(out.join('\n'), { debug: true });
@@ -244,7 +239,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         this.props.onNodeOver(idx, node);
     }
 
-    
+
     private async handleNodeOut(idx: string, node: IParseNode, e: MouseEvent) {
         e.stopPropagation();
 

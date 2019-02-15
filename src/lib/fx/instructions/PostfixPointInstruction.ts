@@ -2,7 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EInstructionTypes, IIdExprInstruction, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface IPostfixPointInstructionSettings extends IInstructionSettings {
@@ -23,8 +23,8 @@ export class PostfixPointInstruction extends ExprInstruction {
     constructor({ element, postfix, ...settings }: IPostfixPointInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PostfixPointInstruction, type: postfix.type, ...settings });
         
-        this._element = element.$withParent(this);
-        this._postfix = postfix.$withParent(this);
+        this._element = Instruction.$withParent(element, this);
+        this._postfix = Instruction.$withParent(postfix, this);
     }
 
 

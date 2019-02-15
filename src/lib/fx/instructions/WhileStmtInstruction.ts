@@ -1,5 +1,5 @@
 import { EInstructionTypes } from "../../idl/IInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { IStmtInstruction } from "../../idl/IInstruction";
 import { IExprInstruction } from "../../idl/IInstruction";
 import { StmtInstruction } from "./StmtInstruction";
@@ -27,8 +27,8 @@ export class WhileStmtInstruction extends StmtInstruction {
     constructor({ cond, body, operator, ...settings }: IWhileStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_WhileStmtInstruction, ...settings });
         
-        this._cond = cond.$withParent(this);
-        this._body = body.$withParent(this);
+        this._cond = Instruction.$withParent(cond, this);
+        this._body = Instruction.$withParent(body, this);
         this._operator = operator;
     }
 

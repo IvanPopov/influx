@@ -5,6 +5,7 @@ import { IMap } from "../../idl/IMap";
 import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
 import * as SystemScope from "../SystemScope";
 import { isNull } from "../../common";
+import { Instruction } from "./Instruction";
 
 
 export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
@@ -26,9 +27,9 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     constructor({ returnType, id, paramList = [], ...settings }: IFunctionDefInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
 
-        this._parameterList = paramList.map(param => param.$withParent(this));
-        this._returnType = returnType.$withParent(this);
-        this._id = id.$withParent(this);
+        this._parameterList = paramList.map(param => Instruction.$withParent(param, this));
+        this._returnType = Instruction.$withParent(returnType, this);
+        this._id = Instruction.$withParent(id, this);
     }
 
 

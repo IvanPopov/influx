@@ -9,13 +9,14 @@ import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, File
 import { getCommon, mapProps } from '../reducers';
 import IStoreState from '../store/IStoreState';
 import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
-import { IParseTree } from '../../lib/idl/parser/IParser';
+import { IParseTree, IParseNode } from '../../lib/idl/parser/IParser';
 import { IInstruction, IScope, IFunctionDeclInstruction, IInstructionCollector } from '../../lib/idl/IInstruction';
 import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
 import { isDefAndNotNull, isNull } from '../../lib/common';
 
 import * as Bytecode from '../../lib/fx/bytecode/Bytecode';
 import * as VM from '../../lib/fx/bytecode/VM';
+import autobind from 'autobind-decorator';
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
@@ -50,18 +51,18 @@ class App extends React.Component<IAppProps> {
 
     state: {
         ast: IParseTree;
-        scope: IScope;
         root: IInstructionCollector;
         bc: ReturnType<typeof Bytecode['translate']> // todo: fix type deduction;
         showFileBrowser: boolean;
         autocompile: boolean;
+
+
     };
 
     constructor(props) {
         super(props);
         this.state = { 
             ast: null, 
-            scope: null, 
             root: null, 
             bc: null,
             showFileBrowser: false, 
@@ -73,11 +74,11 @@ class App extends React.Component<IAppProps> {
     shouldComponentUpdate(nextProps, nextState): boolean {
         const { props, state } = this;
 
-        if (Object.keys(props.sourceFile.markers).length > 0) {
-            // cleanup error highlighting before render
-            this.props.actions.cleanupMarkers();
-            return false;
-        }
+        // if (Object.keys(props.sourceFile.markers).length > 0) {
+        //     // cleanup error highlighting before render
+        //     this.props.actions.cleanupMarkers();
+        //     return false;
+        // }
 
         return true;
     }
@@ -106,30 +107,111 @@ class App extends React.Component<IAppProps> {
         }
     }
 
-    setProgram(scope: IScope, root: IInstructionCollector) {
+    setProgram(root: IInstructionCollector) {
         const { state } = this;
-        this.setState({ scope, root, bc: null }, () => {
+        this.setState({ root, bc: null }, () => {
             if (state.autocompile) {
                 this.compile(true);
             }
         });
     }
 
+
+    highlightInstruction(inst: IInstruction, show: boolean = true) {
+        let markerName = `ast-range-${inst.instructionID}`;
+        if (show) {
+            this.props.actions.addMarker({
+                name: markerName,
+                range: inst.sourceNode.loc,
+                type: `marker`
+            });
+        } else {
+            this.props.actions.removeMarker(markerName);
+        }
+    }
+
+
+    highlightPNode(id: string, pnode: IParseNode = null, show: boolean = true) {
+        if (show) {
+            this.props.actions.addMarker({
+                name: `ast-range-${id}`,
+                range: pnode.loc,
+                type: 'marker'
+            }) 
+        } else {
+            this.props.actions.removeMarker(`ast-range-${id}`);
+        }
+    }
+
+
+    handleASTViewUpdate(errors) {
+        const { props } = this;
+
+        for (let markerName in props.sourceFile.markers) {
+            if (markerName.startsWith('syntax-error-')) {
+                props.actions.removeMarker(markerName);
+            }
+        }
+
+        errors.forEach(err => {
+            let { loc, message } = err;
+            this.props.actions.addMarker({ 
+                name: `syntax-error-${message}`, 
+                range: loc, 
+                type: 'error', 
+                tooltip: message 
+            });
+        })
+    }
+
+
+    handleProgramViewUpdate(errors) {
+        const { props } = this;
+        
+        for (let markerName in props.sourceFile.markers) {
+            if (markerName.startsWith('compiler-error-')) {
+                props.actions.removeMarker(markerName);
+            }
+        }
+
+        // todo: add support for multiple errors on the same lines;
+        errors.forEach(err => {
+            let { loc, message } = err;
+            this.props.actions.addMarker({ 
+                name: `compiler-error-${message}`, 
+                range: loc, 
+                type: 'error', 
+                tooltip: message 
+            })
+        })
+    }
+
+
+    // todo: temp solution, rework it;
+    static contentTimeout: NodeJS.Timeout;
+    @autobind
+    handleContentChanges(content: string) {
+        clearTimeout(App.contentTimeout);
+        App.contentTimeout = setTimeout(() => {
+            this.props.actions.setContent(content);
+        }, 500);
+    }
+
+
     render() {
         const { props, state } = this;
-        console.log(state.bc && state.bc.cdl);
+        // console.log(state.bc && state.bc.cdl);
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
-            
                         <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setAutocompile(data.checked) } className={props.classes.checkboxTiny}/>
                         <Divider />
                         { state.bc ? (
                             <div>
                                 <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={state.bc.constants.data.layout} />
-                                <BytecodeView code={ new Uint8Array(state.bc.code) } />
+                                <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
                             </div>
                         ) : (
                             <Container textAlign="center">
@@ -147,16 +229,12 @@ class App extends React.Component<IAppProps> {
                             filename={ props.sourceFile.filename }
                             ast={ state.ast }
 
-                            onNodeOver={ (instr: IInstruction) => props.actions.addMarker({
-                                name: `ast-range-${instr.instructionID}`,
-                                range: instr.sourceNode.loc,
-                                type: `marker`
-                            }) }
-                            onNodeOut={ (instr: IInstruction) => props.actions.removeMarker(`ast-range-${instr.instructionID}`) }
-                            onNodeClick={ (instr: IInstruction) => { } }
+                            onNodeOver={ inst => this.highlightInstruction(inst, true) }
+                            onNodeOut={ inst => this.highlightInstruction(inst, false) }
+                            onNodeClick={ inst => { } }
 
-                            onError={ (range, message) => props.actions.addMarker({ name: `compiler-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete= { (scope, root) => { this.setProgram(scope, root); } }
+                            onUpdate={ errors => this.handleProgramViewUpdate(errors) }
+                            onComplete= { (root) => { this.setProgram(root); } }
                         />
                     </Tab.Pane>
                 )
@@ -170,20 +248,39 @@ class App extends React.Component<IAppProps> {
                             parserParams={ props.parserParams }
                             content={ props.sourceFile.content }
 
-                            onNodeOver={ (idx, node) => props.actions.addMarker({
-                                name: `ast-range-${idx}`,
-                                range: node.loc,
-                                type: 'marker'
-                            }) }
-                            onNodeOut={ idx => props.actions.removeMarker(`ast-range-${idx}`) }
-                            onError={ (range, message) => props.actions.addMarker({ name: `syntax-error-${message}`, range, type: 'error', tooltip: message }) }
-                            onComplete={ ast => { this.setState({ ast }) } }
+                            onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
+                            onNodeOut={ idx => this.highlightPNode(idx, null, false) }
+                            onUpdate={ errors => this.handleASTViewUpdate(errors) }
+                            onComplete={ ast => this.setState({ ast }) }
                         />
                     </Tab.Pane>
                 )
             }
         ];
 
+        const sourceViewFork = [
+            {
+                menuItem: <Menu.Item>Editor</Menu.Item>,
+                render: () => (
+                    <Tab.Pane  attached={ false } key="editor" >
+                        <SourceEditor
+                            name="source-code"
+                            content={ props.sourceFile.content }
+                            onChange={ this.handleContentChanges }
+                            markers={ props.sourceFile.markers }
+                        />
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: <Menu.Item>Debugger<br/>view</Menu.Item>,
+                render: () => (
+                    <Tab.Pane  attached={ false } key="debugger" >
+                        <div>todo...</div>
+                    </Tab.Pane>
+                )
+            }
+        ]
 
         const panes = [
             {
@@ -193,12 +290,7 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ false }>
                             <Grid.Row columns={ 3 }>
                                 <Grid.Column computer="10" tablet="8" mobile="6">
-                                    <SourceEditor
-                                        name="source-code"
-                                        content={ props.sourceFile.content }
-                                        onChange={ props.actions.setContent }
-                                        markers={ props.sourceFile.markers }
-                                    />
+                                    <Tab menu={ { secondary: true, size: 'mini' } } panes={ sourceViewFork } />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
                                     <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />

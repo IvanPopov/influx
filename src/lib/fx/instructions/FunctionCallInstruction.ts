@@ -4,6 +4,7 @@ import { IParseNode } from "../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { IdExprInstruction } from "./IdExprInstruction";
 import { ExprInstruction } from "./ExprInstruction";
+import { Instruction } from "./Instruction";
 
 export interface IFunctionCallInstructionSettings extends IExprInstructionSettings {
     decl: IFunctionDeclInstruction;
@@ -24,7 +25,7 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
         super({ instrType: EInstructionTypes.k_FunctionCallInstruction, ...settings });
         
         this._decl = decl;
-        this._args = args.map((arg) => arg.$withParent(this));
+        this._args = args.map(arg => Instruction.$withParent(arg, this));
     }
 
 

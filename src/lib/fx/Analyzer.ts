@@ -1076,10 +1076,15 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         } else if (children[i].name === 'Initializer') {
             let args = analyzeInitializerArguments(context, program, children[i]);
             init = new InitExprInstruction({ scope, sourceNode: children[i], args, type });
-   
-            if (!init.optimizeForVariableType(type)) {
+            
+            let isValidInit = false;
+            try {
+                isValidInit = init.optimizeForVariableType(type);
+            } catch (e) {};
+
+            if (!isValidInit) {
                 context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
-                return null;
+                init = null;
             }
         }
     }

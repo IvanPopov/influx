@@ -5,7 +5,7 @@ import { isNull, isDef } from "../../common";
 import { ISamplerState } from "../../idl/ISamplerState"
 import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import * as SystemScope from '../SystemScope';
 
 export type SamplerOperator = "sampler_state";
@@ -28,7 +28,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
         // todo: resolve type from texture type!
         super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: SystemScope.T_SAMPLER, ...settings } );
         
-        this._samplerParams = params.map(param => param.$withParent(this));
+        this._samplerParams = params.map(param => Instruction.$withParent(param, this));
         this._operator = operator;
     }
 

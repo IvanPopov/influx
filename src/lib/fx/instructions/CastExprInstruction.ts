@@ -3,6 +3,7 @@ import { IExprInstructionSettings } from "./ExprInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
+import { Instruction } from "./Instruction";
 
 
 export interface ICastExprInstructionSettings extends IExprInstructionSettings {
@@ -20,7 +21,7 @@ export class CastExprInstruction extends ExprInstruction {
     constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
 
-        this._srcExpr = sourceExpr.$withParent(this);
+        this._srcExpr = Instruction.$withParent(sourceExpr, this);
     }
 
     get expr(): IInstruction {

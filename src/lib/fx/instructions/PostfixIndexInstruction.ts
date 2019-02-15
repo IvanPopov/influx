@@ -4,7 +4,7 @@ import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, 
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { VariableTypeInstruction } from "./VariableTypeInstruction";
 
 
@@ -28,8 +28,8 @@ export class PostfixIndexInstruction extends ExprInstruction {
             instrType: EInstructionTypes.k_PostfixIndexInstruction, 
             type: (element.type as IVariableTypeInstruction).arrayElementType, ...settings });
             
-        this._element = element.$withParent(this);
-        this._index = index.$withParent(this);
+        this._element = Instruction.$withParent(element, this);
+        this._index = Instruction.$withParent(index, this);
     }
 
     

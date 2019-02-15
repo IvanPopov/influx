@@ -3,6 +3,8 @@ import { IPosition } from "./../../idl/parser/IParser";
 import { flag } from "./../../bf/bf";
 import { IFunctionDeclInstruction, IVariableDeclInstruction, IInstruction } from "./../../idl/IInstruction";
 import { isNull } from "util";
+import assert = require("assert");
+import { isDef } from "../../../lib/common";
 enum EDebugLineFlags {
     k_NewStatement = 0x01
 };
@@ -146,6 +148,25 @@ export function debug (pc: PC) {
     return { ...line, ...info, dump }; // todo: export only required;
 }
 
+
+export function cdlview(cdlRaw: CdlRaw) {
+    
+    const { line, info } = cdlRaw;
+
+    function sourceFileFromPc(pc: number) {
+        let rec = line.layout[pc];
+        assert(rec.pc == pc);
+        return {
+            file: isDef(rec.file) ? line.files[rec.file]: null,
+            line: rec.line,
+            column: rec.column
+        };
+    }
+    
+    return {
+        sourceFileFromPc
+    }
+}
 
 export default debug;
 

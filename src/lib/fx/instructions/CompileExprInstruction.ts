@@ -3,6 +3,7 @@ import { IExprInstructionSettings } from "./ExprInstruction";
 import { IExprInstruction } from "../../idl/IInstruction";
 import { EInstructionTypes, IFunctionDeclInstruction, ICompileExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
+import { Instruction } from "./Instruction";
 
 export interface ICompileExprInstructionSettings extends IExprInstructionSettings {
     operand: IFunctionDeclInstruction;
@@ -21,8 +22,8 @@ export class CompileExprInstruction extends ExprInstruction implements ICompileE
     constructor({ operand, args = null, ...settings }: ICompileExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CompileExprInstruction, ...settings });
 
-        this._operand = operand.$withParent(this);
-        this._args = (args || []).map(arg => arg.$withParent(this));
+        this._operand = Instruction.$withParent(operand, this);
+        this._args = (args || []).map(arg => Instruction.$withParent(arg, this));
     }
 
     

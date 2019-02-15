@@ -5,7 +5,7 @@ import { EInstructionTypes, EVarUsedMode, ITypeUseInfoContainer, IExprInstructio
 import { IMap } from "../../idl/IMap";
 import { isNull } from "../../common";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import * as SystemScope from "../SystemScope";
 
 export interface IConstructorCallInstructionSettings extends IInstructionSettings {
@@ -26,8 +26,8 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
     constructor({ ctor, args = null, ...settings }: IConstructorCallInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ConstructorCallInstruction, type: ctor.subType, ...settings });
 
-        this._args = (args || []).map(arg => arg.$withParent(this));
-        this._ctor = ctor.$withParent(this);
+        this._args = (args || []).map(arg => Instruction.$withParent(arg, this));
+        this._ctor = Instruction.$withParent(ctor, this);
     }
 
     

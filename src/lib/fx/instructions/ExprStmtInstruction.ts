@@ -1,5 +1,5 @@
 import { StmtInstruction } from "./StmtInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IInstruction";
 
@@ -18,7 +18,7 @@ export class ExprStmtInstruction extends StmtInstruction {
     constructor({ expr, ...settings }: IExprStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ExprStmtInstruction, ...settings });
 
-        this._expr = expr.$withParent(this);
+        this._expr = Instruction.$withParent(expr, this);
     }
 
     get expr(): IExprInstruction {

@@ -96,18 +96,18 @@ const Property: PropertyComponent =
                 onMouseOver={ onMouseOver }
                 onMouseOut={ onMouseOut }
                 onClick={ onClick }
-                style={ { ...PropertyStyle({ selected, system }), ...( simpleProperty ? { fontSize: '85%' }: {} ) } }
+                style={ { ...PropertyStyle({ selected, system }), ...(simpleProperty ? { fontSize: '85%' } : {}) } }
             >
                 { showIcon &&
                     <List.Icon name={ iconName } />
                 }
                 <List.Content>
                     { isDefAndNotNull(name) &&
-                        <List.Header style={ helperProperty? { fontSize: '85%', color: '#ccc' }: {} }>
+                        <List.Header style={ helperProperty ? { fontSize: '85%', color: '#ccc' } : {} }>
                             { parent &&
-                                <span> <a style={ { color: 'rgba(0,0,0,0.3)' } } onClick={ onParentClick }><Icon name={ `git pull request` as any } size="small"/></a></span>
+                                <span> <a style={ { color: 'rgba(0,0,0,0.3)' } } onClick={ onParentClick }><Icon name={ `git pull request` as any } size="small" /></a></span>
                             }
-                            { helperProperty? `[${name}]`: name }
+                            { helperProperty ? `[${name}]` : name }
                         </List.Header>
 
                     }
@@ -154,8 +154,8 @@ export interface IProgramViewProps {
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
 
-    onError?: (loc: IRange , message: string) => void;
-    onComplete?: (scope: IScope, root: IInstructionCollector) => void;
+    onUpdate?: (errors: { loc: IRange; message: string; }[]) => void;
+    onComplete?: (root: IInstructionCollector) => void;
 }
 
 class ProgramView extends React.Component<IProgramViewProps, {}> {
@@ -185,15 +185,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         const result = analyze(nextProps.filename, nextProps.ast);
         this.setState({ root: result.root });
-        
-        result.diag.messages.forEach(mesg => {
-            this.props.onError(Diagnostics.asRange(mesg), mesg.content);
-        });
+
+        props.onUpdate(result.diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content })));
 
         console.log(Diagnostics.stringify(result.diag));
 
         if (isFunction(props.onComplete)) {
-            props.onComplete(result.scope, result.root);
+            props.onComplete(result.root);
         }
     }
 
@@ -238,7 +236,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         if (!instr) {
             return null;
         }
-        
+
         switch (instr.instructionType) {
             case EInstructionTypes.k_InstructionCollector:
                 return this.InstructionCollector(instr);
@@ -255,11 +253,11 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.VariableDecl(instr);
             case EInstructionTypes.k_VariableTypeInstruction:
                 return this.VariableType(instr);
-                case EInstructionTypes.k_SystemTypeInstruction:
+            case EInstructionTypes.k_SystemTypeInstruction:
                 return this.SystemType(instr);
-                case EInstructionTypes.k_FunctionDeclInstruction:
+            case EInstructionTypes.k_FunctionDeclInstruction:
                 return this.FunctionDecl(instr);
-                
+
             //
             // Expressions
             //
@@ -504,7 +502,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     StmtBlock(instr: IStmtBlockInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
-                { instr.stmtList.map( stmt => this.Stmt(stmt) ) }
+                { instr.stmtList.map(stmt => this.Stmt(stmt)) }
             </Property>
         );
     }
@@ -523,7 +521,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ForStmt(instr as ForStmtInstruction);
             case EInstructionTypes.k_SemicolonStmtInstruction:
                 return this.SemicolonStmt(instr as SemicolonStmtInstruction);
-            break;  
+                break;
         }
 
         return this.NotImplemented(instr); // TODO: remove it
@@ -534,7 +532,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <Property name="declarations">
-                    { instr.declList.map( decl => this.Unknown(decl) ) }
+                    { instr.declList.map(decl => this.Unknown(decl)) }
                 </Property>
             </Property>
         );
@@ -609,11 +607,11 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         return (
             <Property { ...this.bindProps(instr) }>
-                 <Property name="const" value={ String(instr.isConst()) } />
-                 <Property name="array" value={ String(instr.isArray()) } />
-                 <Property name="arguments">
-                    { instr.arguments.map( arg => this.Unknown(arg) ) }
-                 </Property>
+                <Property name="const" value={ String(instr.isConst()) } />
+                <Property name="array" value={ String(instr.isArray()) } />
+                <Property name="arguments">
+                    { instr.arguments.map(arg => this.Unknown(arg)) }
+                </Property>
             </Property>
         );
     }

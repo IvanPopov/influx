@@ -1,5 +1,5 @@
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { EInstructionTypes, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
@@ -20,7 +20,7 @@ export class ComplexExprInstruction extends ExprInstruction {
     constructor({ expr, ...settings }: IComplexExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexExprInstruction, type: expr.type, ...settings });
 
-        this._expr = expr.$withParent(this);
+        this._expr = Instruction.$withParent(expr, this);
     }
 
     

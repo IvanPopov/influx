@@ -189,9 +189,9 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
 
     // insert code
     function icode(code: EOperation, ...args: number[]): void {
-        instructions.add(code, args);
         // add this instruction to debug layout;
         debug.step();
+        instructions.add(code, args);
     }
 
     // resolve address => returns address of temprary result of expression

@@ -32,7 +32,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this._isContainSampler = false;
         this._isContainComplexType = false;
 
-        this.addFields(fields.map(field => field.$withParent(this)));
+        this.addFields(fields.map(field => Instruction.$withParent(field, this)));
     }
 
     get builtIn(): boolean {

@@ -4,7 +4,7 @@ import { IVariableTypeInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
 import { ExprInstruction } from "./ExprInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export type PostfixOperator = "++" | "--";
@@ -27,7 +27,7 @@ export class PostfixArithmeticInstruction extends ExprInstruction {
         super({ instrType: EInstructionTypes.k_PostfixArithmeticInstruction, type: expr.type, ...settings });
 
         this._operator = operator;
-        this._expr = expr.$withParent(this);
+        this._expr = Instruction.$withParent(expr, this);
     }
 
 

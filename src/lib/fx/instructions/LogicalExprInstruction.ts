@@ -2,7 +2,7 @@ import { ExprInstruction } from "./ExprInstruction";
 import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import * as SystemScope from '../SystemScope';
 
 
@@ -27,8 +27,8 @@ export class LogicalExprInstruction extends ExprInstruction {
     constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: SystemScope.T_BOOL, ...settings });
 
-        this._leftOperand = left.$withParent(this);
-        this._rightOperand = right.$withParent(this);
+        this._leftOperand = Instruction.$withParent(left, this);
+        this._rightOperand = Instruction.$withParent(right, this);
         this._operator = operator;
     }
 

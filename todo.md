@@ -12,6 +12,14 @@
 3. Implement the simplest compute shader.
 4. Implement the simplest ui for node programming
 
+### Editor
+1. ~~Accelerate text input (remove freezes).~~
+2. Add determination of the current scope inside code.
+3. Add dynamic highlighting of all functions and other dynamically added objects.
+4. Add highlighting of all occurancies of identidier.
+5. Add autocomplete.
+6. Add info about identifiers when selected by mouse.
+
 ***
 
 ### Known Issues

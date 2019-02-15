@@ -7,9 +7,11 @@ import { IWithStyles } from './';
 import { EOperation } from '../../lib/idl/bytecode/EOperations';
 import VM from '../../lib/fx/bytecode/VM';
 import { EChunkType } from '../../lib/fx/bytecode/Bytecode';
+import { CdlRaw, cdlview } from '../../lib/fx/bytecode/DebugLayout';
 
 export interface IBytecodeViewProps {
     code: Uint8Array;
+    cdl: CdlRaw;
 }
 
 function minWidth(str: string, len: number = 0, char: string = ' ') {
@@ -85,11 +87,18 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
         }
     }
 
+    showSourceLine(pc: number) {
+        console.log(cdlview(this.props.cdl).sourceFileFromPc(pc));
+    }
+
+    hideSourceLine(oc: number) {
+
+    }
     
     renderOpInternal(code: EOperation, args: string[]) {
         let i = this.state.count++;
         return (
-            <Table.Row key={`op-${code}-${i}`}>
+            <Table.Row key={`op-${code}-${i}`} onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
                 <Table.Cell></Table.Cell>
                 <Table.Cell>{ hex4(i) }</Table.Cell>
                 <Table.Cell>{ EOperation[code].substr(2).toLowerCase() }</Table.Cell>

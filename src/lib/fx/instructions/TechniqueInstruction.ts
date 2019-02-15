@@ -5,6 +5,7 @@ import { EInstructionTypes, IPassInstruction, ITechniqueInstruction } from '../.
 import { DeclInstruction } from './DeclInstruction';
 import { PassInstruction } from './PassInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
+import { Instruction } from './Instruction';
 
 
 export interface ITechniqueInstructionSettings extends IDeclInstructionSettings {
@@ -21,7 +22,7 @@ export class TechniqueInstruction extends DeclInstruction implements ITechniqueI
         super({ instrType: EInstructionTypes.k_TechniqueInstruction, ...settings });
         
         this._name = name;
-        this._passList = passList.map(pass => pass.$withParent(this));
+        this._passList = passList.map(pass => Instruction.$withParent(pass, this));
     }
 
 

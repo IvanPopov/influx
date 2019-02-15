@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { EInstructionTypes, EVarUsedMode, ITypedInstruction, IConditionalExprInstruction, ITypeUseInfoContainer, IExprInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
@@ -27,9 +27,9 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
 
         console.assert(left.type.isStrongEqual(right.type));
         
-        this._cond = cond.$withParent(this);
-        this._leftValue = left.$withParent(this);
-        this._rightValue = right.$withParent(this);
+        this._cond = Instruction.$withParent(cond, this);
+        this._leftValue = Instruction.$withParent(left, this);
+        this._rightValue = Instruction.$withParent(right, this);
     }
 
 

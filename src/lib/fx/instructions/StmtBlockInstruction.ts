@@ -1,7 +1,7 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { EInstructionTypes, IStmtBlockInstruction, IStmtInstruction, IExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface IStmtBlockInstructionSettings extends IInstructionSettings {
@@ -19,7 +19,7 @@ export class StmtBlockInstruction extends StmtInstruction implements IStmtBlockI
     
     constructor({ stmtList, ...settings }: IStmtBlockInstructionSettings) {
         super({ instrType: EInstructionTypes.k_StmtBlockInstruction, ...settings });
-        this._stmtList = stmtList.map(stmt => stmt.$withParent(this));
+        this._stmtList = stmtList.map(stmt => Instruction.$withParent(stmt, this));
     }
 
 

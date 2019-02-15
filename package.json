@@ -51,5 +51,8 @@
     "preinstall": "npm install -g grunt-cli",
     "start": "electron ./build/sandbox/shell.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "brace": "^0.11.1",
+    "react-ace": "^6.4.0"
+  }
 }

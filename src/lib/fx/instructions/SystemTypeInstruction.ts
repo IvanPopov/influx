@@ -257,7 +257,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     addField(field: IVariableDeclInstruction): void {
         console.assert(this.getField(field.name) === null);
-        this._fields.push(field.$withParent(this));
+        this._fields.push(Instruction.$withParent(field, this));
     }
 }
 

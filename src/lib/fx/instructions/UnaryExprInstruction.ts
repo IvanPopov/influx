@@ -3,7 +3,7 @@ import { IMap } from '../../idl/IMap';
 import { ExprInstruction, IExprInstructionSettings } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
 import * as Analyzer from '../Analyzer';
-import { IInstructionSettings } from './Instruction';
+import { IInstructionSettings, Instruction } from './Instruction';
 
 
 export type UnaryOperator = "+" | "-" | "!" | "++" | "--";
@@ -27,7 +27,7 @@ export class UnaryExprInstruction extends ExprInstruction {
     constructor({ expr, operator, ...settings }: IUnaryExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_UnaryExprInstruction, type: expr.type, ...settings });
         
-        this._expr = expr.$withParent(this);
+        this._expr = Instruction.$withParent(expr, this);
         this._operator = operator;
     }
 

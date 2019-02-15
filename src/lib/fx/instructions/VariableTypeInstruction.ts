@@ -68,8 +68,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
-            this._arrayElementType = (new VariableTypeInstruction({ scope: this.scope, type: this.subType, usages: this._usageList })).$withParent(this);
-            this._arrayIndexExpr = arrayIndex.$withParent(this);
+            this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ scope: this.scope, type: this.subType, usages: this._usageList }), this);
+            this._arrayIndexExpr = Instruction.$withParent(arrayIndex, this);
         }
 
         (usages || []).forEach( usage => this.addUsage(usage) );
@@ -395,7 +395,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         fieldType.$overwritePadding(padding);
 
         let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType, semantics });
-        return field.$withParent(this);
+        return Instruction.$withParent(field, this);
     }
 
 
@@ -414,7 +414,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         let id = subField.id;
         let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ scope, type: subField.type });
         let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType });
-        return field.$withParent(this);
+        return Instruction.$withParent(field, this);
     }
 
 
