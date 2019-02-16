@@ -1,17 +1,25 @@
 import * as React from 'react';
 import injectSheet from 'react-jss'
+import { connect } from 'react-redux';
 
 import { Table, Button, Icon } from 'semantic-ui-react'
-import { IWithStyles } from './';
+import { IWithStyles } from '../components';
 
 import { EOperation } from '../../lib/idl/bytecode/EOperations';
 import VM from '../../lib/fx/bytecode/VM';
 import { EChunkType } from '../../lib/fx/bytecode/Bytecode';
 import { CdlRaw, cdlview } from '../../lib/fx/bytecode/DebugLayout';
 
-export interface IBytecodeViewProps {
+import { mapActions, sourceCode as sourceActions } from '../actions';
+import { mapProps } from '../reducers';
+import { getSourceCode } from '../reducers/sourceFile';
+import { IFileState } from 'sandbox/store/IStoreState';
+
+export interface IBytecodeViewProps extends IFileState {
     code: Uint8Array;
     cdl: CdlRaw;
+
+    actions: typeof sourceActions;
 }
 
 function minWidth(str: string, len: number = 0, char: string = ' ') {
@@ -108,4 +116,4 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
     }
 }
 
-export default BytecodeView;
+export default connect<{}, {}, IBytecodeViewProps>(mapProps(getSourceCode), mapActions(sourceActions))(BytecodeView) as any;

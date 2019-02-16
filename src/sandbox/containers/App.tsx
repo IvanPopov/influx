@@ -71,20 +71,6 @@ class App extends React.Component<IAppProps> {
         };
     }
 
-
-    shouldComponentUpdate(nextProps, nextState): boolean {
-        const { props, state } = this;
-
-        // if (Object.keys(props.sourceFile.markers).length > 0) {
-        //     // cleanup error highlighting before render
-        //     this.props.actions.cleanupMarkers();
-        //     return false;
-        // }
-
-        return true;
-    }
-
-
     handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
     hideFileBrowser = () => this.setState({ showFileBrowser: false })
 
@@ -145,27 +131,6 @@ class App extends React.Component<IAppProps> {
     }
 
 
-    handleASTViewUpdate(errors) {
-        const { props } = this;
-
-        for (let markerName in props.sourceFile.markers) {
-            if (markerName.startsWith('syntax-error-')) {
-                props.actions.removeMarker(markerName);
-            }
-        }
-
-        errors.forEach(err => {
-            let { loc, message } = err;
-            this.props.actions.addMarker({ 
-                name: `syntax-error-${message}`, 
-                range: loc, 
-                type: 'error', 
-                tooltip: message 
-            });
-        })
-    }
-
-
     handleProgramViewUpdate(errors) {
         const { props } = this;
         
@@ -185,17 +150,6 @@ class App extends React.Component<IAppProps> {
                 tooltip: message 
             })
         })
-    }
-
-
-    // todo: temp solution, rework it;
-    static contentTimeout: NodeJS.Timeout;
-    @autobind
-    handleContentChanges(content: string) {
-        clearTimeout(App.contentTimeout);
-        App.contentTimeout = setTimeout(() => {
-            this.props.actions.setContent(content);
-        }, 500);
     }
 
 
@@ -223,6 +177,7 @@ class App extends React.Component<IAppProps> {
                         <Divider />
                         { state.bc ? (
                             <div>
+                                {/* todo: move memory view inside bytecode view; */}
                                 <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={state.bc.constants.data.layout} />
                                 <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
                             </div>
@@ -240,7 +195,7 @@ class App extends React.Component<IAppProps> {
                     <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
                             filename={ props.sourceFile.filename }
-                            ast={ state.ast }
+                            ast={ props.sourceFile.parseTree }
 
                             onNodeOver={ inst => this.highlightInstruction(inst, true) }
                             onNodeOut={ inst => this.highlightInstruction(inst, false) }
@@ -257,14 +212,8 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Tab.Pane attached={ false } key="ast-view">
                         <ASTView
-                            filename={ props.sourceFile.filename }
-                            parserParams={ props.parserParams }
-                            content={ props.sourceFile.content }
-
                             onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
                             onNodeOut={ idx => this.highlightPNode(idx, null, false) }
-                            onUpdate={ errors => this.handleASTViewUpdate(errors) }
-                            onComplete={ ast => this.setState({ ast }) }
                         />
                     </Tab.Pane>
                 )
@@ -278,9 +227,6 @@ class App extends React.Component<IAppProps> {
                     <Tab.Pane  attached={ false } key="editor" >
                         <SourceEditor
                             name="source-code"
-                            content={ props.sourceFile.content }
-                            onChange={ this.handleContentChanges }
-                            markers={ props.sourceFile.markers }
                             validateBreakpoint={ line => this.validateBreakpoint(line) }
                         />
                     </Tab.Pane>

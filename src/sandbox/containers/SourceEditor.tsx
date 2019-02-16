@@ -1,6 +1,7 @@
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { render } from 'react-dom';
+import { connect } from 'react-redux';
 import injectSheet from 'react-jss'
 import { Label, Popup, Form, Tab, Container, Segment, Grid } from 'semantic-ui-react'
 
@@ -14,6 +15,9 @@ import '../deps/brace/ext/language_tools'; // need for ace autocompletions;
 import { ParserParameters, ASTView, IWithStyles } from '../components';
 import IStoreState, { IParserParams, IFileState, IMarker } from '../store/IStoreState';
 import { IMap } from '../../lib/idl/IMap';
+import { mapActions, sourceCode as sourceActions } from '../actions';
+import { mapProps } from '../reducers';
+import { getSourceCode } from '../reducers/sourceFile';
 
 const AceRange = brace.acequire("ace/range").Range;
 
@@ -36,12 +40,12 @@ export const styles = {
 }
 
 
-export interface ISourceEditorProps extends IWithStyles<typeof styles> {
-    content: string;
+export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
     name?: string,
-    onChange?: (content: string) => void;
-    validateBreakpoint: (line: number) => number;
-    markers: IMap<IMarker>
+    
+    validateBreakpoint: (line: number) => number;// todo: remove it;
+
+    actions: typeof sourceActions;
 }
 
 
@@ -132,20 +136,20 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    get editorSession(): brace.IEditSession {
+    get session(): brace.IEditSession {
         return this.editor.getSession();
     }
 
-    shouldComponentUpdate(nextProps: ISourceEditorProps, nextState) {
-        return this.editor.getValue() != nextProps.content;
-    }
+    // shouldComponentUpdate(nextProps: ISourceEditorProps, nextState) {
+    //     return this.editor.getValue() != nextProps.content;
+    // }
 
     componentDidMount() {
 
     }
 
     componentDidUpdate() {
-        let { editor, props, editorSession } = this;
+        let { editor, props, session } = this;
 
         editor.renderer.setShowGutter(true);
 
@@ -168,15 +172,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             var breakpointsArray = editor.session.getBreakpoints();
             if (!(row in breakpointsArray)) {
                 editor.session.setBreakpoint(props.validateBreakpoint(row), props.classes.breakpoint);
+                props.actions.addBreakpoint(row);
             } else {
                 editor.session.clearBreakpoint(row);
+                props.actions.removeBreakpoint(row);
             }
             e.stop();
-        });
-
-        editorSession.getBreakpoints().forEach(row => {
-            editorSession.clearBreakpoint(row);
-            editorSession.setBreakpoint(props.validateBreakpoint(row), props.classes.breakpoint);
         });
 
         // editor.on('mousemove', e => {
@@ -185,42 +186,42 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         //     console.log(token);
         // });
 
-        // editorSession.selection.on('changeCursor', (e, selection) => {
+        // session.selection.on('changeCursor', (e, selection) => {
         //     var position = selection.getCursor();
         //     var token = editor.session.getTokenAt(position.row, position.column);
         //     console.log(token);
         // });
 
-        // console.log(this.editorSession.getMode());
-        // this.editorSession.getMode().$highlightRules.setFunctionKeywords(['foo', 'bar']) //...
+        // console.log(this.session.getMode());
+        // this.session.getMode().$highlightRules.setFunctionKeywords(['foo', 'bar']) //...
 
         
-        var completions = [
-            { id: 'id1', 'value': 'value1' },
-            { id: 'id2', 'value': 'value2' }
-        ];
+        // var completions = [
+        //     { id: 'id1', 'value': 'value1' },
+        //     { id: 'id2', 'value': 'value2' }
+        // ];
 
-        var autoCompleter = {
-            getCompletions: (editor: brace.Editor, session: brace.IEditSession, pos: brace.Position, prefix, callback) => {
-                console.log(arguments);
-                if (prefix.length === 0) {
-                    callback(null, []);
-                    return;
-                }
-                callback(
-                    null,
-                    completions.map(function (c) {
-                        return { value: c.id, caption: c.value };
-                    })
-                );
-            }
-        };
+        // var autoCompleter = {
+        //     getCompletions: (editor: brace.Editor, session: brace.IEditSession, pos: brace.Position, prefix, callback) => {
+        //         console.log(arguments);
+        //         if (prefix.length === 0) {
+        //             callback(null, []);
+        //             return;
+        //         }
+        //         callback(
+        //             null,
+        //             completions.map(function (c) {
+        //                 return { value: c.id, caption: c.value };
+        //             })
+        //         );
+        //     }
+        // };
 
-        this.editor.setOptions({ 
-            enableBasicAutocompletion: [ autoCompleter ],
-            enableLiveAutocompletion: false,
-            enableSnippets: false
-        });
+        // this.editor.setOptions({ 
+        //     enableBasicAutocompletion: [ autoCompleter ],
+        //     enableLiveAutocompletion: false,
+        //     enableSnippets: false
+        // });
     }
 
     render() {
@@ -244,7 +245,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     theme="github"
                     width="100%"
                     height="calc(100vh - 237px)" // todo: fixme
-                    onChange={ props.onChange }
+                    onChange={ content => props.actions.setContent(content) }
                     fontSize={ 12 }
                     value={ props.content || '' }
                     markers={ this.setupMarkers() as any }
@@ -258,4 +259,4 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 }
 
-export default SourceEditor;
+export default connect<{}, {}, ISourceEditorProps>(mapProps(getSourceCode), mapActions(sourceActions))(SourceEditor) as any;

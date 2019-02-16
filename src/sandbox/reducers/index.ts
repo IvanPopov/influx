@@ -4,16 +4,16 @@ import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
 import parserParams, * as fromParserParams from './parserParams';
 import sourceFile from './sourceFile';
 
-export default combineReducers<IStoreState>({ sourceFile, parserParams });
-
 /**
  * selectors
  */
 
+// most common selector;
 export const getCommon = (state: IStoreState): IStoreState => state;
 
-// todo: use ReturnType for better readability.
-export type ReturnType<T> = any;//T extends (...args: any[]) => infer R ? R : T;
+// helper function in order to get proper props from state using custom selector;
 export function mapProps<T extends { (state: IStoreState): any; }>(selector: T): (state: IStoreState) => ReturnType<T> {
     return (state) => selector(state);
 }
+
+export default combineReducers<IStoreState>({ sourceFile, parserParams });

@@ -40,6 +40,7 @@
     "redux-devtools-extension": "^2.13.7",
     "redux-immutable-state-invariant": "^2.1.0",
     "redux-logger": "^3.0.6",
+    "redux-logic": "^2.1.1",
     "redux-thunk": "^2.3.0",
     "semantic-ui-less": "^2.4.1",
     "semantic-ui-react": "^0.84.0",
@@ -51,6 +52,5 @@
     "preinstall": "npm install -g grunt-cli",
     "start": "electron ./build/sandbox/shell.js"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }

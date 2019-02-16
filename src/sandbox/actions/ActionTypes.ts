@@ -1,4 +1,4 @@
-import { EParseMode, EParserType, IRange } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserType, IRange, IParseTree } from '../../lib/idl/parser/IParser';
 import * as evt from './ActionTypeKeys';
 import { IMarker } from '../store/IStoreState';
 
@@ -17,6 +17,7 @@ export type ISourceFileRequest          = IAction<typeof evt.SOURCE_FILE_REQUEST
 export type ISourceFileLoaded           = IAction<typeof evt.SOURCE_FILE_LOADED, { content: string }>;
 export type ISourceFileLoadingFailed    = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
 export type ISourceCodeModified         = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
+export type ISourceCodeAstCreated       = IAction<typeof evt.SOURCE_CODE_PARSE_TREE_CHANGED, { parseTree: IParseTree }>;
 
 
 export interface IMarkerDesc extends IMarker {
@@ -25,10 +26,13 @@ export interface IMarkerDesc extends IMarker {
 
 export type ISourceCodeAddMarker        = IAction<typeof evt.SOURCE_CODE_ADD_MARKER, IMarkerDesc>;
 export type ISourceCodeRemoveMarker     = IAction<typeof evt.SOURCE_CODE_REMOVE_MARKER, { name: string }>;
+export type ISourceCodeAddBreakpoint    = IAction<typeof evt.SOURCE_CODE_ADD_BREAKPOINT, { line: number }>;
+export type ISourceCodeRemoveBreakpoint    = IAction<typeof evt.SOURCE_CODE_REMOVE_BREAKPOINT, { line: number }>;
 
 export type ISourceFileActions = 
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | 
-    ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker;
+    ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker | 
+    ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeAstCreated;
 
 //
 // grammar api (simplified)
