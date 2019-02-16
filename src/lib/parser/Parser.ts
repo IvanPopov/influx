@@ -335,6 +335,8 @@ export class Parser implements IParser {
                     breakProcessing = true;
                 }
             }
+            
+            tree.finishTree();
 
             if (errorFound) {
                 if (token.value == END_SYMBOL) {
@@ -346,7 +348,6 @@ export class Parser implements IParser {
                 return EParserCode.k_Error;
             };
 
-            tree.finishTree();
         } catch (e) {
             if (e instanceof DiagnosticException) {
                 return EParserCode.k_Error;
@@ -588,20 +589,20 @@ export class Parser implements IParser {
     }
 
 
-    private pushInSyntaxTable(iIndex: number, symbolVal: string, operation: IOperation): void {
+    private pushInSyntaxTable(idx: number, symbolVal: string, operation: IOperation): void {
         var syntaxTable: IOperationDMap = this._syntaxTable;
-        if (!syntaxTable[iIndex]) {
-            syntaxTable[iIndex] = <IOperationMap>{};
+        if (!syntaxTable[idx]) {
+            syntaxTable[idx] = <IOperationMap>{};
         }
-        if (isDef(syntaxTable[iIndex][symbolVal])) {
+        if (isDef(syntaxTable[idx][symbolVal])) {
             this.grammarError(EParserErrors.GrammarAddOperation, {
-                stateIndex: iIndex,
+                stateIndex: idx,
                 grammarSymbol: this.convertGrammarSymbol(symbolVal),
-                oldOperation: this._syntaxTable[iIndex][symbolVal],
+                oldOperation: this._syntaxTable[idx][symbolVal],
                 newOperation: operation
             });
         }
-        syntaxTable[iIndex][symbolVal] = operation;
+        syntaxTable[idx][symbolVal] = operation;
     }
 
 
@@ -1539,12 +1540,13 @@ export class Parser implements IParser {
                 }
             }
 
+            tree.finishTree();
+
             if (errorFound) {
                 this.syntaxError(EParserErrors.SyntaxUnknownError, token);
                 return EParserCode.k_Error;
             }
 
-            tree.finishTree();
         }
         catch (e) {
             if (e instanceof DiagnosticException) {

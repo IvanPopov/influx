@@ -37,8 +37,17 @@ export const styles = {
         padding: '10px !important',
         background: 'rgba(255,255,255,0.95) !important'
     },
-    checkboxTiny: {
-        // transform: 'scale(.75)'
+    containerMarginFix: {
+        border: '0px !important',
+        padding: '0 !important'
+    },
+    topMenuFix: { 
+        '& > div:first-child': {
+            marginBottom: '0', 
+            position: 'relative', 
+            zIndex: '10', 
+            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important' 
+        }
     }
 }
 
@@ -62,12 +71,12 @@ class App extends React.Component<IAppProps> {
 
     constructor(props) {
         super(props);
-        this.state = { 
-            ast: null, 
-            root: null, 
+        this.state = {
+            ast: null,
+            root: null,
             bc: null,
-            showFileBrowser: false, 
-            autocompile: false 
+            showFileBrowser: false,
+            autocompile: false
         };
     }
 
@@ -124,7 +133,7 @@ class App extends React.Component<IAppProps> {
                 name: `ast-range-${id}`,
                 range: pnode.loc,
                 type: 'marker'
-            }) 
+            })
         } else {
             this.props.actions.removeMarker(`ast-range-${id}`);
         }
@@ -133,7 +142,7 @@ class App extends React.Component<IAppProps> {
 
     handleProgramViewUpdate(errors) {
         const { props } = this;
-        
+
         for (let markerName in props.sourceFile.markers) {
             if (markerName.startsWith('compiler-error-')) {
                 props.actions.removeMarker(markerName);
@@ -143,11 +152,11 @@ class App extends React.Component<IAppProps> {
         // todo: add support for multiple errors on the same lines;
         errors.forEach(err => {
             let { loc, message } = err;
-            this.props.actions.addMarker({ 
-                name: `compiler-error-${message}`, 
-                range: loc, 
-                type: 'error', 
-                tooltip: message 
+            this.props.actions.addMarker({
+                name: `compiler-error-${message}`,
+                range: loc,
+                type: 'error',
+                tooltip: message
             })
         })
     }
@@ -173,24 +182,24 @@ class App extends React.Component<IAppProps> {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
-                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setAutocompile(data.checked) } className={props.classes.checkboxTiny}/>
+                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setAutocompile(data.checked) } />
                         <Divider />
                         { state.bc ? (
                             <div>
-                                {/* todo: move memory view inside bytecode view; */}
-                                <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={state.bc.constants.data.layout} />
+                                {/* todo: move memory view inside bytecode view; */ }
+                                <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={ state.bc.constants.data.layout } />
                                 <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
                             </div>
                         ) : (
-                            <Container textAlign="center">
-                                <Button onClick={ () => this.compile() }>Compile</Button>
-                            </Container>
-                        ) } 
+                                <Container textAlign="center">
+                                    <Button onClick={ () => this.compile() }>Compile</Button>
+                                </Container>
+                            ) }
                     </Tab.Pane>
                 )
             },
             {
-                menuItem: (<Menu.Item>semantics<br/>analyzer</Menu.Item>),
+                menuItem: (<Menu.Item>semantics<br />analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
@@ -202,13 +211,13 @@ class App extends React.Component<IAppProps> {
                             onNodeClick={ inst => { } }
 
                             onUpdate={ errors => this.handleProgramViewUpdate(errors) }
-                            onComplete= { (root) => { this.setProgram(root); } }
+                            onComplete={ (root) => { this.setProgram(root); } }
                         />
                     </Tab.Pane>
                 )
             },
             {
-                menuItem: (<Menu.Item>syntax<br/>analyzer</Menu.Item>),
+                menuItem: (<Menu.Item>syntax<br />analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="ast-view">
                         <ASTView
@@ -220,40 +229,26 @@ class App extends React.Component<IAppProps> {
             }
         ];
 
-        const sourceViewFork = [
-            {
-                menuItem: <Menu.Item>Editor</Menu.Item>,
-                render: () => (
-                    <Tab.Pane  attached={ false } key="editor" >
-                        <SourceEditor
-                            name="source-code"
-                            validateBreakpoint={ line => this.validateBreakpoint(line) }
-                        />
-                    </Tab.Pane>
-                )
-            },
-            {
-                menuItem: <Menu.Item>Debugger<br/>view</Menu.Item>,
-                render: () => (
-                    <Tab.Pane  attached={ false } key="debugger" >
-                        <div>todo...</div>
-                    </Tab.Pane>
-                )
-            }
-        ]
-
         const panes = [
             {
                 menuItem: 'Source File',
                 pane: (
-                    <Tab.Pane key="source" className={ props.classes.mainViewHeightHotfix }>
+                    <Tab.Pane key="source" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
+                        // fixme: remove style from line below;
+                        // as={ ({ ...props }) => <Container fluid { ...props } /> }
+                        >
                         <Grid divided={ false }>
                             <Grid.Row columns={ 3 }>
-                                <Grid.Column computer="10" tablet="8" mobile="6">
-                                    <Tab menu={ { secondary: true, size: 'mini' } } panes={ sourceViewFork } />
+                                <Grid.Column computer="10" tablet="8" mobile="6" >
+                                    <SourceEditor
+                                        name="source-code"
+                                        validateBreakpoint={ line => this.validateBreakpoint(line) }
+                                    />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
-                                    <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                    <Container style={ { paddingTop: '15px' } }>
+                                        <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                    </Container>
                                 </Grid.Column>
                             </Grid.Row>
                         </Grid>
@@ -281,17 +276,18 @@ class App extends React.Component<IAppProps> {
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarHotfix }
                     >
-                        <FileListView path="./assets"  filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } }/>
+                        <FileListView path="./assets" filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
-                        <Container>
-                            <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ false } />
-                        </Container>
+                    {/* <Container> */}
+                        <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ false } 
+                            className={ props.classes.topMenuFix } />
+                            {/* </Container> */}
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
-                
+
                 <Menu vertical icon='labeled' inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
-                    <Menu.Item name='home' onClick={this.handleShowFileBrowser} >
+                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
                         <Icon name={ 'three bars' as UnknownIcon } />
                         File Browser
                     </Menu.Item>

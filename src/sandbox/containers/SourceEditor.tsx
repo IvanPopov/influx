@@ -230,21 +230,21 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
         return (
             <div>
-                <Form>
+                {/* <Form>
                     <Form.Group inline>
                         <Form.Checkbox label='Show whitespaces' value='sm'
                             checked={ showWhitespaces }
                             onChange={ (e, { checked }) => { this.setState({ showWhitespaces: checked }) } }
                         />
                     </Form.Group>
-                </Form>
+                </Form> */}
                 <AceEditor
                     ref="aceEditor"
                     name={ props.name }
                     mode="c_cpp"
                     theme="github"
                     width="100%"
-                    height="calc(100vh - 237px)" // todo: fixme
+                    height="calc(100vh - 41px)" // todo: fixme
                     onChange={ content => props.actions.setContent(content) }
                     fontSize={ 12 }
                     value={ props.content || '' }

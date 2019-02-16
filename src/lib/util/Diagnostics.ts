@@ -218,7 +218,12 @@ export class Diagnostics <DESC_T>{
 
         if (!range.end) {
             range.end = { ...range.start };
-            range.end.column += 1;
+        }
+
+        const { start, end } = range;
+
+        if (end.line == start.line && end.column == start.column) {
+            end.column +=1;
         }
 
         return range;

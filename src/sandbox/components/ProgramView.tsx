@@ -500,6 +500,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     StmtBlock(instr: IStmtBlockInstruction) {
+        if (isNull(instr)) {
+            return null;
+        }
         return (
             <Property { ...this.bindProps(instr, true) }>
                 { instr.stmtList.map(stmt => this.Stmt(stmt)) }

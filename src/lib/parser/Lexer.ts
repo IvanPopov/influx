@@ -125,7 +125,7 @@ export class Lexer implements ILexer {
                 value: END_SYMBOL,
                 loc: {
                     start: pos,
-                    end: pos
+                    end: { ...pos }
                 }
             };
         }

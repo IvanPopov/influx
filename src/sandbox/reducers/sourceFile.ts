@@ -3,7 +3,7 @@ import { ISourceFileActions, ISourceFileRequest, ISourceFileLoadingFailed,
          ISourceCodeRemoveMarker, ISourceCodeAddBreakpoint, ISourceCodeRemoveBreakpoint } from '../actions/ActionTypes';
 import { SOURCE_FILE_REQUEST, SOURCE_FILE_LOADED, 
          SOURCE_FILE_LOADING_FAILED, SOURCE_CODE_MODIFED, 
-         SOURCE_CODE_ADD_MARKER, SOURCE_CODE_REMOVE_MARKER, SOURCE_CODE_CLEANUP_MARKERS, 
+         SOURCE_CODE_ADD_MARKER, SOURCE_CODE_REMOVE_MARKER, 
          SOURCE_CODE_ADD_BREAKPOINT, SOURCE_CODE_REMOVE_BREAKPOINT, SOURCE_CODE_PARSE_TREE_CHANGED } from '../actions/ActionTypeKeys';
 import { IFileState, IStoreState } from '../store/IStoreState';
 import { handleActions } from "./handleActions";
@@ -47,10 +47,6 @@ export default handleActions<IFileState, ISourceFileActions>({
             let markers = { ...state.markers };
             delete markers[action.payload.name];
             return { ...state, markers };
-    },
-
-    [ SOURCE_CODE_CLEANUP_MARKERS ]: (state, action?) => {
-        return { ...state, markers: {} };
     },
 
     //

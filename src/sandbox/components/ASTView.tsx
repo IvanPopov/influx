@@ -31,6 +31,69 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         };
     }
 
+    /*
+
+    render() {
+        // const { state: { parseTree } } = this;
+        const parseTree = this.props.sourceFile.parseTree;
+
+        const style = {
+            height: 'calc(100vh - 205px)',
+            overflowY: 'auto',
+            whiteSpace: 'pre',
+            fontFamily: 'Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace',
+            fontSize: '12px',
+            lineHeight: 'normal',
+            cursor: 'pointer'
+        };
+
+        return (
+            <div style={ style as any }>
+                { this.renderASTNode(parseTree ? parseTree.getRoot() : null) }
+            </div>
+        );
+    }
+
+    private renderASTNode(node: IParseNode, idx = '0') {
+        if (!node) {
+            return null;
+        }
+        const { nodeStats } = this.state;
+        const forceShow = idx.split('.').length < 2;
+        const show = forceShow || (nodeStats[idx] || { opened: false, selected: false }).opened;
+        const selected = (nodeStats[idx] || { opened: false, selected: false }).selected;
+
+        let depth = idx.split('.').length;
+        let pad = '';
+        for (let i = 0; i < depth; ++ i) {
+            pad += '  ';
+        }
+
+        if (node.value) {
+            return (
+                <div key={ idx }
+                    onClick={ this.handleNodeClick.bind(this, idx, node) }
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
+                    onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
+                >  { pad }<span style={ { fontWeight: 'bold' } }>{ node.name }</span>: { node.value }</div>
+            );
+        }
+        else {
+            let children = null;
+            if (show) {
+                children = node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse();
+            }
+            return (
+                <div key={ idx }
+                    onClick={ this.handleNodeClick.bind(this, idx, node) }
+                    onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
+                    onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
+                >{ pad }<span style={ { fontWeight: 'bold' } }>{ show ? `- ` : `+ ` }{ node.name }&nbsp;<a style={ { display: selected ? 'inline' : 'none' } } onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a></span>{ children }</div>
+            );
+        }
+    }
+    */
+
     render() {
         // const { state: { parseTree } } = this;
         const parseTree = this.props.sourceFile.parseTree;

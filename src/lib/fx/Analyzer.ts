@@ -2280,7 +2280,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         }
     }
 
-    if (!hasVoidType && !context.haveCurrentFunctionReturnOccur) {
+    if (!hasVoidType && !context.haveCurrentFunctionReturnOccur && !isNull(implementation)) {
         context.error(sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: definition.name });
     }
 
