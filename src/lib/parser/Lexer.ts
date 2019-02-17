@@ -1,8 +1,7 @@
-import { IMap } from '../idl/IMap';
-import { ETokenType, ILexer, IToken, IPosition, IRange, IFile } from '../idl/parser/IParser';
+import { IMap } from '@lib/idl/IMap';
+import { ETokenType, IFile, ILexer, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
+import { Diagnostics, IDiagnosticReport } from '@lib/util/Diagnostics';
 import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
-import { Diagnostics, IDiagnosticReport } from '../util/Diagnostics';
-import { StringRef } from 'lib/util/StringRef';
 
 
 interface ILexerDiagDesc {

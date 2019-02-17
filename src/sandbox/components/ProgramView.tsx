@@ -1,25 +1,24 @@
+import { isArray, isDefAndNotNull, isFunction, isNull } from '@lib/common';
+import { analyze } from '@lib/fx/Analyzer';
+import { ArithmeticExprInstruction } from '@lib/fx/instructions/ArithmeticExprInstruction';
+import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
+import { ComplexTypeInstruction } from '@lib/fx/instructions/ComplexTypeInstruction';
+import { DeclStmtInstruction } from '@lib/fx/instructions/DeclStmtInstruction';
+import { ExprStmtInstruction } from '@lib/fx/instructions/ExprStmtInstruction';
+import { FloatInstruction } from '@lib/fx/instructions/FloatInstruction';
+import { ForStmtInstruction } from '@lib/fx/instructions/ForStmtInstruction';
+import { IntInstruction } from '@lib/fx/instructions/IntInstruction';
+import { PostfixArithmeticInstruction } from '@lib/fx/instructions/PostfixArithmeticInstruction';
+import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
+import { SemicolonStmtInstruction } from '@lib/fx/instructions/SemicolonStmtInstruction';
+import { StringInstruction } from '@lib/fx/instructions/StringInstruction';
+import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
+import { EInstructionTypes, IAssignmentExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IPassInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { IMap } from '@lib/idl/IMap';
+import { IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { Diagnostics } from '@lib/util/Diagnostics';
 import * as React from 'react';
-import { List, Message, Icon, Popup, Button } from 'semantic-ui-react';
-import { isArray, isFunction } from '../../lib/common';
-import { isDefAndNotNull, isNull } from '../../lib/common';
-import { analyze } from '../../lib/fx/Analyzer';
-import { ComplexTypeInstruction } from '../../lib/fx/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IIdExprInstruction, IInstruction, IInstructionCollector, IVariableDeclInstruction, ITechniqueInstruction, IPassInstruction, IProvideInstruction, ITypeDeclInstruction, IVariableTypeInstruction, IInitExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IStmtInstruction, IScope, IStmtBlockInstruction, IDeclInstruction, IAssignmentExprInstruction } from '../../lib/idl/IInstruction';
-import { IMap } from '../../lib/idl/IMap';
-import { IParseTree, IRange } from '../../lib/idl/parser/IParser';
-import { SystemTypeInstruction } from '../../lib/fx/instructions/SystemTypeInstruction';
-import { Diagnostics } from '../../lib/util/Diagnostics';
-import { DeclStmtInstruction } from '../../lib/fx/instructions/DeclStmtInstruction';
-import { ReturnStmtInstruction } from '../../lib/fx/instructions/ReturnStmtInstruction';
-import { ExprStmtInstruction } from 'lib/fx/instructions/ExprStmtInstruction';
-import { IntInstruction } from 'lib/fx/instructions/IntInstruction';
-import { PostfixArithmeticInstruction } from 'lib/fx/instructions/PostfixArithmeticInstruction';
-import { ArithmeticExprInstruction } from 'lib/fx/instructions/ArithmeticExprInstruction';
-import { FloatInstruction } from 'lib/fx/instructions/FloatInstruction';
-import { BoolInstruction } from 'lib/fx/instructions/BoolInstruction';
-import { StringInstruction } from 'lib/fx/instructions/StringInstruction';
-import { ForStmtInstruction } from 'lib/fx/instructions/ForStmtInstruction';
-import { SemicolonStmtInstruction } from 'lib/fx/instructions/SemicolonStmtInstruction';
+import { Icon, List, Message } from 'semantic-ui-react';
 
 
 

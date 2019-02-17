@@ -12,7 +12,7 @@
     "allowSyntheticDefaultImports": false,
     "allowUnreachableCode": true,
     "allowUnusedLabels": false,
-    "baseUrl": "src/",
+    "baseUrl": "src",
     "alwaysStrict": true,
     "declaration": true,
     "experimentalDecorators": true,
@@ -24,17 +24,28 @@
     "noImplicitReturns": true,
     "outDir": "build",
     "preserveConstEnums": false,
-    "pretty": false,
-    "removeComments": true,
-    "rootDir": "src/",
-    "rootDirs": [
-      "src/"
-    ],
-    "sourceMap": true,
+    "pretty": true,
+    "removeComments": false,
+    "rootDir": "src",
+    "paths": {
+      "@sandbox/*": [
+        "sandbox/*"
+      ],
+      "@lib/*": [
+        "lib/*"
+      ]
+    },
+    // "sourceMap": true,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "moduleResolution": "node",
     "strict": false
   },
   "files": [
-    "src/sandbox/shell.ts",
+    "src/shell.ts",
     "src/sandbox/index.tsx"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

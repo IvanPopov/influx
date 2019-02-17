@@ -1,10 +1,9 @@
 
+import { EffectParser } from '@lib/fx/EffectParser';
+import { Diagnostics } from '@lib/util/Diagnostics';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import IStoreState, { IParserParams } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
-import { IParser, EParserCode, IParseTree } from '../../lib/idl/parser/IParser';
-import { EffectParser } from '../../lib/fx/EffectParser';
-import { Diagnostics } from '../../lib/util/Diagnostics';
-import * as evt from '../actions/ActionTypeKeys';
 
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);

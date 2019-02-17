@@ -1,11 +1,10 @@
-import * as fs from 'fs';
-import { Dispatch } from 'redux';
-
-import { EParseMode, EParserType, IRange, IParseTree } from '../../lib/idl/parser/IParser';
+import { EParserType } from '@lib/idl/parser/IParser';
+import IStoreState from '@sandbox/store/IStoreState';
+import { bindActionCreators, Dispatch } from 'redux';
 import * as evt from './ActionTypeKeys';
-import IStoreState from '../store/IStoreState';
-import { bindActionCreators } from 'redux';
 import { IMarkerDesc } from './ActionTypes';
+
+
 
 export type IDispatch = Dispatch<any>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;

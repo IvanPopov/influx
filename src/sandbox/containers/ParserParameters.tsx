@@ -1,21 +1,20 @@
+import * as bf from '@lib/bf/bf';
+import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
+import { mapActions, parser as parserActions } from '@sandbox/actions';
+import '@sandbox/deps/brace';
+import '@sandbox/deps/brace/mode/sh';
+import '@sandbox/deps/brace/theme/github';
+import AceEditor from '@sandbox/deps/react-ace';
+import { mapProps } from '@sandbox/reducers';
+import { getParser } from '@sandbox/reducers/parserParams';
+import { IParserParams } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
+import { Form, Grid, Segment } from 'semantic-ui-react';
 
-import * as bf from '../../lib/bf/bf';
-import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { parser as parserActions, IDispatch, mapActions } from '../actions';
-import { mapProps } from '../reducers';
-import { getParser } from '../reducers/parserParams'
-import { IStoreState, IParserParams } from '../store/IStoreState';
 
-import { Form, Segment, Grid } from 'semantic-ui-react'
 
-// import from submodules
-import AceEditor from '../deps/react-ace';
-import '../deps/brace';
-import '../deps/brace/mode/sh';
-import '../deps/brace/theme/github';
 
 
 const setFlags = (dest: number, src: number, value: boolean) => {

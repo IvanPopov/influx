@@ -1,23 +1,20 @@
+import { isNull } from '@lib/common';
+import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import { cdlview } from '@lib/fx/bytecode/DebugLayout';
+import { IInstruction, IInstructionCollector } from '@lib/idl/IInstruction';
+import { IParseNode, IParseTree } from '@lib/idl/parser/IParser';
+import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
+import { BytecodeView, ParserParameters, SourceEditor } from '@sandbox/containers';
+import { getCommon, mapProps } from '@sandbox/reducers';
+import IStoreState from '@sandbox/store/IStoreState';
 import * as React from 'react';
-import { render } from 'react-dom';
+import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Sidebar, Icon, Menu, Tab, Container, Segment, Grid, Table, Button, Divider, Checkbox } from 'semantic-ui-react'
-import injectSheet from 'react-jss'
+import { Button, Checkbox, Container, Divider, Grid, Icon, Menu, Segment, Sidebar, Tab } from 'semantic-ui-react';
 
 
-import { ParserParameters, ASTView, ProgramView, SourceEditor, IWithStyles, FileListView, MemoryView, BytecodeView } from '../components';
-import { getCommon, mapProps } from '../reducers';
-import IStoreState from '../store/IStoreState';
-import { IDispatch, sourceCode as sourceActions, mapActions } from '../actions';
-import { IParseTree, IParseNode } from '../../lib/idl/parser/IParser';
-import { IInstruction, IScope, IFunctionDeclInstruction, IInstructionCollector } from '../../lib/idl/IInstruction';
-import { analyze as analyzeFlow } from '../../lib/fx/CodeFlow'
-import { isDefAndNotNull, isNull } from '../../lib/common';
 
-import * as Bytecode from '../../lib/fx/bytecode/Bytecode';
-import * as VM from '../../lib/fx/bytecode/VM';
-import { cdlview } from '../../lib/fx/bytecode/DebugLayout';
-import autobind from 'autobind-decorator';
 
 process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
@@ -45,7 +42,7 @@ export const styles = {
         '& > div:first-child': {
             marginBottom: '0', 
             position: 'relative', 
-            zIndex: '10', 
+            zIndex: '1', 
             boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important' 
         }
     }

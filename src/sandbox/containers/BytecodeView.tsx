@@ -1,19 +1,15 @@
+import { EChunkType } from '@lib/fx/bytecode/Bytecode';
+import { CdlRaw, cdlview } from '@lib/fx/bytecode/DebugLayout';
+import VM from '@lib/fx/bytecode/VM';
+import { EOperation } from '@lib/idl/bytecode/EOperations';
+import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { mapProps } from '@sandbox/reducers';
+import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
-import injectSheet from 'react-jss'
 import { connect } from 'react-redux';
+import { Button, Icon, Table } from 'semantic-ui-react';
 
-import { Table, Button, Icon } from 'semantic-ui-react'
-import { IWithStyles } from '../components';
-
-import { EOperation } from '../../lib/idl/bytecode/EOperations';
-import VM from '../../lib/fx/bytecode/VM';
-import { EChunkType } from '../../lib/fx/bytecode/Bytecode';
-import { CdlRaw, cdlview } from '../../lib/fx/bytecode/DebugLayout';
-
-import { mapActions, sourceCode as sourceActions } from '../actions';
-import { mapProps } from '../reducers';
-import { getSourceCode } from '../reducers/sourceFile';
-import { IFileState } from 'sandbox/store/IStoreState';
 
 export interface IBytecodeViewProps extends IFileState {
     code: Uint8Array;

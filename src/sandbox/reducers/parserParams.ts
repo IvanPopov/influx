@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import { handleActions } from "./handleActions";
-import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, GRAMMAR_CONTENT_SPECIFIED } from '../actions/ActionTypeKeys';
-import { IGrammarFileSpecified, IParserParamsActions, IGrammarContentSpecified, IParserParamsChanged } from '../actions/ActionTypes';
-import { IParserParams, IStoreState } from '../store/IStoreState';
+import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
+import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, GRAMMAR_CONTENT_SPECIFIED } from '@sandbox/actions/ActionTypeKeys';
+import { IGrammarFileSpecified, IParserParamsActions, IGrammarContentSpecified, IParserParamsChanged } from '@sandbox/actions/ActionTypes';
+import { IParserParams, IStoreState } from '@sandbox/store/IStoreState';
 
 
 const initialState: IParserParams = {

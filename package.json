@@ -50,7 +50,14 @@
   },
   "scripts": {
     "preinstall": "npm install -g grunt-cli",
-    "start": "electron ./build/sandbox/shell.js"
+    "start": "electron ./build/shell.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "module-alias": "^2.2.0"
+  },
+
+  "_moduleAliases": {
+    "@lib": "./build/lib",
+    "@sandbox": "./build/sandbox"
+  }
 }

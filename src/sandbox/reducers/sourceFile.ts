@@ -1,13 +1,8 @@
-import { ISourceFileActions, ISourceFileRequest, ISourceFileLoadingFailed, 
-         ISourceCodeAstCreated as ISourceCodeParseTreeChanged, ISourceCodeModified, ISourceCodeAddMarker, ISourceFileLoaded, 
-         ISourceCodeRemoveMarker, ISourceCodeAddBreakpoint, ISourceCodeRemoveBreakpoint } from '../actions/ActionTypes';
-import { SOURCE_FILE_REQUEST, SOURCE_FILE_LOADED, 
-         SOURCE_FILE_LOADING_FAILED, SOURCE_CODE_MODIFED, 
-         SOURCE_CODE_ADD_MARKER, SOURCE_CODE_REMOVE_MARKER, 
-         SOURCE_CODE_ADD_BREAKPOINT, SOURCE_CODE_REMOVE_BREAKPOINT, SOURCE_CODE_PARSE_TREE_CHANGED } from '../actions/ActionTypeKeys';
-import { IFileState, IStoreState } from '../store/IStoreState';
+import { assert } from '@lib/common';
+import { SOURCE_CODE_ADD_BREAKPOINT, SOURCE_CODE_ADD_MARKER, SOURCE_CODE_MODIFED, SOURCE_CODE_PARSE_TREE_CHANGED, SOURCE_CODE_REMOVE_BREAKPOINT, SOURCE_CODE_REMOVE_MARKER, SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST } from '@sandbox/actions/ActionTypeKeys';
+import { ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAstCreated as ISourceCodeParseTreeChanged, ISourceCodeModified, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IFileState, IStoreState } from '@sandbox/store/IStoreState';
 import { handleActions } from "./handleActions";
-import { assert } from '../../lib/common';
 
 
 const initialState: IFileState = {

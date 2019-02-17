@@ -1,3 +1,8 @@
+// path mapping from package.json
+// path remapping from package.json
+import 'module-alias/register';
+
+
 import * as reactDevTools from 'electron-react-devtools';
 reactDevTools.install();
 
@@ -8,11 +13,12 @@ import thunk from 'redux-thunk';
 import { createLogger } from 'redux-logger';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { applyMiddleware, createStore, Middleware } from 'redux';
-import { parser, sourceCode } from './actions';
-import { App } from './containers';
-import reducer from './reducers';
-import logic from './logic';
-import IStoreState from './store/IStoreState';
+
+import { parser, sourceCode } from '@sandbox/actions';
+import { App } from '@sandbox/containers';
+import reducer from '@sandbox/reducers';
+import logic from '@sandbox/logic';
+import IStoreState from '@sandbox/store/IStoreState';
 
 const logger = createLogger({
   collapsed: true,

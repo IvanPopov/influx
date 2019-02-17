@@ -6,11 +6,18 @@ module.exports = function (grunt) {
     grunt.initConfig({
         ts: {
             debug: { 
-                tsconfig: 'tsconfig.json'
+                tsconfig: {
+                    passThrough: true
+                },
+                // options: {
+                //     verbose: true
+                // }
             },
             live: {
                 watch: `${sandbox}`,
-                tsconfig: 'tsconfig.json'
+                tsconfig: {
+                    passThrough: true
+                }
             }
         },
         clean: {

@@ -1,6 +1,6 @@
-import { EParseMode, EParserType, IRange, IParseTree } from '../../lib/idl/parser/IParser';
+import { EParseMode, EParserType, IRange, IParseTree } from '@lib/idl/parser/IParser';
 import * as evt from './ActionTypeKeys';
-import { IMarker } from '../store/IStoreState';
+import { IMarker } from '@sandbox/store/IStoreState';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;

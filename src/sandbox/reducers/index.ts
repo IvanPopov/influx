@@ -1,7 +1,6 @@
-import { AnyAction, combineReducers } from 'redux';
-import { EParseMode, EParserType } from '../../lib/idl/parser/IParser';
-import IStoreState, { IParserParams, IFileState } from '../store/IStoreState';
-import parserParams, * as fromParserParams from './parserParams';
+import IStoreState from '@sandbox/store/IStoreState';
+import { combineReducers } from 'redux';
+import parserParams from './parserParams';
 import sourceFile from './sourceFile';
 
 /**

@@ -1,23 +1,20 @@
-import autobind from 'autobind-decorator';
+import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { IWithStyles } from '@sandbox/components';
+import * as brace from '@sandbox/deps/brace';
+import '@sandbox/deps/brace/ext/language_tools'; // need for ace autocompletions;
+import '@sandbox/deps/brace/mode/c_cpp';
+import '@sandbox/deps/brace/theme/github';
+import AceEditor, { Marker } from '@sandbox/deps/react-ace';
+import { mapProps } from '@sandbox/reducers';
+import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { render } from 'react-dom';
+import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import injectSheet from 'react-jss'
-import { Label, Popup, Form, Tab, Container, Segment, Grid } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react';
 
-// import from submodules
-import AceEditor, { Marker, Annotation } from '../deps/react-ace';
-import * as brace from '../deps/brace';
-import '../deps/brace/mode/c_cpp';
-import '../deps/brace/theme/github';
-import '../deps/brace/ext/language_tools'; // need for ace autocompletions;
 
-import { ParserParameters, ASTView, IWithStyles } from '../components';
-import IStoreState, { IParserParams, IFileState, IMarker } from '../store/IStoreState';
-import { IMap } from '../../lib/idl/IMap';
-import { mapActions, sourceCode as sourceActions } from '../actions';
-import { mapProps } from '../reducers';
-import { getSourceCode } from '../reducers/sourceFile';
 
 const AceRange = brace.acequire("ace/range").Range;
 

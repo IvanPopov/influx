@@ -1,8 +1,8 @@
 import * as React from 'react';
-import injectSheet from 'react-jss'
-
-import { Table } from 'semantic-ui-react'
+import injectSheet from 'react-jss';
+import { Table } from 'semantic-ui-react';
 import { IWithStyles } from './';
+
 
 export const styles = {
     memoryVal: {

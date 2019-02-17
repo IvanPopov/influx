@@ -1,6 +1,5 @@
-import { EParserType, IRange, IParseTree } from '../../lib/idl/parser/IParser';
-import { IMap } from '../../lib/idl/IMap';
-import { AnyAction } from 'redux';
+import { IMap } from '@lib/idl/IMap';
+import { EParserType, IParseTree, IRange } from '@lib/idl/parser/IParser';
 
 export interface IMarker {
     range: IRange;

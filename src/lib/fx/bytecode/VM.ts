@@ -1,9 +1,8 @@
-import { EChunkType, REG_RAX } from "./Bytecode";
-import { EOperation } from "../../idl/bytecode/EOperations";
-import { assert, isDefAndNotNull, isDef } from "./../../common";
+import { assert, isDefAndNotNull } from "@lib/common";
+import { EOperation } from "@lib/idl/bytecode/EOperations";
+import { IMap } from "@lib/idl/IMap";
 import { remote } from 'electron';
-import { IMap } from "lib/idl/IMap";
-import { isNull } from "util";
+import { EChunkType, REG_RAX } from "./Bytecode";
 
 
 type Chunk = Uint8Array;

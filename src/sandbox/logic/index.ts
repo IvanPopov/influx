@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
-import * as evt from '../actions/ActionTypeKeys';
-import { ISourceFileRequest } from '../actions/ActionTypes';
-import IStoreState from '../store/IStoreState';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import IStoreState from '@sandbox/store/IStoreState';
 import parsing from './parsing'
 
 

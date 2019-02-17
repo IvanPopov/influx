@@ -1,16 +1,11 @@
-import autobind from 'autobind-decorator';
+import { IMap } from '@lib/idl/IMap';
+import { IParseNode } from '@lib/idl/parser/IParser';
+import { getCommon, mapProps } from '@sandbox/reducers';
+import IStoreState from '@sandbox/store/IStoreState';
+import * as copy from 'copy-to-clipboard';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import * as copy from 'copy-to-clipboard';
-
-import { EffectParser } from '../../lib/fx/EffectParser';
-import { EParserCode, IParseTree, IParseNode, IRange } from '../../lib/idl/parser/IParser';
-import { List } from 'semantic-ui-react'
-import { IMap } from '../../lib/idl/IMap';
-
-import IStoreState from '../store/IStoreState';
-import { Diagnostics } from '../../lib/util/Diagnostics';
-import { mapProps, getCommon } from '../reducers';
+import { List } from 'semantic-ui-react';
 
 
 
