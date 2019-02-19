@@ -5,6 +5,7 @@
     ],
     "jsRules": {},
     "rules": {
+        "no-null-keyword": false,
         "no-bitwise": false,
         "linebreak-style": false,
         "missing-jsdoc": false,
@@ -15,7 +16,7 @@
             "parameter",
             "member-variable-declaration",
             "property-declaration",
-            "variable-declaration"
+            // "variable-declaration",
         ],
         "no-relative-imports": false,
         "use-named-parameter": false,
@@ -39,8 +40,14 @@
         "function-name": [
             true,
             {
-                "private-method-regex": "^_?[a-z][\w\d]+$"
+                "private-method-regex": "^_?[a-z][\\w\\d]+$"
             }
+        ],
+        "no-implicit-dependencies": false,
+        "no-submodule-imports": [
+            true,
+            "@sandbox",
+            "@lib"
         ]
     },
     "rulesDirectory": [],

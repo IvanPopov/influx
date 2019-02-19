@@ -3,10 +3,11 @@ import { EParserCode } from "./../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 import { EOperationType, IParseTree, IParseNode, IParserState } from '../idl/parser/IParser';
 import * as uri from "../uri/uri"
-import * as fs from "fs";
+// import * as fs from "fs";
 import { promisify } from "util";
+// import isElectron from 'is-electron-renderer';
 
-const readFile = promisify(fs.readFile);
+const readTextFile = (filename) => fetch(filename).then(response => response.text());
 
 export class EffectParser extends Parser {
     private _includedFilesMap: IMap<boolean> = null;
@@ -71,7 +72,7 @@ export class EffectParser extends Parser {
         let parserState = this._saveState();
 
         try {
-            let dataVal = (await readFile(file)).toString('utf8');
+            let dataVal = await readTextFile(file);
             parserState.source = parserState.source.substr(0, parserState.index) +
             dataVal + parserState.source.substr(parserState.index);
 

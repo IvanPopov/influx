@@ -35,6 +35,7 @@ bld/
 [Bb]in/
 #[Oo]bj/
 built/Dev/*
+dist/
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -116,3 +117,4 @@ npm-debug.log
 .vscode/
 .tscache/
 src/lib/fx/instructions/SystemFunctionInstruction.ts
+.awcache

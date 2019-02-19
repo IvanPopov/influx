@@ -1,19 +1,17 @@
-import { IRange, IPosition, IFile } from "./../idl/parser/IParser";
-import { IDiagnosticReport } from "./../util/Diagnostics";
-import { isDef, isNull, isDefAndNotNull } from "../common";
-import { EOperationType, IRule, IRuleFunction, IParser, IParseTree, ILexer, IToken, EParserType, EParseMode, IParseNode, EParserCode, IParserState, ENodeCreateMode } from "../idl/parser/IParser";
-import { IMap, IDMap } from "../idl/IMap";
-import { IState } from "../idl/parser/IState";
-import { IItem } from "../idl/parser/IItem";
-import { Lexer } from "./Lexer";
-import * as bf from "../bf/bf"
-import { ParseTree } from "./ParseTree";
-import { T_EMPTY, LEXER_RULES, FLAG_RULE_NOT_CREATE_NODE, FLAG_RULE_FUNCTION, END_SYMBOL, START_SYMBOL, FLAG_RULE_CREATE_NODE, END_POSITION, UNUSED_SYMBOL, INLINE_COMMENT_SYMBOL } from "./symbols";
+import bf from "@lib/bf";
+import { isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { IDMap, IMap } from "@lib/idl/IMap";
+import { IItem } from "@lib/idl/parser/IItem";
+import { IFile, IPosition, IRange } from "@lib/idl/parser/IParser";
+import { IState } from "@lib/idl/parser/IState";
+import { DiagnosticException, Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
+import { StringRef } from "@lib/util/StringRef";
+import { ENodeCreateMode, EOperationType, EParseMode, EParserCode, EParserType, ILexer, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "../idl/parser/IParser";
 import { Item } from "./Item";
+import { Lexer } from "./Lexer";
+import { ParseTree } from "./ParseTree";
 import { State } from "./State";
-import { Diagnostics, DiagnosticException } from "../util/Diagnostics";
-import { StringRef } from "../util/StringRef";
-
+import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "./symbols";
 
 
 export enum EParserErrors {
@@ -42,9 +40,9 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
 
     protected resolveRange(code: number, desc: IMap<any>): IRange {
         switch (code) {
-        case EParserErrors.SyntaxUnknownError:
-        case EParserErrors.SyntaxUnexpectedEOF:
-            return desc.token.loc;
+            case EParserErrors.SyntaxUnknownError:
+            case EParserErrors.SyntaxUnexpectedEOF:
+                return desc.token.loc;
         }
         return null;
     }
@@ -335,13 +333,13 @@ export class Parser implements IParser {
                     breakProcessing = true;
                 }
             }
-            
+
             tree.finishTree();
 
             if (errorFound) {
                 if (token.value == END_SYMBOL) {
                     this.syntaxError(EParserErrors.SyntaxUnexpectedEOF, token);
-                } 
+                }
                 else {
                     this.syntaxError(EParserErrors.SyntaxUnknownError, token);
                 }
@@ -837,25 +835,25 @@ export class Parser implements IParser {
 
 
     private generateRules(grammarSource: string): void {
-        var allRuleList: string[] = grammarSource.split(/\r?\n/);
-        var tempRule: string[];
-        var rule: IRule;
-        var isLexerBlock: boolean = false;
+        let allRuleList: string[] = grammarSource.split(/\r?\n/);
+        let tempRule: string[];
+        let rule: IRule;
+        let isLexerBlock: boolean = false;
 
         this._rulesDMap = <IRuleDMap>{};
         this._additionalFuncInfoList = <IAdditionalFuncInfo[]>[];
         this._ruleCreationModeMap = <IMap<number>>{};
         this._grammarSymbols = <IMap<string>>{};
 
-        var i = 0, j = 0;
+        let i = 0, j = 0;
 
-        var isAllNodeMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_AllNode);
-        var isNegateMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Negate);
-        var isAddMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Add);
+        let isAllNodeMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_AllNode);
+        let isNegateMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Negate);
+        let isAddMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Add);
 
-        var symbolsWithNodeMap: IMap<number> = this._ruleCreationModeMap;
+        let symbolsWithNodeMap: IMap<number> = this._ruleCreationModeMap;
 
-        var sName: string;
+        let sName: string;
 
         for (i = 0; i < allRuleList.length; i++) {
             if (allRuleList[i] === "" || allRuleList[i] === "\r") {

@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as React from 'react';
 import { List } from 'semantic-ui-react';
 import { promisify } from 'util';
+import isElectron from 'is-electron-renderer';
 
 interface IFileListViewProps {
     path: string;
@@ -22,10 +23,12 @@ interface IFolder {
     totalFiles: number;
 }
 
+
 const fs = {
-    stat: promisify(fs1.lstat),
-    readdir: promisify(fs1.readdir)
+    stat: isElectron ? promisify(fs1.lstat) : null,
+    readdir: isElectron ? promisify(fs1.readdir) : null
 }
+
 
 // todo: remove "sync" calls
 
@@ -117,6 +120,11 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
     }
 
     render() {
+        // temp check in order to be compatible with browsers;
+        if (!isElectron) {
+            return null;
+        }
+
         const { root } = this.state;
         return (
             <List selection>

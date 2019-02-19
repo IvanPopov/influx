@@ -1,9 +1,9 @@
-import * as fs from 'fs';
-import { handleActions } from "./handleActions";
 import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
-import { GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED, GRAMMAR_CONTENT_SPECIFIED } from '@sandbox/actions/ActionTypeKeys';
-import { IGrammarFileSpecified, IParserParamsActions, IGrammarContentSpecified, IParserParamsChanged } from '@sandbox/actions/ActionTypes';
+import { GRAMMAR_CONTENT_SPECIFIED, GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED } from '@sandbox/actions/ActionTypeKeys';
+import { IGrammarContentSpecified, IGrammarFileSpecified, IParserParamsActions, IParserParamsChanged } from '@sandbox/actions/ActionTypes';
 import { IParserParams, IStoreState } from '@sandbox/store/IStoreState';
+import * as fs from 'fs';
+import { handleActions } from './handleActions';
 
 
 const initialState: IParserParams = {
@@ -19,8 +19,8 @@ export default handleActions<IParserParams, IParserParamsActions>({
         ({ ...state, grammar: action.payload.content }),
 
     [ GRAMMAR_FILE_SPECIFIED ]: (state, action: IGrammarFileSpecified) => {
-        const { payload } = action;
-        return { ...state, grammar: fs.readFileSync(payload.filename, 'utf-8'), filename: payload.filename };
+        const { payload: { filename } } = action;
+        return { ...state, filename };
     },
 
     [ PARSER_PARAMS_CHANGED ]: (state, action: IParserParamsChanged) => {

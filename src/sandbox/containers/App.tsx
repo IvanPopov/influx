@@ -16,7 +16,7 @@ import { Button, Checkbox, Container, Divider, Grid, Icon, Menu, Segment, Sideba
 
 
 
-process.chdir(`${__dirname}/../../`); // making ./build as cwd
+// process.chdir(`${__dirname}/../../`); // making ./build as cwd
 
 type UnknownIcon = any;
 

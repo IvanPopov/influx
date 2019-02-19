@@ -1,9 +1,9 @@
 import { assert, isDefAndNotNull } from "@lib/common";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IMap } from "@lib/idl/IMap";
-import { remote } from 'electron';
+// import { remote } from 'electron';
+import isElectron from 'is-electron-renderer';
 import { EChunkType, REG_RAX } from "./Bytecode";
-
 
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;
@@ -78,8 +78,11 @@ class VM {
             i4 += 4;
         }
 
-        // alert(String(regs[REG_RAX]));
-        remote.dialog.showMessageBox({ type: 'info', title: 'evaluation result', message: `${regs[REG_RAX]}` }, () => {});
+        // if (!isElectron) {
+            alert(String(regs[REG_RAX]));
+        // } else {
+            // remote.dialog.showMessageBox({ type: 'info', title: 'evaluation result', message: `${regs[REG_RAX]}` }, () => {});
+        // }
     }
 }
 

@@ -20,6 +20,9 @@
 5. Add autocomplete.
 6. Add info about identifiers when selected by mouse.
 
+### Other
+1. Remove useless dependecies from package.json
+
 ***
 
 ### Known Issues

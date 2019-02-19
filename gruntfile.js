@@ -1,6 +1,8 @@
-const build         = './build';
-const sandbox       = './src/sandbox';
-const semanticLess  = './node_modules/semantic-ui-less';
+const build         = `./build`;
+const source        = `./src`
+const sandbox       = `${source}/sandbox`;
+const lib           = `${source}/lib`;
+const semanticLess  = `./node_modules/semantic-ui-less`;
 
 module.exports = function (grunt) {
     grunt.initConfig({
@@ -14,9 +16,12 @@ module.exports = function (grunt) {
                 // }
             },
             live: {
-                watch: `${sandbox}`,
+                watch: [ lib, sandbox ],
                 tsconfig: {
-                    passThrough: true
+                    passThrough: true,
+                },
+                options: {
+                    additionalFlags: `--build --verbose`
                 }
             }
         },
@@ -79,11 +84,14 @@ module.exports = function (grunt) {
             }
         }
     });
+
     // grunt.loadNpmTasks("grunt-tslint");
     grunt.loadNpmTasks('grunt-contrib-less');
     grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-pug');
     grunt.loadNpmTasks("grunt-ts");
+
+
     grunt.registerTask("default", ["copy", "pug", "less", "ts:debug"]);
 };
