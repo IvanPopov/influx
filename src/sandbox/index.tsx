@@ -1,11 +1,9 @@
-// import 'module-alias/register';
-import isElectron from 'is-electron-renderer';
+import * as isElectron from 'is-electron-renderer';
 import { parser, sourceCode } from '@sandbox/actions';
 import { App } from '@sandbox/containers';
 import logic from '@sandbox/logic';
 import reducer from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
-// import * as reactDevTools from 'electron-react-devtools';
 import * as React from 'react';
 import { render } from 'react-dom';
 import { Provider } from 'react-redux';
@@ -13,11 +11,13 @@ import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
 import thunk from 'redux-thunk';
+import { string } from 'prop-types';
+
+require('semantic-ui-less/semantic.less');
 
 if (isElectron) {
-    // reactDevTools.install();
+    require('electron-react-devtools').install();
 }
-
 
 const logger = createLogger({
     collapsed: true,
@@ -41,9 +41,14 @@ render(
     document.getElementById('app')
 );
 
-store.dispatch(sourceCode.openFile(`${isElectron? './dist/electron': ''}/assets/fx/tests/simplest_func.fx`));
-store.dispatch(parser.openGrammar(`${isElectron? './dist/electron': ''}/assets/HLSL.gr`));
+store.dispatch(sourceCode.openFile(`./assets/fx/tests/simplest_func.fx`));
+store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
-console.log('is this running in electron.js?: ', isElectron);
-const runtime = isElectron ? 'electron.js' : 'a web browser';
-console.log('This is ' + runtime + "!!!");
+console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
+console.log(`%c This is ${isElectron ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
+
+// global defines from webpack's config;
+declare const VERSION: string;
+declare const COMMITHASH: string;
+declare const BRANCH: string;
+console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH})`, 'background: #222; color: #bada55');

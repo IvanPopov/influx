@@ -2,7 +2,7 @@ import { assert, isDefAndNotNull } from "@lib/common";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IMap } from "@lib/idl/IMap";
 // import { remote } from 'electron';
-import isElectron from 'is-electron-renderer';
+import * as isElectron from 'is-electron-renderer';
 import { EChunkType, REG_RAX } from "./Bytecode";
 
 type Chunk = Uint8Array;

@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as React from 'react';
 import { List } from 'semantic-ui-react';
 import { promisify } from 'util';
-import isElectron from 'is-electron-renderer';
+import * as isElectron from 'is-electron-renderer';
 
 interface IFileListViewProps {
     path: string;
@@ -25,8 +25,14 @@ interface IFolder {
 
 
 const fs = {
-    stat: isElectron ? promisify(fs1.lstat) : null,
-    readdir: isElectron ? promisify(fs1.readdir) : null
+    stat: isElectron ? 
+        promisify(fs1.lstat) : 
+        (dir) => ({ 
+            isDirectory() { return false }, 
+            isFile() { return false }
+        }),
+    readdir: isElectron ? 
+        promisify(fs1.readdir) : null
 }
 
 

@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest, IGrammarFileSpecified } from '@sandbox/actions/ActionTypes';
@@ -6,7 +5,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import parsing from './parsing'
 
 
-const readFile = filename => fetch(filename).then(r => r.text());
+const readFile = fname => fetch(fname).then(resp => resp.text());
 
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
     type: evt.SOURCE_FILE_REQUEST,

@@ -4,3 +4,5 @@
 
 @pageMinWidth  : 100%;
 @largeMonitorBreakpoint: 1920px;
+
+// @fontPath  : '../../default/assets/fonts';

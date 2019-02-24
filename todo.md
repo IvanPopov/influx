@@ -21,7 +21,11 @@
 6. Add info about identifiers when selected by mouse.
 
 ### Other
-1. Remove useless dependecies from package.json
+1. ~~Remove useless dependecies from package.json~~
+2. Add production config.
+3. Add version variable to bundle (with commit id).
+4. Use proper relative path in theme.config for site folder.
+5. Use react semantic ui loader instead of direct 'require'. 
 
 ***
 
