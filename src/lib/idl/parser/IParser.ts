@@ -64,9 +64,17 @@ export interface IToken {
     // range?: number[];
 }
 
+
+/**
+ * Grammar rule corresponding to the entry from grammar file.
+ */
 export interface IRule {
     left: string;
     right: string[];
+
+    /**
+     * rule index based on parser's '_nRules'; 
+     */
     index: number;
 }
 
@@ -109,21 +117,6 @@ export interface IParseTree {
     toHTMLString(node?: IParseNode, padding?: string): string;
 }
 
-export interface ILexer {
-    addPunctuator(value: string, name?: string): string;
-    addKeyword(value: string, name: string): string;
-
-    getTerminalValueByName(name: string): string;
-
-    init(source: string): void;
-
-    getNextToken(): IToken | null;
-    getIndex(): number;
-    setSource(source: string): void;
-    setIndex(idx: number): void;
-
-    getDiagnostics(): IDiagnosticReport;
-}
 
 export interface IParserState {
     source: string;

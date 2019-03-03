@@ -1,16 +1,15 @@
-﻿import { IItem } from "../idl/parser/IItem";
-import { IState } from "../idl/parser/IState";
-import { IRule, EParserType } from "../idl/parser/IParser";
+﻿import { IRule, EParserType } from "../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 import { END_POSITION, T_EMPTY } from "./symbols";
 import { isDef } from "../common";
+import { State } from "./State";
 
 
-export class Item implements IItem {
+export class Item {
     private _pRule: IRule;
     private _iPos: number;
     private _iIndex: number;
-    private _pState: IState | null;
+    private _pState: State | null;
 
     private _pExpected: IMap<boolean>;
     private _isNewExpected: boolean;
@@ -32,11 +31,11 @@ export class Item implements IItem {
         this._iPos = iPos;
     }
 
-    getState(): IState | null {
+    getState(): State | null {
         return this._pState;
     }
 
-    setState(pState: IState): void {
+    setState(pState: State): void {
         this._pState = pState;
     }
 
@@ -83,17 +82,17 @@ export class Item implements IItem {
         }
     }
 
-    isEqual(pItem: IItem, eType: EParserType = EParserType.k_LR0): boolean {
+    isEqual(pItem: Item, eType: EParserType = EParserType.k_LR0): boolean {
         if (eType === EParserType.k_LR0) {
             return (this._pRule === pItem.getRule() && this._iPos === pItem.getPosition());
         }
         else if (eType === EParserType.k_LR1) {
-            if (!(this._pRule === pItem.getRule() && this._iPos === pItem.getPosition() && this._iLength === (<IItem>pItem).getLength())) {
+            if (!(this._pRule === pItem.getRule() && this._iPos === pItem.getPosition() && this._iLength === (<Item>pItem).getLength())) {
                 return false;
             }
             var i: string = "";
             for (i in this._pExpected) {
-                if (!(<IItem>pItem).isExpected(i)) {
+                if (!(<Item>pItem).isExpected(i)) {
                     return false;
                 }
             }
@@ -105,11 +104,11 @@ export class Item implements IItem {
         }
     }
 
-    isParentItem(pItem: IItem): boolean {
+    isParentItem(pItem: Item): boolean {
         return (this._pRule === pItem.getRule() && this._iPos === pItem.getPosition() + 1);
     }
 
-    isChildItem(pItem: IItem): boolean {
+    isChildItem(pItem: Item): boolean {
         return (this._pRule === pItem.getRule() && this._iPos === pItem.getPosition() - 1);
     }
 
@@ -144,35 +143,35 @@ export class Item implements IItem {
     }
 
     toString(): string {
-        let sMsg: string = this._pRule.left + " -> ";
-        let sExpected: string = "";
-        let pRight: string[] = this._pRule.right;
+        let msg: string = this._pRule.left + " -> ";
+        let expected: string = "";
+        let right: string[] = this._pRule.right;
 
-        for (let k = 0; k < pRight.length; k++) {
+        for (let k = 0; k < right.length; k++) {
             if (k === this._iPos) {
-                sMsg += ". ";
+                msg += ". ";
             }
-            sMsg += pRight[k] + " ";
+            msg += right[k] + " ";
         }
 
-        if (this._iPos === pRight.length) {
-            sMsg += ". ";
+        if (this._iPos === right.length) {
+            msg += ". ";
         }
 
         if (isDef(this._pExpected)) {
-            sExpected = ", ";
+            expected = ", ";
             let pKeys = Object.getOwnPropertyNames(this._pExpected);
 
             for (let l: number = 0; l < pKeys.length; ++l) {
-                sExpected += pKeys[l] + "/";
+                expected += pKeys[l] + "/";
             }
 
-            if (sExpected !== ", ") {
-                sMsg += sExpected;
+            if (expected !== ", ") {
+                msg += expected;
             }
         }
 
-        sMsg = sMsg.slice(0, sMsg.length - 1);
-        return sMsg;
+        msg = msg.slice(0, msg.length - 1);
+        return msg;
     }
 }
