@@ -4,9 +4,19 @@ import { isDef } from "../common";
 import { Item } from "./Item"
 
 export class State {
-    private _pItemList: Item[];
-    private _pNextStates: IMap<State>;
+    private _itemList: Item[];
+    /**
+     * 'symbol name => state' map
+     */
+    private _nextStates: IMap<State>;
+    /**
+     * Index in external array.
+     * see: Parser._stateList
+     */
     private _iIndex: number;
+    /**
+     * Number of items where symbol for which it state was build is placed as right part of rule.
+     */
     private _nBaseItems: number;
 
     getIndex(): number {
@@ -18,7 +28,7 @@ export class State {
     }
 
     getItems(): Item[] {
-        return this._pItemList;
+        return this._itemList;
     }
 
     getNumBaseItems(): number {
@@ -26,19 +36,19 @@ export class State {
     }
 
     getNextStates(): IMap<State> {
-        return this._pNextStates;
+        return this._nextStates;
     }
 
     constructor() {
-        this._pItemList = <Item[]>[];
-        this._pNextStates = <IMap<State>>{};
+        this._itemList = <Item[]>[];
+        this._nextStates = <IMap<State>>{};
         this._iIndex = 0;
         this._nBaseItems = 0;
     }
 
     hasItem(pItem: Item, eType: EParserType): Item | null {
         var i;
-        var pItems: Item[] = this._pItemList;
+        var pItems: Item[] = this._itemList;
         for (i = 0; i < pItems.length; i++) {
             if (pItems[i].isEqual(pItem, eType)) {
                 return pItems[i];
@@ -49,7 +59,7 @@ export class State {
 
     hasParentItem(pItem: Item): Item | null {
         var i;
-        var pItems = this._pItemList;
+        var pItems = this._itemList;
         for (i = 0; i < pItems.length; i++) {
             if (pItems[i].isParentItem(pItem)) {
                 return pItems[i];
@@ -60,7 +70,7 @@ export class State {
 
     hasChildItem(pItem: Item): Item | null {
         var i;
-        var pItems = this._pItemList;
+        var pItems = this._itemList;
         for (i = 0; i < pItems.length; i++) {
             if (pItems[i].isChildItem(pItem)) {
                 return pItems[i];
@@ -71,7 +81,7 @@ export class State {
 
     hasRule(pRule: IRule, iPos: number): boolean {
         var i: number = 0;
-        var pItemList: Item[] = this._pItemList;
+        var pItemList: Item[] = this._itemList;
         var pItem: Item;
 
         for (i = 0; i < this._nBaseItems; i++) {
@@ -85,11 +95,11 @@ export class State {
     }
 
     isEmpty(): boolean {
-        return !(this._pItemList.length);
+        return !(this._itemList.length);
     }
 
     isEqual(pState: State, eType: EParserType): boolean {
-        var pItemsA: Item[] = this._pItemList;
+        var pItemsA: Item[] = this._itemList;
         var pItemsB: Item[] = pState.getItems();
 
         if (this._nBaseItems !== pState.getNumBaseItems()) {
@@ -114,81 +124,78 @@ export class State {
     }
 
     public push(pItem: Item): void {
-        if (this._pItemList.length === 0 || pItem.getPosition() > 0) {
+        if (this._itemList.length === 0 || pItem.getPosition() > 0) {
             this._nBaseItems += 1;
         }
         pItem.setState(this);
-        this._pItemList.push(pItem);
+        this._itemList.push(pItem);
     }
 
+
     public tryPush_LR0(pRule: IRule, iPos: number): boolean {
-        var i: number;
-        var pItems: Item[] = this._pItemList;
-        for (i = 0; i < pItems.length; i++) {
-            if (pItems[i].getRule() === pRule && pItems[i].getPosition() === iPos) {
+        let items = this._itemList;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].getRule() === pRule && items[i].getPosition() === iPos) {
                 return false;
             }
         }
-        var pItem: Item = new Item(pRule, iPos);
-        this.push(pItem);
+        let item = new Item(pRule, iPos);
+        this.push(item);
         return true;
     }
 
-    public tryPush_LR(pRule: IRule, iPos: number, sExpectedSymbol: string): boolean {
-        var i: number;
-        var pItems: Item[] = <Item[]>(this._pItemList);
 
-        for (i = 0; i < pItems.length; i++) {
-            if (pItems[i].getRule() === pRule && pItems[i].getPosition() === iPos) {
-                return pItems[i].addExpected(sExpectedSymbol);
+    public tryPush_LR(pRule: IRule, iPos: number, expectedSymbol: string): boolean {
+        let items = this._itemList;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].getRule() === pRule && items[i].getPosition() === iPos) {
+                return items[i].addExpected(expectedSymbol);
             }
         }
 
-        var pExpected: IMap<boolean> = <IMap<boolean>>{};
-        pExpected[sExpectedSymbol] = true;
-
-        var pItem: Item = new Item(pRule, iPos, pExpected);
-        this.push(pItem);
+        let expected = { [expectedSymbol]: true };
+        let item = new Item(pRule, iPos, expected);
+        this.push(item);
         return true;
     }
 
     public getNextStateBySymbol(sSymbol: string): State | null {
-        if (isDef(this._pNextStates[sSymbol])) {
-            return this._pNextStates[sSymbol];
+        if (isDef(this._nextStates[sSymbol])) {
+            return this._nextStates[sSymbol];
         }
-        else {
-            return null;
-        }
+
+        return null;
     }
 
-    public addNextState(sSymbol: string, pState: State): boolean {
-        if (isDef(this._pNextStates[sSymbol])) {
+    /**
+     * 
+     */
+    public addNextState(symbol: string, state: State): boolean {
+        if (isDef(this._nextStates[symbol])) {
             return false;
-        }
-        else {
-            this._pNextStates[sSymbol] = pState;
+        } else {
+            this._nextStates[symbol] = state;
             return true;
         }
     }
 
     public deleteNotBase(): void {
-        this._pItemList.length = this._nBaseItems;
+        this._itemList.length = this._nBaseItems;
     }
 
     public toString(isBase: boolean = true): string {
-        let len: number = 0;
-        let sMsg: string;
-        let pItemList: Item[] = this._pItemList;
+        let itemList = this._itemList;
 
-        sMsg = "State " + this._iIndex + ":\n";
-        len = isBase ? this._nBaseItems : pItemList.length;
+        let msg = "State " + this._iIndex + ":\n";
+        let len = isBase ? this._nBaseItems : itemList.length;
 
         for (let j = 0; j < len; j++) {
-            sMsg += "\t\t";
-            sMsg += pItemList[j].toString();
-            sMsg += "\n";
+            msg += "\t\t";
+            msg += itemList[j].toString();
+            msg += "\n";
         }
 
-        return sMsg;
+        return msg;
     }
 }
