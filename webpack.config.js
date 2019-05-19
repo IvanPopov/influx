@@ -7,7 +7,7 @@ const TsConfigPathsPlugin = require('awesome-typescript-loader').TsConfigPathsPl
 const { CheckerPlugin } = require('awesome-typescript-loader');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-var GitRevisionPlugin = require('git-revision-webpack-plugin')
+var GitRevisionPlugin = require('git-revision-webpack-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin()
 
@@ -138,6 +138,7 @@ let options = {
             'VERSION': JSON.stringify(`${require("./package.json").version}.${gitRevisionPlugin.version()}`),
             'COMMITHASH': JSON.stringify(gitRevisionPlugin.commithash()),
             'BRANCH': JSON.stringify(gitRevisionPlugin.branch()),
+            'global': {}
         })
     ],
     node: {

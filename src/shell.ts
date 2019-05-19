@@ -7,7 +7,7 @@ let win: Electron.BrowserWindow;
 
 
 function createWindow(): void {
-  win = new BrowserWindow({ width: 800, height: 600, webPreferences: { experimentalFeatures: true } });
+  win = new BrowserWindow({ width: 800, height: 600, webPreferences: { experimentalFeatures: true, nodeIntegration: true } });
   win.loadURL(url.format({
     pathname: path.join(__dirname, 'sandbox.html'),
     protocol: 'file:',

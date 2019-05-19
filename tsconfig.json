@@ -43,10 +43,10 @@
     "moduleResolution": "node",
     "strict": false
   },
-  "files": [
-    "src/shell.ts",
-    "src/sandbox/index.tsx"
-  ],
+  // "files": [
+  //   "src/shell.ts",
+  //   "src/sandbox/index.tsx"
+  // ],
   "exclude": [
     "node_modules"
   ]

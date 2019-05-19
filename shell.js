@@ -7,7 +7,7 @@ const { app } = require('electron');
 
 let win;
 function createWindow() {
-    win = new electron_1.BrowserWindow({ width: 800, height: 600, webPreferences: { experimentalFeatures: true } });
+    win = new electron_1.BrowserWindow({ width: 800, height: 600, webPreferences: { experimentalFeatures: true, nodeIntegration: true } });
     win.loadURL(url.format({
         pathname: path.join(__dirname, 'dist/electron/index-electron.html'),
         protocol: 'file:',

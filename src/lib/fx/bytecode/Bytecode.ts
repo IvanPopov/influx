@@ -1,6 +1,6 @@
 
 import debugLayout, { CdlRaw } from "./DebugLayout";
-import { isNull, debug, isNumber } from "util";
+import { isNull, isNumber } from "util";
 import { isDef, isDefAndNotNull } from "../../common";
 import { EOperation } from "../../idl/bytecode/EOperations";
 // import { IInstruction as IOperation, IInstructionArgument } from "../../idl/bytecode/IInstruction";

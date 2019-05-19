@@ -10,7 +10,7 @@ export class State {
      */
     private _nextStates: IMap<State>;
     /**
-     * Index in external array.
+     * Uniq id/index.
      * see: Parser._stateList
      */
     private _iIndex: number;
