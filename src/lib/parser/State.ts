@@ -184,7 +184,7 @@ export class State {
         this._itemList.length = this._nBaseItems;
     }
 
-    public toString(isBase: boolean = true): string {
+    public toString(isBase: boolean = true, grammarSymbols: IMap<string> = null): string {
         let itemList = this._itemList;
 
         let msg = "State " + this._iIndex + ":\n";
@@ -192,7 +192,7 @@ export class State {
 
         for (let j = 0; j < len; j++) {
             msg += "\t\t";
-            msg += itemList[j].toString();
+            msg += itemList[j].toString(grammarSymbols);
             msg += "\n";
         }
 

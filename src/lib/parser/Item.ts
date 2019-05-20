@@ -1,7 +1,7 @@
 ﻿import { IRule, EParserType } from "../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
 import { END_POSITION, T_EMPTY } from "./symbols";
-import { isDef, assert } from "../common";
+import { isDef, assert, isDefAndNotNull } from "../common";
 import { State } from "./State";
 
 
@@ -25,6 +25,9 @@ export class Item {
     private _state: State | null;
 
     private _expected: IMap<boolean>;
+
+    // aux
+    // todo: remove it?
     private _isNewExpected: boolean;
 
     getRule(): IRule {
@@ -153,7 +156,7 @@ export class Item {
         return true;
     }
 
-    toString(): string {
+    toString(grammarSymbols: IMap<string> = null): string {
         let msg: string = this._rule.left + " -> ";
         let expected: string = "";
         let right: string[] = this._rule.right;
@@ -171,10 +174,12 @@ export class Item {
 
         if (isDef(this._expected)) {
             expected = ", ";
-            let pKeys = Object.getOwnPropertyNames(this._expected);
+            let keys = Object.getOwnPropertyNames(this._expected);
 
-            for (let l: number = 0; l < pKeys.length; ++l) {
-                expected += pKeys[l] + "/";
+            for (let l: number = 0; l < keys.length; ++l) {
+                expected += (isDefAndNotNull(grammarSymbols)? 
+                    (grammarSymbols[keys[l]] ? `'${grammarSymbols[keys[l]]}'` : keys[l]) : 
+                    keys[l]) + "/";
             }
 
             if (expected !== ", ") {

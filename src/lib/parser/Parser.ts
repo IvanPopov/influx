@@ -1049,8 +1049,8 @@ export class Parser implements IParser {
 
         var i: number = 0, j: number = 0;
 
-        var pFuncByStateDMap: IRuleFunctionDMap = <IRuleFunctionDMap>{};
-        pFuncByStateDMap = this._adidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
+        var funcByStateDMap = <IRuleFunctionDMap>{};
+        funcByStateDMap = this._adidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
 
         for (i = 0; i < funcInfoList.length; i++) {
             funcInfo = funcInfoList[i];
@@ -1067,11 +1067,11 @@ export class Parser implements IParser {
             for (j = 0; j < stateList.length; j++) {
                 if (stateList[j].hasRule(rule, pos)) {
 
-                    if (!isDef(pFuncByStateDMap[stateList[j].getIndex()])) {
-                        pFuncByStateDMap[stateList[j].getIndex()] = <IRuleFunctionMap>{};
+                    if (!isDef(funcByStateDMap[stateList[j].getIndex()])) {
+                        funcByStateDMap[stateList[j].getIndex()] = <IRuleFunctionMap>{};
                     }
 
-                    pFuncByStateDMap[stateList[j].getIndex()][grammarSymbol] = func;
+                    funcByStateDMap[stateList[j].getIndex()][grammarSymbol] = func;
                 }
             }
         }
@@ -1245,8 +1245,8 @@ export class Parser implements IParser {
 
         let itemListX = stateX.getItems();
         let itemList = testState.getItems();
-        let nBaseItemTest = testState.getNumBaseItems();
         let nBaseItemX = stateX.getNumBaseItems();
+        let nBaseItemTest = testState.getNumBaseItems();
 
         for (let i = 0; i < nBaseItemTest; i++) {
             let state = this.closureForItem(itemList[i].getRule(), itemList[i].getPosition());
@@ -1456,10 +1456,10 @@ export class Parser implements IParser {
 
         let rulesDMapKeys: string[] = Object.keys(this._rulesDMap);
         for (j = 0; j < rulesDMapKeys.length; j++) {
-            let pRulesMapKeys: string[] = Object.keys(this._rulesDMap[rulesDMapKeys[j]]);
-            for (k = 0; k < pRulesMapKeys.length; k++) {
-                let symbolVal: string = pRulesMapKeys[k];
-                let rule: IRule = this._rulesDMap[rulesDMapKeys[j]][symbolVal];
+            let rulesMapKeys: string[] = Object.keys(this._rulesDMap[rulesDMapKeys[j]]);
+            for (k = 0; k < rulesMapKeys.length; k++) {
+                let symbolVal = rulesMapKeys[k];
+                let rule = this._rulesDMap[rulesDMapKeys[j]][symbolVal];
 
                 this._reduceOperationsMap[symbolVal] = <IOperation>{
                     type: EOperationType.k_Reduce,
@@ -1588,7 +1588,7 @@ export class Parser implements IParser {
         let i: number = 0;
 
         for (i = 0; i < this._stateList.length; i++) {
-            mesg += this._stateList[i].toString(isBaseOnly);
+            mesg += this._stateList[i].toString(isBaseOnly, this._grammarSymbols);
             mesg += " ";
         }
 
