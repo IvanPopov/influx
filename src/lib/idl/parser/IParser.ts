@@ -141,7 +141,7 @@ export interface IParser {
     getParseFileName(): IFile;
 
     getSyntaxTree(): IParseTree;
-    getGrammarSymbols(): IMap<string>;
+    getGrammarSymbols(): Map<string, string>;
     getDiagnostics(): IDiagnosticReport;
 
     printStates(isPrintOnlyBase?: boolean): void;

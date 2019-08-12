@@ -144,7 +144,6 @@ export class Parser implements IParser {
      * @deprecated 
      * Auxiliary map for all symbols from grammar: symbolName => bool.
      */
-    private _symbolMap: IMap<boolean>;
     private _syntaxTable: IOperationDMap | null;
     private _reduceOperationsMap: IOperationMap | null;
     private _shiftOperationsMap: IOperationMap | null;
@@ -171,11 +170,10 @@ export class Parser implements IParser {
      */
     private _eType: EParserType;
 
-    // todo: remove _grammarSymbols or _symbolMap
     /** 
      * Auxiliary map for all symbols from grammar: symbolName => symbolName.
      */
-    private _grammarSymbols: IMap<string>;
+    private _grammarSymbols: Map<string, string>;
 
     // Additioanal info
 
@@ -204,7 +202,6 @@ export class Parser implements IParser {
         this._stack = <number[]>[];
         this._token = null;
 
-        this._symbolMap = null;
         this._syntaxTable = null;
         this._reduceOperationsMap = null;
         this._shiftOperationsMap = null;
@@ -408,7 +405,7 @@ export class Parser implements IParser {
     }
 
 
-    getGrammarSymbols(): IMap<string> {
+    getGrammarSymbols(): Map<string, string> {
         return this._grammarSymbols;
     }
 
@@ -558,7 +555,7 @@ export class Parser implements IParser {
      * terminals & non-terminals;
      */
     private symbols(): string[] {
-        return Object.keys(this._symbolMap);
+        return [ ...this._grammarSymbols.keys() ];
     }
 
     private isTerminal(symbolVal: string): boolean {
@@ -877,8 +874,7 @@ export class Parser implements IParser {
         this._rulesDMap = <IRuleDMap>{};
         this._additionalFuncInfoList = <IAdditionalFuncInfo[]>[];
         this._ruleCreationModeMap = <IMap<number>>{};
-        this._grammarSymbols = { END_SYMBOL: END_SYMBOL };
-        this._symbolMap = { END_SYMBOL: true };
+        this._grammarSymbols = new Map([[ 'END_SYMBOL', END_SYMBOL ]]);
 
         let i = 0, j = 0;
 
@@ -926,8 +922,7 @@ export class Parser implements IParser {
                         sName = this._lexer.addPunctuator(tempRule[2], tempRule[0]);
                     }
 
-                    this._grammarSymbols[sName] = tempRule[2];
-                    this._symbolMap[sName] = true;
+                    this._grammarSymbols.set(sName, tempRule[2]);
                 }
 
                 continue;
@@ -955,8 +950,7 @@ export class Parser implements IParser {
                 index: 0
             };
 
-            this._symbolMap[tempRule[0]] = true;
-            this._grammarSymbols[tempRule[0]] = tempRule[0];
+            this._grammarSymbols.set(tempRule[0], tempRule[0]);
 
             if (isAllNodeMode) {
                 symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Default;
@@ -1017,13 +1011,11 @@ export class Parser implements IParser {
 
                     sName = this._lexer.addPunctuator(tempRule[j][1]);
                     rule.right.push(sName);
-                    this._symbolMap[sName] = true;
-                    this._grammarSymbols[sName] = tempRule[j][1];
+                    this._grammarSymbols.set(sName, tempRule[j][1]);
                 }
                 else {
                     rule.right.push(tempRule[j]);
-                    this._symbolMap[tempRule[j]] = true;
-                    this._grammarSymbols[tempRule[j]] = tempRule[j];
+                    this._grammarSymbols.set(tempRule[j], tempRule[j]);
                 }
             }
 

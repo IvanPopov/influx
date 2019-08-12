@@ -33,7 +33,7 @@
     "is-electron-renderer": "^2.0.1",
     "less": "^3.9.0",
     "less-loader": "^5.0.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "lodash-es": "^4.17.11",
     "lodash.debounce": "^4.0.8",
     "lodash.get": "^4.4.2",
@@ -63,7 +63,7 @@
     "url-loader": "^1.1.2",
     "webpack": "^4.31.0",
     "webpack-cli": "^3.3.2",
-    "webpack-dev-server": "^3.4.1"
+    "webpack-dev-server": "^3.8.0"
   },
   "scripts": {
     "electron": "electron ./shell.js"

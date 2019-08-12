@@ -156,7 +156,7 @@ export class Item {
         return true;
     }
 
-    toString(grammarSymbols: IMap<string> = null): string {
+    toString(grammarSymbols: Map<string, string> = null): string {
         let msg: string = this._rule.left + " -> ";
         let expected: string = "";
         let right: string[] = this._rule.right;
@@ -178,7 +178,7 @@ export class Item {
 
             for (let l: number = 0; l < keys.length; ++l) {
                 expected += (isDefAndNotNull(grammarSymbols)? 
-                    (grammarSymbols[keys[l]] ? `'${grammarSymbols[keys[l]]}'` : keys[l]) : 
+                    (grammarSymbols.get(keys[l]) ? `'${grammarSymbols.get(keys[l])}'` : keys[l]) : 
                     keys[l]) + "/";
             }
 

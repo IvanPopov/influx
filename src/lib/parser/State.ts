@@ -184,7 +184,7 @@ export class State {
         this._itemList.length = this._nBaseItems;
     }
 
-    public toString(isBase: boolean = true, grammarSymbols: IMap<string> = null): string {
+    public toString(isBase: boolean = true, grammarSymbols: Map<string, string> = null): string {
         let itemList = this._itemList;
 
         let msg = "State " + this._iIndex + ":\n";
