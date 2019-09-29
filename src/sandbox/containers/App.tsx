@@ -11,7 +11,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Container, Divider, Grid, Icon, Menu, Segment, Sidebar, Tab } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table } from 'semantic-ui-react';
 
 
 
@@ -38,12 +38,12 @@ export const styles = {
         border: '0px !important',
         padding: '0 !important'
     },
-    topMenuFix: { 
+    topMenuFix: {
         '& > div:first-child': {
-            marginBottom: '0', 
-            position: 'relative', 
-            zIndex: '1', 
-            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important' 
+            marginBottom: '0',
+            position: 'relative',
+            zIndex: '1',
+            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important'
         }
     }
 }
@@ -52,6 +52,7 @@ export const styles = {
 export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
     actions: typeof sourceActions;
 }
+
 
 @injectSheet(styles)
 class App extends React.Component<IAppProps> {
@@ -62,8 +63,7 @@ class App extends React.Component<IAppProps> {
         bc: ReturnType<typeof Bytecode['translate']> // todo: fix type deduction;
         showFileBrowser: boolean;
         autocompile: boolean;
-
-
+        entryPoint: string;
     };
 
     constructor(props) {
@@ -73,7 +73,8 @@ class App extends React.Component<IAppProps> {
             root: null,
             bc: null,
             showFileBrowser: false,
-            autocompile: false
+            autocompile: false,
+            entryPoint: Bytecode.DEFAULT_ENTRY_POINT_NAME
         };
     }
 
@@ -88,8 +89,12 @@ class App extends React.Component<IAppProps> {
         }
 
         if (!isNull(state.root)) {
-            this.setState({ bc: Bytecode.translate(Bytecode.DEFAULT_ENTRY_POINT_NAME, state.root) });
+            this.setState({ bc: Bytecode.translate(state.entryPoint, state.root) });
         }
+    }
+
+    setEntryPoint(val: string) {
+        this.setState({ entryPoint: val, bc: null });
     }
 
     setAutocompile(val: boolean) {
@@ -178,37 +183,58 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="bytecode-view">
-                        <Checkbox toggle label='auto compilation' onChange={ (e, data) => this.setAutocompile(data.checked) } />
-                        <Divider />
-                        { state.bc ? (
+                    <Tab.Pane attached={false} key="bytecode-view">
+                        <Table size='small' basic='very' compact='very'>
+                            {/* todo: remove this padding hack */}
+                            <Table.Row style={{paddingTop: 0}}>
+                                <Table.Cell>
+                                    <Input
+                                        fluid
+                                        size='small'
+                                        label='entry point'
+                                        placeholder={state.entryPoint}
+                                        onChange={(e, data) => this.setEntryPoint(data.value)}
+                                    />
+                                </Table.Cell>
+                 
+                                <Table.Cell>
+                                    <Checkbox
+                                        label='auto compilation'
+                                        size='small'
+                                        toggle
+                                        onChange={(e, data) => this.setAutocompile(data.checked)}
+                                    />
+                                </Table.Cell>
+                            </Table.Row>
+                        </Table>
+                        {state.bc ? (
                             <div>
-                                {/* todo: move memory view inside bytecode view; */ }
-                                <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={ state.bc.constants.data.layout } />
-                                <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
+                                {/* todo: move memory view inside bytecode view; */}
+                                <MemoryView binaryData={state.bc.constants.data.byteArray} layout={state.bc.constants.data.layout} />
+                                <BytecodeView code={new Uint8Array(state.bc.code)} cdl={state.bc.cdl} />
                             </div>
                         ) : (
                                 <Container textAlign="center">
-                                    <Button onClick={ () => this.compile() }>Compile</Button>
+                                    <Button onClick={() => this.compile()}>Compile</Button>
                                 </Container>
-                            ) }
+                            )}
                     </Tab.Pane>
                 )
             },
             {
                 menuItem: (<Menu.Item>semantics<br />analyzer</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="program-view">
+                    <Tab.Pane attached={false} key="program-view">
                         <ProgramView
-                            filename={ props.sourceFile.filename }
-                            ast={ props.sourceFile.parseTree }
+                            filename={props.sourceFile.filename}
+                            ast={props.sourceFile.parseTree}
 
-                            onNodeOver={ inst => this.highlightInstruction(inst, true) }
-                            onNodeOut={ inst => this.highlightInstruction(inst, false) }
-                            onNodeClick={ inst => { } }
+                            onNodeOver={inst => this.highlightInstruction(inst, true)}
+                            onNodeOut={inst => this.highlightInstruction(inst, false)}
+                            onNodeClick={inst => { }}
 
-                            onUpdate={ errors => this.handleProgramViewUpdate(errors) }
-                            onComplete={ (root) => { this.setProgram(root); } }
+                            onUpdate={errors => this.handleProgramViewUpdate(errors)}
+                            onComplete={(root) => { this.setProgram(root); }}
                         />
                     </Tab.Pane>
                 )
@@ -216,10 +242,10 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (<Menu.Item>syntax<br />analyzer</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="ast-view">
+                    <Tab.Pane attached={false} key="ast-view">
                         <ASTView
-                            onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
-                            onNodeOut={ idx => this.highlightPNode(idx, null, false) }
+                            onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
+                            onNodeOut={idx => this.highlightPNode(idx, null, false)}
                         />
                     </Tab.Pane>
                 )
@@ -230,21 +256,21 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Source File',
                 pane: (
-                    <Tab.Pane key="source" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
-                        // fixme: remove style from line below;
-                        // as={ ({ ...props }) => <Container fluid { ...props } /> }
-                        >
-                        <Grid divided={ false }>
-                            <Grid.Row columns={ 3 }>
+                    <Tab.Pane key="source" className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}
+                    // fixme: remove style from line below;
+                    // as={ ({ ...props }) => <Container fluid { ...props } /> }
+                    >
+                        <Grid divided={false}>
+                            <Grid.Row columns={3}>
                                 <Grid.Column computer="10" tablet="8" mobile="6" >
                                     <SourceEditor
                                         name="source-code"
-                                        validateBreakpoint={ line => this.validateBreakpoint(line) }
+                                        validateBreakpoint={line => this.validateBreakpoint(line)}
                                     />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10">
-                                    <Container style={ { paddingTop: '15px' } }>
-                                        <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                    <Container style={{ paddingTop: '15px' }}>
+                                        <Tab menu={{ secondary: true, size: 'mini' }} panes={analysisResults} renderActiveOnly={false} />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -263,29 +289,29 @@ class App extends React.Component<IAppProps> {
         ];
 
         return (
-            <div className={ props.classes.mainContentHotfix }>
+            <div className={props.classes.mainContentHotfix}>
                 <Sidebar.Pushable>
                     <Sidebar
-                        as={ Segment }
+                        as={Segment}
                         animation='overlay'
                         // onHide={ this.hideFileBrowser }
                         vertical
-                        visible={ this.state.showFileBrowser }
-                        className={ this.props.classes.fileBrowserSidebarHotfix }
+                        visible={this.state.showFileBrowser}
+                        className={this.props.classes.fileBrowserSidebarHotfix}
                     >
-                        <FileListView path="./assets" filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
+                        <FileListView path="./assets" filters={['.fx']} onFileClick={(file) => { props.actions.openFile(file) }} />
                     </Sidebar>
-                    <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
-                    {/* <Container> */}
-                        <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ false } 
-                            className={ props.classes.topMenuFix } />
-                            {/* </Container> */}
+                    <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
+                        {/* <Container> */}
+                        <Tab menu={{ secondary: true, pointing: true }} panes={panes} renderActiveOnly={false}
+                            className={props.classes.topMenuFix} />
+                        {/* </Container> */}
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
-                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
-                        <Icon name={ 'three bars' as UnknownIcon } />
+                <Menu vertical icon='labeled' inverted fixed="left" className={props.classes.sidebarLeftHotfix}>
+                    <Menu.Item name='home' onClick={this.handleShowFileBrowser} >
+                        <Icon name={'three bars' as UnknownIcon} />
                         File Browser
                     </Menu.Item>
                 </Menu>

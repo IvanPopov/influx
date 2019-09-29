@@ -10,6 +10,9 @@ Decl : VariableDecl
 Decl : VarStructDecl
 Decl : FunctionDecl
 Decl : TechniqueDecl
+#if FX_PART
+    Decl : PartFXDecl
+#endif 
 Decl : UseDecl
 Decl : ImportDecl
 Decl : ProvideDecl
@@ -256,6 +259,14 @@ StateIndex : '[' Uint ']'
 StateExprBegin : '='
 StateExprEnd : ';'
 
+#if FX_PART
+    PartFXDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFXBody --AN
+    PartFXBody : PartFXBegin PartFXEnd  --AN
+    PartFXBody : PartFXBegin PassDecls PartFXEnd
+    PartFXBegin : '{'
+    PartFXEnd : '}'
+#endif // FX_PART
+
 StmtBlock : StmtBlockBegin StmtBlockEnd --AN
 StmtBlock : StmtBlockBegin Stmts StmtBlockEnd
 StmtBlockBegin : '{'
@@ -476,6 +487,9 @@ T_KW_IN : "in"
 T_KW_OUT : "out"
 T_KW_INOUT : "inout"
 T_KW_TECHNIQUE : "technique"
+#if FX_PART
+    T_KW_FXPART : "part"
+#endif
 T_KW_PASS : "pass"
 T_KW_RETURN : "return"
 T_KW_DO : "do"
