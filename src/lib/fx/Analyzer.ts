@@ -1083,6 +1083,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
             } catch (e) {};
 
             if (!isValidInit) {
+                // todo: make it warning
                 context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
                 init = null;
             }
@@ -2922,18 +2923,20 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
 
     for (let i = children.length - 2; i >= 1; i--) {
         let func = analyzePassStateForShader(context, program, children[i]);
-        switch (func.functionType) {
-            case EFunctionType.k_Vertex:
-                assert(vertex == null);
-                vertex = func;
-                break;
-            case EFunctionType.k_Pixel:
-                assert(pixel == null);
-                pixel = func;
-                break;
-            default:
-                // todo: make error!
-                console.error('function is not suitable as shader entry point');
+        if (!isNull(func)) {
+            switch (func.functionType) {
+                case EFunctionType.k_Vertex:
+                    assert(vertex == null);
+                    vertex = func;
+                    break;
+                case EFunctionType.k_Pixel:
+                    assert(pixel == null);
+                    pixel = func;
+                    break;
+                default:
+                    // todo: make error!
+                    console.error('function is not suitable as shader entry point');
+            }
         }
     }
 

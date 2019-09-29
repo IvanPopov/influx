@@ -7,7 +7,7 @@ import { Instruction } from "./Instruction";
 
 
 export interface ICastExprInstructionSettings extends IExprInstructionSettings {
-    sourceExpr: IInstruction;
+    sourceExpr: IExprInstruction;
 }
 
 
@@ -16,7 +16,7 @@ export interface ICastExprInstructionSettings extends IExprInstructionSettings {
  * EMPTY_OPERATOR VariableTypeInstruction Instruction
  */
 export class CastExprInstruction extends ExprInstruction {
-    private _srcExpr: IInstruction;
+    private _srcExpr: IExprInstruction;
 
     constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
@@ -24,19 +24,22 @@ export class CastExprInstruction extends ExprInstruction {
         this._srcExpr = Instruction.$withParent(sourceExpr, this);
     }
 
-    get expr(): IInstruction {
+    get expr(): IExprInstruction {
         return this._srcExpr;
     }
 
     toCode(): string {
         var code: string = "";
-        code += this.type.toCode();
         code += "(";
-        code += this._srcExpr.toCode();
+        code += this.type.toCode();
         code += ")";
+        code += this._srcExpr.toCode();
         return code;
     }
 
+    IsUseless() {
+        return this.type.isEqual(this.expr.type);
+    }
 
     isConst(): boolean {
         return (<IExprInstruction>this._srcExpr).isConst();

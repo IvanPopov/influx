@@ -2,6 +2,8 @@ import { isArray, isDefAndNotNull, isFunction, isNull } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
 import { ArithmeticExprInstruction } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
+import { CastExprInstruction } from '@lib/fx/instructions/CastExprInstruction';
+import { ComplexExprInstruction } from '@lib/fx/instructions/ComplexExprInstruction';
 import { ComplexTypeInstruction } from '@lib/fx/instructions/ComplexTypeInstruction';
 import { DeclStmtInstruction } from '@lib/fx/instructions/DeclStmtInstruction';
 import { ExprStmtInstruction } from '@lib/fx/instructions/ExprStmtInstruction';
@@ -12,8 +14,9 @@ import { PostfixArithmeticInstruction } from '@lib/fx/instructions/PostfixArithm
 import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
 import { SemicolonStmtInstruction } from '@lib/fx/instructions/SemicolonStmtInstruction';
 import { StringInstruction } from '@lib/fx/instructions/StringInstruction';
-import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
-import { EInstructionTypes, IAssignmentExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IPassInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { SystemTypeInstruction, ISystemTypeInstructionSettings } from '@lib/fx/instructions/SystemTypeInstruction';
+import { VariableTypeInstruction } from '@lib/fx/instructions/VariableTypeInstruction';
+import { EInstructionTypes, IAssignmentExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IPassInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseTree, IRange } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
@@ -279,7 +282,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.Bool(instr);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 return this.ArithmeticExpr(instr);
-
+            case EInstructionTypes.k_CastExprInstruction:
+                return this.Cast(instr);
+            case EInstructionTypes.k_ComplexExprInstruction:
+                return this.ComplexExpr(instr);
             default:
                 return this.NotImplemented(instr);
         }
@@ -457,6 +463,31 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    Cast(instr: CastExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } >
+                <Property name="type">
+                    { this.Type(instr.type) }
+                </Property>
+                <Property name="expr" >
+                    { this.Unknown(instr.expr) }
+                </Property>
+            </Property>
+        );
+    }
+
+
+    ComplexExpr(instr: ComplexExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } >
+                <Property name="expr" >
+                    { this.Unknown(instr.expr) }
+                </Property>
+            </Property>
+        );
+    }
+
+
     Int(instr: IntInstruction) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
@@ -524,6 +555,17 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             case EInstructionTypes.k_SemicolonStmtInstruction:
                 return this.SemicolonStmt(instr as SemicolonStmtInstruction);
                 break;
+        }
+
+        return this.NotImplemented(instr); // TODO: remove it
+    }
+
+    Type(instr: ITypeInstruction) {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_VariableTypeInstruction:
+                return this.VariableType(instr as VariableTypeInstruction);
+            case EInstructionTypes.k_SystemTypeInstruction:
+                return this.SystemType(instr as SystemTypeInstruction);
         }
 
         return this.NotImplemented(instr); // TODO: remove it

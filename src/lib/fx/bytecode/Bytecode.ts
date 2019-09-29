@@ -16,10 +16,16 @@ import { assert } from "./../../common";
 import ConstanPool from "./ConstantPool";
 import InstructionList from "./InstructionList";
 import sizeof from "./sizeof";
+import { FloatInstruction } from "../instructions/FloatInstruction";
+import { CastExprInstruction } from "../instructions/CastExprInstruction";
+import { T_INT, T_FLOAT } from "../SystemScope";
+import { ComplexExprInstruction } from "../instructions/ComplexExprInstruction";
 
 enum EErrors {
     k_UnsupportedConstantType,
-    k_UnsupportedExprType
+    k_UnsupportedExprType,
+    k_UnsupoortedTypeConversion,
+    k_UnsupportedArithmeticExpr
 }
 
 export enum EChunkType {
@@ -59,6 +65,7 @@ const REG_NAMES = {
 // symbol name id generation;
 const sname = {
     i32: (i32: number) => `%i32:${i32}`,
+    f32: (f32: number) => `%f32:${f32}`,
     var: (vdecl: IVariableDeclInstruction) => `${vdecl.name}:${vdecl.instructionID}`,
     fun: (fdecl: IFunctionDeclInstruction) => `${fdecl.name}:${fdecl.instructionID}`
 };
@@ -155,7 +162,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
     let registerCounter = 0;
     let symbolTable = new SymbolTable<number>();
 
-    // resolve constant (all constants have been placed in global memory)
+    /** resolve constant (all constants have been placed in global memory) */
     function rcost(lit: ILiteralInstruction): number {
         switch (lit.instructionType) {
             // assume only int32
@@ -165,6 +172,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                     let r = deref(sname.i32(i32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
+                        // constants.checkInt32(i32) => returns address in global memory
                         icode(EOperation.k_Load, r, constants.checkInt32(i32), sizeof.i32());
                         debug.map(lit);
 
@@ -173,6 +181,20 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                     return r;
                 }
                 break;
+            case EInstructionTypes.k_FloatInstruction:
+                    {
+                        let f32 = (lit as FloatInstruction).value;
+                        let r = deref(sname.f32(f32));
+                        if (r == REG_INVALID) {
+                            r = alloca(sizeof.f32());
+                            icode(EOperation.k_Load, r, constants.checkFloat32(f32), sizeof.f32());
+                            debug.map(lit);
+    
+                            ref(sname.f32(f32), r);
+                        }
+                        return r;
+                    }
+                    break;
             default:
                 diag.critical(EErrors.k_UnsupportedConstantType, {});
         }
@@ -180,21 +202,23 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
         return REG_INVALID;
     }
 
-    // assuming that all registers for all types are the same memory;
+    /**
+     * (assuming that all registers for all types are placed in the same memory)
+     */
     function alloca(size: number): number {
         let rc = registerCounter;
         registerCounter += size;
         return rc;
     }
 
-    // insert code
+    /** insert code */ 
     function icode(code: EOperation, ...args: number[]): void {
         // add this instruction to debug layout;
         debug.step();
         instructions.add(code, args);
     }
 
-    // resolve address => returns address of temprary result of expression
+    /** resolve address => returns address of temprary result of expression */
     function raddr(expr: IExprInstruction): number {
         switch (expr.instructionType) {
             case EInstructionTypes.k_InitExprInstruction:
@@ -210,6 +234,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                 }
                 break;
             case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_FloatInstruction:
                 return rcost(expr as ILiteralInstruction);
             case EInstructionTypes.k_IdExprInstruction:
                 {
@@ -217,19 +242,37 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                     assert(id.declaration.instructionType == EInstructionTypes.k_VariableDeclInstruction);
                     return deref(sname.var(id.declaration as IVariableDeclInstruction));
                 }
+            case EInstructionTypes.k_ComplexExprInstruction:
+                return raddr((expr as ComplexExprInstruction).expr);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
                     const arithExpr = expr as ArithmeticExprInstruction;
 
-                    const opMap = {
-                        '+': EOperation.k_Add,
-                        '-': EOperation.k_Sub,
-                        '*': EOperation.k_Mul,
-                        '/': EOperation.k_Div
+                    const opIntMap = {
+                        '+': EOperation.k_IAdd,
+                        '-': EOperation.k_ISub,
+                        '*': EOperation.k_IMul,
+                        '/': EOperation.k_IDiv
                     }
 
-                    let op: EOperation = opMap[arithExpr.operator];
+                    const opFloatMap = {
+                        '+': EOperation.k_FAdd,
+                        '-': EOperation.k_FSub,
+                        '*': EOperation.k_FMul,
+                        '/': EOperation.k_FDiv
+                    }
 
+                    let op: EOperation;
+
+                    if (arithExpr.type.isEqual(T_INT)) {
+                        op = opIntMap[arithExpr.operator];
+                    } else if (arithExpr.type.isEqual(T_FLOAT)) {
+                        op = opFloatMap[arithExpr.operator];
+                    } else {
+                        // todo: add type description
+                        diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                    }
+                    
                     if (!isDef(op)) {
                         diag.critical(EErrors.k_UnsupportedExprType, {});
                         return REG_INVALID;
@@ -241,24 +284,45 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                     return dest;
                 }
                 break;
+            case EInstructionTypes.k_CastExprInstruction:
+                {
+                    const castExpr = expr as CastExprInstruction;
+                    if (castExpr.IsUseless()) {
+                        console.warn(`Useless cast found: ${castExpr.toCode()}`);
+                        return raddr(castExpr.expr);
+                    }
+
+                    let srcType = castExpr.expr.type;
+                    let dstType = castExpr.type;
+
+                    let op: EOperation;
+                    if (srcType.isEqual(T_FLOAT) && dstType.isEqual(T_INT)) {
+                        op = EOperation.k_FloatToInt;
+                    } else if (srcType.isEqual(T_INT) && dstType.isEqual(T_FLOAT)) {
+                        op = EOperation.k_IntToFloat;
+                    } else {
+                        // todo: add type descriptions
+                        diag.critical(EErrors.k_UnsupoortedTypeConversion, {});
+                        return REG_INVALID;
+                    }
+
+                    let dest = alloca(castExpr.type.size);
+                    icode(op, dest, raddr(castExpr.expr));
+                    debug.map(castExpr);
+                    return dest;
+                }
+                break;
             default:
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
                 return REG_INVALID;
         }
     }
 
-    // add referene of the local variable
-    // function ref(i32: number, r: number): void;
-    // function ref(decl: IVariableDeclInstruction, r: number): void;
-    // function ref(src, r) {
-    //     if (isNumber(src)) {
-    //         let i32 = src as number;
-    //         locateSymbol(sname.i32(i32), r);
-    //     } else {
-    //         let decl = src as IVariableDeclInstruction;
-    //         locateSymbol(sname.var(decl), r);
-    //     }
-    // }
+    /**
+     * Add referene of the local variable.
+     * @param sname Variable name or hash.
+     * @param r Register number.
+     */
     function ref(sname: string, r: number) {
         assert(!isDef(symbolTable[sname]));
         symbolTable[sname] = r;

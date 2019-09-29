@@ -18,12 +18,12 @@ class ConstantPoolMemory {
         return this.byteArray.byteLength;
     }
 
+    /** Check capacity and make realloc if needed. */
     private check(byteSize: number) {
         let expected = this.byteLength + byteSize; 
         if (expected <= this.byteCapacity) {
             return;
         }
-        // this.byteArray = ArrayBuffer.transfer(this.byteArray, this.byteCapacity * 2);
         var oldBuffer = this.byteArray;
         var newBuffer = new ArrayBuffer(Math.max(expected, this.byteCapacity * 2));
         new Uint8Array(newBuffer).set(new Uint8Array(oldBuffer));
@@ -31,6 +31,7 @@ class ConstantPoolMemory {
         this.byteArray = newBuffer;
     }
 
+    /** Write constant to buffer and update layout info. */
     addInt32(i32: number) {
         this.check(sizeof.i32());
         new DataView(this.byteArray).setInt32(this.byteLength, i32, true);
@@ -38,18 +39,39 @@ class ConstantPoolMemory {
 
         this.layout.push({ range: sizeof.i32(), value: i32 });
     }
+
+    /** Write constant to buffer and update layout info. */
+    addFloat32(f32: number) {
+        this.check(sizeof.f32());
+        new DataView(this.byteArray).setFloat32(this.byteLength, f32, true);
+        this.byteLength += sizeof.f32();
+
+        this.layout.push({ range: sizeof.f32(), value: f32 });
+    }
 }
+
 
 class ConstanPool {
     _data: ConstantPoolMemory = new ConstantPoolMemory;
-    _intMap: IMap<number> = {};
+    _int32Map: IMap<number> = {};
+    _float32Map: IMap<number> = {};
 
     checkInt32(i32: number): number {
-        let addr = this._intMap[i32];
+        let addr = this._int32Map[i32];
         if (!isDef(addr)) {
-            this._intMap[i32] = this._data.byteLength;
+            this._int32Map[i32] = this._data.byteLength;
             this._data.addInt32(i32);
-            return this._intMap[i32];
+            return this._int32Map[i32];
+        }
+        return addr;
+    }
+
+    checkFloat32(f32: number): number {
+        let addr = this._float32Map[f32];
+        if (!isDef(addr)) {
+            this._float32Map[f32] = this._data.byteLength;
+            this._data.addFloat32(f32);
+            return this._float32Map[f32];
         }
         return addr;
     }
