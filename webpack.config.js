@@ -12,7 +12,7 @@ var GitRevisionPlugin = require('git-revision-webpack-plugin');
 const gitRevisionPlugin = new GitRevisionPlugin()
 
 const [, , command, value] = process.argv;
-const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET === 'WEB');
+const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 
 const srcPath = `${__dirname}/src`;
 const outputPath = `${__dirname}/dist/${isWeb ? 'web' : 'electron'}`;

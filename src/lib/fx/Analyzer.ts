@@ -1,56 +1,58 @@
-﻿import { assert, isDef, isDefAndNotNull, isNull } from '../common';
-import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '../idl/EAnalyzerErrors';
-import { ERenderStates } from '../idl/ERenderStates';
-import { ERenderStateValues } from '../idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '../idl/IInstruction';
-import { IMap } from '../idl/IMap';
-import { IParseNode, IParseTree, IRange } from "../idl/parser/IParser";
-import { Diagnostics, IDiagnosticReport } from "../util/Diagnostics";
-import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
-import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
-import { BoolInstruction } from './instructions/BoolInstruction';
-import { BreakOperator, BreakStmtInstruction } from './instructions/BreakStmtInstruction';
-import { CastExprInstruction } from './instructions/CastExprInstruction';
-import { CompileExprInstruction } from './instructions/CompileExprInstruction';
-import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
-import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
-import { ConditionalExprInstruction } from './instructions/ConditionalExprInstruction';
-import { ConstructorCallInstruction } from './instructions/ConstructorCallInstruction';
-import { DeclStmtInstruction } from './instructions/DeclStmtInstruction';
-import { ExprStmtInstruction } from './instructions/ExprStmtInstruction';
-import { FloatInstruction } from './instructions/FloatInstruction';
-import { ForStmtInstruction } from './instructions/ForStmtInstruction';
-import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
-import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
-import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
-import { IdExprInstruction } from './instructions/IdExprInstruction';
-import { IdInstruction } from './instructions/IdInstruction';
-import { IfStmtInstruction } from './instructions/IfStmtInstruction';
-import { InitExprInstruction } from './instructions/InitExprInstruction';
-import { InstructionCollector } from './instructions/InstructionCollector';
-import { IntInstruction } from './instructions/IntInstruction';
-import { LogicalExprInstruction, LogicalOperator } from './instructions/LogicalExprInstruction';
-import { PassInstruction } from './instructions/PassInstruction';
-import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
-import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
-import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
-import { ProvideInstruction } from "./instructions/ProvideInstruction";
-import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
-import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
-import { SamplerOperator, SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
-import { SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
-import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
-import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
-import { StringInstruction } from './instructions/StringInstruction';
-import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
-import { TechniqueInstruction } from './instructions/TechniqueInstruction';
-import { TypeDeclInstruction } from './instructions/TypeDeclInstruction';
-import { UnaryExprInstruction, UnaryOperator } from './instructions/UnaryExprInstruction';
-import { VariableDeclInstruction, EVariableUsageFlags } from './instructions/VariableDeclInstruction';
-import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
-import { DoWhileOperator, WhileStmtInstruction } from './instructions/WhileStmtInstruction';
-import { ProgramScope } from './ProgramScope';
-import * as SystemScope from './SystemScope';
+﻿import { assert, isDef, isDefAndNotNull, isNull, assignIfDef } from '@lib/common';
+import { ArithmeticExprInstruction, ArithmeticOperator } from '@lib/fx/instructions/ArithmeticExprInstruction';
+import { AssigmentOperator, AssignmentExprInstruction } from "@lib/fx/instructions/AssignmentExprInstruction";
+import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
+import { BreakOperator, BreakStmtInstruction } from '@lib/fx/instructions/BreakStmtInstruction';
+import { CastExprInstruction } from '@lib/fx/instructions/CastExprInstruction';
+import { CompileExprInstruction } from '@lib/fx/instructions/CompileExprInstruction';
+import { ComplexExprInstruction } from '@lib/fx/instructions/ComplexExprInstruction';
+import { ComplexTypeInstruction } from '@lib/fx/instructions/ComplexTypeInstruction';
+import { ConditionalExprInstruction } from '@lib/fx/instructions/ConditionalExprInstruction';
+import { ConstructorCallInstruction } from '@lib/fx/instructions/ConstructorCallInstruction';
+import { DeclStmtInstruction } from '@lib/fx/instructions/DeclStmtInstruction';
+import { ExprStmtInstruction } from '@lib/fx/instructions/ExprStmtInstruction';
+import { FloatInstruction } from '@lib/fx/instructions/FloatInstruction';
+import { ForStmtInstruction } from '@lib/fx/instructions/ForStmtInstruction';
+import { FunctionCallInstruction } from '@lib/fx/instructions/FunctionCallInstruction';
+import { FunctionDeclInstruction } from '@lib/fx/instructions/FunctionDeclInstruction';
+import { FunctionDefInstruction } from '@lib/fx/instructions/FunctionDefInstruction';
+import { IdExprInstruction } from '@lib/fx/instructions/IdExprInstruction';
+import { IdInstruction } from '@lib/fx/instructions/IdInstruction';
+import { IfStmtInstruction } from '@lib/fx/instructions/IfStmtInstruction';
+import { InitExprInstruction } from '@lib/fx/instructions/InitExprInstruction';
+import { InstructionCollector } from '@lib/fx/instructions/InstructionCollector';
+import { IntInstruction } from '@lib/fx/instructions/IntInstruction';
+import { LogicalExprInstruction, LogicalOperator } from '@lib/fx/instructions/LogicalExprInstruction';
+import { PartFxInstruction } from '@lib/fx/instructions/part/PartFxInstruction';
+import { PassInstruction } from '@lib/fx/instructions/PassInstruction';
+import { PostfixArithmeticInstruction, PostfixOperator } from '@lib/fx/instructions/PostfixArithmeticInstruction';
+import { PostfixIndexInstruction } from '@lib/fx/instructions/PostfixIndexInstruction';
+import { PostfixPointInstruction } from '@lib/fx/instructions/PostfixPointInstruction';
+import { ProvideInstruction } from "@lib/fx/instructions/ProvideInstruction";
+import { RelationalExprInstruction, RelationOperator } from '@lib/fx/instructions/RelationalExprInstruction';
+import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
+import { SamplerOperator, SamplerStateBlockInstruction } from '@lib/fx/instructions/SamplerStateBlockInstruction';
+import { SamplerStateInstruction } from "@lib/fx/instructions/SamplerStateInstruction";
+import { SemicolonStmtInstruction } from '@lib/fx/instructions/SemicolonStmtInstruction';
+import { StmtBlockInstruction } from '@lib/fx/instructions/StmtBlockInstruction';
+import { StringInstruction } from '@lib/fx/instructions/StringInstruction';
+import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
+import { TechniqueInstruction } from '@lib/fx/instructions/TechniqueInstruction';
+import { TypeDeclInstruction } from '@lib/fx/instructions/TypeDeclInstruction';
+import { UnaryExprInstruction, UnaryOperator } from '@lib/fx/instructions/UnaryExprInstruction';
+import { EVariableUsageFlags, VariableDeclInstruction } from '@lib/fx/instructions/VariableDeclInstruction';
+import { VariableTypeInstruction } from '@lib/fx/instructions/VariableTypeInstruction';
+import { DoWhileOperator, WhileStmtInstruction } from '@lib/fx/instructions/WhileStmtInstruction';
+import { ProgramScope } from '@lib/fx/ProgramScope';
+import * as SystemScope from '@lib/fx/SystemScope';
+import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
+import { ERenderStates } from '@lib/idl/ERenderStates';
+import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
+import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IPartFxPassProperties } from '@lib/idl/IInstruction';
+import { IMap } from '@lib/idl/IMap';
+import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
+import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
+import { PartFxPassInstruction } from './instructions/part/PartFxPassInstruction';
 
 
 function validate(instr: IInstruction, expectedType: EInstructionTypes) {
@@ -2863,8 +2865,71 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
     return technique;
 }
 
+/**
+ * AST example:
+ *    PartFxDecl
+ *         T_PUNCTUATOR_125 = '}'
+ *       + PassDecl 
+ *       + PassState 
+ *       + PassState 
+ *       + PassState 
+ *         T_PUNCTUATOR_123 = '{'
+ *       + ComplexNameOpt 
+ *         T_KW_FXPART = 'partFx'
+ */
+function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxInstruction {
+    const children = sourceNode.children;
+    const name = analyzeComplexName(children[children.length - 2]);
+    // Specifies whether name should be interpreted as globalNamespace.name or just a name;
+    const isComplexName = children[children.length - 2].children.length !== 1;
+    const scope = program.currentScope;
+
+    let annotation: IAnnotationInstruction = null;
+    let semantics: string = null;
+    let passList: IPartFxPassInstruction[] = [];
+    let spawnRoutine: IFunctionDeclInstruction = null;
+    let initRoutine: IFunctionDeclInstruction = null;
+    let updateRoutine: IFunctionDeclInstruction = null;
+
+    for (let i = children.length - 3; i >= 0; i--) {
+
+        switch(children[i].name) {
+            case 'Annotation':
+                annotation = analyzeAnnotation(children[i]);
+                break;
+            case 'Semantic':
+                semantics = analyzeSemantic(children[i]);
+                break;
+            case 'PassState':
+                // todo: process state
+                break;
+            case 'PassDecl':
+            let pass = analyzePartFXPassDecl(context, program, children[i]);
+                assert(!isNull(pass));
+                passList.push(pass);
+                break;
+
+        }
+    }
+
+    const partFx = new PartFxInstruction({ 
+        sourceNode, name, semantics, annotation, 
+        spawnRoutine, initRoutine, updateRoutine,
+        passList, scope });
+        
+    addTechnique(context, program, partFx);
+    return partFx;
+}
 
 
+/**
+ * AST example:
+ *    TechniqueBody
+ *         T_PUNCTUATOR_125 = '}'
+ *       + PassDecl 
+ *       + PassDecl 
+ *         T_PUNCTUATOR_123 = '{'
+ */
 function analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction[] {
     const children = sourceNode.children;
     let passList: IPassInstruction[] = [];
@@ -2874,6 +2939,53 @@ function analyzeTechnique(context: Context, program: ProgramScope, sourceNode: I
         passList.push(pass);
     }
     return passList;
+}
+
+
+/**
+ * AST example:
+ *    PassDecl
+ *       + PassStateBlock 
+ *         T_NON_TYPE_ID = 'P0'
+ *         T_KW_PASS = 'pass'
+ */
+function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
+
+    
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const renderStates = analyzePassStateBlock(context, program, children[0]);
+    const fxStates = analyzePartFxStateBlock(context, program, children[0]);
+
+    const sorting = assignIfDef(fxStates.sorting, true);
+    const defaultShader = assignIfDef(fxStates.defaultShader, false);
+    const prerenderRoutine = assignIfDef(fxStates.prerenderRoutine, null);
+
+    let id: IIdInstruction = null;
+    for (let i = 0; i < children.length; ++ i) {
+        if (children[i].name === "T_NON_TYPE_ID") {
+            let name = children[i].value;
+            id = new IdInstruction({ name, scope });
+        }
+    }
+
+
+    const pass = new PartFxPassInstruction({
+        scope,
+        sourceNode,
+        renderStates,
+        id,
+        sorting,
+        defaultShader,
+        prerenderRoutine,
+        // todo: rework shaders setup
+        pixelShader: null,
+        vertexShader: null
+    });
+
+    //todo: add annotation and id
+
+    return pass;
 }
 
 /**
@@ -2985,8 +3097,15 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 }
 
 
-
-
+// todo: use explicit return type
+function analyzePartFxStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
+    const children = sourceNode.children;
+    let states: Partial<IPartFxPassProperties> = {}
+    for (let i = children.length - 2; i >= 1; i--) {
+        states = { ...states, ...analyzePartFXPassProperies(context, program, children[i]) };
+    }
+    return states;
+}
 
 /**
  * AST example:
@@ -3004,6 +3123,118 @@ function analyzePassStateBlock(context: Context, program: ProgramScope, sourceNo
         states = { ...states, ...analyzePassState(context, program, children[i]) };
     }
     return states;
+}
+
+
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'STATE_ONE'
+ */
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'STATE_TWO'
+ */
+/**
+ * AST example:
+ *    PassStateExpr
+ *         T_PUNCTUATOR_125 = '}'
+ *         T_UINT = '1'
+ *         T_PUNCTUATOR_44 = ','
+ *         T_KW_TRUE = 'true'
+ *         T_PUNCTUATOR_123 = '{'
+ */
+// todo: add explicit type for fx statess
+function analyzePartFXPassProperies(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
+
+    const children = sourceNode.children;
+    
+    const stateName: string = children[children.length - 1].value.toUpperCase();
+    const stateExprNode: IParseNode = children[children.length - 3];
+    const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
+
+    let fxStates: Partial<IPartFxPassProperties> = {};
+    
+    if (isNull(exprNode.value) || isNull(stateName)) {
+        console.warn('Pass state is incorrect.'); // todo: move to warnings
+        // todo: return correct state list
+        return fxStates;
+    }
+    
+    /**
+     * AST example:
+     *    PassStateExpr
+     *         T_PUNCTUATOR_125 = '}'
+     *         T_UINT = '1'
+     *         T_PUNCTUATOR_44 = ','
+     *         T_KW_TRUE = 'true'
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    if (exprNode.value === '{' && stateExprNode.children.length > 3) {
+        const values: string[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
+        for (let i = stateExprNode.children.length - 2, j = 0; i >= 1; i -= 2, j++) {
+            // todo: validate values with names
+            values[j] = stateExprNode.children[i].value.toUpperCase();
+        }
+
+        switch (stateName) {
+            // case ERenderStates.BLENDFUNC:
+            //     if (values.length !== 2) {
+            //         console.warn('Pass state are incorrect.');
+            //         return {};
+            //     }
+            //     renderStates[ERenderStates.SRCBLENDCOLOR] = values[0];
+            //     renderStates[ERenderStates.SRCBLENDALPHA] = values[0];
+            //     renderStates[ERenderStates.DESTBLENDCOLOR] = values[1];
+            //     renderStates[ERenderStates.DESTBLENDALPHA] = values[1];
+            //     break;
+            default:
+                console.warn('Pass fx state is incorrect.');
+                return fxStates;
+        }
+    }
+    /**
+     * AST example:
+     *    PassStateExpr
+     *         T_NON_TYPE_ID = 'FALSE'
+     */
+    else {
+        let value: string = null;
+        if (exprNode.value === '{') {
+            value = stateExprNode.children[1].value.toUpperCase();
+        }
+        else {
+            value = exprNode.value.toUpperCase();
+        }
+
+        switch (stateName) {
+            case 'SORTING':
+                // todo: use correct validation with diag error output
+                assert(value == 'TRUE' || value == 'FALSE');
+                fxStates.sorting = (value === 'TRUE');
+                break;
+            case 'DEFAULTSHADER':
+                 // todo: use correct validation with diag error output
+                 assert(value == 'TRUE' || value == 'FALSE');
+                 fxStates.defaultShader = (value === 'TRUE');
+                 break;
+            case 'PRERENDERROUTINE':
+                // todo: parse routine!
+                fxStates.prerenderRoutine = null;
+            default:
+                console.warn('Pass fx state is incorrect.');
+                break;
+        }
+    }
+    
+    return fxStates;
 }
 
 
@@ -3206,6 +3437,11 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
 
     for (let i = children.length - 1; i >= 0; i--) {
         switch (children[i].name) {
+            
+            case 'PartFxDecl':
+                globals.push(analyzePartFXDecl(context, program, children[i]));
+                break;
+
             case 'TechniqueDecl':
                 globals.push(analyzeTechniqueDecl(context, program, children[i]));
                 break;

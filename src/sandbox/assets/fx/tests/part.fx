@@ -4,11 +4,13 @@ struct Part {
     float size;
 };
 
+/* Example of default shader input. */
 struct DefaultShaderInput {
-    float pos;
-    float size;
-    float color;
+    float pos : POSITION;
+    float size : SIZE;
+    float color : COLOR0;
 };
+
 
 int spawn()
 {

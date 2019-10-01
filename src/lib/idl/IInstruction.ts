@@ -2,6 +2,7 @@ import { ERenderStates } from "./ERenderStates";
 import { ERenderStateValues } from "./ERenderStateValues";
 import { IMap } from "./IMap";
 import { IParseNode } from "./parser/IParser";
+import { Writable } from "stream";
 
 export enum EInstructionTypes {
     k_Instruction = 0,
@@ -60,7 +61,11 @@ export enum EInstructionTypes {
     k_SemicolonStmtInstruction,
     k_PassInstruction,
     k_TechniqueInstruction,
-    k_ProvideInstruction
+    k_ProvideInstruction,
+
+    // part fx
+    k_PartFxDeclInstruction,
+    k_PartFxPassInstruction
 }
 
 
@@ -483,31 +488,29 @@ export interface IStmtBlockInstruction extends IStmtInstruction {
 export interface IPassInstruction extends IDeclInstruction {
     readonly id: IIdInstruction;
 
-    readonly uniformVariableMapV: IMap<IVariableDeclInstruction>;
-    readonly textureVariableMapV: IMap<IVariableDeclInstruction>;
-    readonly usedComplexTypeMapV: IMap<ITypeInstruction>;
+    // readonly uniformVariableMapV: IMap<IVariableDeclInstruction>;
+    // readonly textureVariableMapV: IMap<IVariableDeclInstruction>;
+    // readonly usedComplexTypeMapV: IMap<ITypeInstruction>;
 
-    readonly uniformVariableMapP: IMap<IVariableDeclInstruction>;
-    readonly textureVariableMapP: IMap<IVariableDeclInstruction>;
-    readonly usedComplexTypeMapP: IMap<ITypeInstruction>;
+    // readonly uniformVariableMapP: IMap<IVariableDeclInstruction>;
+    // readonly textureVariableMapP: IMap<IVariableDeclInstruction>;
+    // readonly usedComplexTypeMapP: IMap<ITypeInstruction>;
 
-    readonly fullUniformMap: IMap<IVariableDeclInstruction>;
-    readonly fullTextureMap: IMap<IVariableDeclInstruction>;
+    // readonly fullUniformMap: IMap<IVariableDeclInstruction>;
+    // readonly fullTextureMap: IMap<IVariableDeclInstruction>;
 
-    readonly vertexShader: IFunctionDeclInstruction;
-    readonly pixelShader: IFunctionDeclInstruction;
+    // readonly vertexShader: IFunctionDeclInstruction;
+    // readonly pixelShader: IFunctionDeclInstruction;
+
     readonly renderStates: IMap<ERenderStateValues>;
-
-
     getState(type: ERenderStates): ERenderStateValues;
 
+    // todo: remove it?
     $finalizePass(): void;
 }
 
 
 export interface ITechniqueInstruction extends IDeclInstruction {
-    name: string;
-
     readonly passList: IPassInstruction[];
 }
 
@@ -515,3 +518,29 @@ export interface ITechniqueInstruction extends IDeclInstruction {
 export interface IFunctionDeclListMap {
     [functionName: string]: IFunctionDeclInstruction[];
 }
+
+
+/**
+ * Particle FX system
+ */
+
+
+export interface IPartFxPassInstruction extends IPassInstruction {
+    readonly sorting: boolean;
+    readonly prerenderRoutine: IFunctionDeclInstruction;
+    readonly defaultShader: boolean;
+}
+
+
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+export type IPartFxPassProperties = Writeable<Pick<IPartFxPassInstruction, Exclude<keyof IPartFxPassInstruction, keyof IPassInstruction>>>;
+
+
+ export interface IPartFxInstruction extends ITechniqueInstruction {
+
+    readonly spawnRoutine: IFunctionDeclInstruction;
+    readonly initRoutine: IFunctionDeclInstruction;
+    readonly updateRoutine: IFunctionDeclInstruction;
+
+    readonly passList: IPartFxPassInstruction[];
+ }

@@ -62,6 +62,11 @@ export let isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
 export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'object' && typeof x.byteOffset === 'number';
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
-export type INullable<T> = {[P in keyof T]: T[P] | null } | null;
+export let assignIfDef = (val: any, def: any) => (isDef(val) ? val : def);
+export type Nullable<T> = {[P in keyof T]: T[P] | null } | null;
+export type FunctionPropertyNames<T> = { [K in keyof T]: T[K] extends Function ? K : never }[keyof T];
+export type FunctionProperties<T> = Pick<T, FunctionPropertyNames<T>>;
+export type NonFunctionPropertyNames<T> = { [K in keyof T]: T[K] extends Function ? never : K }[keyof T];
+export type NonFunctionProperties<T> = Pick<T, NonFunctionPropertyNames<T>>;
 
 export let assert = console.assert.bind(console);

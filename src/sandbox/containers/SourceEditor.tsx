@@ -39,7 +39,6 @@ export const styles = {
     errorMarker: {
         display: 'inline-block',
         position: 'relative',
-        // borderTop: '1px dotted red',
         '&:before': {
             content: '"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"',
             fontSize: '0.6em',
@@ -76,6 +75,7 @@ class DynamicMarker {
     className: string;
     inFront: boolean;
     tooltip: string;
+    type: string;
 
     constructor(range, className: string, tooltip: string) {
         this.marker = range;
@@ -91,7 +91,7 @@ class DynamicMarker {
         const proxy = <div style={ { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } }></div>;
 
         render(proxy, markerElement);
-        render(<Popup trigger={ proxy } content={ this.tooltip } />, markerElement);
+        render(<Popup trigger={ proxy } inverted content={ this.tooltip } />, markerElement);
         markerElement.style.pointerEvents = 'auto';
         markerLayer.element.appendChild(markerElement);
     }
@@ -148,7 +148,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 ));
             }
         }
-
+        console.log(markers, props.markers);
         return markers;
     }
 

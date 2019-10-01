@@ -17,7 +17,7 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
     constructor({ value, ...settings }: IBoolInstructionSettings) {
         super({ instrType: EInstructionTypes.k_BoolInstruction, type: SystemScope.T_BOOL, ...settings });
 
-        this._value = value === "true";
+        this._value = (value === "true");
     }
 
     set value(bValue: boolean) {

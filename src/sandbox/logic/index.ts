@@ -2,7 +2,8 @@ import { createLogic, createLogicMiddleware } from 'redux-logic';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest, IGrammarFileSpecified } from '@sandbox/actions/ActionTypes';
 import IStoreState from '@sandbox/store/IStoreState';
-import parsing from './parsing'
+import parsing from './parsing';
+import fxRuntime from './fxRuntime';
 
 
 const readFile = fname => fetch(fname).then(resp => resp.text());
@@ -43,5 +44,6 @@ const fetchGrammarFileLogic = createLogic<IStoreState, IGrammarFileSpecified['pa
 export default createLogicMiddleware([
     fetchSourceFileLogic,
     fetchGrammarFileLogic,
-    ...parsing
+    ...parsing,
+    ...fxRuntime
 ]);

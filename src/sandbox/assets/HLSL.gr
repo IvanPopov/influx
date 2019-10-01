@@ -250,7 +250,7 @@ PassState : Id StateIndex StateExprBegin PassStateExpr StateExprEnd --AN
 
 PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --AN
 
-PartFxBody : '{' '}'  --AN
+PartFxBody : '{' '}'  --NN
 PartFxBody : '{' PartFxProperties '}'
 
 PartFxProperties : PartFxProperty --NN
