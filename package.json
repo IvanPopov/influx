@@ -70,6 +70,7 @@
   },
   "dependencies": {
     "electron": "^5.0.1",
+    "jss-nested": "^6.0.1",
     "webpack-target-electron-renderer": "^0.4.0"
   }
 }

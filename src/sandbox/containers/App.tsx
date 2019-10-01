@@ -42,9 +42,17 @@ export const styles = {
         '& > div:first-child': {
             marginBottom: '0',
             position: 'relative',
-            zIndex: '1',
-            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important'
+            zIndex: '2',
+            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important',
+            backgroundColor: 'white !important'
         }
+    },
+    rightColumnFix: {
+        boxShadow: '-5px 0 5px black',
+        zIndex: 1
+    },
+    leftColumnFix: {
+        paddingRight: '0px !important'
     }
 }
 
@@ -262,13 +270,13 @@ class App extends React.Component<IAppProps> {
                     >
                         <Grid divided={false}>
                             <Grid.Row columns={3}>
-                                <Grid.Column computer="10" tablet="8" mobile="6" >
+                                <Grid.Column computer="10" tablet="8" mobile="6" className={props.classes.leftColumnFix}>
                                     <SourceEditor
                                         name="source-code"
                                         validateBreakpoint={line => this.validateBreakpoint(line)}
                                     />
                                 </Grid.Column>
-                                <Grid.Column computer="6" tablet="8" mobile="10">
+                                <Grid.Column computer="6" tablet="8" mobile="10" className={props.classes.rightColumnFix}>
                                     <Container style={{ paddingTop: '15px' }}>
                                         <Tab menu={{ secondary: true, size: 'mini' }} panes={analysisResults} renderActiveOnly={false} />
                                     </Container>

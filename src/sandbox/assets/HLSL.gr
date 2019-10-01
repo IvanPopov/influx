@@ -11,7 +11,7 @@ Decl : VarStructDecl
 Decl : FunctionDecl
 Decl : TechniqueDecl
 #if FX_PART
-    Decl : PartFXDecl
+    Decl : PartFxDecl
 #endif 
 Decl : UseDecl
 Decl : ImportDecl
@@ -245,6 +245,22 @@ PassState : Id StateIndex StateExprBegin PassStateExpr StateExprEnd --AN
 # BreakOpt : ';'
 # BreakOpt : T_KW_BREAK ';'
 
+# todo: move all particles declarations to separate grammar!
+#if FX_PART
+
+PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --AN
+
+PartFxBody : '{' '}'  --AN
+PartFxBody : '{' PartFxProperties '}'
+
+PartFxProperties : PartFxProperty --NN
+PartFxProperties : PartFxProperties PartFxProperty
+
+PartFxProperty : PassState
+PartFxProperty : PassDecl
+
+#endif // FX_PART
+
 StateBlock : StateBlockBegin StateBlockEnd --AN
 StateBlock : StateBlockBegin States StateBlockEnd
 StateBlockBegin : '{'
@@ -258,14 +274,6 @@ StateIndex :
 StateIndex : '[' Uint ']'
 StateExprBegin : '='
 StateExprEnd : ';'
-
-#if FX_PART
-    PartFXDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFXBody --AN
-    PartFXBody : PartFXBegin PartFXEnd  --AN
-    PartFXBody : PartFXBegin PassDecls PartFXEnd
-    PartFXBegin : '{'
-    PartFXEnd : '}'
-#endif // FX_PART
 
 StmtBlock : StmtBlockBegin StmtBlockEnd --AN
 StmtBlock : StmtBlockBegin Stmts StmtBlockEnd
@@ -488,7 +496,7 @@ T_KW_OUT : "out"
 T_KW_INOUT : "inout"
 T_KW_TECHNIQUE : "technique"
 #if FX_PART
-    T_KW_FXPART : "part"
+    T_KW_FXPART : "partFx"
 #endif
 T_KW_PASS : "pass"
 T_KW_RETURN : "return"

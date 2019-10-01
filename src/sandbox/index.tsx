@@ -41,7 +41,7 @@ render(
     document.getElementById('app')
 );
 
-store.dispatch(sourceCode.openFile(`./assets/fx/tests/simplest_func.fx`));
+store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
 store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');

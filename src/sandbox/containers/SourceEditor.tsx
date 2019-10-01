@@ -3,7 +3,8 @@ import { IWithStyles } from '@sandbox/components';
 import * as brace from '@sandbox/deps/brace';
 import '@sandbox/deps/brace/ext/language_tools'; // need for ace autocompletions;
 import '@sandbox/deps/brace/mode/c_cpp';
-import '@sandbox/deps/brace/theme/github';
+// import '@sandbox/deps/brace/theme/github';
+import '@sandbox/deps/brace/theme/ambiance';
 import AceEditor, { Marker } from '@sandbox/deps/react-ace';
 import { mapProps } from '@sandbox/reducers';
 import { getSourceCode } from '@sandbox/reducers/sourceFile';
@@ -14,6 +15,10 @@ import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Popup } from 'semantic-ui-react';
 
+// import jss from 'jss';
+// import nested from 'jss-nested';
+// jss.use(nested());
+
 
 
 const AceRange = brace.acequire("ace/range").Range;
@@ -21,12 +26,32 @@ const AceRange = brace.acequire("ace/range").Range;
 export const styles = {
     yellowMarker: {
         backgroundColor: 'yellow',
+        opacity: 0.3,
         position: 'absolute'
     },
+    // errorMarker: {
+    //     // backgroundColor: 'red',
+    //     position: 'absolute',
+    //     // background: 'url(http://i.imgur.com/HlfA2is.gif) bottom repeat-x'
+    //     borderBottom: '1px dotted red'
+    // },
+
     errorMarker: {
-        // backgroundColor: 'red',
-        position: 'absolute',
-        background: 'url(http://i.imgur.com/HlfA2is.gif) bottom repeat-x'
+        display: 'inline-block',
+        position: 'relative',
+        // borderTop: '1px dotted red',
+        '&:before': {
+            content: '"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"',
+            fontSize: '0.6em',
+            fontWeight: '700',
+            fontFamily: 'Times New Roman, Serif',
+            color: 'red',
+            width: '100%',
+            position: 'absolute',
+            top: '12px',
+            left: '-1px',
+            overflow: 'hidden',
+        }
     },
 
     breakpoint: {
@@ -39,7 +64,7 @@ export const styles = {
 
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
     name?: string,
-    
+
     validateBreakpoint: (line: number) => number;// todo: remove it;
 
     actions: typeof sourceActions;
@@ -192,7 +217,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         // console.log(this.session.getMode());
         // this.session.getMode().$highlightRules.setFunctionKeywords(['foo', 'bar']) //...
 
-        
+
         // var completions = [
         //     { id: 'id1', 'value': 'value1' },
         //     { id: 'id2', 'value': 'value2' }
@@ -219,6 +244,10 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         //     enableLiveAutocompletion: false,
         //     enableSnippets: false
         // });
+
+        
+        // (editor.session.$mode as any).$highlightRules.$keywords["partFx"] = "variable.language";
+        // (editor.session.$mode as any).$highlightRules.$keywordList.push("partFx");
     }
 
     render() {
@@ -239,7 +268,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     ref="aceEditor"
                     name={ props.name }
                     mode="c_cpp"
-                    theme="github"
+                    theme="ambiance"
                     width="100%"
                     height="calc(100vh - 41px)" // todo: fixme
                     onChange={ content => props.actions.setContent(content) }

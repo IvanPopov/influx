@@ -6,6 +6,7 @@ int main(void) {
     return c;
 }
 
+
 technique some : semantic <int a=1;> {
     pass p0 <int b = 10;> {
         //SetComputeShader( CompileShader( cs_5_0, CS() ) );

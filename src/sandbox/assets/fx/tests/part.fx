@@ -4,11 +4,11 @@ struct Part {
     float size;
 };
 
-struct DefaultView {
+struct DefaultShaderInput {
     float pos;
     float size;
     float color;
-}
+};
 
 int spawn()
 {
@@ -25,21 +25,21 @@ void update(inout Part part)
 
 }
 
-void prerender(inout Part part, out DefaultView view)
+void prerender(inout Part part, out DefaultShaderInput input)
 {
-    view.pos = part.pos;
-    view.size = part.size;
-    view.color = 0;
+    input.pos = part.pos;
+    input.size = part.size;
+    input.color = 0.0;
 }
 
-part example {
+partFx awesome {
     SpawnRoutine = compile spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 
     pass P0 {
         Sorting = TRUE;
-        DefaultRenderer = TRUE;
+        DefaultShader = TRUE;
         PrerenderRoutine = compile prerender();
     }
 }

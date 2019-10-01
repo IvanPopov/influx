@@ -895,7 +895,12 @@ export class Parser implements IParser {
             }
 
             // split rule like 'S : Program'
-            tempRule = allRuleList[i].split(/\s* \s*/);
+            tempRule = allRuleList[i].trim().split(/\s* \s*/);
+
+            // ignore rules starting with '#'
+            if (tempRule[0][0] == INLINE_COMMENT_SYMBOL) {
+                continue;
+            }
 
             if (isLexerBlock) {
                 if ((tempRule.length === 3 || (tempRule.length === 4 && tempRule[3] === "")) &&
@@ -931,11 +936,6 @@ export class Parser implements IParser {
             // looking for '--LEXER--' keyword
             if (tempRule[0] === LEXER_RULES) {
                 isLexerBlock = true;
-                continue;
-            }
-
-            // ignore rules starting with '#'
-            if (tempRule[0][0] == INLINE_COMMENT_SYMBOL) {
                 continue;
             }
 
