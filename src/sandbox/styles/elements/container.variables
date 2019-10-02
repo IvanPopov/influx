@@ -1,0 +1,2 @@
+@largeMonitorGutter: 1em;
+@largeMonitorWidth: auto;

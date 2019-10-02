@@ -1,45 +1,30 @@
-import { DeclInstruction, IDeclInstructionSettings } from "@lib/fx/instructions/DeclInstruction";
-import { Instruction } from "@lib/fx/instructions/Instruction";
-import { EInstructionTypes, IPassInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ETechniqueType } from "@lib/idl/IInstruction";
 import { IFunctionDeclInstruction, IPartFxInstruction, IPartFxPassInstruction } from "../../../idl/IInstruction";
+import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
 
 
-export interface IPartFxInstructionSettings extends IDeclInstructionSettings {
-    name: string;
-    passList: IPartFxPassInstruction[];
+// prohibition of explicitly indicating the type of technique
+export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSettings<IPartFxPassInstruction>, "techniqueType"> {
     spawnRoutine: IFunctionDeclInstruction;
     initRoutine: IFunctionDeclInstruction;
     updateRoutine: IFunctionDeclInstruction;
 }
 
+// var s: IPartFxInstructionSettings;
+// s.te
 
-export class PartFxInstruction extends DeclInstruction implements IPartFxInstruction {
-    protected _name: string;
-    protected _passList: IPartFxPassInstruction[];
+export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstruction> implements IPartFxInstruction {
     protected _spawnRoutine: IFunctionDeclInstruction;
     protected _initRoutine: IFunctionDeclInstruction;
     protected _updateRoutine: IFunctionDeclInstruction;
 
-    constructor({ name, spawnRoutine, initRoutine, updateRoutine, passList, ...settings }: IPartFxInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_PartFxDeclInstruction, ...settings });
+    constructor({ spawnRoutine, initRoutine, updateRoutine, ...settings }: IPartFxInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_PartFxDeclInstruction, techniqueType: ETechniqueType.k_PartFx, ...settings });
 
-        this._name = name;
-        this._passList = passList.map(pass => Instruction.$withParent(pass, this));
         this._spawnRoutine = spawnRoutine;
         this._initRoutine = initRoutine;
         this._updateRoutine = updateRoutine;
     }
-
-
-    get name(): string {
-        return this._name;
-    }
-
-
-    get passList(): IPartFxPassInstruction[] {
-        return this._passList;
-    }
-
 
     get spawnRoutine(): IFunctionDeclInstruction {
         return this._spawnRoutine;

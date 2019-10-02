@@ -1,4 +1,3 @@
-import { NonFunctionDiff, Writeable, PropertiesDiff } from "@lib/common";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { IMap } from "@lib/idl/IMap";
@@ -510,8 +509,15 @@ export interface IPassInstruction extends IDeclInstruction {
 }
 
 
+export enum ETechniqueType {
+    k_BasicFx,  // << basic Microsoft DirectX like effect
+    k_PartFx,
+    k_Unknown
+}
+
 export interface ITechniqueInstruction extends IDeclInstruction {
     readonly passList: IPassInstruction[];
+    readonly type: ETechniqueType;
 }
 
 

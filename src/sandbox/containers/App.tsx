@@ -49,7 +49,8 @@ export const styles = {
     },
     rightColumnFix: {
         boxShadow: '-5px 0 5px black',
-        zIndex: 1
+        zIndex: 1,
+        paddingLeft: '0 !important'
     },
     leftColumnFix: {
         paddingRight: '0px !important'
@@ -277,7 +278,7 @@ class App extends React.Component<IAppProps> {
                                     />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10" className={props.classes.rightColumnFix}>
-                                    <Container style={{ paddingTop: '15px' }}>
+                                    <Container style={{ paddingTop: '15px'}}>
                                         <Tab menu={{ secondary: true, size: 'mini' }} panes={analysisResults} renderActiveOnly={false} />
                                     </Container>
                                 </Grid.Column>

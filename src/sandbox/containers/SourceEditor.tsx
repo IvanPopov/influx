@@ -171,7 +171,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     componentDidMount() {
         let { editor, props, session } = this;        
-        let lineHeight = editor.renderer.lineHeight;
+        let lineHeight = 0;//editor.renderer.lineHeight;
         let { classes } = jss.createStyleSheet({ breakpoint: {  background: 'orange', 'margin-top': `${lineHeight}px` } }).attach();
         this.setState({ breakpointCls: classes.breakpoint });
 

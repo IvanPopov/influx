@@ -74,6 +74,6 @@ export type NonFunctionProperties<T> = Pick<T, NonFunctionPropertyNames<T>>;
 export type Diff<T1, T2> = Pick<T1, Exclude<keyof T1, keyof T2>>;
 export type NonFunctionDiff<T1, T2> = NonFunctionProperties<Diff<T1, T2>>;
 export type PropertiesDiff<T1, T2> = Writeable<NonFunctionDiff<T1, T2>>;
-export type ExcludePropertiesWithNames<T, NAMES> = { [P in Exclude<keyof T, NAMES>]?: T[P]; };
+export type MakeOptional<T> = { [P in keyof T]?: T[P]; };
 
 export let assert = console.assert.bind(console);

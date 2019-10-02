@@ -48,7 +48,7 @@ import * as SystemScope from '@lib/fx/SystemScope';
 import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ETechniqueType } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
@@ -2850,6 +2850,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
     let annotation: IAnnotationInstruction = null;
     let semantics: string = null;
     let passList: IPassInstruction[] = null;
+    let techniqueType: ETechniqueType = ETechniqueType.k_BasicFx;
 
     for (let i = children.length - 3; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
@@ -2861,7 +2862,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
         }
     }
 
-    const technique = new TechniqueInstruction({ sourceNode, name, semantics, annotation, passList, scope });
+    const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantics, annotation, passList, scope });
     addTechnique(context, program, technique);
     return technique;
 }
@@ -2913,10 +2914,7 @@ function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: 
         }
     }
 
-    const partFx = new PartFxInstruction({ 
-        sourceNode, name, semantics, annotation, 
-        spawnRoutine, initRoutine, updateRoutine,
-        passList, scope });
+    const partFx = new PartFxInstruction({ sourceNode, name, semantics, annotation, passList, scope, spawnRoutine, initRoutine, updateRoutine });
         
     addTechnique(context, program, partFx);
     return partFx;
