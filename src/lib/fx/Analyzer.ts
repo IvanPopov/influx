@@ -1,4 +1,4 @@
-﻿import { assert, isDef, isDefAndNotNull, isNull, assignIfDef } from '@lib/common';
+﻿import { assert, isDef, isDefAndNotNull, isNull, assignIfDef, PropertiesDiff } from '@lib/common';
 import { ArithmeticExprInstruction, ArithmeticOperator } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "@lib/fx/instructions/AssignmentExprInstruction";
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
@@ -48,11 +48,12 @@ import * as SystemScope from '@lib/fx/SystemScope';
 import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IPartFxPassProperties } from '@lib/idl/IInstruction';
+import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
 import { PartFxPassInstruction } from './instructions/part/PartFxPassInstruction';
+
 
 
 function validate(instr: IInstruction, expectedType: EInstructionTypes) {
@@ -3096,6 +3097,7 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
     return shaderFunc;
 }
 
+type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruction>;
 
 // todo: use explicit return type
 function analyzePartFxStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
@@ -3228,6 +3230,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
             case 'PRERENDERROUTINE':
                 // todo: parse routine!
                 fxStates.prerenderRoutine = null;
+                break;
             default:
                 console.warn('Pass fx state is incorrect.');
                 break;

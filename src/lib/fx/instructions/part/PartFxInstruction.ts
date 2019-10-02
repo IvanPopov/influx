@@ -54,9 +54,4 @@ export class PartFxInstruction extends DeclInstruction implements IPartFxInstruc
     get updateRoutine(): IFunctionDeclInstruction {
         return this._updateRoutine;
     }
-
-    
-    get prerenderRoutine(): IFunctionDeclInstruction {
-        return this._prerenderRoutine;
-    }
 }

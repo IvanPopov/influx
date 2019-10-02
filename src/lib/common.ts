@@ -63,10 +63,17 @@ export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'objec
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
 export let assignIfDef = (val: any, def: any) => (isDef(val) ? val : def);
+
 export type Nullable<T> = {[P in keyof T]: T[P] | null } | null;
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 export type FunctionPropertyNames<T> = { [K in keyof T]: T[K] extends Function ? K : never }[keyof T];
 export type FunctionProperties<T> = Pick<T, FunctionPropertyNames<T>>;
 export type NonFunctionPropertyNames<T> = { [K in keyof T]: T[K] extends Function ? never : K }[keyof T];
 export type NonFunctionProperties<T> = Pick<T, NonFunctionPropertyNames<T>>;
+/** For ex: retrieve the properties of the child that the parent does not have. */
+export type Diff<T1, T2> = Pick<T1, Exclude<keyof T1, keyof T2>>;
+export type NonFunctionDiff<T1, T2> = NonFunctionProperties<Diff<T1, T2>>;
+export type PropertiesDiff<T1, T2> = Writeable<NonFunctionDiff<T1, T2>>;
+export type ExcludePropertiesWithNames<T, NAMES> = { [P in Exclude<keyof T, NAMES>]?: T[P]; };
 
 export let assert = console.assert.bind(console);

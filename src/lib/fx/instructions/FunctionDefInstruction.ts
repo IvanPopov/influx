@@ -1,11 +1,8 @@
-import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { IVariableDeclInstruction, IAnnotationInstruction, IVariableTypeInstruction, IIdInstruction, EInstructionTypes, ITypeInstruction, IInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
-import * as SystemScope from "../SystemScope";
-import { isNull } from "../../common";
-import { Instruction } from "./Instruction";
+import { isNull } from "@lib/common";
+import { DeclInstruction, IDeclInstructionSettings } from "@lib/fx/instructions/DeclInstruction";
+import { Instruction } from "@lib/fx/instructions/Instruction";
+import * as SystemScope from "@lib/fx/SystemScope";
+import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 
 export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
@@ -13,7 +10,6 @@ export interface IFunctionDefInstructionSettings extends IDeclInstructionSetting
     id: IIdInstruction;
     paramList?: IVariableDeclInstruction[];
 }
-
 
 /**
  * Represent type func(...args)[:Semantic]

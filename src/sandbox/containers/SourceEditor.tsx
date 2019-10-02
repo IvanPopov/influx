@@ -15,11 +15,13 @@ import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Popup } from 'semantic-ui-react';
 
+import { createUseStyles } from 'react-jss'
+
 // import jss from 'jss';
 // import nested from 'jss-nested';
 // jss.use(nested());
 
-
+import jss from 'jss'
 
 const AceRange = brace.acequire("ace/range").Range;
 
@@ -59,6 +61,7 @@ export const styles = {
         // boxShadow: '0px 0px 1px 1px red inset'
     }
 }
+
 
 
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
@@ -167,16 +170,16 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     // }
 
     componentDidMount() {
+        let { editor, props, session } = this;        
+        let lineHeight = editor.renderer.lineHeight;
+        let { classes } = jss.createStyleSheet({ breakpoint: {  background: 'orange', 'margin-top': `${lineHeight}px` } }).attach();
+        this.setState({ breakpointCls: classes.breakpoint });
 
-    }
-
-    componentDidUpdate() {
-        let { editor, props, session } = this;
 
         editor.renderer.setShowGutter(true);
 
         editor.on("guttermousedown", e => {
-            var target = e.domEvent.target;
+            let target = e.domEvent.target;
 
             if (target.className.indexOf("ace_gutter-cell") == -1) {
                 return;
@@ -190,10 +193,21 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             if (e.clientX > 25 + target.getBoundingClientRect().left) {
                 return;
             }
-            var row = e.getDocumentPosition().row;
-            var breakpointsArray = editor.session.getBreakpoints();
+
+            let breakpointsArray = editor.session.getBreakpoints();
+            let row = e.getDocumentPosition().row;
+
+            breakpointsArray.forEach((breakpoint, br) => {
+                if (br < row) {
+                    e.clientY -= lineHeight;
+                    e.$pos = null;
+                }
+            });
+
+            row = e.getDocumentPosition().row;
+            
             if (!(row in breakpointsArray)) {
-                editor.session.setBreakpoint(props.validateBreakpoint(row), props.classes.breakpoint);
+                editor.session.setBreakpoint(props.validateBreakpoint(row), classes.breakpoint);
                 props.actions.addBreakpoint(row);
             } else {
                 editor.session.clearBreakpoint(row);
@@ -201,6 +215,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             }
             e.stop();
         });
+
+    }
+
+    componentDidUpdate() {
+        
+        
 
         // editor.on('mousemove', e => {
         //     var position = e.getDocumentPosition();

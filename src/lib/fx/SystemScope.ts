@@ -1,18 +1,14 @@
-import { Scope } from "./ProgramScope";
-import { EScopeType, ITypeInstruction, IVariableDeclInstruction, 
-    ITypeDeclInstruction, IFunctionDeclInstruction, IExprInstruction, 
-    IVariableTypeInstruction, EInstructionTypes, ITechniqueInstruction, ITypedInstruction, IScope } from "../idl/IInstruction";
-import { SystemTypeInstruction } from "./instructions/SystemTypeInstruction";
-import { TypeDeclInstruction } from "./instructions/TypeDeclInstruction";
-import { VariableTypeInstruction } from "./instructions/VariableTypeInstruction";
-import { assert, isNull } from "../common";
-import { IdInstruction } from "./instructions/IdInstruction";
-import { VariableDeclInstruction } from "./instructions/VariableDeclInstruction";
-import { IMap } from "../idl/IMap";
-import { SystemFunctionInstruction } from "./instructions/SystemFunctionInstruction";
-import { EAnalyzerErrors, EAnalyzerWarnings } from '../idl/EAnalyzerErrors';
-import { FunctionDeclInstruction } from "./instructions/FunctionDeclInstruction";
-import { FunctionDefInstruction } from "./instructions/FunctionDefInstruction";
+import { assert, isNull } from "@lib/common";
+import { FunctionDefInstruction } from "@lib/fx/instructions/FunctionDefInstruction";
+import { IdInstruction } from "@lib/fx/instructions/IdInstruction";
+import { SystemFunctionInstruction } from "@lib/fx/instructions/SystemFunctionInstruction";
+import { SystemTypeInstruction } from "@lib/fx/instructions/SystemTypeInstruction";
+import { VariableDeclInstruction } from "@lib/fx/instructions/VariableDeclInstruction";
+import { VariableTypeInstruction } from "@lib/fx/instructions/VariableTypeInstruction";
+import { Scope } from "@lib/fx/ProgramScope";
+import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
+import { EInstructionTypes, EScopeType, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
 
 const scope = new Scope({ type: EScopeType.k_System });
 

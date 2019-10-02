@@ -3,12 +3,17 @@ import { IDeclInstruction, IAnnotationInstruction, EInstructionTypes, IIdInstruc
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings, Instruction } from "./Instruction";
+import { PropertiesDiff, ExcludePropertiesWithNames } from "@lib/common";
+import { IdInstruction } from "./IdInstruction";
 
 export interface IDeclInstructionSettings extends IInstructionSettings {
-    semantics?: string;
-    annotation?: IAnnotationInstruction;
-    builtIn?: boolean;
+    readonly semantics?: string;
+    readonly annotation?: IAnnotationInstruction;
+    readonly builtIn?: boolean;
 }
+
+// export type ISettings<CHILD, PARENT> = ExcludePropertiesWithNames<PropertiesDiff<CHILD, PARENT>, "name" | "id"> & IInstructionSettings;
+// export type IDeclInstructionSettings = ExcludePropertiesWithNames<PropertiesDiff<IDeclInstruction, IInstruction>, "name" | "id"> & IInstructionSettings;
 
 export class DeclInstruction extends Instruction implements IDeclInstruction {
     protected _semantics: string

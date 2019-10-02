@@ -1,8 +1,8 @@
-import { ERenderStates } from "./ERenderStates";
-import { ERenderStateValues } from "./ERenderStateValues";
-import { IMap } from "./IMap";
-import { IParseNode } from "./parser/IParser";
-import { Writable } from "stream";
+import { NonFunctionDiff, Writeable, PropertiesDiff } from "@lib/common";
+import { ERenderStates } from "@lib/idl/ERenderStates";
+import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
+import { IMap } from "@lib/idl/IMap";
+import { IParseNode } from "@lib/idl/parser/IParser";
 
 export enum EInstructionTypes {
     k_Instruction = 0,
@@ -530,10 +530,6 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly prerenderRoutine: IFunctionDeclInstruction;
     readonly defaultShader: boolean;
 }
-
-
-type Writeable<T> = { -readonly [P in keyof T]: T[P] };
-export type IPartFxPassProperties = Writeable<Pick<IPartFxPassInstruction, Exclude<keyof IPartFxPassInstruction, keyof IPassInstruction>>>;
 
 
  export interface IPartFxInstruction extends ITechniqueInstruction {
