@@ -12,7 +12,6 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table } from 'semantic-ui-react';
-import SourceEditor2 from './SourceEditor2';
 
 
 
@@ -273,7 +272,7 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={false}>
                             <Grid.Row columns={2}>
                                 <Grid.Column computer="10" tablet="8" mobile="6" className={props.classes.leftColumnFix}>
-                                    <SourceEditor2
+                                    <SourceEditor
                                         name="source-code"
                                         validateBreakpoint={line => this.validateBreakpoint(line)}
                                     />
