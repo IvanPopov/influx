@@ -12,6 +12,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table } from 'semantic-ui-react';
+import SourceEditor2 from './SourceEditor2';
 
 
 
@@ -43,12 +44,12 @@ export const styles = {
             marginBottom: '0',
             position: 'relative',
             zIndex: '2',
-            boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important',
+            // boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important',
             backgroundColor: 'white !important'
         }
     },
     rightColumnFix: {
-        boxShadow: '-5px 0 5px black',
+        // boxShadow: '-5px 0 5px black',
         zIndex: 1,
         paddingLeft: '0 !important'
     },
@@ -264,15 +265,15 @@ class App extends React.Component<IAppProps> {
         const panes = [
             {
                 menuItem: 'Source File',
-                pane: (
+                render: () => (
                     <Tab.Pane key="source" className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}
                     // fixme: remove style from line below;
                     // as={ ({ ...props }) => <Container fluid { ...props } /> }
                     >
                         <Grid divided={false}>
-                            <Grid.Row columns={3}>
+                            <Grid.Row columns={2}>
                                 <Grid.Column computer="10" tablet="8" mobile="6" className={props.classes.leftColumnFix}>
-                                    <SourceEditor
+                                    <SourceEditor2
                                         name="source-code"
                                         validateBreakpoint={line => this.validateBreakpoint(line)}
                                     />
@@ -289,8 +290,8 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: 'Grammar',
-                pane: (
-                    <Tab.Pane key="grammar">
+                render: () => (
+                    <Tab.Pane key="grammar" className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
                         <ParserParameters />
                     </Tab.Pane>
                 )
@@ -311,10 +312,10 @@ class App extends React.Component<IAppProps> {
                         <FileListView path="./assets" filters={['.fx']} onFileClick={(file) => { props.actions.openFile(file) }} />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
-                        {/* <Container> */}
-                        <Tab menu={{ secondary: true, pointing: true }} panes={panes} renderActiveOnly={false}
+                        {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */}
+                        <Tab menu={{ secondary: true, pointing: true }} panes={panes} renderActiveOnly={true} 
                             className={props.classes.topMenuFix} />
-                        {/* </Container> */}
+                        
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 

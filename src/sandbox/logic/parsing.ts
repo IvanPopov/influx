@@ -111,5 +111,14 @@ const updateSourceContentLogic = createLogic<IStoreState>({
 });
 
 
+// const markerLogic = createLogic<IStoreState>({
+//     type: [evt.SOURCE_CODE_ADD_MARKER, evt.SOURCE_CODE_REMOVE_MARKER],
+//     debounce: 500
+// });
 
-export default [updateParserLogic, updateSourceContentLogic];
+
+export default [
+    updateParserLogic, 
+    updateSourceContentLogic, 
+    // markerLogic
+];

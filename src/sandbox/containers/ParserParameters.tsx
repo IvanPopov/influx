@@ -1,20 +1,14 @@
 import * as bf from '@lib/bf/bf';
 import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
 import { mapActions, parser as parserActions } from '@sandbox/actions';
-import '@sandbox/deps/brace';
-import '@sandbox/deps/brace/mode/sh';
-import '@sandbox/deps/brace/theme/github';
-import AceEditor from '@sandbox/deps/react-ace';
 import { mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
 import { IParserParams } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
+import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { Form, Grid, Segment } from 'semantic-ui-react';
-
-
-
 
 
 const setFlags = (dest: number, src: number, value: boolean) => {
@@ -42,9 +36,27 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
         const { type, mode, grammar } = this.state;
         return (
             <Grid>
-                <Grid.Row columns={ 1 }>
-                    <Grid.Column>
-                        <Segment>
+                <Grid.Row columns={ 2 }>
+                    <Grid.Column computer="10" tablet="8" mobile="6">
+                        <MonacoEditor
+                            language="powershell"
+                            theme="vs"
+                            value={ grammar || '' }
+                            width="100%"
+                            height="calc(100vh - 41px)" // todo: fixme
+                            options={ {
+                                selectOnLineNumbers: true,
+                                fontSize: 12,
+                                lineNumbers: "on",
+                                lineHeight: 14,
+                                automaticLayout: true
+                            } }
+                            onChange={ grammar => this.setState({ grammar }) }
+                        />
+                    </Grid.Column>
+                    <Grid.Column computer="6" tablet="8" mobile="10">
+                        {/* css fix for stupied setup in the App.tsx */ }
+                        <Segment style={ { marginTop: '1em', marginRight: '2em' } }>
                             <Form>
                                 <Grid columns='equal' divided padded>
                                     <Grid.Column>
@@ -110,22 +122,6 @@ class ParserParameters extends React.Component<IParserProps, IParserParams> {
                                 </Form.Button>
                             </Form>
                         </Segment>
-                    </Grid.Column>
-                </Grid.Row>
-                <Grid.Row columns={ 1 }>
-                    <Grid.Column>
-                        <AceEditor
-                            name={ "grammar-text" }
-                            theme="github"
-                            width="100%"
-                            mode="sh"
-                            onChange={ (grammar: string) => this.setState({ grammar }) }
-                            fontSize={ 12 }
-                            value={ grammar || '' }
-                            setOptions={ {
-                                showLineNumbers: true,
-                                tabSize: 2
-                            } } />
                     </Grid.Column>
                 </Grid.Row>
             </Grid>

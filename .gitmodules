@@ -1,6 +1,0 @@
-[submodule "src/sandbox/deps/brace"]
-	path = src/sandbox/deps/brace
-	url = https://github.com/IvanPopov/brace.git
-[submodule "src/sandbox/deps/react-ace"]
-	path = src/sandbox/deps/react-ace
-	url = https://github.com/IvanPopov/react-ace.git

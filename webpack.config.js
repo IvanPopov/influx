@@ -8,6 +8,7 @@ const { CheckerPlugin } = require('awesome-typescript-loader');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 var GitRevisionPlugin = require('git-revision-webpack-plugin');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin()
 
@@ -103,6 +104,10 @@ let options = {
                     }
                 },
                 include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
+            },
+            {
+                test: /\.css$/,
+                use: ['style-loader', 'css-loader']
             }
         ]
     },
@@ -139,6 +144,9 @@ let options = {
             'COMMITHASH': JSON.stringify(gitRevisionPlugin.commithash()),
             'BRANCH': JSON.stringify(gitRevisionPlugin.branch()),
             'global': {}
+        }),
+        new MonacoWebpackPlugin({
+            languages: ['cpp', 'powershell']
         })
     ],
     node: {
