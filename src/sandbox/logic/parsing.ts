@@ -4,6 +4,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import IStoreState, { IParserParams } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
+import { filter, take, tap } from 'rxjs/operators';
 
 function deepEqual(a: Object, b: Object): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
@@ -105,7 +106,7 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
     emitErrors(errors, dispatch, ANALYSIS_ERROR_PREFIX);
     console.log(Diagnostics.stringify(diag));
 
-    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { root, scope} });
+    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { root, scope } });
 }
 
 
@@ -125,8 +126,20 @@ const updateSourceContentLogic = createLogic<IStoreState>({
     latest: true,
     debounce: 500,
 
-    async process({ getState }, dispatch, done) {
+    async process({ getState, action, action$ }, dispatch, done) {
         await processParsing(getState(), dispatch);
+
+        // let begin = Date.now();
+
+        // action$.pipe(
+        //     filter(a => a.type === evt.SOURCE_CODE_ANALYSIS_COMPLETE),
+        //     take(1) // we only wait for one and then finish
+        // ).subscribe({ complete: () => {
+        //     console.log('await SOURCE_CODE_PARSING_COMPLETE', Date.now() - begin);
+        //     done()
+        //  } })
+
+        // console.log('await SOURCE_CODE_PARSING_COMPLETE', Date.now() - begin);
         done();
     }
 });
@@ -134,9 +147,20 @@ const updateSourceContentLogic = createLogic<IStoreState>({
 
 const parsingCompleteLogic = createLogic<IStoreState>({
     type: [evt.SOURCE_CODE_PARSING_COMPLETE],
-    
-    async process({ getState }, dispatch, done) {
+
+    async process({ getState, action, action$ }, dispatch, done) {
         await processAnalyze(getState(), dispatch);
+        
+        // let begin = Date.now();
+        
+        // action$.pipe(
+        //     filter(a => a.type === evt.SOURCE_CODE_ANALYSIS_COMPLETE),
+        //     take(1) // we only wait for one and then finish
+        // ).subscribe({ complete: () => {
+        //     console.log('await SOURCE_CODE_ANALYSIS_COMPLETE', Date.now() - begin);
+        //     done()
+        //  } })
+        
         done();
     }
 });

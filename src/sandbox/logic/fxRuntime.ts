@@ -7,7 +7,9 @@ const analysisCompleteLogic = createLogic<IStoreState>({
     type: evt.SOURCE_CODE_ANALYSIS_COMPLETE,
 
     async process({ getState }, dispatch, done) {
-        // let { parseTree } = getSourceCode(getState());
+        // setTimeout(() =>
+        // // let { parseTree } = getSourceCode(getState());
+        // done(), 5000);
         done();
     }
 });

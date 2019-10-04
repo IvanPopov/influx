@@ -11,6 +11,7 @@ import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { IScope, ETechniqueType } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { deepEqual, isNull } from '@lib/common';
 
 export const styles = {
     yellowMarker: {
@@ -32,41 +33,44 @@ let timer = (delay) => new Promise(done => { setTimeout(done, delay) });
 class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 
     constructor(protected getScope: () => IScope) {
-
+        
     }
 
     async provideCodeLenses(model: monaco.editor.ITextModel, token: monaco.CancellationToken)
-    // : Promise<any>
-    : Promise<monaco.languages.CodeLensList>
+        // : Promise<any>
+        : Promise<monaco.languages.CodeLensList>
     // : monaco.languages.ProviderResult<monaco.languages.CodeLensList> 
     {
         // fixme: hack for sync between editor and analisys results
-        await timer(500);
+        await timer(500); // << waiting for parsing completing
 
         let lenses = [];
         let scope = this.getScope();
-        for (let techniqueName in scope.techniqueMap) {
-            let technique = scope.techniqueMap[techniqueName];
-            if (technique.type == ETechniqueType.k_PartFx) {
-                let partFx = technique as IPartFxInstruction;
 
-                if (partFx.spawnRoutine) {
-                    let sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
-                    let loc = sourceNode.loc;
+        if (!isNull(scope)) {
+            for (let techniqueName in scope.techniqueMap) {
+                let technique = scope.techniqueMap[techniqueName];
+                if (technique.type == ETechniqueType.k_PartFx) {
+                    let partFx = technique as IPartFxInstruction;
 
-                    let range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
-                    lenses.push({
-                        range,
-                        command: {
-                            id: null,
-                            // title: `spawn routine of '${techniqueName}' fx`
-                            title: `[spawn routine]`
-                        }
-                    });
+                    if (partFx.spawnRoutine) {
+                        let sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
+                        let loc = sourceNode.loc;
+
+                        let range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                        lenses.push({
+                            range,
+                            command: {
+                                id: null,
+                                // title: `spawn routine of '${techniqueName}' fx`
+                                title: `[spawn routine]`
+                            }
+                        });
+                    }
                 }
             }
-        }
 
+        }
         // let lenses = this.getBreakpoints().map(brk => {
         //     let range = new monaco.Range(brk + 1, 5, brk + 1, 5);
         //     return {
@@ -119,6 +123,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     state = {
         showWhitespaces: false,
     };
+
+    provider: monaco.IDisposable = null;
 
     // cache for previously set decorations/breakpoints
     decorations: string[] = [];
@@ -201,18 +207,23 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         // editor.setPosition({ lineNumber: 1, column: 1 });
         // editor.focus();
         // console.log('editor did mount!');
-        let provider = monaco.languages.registerCodeLensProvider(
-            '*',
-            new MyCodeLensProvider(() => this.props.scope)
-        );
+
 
         // console.log(provider);
         // console.log(editor);
     }
 
     @autobind
-    onChange(content, e) {
+    async onChange(content, e) {
+        // let begin = Date.now();
+        // let props: any = this.props;
+        // console.log(await props.$dispatch(props.$rowActions.setContent(content)));
+        if (this.provider) {
+            // this.provider.dispose();
+            // this.provider = null;
+        }
         this.props.actions.setContent(content);
+        // console.log('await setContent()', Date.now() - begin);
     }
 
     get editor(): monaco.editor.ICodeEditor {
@@ -230,10 +241,27 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         return this.decorations;
     }
 
+    shouldComponentUpdate(nextProps, nextState) {
+        let renderRequired = this.props.content != nextProps.content ||
+            !deepEqual(this.props.markers, nextProps.markers);
+        // todo: add state checking
+
+        if (nextProps.root && this.props.root != nextProps.root) {
+            // console.log('codelens update required');
+            if (!this.provider)
+                this.provider = monaco.languages.registerCodeLensProvider(
+                    '*',
+                    new MyCodeLensProvider(() => this.props.scope)
+                );
+        }
+
+        return renderRequired;
+    }
+
+
     render() {
         const { props } = this;
         const { showWhitespaces } = this.state;
-
 
         const options: monaco.editor.IEditorConstructionOptions = {
             selectOnLineNumbers: true,
@@ -270,3 +298,5 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 }
 
 export default connect<{}, {}, ISourceEditorProps>(mapProps(getSourceCode), mapActions(sourceActions))(SourceEditor) as any;
+
+

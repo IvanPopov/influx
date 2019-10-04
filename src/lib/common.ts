@@ -63,6 +63,8 @@ export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'objec
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
 export let assignIfDef = (val: any, def: any) => (isDef(val) ? val : def);
+export let deepEqual = (a: Object, b: Object) => JSON.stringify(a) === JSON.stringify(b);
+
 
 export type Nullable<T> = {[P in keyof T]: T[P] | null } | null;
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

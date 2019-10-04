@@ -33,6 +33,13 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
     },
 
+    // setContent (content): IActionCreator {
+    //     return async (dispatch: IDispatch, getState) => {
+    //         await dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
+    //         return getState();
+    //     };
+    // },
+
     // IP: Just an incredible example of a AC power!!
     // someRoutine (...argv): IActionCreator {
     //     return async (dispatch: IDispatch, getState) => {
@@ -67,9 +74,15 @@ export const sourceCode = {
 };
 
 
-export type mapDispatchToProps = (dispatch: IDispatch) => { actions: any; };
-export function mapActions(actions): mapDispatchToProps {
-    return (dispatch) => {
-        return { actions: bindActionCreators(actions, dispatch) }
+export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };
+export function mapActions(actions): mapDispatchToProps<typeof actions> {
+    return (dispatch: IDispatch) => {
+        return { 
+            actions: bindActionCreators(actions, dispatch), 
+
+            // debug functionality
+            $dispatch: dispatch, 
+            $rowActions: actions 
+        }
     };
-}
+}   
