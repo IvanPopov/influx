@@ -23,7 +23,6 @@ import { InitExprInstruction } from '@lib/fx/instructions/InitExprInstruction';
 import { InstructionCollector } from '@lib/fx/instructions/InstructionCollector';
 import { IntInstruction } from '@lib/fx/instructions/IntInstruction';
 import { LogicalExprInstruction, LogicalOperator } from '@lib/fx/instructions/LogicalExprInstruction';
-import { PartFxInstruction } from '@lib/fx/instructions/part/PartFxInstruction';
 import { PassInstruction } from '@lib/fx/instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from '@lib/fx/instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from '@lib/fx/instructions/PostfixIndexInstruction';
@@ -48,11 +47,14 @@ import * as SystemScope from '@lib/fx/SystemScope';
 import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPartFxInstruction, IPartFxPassInstruction, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ETechniqueType } from '@lib/idl/IInstruction';
+import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ETechniqueType, ICompileExprInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
-import { PartFxPassInstruction } from './instructions/part/PartFxPassInstruction';
+import { PartFxInstruction } from '@lib/fx/instructions/part/PartFxInstruction';
+import { IPartFxPassInstruction, IPartFxInstruction } from '@lib/idl/IPartFx';
+import { PartFxPassInstruction } from '@lib/fx/instructions/part/PartFxPassInstruction';
+
 
 
 
@@ -1263,10 +1265,9 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
     const shaderFuncName = children[children.length - 2].value;
     const scope = program.currentScope;
 
-    let args: IExprInstruction[] = null;
+    let args: IExprInstruction[] = [];
 
     if (children.length > 4) {
-        args = [];
         for (let i = children.length - 3; i > 0; i--) {
             if (children[i].value !== ',') {
                 let argumentExpr = analyzeExpr(context, program, children[i]);
@@ -1275,16 +1276,17 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
         }
     }
 
-    let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
+    // let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
+    let func = program.globalScope.findFunction(shaderFuncName, args);
 
-    if (isNull(shaderFunc)) {
+    if (isNull(func)) {
         context.error(sourceNode, EErrors.InvalidCompileNotFunction, { funcName: shaderFuncName });
         return null;
     }
 
-    let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>shaderFunc.definition.returnType, scope);
+    let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>func.definition.returnType, scope);
 
-    let expr = new CompileExprInstruction({ args, scope, type, operand: shaderFunc });
+    let expr = new CompileExprInstruction({ args, scope, type, operand: func });
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
@@ -2869,60 +2871,6 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
 
 /**
  * AST example:
- *    PartFxDecl
- *         T_PUNCTUATOR_125 = '}'
- *       + PassDecl 
- *       + PassState 
- *       + PassState 
- *       + PassState 
- *         T_PUNCTUATOR_123 = '{'
- *       + ComplexNameOpt 
- *         T_KW_FXPART = 'partFx'
- */
-function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxInstruction {
-    const children = sourceNode.children;
-    const name = analyzeComplexName(children[children.length - 2]);
-    // Specifies whether name should be interpreted as globalNamespace.name or just a name;
-    const isComplexName = children[children.length - 2].children.length !== 1;
-    const scope = program.currentScope;
-
-    let annotation: IAnnotationInstruction = null;
-    let semantics: string = null;
-    let passList: IPartFxPassInstruction[] = [];
-    let spawnRoutine: IFunctionDeclInstruction = null;
-    let initRoutine: IFunctionDeclInstruction = null;
-    let updateRoutine: IFunctionDeclInstruction = null;
-
-    for (let i = children.length - 3; i >= 0; i--) {
-
-        switch(children[i].name) {
-            case 'Annotation':
-                annotation = analyzeAnnotation(children[i]);
-                break;
-            case 'Semantic':
-                semantics = analyzeSemantic(children[i]);
-                break;
-            case 'PassState':
-                // todo: process state
-                break;
-            case 'PassDecl':
-            let pass = analyzePartFXPassDecl(context, program, children[i]);
-                assert(!isNull(pass));
-                passList.push(pass);
-                break;
-
-        }
-    }
-
-    const partFx = new PartFxInstruction({ sourceNode, name, semantics, annotation, passList, scope, spawnRoutine, initRoutine, updateRoutine });
-        
-    addTechnique(context, program, partFx);
-    return partFx;
-}
-
-
-/**
- * AST example:
  *    TechniqueBody
  *         T_PUNCTUATOR_125 = '}'
  *       + PassDecl 
@@ -2940,52 +2888,6 @@ function analyzeTechnique(context: Context, program: ProgramScope, sourceNode: I
     return passList;
 }
 
-
-/**
- * AST example:
- *    PassDecl
- *       + PassStateBlock 
- *         T_NON_TYPE_ID = 'P0'
- *         T_KW_PASS = 'pass'
- */
-function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
-
-    
-    const children = sourceNode.children;
-    const scope = program.currentScope;
-    const renderStates = analyzePassStateBlock(context, program, children[0]);
-    const fxStates = analyzePartFxStateBlock(context, program, children[0]);
-
-    const sorting = assignIfDef(fxStates.sorting, true);
-    const defaultShader = assignIfDef(fxStates.defaultShader, false);
-    const prerenderRoutine = assignIfDef(fxStates.prerenderRoutine, null);
-
-    let id: IIdInstruction = null;
-    for (let i = 0; i < children.length; ++ i) {
-        if (children[i].name === "T_NON_TYPE_ID") {
-            let name = children[i].value;
-            id = new IdInstruction({ name, scope });
-        }
-    }
-
-
-    const pass = new PartFxPassInstruction({
-        scope,
-        sourceNode,
-        renderStates,
-        id,
-        sorting,
-        defaultShader,
-        prerenderRoutine,
-        // todo: rework shaders setup
-        pixelShader: null,
-        vertexShader: null
-    });
-
-    //todo: add annotation and id
-
-    return pass;
-}
 
 /**
  * AST example:
@@ -3023,7 +2925,14 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
     return pass;
 }
 
-
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'VertexShader'
+ */
 function analyzePassStateBlockForShaders(context: Context, program: ProgramScope,
     sourceNode: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
 
@@ -3095,17 +3004,6 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
     return shaderFunc;
 }
 
-type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruction>;
-
-// todo: use explicit return type
-function analyzePartFxStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
-    const children = sourceNode.children;
-    let states: Partial<IPartFxPassProperties> = {}
-    for (let i = children.length - 2; i >= 1; i--) {
-        states = { ...states, ...analyzePartFXPassProperies(context, program, children[i]) };
-    }
-    return states;
-}
 
 /**
  * AST example:
@@ -3123,119 +3021,6 @@ function analyzePassStateBlock(context: Context, program: ProgramScope, sourceNo
         states = { ...states, ...analyzePassState(context, program, children[i]) };
     }
     return states;
-}
-
-
-/**
- * AST example:
- *    PassState
- *         T_PUNCTUATOR_59 = ';'
- *       + PassStateExpr 
- *         T_PUNCTUATOR_61 = '='
- *         T_NON_TYPE_ID = 'STATE_ONE'
- */
-/**
- * AST example:
- *    PassState
- *         T_PUNCTUATOR_59 = ';'
- *       + PassStateExpr 
- *         T_PUNCTUATOR_61 = '='
- *         T_NON_TYPE_ID = 'STATE_TWO'
- */
-/**
- * AST example:
- *    PassStateExpr
- *         T_PUNCTUATOR_125 = '}'
- *         T_UINT = '1'
- *         T_PUNCTUATOR_44 = ','
- *         T_KW_TRUE = 'true'
- *         T_PUNCTUATOR_123 = '{'
- */
-// todo: add explicit type for fx statess
-function analyzePartFXPassProperies(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
-
-    const children = sourceNode.children;
-    
-    const stateName: string = children[children.length - 1].value.toUpperCase();
-    const stateExprNode: IParseNode = children[children.length - 3];
-    const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-
-    let fxStates: Partial<IPartFxPassProperties> = {};
-    
-    if (isNull(exprNode.value) || isNull(stateName)) {
-        console.warn('Pass state is incorrect.'); // todo: move to warnings
-        // todo: return correct state list
-        return fxStates;
-    }
-    
-    /**
-     * AST example:
-     *    PassStateExpr
-     *         T_PUNCTUATOR_125 = '}'
-     *         T_UINT = '1'
-     *         T_PUNCTUATOR_44 = ','
-     *         T_KW_TRUE = 'true'
-     *         T_PUNCTUATOR_123 = '{'
-     */
-    if (exprNode.value === '{' && stateExprNode.children.length > 3) {
-        const values: string[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
-        for (let i = stateExprNode.children.length - 2, j = 0; i >= 1; i -= 2, j++) {
-            // todo: validate values with names
-            values[j] = stateExprNode.children[i].value.toUpperCase();
-        }
-
-        switch (stateName) {
-            // case ERenderStates.BLENDFUNC:
-            //     if (values.length !== 2) {
-            //         console.warn('Pass state are incorrect.');
-            //         return {};
-            //     }
-            //     renderStates[ERenderStates.SRCBLENDCOLOR] = values[0];
-            //     renderStates[ERenderStates.SRCBLENDALPHA] = values[0];
-            //     renderStates[ERenderStates.DESTBLENDCOLOR] = values[1];
-            //     renderStates[ERenderStates.DESTBLENDALPHA] = values[1];
-            //     break;
-            default:
-                console.warn('Pass fx state is incorrect.');
-                return fxStates;
-        }
-    }
-    /**
-     * AST example:
-     *    PassStateExpr
-     *         T_NON_TYPE_ID = 'FALSE'
-     */
-    else {
-        let value: string = null;
-        if (exprNode.value === '{') {
-            value = stateExprNode.children[1].value.toUpperCase();
-        }
-        else {
-            value = exprNode.value.toUpperCase();
-        }
-
-        switch (stateName) {
-            case 'SORTING':
-                // todo: use correct validation with diag error output
-                assert(value == 'TRUE' || value == 'FALSE');
-                fxStates.sorting = (value === 'TRUE');
-                break;
-            case 'DEFAULTSHADER':
-                 // todo: use correct validation with diag error output
-                 assert(value == 'TRUE' || value == 'FALSE');
-                 fxStates.defaultShader = (value === 'TRUE');
-                 break;
-            case 'PRERENDERROUTINE':
-                // todo: parse routine!
-                fxStates.prerenderRoutine = null;
-                break;
-            default:
-                console.warn('Pass fx state is incorrect.');
-                break;
-        }
-    }
-    
-    return fxStates;
 }
 
 
@@ -3478,6 +3263,264 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
 }
 
 
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'SpawnRoutine'
+ */
+function analyzePartFXProperty(context: Context, program: ProgramScope, sourceNode: IParseNode): any {
+    const children = sourceNode.children;
+    console.log(sourceNode);
+}
+
+/**
+ * AST example:
+ *    PassDecl
+ *       + PassStateBlock 
+ *         T_NON_TYPE_ID = 'P0'
+ *         T_KW_PASS = 'pass'
+ */
+function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
+
+    
+    const children = sourceNode.children;
+    const scope = program.currentScope;
+    const renderStates = analyzePassStateBlock(context, program, children[0]);
+    const fxStates = analyzePartFxStateBlock(context, program, children[0]);
+
+    const sorting = assignIfDef(fxStates.sorting, true);
+    const defaultShader = assignIfDef(fxStates.defaultShader, false);
+    const prerenderRoutine = assignIfDef(fxStates.prerenderRoutine, null);
+
+    let id: IIdInstruction = null;
+    for (let i = 0; i < children.length; ++ i) {
+        if (children[i].name === "T_NON_TYPE_ID") {
+            let name = children[i].value;
+            id = new IdInstruction({ name, scope });
+        }
+    }
+
+    const pass = new PartFxPassInstruction({
+        scope,
+        sourceNode,
+        renderStates,
+        id,
+        sorting,
+        defaultShader,
+        prerenderRoutine,
+        // todo: rework shaders setup
+        pixelShader: null,
+        vertexShader: null
+    });
+
+    //todo: add annotation and id
+
+    return pass;
+}
+
+
+
+type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruction>;
+
+// todo: use explicit return type
+function analyzePartFxStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
+    const children = sourceNode.children;
+    let states: Partial<IPartFxPassProperties> = {}
+    for (let i = children.length - 2; i >= 1; i--) {
+        states = { ...states, ...analyzePartFXPassProperies(context, program, children[i]) };
+    }
+    return states;
+}
+
+
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'STATE_ONE'
+ */
+/**
+ * AST example:
+ *    PassState
+ *         T_PUNCTUATOR_59 = ';'
+ *       + PassStateExpr 
+ *         T_PUNCTUATOR_61 = '='
+ *         T_NON_TYPE_ID = 'STATE_TWO'
+ */
+/**
+ * AST example:
+ *    PassStateExpr
+ *         T_PUNCTUATOR_125 = '}'
+ *         T_UINT = '1'
+ *         T_PUNCTUATOR_44 = ','
+ *         T_KW_TRUE = 'true'
+ *         T_PUNCTUATOR_123 = '{'
+ */
+// todo: add explicit type for fx statess
+function analyzePartFXPassProperies(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
+
+    const children = sourceNode.children;
+    
+    const stateName: string = children[children.length - 1].value.toUpperCase();
+    const stateExprNode: IParseNode = children[children.length - 3];
+    const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
+
+    let fxStates: Partial<IPartFxPassProperties> = {};
+    
+    if (isNull(exprNode.value) || isNull(stateName)) {
+        console.warn('Pass state is incorrect.'); // todo: move to warnings
+        // todo: return correct state list
+        return fxStates;
+    }
+    
+    /**
+     * AST example:
+     *    PassStateExpr
+     *         T_PUNCTUATOR_125 = '}'
+     *         T_UINT = '1'
+     *         T_PUNCTUATOR_44 = ','
+     *         T_KW_TRUE = 'true'
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    if (exprNode.value === '{' && stateExprNode.children.length > 3) {
+        const values: string[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
+        for (let i = stateExprNode.children.length - 2, j = 0; i >= 1; i -= 2, j++) {
+            // todo: validate values with names
+            values[j] = stateExprNode.children[i].value.toUpperCase();
+        }
+
+        switch (stateName) {
+            // case ERenderStates.BLENDFUNC:
+            //     if (values.length !== 2) {
+            //         console.warn('Pass state are incorrect.');
+            //         return {};
+            //     }
+            //     renderStates[ERenderStates.SRCBLENDCOLOR] = values[0];
+            //     renderStates[ERenderStates.SRCBLENDALPHA] = values[0];
+            //     renderStates[ERenderStates.DESTBLENDCOLOR] = values[1];
+            //     renderStates[ERenderStates.DESTBLENDALPHA] = values[1];
+            //     break;
+            default:
+                console.warn('Pass fx state is incorrect.');
+                return fxStates;
+        }
+    }
+    /**
+     * AST example:
+     *    PassStateExpr
+     *         T_NON_TYPE_ID = 'FALSE'
+     */
+    else {
+        let value: string = null;
+        if (exprNode.value === '{') {
+            value = stateExprNode.children[1].value.toUpperCase();
+        }
+        else {
+            value = exprNode.value.toUpperCase();
+        }
+
+        switch (stateName) {
+            case 'SORTING':
+                // todo: use correct validation with diag error output
+                assert(value == 'TRUE' || value == 'FALSE');
+                fxStates.sorting = (value === 'TRUE');
+                break;
+            case 'DEFAULTSHADER':
+                 // todo: use correct validation with diag error output
+                 assert(value == 'TRUE' || value == 'FALSE');
+                 fxStates.defaultShader = (value === 'TRUE');
+                 break;
+            case 'PRERENDERROUTINE':
+                fxStates.prerenderRoutine = <ICompileExprInstruction>analyzeObjectExpr(context, program, exprNode);
+                // todo: validate prerender routine!
+                console.log(fxStates.prerenderRoutine);
+                break;
+            default:
+                console.warn('Pass fx state is incorrect.');
+                break;
+        }
+    }
+    
+    return fxStates;
+}
+
+
+
+/**
+ * AST example:
+ *    PartFxDecl
+ *         T_PUNCTUATOR_125 = '}'
+ *       + PassDecl 
+ *       + PassState 
+ *       + PassState 
+ *       + PassState 
+ *         T_PUNCTUATOR_123 = '{'
+ *       + ComplexNameOpt 
+ *         T_KW_FXPART = 'partFx'
+ */
+export function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxInstruction {
+    const children = sourceNode.children;
+    const name = analyzeComplexName(children[children.length - 2]);
+    // Specifies whether name should be interpreted as globalNamespace.name or just a name;
+    const isComplexName = children[children.length - 2].children.length !== 1;
+    const scope = program.currentScope;
+
+    let annotation: IAnnotationInstruction = null;
+    let semantics: string = null;
+    let passList: IPartFxPassInstruction[] = [];
+    let spawnRoutine: ICompileExprInstruction = null;
+    let initRoutine: ICompileExprInstruction = null;
+    let updateRoutine: ICompileExprInstruction = null;
+
+    for (let i = children.length - 3; i >= 0; i--) {
+
+        switch(children[i].name) {
+            case 'Annotation':
+                annotation = analyzeAnnotation(children[i]);
+                break;
+            case 'Semantic':
+                semantics = analyzeSemantic(children[i]);
+                break;
+            case 'PassState':
+                {
+                    let stateNode = children[i];
+                    let stateName = stateNode.children[3].value; // "T_NON_TYPE_ID"
+                    switch (stateName.toUpperCase()) {
+                        case 'SPAWNROUTINE':
+                            {
+                                let objectExrNode = stateNode.children[1].children[0];
+                                spawnRoutine = <ICompileExprInstruction>analyzeObjectExpr(context, program, objectExrNode);
+                                console.log(spawnRoutine);
+                            }
+                            break;
+                    }
+                }
+                // todo: process state
+                analyzePartFXProperty(context, program, children[i]);
+                break;
+            case 'PassDecl':
+            let pass = analyzePartFXPassDecl(context, program, children[i]);
+                assert(!isNull(pass));
+                passList.push(pass);
+                break;
+
+        }
+    }
+
+    const partFx = new PartFxInstruction({ sourceNode, name, semantics, annotation, passList, scope, 
+        spawnRoutine, initRoutine, updateRoutine });
+        
+    addTechnique(context, program, partFx);
+    return partFx;
+}
+
+
+
 
 // function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
 //     for (let i = 0; i < context.functionWithImplementationList.length; i++) {
@@ -3579,6 +3622,7 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
         program.validate();
     } catch (e) {
         // critical errors were occured
+        throw e;
     }
     
     console.timeEnd(`analyze(${filename})`);

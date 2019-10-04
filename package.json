@@ -25,6 +25,7 @@
     "awesome-typescript-loader": "^5.2.1",
     "copy-to-clipboard": "^3.2.0",
     "copy-webpack-plugin": "^5.0.3",
+    "cross-env": "^6.0.3",
     "css-loader": "^2.1.1",
     "electron-react-devtools": "^0.5.3",
     "file-loader": "^3.0.1",
@@ -66,14 +67,18 @@
     "url-loader": "^1.1.2",
     "webpack": "^4.41.0",
     "webpack-cli": "^3.3.2",
-    "webpack-dev-server": "^3.8.0"
+    "webpack-dev-server": "^3.8.0",
+    "jss-nested": "^6.0.1"
   },
   "scripts": {
-    "electron": "electron ./shell.js"
+    "electron": "electron ./shell.js",
+    "build:web": "cross-env APP_TARGET=web webpack",
+    "build:electron": "cross-env APP_TARGET=electron webpack",
+    "dev-server:web": "cross-env APP_TARGET=web webpack-dev-server",
+    "dev-server:electron": "cross-env APP_TARGET=electron webpack-dev-server"
   },
   "dependencies": {
     "electron": "^5.0.1",
-    "jss-nested": "^6.0.1",
     "webpack-target-electron-renderer": "^0.4.0"
   }
 }

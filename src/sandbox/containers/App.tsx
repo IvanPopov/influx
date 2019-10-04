@@ -67,19 +67,15 @@ export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
 class App extends React.Component<IAppProps> {
 
     state: {
-        ast: IParseTree;
-        root: IInstructionCollector;
-        bc: ReturnType<typeof Bytecode['translate']> // todo: fix type deduction;
         showFileBrowser: boolean;
         autocompile: boolean;
         entryPoint: string;
+        bc: ReturnType<typeof Bytecode['translate']> // todo: fix type deduction;
     };
 
     constructor(props) {
         super(props);
         this.state = {
-            ast: null,
-            root: null,
             bc: null,
             showFileBrowser: false,
             autocompile: false,
@@ -91,14 +87,14 @@ class App extends React.Component<IAppProps> {
     hideFileBrowser = () => this.setState({ showFileBrowser: false })
 
     compile(force: boolean = false) {
-        const { state } = this;
+        const { state, props } = this;
 
         if (!isNull(state.bc) && !force) {
             return;
         }
 
-        if (!isNull(state.root)) {
-            this.setState({ bc: Bytecode.translate(state.entryPoint, state.root) });
+        if (!isNull(props.sourceFile.root)) {
+            this.setState({ bc: Bytecode.translate(state.entryPoint, props.sourceFile.root) });
         }
     }
 
@@ -108,22 +104,29 @@ class App extends React.Component<IAppProps> {
 
     setAutocompile(val: boolean) {
         this.setState({ autocompile: val });
+    }
 
-        if (val) {
-            this.compile();
+    static getDerivedStateFromProps(props, state) {
+        if (!state.autocompile) {
+            return null;
         }
+
+        if (isNull(props.sourceFile.root)) {
+            return null;
+        }
+
+        if (state.prevRoot == props.sourceFile.root) {
+            return null;
+        }
+
+        let prevRoot = props.sourceFile.root;
+        let bc = Bytecode.translate(state.entryPoint, props.sourceFile.root);
+
+        console.log('bytecode has been updated');
+        return { bc, prevRoot };
     }
 
-    setProgram(root: IInstructionCollector) {
-        const { state } = this;
-        this.setState({ root, bc: null }, () => {
-            if (state.autocompile) {
-                this.compile(true);
-            }
-        });
-    }
-
-
+    
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         let markerName = `ast-range-${inst.instructionID}`;
         if (show) {
@@ -151,28 +154,6 @@ class App extends React.Component<IAppProps> {
     }
 
 
-    handleProgramViewUpdate(errors) {
-        const { props } = this;
-
-        for (let markerName in props.sourceFile.markers) {
-            if (markerName.startsWith('compiler-error-')) {
-                props.actions.removeMarker(markerName);
-            }
-        }
-
-        // todo: add support for multiple errors on the same lines;
-        errors.forEach(err => {
-            let { loc, message } = err;
-            this.props.actions.addMarker({
-                name: `compiler-error-${message}`,
-                range: loc,
-                type: 'error',
-                tooltip: message
-            })
-        })
-    }
-
-
     validateBreakpoint(ln: number) {
         let { state: { bc } } = this;
         let cdl = bc && bc.cdl;
@@ -186,64 +167,57 @@ class App extends React.Component<IAppProps> {
 
     render() {
         const { props, state } = this;
-        // console.log(state.bc && state.bc.cdl);
 
         const analysisResults = [
             {
                 menuItem: (<Menu.Item>Bytecode</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={false} key="bytecode-view">
+                    <Tab.Pane attached={ false } key="bytecode-view">
                         <Table size='small' basic='very' compact='very'>
-                            {/* todo: remove this padding hack */}
-                            <Table.Row style={{paddingTop: 0}}>
+                            {/* todo: remove this padding hack */ }
+                            <Table.Row style={ { paddingTop: 0 } }>
                                 <Table.Cell>
                                     <Input
                                         fluid
                                         size='small'
                                         label='entry point'
-                                        placeholder={state.entryPoint}
-                                        onChange={(e, data) => this.setEntryPoint(data.value)}
+                                        placeholder={ state.entryPoint }
+                                        onChange={ (e, data) => this.setEntryPoint(data.value) }
                                     />
                                 </Table.Cell>
-                 
+
                                 <Table.Cell>
                                     <Checkbox
                                         label='auto compilation'
                                         size='small'
                                         toggle
-                                        onChange={(e, data) => this.setAutocompile(data.checked)}
+                                        onChange={ (e, data) => this.setAutocompile(data.checked) }
                                     />
                                 </Table.Cell>
                             </Table.Row>
                         </Table>
-                        {state.bc ? (
+                        { state.bc ? (
                             <div>
-                                {/* todo: move memory view inside bytecode view; */}
-                                <MemoryView binaryData={state.bc.constants.data.byteArray} layout={state.bc.constants.data.layout} />
-                                <BytecodeView code={new Uint8Array(state.bc.code)} cdl={state.bc.cdl} />
+                                {/* todo: move memory view inside bytecode view; */ }
+                                <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={ state.bc.constants.data.layout } />
+                                <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
                             </div>
                         ) : (
                                 <Container textAlign="center">
-                                    <Button onClick={() => this.compile()}>Compile</Button>
+                                    <Button onClick={ () => this.compile(true) }>Compile</Button>
                                 </Container>
-                            )}
+                            ) }
                     </Tab.Pane>
                 )
             },
             {
                 menuItem: (<Menu.Item>semantics<br />analyzer</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={false} key="program-view">
+                    <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
-                            filename={props.sourceFile.filename}
-                            ast={props.sourceFile.parseTree}
-
-                            onNodeOver={inst => this.highlightInstruction(inst, true)}
-                            onNodeOut={inst => this.highlightInstruction(inst, false)}
-                            onNodeClick={inst => { }}
-
-                            onUpdate={errors => this.handleProgramViewUpdate(errors)}
-                            onComplete={(root) => { this.setProgram(root); }}
+                            onNodeOver={ inst => this.highlightInstruction(inst, true) }
+                            onNodeOut={ inst => this.highlightInstruction(inst, false) }
+                            onNodeClick={ inst => { } }
                         />
                     </Tab.Pane>
                 )
@@ -251,10 +225,10 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (<Menu.Item>syntax<br />analyzer</Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={false} key="ast-view">
+                    <Tab.Pane attached={ false } key="ast-view">
                         <ASTView
-                            onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
-                            onNodeOut={idx => this.highlightPNode(idx, null, false)}
+                            onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
+                            onNodeOut={ idx => this.highlightPNode(idx, null, false) }
                         />
                     </Tab.Pane>
                 )
@@ -265,21 +239,21 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Source File',
                 render: () => (
-                    <Tab.Pane key="source" className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}
+                    <Tab.Pane key="source" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
                     // fixme: remove style from line below;
                     // as={ ({ ...props }) => <Container fluid { ...props } /> }
                     >
-                        <Grid divided={false}>
-                            <Grid.Row columns={2}>
-                                <Grid.Column computer="10" tablet="8" mobile="6" className={props.classes.leftColumnFix}>
+                        <Grid divided={ false }>
+                            <Grid.Row columns={ 2 }>
+                                <Grid.Column computer="10" tablet="8" mobile="6" className={ props.classes.leftColumnFix }>
                                     <SourceEditor
                                         name="source-code"
-                                        validateBreakpoint={line => this.validateBreakpoint(line)}
+                                        validateBreakpoint={ line => this.validateBreakpoint(line) }
                                     />
                                 </Grid.Column>
-                                <Grid.Column computer="6" tablet="8" mobile="10" className={props.classes.rightColumnFix}>
-                                    <Container style={{ paddingTop: '15px'}}>
-                                        <Tab menu={{ secondary: true, size: 'mini' }} panes={analysisResults} renderActiveOnly={false} />
+                                <Grid.Column computer="6" tablet="8" mobile="10" className={ props.classes.rightColumnFix }>
+                                    <Container style={ { paddingTop: '15px' } }>
+                                        <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -290,7 +264,7 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Grammar',
                 render: () => (
-                    <Tab.Pane key="grammar" className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
+                    <Tab.Pane key="grammar" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
                         <ParserParameters />
                     </Tab.Pane>
                 )
@@ -298,29 +272,29 @@ class App extends React.Component<IAppProps> {
         ];
 
         return (
-            <div className={props.classes.mainContentHotfix}>
+            <div className={ props.classes.mainContentHotfix }>
                 <Sidebar.Pushable>
                     <Sidebar
-                        as={Segment}
+                        as={ Segment }
                         animation='overlay'
                         // onHide={ this.hideFileBrowser }
                         vertical
-                        visible={this.state.showFileBrowser}
-                        className={this.props.classes.fileBrowserSidebarHotfix}
+                        visible={ this.state.showFileBrowser }
+                        className={ this.props.classes.fileBrowserSidebarHotfix }
                     >
-                        <FileListView path="./assets" filters={['.fx']} onFileClick={(file) => { props.actions.openFile(file) }} />
+                        <FileListView path="./assets" filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
                     </Sidebar>
-                    <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
-                        {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */}
-                        <Tab menu={{ secondary: true, pointing: true }} panes={panes} renderActiveOnly={true} 
-                            className={props.classes.topMenuFix} />
-                        
+                    <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
+                        {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */ }
+                        <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ true }
+                            className={ props.classes.topMenuFix } />
+
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' inverted fixed="left" className={props.classes.sidebarLeftHotfix}>
-                    <Menu.Item name='home' onClick={this.handleShowFileBrowser} >
-                        <Icon name={'three bars' as UnknownIcon} />
+                <Menu vertical icon='labeled' inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
+                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
+                        <Icon name={ 'three bars' as UnknownIcon } />
                         File Browser
                     </Menu.Item>
                 </Menu>

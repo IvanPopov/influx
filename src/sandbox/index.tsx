@@ -24,7 +24,11 @@ const logger = createLogger({
     diff: false
 });
 
-const reduxImmutableState = reduxImmutableStateInvariant({ ignore: ['sourceFile.parseTree'] } as any);
+const reduxImmutableState = reduxImmutableStateInvariant({ ignore: [
+    'sourceFile.parseTree', 
+    'sourceFile.root', 
+    'sourceFile.scope'
+] } as any);
 
 // todo: add support for retail configuration
 const middleware: Middleware[] = [logic, thunk, logger, reduxImmutableState];

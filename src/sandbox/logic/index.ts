@@ -1,9 +1,9 @@
-import { createLogic, createLogicMiddleware } from 'redux-logic';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { ISourceFileRequest, IGrammarFileSpecified } from '@sandbox/actions/ActionTypes';
+import { IGrammarFileSpecified, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import fxRuntime from '@sandbox/logic/fxRuntime';
+import parsing from '@sandbox/logic/parsing';
 import IStoreState from '@sandbox/store/IStoreState';
-import parsing from './parsing';
-import fxRuntime from './fxRuntime';
+import { createLogic, createLogicMiddleware } from 'redux-logic';
 
 
 const readFile = fname => fetch(fname).then(resp => resp.text());

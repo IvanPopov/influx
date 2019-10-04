@@ -9,6 +9,8 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
+import { IScope, ETechniqueType } from '@lib/idl/IInstruction';
+import { IPartFxInstruction } from '@lib/idl/IPartFx';
 
 export const styles = {
     yellowMarker: {
@@ -24,6 +26,75 @@ export const styles = {
         background: 'red'
     }
 }
+
+let timer = (delay) => new Promise(done => { setTimeout(done, delay) });
+
+class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
+
+    constructor(protected getScope: () => IScope) {
+
+    }
+
+    async provideCodeLenses(model: monaco.editor.ITextModel, token: monaco.CancellationToken)
+    // : Promise<any>
+    : Promise<monaco.languages.CodeLensList>
+    // : monaco.languages.ProviderResult<monaco.languages.CodeLensList> 
+    {
+        // fixme: hack for sync between editor and analisys results
+        await timer(500);
+
+        let lenses = [];
+        let scope = this.getScope();
+        for (let techniqueName in scope.techniqueMap) {
+            let technique = scope.techniqueMap[techniqueName];
+            if (technique.type == ETechniqueType.k_PartFx) {
+                let partFx = technique as IPartFxInstruction;
+
+                if (partFx.spawnRoutine) {
+                    let sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
+                    let loc = sourceNode.loc;
+
+                    let range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                    lenses.push({
+                        range,
+                        command: {
+                            id: null,
+                            // title: `spawn routine of '${techniqueName}' fx`
+                            title: `[spawn routine]`
+                        }
+                    });
+                }
+            }
+        }
+
+        // let lenses = this.getBreakpoints().map(brk => {
+        //     let range = new monaco.Range(brk + 1, 5, brk + 1, 5);
+        //     return {
+        //         range,
+        //         ...c
+        //     }
+        // });
+
+        return {
+            lenses,
+            dispose() {
+                // console.log('disposed!');
+            }
+        };
+    }
+
+    onDidChange() {
+        console.log('on did change');
+        return {
+            dispose() {
+
+            }
+        }
+    }
+}
+
+
+
 
 
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
@@ -90,6 +161,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     componentDidUpdate() {
         this.updateDecorations();
+        // this.editor.render();
     }
 
     @autobind
@@ -98,7 +170,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
     @autobind
-    editorDidMount(editor: monaco.editor.ICodeEditor) {
+    editorDidMount(editor: monaco.editor.IStandaloneCodeEditor) {
         editor.getModel().updateOptions({ tabSize: 4 });
 
         editor.onMouseDown((e: monaco.editor.IEditorMouseEvent) => {
@@ -125,6 +197,17 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 props.actions.removeBreakpoint(lineNumber);
             }
         });
+
+        // editor.setPosition({ lineNumber: 1, column: 1 });
+        // editor.focus();
+        // console.log('editor did mount!');
+        let provider = monaco.languages.registerCodeLensProvider(
+            '*',
+            new MyCodeLensProvider(() => this.props.scope)
+        );
+
+        // console.log(provider);
+        // console.log(editor);
     }
 
     @autobind
@@ -144,7 +227,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     updateDecorations() {
         this.decorations = this.editor.deltaDecorations(this.decorations, this.setupDecorations());
-        // this.setState({ decorations });
         return this.decorations;
     }
 
@@ -162,15 +244,19 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 enabled: false
             },
             automaticLayout: true,
-            glyphMargin: true
+            glyphMargin: true,
+            theme: "vs-dark",
+            language: "cpp",
+            lineDecorationsWidth: 0,
+            cursorSmoothCaretAnimation: true,
+            fontLigatures: true
         };
 
         return (
             <MonacoEditor
                 ref="monaco"
-                language="cpp"
-                theme="vs-dark"
-                value={ props.content || '' }
+                value={ (props.content || '') }
+
                 width="100%"
                 height="calc(100vh - 41px)" // todo: fixme
 

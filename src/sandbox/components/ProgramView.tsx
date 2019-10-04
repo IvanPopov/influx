@@ -1,5 +1,4 @@
 import { isArray, isDefAndNotNull, isFunction, isNull } from '@lib/common';
-import { analyze } from '@lib/fx/Analyzer';
 import { ArithmeticExprInstruction } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
 import { CastExprInstruction } from '@lib/fx/instructions/CastExprInstruction';
@@ -22,6 +21,10 @@ import { IParseTree, IRange } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import * as React from 'react';
 import { Icon, List, Message } from 'semantic-ui-react';
+import { connect } from 'react-redux';
+import { mapProps } from '@sandbox/reducers';
+import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { IFileState } from '@sandbox/store/IStoreState';
 
 
 
@@ -148,72 +151,43 @@ const SystemProperty: PropertyComponent = (props) => {
     );
 }
 
-export interface IProgramViewProps {
-    ast: IParseTree;
-    filename?: string;
-
+export interface IProgramViewProps extends IFileState {
     onNodeOut?: (instr: IInstruction) => void;
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
-
-    onUpdate?: (errors: { loc: IRange; message: string; }[]) => void;
-    onComplete?: (root: IInstructionCollector) => void;
 }
 
 class ProgramView extends React.Component<IProgramViewProps, {}> {
     state: {
-        root: IInstructionCollector;
-        hash: number;
-
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
     };
 
     constructor(props) {
         super(props);
         this.state = {
-            root: null,
-            hash: -1,
             instrList: {}
         };
     }
 
 
-    componentWillReceiveProps(nextProps) {
-        const { props, state } = this;
+    // shouldComponentUpdate(nextProps, nextState): boolean {
+    //     const { props, state } = this;
+    //     if (nextProps.ast != props.parseTree) {
+    //         return true;
+    //     }
 
-        if (isNull(nextProps.ast) || nextProps.ast == props.ast) {
-            return;
-        }
+    //     // is it ok?
+    //     if (!deepEqual(state.instrList, nextState.instrList)) {
+    //         return true;
+    //     }
 
-        const result = analyze(nextProps.filename, nextProps.ast);
-        this.setState({ root: result.root });
-
-        props.onUpdate(result.diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content })));
-
-        console.log(Diagnostics.stringify(result.diag));
-
-        if (isFunction(props.onComplete)) {
-            props.onComplete(result.root);
-        }
-    }
-
-
-    shouldComponentUpdate(nextProps, nextState): boolean {
-        const { props, state } = this;
-        if (nextProps.ast != props.ast) {
-            return true;
-        }
-
-        if (!deepEqual(state.instrList, nextState.instrList)) {
-            return true;
-        }
-
-        return false;
-    }
+    //     console.warn("skip ProgramView's update");
+    //     return false;
+    // }
 
 
     render() {
-        const { root } = this.state;
+        const { root } = this.props;
 
         if (isNull(root)) {
             return null;
@@ -740,9 +714,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         this.invertInstructionProperty(instr, "opened");
 
-        if (instr.sourceNode) {
+        if (instr.sourceNode)
             this.props.onNodeClick(instr);
-        }
     }
 
 
@@ -756,5 +729,4 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 }
 
-export default ProgramView;
-
+export default connect<{}, {}, IProgramViewProps>(mapProps(getSourceCode), {})(ProgramView) as any;

@@ -1,4 +1,4 @@
-
+import { analyze } from '@lib/fx/Analyzer';
 import { EffectParser } from '@lib/fx/EffectParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
@@ -28,7 +28,7 @@ async function createParser(parserParams: IParserParams) {
     console.log('%c Creating parser....', 'background: #222; color: #bada55');
     parserParamsLast = parserParams;
     parser = new EffectParser();
-    
+
     if (!parser.init(grammar, mode, type)) {
         console.error('Could not initialize parser!');
         parser = null;
@@ -37,21 +37,23 @@ async function createParser(parserParams: IParserParams) {
     }
 }
 
+const PARSING_ERROR_PREFIX = 'parsing-error';
+const ANALYSIS_ERROR_PREFIX = 'analysis-error';
 
-function cleanupSyntaxErrors(state, dispatch) {
+function cleanupErrors(state, dispatch, errorPrefix) {
     for (let name in state.sourceFile.markers) {
-        if (name.startsWith('syntax-error-')) {
+        if (name.startsWith(`${errorPrefix}-`)) {
             dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
         }
     }
 }
 
 
-function emitSyntaxErrors(errors, dispatch) {
+function emitErrors(errors, dispatch, errorPrefix) {
     errors.forEach(err => {
         let { loc, message } = err;
         let marker = {
-            name: `syntax-error-${message}`,
+            name: `${errorPrefix}-${message}`,
             range: loc,
             type: 'error',
             tooltip: message
@@ -61,10 +63,10 @@ function emitSyntaxErrors(errors, dispatch) {
 }
 
 
-async function parse(state: IStoreState, dispatch): Promise<void> {
+async function processParsing(state: IStoreState, dispatch): Promise<void> {
     const { content, filename } = state.sourceFile;
 
-    cleanupSyntaxErrors(state, dispatch);
+    cleanupErrors(state, dispatch, PARSING_ERROR_PREFIX);
 
     if (!content || !parser) {
         return;
@@ -78,12 +80,32 @@ async function parse(state: IStoreState, dispatch): Promise<void> {
     let report = parser.getDiagnostics();
     let errors = report.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
 
-    emitSyntaxErrors(errors, dispatch);
-
+    emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
     console.log(Diagnostics.stringify(parser.getDiagnostics()));
 
-    // if (res == EParserCode.k_Ok) {}
-    dispatch({ type: evt.SOURCE_CODE_PARSE_TREE_CHANGED, payload: { parseTree: parser.getSyntaxTree() } });
+    dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: parser.getSyntaxTree() } });
+}
+
+
+async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
+    const { parseTree, filename } = state.sourceFile;
+
+    cleanupErrors(state, dispatch, ANALYSIS_ERROR_PREFIX);
+
+    if (!parseTree) {
+        return;
+    }
+
+
+    const res = analyze(filename, parseTree);
+
+    let { diag, root, scope } = res;
+    let errors = diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
+
+    emitErrors(errors, dispatch, ANALYSIS_ERROR_PREFIX);
+    console.log(Diagnostics.stringify(diag));
+
+    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { root, scope} });
 }
 
 
@@ -92,7 +114,6 @@ const updateParserLogic = createLogic<IStoreState>({
 
     async process({ getState, action }, dispatch, done) {
         let parserParams = getState().parserParams;
-
         await createParser(parserParams);
         done();
     }
@@ -105,20 +126,25 @@ const updateSourceContentLogic = createLogic<IStoreState>({
     debounce: 500,
 
     async process({ getState }, dispatch, done) {
-        await parse(getState(), dispatch);
+        await processParsing(getState(), dispatch);
         done();
     }
 });
 
 
-// const markerLogic = createLogic<IStoreState>({
-//     type: [evt.SOURCE_CODE_ADD_MARKER, evt.SOURCE_CODE_REMOVE_MARKER],
-//     debounce: 500
-// });
+const parsingCompleteLogic = createLogic<IStoreState>({
+    type: [evt.SOURCE_CODE_PARSING_COMPLETE],
+    
+    async process({ getState }, dispatch, done) {
+        await processAnalyze(getState(), dispatch);
+        done();
+    }
+});
+
 
 
 export default [
-    updateParserLogic, 
-    updateSourceContentLogic, 
-    // markerLogic
+    updateParserLogic,
+    updateSourceContentLogic,
+    parsingCompleteLogic
 ];

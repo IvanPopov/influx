@@ -28,6 +28,6 @@ export class CompileExprInstruction extends ExprInstruction implements ICompileE
 
     
     get function(): IFunctionDeclInstruction {
-        return <IFunctionDeclInstruction>this._operand.parent.parent;
+        return <IFunctionDeclInstruction>this._operand;
     }
 }

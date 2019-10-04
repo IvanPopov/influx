@@ -1,22 +1,23 @@
 import { EInstructionTypes, ETechniqueType } from "@lib/idl/IInstruction";
-import { IFunctionDeclInstruction, IPartFxInstruction, IPartFxPassInstruction } from "../../../idl/IInstruction";
+import { ICompileExprInstruction } from "../../../idl/IInstruction";
 import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
+import { IPartFxPassInstruction, IPartFxInstruction } from "@lib/idl/IPartFx";
 
 
 // prohibition of explicitly indicating the type of technique
 export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSettings<IPartFxPassInstruction>, "techniqueType"> {
-    spawnRoutine: IFunctionDeclInstruction;
-    initRoutine: IFunctionDeclInstruction;
-    updateRoutine: IFunctionDeclInstruction;
+    spawnRoutine: ICompileExprInstruction;
+    initRoutine: ICompileExprInstruction;
+    updateRoutine: ICompileExprInstruction;
 }
 
 // var s: IPartFxInstructionSettings;
 // s.te
 
 export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstruction> implements IPartFxInstruction {
-    protected _spawnRoutine: IFunctionDeclInstruction;
-    protected _initRoutine: IFunctionDeclInstruction;
-    protected _updateRoutine: IFunctionDeclInstruction;
+    protected _spawnRoutine: ICompileExprInstruction;
+    protected _initRoutine: ICompileExprInstruction;
+    protected _updateRoutine: ICompileExprInstruction;
 
     constructor({ spawnRoutine, initRoutine, updateRoutine, ...settings }: IPartFxInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PartFxDeclInstruction, techniqueType: ETechniqueType.k_PartFx, ...settings });
@@ -26,17 +27,17 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
         this._updateRoutine = updateRoutine;
     }
 
-    get spawnRoutine(): IFunctionDeclInstruction {
+    get spawnRoutine(): ICompileExprInstruction {
         return this._spawnRoutine;
     }
 
     
-    get initRoutine(): IFunctionDeclInstruction {
+    get initRoutine(): ICompileExprInstruction {
         return this._initRoutine;
     }
 
     
-    get updateRoutine(): IFunctionDeclInstruction {
+    get updateRoutine(): ICompileExprInstruction {
         return this._updateRoutine;
     }
 }

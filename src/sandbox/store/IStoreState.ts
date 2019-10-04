@@ -1,5 +1,6 @@
 import { IMap } from '@lib/idl/IMap';
 import { EParserType, IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { IScope, IInstructionCollector } from '@lib/idl/IInstruction';
 
 export interface IMarker {
     range: IRange;
@@ -8,12 +9,16 @@ export interface IMarker {
 }
 
 export interface IFileState {
-    filename: string;
-    content: string;
-    error: Error;
+    filename: string;               // source file's path
+    content: string;                // source file's content
+    error: Error;                   // source file loading's error
+
+    parseTree: IParseTree;          // syntax analysis' results
+    scope: IScope;                  // semantic analysis' results
+    root: IInstructionCollector;    // semantic analysis' results
+    
     markers: IMap<IMarker>;
     breakpoints: number[];
-    parseTree: IParseTree;
 }
 
 export interface IParserParams {

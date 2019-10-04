@@ -525,24 +525,3 @@ export interface IFunctionDeclListMap {
     [functionName: string]: IFunctionDeclInstruction[];
 }
 
-
-/**
- * Particle FX system
- */
-
-
-export interface IPartFxPassInstruction extends IPassInstruction {
-    readonly sorting: boolean;
-    readonly prerenderRoutine: IFunctionDeclInstruction;
-    readonly defaultShader: boolean;
-}
-
-
- export interface IPartFxInstruction extends ITechniqueInstruction {
-
-    readonly spawnRoutine: IFunctionDeclInstruction;
-    readonly initRoutine: IFunctionDeclInstruction;
-    readonly updateRoutine: IFunctionDeclInstruction;
-
-    readonly passList: IPartFxPassInstruction[];
- }

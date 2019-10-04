@@ -146,9 +146,10 @@ export class Scope implements IScope {
      * returns:
      *   'null' if threre are not function; 
      *   'undefined' if there more then one function; 
-     *   function if all ok;
+     *   function if all is ok;
+     * @deprecated
      */
-    findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction {
+    findShaderFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction {
         let scope: Scope = this;
         let func: IFunctionDeclInstruction = null;
 
@@ -157,18 +158,18 @@ export class Scope implements IScope {
 
             if (isDef(funcList)) {
                 for (let i = 0; i < funcList.length; i++) {
-                    let testedFunction: IFunctionDeclInstruction = funcList[i];
-                    let testedArguments: IVariableDeclInstruction[] =
-                        <IVariableDeclInstruction[]>testedFunction.definition.paramList;
+                    let testedFunction = funcList[i];
+                    let testedArguments = testedFunction.definition.paramList;
 
-                    if (argTypes.length > testedArguments.length) {
+                    if (args.length > testedArguments.length ||
+                        args.length < testedFunction.definition.numArgsRequired) {
                         continue;
                     }
 
                     let isParamsEqual: boolean = true;
                     let iArg: number = 0;
 
-                    if (argTypes.length === 0) {
+                    if (args.length === 0) {
                         if (!isNull(func)) {
                             return undefined;
                         }
@@ -180,7 +181,7 @@ export class Scope implements IScope {
                     for (let j: number = 0; j < testedArguments.length; j++) {
                         isParamsEqual = false;
 
-                        if (iArg >= argTypes.length) {
+                        if (iArg >= args.length) {
                             if (testedArguments[j].isUniform()) {
                                 break;
                             }
@@ -189,7 +190,7 @@ export class Scope implements IScope {
                             }
                         }
                         else if (testedArguments[j].isUniform()) {
-                            if (!argTypes[iArg].type.isEqual(testedArguments[j].type)) {
+                            if (!args[iArg].type.isEqual(testedArguments[j].type)) {
                                 break;
                             }
                             else {
