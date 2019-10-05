@@ -13,6 +13,13 @@ import { createLogger } from 'redux-logger';
 
 require('semantic-ui-less/semantic.less');
 
+// global defines from webpack's config;
+declare const VERSION: string;
+declare const COMMITHASH: string;
+declare const BRANCH: string;
+declare const MODE: string;
+declare const PRODUCTION: boolean;
+
 if (isElectron) {
     require('electron-react-devtools').install();
 }
@@ -23,14 +30,18 @@ const logger = createLogger({
 });
 
 
-const reduxImmutableState = reduxImmutableStateInvariant({ ignore: [
-    'sourceFile.parseTree', 
-    'sourceFile.root', 
-    'sourceFile.scope'
-] } as any);
+const reduxImmutableState = reduxImmutableStateInvariant({
+    ignore: [
+        'sourceFile.parseTree',
+        'sourceFile.root',
+        'sourceFile.scope'
+    ]
+} as any);
 
 // todo: add support for retail configuration
-const middleware: Middleware[] = [/*thunk, */logic, logger, reduxImmutableState];
+const middleware: Middleware[] = !PRODUCTION ?
+    [/*thunk, */logic, logger, reduxImmutableState] :
+    [logic];
 
 const store = createStore<IStoreState, any, any, any>(
     reducer,
@@ -49,9 +60,4 @@ store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
 console.log(`%c This is ${isElectron ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
-
-// global defines from webpack's config;
-declare const VERSION: string;
-declare const COMMITHASH: string;
-declare const BRANCH: string;
-console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH})`, 'background: #222; color: #bada55');
+console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}`, 'background: #222; color: #bada55');

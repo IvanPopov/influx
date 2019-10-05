@@ -7,39 +7,78 @@ const TsConfigPathsPlugin = require('awesome-typescript-loader').TsConfigPathsPl
 const { CheckerPlugin } = require('awesome-typescript-loader');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-var GitRevisionPlugin = require('git-revision-webpack-plugin');
+const GitRevisionPlugin = require('git-revision-webpack-plugin');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin()
 
 const [, , command, value] = process.argv;
-const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 
+const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 const srcPath = `${__dirname}/src`;
 const outputPath = `${__dirname}/dist/${isWeb ? 'web' : 'electron'}`;
 const sandboxPath = `${srcPath}/sandbox`;
+const version = `${require("./package.json").version}.${gitRevisionPlugin.version()}`;
+const commithash = gitRevisionPlugin.commithash();
+const branch = gitRevisionPlugin.branch();
+const mode = process.env.NODE_ENV || 'development';
 
-console.log({ outputPath, isWeb });
+const DEVELOPMENT = mode == 'development';
+const PRODUCTION = mode == 'production';
+const ENABLE_PROFILING = false;             // turn it on to compile minified version with source map support enabled
 
-let options = {
-    mode: 'development',
-    optimization: {
-        minimize: false,
-        runtimeChunk: 'single',
-        namedModules: true,
-        namedChunks: true,
-        moduleIds: 'named',
-        chunkIds: 'named',
-        splitChunks: {
-            cacheGroups: {
-                vendors: {
-                    test: /[\\/]node_modules[\\/]/,
-                    name: 'vendors',
-                    chunks: 'all'
-                }
+console.log({ outputPath, isWeb, mode });
+
+let optimization = {
+    minimize: PRODUCTION,
+    runtimeChunk: 'single',
+    namedModules: !PRODUCTION,
+    namedChunks: !PRODUCTION,
+    moduleIds: 'named',
+    chunkIds: 'named',
+    splitChunks: {
+        cacheGroups: {
+            vendors: {
+                test: /[\\/]node_modules[\\/]/,
+                name: 'vendors',
+                chunks: 'all'
             }
         }
-    },
+    }
+};
+
+let output = {
+    path: outputPath,
+    filename: '[name].[contenthash].js',
+    chunkFilename: '[name].[contenthash].bundle.js',
+};
+
+let devtool = 'source-map';
+let target = isWeb ? 'web' : 'electron-renderer';
+
+if (PRODUCTION && !ENABLE_PROFILING) {
+    optimization = {
+        minimize: true,
+        minimizer: [
+            new TerserPlugin({
+                cache: true,
+                parallel: true,
+                terserOptions: {
+                    arguments: true,
+                    booleans_as_integers: true
+                }
+            })
+        ]
+    };
+
+    devtool = false;
+}
+
+let options = {
+    mode,
+    optimization,
+    target,
     resolve: {
         alias: {
             '../../theme.config$': path.join(__dirname, 'theme.config')
@@ -49,8 +88,7 @@ let options = {
             new TsConfigPathsPlugin(),
         ]
     },
-    devtool: 'source-map',
-    mode: process.env.NODE_ENV,
+    devtool,
     module: {
         rules: [
             {
@@ -114,11 +152,7 @@ let options = {
     devServer: {
         contentBase: outputPath,
     },
-    output: {
-        path: outputPath,
-        filename: '[name].[contenthash].js',
-        chunkFilename: '[name].[contenthash].bundle.js',
-    },
+    output,
     entry: [`${sandboxPath}/index.tsx`, `${sandboxPath}/index-webpack.pug`],
     plugins: [
         new CopyPlugin([
@@ -131,7 +165,7 @@ let options = {
         new HtmlWebpackPlugin({
             template: `!!pug-loader!${sandboxPath}/index-webpack.pug`,
             filename: `${outputPath}/${isWeb ? 'index' : 'index-electron'}.html`,
-            title: `Influx ${isWeb ? 'Web' : 'Electron'} App`,
+            title: `Influx ${isWeb ? 'Web' : 'Electron'} App | ver-${version}.${branch}`,
             minify: false
         }),
         new webpack.HashedModuleIdsPlugin(),
@@ -140,9 +174,11 @@ let options = {
         new GitRevisionPlugin(),
         gitRevisionPlugin,
         new webpack.DefinePlugin({
-            'VERSION': JSON.stringify(`${require("./package.json").version}.${gitRevisionPlugin.version()}`),
-            'COMMITHASH': JSON.stringify(gitRevisionPlugin.commithash()),
-            'BRANCH': JSON.stringify(gitRevisionPlugin.branch()),
+            'VERSION': JSON.stringify(version),
+            'COMMITHASH': JSON.stringify(commithash),
+            'BRANCH': JSON.stringify(branch),
+            'MODE': JSON.stringify(mode),
+            'PRODUCTION': PRODUCTION,
             'global': {}
         }),
         new MonacoWebpackPlugin({
@@ -153,7 +189,5 @@ let options = {
         fs: 'empty'
     }
 };
-
-options.target = isWeb ? 'web' : 'electron-renderer'
 
 module.exports = options;

@@ -32,6 +32,7 @@
     "git-revision-webpack-plugin": "^3.0.3",
     "html-webpack-plugin": "^3.2.0",
     "is-electron-renderer": "^2.0.1",
+    "jss-nested": "^6.0.1",
     "less": "^3.9.0",
     "less-loader": "^5.0.0",
     "lodash": "^4.17.15",
@@ -61,21 +62,21 @@
     "semantic-ui-react-less-loader": "^0.2.0",
     "source-map-loader": "^0.2.4",
     "style-loader": "^0.23.1",
+    "terser-webpack-plugin": "^2.1.2",
     "tslint": "^5.16.0",
     "tslint-microsoft-contrib": "^6.1.1",
     "typescript": "^3.6.3",
     "url-loader": "^1.1.2",
     "webpack": "^4.41.0",
     "webpack-cli": "^3.3.2",
-    "webpack-dev-server": "^3.8.0",
-    "jss-nested": "^6.0.1"
+    "webpack-dev-server": "^3.8.0"
   },
   "scripts": {
     "electron": "electron ./shell.js",
-    "build:web": "cross-env APP_TARGET=web webpack",
-    "build:electron": "cross-env APP_TARGET=electron webpack",
+    "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack",
+    "build:electron": "cross-env NODE_ENV=production APP_TARGET=electron webpack",
     "dev-server:web": "cross-env APP_TARGET=web webpack-dev-server",
-    "dev-server:electron": "cross-env APP_TARGET=electron webpack-dev-server"
+    "dev-server:electron": "cross-env APP_TARGET=electron webpack --watch"
   },
   "dependencies": {
     "electron": "^5.0.1",

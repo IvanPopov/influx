@@ -5,15 +5,18 @@ import { IInstruction, IInstructionCollector } from '@lib/idl/IInstruction';
 import { IParseNode, IParseTree } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
-import { BytecodeView, ParserParameters, SourceEditor, Playground } from '@sandbox/containers';
+import { BytecodeView, ParserParameters, SourceEditor2, Playground } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table, Header } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table, Header, Message } from 'semantic-ui-react';
 
-
+declare const VERSION: string;
+declare const COMMITHASH: string;
+declare const BRANCH: string;
+declare const MODE: string;
 
 
 // process.chdir(`${__dirname}/../../`); // making ./build as cwd
@@ -55,6 +58,10 @@ export const styles = {
     },
     leftColumnFix: {
         paddingRight: '0px !important'
+    },
+    versionFix: {
+        padding: '5px !important',
+        margin: '-5px !important'
     }
 }
 
@@ -63,6 +70,16 @@ export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
     actions: typeof sourceActions;
 }
 
+
+const Version = (props) => {
+    return (
+        <div>
+            <Message warning={ MODE != 'production' } size="tiny" compact className={ props.classes.versionFix }>
+                { MODE != 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+            </Message>
+        </div>
+    );
+}
 
 @injectSheet(styles)
 class App extends React.Component<IAppProps> {
@@ -173,7 +190,7 @@ class App extends React.Component<IAppProps> {
 
         const analysisResults = [
             {
-                menuItem: (<Menu.Item key="bytecode"><Menu.Header>Bytecode<br/>Debugger</Menu.Header></Menu.Item>),
+                menuItem: (<Menu.Item key="bytecode"><Menu.Header>Bytecode<br />Debugger</Menu.Header></Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
                         <Header as='h4' dividing>
@@ -264,14 +281,14 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column computer="10" tablet="8" mobile="6" className={ props.classes.leftColumnFix }>
-                                    <SourceEditor
+                                    <SourceEditor2
                                         name="source-code"
                                         validateBreakpoint={ line => this.validateBreakpoint(line) }
                                     />
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10" className={ props.classes.rightColumnFix }>
                                     <Container style={ { paddingTop: '15px' } }>
-                                        <Tab  menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                        <Tab menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -286,6 +303,10 @@ class App extends React.Component<IAppProps> {
                         <ParserParameters />
                     </Tab.Pane>
                 )
+            },
+            {
+                menuItem: (<Menu.Item key="ver" position="right" inverted disabled color="red"><Version classes={ props.classes } /></Menu.Item>),
+                render: () => null
             }
         ];
 
@@ -306,7 +327,6 @@ class App extends React.Component<IAppProps> {
                         {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */ }
                         <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ true }
                             className={ props.classes.topMenuFix } />
-
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
