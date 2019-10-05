@@ -149,7 +149,8 @@ export interface IScope {
 
     findVariable(variableName: string): IVariableDeclInstruction;
     findType(typeName: string): ITypeInstruction;
-    findFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
+    findFunction(funcName: string, args: ITypeInstruction[]): IFunctionDeclInstruction | null | undefined;
+    /** @deprecated */
     findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
 
@@ -364,11 +365,17 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
 export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
     readonly implementation: IStmtBlockInstruction;
+
+    /** @deprecated */
     readonly functionType: EFunctionType;
 
+    /** @deprecated */
     checkVertexUsage(): boolean;
+    
+    /** @deprecated */
     checkPixelUsage(): boolean;
 
+    /** @deprecated */
     $overwriteType(type: EFunctionType): void;
 }
 

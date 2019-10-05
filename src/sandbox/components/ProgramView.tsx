@@ -1,4 +1,4 @@
-import { isArray, isDefAndNotNull, isFunction, isNull } from '@lib/common';
+import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { ArithmeticExprInstruction } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
 import { CastExprInstruction } from '@lib/fx/instructions/CastExprInstruction';
@@ -13,26 +13,27 @@ import { PostfixArithmeticInstruction } from '@lib/fx/instructions/PostfixArithm
 import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
 import { SemicolonStmtInstruction } from '@lib/fx/instructions/SemicolonStmtInstruction';
 import { StringInstruction } from '@lib/fx/instructions/StringInstruction';
-import { SystemTypeInstruction, ISystemTypeInstructionSettings } from '@lib/fx/instructions/SystemTypeInstruction';
+import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
 import { VariableTypeInstruction } from '@lib/fx/instructions/VariableTypeInstruction';
-import { EInstructionTypes, IAssignmentExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IPassInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IAssignmentExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IPassInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IIdInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
-import { IParseTree, IRange } from '@lib/idl/parser/IParser';
-import { Diagnostics } from '@lib/util/Diagnostics';
-import * as React from 'react';
-import { Icon, List, Message } from 'semantic-ui-react';
-import { connect } from 'react-redux';
 import { mapProps } from '@sandbox/reducers';
 import { getSourceCode } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
+import * as React from 'react';
+import { connect } from 'react-redux';
+import { Icon, List, Message, IconProps } from 'semantic-ui-react';
+import { PostfixPointInstruction } from '@lib/fx/instructions/PostfixPointInstruction';
+import injectSheet from 'react-jss';
+import { IWithStyles } from '.';
 
-
-
-// todo: use common func
-function deepEqual(a: Object, b: Object): boolean {
-    return JSON.stringify(a) === JSON.stringify(b);
-}
-
+const styles = {
+    parentIcon: {
+        '&:hover': {
+            textShadow: '1px 1px 1px #ccc'
+        }
+    }
+};
 
 const PropertyStyles = {
     selected: {
@@ -63,7 +64,7 @@ function prettifyEName(econstName: string): string {
 }
 
 
-interface PropertyProps {
+interface PropertyProps extends IWithStyles<typeof styles> {
     name?: any;
     value?: any;
     onMouseOver?: any;
@@ -73,7 +74,8 @@ interface PropertyProps {
     opened?: boolean;
     system?: boolean;
     parent?: any;
-    onParentClick?: any;
+    onParentMouseDown?: any;
+    onParentMouseUp?: any;
 }
 
 
@@ -82,7 +84,7 @@ type PropertyComponent = React.StatelessComponent<PropertyProps>;
 
 
 const Property: PropertyComponent =
-    ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, opened, system, parent, onParentClick }) => {
+    ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, opened, system, parent, onParentMouseDown, onParentMouseUp, classes }) => {
         let iconName = system ? `code` as any : (isDefAndNotNull(children) ? `chevron down` : `code`);
         if (!children) {
             opened = true;
@@ -110,7 +112,11 @@ const Property: PropertyComponent =
                     { isDefAndNotNull(name) &&
                         <List.Header style={ helperProperty ? { fontSize: '85%', color: '#ccc' } : {} }>
                             { parent &&
-                                <span> <a style={ { color: 'rgba(0,0,0,0.3)' } } onClick={ onParentClick }><Icon name={ `git pull request` as any } size="small" /></a></span>
+                                <span>
+                                    <a style={ { color: 'rgba(0,0,0,0.3)' } } onMouseOver={ onParentMouseDown } onMouseOut={ onParentMouseUp }>
+                                        <Icon className={ classes.parentIcon } name={ `git pull request` as any } size="small" />
+                                    </a>
+                                </span>
                             }
                             { helperProperty ? `[${name}]` : name }
                         </List.Header>
@@ -151,12 +157,13 @@ const SystemProperty: PropertyComponent = (props) => {
     );
 }
 
-export interface IProgramViewProps extends IFileState {
+export interface IProgramViewProps extends IFileState, IWithStyles<typeof styles> {
     onNodeOut?: (instr: IInstruction) => void;
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
 }
 
+@injectSheet(styles)
 class ProgramView extends React.Component<IProgramViewProps, {}> {
     state: {
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
@@ -242,6 +249,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.InitExpr(instr);
             case EInstructionTypes.k_IdExprInstruction:
                 return this.IdExpr(instr);
+            case EInstructionTypes.k_PostfixPointInstruction:
+                return this.PostfixPointExpr(instr);
             case EInstructionTypes.k_AssignmentExprInstruction:
                 return this.Assigment(instr);
             case EInstructionTypes.k_PostfixArithmeticInstruction:
@@ -392,7 +401,29 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     IdExpr(instr: IIdExprInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
-                <Property name="name" value={ instr.name } />
+                { this.Id(instr.id) }
+                <Property name="declaration" >
+                    { this.Unknown(instr.declaration) }
+                </Property>
+            </Property>
+        )
+    }
+
+    Id(instr: IIdInstruction) {
+        return (
+            <Property {...this.bindProps(instr)} name="name" value={ instr.name } />
+        )
+    }
+
+    PostfixPointExpr(instr: PostfixPointInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name="element">
+                    { this.Unknown(instr.element) }
+                </Property>
+                <Property name="postfix">
+                    { this.Unknown(instr.postfix) }
+                </Property>
             </Property>
         )
     }
@@ -607,9 +638,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
-                <PropertyOpt name="usages" opened={ false }>
-                    { (instr.usageList.join(' ') || null) }
-                </PropertyOpt>
+                <PropertyOpt name="usages" value={ (instr.usageList.join(' ') || null) } />
                 <PropertyOpt name="subType" opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>
@@ -667,25 +696,36 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         return {
             name: `${prettifyEName(instr.instructionName)}`,
-            key: instr.instructionID,
+            key: `${instr.instructionID}`,
             onMouseOver: this.handleMouseOver.bind(this, instr),
             onMouseOut: this.handleMouseOut.bind(this, instr),
             onClick: this.handleMouseClick.bind(this, instr),
             selected: !!instrState.selected,
             opened: !!instrState.opened,
             parent: instr.parent && `I${instr.parent.instructionID}`,
-            onParentClick: this.handleParentClick.bind(this, instr)
+            onParentMouseDown: this.handleParentMouseDown.bind(this, instr),
+            onParentMouseUp: this.handleParentMouseUp.bind(this, instr),
+            classes: this.props.classes
         }
     }
 
 
-    handleParentClick(instr: IInstruction, e: MouseEvent) {
+    handleParentMouseDown(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
         let parent = instr.parent;
 
         if (parent && parent.sourceNode)
             this.props.onNodeOver(parent);
+    }
+
+    handleParentMouseUp(instr: IInstruction, e: MouseEvent) {
+        e.stopPropagation();
+
+        let parent = instr.parent;
+
+        if (parent && parent.sourceNode)
+            this.props.onNodeOut(parent);
     }
 
 

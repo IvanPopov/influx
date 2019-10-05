@@ -147,3 +147,10 @@ export interface IParser {
     printStates(isPrintOnlyBase?: boolean): void;
     printState(iStateIndex: number, isPrintOnlyBase?: boolean): void;
 }
+
+
+export interface IParserParams {
+    grammar: string;
+    type: EParserType;
+    mode: number;
+}

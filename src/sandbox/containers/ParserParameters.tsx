@@ -3,7 +3,7 @@ import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
 import { mapActions, parser as parserActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
-import { IParserParams } from '@sandbox/store/IStoreState';
+import { IParserState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import MonacoEditor from 'react-monaco-editor';
@@ -15,14 +15,14 @@ const setFlags = (dest: number, src: number, value: boolean) => {
     return value ? bf.setFlags(dest, src) : bf.clearFlags(dest, src);
 };
 
-export interface IParserProps extends IParserParams {
+export interface IParserProps extends IParserState {
     // warning, actions actually have void return type!
     actions: typeof parserActions;
 }
 
 
-class ParserParameters extends React.Component<IParserProps, IParserParams> {
-    state: IParserParams;
+class ParserParameters extends React.Component<IParserProps, IParserState> {
+    state: IParserState;
 
     componentWillMount() {
         this.setState(this.props);

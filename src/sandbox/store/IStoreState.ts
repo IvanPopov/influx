@@ -1,5 +1,5 @@
 import { IMap } from '@lib/idl/IMap';
-import { EParserType, IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { EParserType, IParseTree, IRange, IParserParams } from '@lib/idl/parser/IParser';
 import { IScope, IInstructionCollector } from '@lib/idl/IInstruction';
 
 export interface IMarker {
@@ -21,7 +21,7 @@ export interface IFileState {
     breakpoints: number[];
 }
 
-export interface IParserParams {
+export interface IParserState extends IParserParams {
     filename: string;
     grammar: string;
     type: EParserType;
@@ -30,7 +30,7 @@ export interface IParserParams {
 
 export interface IStoreState {
     readonly sourceFile: IFileState;
-    readonly parserParams: IParserParams;
+    readonly parserParams: IParserState;
 }
 
 export default IStoreState;

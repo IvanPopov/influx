@@ -28,6 +28,7 @@ export enum EAnalyzerErrors {
     InvalidComplexNotType = 2224,
     InvalidComplexNotConstructor = 2225,
     InvalidCompileNotFunction = 2226,
+    InvalidCompileFunctionNotValid = 2281,
     FunctionRedefinition = 2227,
     InvalidWhileCondition = 2228,
     InvalidDoWhileCondition = 2229,
@@ -70,6 +71,8 @@ export enum EAnalyzerErrors {
     InvalidFunctionReturnStmtNotFound = 2279,
     UnsupportedProvideAs = 2303,
     UnreachableCode = 2280,
+
+    // PartFx_InvalidInitRoutine
 };
 
 export enum EAnalyzerWarnings {

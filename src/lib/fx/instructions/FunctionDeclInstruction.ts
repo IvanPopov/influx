@@ -83,8 +83,12 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
 
     toCode(): string {
         let code = '';
-        code += this._definition.toCode();
-        code += this._implementation.toCode();
+        code += this.definition.toCode();
+        if (this.implementation) {
+            code += this.implementation.toCode();
+        } else {
+            code += ';';
+        }
         return code;
     }
 

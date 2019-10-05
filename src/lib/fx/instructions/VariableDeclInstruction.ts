@@ -189,20 +189,22 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return code;
     }
 
+    /** @deprecated */
     $makeVertexCompatible(val: boolean): void {
         this._bForVertex = val;
     }
 
+    /** @deprecated */
     $makePixelCompatible(val: boolean): void {
         this._bForPixel = val;
     }
 
-
+    /** @deprecated */
     checkVertexUsage(): boolean {
         return this._bForVertex;
     }
 
-
+    /** @deprecated */
     checkPixelUsage(): boolean {
         return this._bForPixel;
     }

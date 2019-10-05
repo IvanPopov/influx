@@ -624,14 +624,14 @@ export const T_SAMPLER_CUBE = scope.findType("samplerCUBE");
 export const findType = (typeName: string) => scope.findType(typeName);
 export const findVariable = (varName: string) => scope.findVariable(varName);
 export const findTechnique = (techName: string) => scope.findTechnique(techName);
-export const findFunction = (funcName: string, args?: ITypedInstruction[]) => scope.findFunction(funcName, args);
+export const findFunction = (funcName: string, args?: ITypeInstruction[]) => scope.findFunction(funcName, args);
 export const findShaderFunction = (funcName: string, args?: ITypedInstruction[]) => scope.findShaderFunction(funcName, args);
 
 export const hasType = (typeName: string) => scope.hasType(typeName);
 export const hasVariable = (varName: string) => scope.hasVariable(varName);
 export const hasTechnique = (techName: string) => scope.hasTechnique(techName);
 
-export function isMatrixType(type: ITypeInstruction): boolean {
+export function isMatrixType(type: ITypeInstruction): boolean { 
     return type.isEqual(getSystemType("float2x2")) ||
         type.isEqual(getSystemType("float3x3")) ||
         type.isEqual(getSystemType("float4x4")) ||
@@ -747,4 +747,3 @@ export function getExternalType(type: ITypeInstruction): any {
         return null;
     }
 }
-

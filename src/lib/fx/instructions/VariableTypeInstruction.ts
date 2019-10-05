@@ -119,6 +119,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return false;
         }
 
+        if (this.isConst()) {
+            return false;
+        }
+
         return this.subType.writable;
     }
 
@@ -245,7 +249,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this.subType.toDeclString();
     }
 
-
+    // todo: add explanation!
     isBase(): boolean {
         return this.subType.isBase() && isNull(this._arrayElementType);
     }
@@ -347,7 +351,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     hasField(sFieldName: string): boolean {
-        return this.subType.hasField(sFieldName);
+        return !this.isNotBaseArray() && this.subType.hasField(sFieldName);
     }
 
 
@@ -378,23 +382,27 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    getField(sFieldName: string): IVariableDeclInstruction {
-        if (!this.hasField(sFieldName)) {
+    getField(fieldName: string): IVariableDeclInstruction {
+        if (!this.hasField(fieldName)) {
             return null;
         }
 
         const scope = this.scope;
 
-        let subField = this.subType.getField(sFieldName);
-        let id = subField.id;
-        let type = subField.type;
-        let padding = subField.type.padding;
-        let semantics = subField.semantics;
+        // let subField  = this.subType.getField(fieldName);
+        // let id        = subField.id;
+        // let type      = subField.type;
+        // let padding   = subField.type.padding;
+        // let semantics = subField.semantics;
 
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ scope, type });
+        let { id, type, type: { padding }, semantics } = this.subType.getField(fieldName);
+        
+
+        let fieldType = VariableTypeInstruction.wrap(type, scope);
         fieldType.$overwritePadding(padding);
 
-        let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType, semantics });
+        let fieldId = new IdInstruction({ scope, name: id.name });
+        let field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantics });
         return Instruction.$withParent(field, this);
     }
 
@@ -617,17 +625,5 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
         return new VariableTypeInstruction({ type, scope: scope });
-    }
-
-
-    static fieldToExpr(type: IVariableTypeInstruction, fieldName: string): IIdExprInstruction {
-        if (!type.hasField(fieldName)) {
-            return null;
-        }
-
-        var field = type.getField(fieldName);
-        var expr = new IdExprInstruction({ scope: null, id: field.id, decl: field });
-
-        return expr;
     }
 }

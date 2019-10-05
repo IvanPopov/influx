@@ -1,7 +1,7 @@
 import bf from "@lib/bf";
-import { isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { isDef, isDefAndNotNull, isNull, deepEqual } from "@lib/common";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { IFile, IPosition, IRange } from "@lib/idl/parser/IParser";
+import { IFile, IPosition, IRange, IParserParams } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
 import { ENodeCreateMode, EOperationType, EParseMode, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "../idl/parser/IParser";
@@ -77,9 +77,6 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
         };
     }
 }
-
-
-////
 
 interface IOperation {
     type: EOperationType;
@@ -1633,5 +1630,57 @@ export class Parser implements IParser {
 
     protected critical(code, desc) {
         this._diag.critical(code, desc);
+    }
+
+
+    private static $parser: IParser = null;
+    private static $parserParams: IParserParams = null;
+
+    /**
+     * Create a singleton instance of parser for internal use.
+     */
+    static init(parserParams: IParserParams, ParserConstructor: new () => IParser = null): IParser {
+        const { grammar, mode, type } = parserParams;
+
+        if (!grammar) {
+            return Parser.$parser;
+        }
+
+        if (deepEqual(parserParams, Parser.$parserParams)) {
+            return Parser.$parser;
+        }
+
+        if (isNull(ParserConstructor)) {
+            ParserConstructor = Parser;
+        }
+
+        console.log('%c Creating parser....', 'background: #222; color: #bada55');
+        Parser.$parserParams = parserParams;
+        Parser.$parser = new ParserConstructor();
+
+        if (!Parser.$parser.init(grammar, mode, type)) {
+            console.error('Could not initialize parser!');
+            Parser.$parser = null;
+        } else {
+            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
+        }
+
+        return Parser.$parser;
+    }
+
+
+    static async parse(content: string, filename: string = "stdin")
+    {
+        Parser.$parser.setParseFileName(filename);
+        // All diagnostic exceptions should be already handled inside parser.
+        let result = await Parser.$parser.parse(content);
+    
+        let diag = Parser.$parser.getDiagnostics();
+        let ast = Parser.$parser.getSyntaxTree();
+
+        // todo: fix this hack
+        Parser.$parser.setParseFileName("stdin");
+
+        return { result, diag, ast };
     }
 }

@@ -1,12 +1,12 @@
 import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
 import { GRAMMAR_CONTENT_SPECIFIED, GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED } from '@sandbox/actions/ActionTypeKeys';
 import { IGrammarContentSpecified, IGrammarFileSpecified, IParserParamsActions, IParserParamsChanged } from '@sandbox/actions/ActionTypes';
-import { IParserParams, IStoreState } from '@sandbox/store/IStoreState';
+import { IParserState, IStoreState } from '@sandbox/store/IStoreState';
 import * as fs from 'fs';
 import { handleActions } from './handleActions';
 
 
-const initialState: IParserParams = {
+const initialState: IParserState = {
     filename: null,
     grammar: null,
     type: EParserType.k_LALR,
@@ -14,7 +14,7 @@ const initialState: IParserParams = {
 };
 
 
-export default handleActions<IParserParams, IParserParamsActions>({
+export default handleActions<IParserState, IParserParamsActions>({
     [ GRAMMAR_CONTENT_SPECIFIED ]: (state, action: IGrammarContentSpecified) => 
         ({ ...state, grammar: action.payload.content }),
 
@@ -32,4 +32,4 @@ export default handleActions<IParserParams, IParserParamsActions>({
 
 //- Selectors
 
-export const getParser = (state: IStoreState): IParserParams => state.parserParams;
+export const getParser = (state: IStoreState): IParserState => state.parserParams;

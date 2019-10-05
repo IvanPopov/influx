@@ -1,10 +1,9 @@
-import { IPassInstruction, IFunctionDeclInstruction, ITechniqueInstruction, ICompileExprInstruction } from "@lib/idl/IInstruction";
+import { IPassInstruction, IFunctionDeclInstruction, ITechniqueInstruction, ICompileExprInstruction, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 
 
 export interface IPartFxPassInstruction extends IPassInstruction {
     readonly sorting: boolean;
     readonly prerenderRoutine: ICompileExprInstruction;
-    readonly defaultShader: boolean;
 }
 
 
@@ -13,6 +12,8 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly spawnRoutine: ICompileExprInstruction;
     readonly initRoutine: ICompileExprInstruction;
     readonly updateRoutine: ICompileExprInstruction;
+
+    readonly particle: ITypeInstruction;
 
     readonly passList: IPartFxPassInstruction[];
  }

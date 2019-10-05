@@ -1,4 +1,4 @@
-﻿import { assert, isDef, isDefAndNotNull, isNull, assignIfDef, PropertiesDiff } from '@lib/common';
+﻿import { assert, assignIfDef, isDef, isDefAndNotNull, isNull, PropertiesDiff } from '@lib/common';
 import { ArithmeticExprInstruction, ArithmeticOperator } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "@lib/fx/instructions/AssignmentExprInstruction";
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
@@ -23,6 +23,8 @@ import { InitExprInstruction } from '@lib/fx/instructions/InitExprInstruction';
 import { InstructionCollector } from '@lib/fx/instructions/InstructionCollector';
 import { IntInstruction } from '@lib/fx/instructions/IntInstruction';
 import { LogicalExprInstruction, LogicalOperator } from '@lib/fx/instructions/LogicalExprInstruction';
+import { PartFxInstruction } from '@lib/fx/instructions/part/PartFxInstruction';
+import { PartFxPassInstruction } from '@lib/fx/instructions/part/PartFxPassInstruction';
 import { PassInstruction } from '@lib/fx/instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from '@lib/fx/instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from '@lib/fx/instructions/PostfixIndexInstruction';
@@ -42,18 +44,18 @@ import { UnaryExprInstruction, UnaryOperator } from '@lib/fx/instructions/UnaryE
 import { EVariableUsageFlags, VariableDeclInstruction } from '@lib/fx/instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from '@lib/fx/instructions/VariableTypeInstruction';
 import { DoWhileOperator, WhileStmtInstruction } from '@lib/fx/instructions/WhileStmtInstruction';
-import { ProgramScope } from '@lib/fx/ProgramScope';
+import { ProgramScope, Scope } from '@lib/fx/ProgramScope';
 import * as SystemScope from '@lib/fx/SystemScope';
+import { T_BOOL, T_INT, T_VOID } from '@lib/fx/SystemScope';
 import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, IAnnotationInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ETechniqueType, ICompileExprInstruction } from '@lib/idl/IInstruction';
+import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
+import { IPartFxInstruction, IPartFxPassInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
+import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
-import { PartFxInstruction } from '@lib/fx/instructions/part/PartFxInstruction';
-import { IPartFxPassInstruction, IPartFxInstruction } from '@lib/idl/IPartFx';
-import { PartFxPassInstruction } from '@lib/fx/instructions/part/PartFxPassInstruction';
 
 
 
@@ -73,7 +75,7 @@ interface IAnalyzerDiagDesc {
     info: any; // todo: fixme
 }
 
-type IErrorInfo = IMap<any>; 
+type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
 
 export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
@@ -698,7 +700,7 @@ function checkTwoOperandExprTypes(
     const isComplex = leftType.isComplex() || rightType.isComplex();
     const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
     const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
-    const boolType = <IVariableTypeInstruction>SystemScope.T_BOOL;
+    const boolType = <IVariableTypeInstruction>T_BOOL;
 
     if (isArray || isSampler) {
         return null;
@@ -852,7 +854,7 @@ function checkOneOperandExprType(context: Context, sourceNode: IParseNode, opera
     }
 
     if (operator === '!') {
-        const boolType = <IVariableTypeInstruction>SystemScope.T_BOOL;
+        const boolType = <IVariableTypeInstruction>T_BOOL;
         validate(boolType, EInstructionTypes.k_VariableDeclInstruction);
 
         if (type.isEqual(boolType)) {
@@ -980,7 +982,7 @@ function analyzeType(context: Context, program: ProgramScope, sourceNode: IParse
             break;
 
         case 'T_KW_VOID':
-            type = SystemScope.T_VOID;
+            type = T_VOID;
             break;
 
         case 'ScalarType':
@@ -1060,18 +1062,20 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
             id = new IdInstruction({ scope, sourceNode, name });
             break;
         }
-    
-        assert (vdimChildren.length == 4);
+
+        assert(vdimChildren.length == 4);
 
         if (!isNull(arrayIndex)) {
-            generalType = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
+            // using generalType.source node instead of sourceNode was done for more clear degging
+            generalType = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
         }
 
         arrayIndex = analyzeExpr(context, program, vdimChildren[vdimChildren.length - 3]);
         vdimNode = vdimChildren[vdimChildren.length - 1];
     } while (true);
-    
-    type = new VariableTypeInstruction({ scope, sourceNode, type: generalType, arrayIndex });
+
+    // using generalType.source node instead of sourceNode was done for more clear degging
+    type = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
 
     for (let i = children.length - 2; i >= 0; i--) {
         if (children[i].name === 'Annotation') {
@@ -1081,11 +1085,11 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         } else if (children[i].name === 'Initializer') {
             let args = analyzeInitializerArguments(context, program, children[i]);
             init = new InitExprInstruction({ scope, sourceNode: children[i], args, type });
-            
+
             let isValidInit = false;
             try {
                 isValidInit = init.optimizeForVariableType(type);
-            } catch (e) {};
+            } catch (e) { };
 
             if (!isValidInit) {
                 // todo: make it warning
@@ -1252,6 +1256,12 @@ function analyzeObjectExpr(context: Context, program: ProgramScope, sourceNode: 
 }
 
 
+interface ICompileValidator {
+    // validate with custom arguments ignoring statements inside compile expression.
+    args?: ITypeInstruction[];
+    ret?: ITypeInstruction;
+}
+
 /**
  * AST example:
  *    ObjectExpr
@@ -1260,19 +1270,33 @@ function analyzeObjectExpr(context: Context, program: ProgramScope, sourceNode: 
  *         T_NON_TYPE_ID = 'main'
  *         T_KW_COMPILE = 'compile'
  */
-function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): CompileExprInstruction {
+function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, validator?: ICompileValidator): CompileExprInstruction {
     const children = sourceNode.children;
     const shaderFuncName = children[children.length - 2].value;
     const scope = program.currentScope;
 
-    let args: IExprInstruction[] = [];
+    let compileArgs: IExprInstruction[] = null;
+    let retType: ITypeInstruction = null;
+    let args: ITypeInstruction[] = null;
 
     if (children.length > 4) {
-        for (let i = children.length - 3; i > 0; i--) {
+        compileArgs = [];
+        for (let i = children.length - 4; i > 0; i--) {
             if (children[i].value !== ',') {
-                let argumentExpr = analyzeExpr(context, program, children[i]);
-                args.push(argumentExpr);
+                compileArgs.push(analyzeExpr(context, program, children[i]));
             }
+        }
+    }
+
+    args = compileArgs ? compileArgs.map(arg => arg.type) : null;
+
+    if (validator) {
+        if (validator.args) {
+            args = validator.args;
+        }
+
+        if (validator.ret) {
+            retType = validator.ret;
         }
     }
 
@@ -1284,9 +1308,20 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
         return null;
     }
 
+    if (retType) {
+        if (!func.definition.returnType.isEqual(retType)) {
+            context.error(sourceNode, EErrors.InvalidCompileFunctionNotValid, {
+                funcName: shaderFuncName,
+                funcType: retType.toCode(),
+                tooltip: `Return type mismatch: expected '${retType.toCode()}' a is a '${func.definition.returnType.toCode()}' `
+            });
+            return null;
+        }
+    }
+
     let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>func.definition.returnType, scope);
 
-    let expr = new CompileExprInstruction({ args, scope, type, operand: func });
+    let expr = new CompileExprInstruction({ args: compileArgs, scope, type, operand: func, sourceNode });
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
@@ -1479,7 +1514,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         }
     }
 
-    let func = globalScope.findFunction(funcName, args);
+    let func = globalScope.findFunction(funcName, args.map(arg => arg.type));
 
     if (isNull(func)) {
         context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName: funcName });
@@ -1503,7 +1538,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
     //     }
     // }
 
-    if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction || 
+    if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction ||
         func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
             const funcArguments = func.definition.paramList;
@@ -1682,7 +1717,7 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const indexExpr = analyzeExpr(context, program, children[children.length - 3]);
     const indexExprType = <IVariableTypeInstruction>indexExpr.type;
 
-    if (!indexExprType.isEqual(SystemScope.T_INT)) {
+    if (!indexExprType.isEqual(T_INT)) {
         context.error(sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: indexExprType.toString() });
         return null;
     }
@@ -1691,6 +1726,21 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
 }
 
+
+function analyzePosifixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, type: IVariableTypeInstruction): IIdExprInstruction {
+    const scope = program.currentScope;
+    const fieldName = sourceNode.value;
+
+    if (!type.hasField(fieldName)) {
+        return null;
+    }
+
+    const field = type.getField(fieldName);
+    const id = new IdInstruction({ scope, sourceNode, name: fieldName });
+    const expr = new IdExprInstruction({ sourceNode, scope, id, decl: field });
+
+    return expr;
+}
 
 /**
  * AST example:
@@ -1706,12 +1756,13 @@ function analyzePostfixPoint(context: Context, program: ProgramScope, sourceNode
     const postfixExpr = analyzeExpr(context, program, children[children.length - 1]);
     const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
     const fieldName = children[children.length - 3].value;
-    const fieldNameExpr = VariableTypeInstruction.fieldToExpr(postfixExprType, fieldName);
+
+    const fieldNameExpr = analyzePosifixPointField(context, program, children[children.length - 3], postfixExprType);
 
     if (isNull(fieldNameExpr)) {
         context.error(sourceNode, EErrors.InvalidPostfixNotField, {
             typeName: postfixExprType.toString(),
-            fieldName
+            fieldName: fieldName
         });
         return null;
     }
@@ -1822,7 +1873,7 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
     const leftExprType = <IVariableTypeInstruction>leftExpr.type;
     const rightExprType = <IVariableTypeInstruction>rightExpr.type;
 
-    const boolType = SystemScope.T_BOOL;
+    const boolType = T_BOOL;
 
     if (!conditionType.isEqual(boolType)) {
         context.error(conditionExpr.sourceNode, EErrors.InvalidConditionType, { typeName: conditionType.toString() });
@@ -1944,7 +1995,7 @@ function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode:
     const leftType = <IVariableTypeInstruction>left.type;
     const rightType = <IVariableTypeInstruction>right.type;
 
-    const boolType = SystemScope.T_BOOL;
+    const boolType = T_BOOL;
 
     if (!leftType.isEqual(boolType)) {
         context.error(leftType.sourceNode, EErrors.InvalidLogicOperation, {
@@ -1990,6 +2041,10 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
 
     const left = analyzeExpr(context, program, children[children.length - 1]);
     const right = analyzeExpr(context, program, children[0]);
+
+    if (isNull(left) || isNull(right)) {
+        return null;
+    }
 
     const leftType = <IVariableTypeInstruction>left.type;
     const rightType = <IVariableTypeInstruction>right.type;
@@ -2049,7 +2104,7 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
         }
     }
 
-    let id = new IdInstruction({ sourceNode, name, scope });
+    let id = new IdInstruction({ scope, sourceNode, name });
     let varId = new IdExprInstruction({ scope, sourceNode, id, decl });
     return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
 }
@@ -2222,7 +2277,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     program.push(EScopeType.k_Default);
 
     let definition = analyzeFunctionDef(context, program, children[children.length - 1]);
-    let func = globalScope.findFunction(definition.name, definition.paramList);
+    let func = globalScope.findFunction(definition.name, definition.paramList.map(param => param.type));
 
     if (!isDef(func)) {
         context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
@@ -2260,7 +2315,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 
     program.pop();
 
-    let hasVoidType = definition.returnType.isEqual(SystemScope.T_VOID);
+    let hasVoidType = definition.returnType.isEqual(T_VOID);
 
     // validate unreachable code.
     if (!isNull(implementation)) {
@@ -2413,7 +2468,7 @@ function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: I
 
     const children = sourceNode.children;
     const scope = program.currentScope;
-    
+
     let stmtList: IStmtInstruction[] = [];
     for (let i = children.length - 2; i > 0; i--) {
         let stmt = analyzeStmt(context, program, children[i]);
@@ -2421,7 +2476,7 @@ function analyzeStmtBlock(context: Context, program: ProgramScope, sourceNode: I
             stmtList.push(stmt);
         }
     }
-    
+
     const stmtBlock = new StmtBlockInstruction({ sourceNode, scope, stmtList });
     checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2465,12 +2520,12 @@ function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: 
             return analyzeWhileStmt(context, program, sourceNode);
 
         case 'StmtBlock':
-        {
-            program.push(EScopeType.k_Default);
-            let stmtBlock = analyzeStmtBlock(context, program, children[0]);
-            program.pop();
-            return stmtBlock;
-        }
+            {
+                program.push(EScopeType.k_Default);
+                let stmtBlock = analyzeStmtBlock(context, program, children[0]);
+                program.pop();
+                return stmtBlock;
+            }
         case 'T_KW_DISCARD':
         case 'T_KW_BREAK':
         case 'T_KW_CONTINUE':
@@ -2485,7 +2540,7 @@ function analyzeSimpleStmt(context: Context, program: ProgramScope, sourceNode: 
             if (children.length === 2) {
                 return analyzeExprStmt(context, program, sourceNode);
             }
-        
+
             return new SemicolonStmtInstruction({ sourceNode, scope });
     }
 }
@@ -2501,17 +2556,17 @@ function analyzeReturnStmt(context: Context, program: ProgramScope, sourceNode: 
 
     const children = sourceNode.children;
     const scope = program.currentScope;
-   
+
     assert(context.func);
 
     const funcReturnType = context.funcDef.returnType;
     context.haveCurrentFunctionReturnOccur = true;
 
-    if (funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 3) {
+    if (funcReturnType.isEqual(T_VOID) && children.length === 3) {
         context.error(sourceNode, EErrors.InvalidReturnStmtVoid);
         return null;
     }
-    else if (!funcReturnType.isEqual(SystemScope.T_VOID) && children.length === 2) {
+    else if (!funcReturnType.isEqual(T_VOID) && children.length === 2) {
         context.error(sourceNode, EErrors.InvalidReturnStmtEmpty);
         return null;
     }
@@ -2549,11 +2604,11 @@ function analyzeBreakStmt(context: Context, program: ProgramScope, sourceNode: I
     const scope = program.currentScope;
 
     const operator: BreakOperator = <BreakOperator>children[1].value;
-    
+
     if (operator === 'discard' && !isNull(context.funcDef)) {
         // context.currentFunction.vertex = (false);
     }
-    
+
     const breakStmtInstruction = new BreakStmtInstruction({ sourceNode, scope, operator });
     checkInstruction(context, breakStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2577,21 +2632,21 @@ function analyzeDeclStmt(context: Context, program: ProgramScope, sourceNode: IP
     const children = sourceNode.children;
     const scope = program.currentScope;
     const nodeName = sourceNode.name;
-    
+
     let declList: IDeclInstruction[] = [];
 
     switch (nodeName) {
         case 'TypeDecl':
-        declList.push(analyzeTypeDecl(context, program, sourceNode));
-        break;
+            declList.push(analyzeTypeDecl(context, program, sourceNode));
+            break;
         case 'VariableDecl':
-        declList = declList.concat(analyzeVariableDecl(context, program, sourceNode));
-        break;
+            declList = declList.concat(analyzeVariableDecl(context, program, sourceNode));
+            break;
         case 'VarStructDecl':
-        declList = declList.concat(analyzeVarStructDecl(context, program, sourceNode));
-        break;
+            declList = declList.concat(analyzeVarStructDecl(context, program, sourceNode));
+            break;
     }
-    
+
     const declStmtInstruction = new DeclStmtInstruction({ sourceNode, scope, declList });
     checkInstruction(context, declStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2603,7 +2658,7 @@ function analyzeExprStmt(context: Context, program: ProgramScope, sourceNode: IP
     const scope = program.currentScope;
     const children = sourceNode.children;
     const expr = analyzeExpr(context, program, children[1]);
-    
+
     const exprStmt = new ExprStmtInstruction({ sourceNode, scope, expr });
     checkInstruction(context, exprStmt, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2633,9 +2688,9 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
     const children = sourceNode.children;
     const isDoWhile = (children[children.length - 1].value === 'do');
     const isNonIfStmt = (sourceNode.name === 'NonIfStmt') ? true : false;
-    const boolType = SystemScope.T_BOOL;
+    const boolType = T_BOOL;
 
-    
+
     let cond: IExprInstruction = null;
     let conditionType: IVariableTypeInstruction = null;
     let body: IStmtInstruction = null;
@@ -2671,7 +2726,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
         }
     }
 
-    const whileStmt = new WhileStmtInstruction({ sourceNode, scope, cond, body, operator});
+    const whileStmt = new WhileStmtInstruction({ sourceNode, scope, cond, body, operator });
     checkInstruction(context, whileStmt, ECheckStage.CODE_TARGET_SUPPORT);
 
     return whileStmt;
@@ -2695,17 +2750,17 @@ function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IPar
 
     const cond = analyzeExpr(context, program, children[children.length - 3]);
     const conditionType = <IVariableTypeInstruction>cond.type;
-    const boolType = SystemScope.T_BOOL;
-    
+    const boolType = T_BOOL;
+
     let conseq: IStmtInstruction = null;
     let contrary: IStmtInstruction = null;
     let operator: string = null;
-    
+
     if (!conditionType.isEqual(boolType)) {
         context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: conditionType.toString() });
         return null;
     }
-    
+
     if (isIfElse) {
         operator = 'if_else';
         conseq = analyzeNonIfStmt(context, program, children[2]);
@@ -2715,7 +2770,7 @@ function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IPar
         operator = 'if';
         conseq = analyzeNonIfStmt(context, program, children[0]);
     }
-    
+
     const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary });
     checkInstruction(context, ifStmt, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2751,26 +2806,26 @@ function analyzeForStmt(context: Context, program: ProgramScope, sourceNode: IPa
     const isNonIfStmt = (sourceNode.name === 'NonIfStmt');
 
     let body: IStmtInstruction = null;
-    
+
     program.push();
-    
+
     let init: ITypedInstruction = analyzeForInit(context, program, children[children.length - 3]);
     let cond: IExprInstruction = analyzeForCond(context, program, children[children.length - 4]);
     let step: IExprInstruction = null;
-    
+
     if (children.length === 7) {
         step = analyzeForStep(context, program, children[2]);
     }
-    
+
     if (isNonIfStmt) {
         body = analyzeNonIfStmt(context, program, children[0]);
     }
     else {
         body = analyzeStmt(context, program, children[0]);
     }
-    
+
     program.pop();
-    
+
     const pForStmtInstruction = new ForStmtInstruction({ sourceNode, scope, init, cond, step, body });
     checkInstruction(context, pForStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2903,12 +2958,12 @@ function analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IP
     const scope = program.currentScope;
     const entry = analyzePassStateBlockForShaders(context, program, children[0]);
     const renderStates = analyzePassStateBlock(context, program, children[0]);
-    
+
     let id: IIdInstruction = null;
-    for (let i = 0; i < children.length; ++ i) {
+    for (let i = 0; i < children.length; ++i) {
         if (children[i].name === "T_NON_TYPE_ID") {
             let name = children[i].value;
-            id = new IdInstruction({ name, scope });
+            id = new IdInstruction({ scope, name });
         }
     }
 
@@ -3035,17 +3090,17 @@ function analyzePassStateBlock(context: Context, program: ProgramScope, sourceNo
 function analyzePassState(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<ERenderStateValues> {
 
     const children = sourceNode.children;
-    
+
     const stateType: string = children[children.length - 1].value.toUpperCase();
     const stateName: ERenderStates = getRenderState(stateType);
     const stateExprNode: IParseNode = children[children.length - 3];
     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
-    
+
     if (isNull(exprNode.value) || isNull(stateName)) {
         console.warn('Pass state is incorrect.'); // todo: move to warnings
         return {};
     }
-    
+
     let renderStates: IMap<ERenderStateValues> = {};
     if (exprNode.value === '{' && stateExprNode.children.length > 3) {
         const values: ERenderStateValues[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
@@ -3201,7 +3256,7 @@ function analyzeStructDecl(context: Context, program: ProgramScope, sourceNode: 
 function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeDeclInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    
+
     let type: ITypeInstruction = null;
     if (children.length === 2) {
         type = analyzeStructDecl(context, program, children[1]);
@@ -3210,7 +3265,7 @@ function analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IP
         context.error(sourceNode, EErrors.UnsupportedTypeDecl);
     }
 
-    
+
     let typeDecl = new TypeDeclInstruction({ scope, sourceNode, type });
     addTypeDecl(context, scope, typeDecl);
     return checkInstruction(context, typeDecl, ECheckStage.CODE_TARGET_SUPPORT);
@@ -3223,7 +3278,7 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
 
     for (let i = children.length - 1; i >= 0; i--) {
         switch (children[i].name) {
-            
+
             case 'PartFxDecl':
                 globals.push(analyzePartFXDecl(context, program, children[i]));
                 break;
@@ -3285,32 +3340,32 @@ function analyzePartFXProperty(context: Context, program: ProgramScope, sourceNo
  */
 function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
 
-    
+
     const children = sourceNode.children;
     const scope = program.currentScope;
     const renderStates = analyzePassStateBlock(context, program, children[0]);
     const fxStates = analyzePartFxStateBlock(context, program, children[0]);
 
     const sorting = assignIfDef(fxStates.sorting, true);
-    const defaultShader = assignIfDef(fxStates.defaultShader, false);
     const prerenderRoutine = assignIfDef(fxStates.prerenderRoutine, null);
 
     let id: IIdInstruction = null;
-    for (let i = 0; i < children.length; ++ i) {
+    for (let i = 0; i < children.length; ++i) {
         if (children[i].name === "T_NON_TYPE_ID") {
             let name = children[i].value;
-            id = new IdInstruction({ name, scope });
+            id = new IdInstruction({ scope, name });
         }
     }
 
     const pass = new PartFxPassInstruction({
         scope,
         sourceNode,
-        renderStates,
         id,
+
         sorting,
-        defaultShader,
         prerenderRoutine,
+
+        renderStates,
         // todo: rework shaders setup
         pixelShader: null,
         vertexShader: null
@@ -3365,19 +3420,19 @@ function analyzePartFxStateBlock(context: Context, program: ProgramScope, source
 function analyzePartFXPassProperies(context: Context, program: ProgramScope, sourceNode: IParseNode): Partial<IPartFxPassProperties> {
 
     const children = sourceNode.children;
-    
+
     const stateName: string = children[children.length - 1].value.toUpperCase();
     const stateExprNode: IParseNode = children[children.length - 3];
     const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
 
     let fxStates: Partial<IPartFxPassProperties> = {};
-    
+
     if (isNull(exprNode.value) || isNull(stateName)) {
         console.warn('Pass state is incorrect.'); // todo: move to warnings
         // todo: return correct state list
         return fxStates;
     }
-    
+
     /**
      * AST example:
      *    PassStateExpr
@@ -3425,41 +3480,183 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
         }
 
         switch (stateName) {
-            case 'SORTING':
+            case ('sorting'.toUpperCase()):
                 // todo: use correct validation with diag error output
                 assert(value == 'TRUE' || value == 'FALSE');
                 fxStates.sorting = (value === 'TRUE');
                 break;
-            case 'DEFAULTSHADER':
-                 // todo: use correct validation with diag error output
-                 assert(value == 'TRUE' || value == 'FALSE');
-                 fxStates.defaultShader = (value === 'TRUE');
-                 break;
-            case 'PRERENDERROUTINE':
-                fxStates.prerenderRoutine = <ICompileExprInstruction>analyzeObjectExpr(context, program, exprNode);
-                // todo: validate prerender routine!
-                console.log(fxStates.prerenderRoutine);
+            case ('PrerenderRoutine'.toUpperCase()):
+                {
+                    console.log(exprNode);
+                    /**
+                     * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
+                     */
+                    let validator = { ret: T_VOID, args: [context.particle, null] };
+                    let prerenderRoutine = analyzeCompileExpr(context, program, exprNode);
+
+                    //
+                    // check arguments
+                    //
+
+                    let fn = prerenderRoutine.function;
+
+                    /** first argument's type */
+                    let argv = fn.definition.paramList.map(param => param.type);
+
+                    if (!argv[0].readable || argv[0].subType !== context.particle ||
+                        !argv[1].hasUsage('out') || !argv[1].writable || argv[1].isNotBaseArray()) {
+                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, {
+                            funcName: fn.name,
+                            tooltip: `'PrerenderRoutine' arguments' type mismatch.`
+                        });
+                        prerenderRoutine = null;
+                    }
+
+                    fxStates.prerenderRoutine = prerenderRoutine;
+                }
                 break;
             default:
                 console.warn('Pass fx state is incorrect.');
                 break;
         }
     }
-    
+
     return fxStates;
 }
 
+// type is internal property which is always ETechniqueType.k_PartFx for particle fx's,
+// so we can omit it.
+type IPartFxProperties = Omit<PropertiesDiff<IPartFxInstruction, IDeclInstruction>, "type">;
 
+export function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxProperties {
+    let passList: IPartFxPassInstruction[] = [];
+    let spawnRoutine: ICompileExprInstruction = null;
+    let initRoutine: ICompileExprInstruction = null;
+    let updateRoutine: ICompileExprInstruction = null;
+    let particle: ITypeInstruction = null;
+
+    const children = sourceNode.children;
+
+    for (let i = children.length - 2; i > 0; i--) {
+        switch (children[i].name) {
+            case 'PassState':
+                {
+                    let sourceNode = children[i];
+                    let stateName = sourceNode.children[3].value; // "T_NON_TYPE_ID"
+                    switch (stateName.toUpperCase()) {
+                        case ('SpawnRoutine'.toUpperCase()):
+                            {
+                                /**
+                                 * Spawn routine expected as 'int spawn(void)'.
+                                 */
+                                let validator = { ret: T_INT, args: [] };
+                                let objectExrNode = sourceNode.children[1].children[0];
+                                spawnRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+                            }
+                            break;
+                        case ('InitRoutine'.toUpperCase()):
+                            {
+                                /** Init routine expected as 'void init(in Part part)'. */
+                                let validator: ICompileValidator = { ret: T_VOID, args: [null] };
+                                let objectExrNode = sourceNode.children[1].children[0];
+                                initRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+
+                                //
+                                // check arguments
+                                //
+
+                                let fn = initRoutine.function;
+                                /** first argument's type */
+                                let type = fn.definition.paramList[0].type;
+
+                                if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
+                                        funcName: fn.name,
+                                        tooltip: `'InitRoutine' arguments' type mismatch.`
+                                    });
+                                    initRoutine = null;
+                                }
+
+                                // type is referencing to VariableType of argument,
+                                // while substitute type referencing to declaration. 
+                                particle = type.subType;
+                            }
+                            break;
+                        case ('UpdateRoutine'.toUpperCase()):
+                            {
+                                /**
+                                 * Update routine expected as 'void update(inout Part part)'.
+                                 */
+                                let validator = { ret: T_VOID };
+                                let objectExrNode = sourceNode.children[1].children[0];
+                                updateRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+
+                                //
+                                // check arguments
+                                //
+
+                                let fn = updateRoutine.function;
+                                if (fn.definition.paramList.length != 1) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
+                                        funcName: fn.name,
+                                        tooltip: `'UpdateRoutine' arguments' count mismatch.`
+                                    });
+                                    updateRoutine = null;
+                                }
+
+                                /** first argument's type */
+                                let type = fn.definition.paramList[0].type;
+
+                                if (!type.hasUsage('out') && !type.hasUsage('inout')) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
+                                        funcName: fn.name,
+                                        tooltip: `'updateRoutine' arguments' type mismatch.`
+                                    });
+                                    updateRoutine = null;
+                                }
+
+                                if (type.subType !== particle) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
+                                        funcName: fn.name,
+                                        tooltip: `'UpdateRoutine' arguments' type mismatch.`
+                                    });
+                                    updateRoutine = null;
+                                }
+                            }
+                            break;
+                    }
+                }
+                break;
+        }
+    }
+
+    // Note: all fx properties should be parsed prior to pass declaraion analysis
+    // because some of them are critical for pass validation
+    context.particle = particle;
+
+    for (let i = children.length - 2; i > 0; i--) {
+        switch (children[i].name) {
+            case 'PassDecl':
+                {
+                    let pass = analyzePartFXPassDecl(context, program, children[i]);
+                    assert(!isNull(pass));
+                    passList.push(pass);
+                }
+                break;
+        }
+    }
+
+
+
+    return { passList, spawnRoutine, initRoutine, updateRoutine, particle };
+}
 
 /**
  * AST example:
  *    PartFxDecl
- *         T_PUNCTUATOR_125 = '}'
- *       + PassDecl 
- *       + PassState 
- *       + PassState 
- *       + PassState 
- *         T_PUNCTUATOR_123 = '{'
+ *       + PartFxBody 
+ *       + Annotation 
+ *       + Semantic 
  *       + ComplexNameOpt 
  *         T_KW_FXPART = 'partFx'
  */
@@ -3472,49 +3669,59 @@ export function analyzePartFXDecl(context: Context, program: ProgramScope, sourc
 
     let annotation: IAnnotationInstruction = null;
     let semantics: string = null;
-    let passList: IPartFxPassInstruction[] = [];
-    let spawnRoutine: ICompileExprInstruction = null;
-    let initRoutine: ICompileExprInstruction = null;
-    let updateRoutine: ICompileExprInstruction = null;
+    let props: IPartFxProperties = null;
+
+    context.beginPartFx();
 
     for (let i = children.length - 3; i >= 0; i--) {
 
-        switch(children[i].name) {
+        switch (children[i].name) {
             case 'Annotation':
                 annotation = analyzeAnnotation(children[i]);
                 break;
             case 'Semantic':
                 semantics = analyzeSemantic(children[i]);
                 break;
-            case 'PassState':
-                {
-                    let stateNode = children[i];
-                    let stateName = stateNode.children[3].value; // "T_NON_TYPE_ID"
-                    switch (stateName.toUpperCase()) {
-                        case 'SPAWNROUTINE':
-                            {
-                                let objectExrNode = stateNode.children[1].children[0];
-                                spawnRoutine = <ICompileExprInstruction>analyzeObjectExpr(context, program, objectExrNode);
-                                console.log(spawnRoutine);
-                            }
-                            break;
-                    }
-                }
-                // todo: process state
-                analyzePartFXProperty(context, program, children[i]);
+            case 'PartFxBody':
+                props = analyzePartFXBody(context, program, children[i]);
                 break;
-            case 'PassDecl':
-            let pass = analyzePartFXPassDecl(context, program, children[i]);
-                assert(!isNull(pass));
-                passList.push(pass);
-                break;
+            // case 'PassState':
+            //     {
+            //         let stateNode = children[i];
+            //         let stateName = stateNode.children[3].value; // "T_NON_TYPE_ID"
+            //         switch (stateName.toUpperCase()) {
+            //             case 'SPAWNROUTINE':
+            //                 {
+            //                     /**
+            //                      * Spawn routine expected as 'int spawn(void)'.
+            //                      */
+            //                     let validator = { retType: SystemScope.T_INT, args: [] };
+            //                     let objectExrNode = stateNode.children[1].children[0];
+            //                     spawnRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+            //                     console.log(spawnRoutine);
+            //                 }
+            //                 break;
+            //             // case 
+            //         }
+            //     }
+            //     // todo: process state
+            //     analyzePartFXProperty(context, program, children[i]);
+            //     break;
+            // case 'PassDecl':
+            // let pass = analyzePartFXPassDecl(context, program, children[i]);
+            //     assert(!isNull(pass));
+            //     passList.push(pass);
+            //     break;
 
         }
     }
 
-    const partFx = new PartFxInstruction({ sourceNode, name, semantics, annotation, passList, scope, 
-        spawnRoutine, initRoutine, updateRoutine });
-        
+    context.endPartFx();
+
+    const partFx = new PartFxInstruction({
+        sourceNode, name, semantics, annotation, scope, ...props
+    });
+
     addTechnique(context, program, partFx);
     return partFx;
 }
@@ -3546,6 +3753,10 @@ class Context {
     funcDef: IFunctionDefInstruction | null;    // Current function definition.
     haveCurrentFunctionReturnOccur: boolean;    // todo: replace with array of return statements.
 
+    // part fx states
+    particle: ITypeInstruction;
+    material: ITypeInstruction;
+
     constructor(filename: string, ) {
         this.diagnostics = new AnalyzerDiagnostics;
         this.filename = filename;
@@ -3563,6 +3774,17 @@ class Context {
 
     endFunc(): void {
         this.func = false
+    }
+
+
+    beginPartFx(): void {
+        this.particle = null;
+        this.material = null;
+    }
+
+    endPartFx(): void {
+        this.particle = null;
+        this.material = null;
     }
 
 
@@ -3585,7 +3807,7 @@ class Context {
     warn(sourceNode: IParseNode, code: number, info: IWarningInfo = {}): void {
         let loc = this.resolveNodeSourceLocation(sourceNode);
         let file = this.filename;
-        
+
         this.diagnostics.warning(code, { file, loc, info });
     }
 
@@ -3594,11 +3816,11 @@ class Context {
         if (!isDefAndNotNull(sourceNode)) {
             return null;
         }
-    
+
         if (isDef(sourceNode.loc)) {
             return sourceNode.loc;
         }
-    
+
         return this.resolveNodeSourceLocation(sourceNode.children[sourceNode.children.length - 1]);
     }
 }
@@ -3609,13 +3831,39 @@ export interface IAnalyzeResult {
     diag: IDiagnosticReport;
 }
 
-export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
+
+
+// function fromAST(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
+//     return null;
+// }
+
+export async function fromString(content: string, filename: string = "stdin"): Promise<IInstructionCollector> {
+    let diag;
+    let ast;
+    let root;
+
+    ({ ast, diag } = await Parser.parse(content, filename));
+
+    if (diag.errors) {
+        console.error(Diagnostics.stringify(diag));
+    }
+
+    ({ root, diag } = analyze(ast, filename));
+
+    if (diag.errors) {
+        console.error(Diagnostics.stringify(diag));
+    }
+
+    return root;
+}
+
+export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
     console.time(`analyze(${filename})`);
 
-    
+
     const program = new ProgramScope(SystemScope.SCOPE);
     const context = new Context(filename);
-    
+
     let globals: IInstruction[] = null;
     try {
         globals = analyzeGlobals(context, program, ast);
@@ -3624,11 +3872,11 @@ export function analyze(filename: string, ast: IParseTree): IAnalyzeResult {
         // critical errors were occured
         throw e;
     }
-    
+
     console.timeEnd(`analyze(${filename})`);
 
     assert(program.currentScope == program.globalScope);
-    
+
     const scope = program.globalScope;
     const root = new InstructionCollector({ scope: program.currentScope, instructions: globals });
     const diag = context.diagnostics.resolve();

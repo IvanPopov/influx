@@ -126,7 +126,7 @@ class App extends React.Component<IAppProps> {
         return { bc, prevRoot };
     }
 
-    
+
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         let markerName = `ast-range-${inst.instructionID}`;
         if (show) {
@@ -170,31 +170,33 @@ class App extends React.Component<IAppProps> {
 
         const analysisResults = [
             {
-                menuItem: (<Menu.Item>Bytecode</Menu.Item>),
+                menuItem: (<Menu.Item key="bytecode">Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
                         <Table size='small' basic='very' compact='very'>
-                            {/* todo: remove this padding hack */ }
-                            <Table.Row style={ { paddingTop: 0 } }>
-                                <Table.Cell>
-                                    <Input
-                                        fluid
-                                        size='small'
-                                        label='entry point'
-                                        placeholder={ state.entryPoint }
-                                        onChange={ (e, data) => this.setEntryPoint(data.value) }
-                                    />
-                                </Table.Cell>
+                            <Table.Body>
+                                {/* todo: remove this padding hack */ }
+                                <Table.Row style={ { paddingTop: 0 } }>
+                                    <Table.Cell>
+                                        <Input
+                                            fluid
+                                            size='small'
+                                            label='entry point'
+                                            placeholder={ state.entryPoint }
+                                            onChange={ (e, data) => this.setEntryPoint(data.value) }
+                                        />
+                                    </Table.Cell>
 
-                                <Table.Cell>
-                                    <Checkbox
-                                        label='auto compilation'
-                                        size='small'
-                                        toggle
-                                        onChange={ (e, data) => this.setAutocompile(data.checked) }
-                                    />
-                                </Table.Cell>
-                            </Table.Row>
+                                    <Table.Cell>
+                                        <Checkbox
+                                            label='auto compilation'
+                                            size='small'
+                                            toggle
+                                            onChange={ (e, data) => this.setAutocompile(data.checked) }
+                                        />
+                                    </Table.Cell>
+                                </Table.Row>
+                            </Table.Body>
                         </Table>
                         { state.bc ? (
                             <div>
@@ -211,7 +213,7 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item>semantics<br />analyzer</Menu.Item>),
+                menuItem: (<Menu.Item key="semantic-analysis">semantics<br />analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
@@ -223,7 +225,7 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item>syntax<br />analyzer</Menu.Item>),
+                menuItem: (<Menu.Item key="syntax-analysis">syntax<br />analyzer</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="ast-view">
                         <ASTView

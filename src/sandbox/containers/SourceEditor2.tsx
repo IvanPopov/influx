@@ -12,6 +12,7 @@ import { connect } from 'react-redux';
 import { IScope, ETechniqueType } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { deepEqual, isNull } from '@lib/common';
+import { IRange, IParseNode } from '@lib/idl/parser/IParser';
 
 export const styles = {
     yellowMarker: {
@@ -46,26 +47,61 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 
         let lenses = [];
         let scope = this.getScope();
+        let range: monaco.Range;
+        let loc: IRange;
+        let sourceNode: IParseNode;
 
         if (!isNull(scope)) {
             for (let techniqueName in scope.techniqueMap) {
-                let technique = scope.techniqueMap[techniqueName];
+                const technique = scope.techniqueMap[techniqueName];
                 if (technique.type == ETechniqueType.k_PartFx) {
-                    let partFx = technique as IPartFxInstruction;
+                    const partFx = technique as IPartFxInstruction;
 
                     if (partFx.spawnRoutine) {
-                        let sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
-                        let loc = sourceNode.loc;
+                        sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
+                        loc = sourceNode.loc;
 
-                        let range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
-                        lenses.push({
-                            range,
-                            command: {
-                                id: null,
-                                // title: `spawn routine of '${techniqueName}' fx`
-                                title: `[spawn routine]`
-                            }
-                        });
+                        range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                        lenses.push({ range, command: { id: null, title: `[spawn routine]` } });
+                    }
+
+                    if (partFx.initRoutine) {
+                        sourceNode = partFx.initRoutine.function.definition.sourceNode;
+                        loc = sourceNode.loc;
+
+                        range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                        lenses.push({ range, command: { id: null, title: `[init routine]` } });
+                    }
+
+                    if (partFx.updateRoutine) {
+                        sourceNode = partFx.updateRoutine.function.definition.sourceNode;
+                        loc = sourceNode.loc;
+
+                        range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                        lenses.push({ range, command: { id: null, title: `[update routine]` } });
+                    }
+
+                    if (partFx.particle && !partFx.particle.builtIn) {
+                        sourceNode = partFx.particle.sourceNode;
+                        loc = sourceNode.loc;
+
+                        range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                        lenses.push({ range, command: { id: null, title: `[particle]` } });
+                    }
+
+                    for (let pass of partFx.passList) {
+                        if (pass.prerenderRoutine) {
+                            sourceNode = pass.prerenderRoutine.function.definition.sourceNode;
+                            loc = sourceNode.loc;
+
+                            range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                            lenses.push({ range, command: { id: null, title: `[prerender routine]` } });
+
+                            sourceNode = pass.material.sourceNode;
+                            loc = sourceNode.loc;
+                            range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
+                            lenses.push({ range, command: { id: null, title: `[material]` } });
+                        }
                     }
                 }
             }
@@ -88,10 +124,10 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
     }
 
     onDidChange() {
-        console.log('on did change');
+        // console.log('on did change');
         return {
             dispose() {
-
+                console.log('onDidChange() => dispose()');
             }
         }
     }

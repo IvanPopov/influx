@@ -34,7 +34,7 @@ void prerender(inout Part part, out DefaultShaderInput input)
     input.color = 0.0;
 }
 
-partFx awesome {
+partFx bloodrunner.awesome {
     SpawnRoutine = compile spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();

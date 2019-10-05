@@ -1,42 +1,11 @@
+import { assert } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
 import { EffectParser } from '@lib/fx/EffectParser';
+import { Parser } from '@lib/parser/Parser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import IStoreState, { IParserParams } from '@sandbox/store/IStoreState';
+import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import { filter, take, tap } from 'rxjs/operators';
-
-function deepEqual(a: Object, b: Object): boolean {
-    return JSON.stringify(a) === JSON.stringify(b);
-}
-
-let parser: EffectParser = null;
-let parserParamsLast: IParserParams = null;
-
-async function createParser(parserParams: IParserParams) {
-    const { grammar, mode, type } = parserParams;
-
-    if (!grammar) {
-        return;
-    }
-
-    const parserChanged = !deepEqual(parserParams, parserParamsLast);
-
-    if (!parserChanged) {
-        return;
-    }
-
-    console.log('%c Creating parser....', 'background: #222; color: #bada55');
-    parserParamsLast = parserParams;
-    parser = new EffectParser();
-
-    if (!parser.init(grammar, mode, type)) {
-        console.error('Could not initialize parser!');
-        parser = null;
-    } else {
-        console.log('%c [ DONE ]', 'background: #222; color: #bada55');
-    }
-}
 
 const PARSING_ERROR_PREFIX = 'parsing-error';
 const ANALYSIS_ERROR_PREFIX = 'analysis-error';
@@ -69,22 +38,18 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     cleanupErrors(state, dispatch, PARSING_ERROR_PREFIX);
 
-    if (!content || !parser) {
+    if (!content) {
         return;
     }
 
-    parser.setParseFileName(filename);
+    let { ast, diag, result } = await Parser.parse(content, filename);
 
-    // All diagnostic exceptions should be already handled inside parser.
-    let res = await parser.parse(content);
-
-    let report = parser.getDiagnostics();
-    let errors = report.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
+    let errors = diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
 
     emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
-    console.log(Diagnostics.stringify(parser.getDiagnostics()));
+    console.log(Diagnostics.stringify(diag));
 
-    dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: parser.getSyntaxTree() } });
+    dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
 }
 
 
@@ -97,8 +62,7 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-
-    const res = analyze(filename, parseTree);
+    const res = analyze(parseTree, filename);
 
     let { diag, root, scope } = res;
     let errors = diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
@@ -111,11 +75,17 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
 
 
 const updateParserLogic = createLogic<IStoreState>({
-    type: [evt.GRAMMAR_CONTENT_SPECIFIED, evt.GRAMMAR_FILE_SPECIFIED, evt.PARSER_PARAMS_CHANGED],
+    type: [evt.GRAMMAR_CONTENT_SPECIFIED, evt.PARSER_PARAMS_CHANGED],
 
     async process({ getState, action }, dispatch, done) {
         let parserParams = getState().parserParams;
-        await createParser(parserParams);
+        /**
+         * !!! note: all inline functionality inside analyze.ts depends on this setup
+         */
+        let isOk = Parser.init(parserParams, EffectParser);
+        assert(isOk);
+        
+        // todo: add support for failed setup
         done();
     }
 });

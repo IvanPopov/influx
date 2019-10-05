@@ -85,7 +85,7 @@ export class Scope implements IScope {
      *   'undefined'if there more then one function; 
      *    function if all is ok;
      */
-    findFunction(funcName: string, args: ITypedInstruction[] = null): IFunctionDeclInstruction | null | undefined {
+    findFunction(funcName: string, args: ITypeInstruction[] = null): IFunctionDeclInstruction | null | undefined {
         let scope: Scope = this;
         let func: IFunctionDeclInstruction = null;
 
@@ -98,7 +98,9 @@ export class Scope implements IScope {
                     let testedArguments = testedFunction.definition.paramList;
 
                     if (isNull(args)) {
-                        if (testedFunction.definition.numArgsRequired === 0) {
+                        // if (testedFunction.definition.numArgsRequired === 0) 
+                        // return any function with given name in case of (args === null)
+                        {
                             if (!isNull(func)) {
                                 return undefined;
                             }
@@ -118,7 +120,7 @@ export class Scope implements IScope {
                     for (let j: number = 0; j < args.length; j++) {
                         isParamsEqual = false;
 
-                        if (!args[j].type.isEqual(testedArguments[j].type)) {
+                        if (args[j] && !args[j].isEqual(testedArguments[j].type)) {
                             break;
                         }
 
