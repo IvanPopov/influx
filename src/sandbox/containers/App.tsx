@@ -5,13 +5,13 @@ import { IInstruction, IInstructionCollector } from '@lib/idl/IInstruction';
 import { IParseNode, IParseTree } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
-import { BytecodeView, ParserParameters, SourceEditor } from '@sandbox/containers';
+import { BytecodeView, ParserParameters, SourceEditor, Playground } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table, Header } from 'semantic-ui-react';
 
 
 
@@ -107,23 +107,25 @@ class App extends React.Component<IAppProps> {
     }
 
     static getDerivedStateFromProps(props, state) {
+        let stateDiff = null;
+        let nextRoot = props.sourceFile.root;
+        let contentChanged = !(state.prevRoot == nextRoot);
+
+        if (contentChanged) {
+            stateDiff = { prevRoot: nextRoot };
+        }
+
         if (!state.autocompile) {
-            return null;
+            if (contentChanged && state.bc) {
+                stateDiff.bc = null;
+            }
+        } else if ((contentChanged || !state.bc) && nextRoot) {
+            stateDiff = stateDiff || {};
+            stateDiff.bc = Bytecode.translate(state.entryPoint, nextRoot);
+            console.log('bytecode has been updated');
         }
 
-        if (isNull(props.sourceFile.root)) {
-            return null;
-        }
-
-        if (state.prevRoot == props.sourceFile.root) {
-            return null;
-        }
-
-        let prevRoot = props.sourceFile.root;
-        let bc = Bytecode.translate(state.entryPoint, props.sourceFile.root);
-
-        console.log('bytecode has been updated');
-        return { bc, prevRoot };
+        return stateDiff;
     }
 
 
@@ -173,6 +175,12 @@ class App extends React.Component<IAppProps> {
                 menuItem: (<Menu.Item key="bytecode">Bytecode</Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
+                        <Header as='h4' dividing>
+                            <Icon name='plug' />
+                            <Header.Content>
+                                Bytecode Debugger
+                            </Header.Content>
+                        </Header>
                         <Table size='small' basic='very' compact='very'>
                             <Table.Body>
                                 {/* todo: remove this padding hack */ }
@@ -186,12 +194,14 @@ class App extends React.Component<IAppProps> {
                                             onChange={ (e, data) => this.setEntryPoint(data.value) }
                                         />
                                     </Table.Cell>
-
-                                    <Table.Cell>
+                                    <Table.Cell >
+                                        <Button disabled={ this.state.autocompile } onClick={ () => this.compile(true) } width={ 10 } >Compile</Button>
+                                        &nbsp;
                                         <Checkbox
+                                            width={ 6 }
                                             label='auto compilation'
                                             size='small'
-                                            toggle
+
                                             onChange={ (e, data) => this.setAutocompile(data.checked) }
                                         />
                                     </Table.Cell>
@@ -204,11 +214,16 @@ class App extends React.Component<IAppProps> {
                                 <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={ state.bc.constants.data.layout } />
                                 <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
                             </div>
-                        ) : (
-                                <Container textAlign="center">
-                                    <Button onClick={ () => this.compile(true) }>Compile</Button>
-                                </Container>
-                            ) }
+                        ) : null }
+                        <Header as='h4' dividing>
+                            <Icon name={ 'flame' as any } />
+                            <Header.Content>
+                                Playground
+                                <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
+                            </Header.Content>
+                        </Header>
+                        <Playground />
+
                     </Tab.Pane>
                 )
             },

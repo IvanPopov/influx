@@ -21,6 +21,9 @@ export interface IMemoryViewProps extends IWithStyles<typeof styles> {
 class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     render() {
+        if (!this.props.binaryData) {
+            return null;
+        }
         return (
             <Table unstackable fixed style={{ fontFamily: 'consolas', border: '0' }}>
                 <Table.Body>

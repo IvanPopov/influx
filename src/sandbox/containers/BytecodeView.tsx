@@ -50,6 +50,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
         const { props } = this;
         const { code } = props;
 
+        if (!code) {
+            return null;
+        }
+
         let chunks = VM.decodeChunks(code);
 
         let ilist = VM.decodeCodeChunk(chunks[EChunkType.k_Code]);
