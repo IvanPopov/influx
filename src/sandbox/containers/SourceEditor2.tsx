@@ -279,7 +279,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     shouldComponentUpdate(nextProps, nextState) {
         let renderRequired = this.props.content != nextProps.content ||
-            !deepEqual(this.props.markers, nextProps.markers);
+            !deepEqual(this.props.markers, nextProps.markers) ||
+            !deepEqual(this.props.breakpoints, nextProps.breakpoints);
         // todo: add state checking
 
         if (nextProps.root && this.props.root != nextProps.root) {

@@ -4,6 +4,7 @@ import { IPassInstruction, IFunctionDeclInstruction, ITechniqueInstruction, ICom
 export interface IPartFxPassInstruction extends IPassInstruction {
     readonly sorting: boolean;
     readonly prerenderRoutine: ICompileExprInstruction;
+    readonly material: ITypeInstruction;
 }
 
 
