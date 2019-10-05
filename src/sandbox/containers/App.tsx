@@ -22,7 +22,8 @@ type UnknownIcon = any;
 
 export const styles = {
     sidebarLeftHotfix: {
-        width: `79px !important`
+        width: `79px !important`,
+        backgroundColor: '#1e1e1e !important'
     },
     mainContentHotfix: {
         marginLeft: `calc(79px)`
@@ -172,7 +173,7 @@ class App extends React.Component<IAppProps> {
 
         const analysisResults = [
             {
-                menuItem: (<Menu.Item key="bytecode">Bytecode</Menu.Item>),
+                menuItem: (<Menu.Item key="bytecode"><Menu.Header>Bytecode<br/>Debugger</Menu.Header></Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="bytecode-view">
                         <Header as='h4' dividing>
@@ -228,7 +229,7 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item key="semantic-analysis">semantics<br />analyzer</Menu.Item>),
+                menuItem: (<Menu.Item key="semantic-analysis"><Menu.Header>Semantics<br />Analyzer</Menu.Header></Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="program-view">
                         <ProgramView
@@ -240,7 +241,7 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item key="syntax-analysis">syntax<br />analyzer</Menu.Item>),
+                menuItem: (<Menu.Item key="syntax-analysis"><Menu.Header>Syntax<br />Analyzer</Menu.Header></Menu.Item>),
                 pane: (
                     <Tab.Pane attached={ false } key="ast-view">
                         <ASTView
@@ -270,7 +271,7 @@ class App extends React.Component<IAppProps> {
                                 </Grid.Column>
                                 <Grid.Column computer="6" tablet="8" mobile="10" className={ props.classes.rightColumnFix }>
                                     <Container style={ { paddingTop: '15px' } }>
-                                        <Tab menu={ { secondary: true, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                        <Tab  menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -309,7 +310,7 @@ class App extends React.Component<IAppProps> {
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
+                <Menu vertical icon='labeled' color="black" inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
                     <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
                         <Icon name={ 'three bars' as UnknownIcon } />
                         File Browser
