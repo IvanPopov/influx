@@ -74,8 +74,3 @@ export enum EAnalyzerErrors {
 
     // PartFx_InvalidInitRoutine
 };
-
-export enum EAnalyzerWarnings {
-    UnsupportedRenderStateTypeUsed,
-
-}

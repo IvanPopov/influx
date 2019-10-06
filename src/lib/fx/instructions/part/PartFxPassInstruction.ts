@@ -28,5 +28,9 @@ export class PartFxPassInstruction extends PassInstruction implements IPartFxPas
 
         return this.prerenderRoutine.function.definition.paramList[1].type.subType;
     }
+
+    isValid(): boolean {
+        return !!this.material && !!this.prerenderRoutine;
+    }
 }
 

@@ -1,4 +1,4 @@
-﻿import { assert, assignIfDef, isDef, isDefAndNotNull, isNull, PropertiesDiff } from '@lib/common';
+﻿import { assert, isDef, isDefAndNotNull, isNull, PropertiesDiff } from '@lib/common';
 import { ArithmeticExprInstruction, ArithmeticOperator } from '@lib/fx/instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "@lib/fx/instructions/AssignmentExprInstruction";
 import { BoolInstruction } from '@lib/fx/instructions/BoolInstruction';
@@ -47,7 +47,8 @@ import { DoWhileOperator, WhileStmtInstruction } from '@lib/fx/instructions/Whil
 import { ProgramScope, Scope } from '@lib/fx/ProgramScope';
 import * as SystemScope from '@lib/fx/SystemScope';
 import { T_BOOL, T_INT, T_VOID } from '@lib/fx/SystemScope';
-import { EAnalyzerErrors as EErrors, EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerErrors';
+import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
+import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
@@ -55,7 +56,8 @@ import { IMap } from '@lib/idl/IMap';
 import { IPartFxInstruction, IPartFxPassInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
+import { Diagnostics, IDiagnosticReport, EDiagnosticCategory } from "@lib/util/Diagnostics";
+import { isBoolean } from 'util';
 
 
 
@@ -93,6 +95,7 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
 
     protected diagnosticMessages() {
         // todo: fill all errors.
+        // todo: add support for warnings
         return {
             [EErrors.InvalidReturnStmtEmpty]: 'Invalid return statement. Expression with \'*type*\' type expected.', // todo: specify type
             [EErrors.InvalidReturnStmtVoid]: 'Invalid return statement. Expression with \'void\' type expected.',
@@ -103,12 +106,17 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
         };
     }
 
-    protected resolveDescription(code: number, desc: IAnalyzerDiagDesc): string {
+    protected resolveDescription(code: number, category: EDiagnosticCategory, desc: IAnalyzerDiagDesc): string {
         let descList = this.diagnosticMessages();
         if (isDefAndNotNull(descList[code])) {
-            return super.resolveDescription(code, desc);
+            return super.resolveDescription(code, category, desc);
         }
-        return `error: ${EErrors[code]} (${JSON.stringify(desc)})`;
+
+        let { file, loc, ...data } = desc;
+        if (category == EDiagnosticCategory.WARNING) {
+            return `${EWarnings[code]}: ${JSON.stringify(data)}`;
+        }
+        return `${EErrors[code]}: ${JSON.stringify(data)}`;
     }
 }
 
@@ -3340,20 +3348,25 @@ function analyzePartFXProperty(context: Context, program: ProgramScope, sourceNo
  */
 function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
 
+    context.beginPass();
 
     const children = sourceNode.children;
     const scope = program.currentScope;
     const renderStates = analyzePassStateBlock(context, program, children[0]);
+
+    // temp solution in order to not highlight useless pass states in the next analysis call.
+    context.renderStates = renderStates;
+
     const fxStates = analyzePartFxStateBlock(context, program, children[0]);
 
-    const sorting = assignIfDef(fxStates.sorting, true);
-    const prerenderRoutine = assignIfDef(fxStates.prerenderRoutine, null);
+    const sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
+    const prerenderRoutine = fxStates.prerenderRoutine || null;
 
     let id: IIdInstruction = null;
     for (let i = 0; i < children.length; ++i) {
         if (children[i].name === "T_NON_TYPE_ID") {
             let name = children[i].value;
-            id = new IdInstruction({ scope, name });
+            id = new IdInstruction({ sourceNode: children[i], scope, name });
         }
     }
 
@@ -3372,6 +3385,8 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
     });
 
     //todo: add annotation and id
+
+    context.endPass();
 
     return pass;
 }
@@ -3422,8 +3437,8 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
     const children = sourceNode.children;
 
     const stateName: string = children[children.length - 1].value.toUpperCase();
-    const stateExprNode: IParseNode = children[children.length - 3];
-    const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
+    const stateExprNode = children[children.length - 3];
+    const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
 
     let fxStates: Partial<IPartFxPassProperties> = {};
 
@@ -3516,7 +3531,10 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                 }
                 break;
             default:
-                console.warn('Pass fx state is incorrect.');
+                // todo: remove this hack
+                if (!context.renderStates[ERenderStates[stateName]]) {
+                    context.warn(children[children.length - 1], EWarnings.UselessPassState, {});
+                }
                 break;
         }
     }
@@ -3639,6 +3657,14 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
             case 'PassDecl':
                 {
                     let pass = analyzePartFXPassDecl(context, program, children[i]);
+
+                    if (!pass.isValid()) {
+                        context.warn((pass.id && pass.id.sourceNode) || children[i], EWarnings.IncompletePass, {
+                            techniqueName: pass.name,
+                            tooltip: `The pass is not completed. Not all required parameters are specified.`
+                        });
+                    }
+
                     assert(!isNull(pass));
                     passList.push(pass);
                 }
@@ -3685,33 +3711,6 @@ export function analyzePartFXDecl(context: Context, program: ProgramScope, sourc
             case 'PartFxBody':
                 props = analyzePartFXBody(context, program, children[i]);
                 break;
-            // case 'PassState':
-            //     {
-            //         let stateNode = children[i];
-            //         let stateName = stateNode.children[3].value; // "T_NON_TYPE_ID"
-            //         switch (stateName.toUpperCase()) {
-            //             case 'SPAWNROUTINE':
-            //                 {
-            //                     /**
-            //                      * Spawn routine expected as 'int spawn(void)'.
-            //                      */
-            //                     let validator = { retType: SystemScope.T_INT, args: [] };
-            //                     let objectExrNode = stateNode.children[1].children[0];
-            //                     spawnRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
-            //                     console.log(spawnRoutine);
-            //                 }
-            //                 break;
-            //             // case 
-            //         }
-            //     }
-            //     // todo: process state
-            //     analyzePartFXProperty(context, program, children[i]);
-            //     break;
-            // case 'PassDecl':
-            // let pass = analyzePartFXPassDecl(context, program, children[i]);
-            //     assert(!isNull(pass));
-            //     passList.push(pass);
-            //     break;
 
         }
     }
@@ -3721,6 +3720,14 @@ export function analyzePartFXDecl(context: Context, program: ProgramScope, sourc
     const partFx = new PartFxInstruction({
         sourceNode, name, semantics, annotation, scope, ...props
     });
+
+    if (!partFx.isValid()) {
+        // highlight name only
+        context.warn(children[children.length - 2], EWarnings.IncompleteTechnique, {
+            techniqueName: partFx.name,
+            tooltip: `The technique is not completed. Not all required parameters are specified.`
+        });
+    }
 
     addTechnique(context, program, partFx);
     return partFx;
@@ -3756,6 +3763,7 @@ class Context {
     // part fx states
     particle: ITypeInstruction;
     material: ITypeInstruction;
+    renderStates: IMap<ERenderStateValues>;
 
     constructor(filename: string, ) {
         this.diagnostics = new AnalyzerDiagnostics;
@@ -3776,6 +3784,14 @@ class Context {
         this.func = false
     }
 
+
+    beginPass(): void {
+        this.renderStates = null;
+    }
+
+    endPass(): void {
+        this.renderStates = null;
+    }
 
     beginPartFx(): void {
         this.particle = null;
@@ -3870,7 +3886,8 @@ export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeRe
         program.validate();
     } catch (e) {
         // critical errors were occured
-        throw e;
+        // throw e;
+        console.error(e);
     }
 
     console.timeEnd(`analyze(${filename})`);

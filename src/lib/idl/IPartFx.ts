@@ -5,6 +5,9 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly sorting: boolean;
     readonly prerenderRoutine: ICompileExprInstruction;
     readonly material: ITypeInstruction;
+
+    /** check if the pass is ready for runtime */
+    isValid(): boolean;
 }
 
 
@@ -17,4 +20,7 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly particle: ITypeInstruction;
 
     readonly passList: IPartFxPassInstruction[];
+
+    /** check if the technique is ready for runtime */
+    isValid(): boolean;
  }

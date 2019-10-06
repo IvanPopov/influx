@@ -1,17 +1,6 @@
+import { EFunctionType, EInstructionTypes, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IStmtBlockInstruction, IVariableDeclInstruction } from "../../idl/IInstruction";
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
-import { IFunctionDefInstruction, IStmtBlockInstruction, IScope } from "../../idl/IInstruction";
-import { IFunctionDeclInstruction, EFunctionType, IVariableDeclInstruction, ITypeUseInfoContainer, ITypeDeclInstruction, ISimpleInstruction, EInstructionTypes, ITypeInstruction, IIdInstruction, IVariableTypeInstruction, IDeclInstruction, IStmtInstruction, IInstruction, IInitExprInstruction } from "../../idl/IInstruction";
 import { Instruction } from "./Instruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { IMap } from "../../idl/IMap";
-import { isNull, isDef, isDefAndNotNull } from "../../common";
-import { IdInstruction } from "./IdInstruction";
-import { FunctionDefInstruction } from "./FunctionDefInstruction";
-import { StmtBlockInstruction } from "./StmtBlockInstruction";
-import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
-import { SamplerStateBlockInstruction } from "./SamplerStateBlockInstruction";
-import { VariableDeclInstruction } from "./VariableDeclInstruction";
-import { VariableTypeInstruction } from "./VariableTypeInstruction";
 
 
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {

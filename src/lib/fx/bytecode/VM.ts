@@ -8,7 +8,7 @@ import { EChunkType, REG_RAX } from "./Bytecode";
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;
 
-function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
+export function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
     if (!isDefAndNotNull(chunks)) {
         chunks = {};
     }
@@ -29,17 +29,19 @@ function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
 }
 
 
-function decodeCodeChunk(codeChunk: Uint8Array): Uint32Array {
+export function decodeCodeChunk(codeChunk: Uint8Array): Uint32Array {
     return new Uint32Array(codeChunk.buffer, codeChunk.byteOffset, codeChunk.byteLength >> 2);
 }
 
-function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
+export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
     // return new Uint8Array(constChunk.buffer, constChunk.byteOffset, constChunk.byteLength >> 2);
     return constChunk;
 }
 
+export type INT32 = number;
+
 class VM {
-    static play(data: { instructions: Uint32Array; constants: Uint8Array; }) {
+    static play(data: { instructions: Uint32Array; constants: Uint8Array; }): INT32 {
         let i4 = 0;                      // current instruction;
         let ilist = data.instructions;
 
@@ -119,15 +121,21 @@ class VM {
         }
 
         // if (!isElectron) {
-            alert(String(iregs[REG_RAX >> 2]));
+            // alert(String());
         // } else {
             // remote.dialog.showMessageBox({ type: 'info', title: 'evaluation result', message: `${regs[REG_RAX]}` }, () => {});
         // }
+
+        return iregs[REG_RAX >> 2];
     }
 }
 
-function evaluate(code: Uint8Array)
-{
+interface Package {
+    instructions: Uint32Array;
+    constants: Uint8Array;
+}
+
+export function load(code: Uint8Array): Package {
     let chunks = decodeChunks(code);
 
     let codeChunk = chunks[EChunkType.k_Code];
@@ -138,7 +146,15 @@ function evaluate(code: Uint8Array)
     let instructions = decodeCodeChunk(codeChunk);
     let constants = decodeConstChunk(constChunk);
 
-    VM.play({ instructions, constants });
+    return { instructions, constants };
 }
 
-export default { evaluate, decodeChunks, decodeCodeChunk };
+export function play(pack: Package): INT32 {
+    return VM.play(pack);
+}
+
+
+export function evaluate(code: Uint8Array): INT32 {
+    return play(load(code));
+}
+

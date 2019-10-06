@@ -1,6 +1,6 @@
 
 import debugLayout, { CdlRaw } from "./DebugLayout";
-import { isNull, isNumber } from "util";
+import { isNull, isNumber, isString } from "util";
 import { isDef, isDefAndNotNull } from "../../common";
 import { EOperation } from "../../idl/bytecode/EOperations";
 // import { IInstruction as IOperation, IInstructionArgument } from "../../idl/bytecode/IInstruction";
@@ -102,7 +102,7 @@ type ContextType = ReturnType<typeof Context>;
 
 
 interface ISubProgram {
-    code: ArrayBuffer;
+    code: Uint8Array;
     constants: ConstanPool;
     cdl: CdlRaw;
 }
@@ -136,7 +136,7 @@ function translateSubProgram(ctx: ContextType, entry: IFunctionDeclInstruction):
         return data.buffer;
     }
 
-    function binary(): ArrayBuffer {
+    function binary(): Uint8Array {
         let chunks = [constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
         let byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
         let data = new Uint8Array(byteLength);
@@ -145,7 +145,7 @@ function translateSubProgram(ctx: ContextType, entry: IFunctionDeclInstruction):
             data.set(ch, offset);
             offset += ch.byteLength;
         });
-        return data.buffer;
+        return data;
     }
 
     let code = binary();         // todo: stay only binary view
@@ -418,27 +418,27 @@ const hex4 = (v: number) => `0x${v.toString(16).padStart(4, '0')}`;
 // const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
 
 
-
-export function translate(entryPoint: string, program: IInstructionCollector): ReturnType<typeof translateSubProgram> {
-
-    if (isNull(program)) {
-        return null;
+export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram;
+export function translate(entryPoint: string, scope: IScope): ISubProgram;
+export function translate(...argv): ISubProgram {
+    let func: IFunctionDeclInstruction;
+    if (isString(argv[0])) {
+        let fname = argv[0];
+        let scope = argv[1];
+        func = scope.findFunction(fname, []);
+    } else {
+        func = argv[0];
     }
 
-    let scope = program.scope;
     let ctx = Context();
     let res = null;
 
     try {
-        const entryFunc = scope.findFunction(entryPoint, []);
-
-        if (!isDefAndNotNull(entryFunc)) {
-            console.error(`Entry point '${entryPoint}' not found.`);
+        if (!isDefAndNotNull(func)) {
+            console.error(`Entry point '${func.name}' not found.`);
             return null;
         }
-
-        res = translateSubProgram(ctx, entryFunc);
-
+        res = translateSubProgram(ctx, func);
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));

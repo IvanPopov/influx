@@ -62,7 +62,7 @@ export let isArrayBuffer = (x: any): boolean => x instanceof ArrayBuffer;
 export let isTypedArray = (x: any): boolean => x !== null && typeof x === 'object' && typeof x.byteOffset === 'number';
 export let isBlob = (x: any): boolean => x instanceof Blob;
 export let isArray = (x: any): boolean => typeOf(x) === 'array';
-export let assignIfDef = (val: any, def: any) => (isDef(val) ? val : def);
+// export let assignIfDef = (val: any, def: any) => (isDef(val) ? val : def);
 export let deepEqual = (a: Object, b: Object) => JSON.stringify(a) === JSON.stringify(b);
 
 

@@ -14,7 +14,7 @@ struct DefaultShaderInput {
 
 int spawn()
 {
-    return 0;
+    return 1;
 }
 
 void init(out Part part)
@@ -34,7 +34,7 @@ void prerender(inout Part part, out DefaultShaderInput input)
     input.color = 0.0;
 }
 
-partFx bloodrunner.awesome {
+partFx project.awesome {
     SpawnRoutine = compile spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
@@ -44,4 +44,8 @@ partFx bloodrunner.awesome {
         DefaultShader = TRUE;
         PrerenderRoutine = compile prerender();
     }
+}
+
+partFx incomplete {
+
 }

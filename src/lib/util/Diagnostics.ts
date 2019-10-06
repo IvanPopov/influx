@@ -131,7 +131,7 @@ export class Diagnostics <DESC_T>{
             loc = locToString(start);
         }
 
-        let content = `${file}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, desc)}`;
+        let content = `${file}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, category, desc)}`;
 
         return { code, category, content, file, start, end };
     }
@@ -148,7 +148,7 @@ export class Diagnostics <DESC_T>{
         return null;
     }
 
-    protected resolveDescription(code:number, desc: DESC_T): string {
+    protected resolveDescription(code:number, category: EDiagnosticCategory, desc: DESC_T): string {
         let diagMesgs = this.diagnosticMessages();
         if (!diagMesgs) {
             console.error(`Diagnostic messages of '${this._name}' not found.`);

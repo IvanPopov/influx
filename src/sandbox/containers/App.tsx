@@ -12,6 +12,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Container, Divider, Form, Grid, Icon, Input, Menu, Segment, Sidebar, Tab, Label, Table, Header, Message } from 'semantic-ui-react';
+import * as path from 'path';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -112,7 +113,7 @@ class App extends React.Component<IAppProps> {
         }
 
         if (!isNull(props.sourceFile.root)) {
-            this.setState({ bc: Bytecode.translate(state.entryPoint, props.sourceFile.root) });
+            this.setState({ bc: Bytecode.translate(state.entryPoint, props.sourceFile.root.scope) });
         }
     }
 
@@ -139,7 +140,7 @@ class App extends React.Component<IAppProps> {
             }
         } else if ((contentChanged || !state.bc) && nextRoot) {
             stateDiff = stateDiff || {};
-            stateDiff.bc = Bytecode.translate(state.entryPoint, nextRoot);
+            stateDiff.bc = Bytecode.translate(state.entryPoint, nextRoot.scope);
             console.log('bytecode has been updated');
         }
 
@@ -230,7 +231,7 @@ class App extends React.Component<IAppProps> {
                             <div>
                                 {/* todo: move memory view inside bytecode view; */ }
                                 <MemoryView binaryData={ state.bc.constants.data.byteArray } layout={ state.bc.constants.data.layout } />
-                                <BytecodeView code={ new Uint8Array(state.bc.code) } cdl={ state.bc.cdl } />
+                                <BytecodeView code={ state.bc.code } cdl={ state.bc.cdl } />
                             </div>
                         ) : null }
                         <Header as='h4' dividing>
@@ -240,7 +241,7 @@ class App extends React.Component<IAppProps> {
                                 <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
                             </Header.Content>
                         </Header>
-                        <Playground />
+                        <Playground scope={ props.sourceFile.scope } />
 
                     </Tab.Pane>
                 )
@@ -272,7 +273,14 @@ class App extends React.Component<IAppProps> {
 
         const panes = [
             {
-                menuItem: 'Source File',
+                menuItem: (
+                    <Menu.Item>
+                        Source File
+                        <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
+                            &nbsp;|&nbsp;{ path.basename(props.sourceFile.filename) }
+                        </span>
+                    </Menu.Item>
+                ),
                 render: () => (
                     <Tab.Pane key="source" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
                     // fixme: remove style from line below;

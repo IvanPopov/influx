@@ -48,4 +48,12 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
     get particle(): ITypeInstruction {
         return this._particle;
     }
+
+    isValid() {
+        const routineCheck = !!this.spawnRoutine && !!this.initRoutine && !!this.updateRoutine;
+        const particleCheck = !!this.particle;
+        const passCheck = this.passList && this.passList.filter((pass: IPartFxPassInstruction) => pass.isValid()).length > 0;
+
+        return routineCheck && particleCheck && passCheck;
+    }
 }

@@ -28,6 +28,9 @@ export class TechniqueInstruction<PassType extends IPassInstruction> extends Dec
         this._techniqueType = techniqueType;
     }
 
+    // todo: add id support?
+    // get id();
+
     get name(): string {
         return this._name;
     }

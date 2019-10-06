@@ -1,12 +1,10 @@
 
-import { isDefAndNotNull } from "../../common";
-import { Instruction, IInstructionSettings } from "./Instruction";
-import { ITypeInstruction, IVariableDeclInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
+import { isDef, isDefAndNotNull } from "../../common";
+import { EAnalyzerErrors } from '../../idl/EAnalyzerErrors';
+import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
-import { isNull, isDef } from "../../common";
-import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
-import { IParseNode } from "../../idl/parser/IParser";
 import * as SystemScope from "../SystemScope";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name?: string;

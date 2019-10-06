@@ -1,6 +1,6 @@
 import { EChunkType } from '@lib/fx/bytecode/Bytecode';
 import { CdlRaw, cdlview } from '@lib/fx/bytecode/DebugLayout';
-import VM from '@lib/fx/bytecode/VM';
+import * as VM from '@lib/fx/bytecode/VM';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
@@ -66,7 +66,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
                         { this.renderOpList(ilist) }
                     </Table.Body>
                 </Table>
-                <Button animated onClick={ () => { VM.evaluate(code) } }>
+                <Button animated onClick={ () => { alert(VM.evaluate(code)) } }>
                     <Button.Content visible>Run</Button.Content>
                     <Button.Content hidden>
                         <Icon name='rocket' />

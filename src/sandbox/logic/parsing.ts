@@ -2,35 +2,42 @@ import { assert } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
 import { EffectParser } from '@lib/fx/EffectParser';
 import { Parser } from '@lib/parser/Parser';
-import { Diagnostics } from '@lib/util/Diagnostics';
+import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
 const PARSING_ERROR_PREFIX = 'parsing-error';
 const ANALYSIS_ERROR_PREFIX = 'analysis-error';
+const ANALYSIS_WARNING_PREFIX = 'analysis-warning';
 
-function cleanupErrors(state, dispatch, errorPrefix) {
+function cleanupMarkers(state, dispatch, type, prefix) {
     for (let name in state.sourceFile.markers) {
-        if (name.startsWith(`${errorPrefix}-`)) {
+        if (name.startsWith(`${prefix}-`)) {
             dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
         }
     }
 }
 
-
-function emitErrors(errors, dispatch, errorPrefix) {
+function emitMarkers(errors, dispatch, type, prefix) {
     errors.forEach(err => {
         let { loc, message } = err;
         let marker = {
-            name: `${errorPrefix}-${message}`,
+            name: `${prefix}-${message}`,
             range: loc,
-            type: 'error',
+            type,
             tooltip: message
         };
         dispatch({ type: evt.SOURCE_CODE_ADD_MARKER, payload: marker });
     })
 }
+
+
+
+const emitErrors = (list, dispatch, prefix) => emitMarkers(list, dispatch, 'error', prefix);
+const cleanupErrors = (state, dispatch, prefix) => cleanupMarkers(state, dispatch, 'error', prefix);
+const emitWarnings = (list, dispatch, prefix) => emitMarkers(list, dispatch, 'warning', prefix);
+const cleanupWarnings = (state, dispatch, prefix) => cleanupMarkers(state, dispatch, 'warning', prefix);
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
@@ -44,9 +51,9 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     let { ast, diag, result } = await Parser.parse(content, filename);
 
-    let errors = diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
-
+    let errors = diag.messages.filter(msg => msg.category == EDiagnosticCategory.ERROR).map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
     emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
+    
     console.log(Diagnostics.stringify(diag));
 
     dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
@@ -57,6 +64,7 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
     const { parseTree, filename } = state.sourceFile;
 
     cleanupErrors(state, dispatch, ANALYSIS_ERROR_PREFIX);
+    cleanupWarnings(state, dispatch, ANALYSIS_WARNING_PREFIX);
 
     if (!parseTree) {
         return;
@@ -65,9 +73,13 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
     const res = analyze(parseTree, filename);
 
     let { diag, root, scope } = res;
-    let errors = diag.messages.map(mesg => ({ loc: Diagnostics.asRange(mesg), message: mesg.content }));
 
+    let errors = diag.messages.map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
     emitErrors(errors, dispatch, ANALYSIS_ERROR_PREFIX);
+
+    let warnings = diag.messages.filter(msg => msg.category == EDiagnosticCategory.WARNING).map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+    emitWarnings(warnings, dispatch, ANALYSIS_ERROR_PREFIX);
+
     console.log(Diagnostics.stringify(diag));
 
     dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { root, scope } });

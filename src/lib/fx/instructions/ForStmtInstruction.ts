@@ -1,10 +1,8 @@
-import { StmtInstruction } from "./StmtInstruction";
-import { EInstructionTypes, ECheckStage, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IVariableDeclInstruction, IStmtInstruction, IVariableTypeInstruction, ITypedInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
-import { IMap } from "../../idl/IMap";
-import { EAnalyzerErrors, EAnalyzerWarnings } from '../../idl/EAnalyzerErrors';
-import { IParseNode } from "../../idl/parser/IParser";
+import { EAnalyzerErrors } from '../../idl/EAnalyzerErrors';
+import { ECheckStage, EInstructionTypes, IExprInstruction, IStmtInstruction, ITypedInstruction } from "../../idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
+import { StmtInstruction } from "./StmtInstruction";
 
 
 export interface IForStmtInstructionSettings extends IInstructionSettings {
