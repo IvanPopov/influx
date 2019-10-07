@@ -64,7 +64,7 @@ class VM {
             let c4 = c >> 2;
 
             switch (op) {
-                case EOperation.k_Load:
+                case EOperation.k_LoadConst:
                 {
                     assert(c/*size*/ == 4);
                     // copy 4 bytes

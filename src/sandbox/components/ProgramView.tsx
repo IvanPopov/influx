@@ -26,6 +26,8 @@ import { Icon, List, Message, IconProps } from 'semantic-ui-react';
 import { PostfixPointInstruction } from '@lib/fx/instructions/PostfixPointInstruction';
 import injectSheet from 'react-jss';
 import { IWithStyles } from '.';
+import { Instruction } from '@lib/fx/instructions/Instruction';
+import { PostfixIndexInstruction } from '@lib/fx/instructions/PostfixIndexInstruction';
 
 const styles = {
     parentIcon: {
@@ -251,6 +253,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.IdExpr(instr);
             case EInstructionTypes.k_PostfixPointInstruction:
                 return this.PostfixPointExpr(instr);
+            case EInstructionTypes.k_PostfixIndexInstruction:
+                    return this.PostfixIndexExpr(instr);
             case EInstructionTypes.k_AssignmentExprInstruction:
                 return this.Assigment(instr);
             case EInstructionTypes.k_PostfixArithmeticInstruction:
@@ -423,6 +427,20 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </Property>
                 <Property name="postfix">
                     { this.Unknown(instr.postfix) }
+                </Property>
+            </Property>
+        )
+    }
+
+
+    PostfixIndexExpr(instr: PostfixIndexInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name="element">
+                    { this.Unknown(instr.element) }
+                </Property>
+                <Property name="index">
+                    { this.Unknown(instr.index) }
                 </Property>
             </Property>
         )
@@ -639,6 +657,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <PropertyOpt name="usages" value={ (instr.usageList.join(' ') || null) } />
+                <Property name="padding" value={ instr.padding == Instruction.UNDEFINE_PADDING ? "undef" : instr.padding } />
                 <PropertyOpt name="subType" opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>

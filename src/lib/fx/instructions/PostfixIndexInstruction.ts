@@ -30,6 +30,11 @@ export class PostfixIndexInstruction extends ExprInstruction {
             
         this._element = Instruction.$withParent(element, this);
         this._index = Instruction.$withParent(index, this);
+
+        // console.log('[PostfixIndexInstruction]');
+        // console.log('element:', element.toCode(), element.type && element.type.hash);
+        // console.log('index:', index.toCode());
+        // console.log('this.type:', this.type && this.type.hash)
     }
 
     
@@ -44,17 +49,14 @@ export class PostfixIndexInstruction extends ExprInstruction {
 
 
     toCode(): string {
-        var sCode: string = "";
-
+        let code: string = "";
         {
-            sCode += this.element.toCode();
-
+            code += this.element.toCode();
             {
-                sCode += "[" + this.index.toCode() + "]";
+                code += "[" + this.index.toCode() + "]";
             }
         }
-
-        return sCode;
+        return code;
     }
 
     

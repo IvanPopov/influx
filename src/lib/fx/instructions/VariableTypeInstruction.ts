@@ -18,6 +18,7 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     arrayIndex?: IExprInstruction;
     writable?: boolean;
     readable?: boolean;
+    padding?: number;
 }
 
 
@@ -33,7 +34,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor({ type, usages = null, arrayIndex = null, writable = true, readable = true, ...settings }: IVariableTypeInstructionSettings) {
+    constructor({ type, usages = null, arrayIndex = null, writable = true, readable = true, padding = Instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableTypeInstruction, ...settings });
 
         type = type.$withNoParent();
@@ -64,7 +65,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
         this._arrayIndexExpr = null;
         this._arrayElementType = null;
-        this._padding = Instruction.UNDEFINE_PADDING;
+        this._padding = padding;
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
@@ -73,6 +74,13 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         (usages || []).forEach( usage => this.addUsage(usage) );
+
+        // todo: construct arrayElementType here! with proper usages!
+        // if (this.isArray()) {
+        //     if (isNull(this._arrayElementType)) {
+        //         this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ scope: this.scope, type: this.subType.arrayElementType, usages: this.usageList }), this);
+        //     }
+        // }
     }
 
 
@@ -169,6 +177,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return this.subType.length;
         }
         
+        // if (isNull(this._arrayIndexExpr)) {
+        //     return this.subType.length;
+        // }
+
         let isEval: boolean = this._arrayIndexExpr.evaluate();
 
         if (isEval) {
@@ -188,9 +200,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     // for overloading from structers decls
-    set padding(val: number) {
-        this._padding = val;
-    }
+    // set padding(val: number) {
+    //     this._padding = val;
+    // }
 
 
     get arrayElementType(): IVariableTypeInstruction {
@@ -198,7 +210,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return null;
         }
 
-        return this._arrayElementType;
+        // todo: fix this.subType.arrayElementType!
+        return this._arrayElementType || <IVariableTypeInstruction>this.subType.arrayElementType;
     }
 
 
@@ -350,8 +363,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    hasField(sFieldName: string): boolean {
-        return !this.isNotBaseArray() && this.subType.hasField(sFieldName);
+    hasField(fieldName: string): boolean {
+        return !this.isNotBaseArray() && this.subType.hasField(fieldName);
     }
 
 
@@ -624,6 +637,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
-        return new VariableTypeInstruction({ type, scope: scope });
+        return new VariableTypeInstruction({ type, scope });
     }
 }

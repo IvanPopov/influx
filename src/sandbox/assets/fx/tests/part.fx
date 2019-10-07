@@ -2,6 +2,8 @@
 struct Part {
     float pos;
     float size;
+
+    float3 _pad;
 };
 
 /* Example of default shader input. */
@@ -22,9 +24,10 @@ void init(out Part part)
 
 }
 
-void update(inout Part part)
+/** Return false if you want to kill particle. */
+bool update(inout Part part)
 {
-
+    return true;
 }
 
 void prerender(inout Part part, out DefaultShaderInput input)

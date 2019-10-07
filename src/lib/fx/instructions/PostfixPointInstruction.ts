@@ -15,7 +15,7 @@ export interface IPostfixPointInstructionSettings extends IInstructionSettings {
  * Represent someExpr.id
  * EMPTY_OPERATOR Instruction IdInstruction
  */
-export class PostfixPointInstruction extends ExprInstruction {
+export class PostfixPointInstruction extends ExprInstruction {os
     protected _element: IExprInstruction;
     protected _postfix: IIdExprInstruction;
 
@@ -25,6 +25,12 @@ export class PostfixPointInstruction extends ExprInstruction {
         
         this._element = Instruction.$withParent(element, this);
         this._postfix = Instruction.$withParent(postfix, this);
+
+        // console.log('[PostfixPointInstruction]');
+        // console.log('element:', element.toCode(), element.type.hash);
+        // console.log('postfix:', postfix.toCode(), postfix.type && postfix.type.hash, postfix.type && postfix.type.length, postfix.type && postfix.type.name);
+        // console.log('postfix.type.arrayElementType', postfix.type && postfix.type.isArray() && postfix.type.arrayElementType.hash);
+        // console.log(postfix.type.arrayElementType)
     }
 
 

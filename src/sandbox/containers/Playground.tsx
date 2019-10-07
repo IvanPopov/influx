@@ -1,9 +1,10 @@
 import React = require("react");
-import { Segment, Icon, Message, List, Loader } from "semantic-ui-react";
+import { Segment, Icon, Message, List, Loader, Button, Container } from "semantic-ui-react";
 import { IScope, ETechniqueType, ICompileExprInstruction } from "@lib/idl/IInstruction";
 import { IPartFxInstruction } from "@lib/idl/IPartFx";
 import * as VM from "@lib/fx/bytecode/VM"
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import autobind from "autobind-decorator";
 
 
 type PartFx = IPartFxInstruction;
@@ -53,12 +54,22 @@ function Pipeline(fx: PartFx) {
 
     let $startTime: number;
     let $elapsedTimeLevel: number;
-    let $interval;
+    let $interval = null;
 
     function load(fx: PartFx) {
         emitter = new Emitter;
+        play();
+    }
 
+    function stop() {
+        clearInterval($interval);
+        $interval = null;
+        console.log('pipeline stopped');
+    }
+
+    function play() {
         elapsedTime = 0;
+        elapsedTimeLevel = 0;
         spawnRoutine = prebuild(fx.spawnRoutine);
 
         $startTime = Date.now();
@@ -75,14 +86,14 @@ function Pipeline(fx: PartFx) {
         }, 33);
     }
 
-    function stop() {
-        clearInterval($interval);
+    function isStopped() {
+        return $interval === null;
     }
 
 
     load(fx);
 
-    return { stop, emitter };
+    return { stop, play, isStopped, emitter };
 }
 
 
@@ -97,6 +108,7 @@ interface IPlaygroundState {
     list: IPartFxInstruction[];
     pipeline: ReturnType<typeof Pipeline>;
     scope: IScope;
+    running: boolean;
 }
 
 
@@ -110,7 +122,8 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
             active: null,
             pipeline: null,
             list: [],
-            scope: null
+            scope: null,
+            running: false
         };
     }
 
@@ -131,6 +144,8 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
 
                 let active = null;
                 let pipeline = state.pipeline;
+                let running = false;
+
                 if (state.active) {
                     if (list.map(fx => fx.name).indexOf(state.active) != -1) {
                         active = state.active;
@@ -156,17 +171,30 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                     let i = list.map(fx => fx.name).indexOf(active);
                     pipeline = Pipeline(list[i]);
                     console.log('pipeline has been created.');
+                    running = !pipeline.isStopped();
                 }
 
-                return { list, active, scope, pipeline };
+                return { list, active, scope, pipeline, running };
             }
         }
 
         return null;
     }
 
+    @autobind
+    handlePlayPauseClick() {
+        let state = this.state;
+        if (state.pipeline) {
+            let running = !state.running;
+            if (running != !state.pipeline.isStopped()) {
+                running ? state.pipeline.play() : state.pipeline.stop();
+                this.setState({ running });
+            }
+        }
+    }
+
     render() {
-        let { list, active } = this.state;
+        let { list, active, pipeline } = this.state;
         return (
             <div>
                 { !list.length &&
@@ -186,6 +214,14 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                         </List.Item>
                     )) }
                 </List>
+                { pipeline &&
+                    <div>
+                        <Button.Group compact >
+                            <Button icon='playback pause' color={ pipeline.isStopped() ? "black" : null } disabled={ pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
+                            <Button icon='playback play' color={ !pipeline.isStopped() ? "black" : null } disabled={ !pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
+                        </Button.Group>
+                    </div>
+                }
             </div>
         );
     }

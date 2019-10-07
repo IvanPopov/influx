@@ -58,6 +58,7 @@ import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, IDiagnosticReport, EDiagnosticCategory } from "@lib/util/Diagnostics";
 import { isBoolean } from 'util';
+import { Instruction } from '@lib/fx/instructions/Instruction';
 
 
 
@@ -1074,7 +1075,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         assert(vdimChildren.length == 4);
 
         if (!isNull(arrayIndex)) {
-            // using generalType.source node instead of sourceNode was done for more clear degging
+            // usage of generalType.source node instead of sourceNode was done for more clear debugging
             generalType = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
         }
 
@@ -1637,7 +1638,7 @@ function analyzeConstructorCallExpr(context: Context, program: ProgramScope, sou
     const exprType = findConstructor(ctorType, args);
 
     if (isNull(exprType)) {
-        context.error(sourceNode, EErrors.InvalidComplexNotConstructor, { typeName: ctorType.toString() });
+        context.error(sourceNode, EErrors.InvalidComplexNotConstructor, { typeName: String(ctorType) });
         return null;
     }
 
@@ -1715,18 +1716,23 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
     const scope = program.currentScope;
 
     const postfixExpr = analyzeExpr(context, program, children[children.length - 1]);
+    if (isNull(postfixExpr)) {
+        // todo: emit error?
+        return null;
+    }
+
     const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
 
     if (!postfixExprType.isArray()) {
-        context.error(sourceNode, EErrors.InvalidPostfixNotArray, { typeName: postfixExprType.toString() });
+        context.error(sourceNode, EErrors.InvalidPostfixNotArray, { typeName: String(postfixExprType) });
         return null;
     }
 
     const indexExpr = analyzeExpr(context, program, children[children.length - 3]);
-    const indexExprType = <IVariableTypeInstruction>indexExpr.type;
+    const indexExprType = indexExpr.type;
 
     if (!indexExprType.isEqual(T_INT)) {
-        context.error(sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: indexExprType.toString() });
+        context.error(sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: String(indexExprType) });
         return null;
     }
 
@@ -1735,15 +1741,48 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
 }
 
 
-function analyzePosifixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, type: IVariableTypeInstruction): IIdExprInstruction {
-    const scope = program.currentScope;
-    const fieldName = sourceNode.value;
-
-    if (!type.hasField(fieldName)) {
+function createFieldDecl(varType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
+    if (!varType.hasField(fieldName)) {
         return null;
     }
 
-    const field = type.getField(fieldName);
+    // varType => type defrived from the parameter or variable declaration
+    // varType.subType => original complex (structure) type
+
+    const scope = varType.scope;
+    const { id, type, type: { padding, length }, semantics } = varType.subType.getField(fieldName); // arrayIndex
+    
+    //// note: here is no sourceNode for field.
+    // note: sourceNode for field is being used from the original complex structure.
+
+    // let arrayIndex: IExprInstruction = null;
+    // if (type.isNotBaseArray()) {
+    //     // using of length instead of arrayIndex because of lack of api functionality :/
+    //     assert(length != Instruction.UNDEFINE_LENGTH, "undefined behaviour found");
+    //     arrayIndex = new IntInstruction({ scope, value: String(length) });
+    // }
+
+    const fieldType = new VariableTypeInstruction({ type, scope, padding, sourceNode: type.sourceNode/*, arrayIndex*/ });
+    const fieldId = new IdInstruction({ scope, name: id.name, sourceNode: id.sourceNode });
+    const field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantics, sourceNode: fieldId.sourceNode });
+
+    (fieldType as any).$creator = "createFieldDecl()";
+    return Instruction.$withParent(field, varType);
+}
+
+function analyzePosifixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, type: IVariableTypeInstruction): IIdExprInstruction {
+    if (isNull(type)) {
+        return null;
+    }
+    
+    const scope = program.currentScope;
+    const fieldName = sourceNode.value;
+    const field = createFieldDecl(type, fieldName);
+
+    if (!field) {
+        return null;
+    }
+
     const id = new IdInstruction({ scope, sourceNode, name: fieldName });
     const expr = new IdExprInstruction({ sourceNode, scope, id, decl: field });
 
@@ -1762,16 +1801,18 @@ function analyzePostfixPoint(context: Context, program: ProgramScope, sourceNode
     const scope = program.currentScope;
 
     const postfixExpr = analyzeExpr(context, program, children[children.length - 1]);
+    if (isNull(postfixExpr)) {
+        // todo: emit error?
+        return null;
+    }
+
     const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
     const fieldName = children[children.length - 3].value;
 
     const fieldNameExpr = analyzePosifixPointField(context, program, children[children.length - 3], postfixExprType);
 
     if (isNull(fieldNameExpr)) {
-        context.error(sourceNode, EErrors.InvalidPostfixNotField, {
-            typeName: postfixExprType.toString(),
-            fieldName: fieldName
-        });
+        context.error(sourceNode, EErrors.InvalidPostfixNotField, { typeName: String(postfixExprType), fieldName });
         return null;
     }
 
@@ -1793,7 +1834,7 @@ function analyzePostfixArithmetic(context: Context, program: ProgramScope, sourc
     if (isNull(exprType)) {
         context.error(sourceNode, EErrors.InvalidPostfixArithmetic, {
             operator: operator,
-            typeName: postfixExprType.toString()
+            typeName: String(postfixExprType)
         });
         return null;
     }
@@ -1821,7 +1862,7 @@ function analyzeUnaryExpr(context: Context, program: ProgramScope, sourceNode: I
     if (isNull(exprType)) {
         context.error(sourceNode, EErrors.InvalidUnaryOperation, {
             operator: operator,
-            tyename: expr.type.toString()
+            tyename: String(expr.type)
         });
         return null;
     }
@@ -1884,14 +1925,14 @@ function analyzeConditionalExpr(context: Context, program: ProgramScope, sourceN
     const boolType = T_BOOL;
 
     if (!conditionType.isEqual(boolType)) {
-        context.error(conditionExpr.sourceNode, EErrors.InvalidConditionType, { typeName: conditionType.toString() });
+        context.error(conditionExpr.sourceNode, EErrors.InvalidConditionType, { typeName: String(conditionType) });
         return null;
     }
 
     if (!leftExprType.isEqual(rightExprType)) {
         context.error(leftExprType.sourceNode, EErrors.InvalidConditonValueTypes, {
-            leftTypeName: leftExprType.toString(),
-            rightTypeName: rightExprType.toString()
+            leftTypeName: String(leftExprType),
+            rightTypeName: String(rightExprType)
         });
         return null;
     }
@@ -1940,8 +1981,8 @@ function analyzeArithmeticExpr(context: Context, program: ProgramScope, sourceNo
     if (isNull(type)) {
         context.error(sourceNode, EErrors.InvalidArithmeticOperation, {
             operator: operator,
-            leftTypeName: leftType.toString(),
-            rightTypeName: rightType.toString()
+            leftTypeName: String(leftType),
+            rightTypeName: String(rightType)
         });
         return null;
     }
@@ -2008,14 +2049,14 @@ function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode:
     if (!leftType.isEqual(boolType)) {
         context.error(leftType.sourceNode, EErrors.InvalidLogicOperation, {
             operator: operator,
-            typeName: leftType.toString()
+            typeName: String(leftType)
         });
         return null;
     }
     if (!rightType.isEqual(boolType)) {
         context.error(rightType.sourceNode, EErrors.InvalidLogicOperation, {
             operator: operator,
-            typeName: rightType.toString()
+            typeName: String(rightType)
         });
         return null;
     }
@@ -2157,7 +2198,7 @@ function analyzeConstTypeDim(context: Context, program: ProgramScope, sourceNode
     const type = <IVariableTypeInstruction>(analyzeType(context, program, children[0]));
 
     if (!type.isBase()) {
-        context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: type.toString() });
+        context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: String(type) });
     }
 
     return checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2710,7 +2751,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
         conditionType = <IVariableTypeInstruction>cond.type;
 
         if (!conditionType.isEqual(boolType)) {
-            context.error(sourceNode, EErrors.InvalidDoWhileCondition, { typeName: conditionType.toString() });
+            context.error(sourceNode, EErrors.InvalidDoWhileCondition, { typeName: String(conditionType) });
             return null;
         }
 
@@ -2722,7 +2763,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
         conditionType = <IVariableTypeInstruction>cond.type;
 
         if (!conditionType.isEqual(boolType)) {
-            context.error(sourceNode, EErrors.InvalidWhileCondition, { typeName: conditionType.toString() });
+            context.error(sourceNode, EErrors.InvalidWhileCondition, { typeName: String(conditionType) });
             return null;
         }
 
@@ -2765,7 +2806,7 @@ function analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IPar
     let operator: string = null;
 
     if (!conditionType.isEqual(boolType)) {
-        context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: conditionType.toString() });
+        context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: String(conditionType) });
         return null;
     }
 
@@ -3054,12 +3095,12 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
 
     if (shaderType === EFunctionType.k_Vertex) {
         if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
-            context.error(sourceNode, EErrors.FunctionVertexRedefinition, { funcDef: shaderFunc.toString() });
+            context.error(sourceNode, EErrors.FunctionVertexRedefinition, { funcDef: String(shaderFunc) });
         }
     }
     else {
         if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
-            context.error(sourceNode, EErrors.FunctionPixelRedefinition, { funcDef: shaderFunc.toString() });
+            context.error(sourceNode, EErrors.FunctionPixelRedefinition, { funcDef: String(shaderFunc) });
         }
     }
 
@@ -3502,12 +3543,15 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                 break;
             case ('PrerenderRoutine'.toUpperCase()):
                 {
-                    console.log(exprNode);
                     /**
                      * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
                      */
                     let validator = { ret: T_VOID, args: [context.particle, null] };
                     let prerenderRoutine = analyzeCompileExpr(context, program, exprNode);
+
+                    if (!prerenderRoutine) {
+                        break;
+                    }
 
                     //
                     // check arguments
@@ -3518,12 +3562,11 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     /** first argument's type */
                     let argv = fn.definition.paramList.map(param => param.type);
 
-                    if (!argv[0].readable || argv[0].subType !== context.particle ||
+                    if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particle || 
+                        argv[0].isNotBaseArray() ||
                         !argv[1].hasUsage('out') || !argv[1].writable || argv[1].isNotBaseArray()) {
-                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, {
-                            funcName: fn.name,
-                            tooltip: `'PrerenderRoutine' arguments' type mismatch.`
-                        });
+                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, 
+                            { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' type mismatch.` });
                         prerenderRoutine = null;
                     }
 
@@ -3579,6 +3622,10 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
                                 let objectExrNode = sourceNode.children[1].children[0];
                                 initRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
 
+                                if (!initRoutine) {
+                                    break;
+                                }
+
                                 //
                                 // check arguments
                                 //
@@ -3588,11 +3635,15 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
                                 let type = fn.definition.paramList[0].type;
 
                                 if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
-                                        funcName: fn.name,
-                                        tooltip: `'InitRoutine' arguments' type mismatch.`
-                                    });
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'InitRoutine' arguments' type mismatch.` });
                                     initRoutine = null;
+                                }
+
+                                if (particle && type.subType !== particle) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'InitRoutine' arguments' type mismatch.` });
+                                    updateRoutine = null;
                                 }
 
                                 // type is referencing to VariableType of argument,
@@ -3605,9 +3656,13 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
                                 /**
                                  * Update routine expected as 'void update(inout Part part)'.
                                  */
-                                let validator = { ret: T_VOID };
+                                let validator: ICompileValidator = { ret: T_BOOL, args: [null] };
                                 let objectExrNode = sourceNode.children[1].children[0];
                                 updateRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+
+                                if (!updateRoutine) {
+                                    break;
+                                }
 
                                 //
                                 // check arguments
@@ -3615,31 +3670,29 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
 
                                 let fn = updateRoutine.function;
                                 if (fn.definition.paramList.length != 1) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
-                                        funcName: fn.name,
-                                        tooltip: `'UpdateRoutine' arguments' count mismatch.`
-                                    });
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
 
                                 /** first argument's type */
                                 let type = fn.definition.paramList[0].type;
 
-                                if (!type.hasUsage('out') && !type.hasUsage('inout')) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
-                                        funcName: fn.name,
-                                        tooltip: `'updateRoutine' arguments' type mismatch.`
-                                    });
+                                if (!type.hasUsage('out') && !type.hasUsage('inout') || type.isNotBaseArray()) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
 
-                                if (type.subType !== particle) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, {
-                                        funcName: fn.name,
-                                        tooltip: `'UpdateRoutine' arguments' type mismatch.`
-                                    });
+                                if (particle && type.subType !== particle) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
+
+                                // type is referencing to VariableType of argument,
+                                // while substitute type referencing to declaration. 
+                                particle = type.subType;
                             }
                             break;
                     }

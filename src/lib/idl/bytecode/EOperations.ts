@@ -1,6 +1,7 @@
 export enum EOperation {
     // note: assuming that Load is 32bit and Move is 32bit too
-    k_Load,              // load value from global memory;
+    k_LoadConst,
+    k_LoadInput,
     k_Move,
 
     k_IAdd,

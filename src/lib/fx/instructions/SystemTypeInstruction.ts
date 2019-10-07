@@ -224,8 +224,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    hasField(sFieldName: string): boolean {
-        return isDef(this._fields[sFieldName]);
+    hasField(fieldName: string): boolean {
+        return !!this.getField(fieldName);
     }
 
 
@@ -244,8 +244,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    getField(sFieldName: string): IVariableDeclInstruction {
-        return this._fields[sFieldName] || null;
+    getField(fieldName: string): IVariableDeclInstruction {
+        return this._fields.find(field => field.name == fieldName) || null;
     }
 
 

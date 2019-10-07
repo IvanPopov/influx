@@ -70,6 +70,14 @@ const sname = {
     fun: (fdecl: IFunctionDeclInstruction) => `${fdecl.name}:${fdecl.instructionID}`
 };
 
+/**
+ * A simplified symbol table containing the correspondence of unique 
+ * hashes of symbols and their addresses in registers.
+ * The table is global and does not depend on the stack of functions, 
+ * because hashes are built on the basis of identifiers of instructions 
+ * unique to each function and context.
+ * todo: clean up table after each function call, because adresses of registers are global
+ */
 class SymbolTable<SYMBOL_T>  {
     [key: string]: SYMBOL_T;
 
@@ -81,16 +89,63 @@ class SymbolTable<SYMBOL_T>  {
 }
 
 
+interface IMemoryLocation {
+    memory: 'register' | 'input';
+    addr: number;
+    size: number;
+}
 
-function Context() {
+interface ICallstackEntry {
+    fn: IFunctionDeclInstruction;
+    /**
+     * arguments' addresses 
+     * regs[i] - is a address of i'th argument
+     */ 
+    argv: IMemoryLocation[];
+}
+
+class Callstack {
+    stack: ICallstackEntry[] = [];
+
+    get top(): ICallstackEntry {
+        return this.stack[this.depth - 1];
+    }
+
+    get argv(): IMemoryLocation[] {
+        return this.top.argv;
+    }
+
+    get fn(): IFunctionDeclInstruction {
+        return this.top.fn;
+    }
+
+    get depth(): number {
+        return this.stack.length;
+    }
+
+    push(entry: ICallstackEntry) {
+        this.stack.push(entry);
+    }
+
+    pop() {
+        return this.stack.pop();
+    }
+}
+
+
+function ContextBuilder() {
     const diag = new TranslatorDiagnostics; // todo: remove it?
     const constants = new ConstanPool;
     const instructions = new InstructionList;
+    // program counter: return current index of instruction 
+    // (each instruction consists of 4th numbers)
     const pc = () => instructions.length >> 2;
     const debug = debugLayout(pc);
+    const callstack = new Callstack;
 
     return {
         diag,
+        callstack,
         constants,
         instructions,
         debug,
@@ -98,7 +153,7 @@ function Context() {
     }
 }
 
-type ContextType = ReturnType<typeof Context>;
+type Context = ReturnType<typeof ContextBuilder>;
 
 
 interface ISubProgram {
@@ -107,11 +162,26 @@ interface ISubProgram {
     cdl: CdlRaw;
 }
 
-function translateSubProgram(ctx: ContextType, entry: IFunctionDeclInstruction): ISubProgram {
-    const { diag, constants, instructions, debug } = ctx;
+function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubProgram {
+    const { diag, callstack, constants, instructions, debug } = ctx;
 
-    debug.beginCompilationUnit('[todo]');
-    translateFunction(ctx, entry);
+    debug.beginCompilationUnit('[todo]'); // << it does nothing at the momemt :/
+
+    let offset = 0;
+    let argv = fn.definition.paramList.map(param => {
+        let loc: IMemoryLocation = {
+            memory: 'input',
+            addr: offset,
+            size: param.type.size
+        };
+
+        offset += loc.size;
+        return loc;
+    });
+
+    callstack.push({ fn, argv });
+    translateFunction(ctx, fn);
+    callstack.pop();
     debug.endCompilationUnit();
 
 
@@ -154,16 +224,21 @@ function translateSubProgram(ctx: ContextType, entry: IFunctionDeclInstruction):
     return { code, constants, cdl };
 }
 
-function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
-    const { diag, constants, instructions, debug, pc } = ctx;
+function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
+    const { diag, callstack, constants, instructions, debug, pc } = ctx;
 
     // same as stack pointer; 
     // counter grows forward;
     let registerCounter = 0;
     let symbolTable = new SymbolTable<number>();
 
+    /** resolve input (memory type for arguments, like vertex input for vertex shader) */
+    function rinput(): number {
+        return 0;
+    }
+
     /** resolve constant (all constants have been placed in global memory) */
-    function rcost(lit: ILiteralInstruction): number {
+    function rconst(lit: ILiteralInstruction): number {
         switch (lit.instructionType) {
             // assume only int32
             case EInstructionTypes.k_IntInstruction:
@@ -173,7 +248,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
                         // constants.checkInt32(i32) => returns address in global memory
-                        icode(EOperation.k_Load, r, constants.checkInt32(i32), sizeof.i32());
+                        icode(EOperation.k_LoadConst, r, constants.checkInt32(i32), sizeof.i32());
                         debug.map(lit);
 
                         ref(sname.i32(i32), r);
@@ -182,19 +257,19 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                 }
                 break;
             case EInstructionTypes.k_FloatInstruction:
-                    {
-                        let f32 = (lit as FloatInstruction).value;
-                        let r = deref(sname.f32(f32));
-                        if (r == REG_INVALID) {
-                            r = alloca(sizeof.f32());
-                            icode(EOperation.k_Load, r, constants.checkFloat32(f32), sizeof.f32());
-                            debug.map(lit);
-    
-                            ref(sname.f32(f32), r);
-                        }
-                        return r;
+                {
+                    let f32 = (lit as FloatInstruction).value;
+                    let r = deref(sname.f32(f32));
+                    if (r == REG_INVALID) {
+                        r = alloca(sizeof.f32());
+                        icode(EOperation.k_LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
+                        debug.map(lit);
+
+                        ref(sname.f32(f32), r);
                     }
-                    break;
+                    return r;
+                }
+                break;
             default:
                 diag.critical(EErrors.k_UnsupportedConstantType, {});
         }
@@ -211,7 +286,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
         return rc;
     }
 
-    /** insert code */ 
+    /** insert code */
     function icode(code: EOperation, ...args: number[]): void {
         // add this instruction to debug layout;
         debug.step();
@@ -235,11 +310,11 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                 break;
             case EInstructionTypes.k_IntInstruction:
             case EInstructionTypes.k_FloatInstruction:
-                return rcost(expr as ILiteralInstruction);
+                return rconst(expr as ILiteralInstruction);
             case EInstructionTypes.k_IdExprInstruction:
                 {
                     let id = (expr as IIdExprInstruction);
-                    assert(id.declaration.instructionType == EInstructionTypes.k_VariableDeclInstruction);
+                    assert(id.declaration.instructionType == EInstructionTypes.k_VariableDeclInstruction); // useless check?
                     return deref(sname.var(id.declaration as IVariableDeclInstruction));
                 }
             case EInstructionTypes.k_ComplexExprInstruction:
@@ -272,7 +347,7 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
                         // todo: add type description
                         diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
                     }
-                    
+
                     if (!isDef(op)) {
                         diag.critical(EErrors.k_UnsupportedExprType, {});
                         return REG_INVALID;
@@ -342,7 +417,26 @@ function translateFunction(ctx: ContextType, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_VariableDeclInstruction:
                 {
                     let decl = instr as IVariableDeclInstruction;
-                    if (isNull(decl.initExpr)) {
+
+                    if (decl.isArgument()) {
+                        // todo: fix this hack, write it better!
+                        let idx = callstack.fn.definition.paramList.indexOf(decl);
+                        assert(idx != -1);
+                        
+                        let loc = callstack.argv[idx];
+                        switch (loc.memory) {
+                            case 'input':
+                                    // let r = alloca(loc.size);
+                                    // icode(EOperation.k_LoadInput, r, loc.addr, loc.size);
+                                    // todo: add ns/map debugging info here??
+                                break;
+                            case 'register':
+                                // todo
+                                break;
+                            default:
+                                assert(false, "!!!");
+                        }
+                    } else if (isNull(decl.initExpr)) {
                         // There is no initial value, but allocation should be done anyway
                         // in order to assign register for this variable.
                         ref(sname.var(decl), alloca(decl.type.size));
@@ -430,7 +524,7 @@ export function translate(...argv): ISubProgram {
         func = argv[0];
     }
 
-    let ctx = Context();
+    let ctx = ContextBuilder();
     let res = null;
 
     try {
