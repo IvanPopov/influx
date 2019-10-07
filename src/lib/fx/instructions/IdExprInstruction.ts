@@ -30,7 +30,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     }
 
     
-    get declaration(): IDeclInstruction {
+    get declaration(): IVariableDeclInstruction {
         return this._decl;
     }
     

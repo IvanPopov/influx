@@ -15,7 +15,7 @@ export interface IPostfixPointInstructionSettings extends IInstructionSettings {
  * Represent someExpr.id
  * EMPTY_OPERATOR Instruction IdInstruction
  */
-export class PostfixPointInstruction extends ExprInstruction {os
+export class PostfixPointInstruction extends ExprInstruction {
     protected _element: IExprInstruction;
     protected _postfix: IIdExprInstruction;
 
@@ -56,7 +56,7 @@ export class PostfixPointInstruction extends ExprInstruction {os
 
 
     isConst(): boolean {
-        return (<IExprInstruction>this.element).isConst();
+        return this.element.isConst();
     }
 }
 

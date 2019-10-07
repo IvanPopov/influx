@@ -1741,16 +1741,21 @@ function analyzePostfixIndex(context: Context, program: ProgramScope, sourceNode
 }
 
 
-function createFieldDecl(varType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
-    if (!varType.hasField(fieldName)) {
+/**
+ * 
+ * @param elementType Type of the element. (**element.postfix**)
+ * @param fieldName 
+ */
+function createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
+    if (!elementType.hasField(fieldName)) {
         return null;
     }
 
-    // varType => type defrived from the parameter or variable declaration
-    // varType.subType => original complex (structure) type
+    // elementType => type defrived from the parameter or variable declaration or derived from another expr
+    // elementType.subType => original complex (structure) type
 
-    const scope = varType.scope;
-    const { id, type, type: { padding, length }, semantics } = varType.subType.getField(fieldName); // arrayIndex
+    const scope = elementType.scope;
+    const { id, type, type: { padding, length }, semantics } = elementType.subType.getField(fieldName); // arrayIndex
     
     //// note: here is no sourceNode for field.
     // note: sourceNode for field is being used from the original complex structure.
@@ -1766,26 +1771,29 @@ function createFieldDecl(varType: IVariableTypeInstruction, fieldName: string): 
     const fieldId = new IdInstruction({ scope, name: id.name, sourceNode: id.sourceNode });
     const field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantics, sourceNode: fieldId.sourceNode });
 
-    (fieldType as any).$creator = "createFieldDecl()";
-    return Instruction.$withParent(field, varType);
+    return Instruction.$withParent(field, elementType);
 }
 
+
+/**
+ * 
+ * @param type Type of the element. (**element.postfix**)
+ */
 function analyzePosifixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, type: IVariableTypeInstruction): IIdExprInstruction {
     if (isNull(type)) {
         return null;
     }
     
     const scope = program.currentScope;
-    const fieldName = sourceNode.value;
-    const field = createFieldDecl(type, fieldName);
+    const name = sourceNode.value;              // fiedl name
+    const decl = createFieldDecl(type, name);   // field decl
 
-    if (!field) {
+    if (isNull(decl)) {
         return null;
     }
 
-    const id = new IdInstruction({ scope, sourceNode, name: fieldName });
-    const expr = new IdExprInstruction({ sourceNode, scope, id, decl: field });
-
+    const id = new IdInstruction({ scope, sourceNode, name });
+    const expr = new IdExprInstruction({ sourceNode, scope, id, decl });
     return expr;
 }
 
@@ -1806,7 +1814,7 @@ function analyzePostfixPoint(context: Context, program: ProgramScope, sourceNode
         return null;
     }
 
-    const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
+    const postfixExprType = postfixExpr.type;
     const fieldName = children[children.length - 3].value;
 
     const fieldNameExpr = analyzePosifixPointField(context, program, children[children.length - 3], postfixExprType);

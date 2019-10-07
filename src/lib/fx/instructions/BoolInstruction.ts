@@ -1,7 +1,7 @@
 import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
 import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
 import * as SystemScope from "@lib/fx/SystemScope";
-import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ILiteralInstruction, EScopeType } from "@lib/idl/IInstruction";
 
 export interface IBoolInstructionSettings extends IInstructionSettings {
     value: "true" | "false";
@@ -40,6 +40,5 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
     isConst(): boolean {
         return true;
     }
-
 }
 

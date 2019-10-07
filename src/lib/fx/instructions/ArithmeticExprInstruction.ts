@@ -1,4 +1,4 @@
-import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, EScopeType } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";

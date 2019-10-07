@@ -9,6 +9,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const GitRevisionPlugin = require('git-revision-webpack-plugin');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+// const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin()
@@ -68,7 +69,13 @@ if (PRODUCTION && !ENABLE_PROFILING) {
                     arguments: true,
                     booleans_as_integers: true
                 }
-            })
+            }),
+            // new OptimizeCSSAssetsPlugin({
+            //     assetNameRegExp: /\.css$/g,
+            //     cssProcessor: require('cssnano'),
+            //     cssProcessorOptions: { discardComments: { removeAll: true } },
+            //     canPrint: true
+            // })
         ]
     };
 
@@ -116,8 +123,8 @@ let options = {
                 test: /[.]less$/,
                 use: [
                     MiniCssExtractPlugin.loader,
-                    { loader: 'css-loader', options: { sourceMap: true } },
-                    { loader: 'less-loader', options: { sourceMap: true } },
+                    { loader: 'css-loader', options: { sourceMap: !PRODUCTION } },
+                    { loader: 'less-loader', options: { sourceMap: !PRODUCTION } }
                 ],
                 include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
             },
@@ -145,7 +152,10 @@ let options = {
             },
             {
                 test: /\.css$/,
-                use: ['style-loader', 'css-loader']
+                use: [
+                    { loader: 'style-loader' }, 
+                    { loader: 'css-loader' }
+                ]
             }
         ]
     },

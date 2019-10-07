@@ -61,8 +61,7 @@ export class PostfixIndexInstruction extends ExprInstruction {
 
     
     isConst(): boolean {
-        return (<IExprInstruction>this.element).isConst() &&
-            (<IExprInstruction>this.index).isConst();
+        return this.element.isConst() && this.index.isConst();
     }
 }
 

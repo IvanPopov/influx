@@ -418,7 +418,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 {
                     let decl = instr as IVariableDeclInstruction;
 
-                    if (decl.isArgument()) {
+                    if (decl.isParameter()) {
                         // todo: fix this hack, write it better!
                         let idx = callstack.fn.definition.paramList.indexOf(decl);
                         assert(idx != -1);

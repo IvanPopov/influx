@@ -124,7 +124,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    isArgument(): boolean {
+    isParameter(): boolean {
         assert(!this.isGlobal());
         assert(this.isLocal());
         /**

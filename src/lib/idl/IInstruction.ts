@@ -345,7 +345,7 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
      */
     readonly fullName: string;
 
-    isArgument(): boolean;
+    isParameter(): boolean;
     isLocal(): boolean;
     isGlobal(): boolean;
 
@@ -389,6 +389,7 @@ export interface IIdInstruction extends IInstruction {
     readonly name: string;
 
     /** Specifies whether to emit ID to source code or not. */
+    /** @deprecated */
     readonly visible: boolean;
 }
 
