@@ -1,6 +1,6 @@
 import { ExprInstruction } from "./ExprInstruction";
 import { IDispatch } from "../../../sandbox/actions";
-import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, IExprInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
+import { IVariableDeclInstruction, IVariableTypeInstruction, EInstructionTypes, IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, IPostfixIndexInstruction } from "../../idl/IInstruction";
 import { isNull } from "../../common";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -18,7 +18,7 @@ export interface IPostfixIndexInstructionSettings extends IInstructionSettings {
  * Represent someExpr[someIndex]
  * EMPTY_OPERATOR Instruction ExprInstruction
  */
-export class PostfixIndexInstruction extends ExprInstruction {
+export class PostfixIndexInstruction extends ExprInstruction implements IPostfixIndexInstruction {
     // private _samplerArrayDecl: IVariableDeclInstruction = null;
     protected _element: IExprInstruction;
     protected _index: IExprInstruction;

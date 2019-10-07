@@ -1,4 +1,4 @@
-import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, ITypeInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
+import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, ITypeInstruction, EInstructionTypes, IInstruction, ICastExprInstruction } from "../../idl/IInstruction";
 import { IExprInstructionSettings } from "./ExprInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IMap } from "../../idl/IMap";
@@ -15,7 +15,7 @@ export interface ICastExprInstructionSettings extends IExprInstructionSettings {
  * Represent (type) expr
  * EMPTY_OPERATOR VariableTypeInstruction Instruction
  */
-export class CastExprInstruction extends ExprInstruction {
+export class CastExprInstruction extends ExprInstruction implements ICastExprInstruction {
     private _srcExpr: IExprInstruction;
 
     constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
@@ -37,7 +37,7 @@ export class CastExprInstruction extends ExprInstruction {
         return code;
     }
 
-    IsUseless() {
+    isUseless() {
         return this.type.isEqual(this.expr.type);
     }
 

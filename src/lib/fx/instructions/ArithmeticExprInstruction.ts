@@ -1,4 +1,4 @@
-import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, EScopeType } from "../../idl/IInstruction";
+import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, EScopeType, IArithmeticExprInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { IMap } from "../../idl/IMap";
@@ -18,7 +18,7 @@ export interface IArithmeticExprInstructionSettings extends IExprInstructionSett
  * Represent someExpr + / - * % someExpr
  * (+|-|*|/|%) Instruction Instruction
  */
-export class ArithmeticExprInstruction extends ExprInstruction {
+export class ArithmeticExprInstruction extends ExprInstruction implements IArithmeticExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
     protected _operator: ArithmeticOperator;

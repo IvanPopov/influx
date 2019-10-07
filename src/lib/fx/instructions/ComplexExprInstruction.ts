@@ -1,7 +1,7 @@
-import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
-import { IInstructionSettings, Instruction } from "./Instruction";
-import { EInstructionTypes, IExprInstruction } from "../../idl/IInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
+import { ExprInstruction, IExprInstructionSettings } from "@lib/fx/instructions/ExprInstruction";
+import { IInstructionSettings, Instruction } from "@lib/fx/instructions/Instruction";
+import { EInstructionTypes, IExprInstruction, IComplexExprInstruction } from "@lib/idl/IInstruction";
+import { IParseNode } from "@lib/idl/parser/IParser";
 
 
 export interface IComplexExprInstructionSettings extends IInstructionSettings {
@@ -13,7 +13,7 @@ export interface IComplexExprInstructionSettings extends IInstructionSettings {
  * Represent (expr)
  * EMPTY_OPERATOR ExprInstruction
  */
-export class ComplexExprInstruction extends ExprInstruction {
+export class ComplexExprInstruction extends ExprInstruction implements IComplexExprInstruction {
     protected _expr: IExprInstruction;
 
 

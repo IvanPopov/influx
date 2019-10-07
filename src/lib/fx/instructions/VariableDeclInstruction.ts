@@ -24,6 +24,9 @@ export interface IVariableDeclInstructionSettings extends IDeclInstructionSettin
     usageFlags?: number;
 }
 
+/**
+ * @deprecated
+ */
 export enum EVariableUsageFlags {
     k_Local     = 0x01,
     k_Global    = 0x02,
@@ -57,6 +60,10 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
         this._bForVertex = true;
         this._bForPixel = true;
+
+        assert(!this.isParameter() || (isNull(this.parent) || this.parent.instructionType == EInstructionTypes.k_FunctionDefInstruction));
+        assert(this.isLocal() || !this.isLocal());
+        assert(!this.isParameter() || this.isLocal());
     }
 
 
@@ -108,28 +115,16 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
 
     isGlobal(): boolean {
-        /**
-         * Should also be computable from the scopes.
-         */
         return !!(this._usageFlags & EVariableUsageFlags.k_Global);
     }
 
 
     isLocal(): boolean {
-        assert(!this.isGlobal());
-        /**
-         * Should also be computable from the scopes.
-         */
         return !!(this._usageFlags & EVariableUsageFlags.k_Local);
     }
 
 
     isParameter(): boolean {
-        assert(!this.isGlobal());
-        assert(this.isLocal());
-        /**
-         * Should also be computable from the scopes.
-         */
         return !!(this._usageFlags & EVariableUsageFlags.k_Argument);
     }
 

@@ -362,7 +362,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_CastExprInstruction:
                 {
                     const castExpr = expr as CastExprInstruction;
-                    if (castExpr.IsUseless()) {
+                    if (castExpr.isUseless()) {
                         console.warn(`Useless cast found: ${castExpr.toCode()}`);
                         return raddr(castExpr.expr);
                     }

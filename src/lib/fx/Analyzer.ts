@@ -59,6 +59,7 @@ import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, IDiagnosticReport, EDiagnosticCategory } from "@lib/util/Diagnostics";
 import { isBoolean } from 'util';
 import { Instruction } from '@lib/fx/instructions/Instruction';
+import { ExprInstruction } from './instructions/ExprInstruction';
 
 
 
@@ -693,12 +694,12 @@ function getRenderStateValue(state: ERenderStates, value: string): ERenderStateV
 
 
 /**
- * Проверят возможность использования оператора между двумя типами.
- * Возращает тип получаемый в результате приминения опрератора, или, если применить его невозможно - null.
+* Check the possibility of using the operator between the two types.
+* Returns the type obtained as a result of application of the operator, or, if it is impossible to apply, null.
  *
- * @operator {string} Один из операторов: + - * / % += -= *= /= %= = < > <= >= == != =
- * @leftType {IVariableTypeInstruction} Тип левой части выражения
- * @rightType {IVariableTypeInstruction} Тип правой части выражения
+ * @operator {string} One of the operators: + - * / % += -= *= /= %= = < > <= >= == != =
+ * @leftType {IVariableTypeInstruction} Type of the left side of the expression.
+ * @rightType {IVariableTypeInstruction} Type of the right side of the expression.
  */
 function checkTwoOperandExprTypes(
     context: Context,
@@ -763,6 +764,7 @@ function checkTwoOperandExprTypes(
 
 
     if (leftType.isConst() && isAssignmentOperator(operator)) {
+        // todo: emit proper error
         return null;
     }
 
@@ -2097,6 +2099,14 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
     const operator = <AssigmentOperator>children[1].value;
 
     const left = analyzeExpr(context, program, children[children.length - 1]);
+
+    if (!ExprInstruction.UnwindExpr(left)) {
+        // Invalid left-hand side in assignment
+        context.error(sourceNode, EErrors.InvalidLeftHandSideInAssignment, {
+            operator: operator
+        });
+    }
+
     const right = analyzeExpr(context, program, children[0]);
 
     if (isNull(left) || isNull(right)) {

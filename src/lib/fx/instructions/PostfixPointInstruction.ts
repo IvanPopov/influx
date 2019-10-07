@@ -1,5 +1,5 @@
 import { ExprInstruction } from "./ExprInstruction";
-import { EInstructionTypes, IIdExprInstruction, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, IIdExprInstruction, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IPostfixPointInstruction } from "../../idl/IInstruction";
 import { IMap } from "../../idl/IMap";
 import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -11,11 +11,11 @@ export interface IPostfixPointInstructionSettings extends IInstructionSettings {
 }
 
 
-/*
+/**
  * Represent someExpr.id
  * EMPTY_OPERATOR Instruction IdInstruction
  */
-export class PostfixPointInstruction extends ExprInstruction {
+export class PostfixPointInstruction extends ExprInstruction implements IPostfixPointInstruction {
     protected _element: IExprInstruction;
     protected _postfix: IIdExprInstruction;
 

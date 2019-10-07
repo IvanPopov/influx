@@ -1,4 +1,4 @@
-import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes } from "../../idl/IInstruction";
+import { IExprInstruction, EVarUsedMode, ITypeUseInfoContainer, EInstructionTypes, IPostfixArithmeticInstruction } from "../../idl/IInstruction";
 import { IExprInstructionSettings } from "./ExprInstruction";
 import { IVariableTypeInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
@@ -18,7 +18,7 @@ export interface IPostfixArithmeticInstructionSettings extends IInstructionSetti
  * Represent someExpr ++
  * (-- | ++) Instruction
  */
-export class PostfixArithmeticInstruction extends ExprInstruction {
+export class PostfixArithmeticInstruction extends ExprInstruction implements IPostfixArithmeticInstruction {
     protected _operator: PostfixOperator;
     protected _expr: IExprInstruction;
 

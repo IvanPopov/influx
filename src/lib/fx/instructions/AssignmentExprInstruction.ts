@@ -10,7 +10,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 export type AssigmentOperator = "=" | "+=" | "-=" | "/=" | "*=" | "%=";
 
 export interface IAssignmentExprInstructionSettings extends IInstructionSettings {
-    left: ITypedInstruction;
+    left: IExprInstruction;
     right: ITypedInstruction;
     operator: AssigmentOperator;
 }
@@ -21,7 +21,7 @@ export interface IAssignmentExprInstructionSettings extends IInstructionSettings
  * (=|+=|-=|*=|/=|%=) Instruction Instruction
  */
 export class AssignmentExprInstruction extends ExprInstruction implements IAssignmentExprInstruction {
-    protected _leftValue: ITypedInstruction;
+    protected _leftValue: IExprInstruction;
     protected _rightValue: ITypedInstruction;
     protected _operator: AssigmentOperator;
 
@@ -33,11 +33,11 @@ export class AssignmentExprInstruction extends ExprInstruction implements IAssig
         this._operator = operator;
     }
 
-    get left(): IInstruction {
+    get left(): IExprInstruction {
         return this._leftValue;
     }
 
-    get right(): IInstruction {
+    get right(): ITypedInstruction {
         return this._rightValue;
     }
 

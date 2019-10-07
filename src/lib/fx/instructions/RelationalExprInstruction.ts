@@ -1,9 +1,7 @@
-import { ExprInstruction } from "./ExprInstruction";
-import { EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IPairedExprInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
-import * as SystemScope from '../SystemScope';
+import { EInstructionTypes, IExprInstruction, IInstruction, IRelationalExprInstruction } from "@lib/idl/IInstruction";
+import * as SystemScope from '@lib/fx/SystemScope';
+import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
+import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
 
 export type RelationOperator = "==" | "!=" | "<" | ">" | "<=" | ">=";
 
@@ -17,7 +15,7 @@ export interface IRelationalExprInstructionSettings extends IInstructionSettings
  * Represent someExpr == != < > <= >= someExpr
  * (==|!=|<|>|<=|>=) Instruction Instruction
  */
-export class RelationalExprInstruction extends ExprInstruction implements IPairedExprInstruction {
+export class RelationalExprInstruction extends ExprInstruction implements IRelationalExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
     protected _operator: RelationOperator;
@@ -30,12 +28,12 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
         this._operator = operator;
     }
 
-    
+
     get left(): IInstruction {
         return this._leftOperand;
     }
 
-    
+
     get right(): IInstruction {
         return this._rightOperand;
     }
@@ -54,7 +52,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IPaire
         return code;
     }
 
-    
+
     isConst(): boolean {
         return (<IExprInstruction>this.left).isConst() &&
             (<IExprInstruction>this.right).isConst();

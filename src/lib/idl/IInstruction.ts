@@ -411,9 +411,50 @@ export interface IExprInstruction extends ITypedInstruction {
 }
 
 
+export interface IUnaryExprInstruction extends IExprInstruction {
+    readonly expr: IExprInstruction;
+    readonly operator: string;
+}
+
+export interface IPostfixPointInstruction extends IExprInstruction {
+    readonly element: IExprInstruction;
+    readonly postfix: IIdExprInstruction;
+}
+
+
+export interface IPostfixIndexInstruction extends IExprInstruction {
+    readonly index: IExprInstruction;
+    readonly element: IExprInstruction;
+}
+
+
 export interface IConstructorCallInstruction extends IExprInstruction {
     readonly arguments: IInstruction[];
     readonly ctor: IVariableTypeInstruction;
+}
+
+
+export interface IArithmeticExprInstruction extends IExprInstruction {
+    readonly right: IExprInstruction;
+    readonly left: IExprInstruction;
+    readonly operator: string;
+}
+
+export interface ICastExprInstruction extends IExprInstruction {
+    readonly expr: IExprInstruction;
+
+    isUseless(): boolean;
+}
+
+
+export interface IComplexExprInstruction extends IExprInstruction {
+    readonly expr: IExprInstruction;
+}
+
+
+export interface IPostfixArithmeticInstruction extends IExprInstruction {
+    readonly expr: IExprInstruction;
+    readonly operator: string;
 }
 
 
@@ -426,19 +467,20 @@ export interface ISamplerStateBlockInstruction extends IExprInstruction {
 
 export interface ICompileExprInstruction extends IExprInstruction {
     readonly function: IFunctionDeclInstruction;
+    readonly args: IExprInstruction[];
 }
 
 
-export interface IPairedExprInstruction extends IExprInstruction {
+export interface IRelationalExprInstruction extends IExprInstruction {
     readonly left: IInstruction;
     readonly right: IInstruction;
     readonly operator: string;
-}
+} 
 
-export interface IAssignmentExprInstruction extends IPairedExprInstruction {
+export interface IAssignmentExprInstruction extends IExprInstruction {
     readonly operator: string;
-    readonly left: IInstruction;
-    readonly right: IInstruction;
+    readonly left: IExprInstruction;
+    readonly right: ITypedInstruction;
 }
 
 
@@ -459,7 +501,7 @@ export interface IIdExprInstruction extends IExprInstruction {
 
     /** @helpers */
     readonly type: IVariableTypeInstruction;
-    readonly declaration: IDeclInstruction;
+    readonly declaration: IVariableDeclInstruction;
 }
 
 

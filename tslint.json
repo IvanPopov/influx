@@ -15,7 +15,7 @@
             "call-signature",
             "parameter",
             "member-variable-declaration",
-            "property-declaration",
+            "property-declaration"
             // "variable-declaration",
         ],
         "no-relative-imports": false,
@@ -38,7 +38,7 @@
         "react-this-binding-issue": false,
         "prefer-method-signature": false,
         "function-name": [
-            true,
+            false, // todo: turn it on
             {
                 "private-method-regex": "^_?[a-z][\\w\\d]+$"
             }
@@ -48,7 +48,11 @@
             true,
             "@sandbox",
             "@lib"
-        ]
+        ],
+        "deprecation": true,
+        "completed-docs": false,
+        "no-consecutive-blank-lines": false,
+        "no-suspicious-comment": false
     },
     "rulesDirectory": [],
     "linterOptions": {

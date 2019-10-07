@@ -1,4 +1,4 @@
-import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContainer } from '../../idl/IInstruction';
+import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContainer, IUnaryExprInstruction } from '../../idl/IInstruction';
 import { IMap } from '../../idl/IMap';
 import { ExprInstruction, IExprInstructionSettings } from './ExprInstruction';
 import { IParseNode } from '../../idl/parser/IParser';
@@ -19,7 +19,7 @@ export interface IUnaryExprInstructionSettings extends IInstructionSettings {
  * Represent + - ! ++ -- expr
  * (+|-|!|++|--|) Instruction
  */
-export class UnaryExprInstruction extends ExprInstruction {
+export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprInstruction {
     protected _operator: UnaryOperator;
     protected _expr: IExprInstruction;
 
@@ -56,39 +56,39 @@ export class UnaryExprInstruction extends ExprInstruction {
 
 
     evaluate(): boolean {
-        var sOperator: string = this.operator;
-        var pExpr: IExprInstruction = <IExprInstruction>this.expr;
+        var op = this.operator;
+        var expr = <IExprInstruction>this.expr;
 
-        if (!pExpr.evaluate()) {
+        if (!expr.evaluate()) {
             return false;
         }
 
-        var pRes: any = null;
+        var res: any = null;
 
         try {
-            pRes = pExpr.getEvalValue();
-            switch (sOperator) {
+            res = expr.getEvalValue();
+            switch (op) {
                 case '+':
-                    pRes = +pRes;
+                    res = +res;
                     break;
                 case '-':
-                    pRes = -pRes;
+                    res = -res;
                     break;
                 case '!':
-                    pRes = !pRes;
+                    res = !res;
                     break;
                 case '++':
-                    pRes = ++pRes;
+                    res = ++res;
                     break;
                 case '--':
-                    pRes = --pRes;
+                    res = --res;
                     break;
             }
         } catch (e) {
             return false;
         }
 
-        this._evalResult = pRes;
+        this._evalResult = res;
         return true;
     }
 }
