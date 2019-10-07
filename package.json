@@ -77,10 +77,12 @@
     "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack",
     "build:electron": "cross-env NODE_ENV=production APP_TARGET=electron webpack",
     "dev-server:web": "cross-env APP_TARGET=web webpack-dev-server",
-    "dev-server:electron": "cross-env APP_TARGET=electron webpack --watch"
+    "dev-server:electron": "cross-env APP_TARGET=electron webpack --watch",
+    "docs:web": "typedoc --out dist/web/docs src"
   },
   "dependencies": {
     "electron": "^5.0.1",
+    "typedoc": "^0.15.0",
     "webpack-target-electron-renderer": "^0.4.0"
   }
 }
