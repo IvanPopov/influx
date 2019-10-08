@@ -3607,7 +3607,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
 // so we can omit it.
 type IPartFxProperties = Omit<PropertiesDiff<IPartFxInstruction, IDeclInstruction>, "type">;
 
-export function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxProperties {
+function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxProperties {
     let passList: IPartFxPassInstruction[] = [];
     let spawnRoutine: ICompileExprInstruction = null;
     let initRoutine: ICompileExprInstruction = null;
@@ -3757,7 +3757,7 @@ export function analyzePartFXBody(context: Context, program: ProgramScope, sourc
  *       + ComplexNameOpt 
  *         T_KW_FXPART = 'partFx'
  */
-export function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxInstruction {
+function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxInstruction {
     const children = sourceNode.children;
     const name = analyzeComplexName(children[children.length - 2]);
     // Specifies whether name should be interpreted as globalNamespace.name or just a name;

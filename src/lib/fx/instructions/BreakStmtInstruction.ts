@@ -1,7 +1,6 @@
-import { StmtInstruction } from "./StmtInstruction";
-import { EInstructionTypes } from "../../idl/IInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
+import { EInstructionTypes } from "@lib/idl/IInstruction";
+import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
+import { StmtInstruction } from "@lib/fx/instructions/StmtInstruction";
 
 export type BreakOperator = "break" | "discard";
 
