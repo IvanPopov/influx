@@ -62,8 +62,21 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
             case EInstructionTypes.k_RelationalExprInstruction:
                 // relation expression returns right-hand value;
                 return null;
+            case EInstructionTypes.k_ConstructorCallInstruction:
+                // ctor call expression is not allowed as l-value;
+                // todo: allow it?
+                return null;
             case EInstructionTypes.k_ComplexExprInstruction:
                 return ExprInstruction.UnwindExpr((<IComplexExprInstruction>expr).expr);
+            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_StringInstruction:
+            case EInstructionTypes.k_BoolInstruction:
+                // literal cannot be a left-hand value;
+                return null;
+            case EInstructionTypes.k_FunctionCallInstruction:
+                // function call expression returns right-hand value;
+                return null;
             default:
                 assert(false, "unsupported expr found");
                 return null;
