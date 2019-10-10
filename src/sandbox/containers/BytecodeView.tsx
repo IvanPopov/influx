@@ -49,13 +49,13 @@ const scode = (c: EOperation) => {
         v += char.toLowerCase();
     }
 
-    switch (v.substr(0, 3)) {
-        // case 'i32':
-        //     return (<span>{ v.substr(3) }&nbsp;<span style={ { opacity: 0.25 } }>i32</span></span>);
-        // case 'f32':
-        //     return (<span>{ v.substr(3) }&nbsp;<span style={ { opacity: 0.25 } }>f32</span></span>);
+    switch (c) {
+        case EOperation.k_I32MoveRegToReg:
+            return 'i32_move';
+        // case EOperation.k_I32LoadConst:
+        //     return 'i32_load';
         default:
-            return (<span>{ v }</span>)
+            return v;
     }
 };
 
@@ -123,12 +123,26 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
         console.log(cdlview(this.props.cdl).sourceFileFromPc(pc));
     }
 
-    hideSourceLine(oc: number) {
+    hideSourceLine(oc: number) { 
 
     }
 
     renderOpInternal(code: EOperation, args: string[]) {
         const i = this.state.count++;
+
+        switch(code) {
+            case EOperation.k_F32ToI32:
+            case EOperation.k_I32ToF32:
+            case EOperation.k_I32LoadConst:
+            case EOperation.k_I32MoveRegToReg:
+                args.length = 2;
+                break;
+            case EOperation.k_Ret:
+                args.length = 0;
+                break;
+            default:
+        }
+
         return (
             <Table.Row key={ `op-${code}-${i}` } onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }></Table.Cell>

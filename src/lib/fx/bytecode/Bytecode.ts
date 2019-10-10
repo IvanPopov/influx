@@ -209,7 +209,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
                         // constants.checkInt32(i32) => returns address in global memory
-                        icode(EOperation.k_LoadConst, r, constants.checkInt32(i32), sizeof.i32());
+                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32), sizeof.i32());
                         debug.map(lit);
 
                         ref(sname.i32(i32), r);
@@ -223,7 +223,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let r = deref(sname.f32(f32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.f32());
-                        icode(EOperation.k_LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
+                        icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
                         debug.map(lit);
 
                         ref(sname.f32(f32), r);
@@ -243,7 +243,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         let r = deref(sname.addr(addr));
         if (r == REG_INVALID) {
             r = alloca(sizeof.addr());
-            icode(EOperation.k_LoadConst, r, constants.checkAddr(addr), sizeof.addr());
+            icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr), sizeof.addr());
             ref(sname.addr(addr), r);
         }
         return r;
