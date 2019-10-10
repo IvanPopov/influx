@@ -18,6 +18,13 @@ export interface IBytecodeViewProps extends IFileState {
     actions: typeof sourceActions;
 }
 
+
+export interface IBytecodeViewState {
+    count: number;
+    cdlView: ReturnType<typeof cdlview>;
+}
+
+
 function minWidth(str: string, len: number = 0, char: string = ' ') {
     for (let i = 0, slen = str.length; i < Math.max(0, len - slen); ++i) {
         str = char + str;
@@ -59,16 +66,20 @@ const scode = (c: EOperation) => {
     }
 };
 
-class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
+function colorToHtmlString(val: number) {
+    let r = ((val >> 16) & 0xff);
+    let g = ((val >>  8) & 0xff);
+    let b = ((val >>  0) & 0xff);
+    console.log(val.toString(16), `rgb(${r}, ${g}, ${b})`);
+    return `rgb(${r}, ${g}, ${b})`;
+}
 
-    state = {
-        count: 0
+class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewState>  {
+
+    state: IBytecodeViewState = {
+        count: 0,
+        cdlView: null
     };
-
-    componentWillReceiveProps() {
-        this.setState({ count: 0 });
-    }
-
 
     render() {
         const { props } = this;
@@ -120,7 +131,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
     }
 
     showSourceLine(pc: number) {
-        console.log(cdlview(this.props.cdl).sourceFileFromPc(pc));
+        console.log(this.state.cdlView.resolveFileLocation(pc));
     }
 
     hideSourceLine(oc: number) { 
@@ -129,6 +140,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
 
     renderOpInternal(code: EOperation, args: string[]) {
         const i = this.state.count++;
+        const { cdlView } = this.state;
 
         switch(code) {
             case EOperation.k_F32ToI32:
@@ -145,12 +157,19 @@ class BytecodeView extends React.Component<IBytecodeViewProps, {}>  {
 
         return (
             <Table.Row key={ `op-${code}-${i}` } onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
-                <Table.Cell style={ { padding: '0.2em 0.7em' } }></Table.Cell>
+                <Table.Cell style={ { padding: '0.2em 0.7em', background: colorToHtmlString(cdlView.resolvePcColor(i)) } }></Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ args.join(' ') }</Table.Cell>
             </Table.Row>
         );
+    }
+
+    static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
+        const count = 0;
+        const cdlView = cdlview(props.cdl);
+
+        return { count, cdlView };
     }
 }
 

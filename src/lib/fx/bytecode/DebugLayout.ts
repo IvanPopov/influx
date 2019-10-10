@@ -1,10 +1,9 @@
 
-import { IPosition } from "./../../idl/parser/IParser";
-import { flag } from "./../../bf/bf";
-import { IFunctionDeclInstruction, IVariableDeclInstruction, IInstruction } from "./../../idl/IInstruction";
+import { isDef } from "@lib/common";
+import { IFunctionDeclInstruction, IInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { isNull } from "util";
 import assert = require("assert");
-import { isDef } from "../../../lib/common";
+
 enum EDebugLineFlags {
     k_NewStatement = 0x01
 };
@@ -15,10 +14,36 @@ export class DebugLineRecord {
     line?: number;
     column?: number; 
     flags: number;  // bitflags like: NS PE etc.
+    color?: number; // debug color, for easier code <=> asm matching
 }
 
 // process counter;
 type PC = () => number;
+
+class DistinctColor {
+    static list = [
+        0xe6194b, 0x3cb44b, 0xffe119, 0x4363d8, 0xf58231, 0x911eb4, 
+        0x46f0f0, 0xf032e6, 0xbcf60c, 0xfabebe, 0x008080, 0xe6beff, 
+        0x9a6324, 0xfffac8, 0x800000, 0xaaffc3, 0x808000, 0xffd8b1, 
+        0x000075, 0x808080  //, 0xffffff, 0x000000
+    ];
+
+    private _curIdx = 0;
+
+    value(): number {
+        return DistinctColor.list[ this._curIdx ];
+    }
+
+    // htmlString(): string {
+    //     return `#${this.value().toString(16)}`;
+    // }
+
+    pickNext(): number {
+        this._curIdx = (this._curIdx++) % DistinctColor.list.length;
+        return this.value();
+    }
+}
+
 
 function debugLine(pc: PC) {
     const files: string[] = [];
@@ -48,18 +73,28 @@ function debugLine(pc: PC) {
     }
 
     function map(inst: IInstruction) {
-        let loc = (inst && inst.sourceNode && inst.sourceNode.loc) || null;
+        const loc = (inst && inst.sourceNode && inst.sourceNode.loc) || null;
         if (isNull(loc)) {
             return;
         }
-        let pos = loc.start;
-        let rec = lastRecord();
+        
+        const pos = loc.start;
+        const rec = lastRecord();
         rec.line = pos.line || 0;
         rec.column = pos.column || 0;
         rec.file = fileToIndex(`${pos.file}`);
     }
 
+
     function dump() {
+        let line = -1;
+        let color = new DistinctColor;
+        for (let entry of layout) {
+            if (entry.line != line && entry.line) {
+                color.pickNext();
+            }
+            entry.color = color.value();
+        }
         return { files, layout };
     }
 
@@ -148,12 +183,19 @@ export function debug (pc: PC) {
     return { ...line, ...info, dump }; // todo: export only required;
 }
 
+type Color = number;
 
+/**
+ * Code Debug Layout View.
+ */
 export function cdlview(cdlRaw: CdlRaw) {
     
     const { line, info } = cdlRaw;
 
-    function sourceFileFromPc(pc: number) {
+    /**
+     * @param pc Number of instruction.
+     */
+    function resolveFileLocation(pc: number) {
         let rec = line.layout[pc];
         assert(rec.pc == pc);
         return {
@@ -163,16 +205,25 @@ export function cdlview(cdlRaw: CdlRaw) {
         };
     }
 
-    // returns valid breakpoint position from arbitrary line
-    function placeBreakpoint(ln: number): number {
+    /** 
+     * @returns Valid breakpoint position from arbitrary line.
+     */
+    function resolveBreakpointLocation(ln: number): number {
         // todo: optimize it;
         let rec = line.layout.find(r => r.line >= ln && (r.flags & EDebugLineFlags.k_NewStatement) != 0);
         return (rec && rec.line) || -1;
     }
+
+
+    function resolvePcColor(pc: number): Color {
+        let rec = line.layout.find(r => r.pc == pc);
+        return (rec && rec.color) || 0xffffff;
+    }
     
     return {
-        sourceFileFromPc,
-        placeBreakpoint
+        resolveFileLocation,
+        resolveBreakpointLocation,
+        resolvePcColor
     }
 }
 

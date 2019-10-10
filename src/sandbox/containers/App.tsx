@@ -184,7 +184,7 @@ class App extends React.Component<IAppProps> {
         }
 
         let view = cdlview(cdl);
-        return view.placeBreakpoint(ln);
+        return view.resolveBreakpointLocation(ln);
     }
 
     render() {

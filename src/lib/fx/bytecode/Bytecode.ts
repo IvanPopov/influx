@@ -11,7 +11,7 @@ import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstructio
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { assert } from "@lib/common";
 import ConstanPool from "@lib/fx/bytecode/ConstantPool";
-import debugLayout, { CdlRaw } from "./DebugLayout";
+import debugLayout, { CdlRaw } from "@lib/fx/bytecode/DebugLayout";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import sizeof from "@lib/fx/bytecode/sizeof";
 
@@ -147,11 +147,11 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
 
 
     function constChunk(): ArrayBuffer {
-        let mem = constants.data;
-        let size = mem.byteLength >> 2;
-        let chunkHeader = [EChunkType.k_Constants, size];
+        const mem = constants.data;
+        const size = mem.byteLength >> 2;
+        const chunkHeader = [EChunkType.k_Constants, size];
         assert((size << 2) == mem.byteLength);
-        let data = new Uint32Array(chunkHeader.length + size);
+        const data = new Uint32Array(chunkHeader.length + size);
         data.set(chunkHeader);
         data.set(new Uint32Array(mem.byteArray, 0, mem.byteLength >> 2), chunkHeader.length);
         return data.buffer;
@@ -159,8 +159,8 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
 
 
     function codeChunk(): ArrayBuffer {
-        let chunkHeader = [EChunkType.k_Code, instructions.length];
-        let data = new Uint32Array(chunkHeader.length + instructions.length);
+        const chunkHeader = [EChunkType.k_Code, instructions.length];
+        const data = new Uint32Array(chunkHeader.length + instructions.length);
         data.set(chunkHeader);
         data.set(instructions.data, chunkHeader.length);
 
@@ -168,8 +168,8 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
     }
 
     function binary(): Uint8Array {
-        let chunks = [constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
-        let byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
+        const chunks = [constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
+        const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
         let data = new Uint8Array(byteLength);
         let offset = 0;
         chunks.forEach(ch => {
@@ -524,7 +524,7 @@ export function translate(...argv): ISubProgram {
     }
 
     let ctx = ContextBuilder();
-    let res = null;
+    let res: ISubProgram = null;
 
     try {
         if (!isDefAndNotNull(func)) {
