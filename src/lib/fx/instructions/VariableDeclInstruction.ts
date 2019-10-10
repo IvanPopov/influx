@@ -1,6 +1,6 @@
 import { DeclInstruction } from './DeclInstruction';
 import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction, ITypeUseInfoContainer, EVarUsedMode } from "../../idl/IInstruction";
+import { IAnnotationInstruction, ITypeUseInfoContainer, EVarUsedMode, IFunctionDeclInstruction, IFunctionDefInstruction } from "../../idl/IInstruction";
 import * as Analyzer from '../Analyzer';
 import {
     IExprInstruction, IInstruction, EInstructionTypes,
@@ -204,5 +204,17 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return this._bForPixel;
     }
 
+    /**
+     * @param decl Variable declaraion (decl.isParameter() must be true).
+     * @returns Serial number of the declaration among the function parameters or -1 otherwise.
+     */
+    static GetParameterIndex(decl: IVariableDeclInstruction): number {
+        if (!decl.isParameter()) {
+            return -1;
+        }
+        // all parameters must be a children on function definition!
+        assert(decl.parent.instructionType === EInstructionTypes.k_FunctionDefInstruction);
+        return (<IFunctionDefInstruction>decl.parent).paramList.indexOf(decl);
+    }
 }
 

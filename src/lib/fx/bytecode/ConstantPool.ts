@@ -76,6 +76,10 @@ class ConstanPool {
         return addr;
     }
 
+    checkAddr(addr: number): number {
+        return this.checkInt32(addr);
+    }
+
     get data(): ConstantPoolMemory {
         return this._data;
     }

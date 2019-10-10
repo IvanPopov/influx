@@ -74,40 +74,40 @@ class VM {
                     rregs[a + 3] = cb[b + 3];
                 }
                 break;
-                case EOperation.k_Move:
+                case EOperation.k_I32MoveRegToReg:
                     iregs[a4] = iregs[b4];
                 break;
 
-                case EOperation.k_IAdd:
+                case EOperation.k_I32Add:
                     iregs[a4] = iregs[b4] + iregs[c4];
                 break;
-                case EOperation.k_ISub:
+                case EOperation.k_I32Sub:
                     iregs[a4] = iregs[b4] - iregs[c4];
                 break;
-                case EOperation.k_IMul:
+                case EOperation.k_I32Mul:
                     iregs[a4] = iregs[b4] * iregs[c4];
                 break;
-                case EOperation.k_IDiv:
+                case EOperation.k_I32Div:
                     iregs[a4] = iregs[b4] / iregs[c4];
                 break;
 
-                case EOperation.k_FAdd:
+                case EOperation.k_F32Add:
                     fregs[a4] = fregs[b4] + fregs[c4];
                 break;
-                case EOperation.k_FSub:
+                case EOperation.k_F32Sub:
                     fregs[a4] = fregs[b4] - fregs[c4];
                 break;
-                case EOperation.k_FMul:
+                case EOperation.k_F32Mul:
                     fregs[a4] = fregs[b4] * fregs[c4];
                 break;
-                case EOperation.k_FDiv:
+                case EOperation.k_F32Div:
                     fregs[a4] = fregs[b4] / fregs[c4];
                 break;
 
-                case EOperation.k_FloatToInt:
+                case EOperation.k_F32ToI32:
                     iregs[a4] = Math.trunc(fregs[b4]);
                 break;
-                case EOperation.k_IntToFloat:
+                case EOperation.k_I32ToF32:
                     // nothing to do here :)
                     fregs[a4] = iregs[b4];
                 break;

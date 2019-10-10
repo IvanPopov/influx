@@ -534,6 +534,14 @@ export interface IStmtBlockInstruction extends IStmtInstruction {
     readonly stmtList: IStmtInstruction[];
 }
 
+
+
+export interface IExprStmtInstruction extends IStmtInstruction {
+    expr: IExprInstruction;
+}
+
+
+
 export interface IPassInstruction extends IDeclInstruction {
     readonly id: IIdInstruction;
 

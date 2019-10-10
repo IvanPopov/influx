@@ -1,25 +1,19 @@
 
+import { isNull, isString } from "util";
+import { isDef, isDefAndNotNull } from "@lib/common";
+import { EOperation } from "@lib/idl/bytecode/EOperations";
+// import { IInstruction as IOperation, IInstructionArgument } from "@lib/idl/bytecode/IInstruction";
+import { EInstructionTypes, IComplexExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, ICastExprInstruction, IArithmeticExprInstruction, IExprStmtInstruction, IAssignmentExprInstruction } from "@lib/idl/IInstruction";
+import { IRange } from "@lib/idl/parser/IParser";
+import { Diagnostics } from "@lib/util/Diagnostics";
+import { DeclStmtInstruction } from "@lib/fx/instructions/DeclStmtInstruction";
+import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
+import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
+import { assert } from "@lib/common";
+import ConstanPool from "@lib/fx/bytecode/ConstantPool";
 import debugLayout, { CdlRaw } from "./DebugLayout";
-import { isNull, isNumber, isString } from "util";
-import { isDef, isDefAndNotNull } from "../../common";
-import { EOperation } from "../../idl/bytecode/EOperations";
-// import { IInstruction as IOperation, IInstructionArgument } from "../../idl/bytecode/IInstruction";
-import { EInstructionTypes, IExprInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionDeclInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IRange } from "../../idl/parser/IParser";
-import { Diagnostics } from "../../util/Diagnostics";
-import { ArithmeticExprInstruction } from "../instructions/ArithmeticExprInstruction";
-import { DeclStmtInstruction } from "../instructions/DeclStmtInstruction";
-import { IntInstruction } from "../instructions/IntInstruction";
-import { ReturnStmtInstruction } from "../instructions/ReturnStmtInstruction";
-import { assert } from "./../../common";
-import ConstanPool from "./ConstantPool";
-import InstructionList from "./InstructionList";
-import sizeof from "./sizeof";
-import { FloatInstruction } from "../instructions/FloatInstruction";
-import { CastExprInstruction } from "../instructions/CastExprInstruction";
-import { T_INT, T_FLOAT } from "../SystemScope";
-import { ComplexExprInstruction } from "../instructions/ComplexExprInstruction";
+import InstructionList from "@lib/fx/bytecode/InstructionList";
+import sizeof from "@lib/fx/bytecode/sizeof";
 
 enum EErrors {
     k_UnsupportedConstantType,
@@ -67,7 +61,9 @@ const sname = {
     i32: (i32: number) => `%i32:${i32}`,
     f32: (f32: number) => `%f32:${f32}`,
     var: (vdecl: IVariableDeclInstruction) => `${vdecl.name}:${vdecl.instructionID}`,
-    fun: (fdecl: IFunctionDeclInstruction) => `${fdecl.name}:${fdecl.instructionID}`
+    fun: (fdecl: IFunctionDeclInstruction) => `${fdecl.name}:${fdecl.instructionID}`,
+
+    addr: (addr: number) => sname.i32(addr)
 };
 
 /**
@@ -89,41 +85,18 @@ class SymbolTable<SYMBOL_T>  {
 }
 
 
-interface IMemoryLocation {
-    memory: 'register' | 'input';
-    addr: number;
-    size: number;
-}
-
-interface ICallstackEntry {
-    fn: IFunctionDeclInstruction;
-    /**
-     * arguments' addresses 
-     * regs[i] - is a address of i'th argument
-     */ 
-    argv: IMemoryLocation[];
-}
-
 class Callstack {
-    stack: ICallstackEntry[] = [];
+    stack: IFunctionDeclInstruction[] = [];
 
-    get top(): ICallstackEntry {
+    get top(): IFunctionDeclInstruction {
         return this.stack[this.depth - 1];
-    }
-
-    get argv(): IMemoryLocation[] {
-        return this.top.argv;
-    }
-
-    get fn(): IFunctionDeclInstruction {
-        return this.top.fn;
     }
 
     get depth(): number {
         return this.stack.length;
     }
 
-    push(entry: ICallstackEntry) {
+    push(entry: IFunctionDeclInstruction) {
         this.stack.push(entry);
     }
 
@@ -167,19 +140,7 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
 
     debug.beginCompilationUnit('[todo]'); // << it does nothing at the momemt :/
 
-    let offset = 0;
-    let argv = fn.definition.paramList.map(param => {
-        let loc: IMemoryLocation = {
-            memory: 'input',
-            addr: offset,
-            size: param.type.size
-        };
-
-        offset += loc.size;
-        return loc;
-    });
-
-    callstack.push({ fn, argv });
+    callstack.push(fn);
     translateFunction(ctx, fn);
     callstack.pop();
     debug.endCompilationUnit();
@@ -243,7 +204,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             // assume only int32
             case EInstructionTypes.k_IntInstruction:
                 {
-                    let i32 = (lit as IntInstruction).value;
+                    let i32 = <number>(lit as ILiteralInstruction).value;
                     let r = deref(sname.i32(i32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
@@ -258,7 +219,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 break;
             case EInstructionTypes.k_FloatInstruction:
                 {
-                    let f32 = (lit as FloatInstruction).value;
+                    let f32 = <number>(lit as ILiteralInstruction).value;
                     let r = deref(sname.f32(f32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.f32());
@@ -275,6 +236,17 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         }
 
         return REG_INVALID;
+    }
+
+
+    function rconst_addr(addr: number): number {
+        let r = deref(sname.addr(addr));
+        if (r == REG_INVALID) {
+            r = alloca(sizeof.addr());
+            icode(EOperation.k_LoadConst, r, constants.checkAddr(addr), sizeof.addr());
+            ref(sname.addr(addr), r);
+        }
+        return r;
     }
 
     /**
@@ -318,23 +290,23 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     return deref(sname.var(id.declaration as IVariableDeclInstruction));
                 }
             case EInstructionTypes.k_ComplexExprInstruction:
-                return raddr((expr as ComplexExprInstruction).expr);
+                return raddr((expr as IComplexExprInstruction).expr);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
-                    const arithExpr = expr as ArithmeticExprInstruction;
+                    const arithExpr = expr as IArithmeticExprInstruction;
 
                     const opIntMap = {
-                        '+': EOperation.k_IAdd,
-                        '-': EOperation.k_ISub,
-                        '*': EOperation.k_IMul,
-                        '/': EOperation.k_IDiv
+                        '+': EOperation.k_I32Add,
+                        '-': EOperation.k_I32Sub,
+                        '*': EOperation.k_I32Mul,
+                        '/': EOperation.k_I32Div
                     }
 
                     const opFloatMap = {
-                        '+': EOperation.k_FAdd,
-                        '-': EOperation.k_FSub,
-                        '*': EOperation.k_FMul,
-                        '/': EOperation.k_FDiv
+                        '+': EOperation.k_F32Add,
+                        '-': EOperation.k_F32Sub,
+                        '*': EOperation.k_F32Mul,
+                        '/': EOperation.k_F32Div
                     }
 
                     let op: EOperation;
@@ -361,7 +333,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 break;
             case EInstructionTypes.k_CastExprInstruction:
                 {
-                    const castExpr = expr as CastExprInstruction;
+                    const castExpr = expr as ICastExprInstruction;
                     if (castExpr.isUseless()) {
                         console.warn(`Useless cast found: ${castExpr.toCode()}`);
                         return raddr(castExpr.expr);
@@ -372,9 +344,9 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     let op: EOperation;
                     if (srcType.isEqual(T_FLOAT) && dstType.isEqual(T_INT)) {
-                        op = EOperation.k_FloatToInt;
+                        op = EOperation.k_F32ToI32;
                     } else if (srcType.isEqual(T_INT) && dstType.isEqual(T_FLOAT)) {
-                        op = EOperation.k_IntToFloat;
+                        op = EOperation.k_I32ToF32;
                     } else {
                         // todo: add type descriptions
                         diag.critical(EErrors.k_UnsupoortedTypeConversion, {});
@@ -385,6 +357,29 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     icode(op, dest, raddr(castExpr.expr));
                     debug.map(castExpr);
                     return dest;
+                }
+                break;
+            case EInstructionTypes.k_PostfixPointInstruction:
+                {
+                    const point = expr as IPostfixPointInstruction;
+                    const elementAddr = raddr(point.element);
+                    const padding = point.postfix.type.padding;
+
+                    if (point.isConst() || true) { // todo
+                        return elementAddr + padding;
+                    }
+
+                    // TOOD: add support for move_reg_ptr, move_ptr_ptr
+                    if (padding > 0) {
+                        const postfixReg = rconst_addr(padding);     // write element's padding to register
+                        const elementReg = rconst_addr(elementAddr); // write element's addr to register
+                        const destReg = alloca(sizeof.addr());
+                        icode(EOperation.k_I32Add, destReg, elementReg, postfixReg);
+                        debug.map(point);
+                        return destReg; // << !!!! return addr!!!
+                    }
+
+                    return elementAddr;
                 }
                 break;
             default:
@@ -418,25 +413,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 {
                     let decl = instr as IVariableDeclInstruction;
 
-                    if (decl.isParameter()) {
-                        // todo: fix this hack, write it better!
-                        let idx = callstack.fn.definition.paramList.indexOf(decl);
-                        assert(idx != -1);
-                        
-                        let loc = callstack.argv[idx];
-                        switch (loc.memory) {
-                            case 'input':
-                                    // let r = alloca(loc.size);
-                                    // icode(EOperation.k_LoadInput, r, loc.addr, loc.size);
-                                    // todo: add ns/map debugging info here??
-                                break;
-                            case 'register':
-                                // todo
-                                break;
-                            default:
-                                assert(false, "!!!");
-                        }
-                    } else if (isNull(decl.initExpr)) {
+                    if (isNull(decl.initExpr)) {
                         // There is no initial value, but allocation should be done anyway
                         // in order to assign register for this variable.
                         ref(sname.var(decl), alloca(decl.type.size));
@@ -471,7 +448,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let ret = instr as ReturnStmtInstruction;
                     if (!isNull(ret.expr)) {
                         // todo: check that the expr type is compatible with RAX register or should moved to stack 
-                        icode(EOperation.k_Move, REG_RAX, raddr(ret.expr));
+                        icode(EOperation.k_I32MoveRegToReg, REG_RAX, raddr(ret.expr));
                         debug.map(ret.expr);
                         debug.ns();
                         icode(EOperation.k_Ret);
@@ -495,6 +472,28 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     translate(impl);
 
+                    return;
+                }
+            case EInstructionTypes.k_ExprStmtInstruction:
+                {
+                    let stmt = instr as IExprStmtInstruction;
+                    translate(stmt.expr);
+                    return;
+                }
+            case EInstructionTypes.k_AssignmentExprInstruction:
+                {
+                    let assigment = instr as IAssignmentExprInstruction;
+                    assert(assigment.type.size % sizeof.i32() === 0);
+                    let nmove = assigment.type.size / sizeof.i32();
+                    let leftAddr = raddr(assigment.left);
+                    // todo: fix type of right expr!
+                    let rightAddr = raddr(assigment.right as IExprInstruction);
+                    for (let i = 0; i < nmove; ++ i) {
+                        // todo: check type of left expr and use 'store' insread of 'move' if needed
+                        icode(EOperation.k_I32MoveRegToReg, leftAddr + i * 4, rightAddr);
+                    }
+                    debug.map(assigment);
+                    debug.ns();
                     return;
                 }
             default:

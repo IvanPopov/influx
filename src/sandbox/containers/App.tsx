@@ -1,3 +1,4 @@
+/* tslint:disable:max-func-body-length */
 import { isNull } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
@@ -191,9 +192,24 @@ class App extends React.Component<IAppProps> {
 
         const analysisResults = [
             {
-                menuItem: (<Menu.Item key="bytecode"><Menu.Header>Bytecode<br />Debugger</Menu.Header></Menu.Item>),
+                menuItem: (<Menu.Item key='playground'><Menu.Header>Playground</Menu.Header></Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="bytecode-view">
+                    <Tab.Pane attached={ false } key='playground-view'>
+                        <Header as='h4' dividing>
+                            <Icon name={ 'flame' as any } />
+                            <Header.Content>
+                                Playground
+                                <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
+                            </Header.Content>
+                        </Header>
+                        <Playground scope={ props.sourceFile.scope } />
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: (<Menu.Item key='bytecode'><Menu.Header>Bytecode<br />Debugger</Menu.Header></Menu.Item>),
+                pane: (
+                    <Tab.Pane attached={ false } key='bytecode-view'>
                         <Header as='h4' dividing>
                             <Icon name='plug' />
                             <Header.Content>
@@ -234,22 +250,13 @@ class App extends React.Component<IAppProps> {
                                 <BytecodeView code={ state.bc.code } cdl={ state.bc.cdl } />
                             </div>
                         ) : null }
-                        <Header as='h4' dividing>
-                            <Icon name={ 'flame' as any } />
-                            <Header.Content>
-                                Playground
-                                <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
-                            </Header.Content>
-                        </Header>
-                        <Playground scope={ props.sourceFile.scope } />
-
                     </Tab.Pane>
                 )
             },
             {
-                menuItem: (<Menu.Item key="semantic-analysis"><Menu.Header>Semantics<br />Analyzer</Menu.Header></Menu.Item>),
+                menuItem: (<Menu.Item key='semantic-analysis'><Menu.Header>Semantics<br />Analyzer</Menu.Header></Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="program-view">
+                    <Tab.Pane attached={ false } key='program-view'>
                         <ProgramView
                             onNodeOver={ inst => this.highlightInstruction(inst, true) }
                             onNodeOut={ inst => this.highlightInstruction(inst, false) }
@@ -259,9 +266,9 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item key="syntax-analysis"><Menu.Header>Syntax<br />Analyzer</Menu.Header></Menu.Item>),
+                menuItem: (<Menu.Item key='syntax-analysis'><Menu.Header>Syntax<br />Analyzer</Menu.Header></Menu.Item>),
                 pane: (
-                    <Tab.Pane attached={ false } key="ast-view">
+                    <Tab.Pane attached={ false } key='ast-view'>
                         <ASTView
                             onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
                             onNodeOut={ idx => this.highlightPNode(idx, null, false) }
@@ -282,21 +289,24 @@ class App extends React.Component<IAppProps> {
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key="source" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
+                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
                     // fixme: remove style from line below;
                     // as={ ({ ...props }) => <Container fluid { ...props } /> }
                     >
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
-                                <Grid.Column computer="10" tablet="8" mobile="6" className={ props.classes.leftColumnFix }>
+                                <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceEditor2
-                                        name="source-code"
+                                        name='source-code'
                                         validateBreakpoint={ line => this.validateBreakpoint(line) }
                                     />
                                 </Grid.Column>
-                                <Grid.Column computer="6" tablet="8" mobile="10" className={ props.classes.rightColumnFix }>
+                                <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
                                     <Container style={ { paddingTop: '15px' } }>
-                                        <Tab menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } } panes={ analysisResults } renderActiveOnly={ false } />
+                                        <Tab
+                                            menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } } 
+                                            panes={ analysisResults }
+                                            renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -307,13 +317,13 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Grammar',
                 render: () => (
-                    <Tab.Pane key="grammar" className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
+                    <Tab.Pane key='grammar' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
                         <ParserParameters />
                     </Tab.Pane>
                 )
             },
             {
-                menuItem: (<Menu.Item key="ver" position="right" inverted disabled color="red"><Version classes={ props.classes } /></Menu.Item>),
+                menuItem: (<Menu.Item key='ver' position='right' inverted disabled color='red'><Version classes={ props.classes } /></Menu.Item>),
                 render: () => null
             }
         ];
@@ -329,7 +339,7 @@ class App extends React.Component<IAppProps> {
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarHotfix }
                     >
-                        <FileListView path="./assets" filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
+                        <FileListView path='./assets' filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
                         {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */ }
@@ -338,7 +348,7 @@ class App extends React.Component<IAppProps> {
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' color="black" inverted fixed="left" className={ props.classes.sidebarLeftHotfix }>
+                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
                     <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
                         <Icon name={ 'three bars' as UnknownIcon } />
                         File Browser

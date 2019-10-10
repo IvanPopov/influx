@@ -1,7 +1,6 @@
-import { StmtInstruction } from "./StmtInstruction";
-import { IInstructionSettings, Instruction } from "./Instruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { EInstructionTypes, IInstruction, IExprInstruction } from "../../idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IExprStmtInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "@lib/fx/instructions/Instruction";
+import { StmtInstruction } from "@lib/fx/instructions/StmtInstruction";
 
 
 export interface IExprStmtInstructionSettings extends IInstructionSettings {
@@ -12,7 +11,7 @@ export interface IExprStmtInstructionSettings extends IInstructionSettings {
  * Represent expr;
  * EMPTY_OPERTOR ExprInstruction 
  */
-export class ExprStmtInstruction extends StmtInstruction {
+export class ExprStmtInstruction extends StmtInstruction implements IExprStmtInstruction {
     protected _expr: IExprInstruction;
 
     constructor({ expr, ...settings }: IExprStmtInstructionSettings) {
