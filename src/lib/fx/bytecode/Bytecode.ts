@@ -129,7 +129,7 @@ function ContextBuilder() {
 type Context = ReturnType<typeof ContextBuilder>;
 
 
-interface ISubProgram {
+export interface ISubProgram {
     code: Uint8Array;
     constants: ConstanPool;
     cdl: CdlRaw;

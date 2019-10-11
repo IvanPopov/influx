@@ -34,7 +34,9 @@ const reduxImmutableState = reduxImmutableStateInvariant({
     ignore: [
         'sourceFile.parseTree',
         'sourceFile.root',
-        'sourceFile.scope'
+        'sourceFile.scope',
+
+        'sourceFile.debugger.runtime'
     ]
 } as any);
 

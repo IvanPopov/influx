@@ -3,6 +3,7 @@ import { isDef } from "@lib/common";
 import { IFunctionDeclInstruction, IInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { isNull } from "util";
 import assert = require("assert");
+import DistinctColor from "@lib/util/DistinctColor";
 
 enum EDebugLineFlags {
     k_NewStatement = 0x01
@@ -19,31 +20,6 @@ export class DebugLineRecord {
 
 // process counter;
 type PC = () => number;
-
-class DistinctColor {
-    static list = [
-        0xe6194b, 0x3cb44b, 0xffe119, 0x4363d8, 0xf58231, 0x911eb4, 
-        0x46f0f0, 0xf032e6, 0xbcf60c, 0xfabebe, 0x008080, 0xe6beff, 
-        0x9a6324, 0xfffac8, 0x800000, 0xaaffc3, 0x808000, 0xffd8b1, 
-        0x000075, 0x808080  //, 0xffffff, 0x000000
-    ];
-
-    private _curIdx = 0;
-
-    value(): number {
-        return DistinctColor.list[ this._curIdx ];
-    }
-
-    // htmlString(): string {
-    //     return `#${this.value().toString(16)}`;
-    // }
-
-    pickNext(): number {
-        this._curIdx = (this._curIdx + 1) % DistinctColor.list.length;
-        return this.value();
-    }
-}
-
 
 function debugLine(pc: PC) {
     const files: string[] = [];

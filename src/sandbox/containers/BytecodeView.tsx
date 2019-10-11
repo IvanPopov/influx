@@ -4,18 +4,16 @@ import * as VM from '@lib/fx/bytecode/VM';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
-import { IFileState } from '@sandbox/store/IStoreState';
+import { getSourceCode, getDebugger } from '@sandbox/reducers/sourceFile';
+import { IFileState, IDebuggerState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
 import { isNull } from '@lib/common';
+import DistinctColor from '@lib/util/DistinctColor';
 
 
-export interface IBytecodeViewProps extends IFileState {
-    code: Uint8Array;
-    cdl: CdlRaw;
-
+export interface IBytecodeViewProps extends IDebuggerState {
     actions: typeof sourceActions;
 }
 
@@ -67,12 +65,6 @@ const scode = (c: EOperation) => {
     }
 };
 
-function colorToHtmlString(val: number) {
-    let r = ((val >> 16) & 0xff);
-    let g = ((val >> 8) & 0xff);
-    let b = ((val >> 0) & 0xff);
-    return `rgb(${r}, ${g}, ${b})`;
-}
 
 class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewState>  {
 
@@ -83,7 +75,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     render() {
         const { props } = this;
-        const { code } = props;
+        const { runtime: { code } } = props;
 
         if (isNull(code)) {
             return null;
@@ -130,7 +122,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
     }
 
     showSourceLine(pc: number) {
-        console.log(this.state.cdlView.resolveFileLocation(pc));
+        // console.log(this.state.cdlView.resolveFileLocation(pc));
     }
 
     hideSourceLine(oc: number) {
@@ -157,12 +149,12 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         return (
             <Table.Row key={ `op-${code}-${i}` } onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
                 <Table.Cell
-                    style={
+                    style={ this.props.options.colorize ?
                         {
                             padding: '0.2em 0.7em',
                             opacity: 0.5,
-                            background: colorToHtmlString(cdlView.resolvePcColor(i))
-                        }
+                            background: DistinctColor.make(cdlView.resolvePcColor(i)).toRGBAString()
+                        } : null
                     }></Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
@@ -173,10 +165,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
         const count = 0;
-        const cdlView = cdlview(props.cdl);
+        const cdlView = cdlview(props.runtime.cdl);
 
         return { count, cdlView };
     }
 }
 
-export default connect<{}, {}, IBytecodeViewProps>(mapProps(getSourceCode), mapActions(sourceActions))(BytecodeView) as any;
+export default connect<{}, {}, IBytecodeViewProps>(mapProps(getDebugger), mapActions(sourceActions))(BytecodeView) as any;

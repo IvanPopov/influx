@@ -1,8 +1,9 @@
 import { EParserType } from '@lib/idl/parser/IParser';
-import IStoreState from '@sandbox/store/IStoreState';
+import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
 import { bindActionCreators, Dispatch } from 'redux';
 import * as evt from './ActionTypeKeys';
 import { IMarkerDesc } from './ActionTypes';
+import { MakeOptional } from '@lib/common';
 
 
 
@@ -60,10 +61,6 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } };
     },
 
-    removeMarkerByType(type: string) {
-        return { type: evt.SOURCE_CODE_REMOVE_MARKER_BY_TYPE, payload: { type } };
-    },
-
     //
     //
     //
@@ -74,6 +71,18 @@ export const sourceCode = {
 
     removeBreakpoint(line: number) {
         return { type: evt.SOURCE_CODE_REMOVE_BREAKPOINT, payload: { line } }
+    },
+
+    //
+    //
+    //
+
+    compile(entryPoint: string) {
+        return { type: evt.DEBUGGER_COMPILE, payload: { entryPoint } };
+    },
+
+    specifyOptions(options: MakeOptional<IDebuggerState['options']>) {
+        return { type: evt.DEBUGGER_OPTIONS_CHANGED, payload: { options } };
     }
 };
 

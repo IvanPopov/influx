@@ -1,17 +1,24 @@
-import { assert } from '@lib/common';
+import { assert, isNull } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
+import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { EffectParser } from '@lib/fx/EffectParser';
 import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import IStoreState from '@sandbox/store/IStoreState';
+import IStoreState, { IFileState, IDebuggerState } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
+import { IDebuggerCompile, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
+import { getSourceCode, getDebugger } from '@sandbox/reducers/sourceFile'
+import { cdlview } from '@lib/fx/bytecode/DebugLayout';
+import { IMarker } from '@sandbox/store/IStoreState';
+import { IDispatch } from '@sandbox/actions';
 
 const PARSING_ERROR_PREFIX = 'parsing-error';
 const ANALYSIS_ERROR_PREFIX = 'analysis-error';
 const ANALYSIS_WARNING_PREFIX = 'analysis-warning';
+const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
-function cleanupMarkers(state, dispatch, type, prefix) {
+function cleanupMarkers(state: IStoreState, dispatch: IDispatch, type: IMarkerType, prefix: string) {
     for (let name in state.sourceFile.markers) {
         if (name.startsWith(`${prefix}-`)) {
             dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
@@ -19,14 +26,17 @@ function cleanupMarkers(state, dispatch, type, prefix) {
     }
 }
 
-function emitMarkers(errors, dispatch, type, prefix) {
-    errors.forEach(err => {
-        let { loc, message } = err;
+type IMarkerType = IMarker['type'];
+
+function emitMarkers(list, dispatch: IDispatch, type: IMarkerType, prefix: string) {
+    list.forEach((err, i) => {
+        let { loc, message, payload } = err;
         let marker = {
-            name: `${prefix}-${message}`,
+            name: `${prefix}-${message}-${i}`,
             range: loc,
             type,
-            tooltip: message
+            tooltip: message,
+            payload
         };
         dispatch({ type: evt.SOURCE_CODE_ADD_MARKER, payload: marker });
     })
@@ -38,6 +48,8 @@ const emitErrors = (list, dispatch, prefix) => emitMarkers(list, dispatch, 'erro
 const cleanupErrors = (state, dispatch, prefix) => cleanupMarkers(state, dispatch, 'error', prefix);
 const emitWarnings = (list, dispatch, prefix) => emitMarkers(list, dispatch, 'warning', prefix);
 const cleanupWarnings = (state, dispatch, prefix) => cleanupMarkers(state, dispatch, 'warning', prefix);
+const emitDebuggerColorization = (list, dispatch) => emitMarkers(list, dispatch, 'line', DEBUGGER_COLORIZATION_PREFIX);
+const cleanupDebuggerColorization = (state, dispatch) => cleanupMarkers(state, dispatch, 'line', DEBUGGER_COLORIZATION_PREFIX);
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
@@ -55,7 +67,6 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
     emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
     
     console.log(Diagnostics.stringify(diag));
-
     dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
 }
 
@@ -109,9 +120,9 @@ const updateSourceContentLogic = createLogic<IStoreState>({
     debounce: 500,
 
     async process({ getState, action, action$ }, dispatch, done) {
-
-        // todo: remove this hack
-        dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER_BY_TYPE, payload: { type: 'line' } });
+        if (!getDebugger(getState()).options.autocompile) {
+            dispatch({ type: evt.DEBUGGER_RESET });
+        }
 
         await processParsing(getState(), dispatch);
 
@@ -126,6 +137,7 @@ const updateSourceContentLogic = createLogic<IStoreState>({
         //  } })
 
         // console.log('await SOURCE_CODE_PARSING_COMPLETE', Date.now() - begin);
+
         done();
     }
 });
@@ -152,9 +164,120 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 });
 
 
+function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
+    const fn = fileState.root.scope.findFunction(debuggerState.entryPoint, null);
+    const locList = [];
+    
+    if (fn && debuggerState.runtime) {
+        const from = fn.sourceNode.loc.start.line;
+        const to = fn.sourceNode.loc.end.line;
+        const cdl = cdlview(debuggerState.runtime.cdl);
+    
+        for (let ln = from; ln <= to; ++ ln) {
+            const color = cdl.resolveLineColor(ln);
+            if (color !== 0) {
+                const loc = { start: { file: null, line: ln, column: 0 }, end: null };
+                locList.push({ loc, payload: { color } });
+            }
+        }
+    }
+    return locList;
+}
+
+
+const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload']>({
+    type: evt.DEBUGGER_COMPILE,
+    cancelType: evt.DEBUGGER_RESET,
+    latest: true,
+
+    async process({ getState, action }, dispatch, done) {
+        const fileState = getSourceCode(getState());
+        const debuggerState = getDebugger(getState());
+        const entryPoint = (action.payload && action.payload.entryPoint) || debuggerState.entryPoint ||Bytecode.DEFAULT_ENTRY_POINT_NAME;
+
+        let runtime = null;
+
+        if (!isNull(fileState.scope)) {
+            runtime = Bytecode.translate(entryPoint, fileState.scope);
+            dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { entryPoint, runtime } });
+        } else {
+            console.error('invalid compile request!');
+        }
+
+        done();
+    }
+});
+
+
+const debuggerResetLogic = createLogic<IStoreState>({
+    type: evt.DEBUGGER_RESET,
+
+    async process({ getState, action }, dispatch, done) {
+        let debuggerState = getDebugger(getState());
+        if (debuggerState.options.colorize) {
+            cleanupDebuggerColorization(getState(), dispatch);
+        }
+        done();
+    }
+});
+
+
+const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsChanged['payload']>({
+    type: evt.DEBUGGER_OPTIONS_CHANGED,
+
+    async process({ getState, action }, dispatch, done) {
+        if (action.payload.options.autocompile === true) {
+            dispatch({ type: evt.DEBUGGER_COMPILE });
+        }
+        if (action.payload.options.colorize === false) {
+            cleanupDebuggerColorization(getState(), dispatch);
+        } else {
+            const markers = buildDebuggerSourceColorization(getDebugger(getState()), getSourceCode(getState()));
+            emitDebuggerColorization(markers, dispatch);
+        }
+        done();
+    }
+});
+
+
+const debuggerStartLogic = createLogic<IStoreState>({
+    type: evt.DEBUGGER_START_DEBUG,
+
+    async process({ getState, action }, dispatch, done) {
+        const fileState = getSourceCode(getState());
+        const debuggerState = getDebugger(getState());
+        
+        if (debuggerState.options.colorize) {
+            const markers = buildDebuggerSourceColorization(debuggerState, fileState);
+            emitDebuggerColorization(markers, dispatch);
+        }
+        done();
+    }
+});
+
+
+const debuggerAutocompileLogic = createLogic<IStoreState>({
+    type: evt.SOURCE_CODE_ANALYSIS_COMPLETE,
+
+    process({ getState }, dispatch, done) {
+        const debuggerState = getDebugger(getState());
+        
+        if (debuggerState.options.autocompile) {
+            dispatch({ type: evt.DEBUGGER_COMPILE });
+        }
+
+        done();
+    }
+})
+
 
 export default [
     updateParserLogic,
     updateSourceContentLogic,
-    parsingCompleteLogic
+    parsingCompleteLogic,
+    debuggerCompileLogic,
+    debuggerResetLogic,
+    debuggerOptionsChangedLogic,
+    debuggerStartLogic,
+    debuggerAutocompileLogic
 ];

@@ -11,8 +11,13 @@ export const SOURCE_CODE_PARSING_COMPLETE           = 'source-code-parsing-compl
 export const SOURCE_CODE_ANALYSIS_COMPLETE          = 'source-code-analysis-complete';
 export const SOURCE_CODE_ADD_MARKER                 = 'source-code-add-marker';
 export const SOURCE_CODE_REMOVE_MARKER              = 'source-code-remove-marker';
-export const SOURCE_CODE_REMOVE_MARKER_BY_TYPE      = 'source-code-remove-marker-by-type';
 export const SOURCE_CODE_ADD_BREAKPOINT             = 'source-code-add-breakpoint';
 export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakpoint';
+
+export const DEBUGGER_COMPILE                       = 'debugger-compile';
+export const DEBUGGER_START_DEBUG                   = 'debugger-start-debug';
+export const DEBUGGER_RESET                         = 'debugger-reset'; // cancel compilation or jut clean up all previous results from store
+export const DEBUGGER_COLORIZE                      = 'debugger-colorize';
+export const DEBUGGER_OPTIONS_CHANGED             = 'debugger-options-changed';
 
 

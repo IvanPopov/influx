@@ -1,12 +1,24 @@
 import { IMap } from '@lib/idl/IMap';
 import { EParserType, IParseTree, IRange, IParserParams } from '@lib/idl/parser/IParser';
 import { IScope, IInstructionCollector } from '@lib/idl/IInstruction';
+import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 
 export interface IMarker {
     range: IRange;
-    type: 'error' | 'marker' | 'line';
+    type: 'warning' | 'error'| 'marker' | 'line';
     tooltip?: string;
     payload?: Object;
+}
+
+export interface IDebuggerState {
+    options: {
+        colorize: boolean;
+        disableOptimizations: boolean;
+        autocompile: boolean;
+    }
+
+    entryPoint: string;
+    runtime: ISubProgram;
 }
 
 export interface IFileState {
@@ -20,6 +32,8 @@ export interface IFileState {
 
     markers: IMap<IMarker>;
     breakpoints: number[];
+
+    debugger: IDebuggerState;
 }
 
 export interface IParserState extends IParserParams {

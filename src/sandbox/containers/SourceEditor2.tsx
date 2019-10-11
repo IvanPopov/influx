@@ -17,6 +17,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
+import DistinctColor from '@lib/util/DistinctColor';
 
 export const styles = {
     yellowMarker: {
@@ -38,27 +39,7 @@ export const styles = {
         background: 'red'
     },
 
-    // todo: remove this hack
-    [`cc_${0xe6194b}`]: { opacity: 0.3, backgroundColor: '#e6194b' },
-    [`cc_${0x3cb44b}`]: { opacity: 0.3, backgroundColor: '#3cb44b' },
-    [`cc_${0xffe119}`]: { opacity: 0.3, backgroundColor: '#ffe119' },
-    [`cc_${0x4363d8}`]: { opacity: 0.3, backgroundColor: '#4363d8' },
-    [`cc_${0xf58231}`]: { opacity: 0.3, backgroundColor: '#f58231' },
-    [`cc_${0x911eb4}`]: { opacity: 0.3, backgroundColor: '#911eb4' },
-    [`cc_${0x46f0f0}`]: { opacity: 0.3, backgroundColor: '#46f0f0' },
-    [`cc_${0xf032e6}`]: { opacity: 0.3, backgroundColor: '#f032e6' },
-    [`cc_${0xbcf60c}`]: { opacity: 0.3, backgroundColor: '#bcf60c' },
-    [`cc_${0xfabebe}`]: { opacity: 0.3, backgroundColor: '#fabebe' },
-    [`cc_${0x008080}`]: { opacity: 0.3, backgroundColor: '#008080' },
-    [`cc_${0xe6beff}`]: { opacity: 0.3, backgroundColor: '#e6beff' },
-    [`cc_${0x9a6324}`]: { opacity: 0.3, backgroundColor: '#9a6324' },
-    [`cc_${0xfffac8}`]: { opacity: 0.3, backgroundColor: '#fffac8' },
-    [`cc_${0x800000}`]: { opacity: 0.3, backgroundColor: '#800000' },
-    [`cc_${0xaaffc3}`]: { opacity: 0.3, backgroundColor: '#aaffc3' },
-    [`cc_${0x808000}`]: { opacity: 0.3, backgroundColor: '#808000' },
-    [`cc_${0xffd8b1}`]: { opacity: 0.3, backgroundColor: '#ffd8b1' },
-    [`cc_${0x000075}`]: { opacity: 0.3, backgroundColor: '#000075' },
-    [`cc_${0x808080}`]: { opacity: 0.3, backgroundColor: '#808080' }
+    ...DistinctColor.buildVariousClasses('dc')
 };
 
 let timer = (delay) => new Promise(done => { setTimeout(done, delay) });
@@ -172,8 +153,6 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
     name?: string,
     actions: typeof sourceActions;
-
-    cdlView: ReturnType<typeof cdlview>;
 }
 
 
@@ -188,14 +167,6 @@ interface IMarginData {
     lineNumbersWidth: number;
     offsetX: number;
 }
-
-
-// function colorToHtmlString(val: number) {
-//     let r = ((val >> 16) & 0xff);
-//     let g = ((val >>  8) & 0xff);
-//     let b = ((val >>  0) & 0xff);
-//     return `rgb(${r}, ${g}, ${b})`;
-// }
 
 
 @injectSheet(styles)
@@ -241,7 +212,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                             range: new monaco.Range(start.line + 1, 0, start.line + 1, 0),
                             options: {
                                 isWholeLine: true,
-                                className: classes[`cc_${payload['color']}`]
+                                className: classes[`dc_${DistinctColor.resolveColor(payload['color'])}`]
                             }
                         });
                         break;
@@ -292,7 +263,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             let { lineNumber } = e.target.position;
             let { breakpoints } = props;
 
-            lineNumber = props.cdlView.resolveBreakpointLocation(lineNumber - 1);
+            lineNumber = cdlview(props.debugger.runtime.cdl).resolveBreakpointLocation(lineNumber - 1);
             if (lineNumber == -1) {
                 return;
             }
