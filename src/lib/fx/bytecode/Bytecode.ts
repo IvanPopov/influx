@@ -16,6 +16,7 @@ import InstructionList from "@lib/fx/bytecode/InstructionList";
 import sizeof from "@lib/fx/bytecode/sizeof";
 import { VariableDeclInstruction } from "../instructions/VariableDeclInstruction";
 import { ExprInstruction } from "../instructions/ExprInstruction";
+import { Instruction } from "../instructions/Instruction";
 
 enum EErrors {
     k_UnsupportedConstantType,
@@ -106,6 +107,12 @@ class Callstack {
         return this.stack.pop();
     }
 }
+
+
+enum EMemoryLocation {
+    k_Registers,
+    k_Input
+};
 
 
 function ContextBuilder() {
@@ -243,15 +250,15 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     }
 
 
-    function rconst_addr(addr: number): number {
-        let r = deref(sname.addr(addr));
-        if (r == REG_INVALID) {
-            r = alloca(sizeof.addr());
-            icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr), sizeof.addr());
-            ref(sname.addr(addr), r);
-        }
-        return r;
-    }
+    // function rconst_addr(addr: number): number {
+    //     let r = deref(sname.addr(addr));
+    //     if (r == REG_INVALID) {
+    //         r = alloca(sizeof.addr());
+    //         icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr), sizeof.addr());
+    //         ref(sname.addr(addr), r);
+    //     }
+    //     return r;
+    // }
 
     /**
      * (assuming that all registers for all types are placed in the same memory)
@@ -269,36 +276,88 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         instructions.add(code, args);
     }
 
-    function preload(addr, depth, expr, size, padding) {
-        if (depth == 0) {
-            let decl = ExprInstruction.UnwindExpr(expr);
 
-            if (decl.isLocal() && !decl.isParameter()) {
-                // nothing todo
-            }
+    function load(expr: IExprInstruction, size: number = 0, padding: number = 0) {
+        const decl = ExprInstruction.UnwindExpr(expr);
+        assert(determMemoryLocation(decl) != EMemoryLocation.k_Registers);
 
-            if (decl.isParameter()) {
-                if (callstack.depth == 1) {
-                    let paramOffset = VariableDeclInstruction.GetParameterOffset(decl);
-                    let dest = alloca(size);
-                    assert(size === 4);
-                    icode(EOperation.k_I32LoadInput, dest, paramOffset + padding);
-                    return dest;
-                } else {
-                    assert(false, 'unsupported');
+        if (!size) {
+            size = decl.type.size;
+        }
+
+        if (decl.isParameter()) {
+            if (callstack.depth == 1) {
+                const paramOffset = VariableDeclInstruction.getParameterOffset(decl);
+                const dest = alloca(size);
+                assert(size % sizeof.i32() === 0);
+
+                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                    icode(EOperation.k_I32LoadInput, dest, paramOffset + i * 4 + padding);
                 }
-            }
 
-            if (decl.isGlobal()) {
-                assert(false);
+                return dest;
+            } else {
+                assert(false, 'unsupported');
             }
         }
 
-        return addr + padding;
+        if (decl.isGlobal()) {
+            assert(false, 'unsupported');
+        }
+
+        assert(false, "all is bad :/");
+        return 0;
     }
 
+    function determMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
+        if (decl.isParameter()) {
+            if (decl.type.hasUsage('out') || decl.type.hasUsage('inout')) {
+                return EMemoryLocation.k_Input;
+            }
+        }
+
+        if (decl.isGlobal()) {
+            assert(false, 'unsupported');
+        }
+
+        assert(decl.isLocal());
+        return EMemoryLocation.k_Registers;
+    }
+
+    /** Universal memcopy() suitable both for registers and external memory */
+    function store(expr: IExprInstruction, dst: number, src: number, size: number) {
+        const decl = ExprInstruction.UnwindExpr(expr);
+        assert(!isNull(decl), 'declaration cannot be null');
+        
+        let offset = 0;
+        if (decl.isParameter()) {
+            offset = VariableDeclInstruction.getParameterOffset(decl);
+        }
+
+        switch(determMemoryLocation(decl)) {
+            case EMemoryLocation.k_Input:
+                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                    icode(EOperation.k_I32StoreInput, offset + dst + i * 4, src);
+                }
+                break;
+            case EMemoryLocation.k_Registers:
+            default:
+                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                    icode(EOperation.k_I32MoveRegToReg, offset + dst + i * 4, src);
+                }
+        }
+    }
+
+    /** determines if the expression is in external memory or not  */
+    function isLoadRequired(expr: IExprInstruction): boolean {
+        const decl = ExprInstruction.UnwindExpr(expr);
+        assert(!isNull(decl), 'declaration cannot be null');
+        return determMemoryLocation(decl) != EMemoryLocation.k_Registers;
+    }
+
+
     /** resolve address => returns address of temprary result of expression */
-    function raddr(expr: IExprInstruction, depth: number = 0): number {
+    function raddr(expr: IExprInstruction, isLoadAllowed: boolean = true): number {
         switch (expr.instructionType) {
             case EInstructionTypes.k_InitExprInstruction:
                 {
@@ -309,7 +368,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     }
 
                     let arg = init.arguments[0];
-                    return raddr(arg, depth + 1);
+                    return raddr(arg);
                 }
                 break;
             case EInstructionTypes.k_IntInstruction:
@@ -318,17 +377,21 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IdExprInstruction:
                 {
                     let id = (expr as IIdExprInstruction);
-                    let addr = 0;
-                    assert(id.declaration.instructionType == EInstructionTypes.k_VariableDeclInstruction); // useless check?
+                    assert(id.declaration === ExprInstruction.UnwindExpr(id));
 
-                    if (id.declaration.isLocal() && !id.declaration.isParameter()) {
-                        addr = deref(sname.var(id.declaration as IVariableDeclInstruction));
+                    if (isLoadRequired(id)) {
+                        if (isLoadAllowed) {
+                            return load(id);
+                        }
+                        return 0;
                     }
 
-                    return preload(addr, depth, id, id.declaration.type.size, 0);
+                    // todo: add register based parameters support
+
+                    return deref(sname.var(id.declaration as IVariableDeclInstruction));
                 }
             case EInstructionTypes.k_ComplexExprInstruction:
-                return raddr((expr as IComplexExprInstruction).expr, 0 /* force load instruction */);
+                return raddr((expr as IComplexExprInstruction).expr);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
                     const arithExpr = expr as IArithmeticExprInstruction;
@@ -363,22 +426,24 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                         return REG_INVALID;
                     }
 
-                    let dest = alloca(arithExpr.type.size);
-                    icode(op, dest, raddr(arithExpr.left, 0 /* force load */), raddr(arithExpr.right, 0 /* force load */));
+                    const dest = alloca(arithExpr.type.size);
+                    icode(op, dest, raddr(arithExpr.left), raddr(arithExpr.right));
                     debug.map(arithExpr);
+                    debug.ns();
                     return dest;
                 }
                 break;
             case EInstructionTypes.k_CastExprInstruction:
                 {
                     const castExpr = expr as ICastExprInstruction;
+
                     if (castExpr.isUseless()) {
                         console.warn(`Useless cast found: ${castExpr.toCode()}`);
-                        return raddr(castExpr.expr, depth + 1);
+                        return raddr(castExpr.expr, isLoadAllowed);
                     }
 
-                    let srcType = castExpr.expr.type;
-                    let dstType = castExpr.type;
+                    const srcType = castExpr.expr.type;
+                    const dstType = castExpr.type;
 
                     let op: EOperation;
                     if (srcType.isEqual(T_FLOAT) && dstType.isEqual(T_INT)) {
@@ -391,23 +456,31 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                         return REG_INVALID;
                     }
 
-                    let dest = alloca(castExpr.type.size);
-                    icode(op, dest, raddr(castExpr.expr, 0 /* force load instruction */));
+                    const dest = alloca(castExpr.type.size);
+                    icode(op, dest, raddr(castExpr.expr));
                     debug.map(castExpr);
                     return dest;
                 }
                 break;
             case EInstructionTypes.k_PostfixPointInstruction:
                 {
-                    let point = expr as IPostfixPointInstruction;
-                    let postfix = point.postfix;
-                    let elementAddr = raddr(point.element, depth + 1);
+                    const point = expr as IPostfixPointInstruction;
+                    const postfix = point.postfix;
+                    const elementAddr = raddr(point.element, false);
+                    const { size, padding } = postfix.type;
 
-                    if (point.isConst() || true) { // todo: isConstExpr() method
+                    // Does expression have dynamic indexing?
+                    if (point.isConstExpr()) {
 
-                        elementAddr = preload(elementAddr, depth, point.element, postfix.type.size, postfix.type.padding);
-                        return elementAddr;
-                        // return elementAddr + padding;
+                        // If loading not allowed then we are inside the recursive call to calculate the final address
+                        // so in this case we just have to return address with padding added to it.
+                        if (isLoadAllowed) {
+                            if (isLoadRequired(point.element)) {
+                                return load(point.element, size, padding);
+                            }
+                        }
+
+                        return elementAddr + padding;
                     }
 
                     assert(false, 'not implemented!');
@@ -431,9 +504,6 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         }
     }
 
-    function $raddr (expr: IExprInstruction): number {
-        return 0;
-    }
 
     /**
      * Add referene of the local variable.
@@ -523,7 +593,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     translate(impl);
 
-                    return; 
+                    return;
                 }
             case EInstructionTypes.k_ExprStmtInstruction:
                 {
@@ -533,20 +603,19 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 }
             case EInstructionTypes.k_AssignmentExprInstruction:
                 {
-                    let assigment = instr as IAssignmentExprInstruction;
-                    assert(assigment.type.size % sizeof.i32() === 0);
-                    let nmove = assigment.type.size / sizeof.i32();
-                    let leftAddr = raddr(assigment.left, 1/* hack in order to avoid Load operation */);
-                    // todo: fix type of right expr!
-                    let rightAddr = raddr(assigment.right as IExprInstruction);
-                    for (let i = 0; i < nmove; ++ i) {
-                        // todo: check type of left expr and use 'store' insread of 'move' if needed
-                        if (ExprInstruction.UnwindExpr(assigment.left).isParameter()) {
-                            icode(EOperation.k_I32StoreInput, leftAddr + i * 4, rightAddr);
-                        } else {
-                            icode(EOperation.k_I32MoveRegToReg, leftAddr + i * 4, rightAddr);
-                        }
-                    }
+                    const assigment = instr as IAssignmentExprInstruction;
+                    const size = assigment.type.size;
+                    assert(size % sizeof.i32() === 0);
+
+                    // left address can be both from the registers and in the external memory
+                    const leftAddr = raddr(assigment.left, false);
+
+                    assert(Instruction.isExpression(assigment.right));
+                    // right address always from the registers
+                    const rightAddr = raddr(<IExprInstruction>assigment.right);
+
+                    store(assigment.left, leftAddr, rightAddr, size);
+
                     debug.map(assigment);
                     debug.ns();
                     return;

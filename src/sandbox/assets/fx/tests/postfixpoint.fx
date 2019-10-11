@@ -6,7 +6,7 @@ struct T {
 
 // int main(void) {
 //     T t;
-int main(T t) {
+int main(inout T t) {
     t.x = 10.0;
     t.y = 20.0;
     t.z = t.x * t.y;

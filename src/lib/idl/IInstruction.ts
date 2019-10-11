@@ -408,6 +408,7 @@ export interface IExprInstruction extends ITypedInstruction {
     getEvalValue(): any;
 
     isConst(): boolean;
+    isConstExpr(): boolean;
 }
 
 

@@ -3,6 +3,7 @@
 /* tslint:disable:use-simple-attributes */
 /* tslint:disable:react-a11y-event-has-role */
 /* tslint:disable:no-for-in */
+/* tslint:disable:cyclomatic-complexity */
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { ComplexTypeInstruction } from '@lib/fx/instructions/ComplexTypeInstruction';

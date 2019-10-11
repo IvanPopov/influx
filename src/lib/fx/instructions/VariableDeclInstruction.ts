@@ -123,7 +123,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return !!(this._usageFlags & EVariableUsageFlags.k_Local);
     }
 
-
     isParameter(): boolean {
         return !!(this._usageFlags & EVariableUsageFlags.k_Argument);
     }
@@ -208,7 +207,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
      * @param decl Variable declaraion (decl.isParameter() must be true).
      * @returns Serial number of the declaration among the function parameters or -1 otherwise.
      */
-    static GetParameterIndex(decl: IVariableDeclInstruction): number {
+    static getParameterIndex(decl: IVariableDeclInstruction): number {
         if (!decl.isParameter()) {
             console.error('invalid call.');
             return -1;
@@ -221,13 +220,14 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     /**
      * @returns Offset in bytes from the beginning of the parameters' list.
      */
-    static GetParameterOffset(decl: IVariableDeclInstruction): number {
+    static getParameterOffset(decl: IVariableDeclInstruction): number {
+        // todo: add support for 'inout', 'out' usages 
         if (!decl.isParameter()) {
             console.error('invalid call.');
             return 0;
         }
         
-        let idx = VariableDeclInstruction.GetParameterIndex(decl);
+        let idx = VariableDeclInstruction.getParameterIndex(decl);
         let offset = 0;
         for (let i = 0; i < idx; ++i) {
             offset += (<IFunctionDefInstruction>decl.parent).paramList[i].type.size;

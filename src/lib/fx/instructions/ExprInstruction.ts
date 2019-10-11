@@ -32,6 +32,11 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
         return false;
     }
 
+    isConstExpr(): boolean {
+        // todo: implement it properly
+        return true;
+    }
+
     /**
      * unwind operation returns declaration in case of correct l-value expression;
      */
