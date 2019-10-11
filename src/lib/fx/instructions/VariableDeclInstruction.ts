@@ -210,11 +210,29 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
      */
     static GetParameterIndex(decl: IVariableDeclInstruction): number {
         if (!decl.isParameter()) {
+            console.error('invalid call.');
             return -1;
         }
         // all parameters must be a children on function definition!
         assert(decl.parent.instructionType === EInstructionTypes.k_FunctionDefInstruction);
         return (<IFunctionDefInstruction>decl.parent).paramList.indexOf(decl);
+    }
+
+    /**
+     * @returns Offset in bytes from the beginning of the parameters' list.
+     */
+    static GetParameterOffset(decl: IVariableDeclInstruction): number {
+        if (!decl.isParameter()) {
+            console.error('invalid call.');
+            return 0;
+        }
+        
+        let idx = VariableDeclInstruction.GetParameterIndex(decl);
+        let offset = 0;
+        for (let i = 0; i < idx; ++i) {
+            offset += (<IFunctionDefInstruction>decl.parent).paramList[i].type.size;
+        }
+        return offset;
     }
 }
 

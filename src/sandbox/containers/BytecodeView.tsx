@@ -137,7 +137,9 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
             case EOperation.k_I32LoadConst:
+            case EOperation.k_I32LoadInput:
             case EOperation.k_I32MoveRegToReg:
+            case EOperation.k_I32StoreInput:
                 args.length = 2;
                 break;
             case EOperation.k_Ret:
@@ -151,9 +153,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 <Table.Cell
                     style={ this.props.options.colorize ?
                         {
-                            padding: '0.2em 0.7em',
+                            padding: '0.2em 0',
                             opacity: 0.5,
-                            background: DistinctColor.make(cdlView.resolvePcColor(i)).toRGBAString()
+                            background: DistinctColor.make(cdlView.resolvePcColor(i)).toRGBAString(),
+                            width: '4px'
                         } : null
                     }></Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>

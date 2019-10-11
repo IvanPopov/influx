@@ -4,8 +4,9 @@ struct T {
     float z;
 };
 
-int main(void) {
-    T t;
+// int main(void) {
+//     T t;
+int main(T t) {
     t.x = 10.0;
     t.y = 20.0;
     t.z = t.x * t.y;

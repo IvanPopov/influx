@@ -14,6 +14,8 @@ import ConstanPool from "@lib/fx/bytecode/ConstantPool";
 import debugLayout, { CdlRaw } from "@lib/fx/bytecode/DebugLayout";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import sizeof from "@lib/fx/bytecode/sizeof";
+import { VariableDeclInstruction } from "../instructions/VariableDeclInstruction";
+import { ExprInstruction } from "../instructions/ExprInstruction";
 
 enum EErrors {
     k_UnsupportedConstantType,
@@ -209,6 +211,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
                         // constants.checkInt32(i32) => returns address in global memory
+                        // todo: remove last arument!
                         icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32), sizeof.i32());
                         debug.map(lit);
 
@@ -223,6 +226,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let r = deref(sname.f32(f32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.f32());
+                        // todo: remove last arument!
                         icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
                         debug.map(lit);
 
@@ -265,8 +269,36 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         instructions.add(code, args);
     }
 
+    function preload(addr, depth, expr, size, padding) {
+        if (depth == 0) {
+            let decl = ExprInstruction.UnwindExpr(expr);
+
+            if (decl.isLocal() && !decl.isParameter()) {
+                // nothing todo
+            }
+
+            if (decl.isParameter()) {
+                if (callstack.depth == 1) {
+                    let paramOffset = VariableDeclInstruction.GetParameterOffset(decl);
+                    let dest = alloca(size);
+                    assert(size === 4);
+                    icode(EOperation.k_I32LoadInput, dest, paramOffset + padding);
+                    return dest;
+                } else {
+                    assert(false, 'unsupported');
+                }
+            }
+
+            if (decl.isGlobal()) {
+                assert(false);
+            }
+        }
+
+        return addr + padding;
+    }
+
     /** resolve address => returns address of temprary result of expression */
-    function raddr(expr: IExprInstruction): number {
+    function raddr(expr: IExprInstruction, depth: number = 0): number {
         switch (expr.instructionType) {
             case EInstructionTypes.k_InitExprInstruction:
                 {
@@ -277,7 +309,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     }
 
                     let arg = init.arguments[0];
-                    return raddr(arg);
+                    return raddr(arg, depth + 1);
                 }
                 break;
             case EInstructionTypes.k_IntInstruction:
@@ -286,11 +318,17 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IdExprInstruction:
                 {
                     let id = (expr as IIdExprInstruction);
+                    let addr = 0;
                     assert(id.declaration.instructionType == EInstructionTypes.k_VariableDeclInstruction); // useless check?
-                    return deref(sname.var(id.declaration as IVariableDeclInstruction));
+
+                    if (id.declaration.isLocal() && !id.declaration.isParameter()) {
+                        addr = deref(sname.var(id.declaration as IVariableDeclInstruction));
+                    }
+
+                    return preload(addr, depth, id, id.declaration.type.size, 0);
                 }
             case EInstructionTypes.k_ComplexExprInstruction:
-                return raddr((expr as IComplexExprInstruction).expr);
+                return raddr((expr as IComplexExprInstruction).expr, 0 /* force load instruction */);
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
                     const arithExpr = expr as IArithmeticExprInstruction;
@@ -326,7 +364,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     }
 
                     let dest = alloca(arithExpr.type.size);
-                    icode(op, dest, raddr(arithExpr.left), raddr(arithExpr.right));
+                    icode(op, dest, raddr(arithExpr.left, 0 /* force load */), raddr(arithExpr.right, 0 /* force load */));
                     debug.map(arithExpr);
                     return dest;
                 }
@@ -336,7 +374,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     const castExpr = expr as ICastExprInstruction;
                     if (castExpr.isUseless()) {
                         console.warn(`Useless cast found: ${castExpr.toCode()}`);
-                        return raddr(castExpr.expr);
+                        return raddr(castExpr.expr, depth + 1);
                     }
 
                     let srcType = castExpr.expr.type;
@@ -354,30 +392,35 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     }
 
                     let dest = alloca(castExpr.type.size);
-                    icode(op, dest, raddr(castExpr.expr));
+                    icode(op, dest, raddr(castExpr.expr, 0 /* force load instruction */));
                     debug.map(castExpr);
                     return dest;
                 }
                 break;
             case EInstructionTypes.k_PostfixPointInstruction:
                 {
-                    const point = expr as IPostfixPointInstruction;
-                    const elementAddr = raddr(point.element);
-                    const padding = point.postfix.type.padding;
+                    let point = expr as IPostfixPointInstruction;
+                    let postfix = point.postfix;
+                    let elementAddr = raddr(point.element, depth + 1);
 
-                    if (point.isConst() || true) { // todo
-                        return elementAddr + padding;
+                    if (point.isConst() || true) { // todo: isConstExpr() method
+
+                        elementAddr = preload(elementAddr, depth, point.element, postfix.type.size, postfix.type.padding);
+                        return elementAddr;
+                        // return elementAddr + padding;
                     }
 
-                    // TOOD: add support for move_reg_ptr, move_ptr_ptr
-                    if (padding > 0) {
-                        const postfixReg = rconst_addr(padding);     // write element's padding to register
-                        const elementReg = rconst_addr(elementAddr); // write element's addr to register
-                        const destReg = alloca(sizeof.addr());
-                        icode(EOperation.k_I32Add, destReg, elementReg, postfixReg);
-                        debug.map(point);
-                        return destReg; // << !!!! return addr!!!
-                    }
+                    assert(false, 'not implemented!');
+
+                    // TOOD: add support for move_reg_ptr, move_ptr_ptr, move_ptr_reg
+                    // if (padding > 0) {
+                    //     const postfixReg = rconst_addr(padding);     // write element's padding to register
+                    //     const elementReg = rconst_addr(elementAddr); // write element's addr to register
+                    //     const destReg = alloca(sizeof.addr());
+                    //     icode(EOperation.k_I32Add, destReg, elementReg, postfixReg);
+                    //     debug.map(point);
+                    //     return destReg; // << !!!! return addr!!!
+                    // }
 
                     return elementAddr;
                 }
@@ -386,6 +429,10 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
                 return REG_INVALID;
         }
+    }
+
+    function $raddr (expr: IExprInstruction): number {
+        return 0;
     }
 
     /**
@@ -398,6 +445,10 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         symbolTable[sname] = r;
     }
 
+    /**
+     * @returns Register address of variable/constant or REG_INVALID.
+     * @param sname 
+     */
     function deref(sname: string): number {
         // is zero register available?
         return isDef(symbolTable[sname]) ? symbolTable[sname] : REG_INVALID;
@@ -472,7 +523,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     translate(impl);
 
-                    return;
+                    return; 
                 }
             case EInstructionTypes.k_ExprStmtInstruction:
                 {
@@ -485,12 +536,16 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let assigment = instr as IAssignmentExprInstruction;
                     assert(assigment.type.size % sizeof.i32() === 0);
                     let nmove = assigment.type.size / sizeof.i32();
-                    let leftAddr = raddr(assigment.left);
+                    let leftAddr = raddr(assigment.left, 1/* hack in order to avoid Load operation */);
                     // todo: fix type of right expr!
                     let rightAddr = raddr(assigment.right as IExprInstruction);
                     for (let i = 0; i < nmove; ++ i) {
                         // todo: check type of left expr and use 'store' insread of 'move' if needed
-                        icode(EOperation.k_I32MoveRegToReg, leftAddr + i * 4, rightAddr);
+                        if (ExprInstruction.UnwindExpr(assigment.left).isParameter()) {
+                            icode(EOperation.k_I32StoreInput, leftAddr + i * 4, rightAddr);
+                        } else {
+                            icode(EOperation.k_I32MoveRegToReg, leftAddr + i * 4, rightAddr);
+                        }
                     }
                     debug.map(assigment);
                     debug.ns();
@@ -518,7 +573,7 @@ export function translate(...argv): ISubProgram {
     if (isString(argv[0])) {
         let fname = argv[0];
         let scope = argv[1];
-        func = scope.findFunction(fname, []);
+        func = scope.findFunction(fname, null);
     } else {
         func = argv[0];
     }

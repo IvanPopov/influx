@@ -1,7 +1,8 @@
 export enum EOperation {
     // note: assuming that Load is 32bit and Move is 32bit too
     k_I32LoadConst,
-    // k_LoadInput,
+    k_I32LoadInput,
+    k_I32StoreInput,
 
     k_I32MoveRegToReg,
 
