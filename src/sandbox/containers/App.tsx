@@ -103,35 +103,14 @@ class App extends React.Component<IAppProps> {
         };
     }
 
-    handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
-    hideFileBrowser = () => this.setState({ showFileBrowser: false })
 
-    compile(force: boolean = false) {
-        const { state, props } = this;
-
-        if (!isNull(state.bc) && !force) {
-            return;
-        }
-
-        if (!isNull(props.sourceFile.root)) {
-            this.setState({ bc: Bytecode.translate(state.entryPoint, props.sourceFile.root.scope) });
-        }
-    }
-
-    setEntryPoint(val: string) {
-        this.setState({ entryPoint: val, bc: null });
-    }
-
-    setAutocompile(val: boolean) {
-        this.setState({ autocompile: val });
-    }
-
-    static getDerivedStateFromProps(props, state) {
+    static getDerivedStateFromProps(props: IAppProps, state) {
+        const nextRoot = props.sourceFile.root;
+        const contentChanged = !(state.prevRoot == nextRoot);
         let stateDiff = null;
-        let nextRoot = props.sourceFile.root;
-        let contentChanged = !(state.prevRoot == nextRoot);
 
         if (contentChanged) {
+
             stateDiff = { prevRoot: nextRoot };
         }
 
@@ -145,7 +124,60 @@ class App extends React.Component<IAppProps> {
             console.log('bytecode has been updated');
         }
 
+        // if (!stateDiff || isNull(stateDiff.bc)) {
+        //     props.actions.removeMarkerByType('line');
+        // }
+
         return stateDiff;
+    }
+
+
+    handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
+    hideFileBrowser = () => this.setState({ showFileBrowser: false })
+
+    compile(force: boolean = false) {
+        const { state, props } = this;
+
+        if (!isNull(state.bc) && !force) {
+            return;
+        }
+
+        if (!isNull(props.sourceFile.root)) {
+            props.actions.removeMarkerByType('line');
+
+            const bc = Bytecode.translate(state.entryPoint, props.sourceFile.root.scope);
+            const fn = props.sourceFile.root.scope.findFunction(state.entryPoint, null);
+
+            if (fn && bc) {
+                const from = fn.sourceNode.loc.start.line;
+                const to = fn.sourceNode.loc.end.line;
+
+                const cdl = cdlview(bc.cdl);
+
+                for (let ln = from; ln <= to; ++ ln) {
+                    const color = cdl.resolveLineColor(ln);
+                    if (color !== 0) {
+                        // console.log(ln, color, fn.sourceNode.loc);
+                        props.actions.addMarker({
+                            name: `ln-${ln}`,
+                            range: { start: { file: null, line: ln, column: 0 }, end: null },
+                            type: 'line',
+                            payload: { color }
+                        });
+                    }
+                }
+            }
+
+            this.setState({ bc });
+        }
+    }
+
+    setEntryPoint(val: string) {
+        this.setState({ entryPoint: val, bc: null });
+    }
+
+    setAutocompile(val: boolean) {
+        this.setState({ autocompile: val });
     }
 
 
@@ -298,7 +330,7 @@ class App extends React.Component<IAppProps> {
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceEditor2
                                         name='source-code'
-                                        validateBreakpoint={ line => this.validateBreakpoint(line) }
+                                        cdl={ cdlview(this.state.bc ? this.state.bc.cdl : null) }
                                     />
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
@@ -357,6 +389,7 @@ class App extends React.Component<IAppProps> {
             </div>
         );
     }
+    
 }
 
 

@@ -39,7 +39,7 @@ class DistinctColor {
     // }
 
     pickNext(): number {
-        this._curIdx = (this._curIdx++) % DistinctColor.list.length;
+        this._curIdx = (this._curIdx + 1) % DistinctColor.list.length;
         return this.value();
     }
 }
@@ -90,8 +90,9 @@ function debugLine(pc: PC) {
         let line = -1;
         let color = new DistinctColor;
         for (let entry of layout) {
-            if (entry.line != line && entry.line) {
+            if (entry.line && entry.line !== line) {
                 color.pickNext();
+                line = entry.line;
             }
             entry.color = color.value();
         }
@@ -189,7 +190,10 @@ type Color = number;
  * Code Debug Layout View.
  */
 export function cdlview(cdlRaw: CdlRaw) {
-    
+    if (isNull(cdlRaw)) {
+        return null;
+    }
+
     const { line, info } = cdlRaw;
 
     /**
@@ -216,14 +220,20 @@ export function cdlview(cdlRaw: CdlRaw) {
 
 
     function resolvePcColor(pc: number): Color {
-        let rec = line.layout.find(r => r.pc == pc);
-        return (rec && rec.color) || 0xffffff;
+        return line.layout[pc] ? line.layout[pc].color : 0xffffff;
+    }
+
+    function resolveLineColor(ln: number) {
+        let rec = line.layout.find(r => r.line === ln);
+        return rec ? rec.color : 0;
     }
     
+
     return {
         resolveFileLocation,
         resolveBreakpointLocation,
-        resolvePcColor
+        resolvePcColor,
+        resolveLineColor
     }
 }
 

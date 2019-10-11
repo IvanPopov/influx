@@ -60,6 +60,10 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } };
     },
 
+    removeMarkerByType(type: string) {
+        return { type: evt.SOURCE_CODE_REMOVE_MARKER_BY_TYPE, payload: { type } };
+    },
+
     //
     //
     //

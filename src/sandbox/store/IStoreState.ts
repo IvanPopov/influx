@@ -4,8 +4,9 @@ import { IScope, IInstructionCollector } from '@lib/idl/IInstruction';
 
 export interface IMarker {
     range: IRange;
-    type: 'error' | 'marker';
+    type: 'error' | 'marker' | 'line';
     tooltip?: string;
+    payload?: Object;
 }
 
 export interface IFileState {
@@ -16,7 +17,7 @@ export interface IFileState {
     parseTree: IParseTree;          // syntax analysis' results
     scope: IScope;                  // semantic analysis' results
     root: IInstructionCollector;    // semantic analysis' results
-    
+
     markers: IMap<IMarker>;
     breakpoints: number[];
 }

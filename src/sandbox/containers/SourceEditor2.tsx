@@ -1,3 +1,11 @@
+/* tslint:disable:no-for-in */
+/* tslint:disable:forin */
+
+import { deepEqual, isNull } from '@lib/common';
+import { cdlview } from '@lib/fx/bytecode/DebugLayout';
+import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
+import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { mapProps } from '@sandbox/reducers';
@@ -9,10 +17,6 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { IScope, ETechniqueType } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
-import { deepEqual, isNull } from '@lib/common';
-import { IRange, IParseNode } from '@lib/idl/parser/IParser';
 
 export const styles = {
     yellowMarker: {
@@ -32,8 +36,30 @@ export const styles = {
 
     breakpoint: {
         background: 'red'
-    }
-}
+    },
+
+    // todo: remove this hack
+    [`cc_${0xe6194b}`]: { opacity: 0.3, backgroundColor: '#e6194b' },
+    [`cc_${0x3cb44b}`]: { opacity: 0.3, backgroundColor: '#3cb44b' },
+    [`cc_${0xffe119}`]: { opacity: 0.3, backgroundColor: '#ffe119' },
+    [`cc_${0x4363d8}`]: { opacity: 0.3, backgroundColor: '#4363d8' },
+    [`cc_${0xf58231}`]: { opacity: 0.3, backgroundColor: '#f58231' },
+    [`cc_${0x911eb4}`]: { opacity: 0.3, backgroundColor: '#911eb4' },
+    [`cc_${0x46f0f0}`]: { opacity: 0.3, backgroundColor: '#46f0f0' },
+    [`cc_${0xf032e6}`]: { opacity: 0.3, backgroundColor: '#f032e6' },
+    [`cc_${0xbcf60c}`]: { opacity: 0.3, backgroundColor: '#bcf60c' },
+    [`cc_${0xfabebe}`]: { opacity: 0.3, backgroundColor: '#fabebe' },
+    [`cc_${0x008080}`]: { opacity: 0.3, backgroundColor: '#008080' },
+    [`cc_${0xe6beff}`]: { opacity: 0.3, backgroundColor: '#e6beff' },
+    [`cc_${0x9a6324}`]: { opacity: 0.3, backgroundColor: '#9a6324' },
+    [`cc_${0xfffac8}`]: { opacity: 0.3, backgroundColor: '#fffac8' },
+    [`cc_${0x800000}`]: { opacity: 0.3, backgroundColor: '#800000' },
+    [`cc_${0xaaffc3}`]: { opacity: 0.3, backgroundColor: '#aaffc3' },
+    [`cc_${0x808000}`]: { opacity: 0.3, backgroundColor: '#808000' },
+    [`cc_${0xffd8b1}`]: { opacity: 0.3, backgroundColor: '#ffd8b1' },
+    [`cc_${0x000075}`]: { opacity: 0.3, backgroundColor: '#000075' },
+    [`cc_${0x808080}`]: { opacity: 0.3, backgroundColor: '#808080' }
+};
 
 let timer = (delay) => new Promise(done => { setTimeout(done, delay) });
 
@@ -58,7 +84,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
         let sourceNode: IParseNode;
 
         if (!isNull(scope)) {
-            for (let techniqueName in scope.techniqueMap) {
+            for (const techniqueName in scope.techniqueMap) {
                 const technique = scope.techniqueMap[techniqueName];
                 if (technique.type == ETechniqueType.k_PartFx) {
                     const partFx = technique as IPartFxInstruction;
@@ -145,10 +171,14 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
     name?: string,
-
-    validateBreakpoint: (line: number) => number;// todo: remove it;
-
     actions: typeof sourceActions;
+
+    cdlView: ReturnType<typeof cdlview>;
+}
+
+
+export interface ISourceEditorState {
+    showWhitespaces: boolean;
 }
 
 interface IMarginData {
@@ -159,10 +189,19 @@ interface IMarginData {
     offsetX: number;
 }
 
+
+// function colorToHtmlString(val: number) {
+//     let r = ((val >> 16) & 0xff);
+//     let g = ((val >>  8) & 0xff);
+//     let b = ((val >>  0) & 0xff);
+//     return `rgb(${r}, ${g}, ${b})`;
+// }
+
+
 @injectSheet(styles)
 class SourceEditor extends React.Component<ISourceEditorProps> {
 
-    state = {
+    state: ISourceEditorState = {
         showWhitespaces: false,
     };
 
@@ -175,25 +214,39 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         const { props } = this;
         const { classes } = props;
 
-        let decorations: monaco.editor.IModelDeltaDecoration[] = [];
+        const decorations: monaco.editor.IModelDeltaDecoration[] = [];
 
-        let cls = {
-            'error': classes.errorMarker,
-            'warning': classes.warningMarker
-        }
+        const cls = {
+            error: classes.errorMarker,
+            warning: classes.warningMarker
+        };
 
         for (let key in props.markers) {
-            let { range, type, tooltip, range: { start, end } } = props.markers[key];
-            if (!tooltip) {
+            let { range, type, tooltip, range: { start, end }, payload } = props.markers[key];
+            if (!tooltip && type === 'marker') {
                 decorations.push({
                     range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
                     options: { inlineClassName: classes.yellowMarker },
                 });
             } else {
-                decorations.push({
-                    range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
-                    options: { className: cls[type], hoverMessage: { value: tooltip } },
-                });
+                switch(type) {
+                    case 'error':
+                        decorations.push({
+                            range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
+                            options: { className: cls[type], hoverMessage: { value: tooltip } },
+                        });
+                        break;
+                    case 'line':
+                        decorations.push({
+                            range: new monaco.Range(start.line + 1, 0, start.line + 1, 0),
+                            options: {
+                                isWholeLine: true,
+                                className: classes[`cc_${payload['color']}`]
+                            }
+                        });
+                        break;
+                    default:
+                }
             }
         }
 
@@ -215,7 +268,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     componentDidUpdate() {
         this.updateDecorations();
-        // this.editor.render();
     }
 
     @autobind
@@ -240,7 +292,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             let { lineNumber } = e.target.position;
             let { breakpoints } = props;
 
-            lineNumber = props.validateBreakpoint(lineNumber - 1);
+            lineNumber = props.cdlView.resolveBreakpointLocation(lineNumber - 1);
             if (lineNumber == -1) {
                 return;
             }
@@ -257,8 +309,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         // console.log('editor did mount!');
 
 
-        // console.log(provider);
-        // console.log(editor);
     }
 
     @autobind
@@ -271,7 +321,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             // this.provider = null;
         }
         this.props.actions.setContent(content);
-        // console.log('await setContent()', Date.now() - begin);
     }
 
     get editor(): monaco.editor.ICodeEditor {
@@ -289,19 +338,20 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         return this.decorations;
     }
 
-    shouldComponentUpdate(nextProps, nextState) {
-        let renderRequired = this.props.content != nextProps.content ||
+    shouldComponentUpdate(nextProps: ISourceEditorProps, nextState: ISourceEditorState) {
+        const renderRequired = this.props.content !== nextProps.content ||
             !deepEqual(this.props.markers, nextProps.markers) ||
             !deepEqual(this.props.breakpoints, nextProps.breakpoints);
         // todo: add state checking
 
         if (nextProps.root && this.props.root != nextProps.root) {
             // console.log('codelens update required');
-            if (!this.provider)
+            if (!this.provider) {
                 this.provider = monaco.languages.registerCodeLensProvider(
                     '*',
                     new MyCodeLensProvider(() => this.props.scope)
                 );
+            }
         }
 
         return renderRequired;

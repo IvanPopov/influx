@@ -9,6 +9,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
+import { isNull } from '@lib/common';
 
 
 export interface IBytecodeViewProps extends IFileState {
@@ -68,9 +69,8 @@ const scode = (c: EOperation) => {
 
 function colorToHtmlString(val: number) {
     let r = ((val >> 16) & 0xff);
-    let g = ((val >>  8) & 0xff);
-    let b = ((val >>  0) & 0xff);
-    console.log(val.toString(16), `rgb(${r}, ${g}, ${b})`);
+    let g = ((val >> 8) & 0xff);
+    let b = ((val >> 0) & 0xff);
     return `rgb(${r}, ${g}, ${b})`;
 }
 
@@ -85,12 +85,11 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         const { props } = this;
         const { code } = props;
 
-        if (!code) {
+        if (isNull(code)) {
             return null;
         }
 
         const chunks = VM.decodeChunks(code);
-
         const ilist = VM.decodeCodeChunk(chunks[EChunkType.k_Code]);
 
         return (
@@ -134,7 +133,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         console.log(this.state.cdlView.resolveFileLocation(pc));
     }
 
-    hideSourceLine(oc: number) { 
+    hideSourceLine(oc: number) {
 
     }
 
@@ -142,7 +141,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         const i = this.state.count++;
         const { cdlView } = this.state;
 
-        switch(code) {
+        switch (code) {
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
             case EOperation.k_I32LoadConst:
@@ -157,7 +156,14 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         return (
             <Table.Row key={ `op-${code}-${i}` } onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
-                <Table.Cell style={ { padding: '0.2em 0.7em', background: colorToHtmlString(cdlView.resolvePcColor(i)) } }></Table.Cell>
+                <Table.Cell
+                    style={
+                        {
+                            padding: '0.2em 0.7em',
+                            opacity: 0.5,
+                            background: colorToHtmlString(cdlView.resolvePcColor(i))
+                        }
+                    }></Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ args.join(' ') }</Table.Cell>

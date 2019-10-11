@@ -25,15 +25,16 @@ export interface IMarkerDesc extends IMarker {
     name: string;
 }
 
-export type ISourceCodeAddMarker        = IAction<typeof evt.SOURCE_CODE_ADD_MARKER, IMarkerDesc>;
-export type ISourceCodeRemoveMarker     = IAction<typeof evt.SOURCE_CODE_REMOVE_MARKER, { name: string }>;
-export type ISourceCodeAddBreakpoint    = IAction<typeof evt.SOURCE_CODE_ADD_BREAKPOINT, { line: number }>;
-export type ISourceCodeRemoveBreakpoint    = IAction<typeof evt.SOURCE_CODE_REMOVE_BREAKPOINT, { line: number }>;
+export type ISourceCodeAddMarker            = IAction<typeof evt.SOURCE_CODE_ADD_MARKER, IMarkerDesc>;
+export type ISourceCodeRemoveMarker         = IAction<typeof evt.SOURCE_CODE_REMOVE_MARKER, { name: string }>;
+export type ISourceCodeRemoveMarkerByType   = IAction<typeof evt.SOURCE_CODE_REMOVE_MARKER_BY_TYPE, { type: string }>;
+export type ISourceCodeAddBreakpoint        = IAction<typeof evt.SOURCE_CODE_ADD_BREAKPOINT, { line: number }>;
+export type ISourceCodeRemoveBreakpoint     = IAction<typeof evt.SOURCE_CODE_REMOVE_BREAKPOINT, { line: number }>;
 
-export type ISourceFileActions = 
-    ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | 
-    ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker | 
-    ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete | 
+export type ISourceFileActions =
+    ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed |
+    ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker | ISourceCodeRemoveMarkerByType |
+    ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
     ISourceCodeAnalysisComplete;
 
 //

@@ -1,6 +1,6 @@
 import { assert } from '@lib/common';
-import { SOURCE_CODE_ADD_BREAKPOINT, SOURCE_CODE_ADD_MARKER, SOURCE_CODE_MODIFED, SOURCE_CODE_PARSING_COMPLETE, SOURCE_CODE_REMOVE_BREAKPOINT, SOURCE_CODE_REMOVE_MARKER, SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, SOURCE_CODE_ANALYSIS_COMPLETE } from '@sandbox/actions/ActionTypeKeys';
-import { ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeParsingComplete, ISourceCodeModified, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAnalysisComplete } from '@sandbox/actions/ActionTypes';
+import { SOURCE_CODE_ADD_BREAKPOINT, SOURCE_CODE_ADD_MARKER, SOURCE_CODE_MODIFED, SOURCE_CODE_PARSING_COMPLETE, SOURCE_CODE_REMOVE_BREAKPOINT, SOURCE_CODE_REMOVE_MARKER, SOURCE_FILE_LOADED, SOURCE_FILE_LOADING_FAILED, SOURCE_FILE_REQUEST, SOURCE_CODE_ANALYSIS_COMPLETE, SOURCE_CODE_REMOVE_MARKER_BY_TYPE } from '@sandbox/actions/ActionTypeKeys';
+import { ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeParsingComplete, ISourceCodeModified, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAnalysisComplete, ISourceCodeRemoveMarkerByType } from '@sandbox/actions/ActionTypes';
 import { IFileState, IStoreState } from '@sandbox/store/IStoreState';
 import { handleActions } from "@sandbox/reducers/handleActions";
 
@@ -47,6 +47,16 @@ export default handleActions<IFileState, ISourceFileActions>({
             let markers = { ...state.markers };
             delete markers[action.payload.name];
             return { ...state, markers };
+    },
+
+    [ SOURCE_CODE_REMOVE_MARKER_BY_TYPE ]: (state, action: ISourceCodeRemoveMarkerByType) => {
+        const markers = {};
+        for (let name in state.markers) {
+            if (state.markers[name].type !== action.payload.type) {
+                markers[name] = state.markers[name];
+            }
+        }
+        return { ...state, markers };
     },
 
     //

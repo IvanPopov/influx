@@ -109,6 +109,10 @@ const updateSourceContentLogic = createLogic<IStoreState>({
     debounce: 500,
 
     async process({ getState, action, action$ }, dispatch, done) {
+
+        // todo: remove this hack
+        dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER_BY_TYPE, payload: { type: 'line' } });
+
         await processParsing(getState(), dispatch);
 
         // let begin = Date.now();
