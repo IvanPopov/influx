@@ -1,8 +1,8 @@
 import { assert } from '@lib/common';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeParsingComplete, ISourceCodeModified, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAnalysisComplete, IDebuggerStartDebug, IDebuggerActions, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
-import { IFileState, IStoreState, IDebuggerState } from '@sandbox/store/IStoreState';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
+import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
 
 const initialState: IFileState = {
@@ -35,7 +35,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
 
     [ evt.SOURCE_FILE_LOADING_FAILED ]: (state, action: ISourceFileLoadingFailed) =>
         ({ ...state, error: action.payload.error }),
-    
+
     [ evt.SOURCE_CODE_MODIFED ]: (state, action: ISourceCodeModified) => 
         ({ ...state, content: action.payload.content
             // , debugger: { entryPoint: null, runtime: null, ...state.debugger } 
@@ -55,7 +55,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
         ({ ...state, markers: { ...state.markers, [action.payload.name]: action.payload } }),
 
     [ evt.SOURCE_CODE_REMOVE_MARKER ]: (state, action: ISourceCodeRemoveMarker) => {
-            let markers = { ...state.markers };
+            const markers = { ...state.markers };
             delete markers[action.payload.name];
             return { ...state, markers };
     },
@@ -78,8 +78,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
     //
 
     [ evt.DEBUGGER_START_DEBUG ]: (state, action: IDebuggerStartDebug) => {
-        let options = state.debugger.options;
-        let { entryPoint, runtime } = action.payload;
+        const options = state.debugger.options;
+        const { entryPoint, runtime } = action.payload;
         return { ...state, debugger: { entryPoint, runtime, options }  };
     },
 
@@ -91,7 +91,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
     [ evt.DEBUGGER_OPTIONS_CHANGED ]: (state: IFileState, action: IDebuggerOptionsChanged) => {
         const options = { ...state.debugger.options, ...action.payload.options };
         const $debugger = { ...state.debugger, options };
-        console.log(JSON.stringify(options, null, '\t'));
+        // console.log(JSON.stringify(options, null, '\t'));
         return { ...state, debugger: $debugger };
     }
 

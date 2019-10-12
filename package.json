@@ -51,6 +51,7 @@
     "react-jss": "^8.6.1",
     "react-monaco-editor": "^0.31.0",
     "react-redux": "^7.0.3",
+    "react-router-dom": "^5.1.2",
     "react-swipeable-views": "^0.13.3",
     "redux": "^4.0.1",
     "redux-devtools-extension": "^2.13.8",

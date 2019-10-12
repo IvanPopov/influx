@@ -1,7 +1,5 @@
 /* tslint:disable:max-func-body-length */
-import { isNull } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
@@ -9,13 +7,13 @@ import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sa
 import { BytecodeView, ParserParameters, Playground, SourceEditor2 } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
+import autobind from 'autobind-decorator';
 import * as path from 'path';
 import * as React from 'react';
-import { createRef } from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Container, Grid, Header, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table, Dropdown } from 'semantic-ui-react';
-import autobind from 'autobind-decorator';
+import { HashRouter as Router, matchPath, NavLink, Route, Switch, Redirect } from 'react-router-dom';
+import { Button, Checkbox, Container, Dropdown, Grid, Header, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -78,8 +76,8 @@ export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
 const Version = (props) => {
     return (
         <div>
-            <Message warning={MODE != 'production'} size="tiny" compact className={props.classes.versionFix}>
-                {MODE != 'production' && <Icon name={'issue opened' as UnknownIcon} />}{MODE} | {BRANCH}-{VERSION}
+            <Message warning={ MODE != 'production' } size="tiny" compact className={ props.classes.versionFix }>
+                { MODE != 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
             </Message>
         </div>
     );
@@ -92,7 +90,7 @@ class App extends React.Component<IAppProps> {
         showFileBrowser: boolean;
     };
 
-    private entryPointRef = createRef<Input>();
+    private entryPointRef = React.createRef<Input>();
 
     constructor(props) {
         super(props);
@@ -165,142 +163,181 @@ class App extends React.Component<IAppProps> {
 
     render() {
         const { props, state, props: { sourceFile } } = this;
+        const $debugger = sourceFile.debugger;
 
         const analysisResults = [
             {
-                menuItem: (<Menu.Item key='playground'><Menu.Header>Playground</Menu.Header></Menu.Item>),
+                menuItem: {
+                    as: NavLink,
+                    content: (<Menu.Header>Playground</Menu.Header>),
+                    to: '/playground',
+                    exact: true,
+                    key: 'playground'
+                },
                 pane: (
-                    <Tab.Pane attached={false} key='playground-view'>
-                        <Header as='h4' dividing>
-                            <Icon name={'flame' as any} />
-                            <Header.Content>
-                                Playground
-                                <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
-                            </Header.Content>
-                        </Header>
-                        <Playground scope={props.sourceFile.scope} />
-                    </Tab.Pane>
+                    <Route path='/playground' exact>
+                        <Tab.Pane attached={ false } key='playground-view'>
+                            <Header as='h4' dividing>
+                                <Icon name={ 'flame' as any } />
+                                <Header.Content>
+                                    Playground
+                                    <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
+                                </Header.Content>
+                            </Header>
+                            <Playground scope={ props.sourceFile.scope } />
+                        </Tab.Pane>
+                    </Route>
                 )
             },
             {
-                menuItem: (<Menu.Item key='bytecode'><Menu.Header>Bytecode<br />Debugger</Menu.Header></Menu.Item>),
+                menuItem: {
+                    as: NavLink,
+                    content: (<Menu.Header>Bytecode<br />Debugger</Menu.Header>),
+                    to: '/bytecode',
+                    exact: true,
+                    key: 'bytecode'
+                },
                 pane: (
-                    <Tab.Pane attached={false} key='bytecode-view'>
-                        <Header as='h4' dividing>
-                            <Icon name='plug' />
-                            <Header.Content>
-                                Bytecode Debugger
-                            </Header.Content>
-                        </Header>
-                        <Table size='small' basic='very' compact='very'>
-                            <Table.Body>
-                                {/* todo: remove this padding hack */}
-                                <Table.Row style={{ paddingTop: 0 }}>
-                                    <Table.Cell>
-                                        <Input
-                                            fluid
-                                            size='small'
-                                            label='entry point'
-                                            placeholder={Bytecode.DEFAULT_ENTRY_POINT_NAME}
-                                            ref={this.entryPointRef}
-                                        />
-                                    </Table.Cell>
-                                    <Table.Cell >
-                                        <Button disabled={sourceFile.debugger.options.autocompile} onClick={this.compile} width={10} >Compile</Button>
-                                        &nbsp;
-                                        {/* <Checkbox
-                                            width={6}
-                                            label='auto compilation'
-                                            size='small'
+                    <Route path='/bytecode' exact>
+                        <Tab.Pane attached={ false } key='bytecode-view'>
+                            <Header as='h4' dividing>
+                                <Icon name='plug' />
+                                <Header.Content>
+                                    Bytecode Debugger
+                                </Header.Content>
+                            </Header>
+                            <Table size='small' basic='very' compact='very'>
+                                <Table.Body>
+                                    {/* todo: remove this padding hack */ }
+                                    <Table.Row style={ { paddingTop: 0 } }>
+                                        <Table.Cell>
+                                            <Input
+                                                fluid
+                                                size='small'
+                                                label='entry point'
+                                                placeholder={ Bytecode.DEFAULT_ENTRY_POINT_NAME }
+                                                ref={ this.entryPointRef }
+                                            />
+                                        </Table.Cell>
+                                        <Table.Cell >
+                                            <Button disabled={ $debugger.options.autocompile } onClick={ this.compile } width={ 10 } >Compile</Button>
+                                            &nbsp;
+                                            {/* <Checkbox
+                                                width={6}
+                                                label='auto compilation'
+                                                size='small'
 
-                                            onChange={(e, data) => this.setAutocompile(data.checked)}
-                                        /> */}
-                                        <Dropdown text='Options' pointing='left' >
-                                            <Dropdown.Menu>
-                                                <Dropdown.Item>
-                                                    <Checkbox label='auto compilation' size='small' 
-                                                    checked={ props.sourceFile.debugger.options.autocompile }
-                                                    onMouseDown ={e => this.setAutocompile(!props.sourceFile.debugger.options.autocompile)} />
-                                                </Dropdown.Item>
-                                                <Dropdown.Item>
-                                                    <Checkbox disabled label='no optimisations' size='small' checked/>
-                                                </Dropdown.Item>
-                                                <Dropdown.Item>
-                                                    <Checkbox label='colorize' size='small' 
-                                                    checked={ props.sourceFile.debugger.options.colorize }
-                                                    onMouseDown ={e => this.setBytecodeColorization(!props.sourceFile.debugger.options.colorize)} />
-                                                </Dropdown.Item>
-                                            </Dropdown.Menu>
-                                        </Dropdown>
-
-
-                                    </Table.Cell>
-                                </Table.Row>
-                            </Table.Body>
-                        </Table>
-                        {sourceFile.debugger.runtime ? (
-                            <div>
-                                {/* todo: move memory view inside bytecode view; */}
-                                <MemoryView
-                                    binaryData={sourceFile.debugger.runtime.constants.data.byteArray}
-                                    layout={sourceFile.debugger.runtime.constants.data.layout} />
-                                <BytecodeView  />
-                            </div>
-                        ) : null}
-                    </Tab.Pane>
+                                                onChange={(e, data) => this.setAutocompile(data.checked)}
+                                            /> */}
+                                            <Dropdown text='Options' pointing='left' >
+                                                <Dropdown.Menu>
+                                                    <Dropdown.Item>
+                                                        <Checkbox label='auto compilation' size='small'
+                                                            checked={ $debugger.options.autocompile }
+                                                            onMouseDown={ e => this.setAutocompile(!$debugger.options.autocompile) } />
+                                                    </Dropdown.Item>
+                                                    <Dropdown.Item>
+                                                        <Checkbox disabled label='no optimisations' size='small' checked />
+                                                    </Dropdown.Item>
+                                                    <Dropdown.Item>
+                                                        <Checkbox label='colorize' size='small'
+                                                            checked={ $debugger.options.colorize }
+                                                            onMouseDown={ e => this.setBytecodeColorization(!$debugger.options.colorize) } />
+                                                    </Dropdown.Item>
+                                                </Dropdown.Menu>
+                                            </Dropdown>
+                                        </Table.Cell>
+                                    </Table.Row>
+                                </Table.Body>
+                            </Table>
+                            { $debugger.runtime ? (
+                                <div>
+                                    {/* todo: move memory view inside bytecode view; */ }
+                                    <MemoryView
+                                        binaryData={ $debugger.runtime.constants.data.byteArray }
+                                        layout={ $debugger.runtime.constants.data.layout } />
+                                    <BytecodeView />
+                                </div>
+                            ) : null }
+                        </Tab.Pane>
+                    </Route>
                 )
             },
             {
-                menuItem: (<Menu.Item key='semantic-analysis'><Menu.Header>Semantics<br />Analyzer</Menu.Header></Menu.Item>),
+                menuItem: {
+                    as: NavLink,
+                    content: <Menu.Header>Semantic<br />Analyzer</Menu.Header>,
+                    to: '/program',
+                    exact: true,
+                    key: 'program'
+                },
                 pane: (
-                    <Tab.Pane attached={false} key='program-view'>
-                        <ProgramView
-                            onNodeOver={inst => this.highlightInstruction(inst, true)}
-                            onNodeOut={inst => this.highlightInstruction(inst, false)}
-                            onNodeClick={inst => { }}
-                        />
-                    </Tab.Pane>
+                    <Route path='/program' exact>
+                        <Tab.Pane attached={ false } key='program-view'>
+                            <ProgramView
+                                onNodeOver={ inst => this.highlightInstruction(inst, true) }
+                                onNodeOut={ inst => this.highlightInstruction(inst, false) }
+                                onNodeClick={ inst => { } }
+                            />
+                        </Tab.Pane>
+                    </Route>
                 )
             },
             {
-                menuItem: (<Menu.Item key='syntax-analysis'><Menu.Header>Syntax<br />Analyzer</Menu.Header></Menu.Item>),
+                menuItem: {
+                    as: NavLink,
+                    content: <Menu.Header>Syntax<br />Analyzer</Menu.Header>,
+                    to: '/ast',
+                    exact: true,
+                    key: 'ast'
+                },
                 pane: (
-                    <Tab.Pane attached={false} key='ast-view'>
-                        <ASTView
-                            onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
-                            onNodeOut={idx => this.highlightPNode(idx, null, false)}
-                        />
-                    </Tab.Pane>
+                    <Route path='/ast' exact>
+                        <Tab.Pane attached={ false } key='ast-view'>
+                            <ASTView
+                                onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
+                                onNodeOut={ idx => this.highlightPNode(idx, null, false) }
+                            />
+                        </Tab.Pane>
+                    </Route>
                 )
             }
         ];
+
+        const defaultActiveIndex = analysisResults.findIndex(pane => {
+            return !!matchPath(window.location.pathname, {
+                path: pane.menuItem.to,
+                exact: true
+            });
+        });
 
         const panes = [
             {
                 menuItem: (
                     <Menu.Item>
                         Source File
-                        <span style={{ fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' }}>
-                            &nbsp;|&nbsp;{path.basename(props.sourceFile.filename)}
+                        <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
+                            &nbsp;|&nbsp;{ path.basename(props.sourceFile.filename || '') }
                         </span>
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key='source' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}
+                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
                     // fixme: remove style from line below;
                     // as={ ({ ...props }) => <Container fluid { ...props } /> }
                     >
-                        <Grid divided={false}>
-                            <Grid.Row columns={2}>
-                                <Grid.Column computer='10' tablet='8' mobile='6' className={props.classes.leftColumnFix}>
+                        <Grid divided={ false }>
+                            <Grid.Row columns={ 2 }>
+                                <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceEditor2 name='source-code' />
                                 </Grid.Column>
-                                <Grid.Column computer='6' tablet='8' mobile='10' className={props.classes.rightColumnFix}>
-                                    <Container style={{ paddingTop: '15px' }}>
+                                <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
+                                    <Container style={ { paddingTop: '15px' } }>
                                         <Tab
-                                            menu={{ attached: false, secondary: true, pointing: false, size: 'mini' }}
-                                            panes={analysisResults}
-                                            renderActiveOnly={false} />
+                                            defaultActiveIndex={ defaultActiveIndex }
+                                            menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
+                                            panes={ analysisResults }
+                                            renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -311,44 +348,47 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Grammar',
                 render: () => (
-                    <Tab.Pane key='grammar' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
+                    <Tab.Pane key='grammar' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
                         <ParserParameters />
                     </Tab.Pane>
                 )
             },
             {
-                menuItem: (<Menu.Item key='ver' position='right' inverted disabled color='red'><Version classes={props.classes} /></Menu.Item>),
+                menuItem: (<Menu.Item key='ver' position='right' inverted disabled color='red'><Version classes={ props.classes } /></Menu.Item>),
                 render: () => null
             }
         ];
 
         return (
-            <div className={props.classes.mainContentHotfix}>
-                <Sidebar.Pushable>
-                    <Sidebar
-                        as={Segment}
-                        animation='overlay'
-                        // onHide={ this.hideFileBrowser }
-                        vertical
-                        visible={this.state.showFileBrowser}
-                        className={this.props.classes.fileBrowserSidebarHotfix}
-                    >
-                        <FileListView path='./assets' filters={['.fx']} onFileClick={(file) => { props.actions.openFile(file) }} />
-                    </Sidebar>
-                    <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
-                        {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */}
-                        <Tab menu={{ secondary: true, pointing: true }} panes={panes} renderActiveOnly={true}
-                            className={props.classes.topMenuFix} />
-                    </Sidebar.Pusher>
-                </Sidebar.Pushable>
+            <Router>
+                <div className={ props.classes.mainContentHotfix }>
+                    <Sidebar.Pushable>
+                        <Sidebar
+                            as={ Segment }
+                            animation='overlay'
+                            // onHide={ this.hideFileBrowser }
+                            vertical
+                            visible={ this.state.showFileBrowser }
+                            className={ this.props.classes.fileBrowserSidebarHotfix }
+                        >
+                            <FileListView path='./assets' filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
+                        </Sidebar>
+                        <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
+                            {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */ }
+                            <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ true }
+                                className={ props.classes.topMenuFix } />
+                        </Sidebar.Pusher>
+                    </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={props.classes.sidebarLeftHotfix}>
-                    <Menu.Item name='home' onClick={this.handleShowFileBrowser} >
-                        <Icon name={'three bars' as UnknownIcon} />
-                        File Browser
-                    </Menu.Item>
-                </Menu>
-            </div>
+                    <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
+                        <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
+                            <Icon name={ 'three bars' as UnknownIcon } />
+                            File Browser
+                        </Menu.Item>
+                    </Menu>
+                </div>
+                <Redirect from='/' exact to='/playground' />
+            </Router>
         );
     }
 
