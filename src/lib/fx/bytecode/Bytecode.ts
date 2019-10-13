@@ -648,6 +648,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                         icode(EOperation.k_I32MoveRegToReg, REG_RAX, raddr(ret.expr));
                         debug.map(ret.expr);
                         debug.ns();
+
                         icode(EOperation.k_Ret);
                         debug.map(ret);
                     }

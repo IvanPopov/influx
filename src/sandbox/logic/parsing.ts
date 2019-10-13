@@ -175,8 +175,12 @@ function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileStat
     const locList = [];
 
     if (fn && debuggerState.runtime) {
-        const from = fn.sourceNode.loc.start.line;
-        const to = fn.sourceNode.loc.end.line;
+        // const from = fn.sourceNode.loc.start.line;
+        // const to = fn.sourceNode.loc.end.line;
+
+        const from = 0;
+        const to = fileState.content.split('\n').length;
+
         const cdl = cdlview(debuggerState.runtime.cdl);
 
         for (let ln = from; ln <= to; ++ ln) {

@@ -65,12 +65,14 @@ function debugLine(pc: PC) {
     function dump() {
         let line = -1;
         let color = new DistinctColor;
+        let cache = {};
         for (let entry of layout) {
             if (entry.line && entry.line !== line) {
                 color.pickNext();
                 line = entry.line;
             }
-            entry.color = color.value();
+            cache[entry.line] = cache[entry.line] || color.value();
+            entry.color = cache[entry.line];
         }
         return { files, layout };
     }
