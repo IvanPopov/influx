@@ -1,9 +1,8 @@
-import { ILiteralInstruction, EInstructionTypes, IInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { ExprInstruction } from "./ExprInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { IInstructionSettings } from "./Instruction";
-import * as SystemScope from "../SystemScope";
+import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
+import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
+import { T_INT, SCOPE } from "@lib/fx/SystemScope";
+import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
+import { VariableTypeInstruction } from "@lib/fx/instructions/VariableTypeInstruction";
 
 export interface IIntInstructionSettings extends IInstructionSettings {
     value: string;
@@ -14,9 +13,11 @@ export class IntInstruction extends ExprInstruction implements ILiteralInstructi
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor({ value, ...settings }: IIntInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_IntInstruction, type: SystemScope.T_INT, ...settings });
-        
+    constructor({ value, scope, ...settings }: IIntInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_IntInstruction, 
+            // NOTE: type wraping is no really necessary, just for debug purposes 
+            type: VariableTypeInstruction.wrapAsConst(T_INT, SCOPE), scope, ...settings });
+
         this._value = ((<number><any>value) * 1);
     }
 

@@ -589,6 +589,7 @@ initSystemVariables();
 export const SCOPE = scope;
 
 export const T_VOID = scope.findType("void");
+export const T_STRING = scope.findType("string");
 
 export const T_FLOAT = scope.findType("float");
 export const T_FLOAT2 = scope.findType("float2");

@@ -639,4 +639,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
         return new VariableTypeInstruction({ type, scope });
     }
+
+    static wrapAsConst(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
+        return new VariableTypeInstruction({ type, scope, writable: false, usages: [ 'const' ] });
+    }
 }

@@ -1,9 +1,9 @@
-import { ISubProgram } from "@lib/fx/bytecode/Bytecode";
-import { IInstructionCollector, IScope } from "@lib/idl/IInstruction";
-import { EParserType, IParseTree } from "@lib/idl/parser/IParser";
-import * as evt from "@sandbox/actions/ActionTypeKeys";
-import { IDebuggerState, IMarker } from "@sandbox/store/IStoreState";
-import { MakeOptional } from "@lib/common";
+import { MakeOptional } from '@lib/common';
+import { IAnalyzeResult } from '@lib/fx/Analyzer';
+import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { EParserType, IParseTree } from '@lib/idl/parser/IParser';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
@@ -21,7 +21,7 @@ export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { content
 export type ISourceFileLoadingFailed = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
 export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { parseTree: IParseTree }>;
-export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { scope: IScope; root: IInstructionCollector; }>;
+export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: IAnalyzeResult }>;
 
 export interface IMarkerDesc extends IMarker {
     name: string;
@@ -42,10 +42,10 @@ export type ISourceFileActions =
 // debugger api
 //
 
-export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { entryPoint: string; }>;
+export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { entryPoint: string }>;
 export type IDebuggerReset = IAction<typeof evt.DEBUGGER_RESET, {}>;
-export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { entryPoint: string; runtime: ISubProgram; }>
-export type IDebuggerOptionsChanged = IAction<typeof evt.DEBUGGER_OPTIONS_CHANGED, { options: MakeOptional<IDebuggerState['options']>; }>
+export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { entryPoint: string; runtime: ISubProgram }>;
+export type IDebuggerOptionsChanged = IAction<typeof evt.DEBUGGER_OPTIONS_CHANGED, { options: MakeOptional<IDebuggerState['options']> }>;
 
 export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStartDebug | IDebuggerOptionsChanged;
 
@@ -53,9 +53,9 @@ export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStar
 // grammar api (simplified)
 //
 
-export type IGrammarFileSpecified = IAction<typeof evt.GRAMMAR_FILE_SPECIFIED, { filename: string; }>;
-export type IGrammarContentSpecified = IAction<typeof evt.GRAMMAR_CONTENT_SPECIFIED, { content: string; }>;
-export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { mode: number; type: EParserType; }>;
+export type IGrammarFileSpecified = IAction<typeof evt.GRAMMAR_FILE_SPECIFIED, { filename: string }>;
+export type IGrammarContentSpecified = IAction<typeof evt.GRAMMAR_CONTENT_SPECIFIED, { content: string }>;
+export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { mode: number; type: EParserType }>;
 
 
 export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;

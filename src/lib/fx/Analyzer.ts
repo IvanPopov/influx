@@ -705,12 +705,16 @@ function checkTwoOperandExprTypes(
     context: Context,
     operator: string,
     leftType: IVariableTypeInstruction,
-    rightType: IVariableTypeInstruction): IVariableTypeInstruction {
+    rightType: IVariableTypeInstruction,
+    leftSourceNode: IParseNode = leftType.sourceNode,
+    rightSourceNode: IParseNode = rightType.sourceNode): IVariableTypeInstruction {
 
     const isComplex = leftType.isComplex() || rightType.isComplex();
     const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
     const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
+
     const boolType = <IVariableTypeInstruction>T_BOOL;
+    // const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
 
     if (isArray || isSampler) {
         return null;
@@ -722,27 +726,27 @@ function checkTwoOperandExprTypes(
 
     if (isAssignmentOperator(operator)) {
         if (!leftType.writable) {
-            context.error(leftType.sourceNode, EErrors.InvalidTypeForWriting);
+            context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
             return null;
         }
 
         if (!rightType.readable) {
-            context.error(rightType.sourceNode, EErrors.InvalidTypeForReading);
+            context.error(rightSourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
 
         if (operator !== '=' && !leftType.readable) {
-            context.error(leftType.sourceNode, EErrors.InvalidTypeForReading);
+            context.error(leftSourceNode, EErrors.InvalidTypeForReading);
         }
     }
     else {
         if (!leftType.readable) {
-            context.error(leftType.sourceNode, EErrors.InvalidTypeForReading);
+            context.error(leftSourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
 
         if (!rightType.readable) {
-            context.error(rightType.sourceNode, EErrors.InvalidTypeForReading);
+            context.error(rightSourceNode, EErrors.InvalidTypeForReading);
             return null;
         }
     }
@@ -751,6 +755,7 @@ function checkTwoOperandExprTypes(
         if (operator === '=' && leftType.isEqual(rightType)) {
             return <IVariableTypeInstruction>leftType;
         }
+        // samplers and arrays can't be compared directly
         else if (isEqualOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
             return boolType;
         }
@@ -759,6 +764,7 @@ function checkTwoOperandExprTypes(
         }
     }
 
+    // FIXME: use operands' scope instead of system scope?
     const leftBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, SystemScope.SCOPE);
     const rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
 
@@ -1553,26 +1559,36 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
             const funcArguments = func.definition.paramList;
-
+            
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
+                    const decl = ExprInstruction.UnwindExpr(args[i]);
+                    if (isNull(decl)) {
+                        context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
+                        return null;
+                    }
                     if (!args[i].type.writable) {
-                        context.error(sourceNode, EErrors.InvalidTypeForWriting);
+                        context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
                         return null;
                     }
                 } else if (funcArguments[i].type.hasUsage('inout')) {
+                    const decl = ExprInstruction.UnwindExpr(args[i]);
+                    if (isNull(decl)) {
+                        context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
+                        return null;
+                    }
                     if (!args[i].type.writable) {
-                        context.error(sourceNode, EErrors.InvalidTypeForWriting);
+                        context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
                         return null;
                     }
 
                     if (!args[i].type.readable) {
-                        context.error(sourceNode, EErrors.InvalidTypeForReading);
+                        context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
                         return null;
                     }
                 } else {
                     if (!args[i].type.readable) {
-                        context.error(sourceNode, EErrors.InvalidTypeForReading);
+                        context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
                         return null;
                     }
                 }
@@ -1986,7 +2002,7 @@ function analyzeArithmeticExpr(context: Context, program: ProgramScope, sourceNo
     const leftType = <IVariableTypeInstruction>left.type;
     const rightType = <IVariableTypeInstruction>right.type;
 
-    const type = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+    const type = checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
 
     if (isNull(type)) {
         context.error(sourceNode, EErrors.InvalidArithmeticOperation, {
@@ -2020,7 +2036,7 @@ function analyzeRelationExpr(context: Context, program: ProgramScope, sourceNode
     const leftType = <IVariableTypeInstruction>left.type;
     const rightType = <IVariableTypeInstruction>right.type;
 
-    const exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+    const exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
 
     if (isNull(exprType)) {
         context.error(sourceNode, EErrors.InvalidRelationalOperation, {
@@ -2119,7 +2135,7 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
     let exprType: IVariableTypeInstruction = null;
 
     if (operator !== '=') {
-        exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType);
+        exprType = checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidArithmeticAssigmentOperation, {
                 operator: operator,
@@ -2131,6 +2147,7 @@ function analyzeAssignmentExpr(context: Context, program: ProgramScope, sourceNo
         exprType = rightType;
     }
 
+    // FIXME: show corrent source nodes for left and right expression.
     exprType = checkTwoOperandExprTypes(context, '=', leftType, exprType);
 
     if (isNull(exprType)) {

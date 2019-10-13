@@ -1,6 +1,10 @@
 import { assert } from '@lib/common';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug,
+    ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete,
+    ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
+    ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed,
+    ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -12,8 +16,7 @@ const initialState: IFileState = {
     markers: {},
     breakpoints: [],
     parseTree: null,
-    root: null,
-    scope: null,
+    analysis: null,
     debugger: {
         entryPoint: null,
         runtime: null,
@@ -36,16 +39,16 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
     [ evt.SOURCE_FILE_LOADING_FAILED ]: (state, action: ISourceFileLoadingFailed) =>
         ({ ...state, error: action.payload.error }),
 
-    [ evt.SOURCE_CODE_MODIFED ]: (state, action: ISourceCodeModified) => 
+    [ evt.SOURCE_CODE_MODIFED ]: (state, action: ISourceCodeModified) =>
         ({ ...state, content: action.payload.content
-            // , debugger: { entryPoint: null, runtime: null, ...state.debugger } 
+            // , debugger: { entryPoint: null, runtime: null, ...state.debugger } =
         }),
 
-    [ evt.SOURCE_CODE_PARSING_COMPLETE ]: (state, action: ISourceCodeParsingComplete) => 
+    [ evt.SOURCE_CODE_PARSING_COMPLETE ]: (state, action: ISourceCodeParsingComplete) =>
         ({ ...state, parseTree: action.payload.parseTree }),
 
-    [ evt.SOURCE_CODE_ANALYSIS_COMPLETE ]: (state, action: ISourceCodeAnalysisComplete) => 
-        ({ ...state, root: action.payload.root, scope: action.payload.scope }),
+    [ evt.SOURCE_CODE_ANALYSIS_COMPLETE ]: (state, action: ISourceCodeAnalysisComplete) =>
+        ({ ...state, analysis: action.payload.result }),
 
     //
     // markers
@@ -65,15 +68,15 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
     //
 
     [ evt.SOURCE_CODE_ADD_BREAKPOINT ]: (state, action: ISourceCodeAddBreakpoint) => {
-        assert(state.breakpoints.indexOf(action.payload.line) == -1);
+        assert(state.breakpoints.indexOf(action.payload.line) === -1);
         return ({ ...state, breakpoints: [ ...state.breakpoints, action.payload.line ] })
     },
 
     [ evt.SOURCE_CODE_REMOVE_BREAKPOINT ]: (state, action: ISourceCodeRemoveBreakpoint) => {
-            return { ...state, breakpoints: state.breakpoints.filter(ln => ln != action.payload.line) };
+            return { ...state, breakpoints: state.breakpoints.filter(ln => ln !== action.payload.line) };
     },
 
-    // 
+    //
     // debugger
     //
 

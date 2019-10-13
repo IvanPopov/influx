@@ -1,7 +1,7 @@
-import { IMap } from '@lib/idl/IMap';
-import { EParserType, IParseTree, IRange, IParserParams } from '@lib/idl/parser/IParser';
-import { IScope, IInstructionCollector } from '@lib/idl/IInstruction';
+import { IAnalyzeResult as ISemanticAnalysisResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { IMap } from '@lib/idl/IMap';
+import { EParserType, IParserParams, IParseTree, IRange } from '@lib/idl/parser/IParser';
 
 export interface IMarker {
     range: IRange;
@@ -26,9 +26,8 @@ export interface IFileState {
     content: string;                // source file's content
     error: Error;                   // source file loading's error
 
-    parseTree: IParseTree;          // syntax analysis' results
-    scope: IScope;                  // semantic analysis' results
-    root: IInstructionCollector;    // semantic analysis' results
+    parseTree: IParseTree;              // syntax analysis' results
+    analysis: ISemanticAnalysisResult;
 
     markers: IMap<IMarker>;
     breakpoints: number[];

@@ -64,6 +64,7 @@ export enum EAnalyzerErrors {
     InvalidFunctionParameterUsage,
     InvalidTypeForWriting,
     InvalidTypeForReading,
+    InvalidExprIsNotLValue,
     InvalidVariableInitializing,
     UnsupportedStateIndex,
     InvalidSamplerTexture,

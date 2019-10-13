@@ -1,7 +1,8 @@
+import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
+import { T_BOOL, SCOPE } from "@lib/fx/SystemScope";
 import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
 import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
-import * as SystemScope from "@lib/fx/SystemScope";
-import { EInstructionTypes, ILiteralInstruction, EScopeType } from "@lib/idl/IInstruction";
+import { VariableTypeInstruction } from "@lib/fx/instructions/VariableTypeInstruction";
 
 export interface IBoolInstructionSettings extends IInstructionSettings {
     value: "true" | "false";
@@ -10,8 +11,10 @@ export interface IBoolInstructionSettings extends IInstructionSettings {
 export class BoolInstruction extends ExprInstruction implements ILiteralInstruction {
     protected _value: boolean;
 
-    constructor({ value, ...settings }: IBoolInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_BoolInstruction, type: SystemScope.T_BOOL, ...settings });
+    constructor({ value, scope, ...settings }: IBoolInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_BoolInstruction, 
+            // NOTE: type wraping is no really necessary, just for debug purposes
+            type: VariableTypeInstruction.wrapAsConst(T_BOOL, SCOPE), scope, ...settings });
 
         this._value = (value === "true");
     }

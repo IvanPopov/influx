@@ -1,22 +1,21 @@
 
-import { isNull, isString } from "util";
-import { isDef, isDefAndNotNull } from "@lib/common";
-import { EOperation } from "@lib/idl/bytecode/EOperations";
-// import { IInstruction as IOperation, IInstructionArgument } from "@lib/idl/bytecode/IInstruction";
-import { EInstructionTypes, IComplexExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, ICastExprInstruction, IArithmeticExprInstruction, IExprStmtInstruction, IAssignmentExprInstruction } from "@lib/idl/IInstruction";
-import { IRange } from "@lib/idl/parser/IParser";
-import { Diagnostics } from "@lib/util/Diagnostics";
-import { DeclStmtInstruction } from "@lib/fx/instructions/DeclStmtInstruction";
-import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
-import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
-import { assert } from "@lib/common";
+import { assert, isDef, isDefAndNotNull } from "@lib/common";
 import ConstanPool from "@lib/fx/bytecode/ConstantPool";
 import debugLayout, { CdlRaw } from "@lib/fx/bytecode/DebugLayout";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import sizeof from "@lib/fx/bytecode/sizeof";
-import { VariableDeclInstruction } from "../instructions/VariableDeclInstruction";
+import { DeclStmtInstruction } from "@lib/fx/instructions/DeclStmtInstruction";
+import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
+import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
+import { EOperation } from "@lib/idl/bytecode/EOperations";
+// import { IInstruction as IOperation, IInstructionArgument } from "@lib/idl/bytecode/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IExprInstruction, IExprStmtInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionCallInstruction } from "@lib/idl/IInstruction";
+import { IRange } from "@lib/idl/parser/IParser";
+import { Diagnostics } from "@lib/util/Diagnostics";
+import { isNull, isString } from "util";
 import { ExprInstruction } from "../instructions/ExprInstruction";
 import { Instruction } from "../instructions/Instruction";
+import { VariableDeclInstruction } from "../instructions/VariableDeclInstruction";
 
 enum EErrors {
     k_UnsupportedConstantType,
@@ -75,7 +74,6 @@ const sname = {
  * The table is global and does not depend on the stack of functions, 
  * because hashes are built on the basis of identifiers of instructions 
  * unique to each function and context.
- * todo: clean up table after each function call, because adresses of registers are global
  */
 class SymbolTable<SYMBOL_T>  {
     [key: string]: SYMBOL_T;
@@ -89,22 +87,82 @@ class SymbolTable<SYMBOL_T>  {
 
 
 class Callstack {
-    stack: IFunctionDeclInstruction[] = [];
+   // occupied registers count 
+    // same as stack pointer; 
+    // counter grows forward;
+    registerCounter = 0;
+    stack: { fn: IFunctionDeclInstruction; symbols: SymbolTable<number>; rc: number; }[] = [];
+    constants: SymbolTable<number> = new SymbolTable<number>();
 
-    get top(): IFunctionDeclInstruction {
-        return this.stack[this.depth - 1];
+    get fn(): IFunctionDeclInstruction {
+        return this.stack[this.depth - 1].fn;
+    }
+
+    get symbols(): SymbolTable<number> {
+        return this.stack[this.depth - 1].symbols;
     }
 
     get depth(): number {
         return this.stack.length;
     }
 
-    push(entry: IFunctionDeclInstruction) {
-        this.stack.push(entry);
+ 
+    rc() {
+        return this.registerCounter;
     }
 
-    pop() {
-        return this.stack.pop();
+    /* (assuming that all registers for all types are placed in the same memory) */
+    alloca(size: number){ 
+        let rc = this.registerCounter; 
+        this.registerCounter += size; 
+        return rc; 
+    }
+
+    /**
+     * Add referene of the local variable.
+     * @param sname Variable name or hash.
+     * @param r Register number.
+     */
+    ref(sname: string, r: number): void {
+        assert(!isDef(this.symbols[sname]));
+        this.symbols[sname] = r;
+    }
+
+    /**
+     * @returns Register address of variable/constant or REG_INVALID.
+     * @param sname 
+     */
+    deref(sname: string): number {
+        // is zero register available?
+        for (let i = this.depth - 1; i >= 0; --i) {
+            let symbols = this.stack[i].symbols;
+            if (isDef(symbols[sname])) {
+                return symbols[sname];
+            }
+        }
+        return REG_INVALID;
+    }
+
+    /** Same as ref but for constants only */
+    cref(sname: string, r: number): void {
+        assert(!isDef(this.constants[sname]));
+        this.constants[sname] = r;
+    }
+
+    cderef(sname: string): number {
+        // is zero register available?
+        return isDef(this.constants[sname]) ? this.constants[sname] : REG_INVALID;
+    }
+
+    push(fn: IFunctionDeclInstruction) {
+        const symbols = new SymbolTable<number>();
+        const rc = this.rc();
+        this.stack.push({ fn, symbols, rc });
+    }
+
+    pop(): void {
+        let entry = this.stack.pop();
+        this.registerCounter = entry.rc;
     }
 }
 
@@ -122,6 +180,7 @@ function ContextBuilder() {
     // program counter: return current index of instruction 
     // (each instruction consists of 4th numbers)
     const pc = () => instructions.length >> 2;
+    
     const debug = debugLayout(pc);
     const callstack = new Callstack;
 
@@ -131,7 +190,9 @@ function ContextBuilder() {
         constants,
         instructions,
         debug,
-        pc
+        pc,
+        // rc,
+        // alloca
     }
 }
 
@@ -150,6 +211,7 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
     debug.beginCompilationUnit('[todo]'); // << it does nothing at the momemt :/
 
     callstack.push(fn);
+    // fn.definition.paramList.
     translateFunction(ctx, fn);
     callstack.pop();
     debug.endCompilationUnit();
@@ -197,15 +259,15 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
 function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     const { diag, callstack, constants, instructions, debug, pc } = ctx;
 
-    // same as stack pointer; 
-    // counter grows forward;
-    let registerCounter = 0;
-    let symbolTable = new SymbolTable<number>();
+    // NOTE: pc - number of written instructions
+    // NOTE: rc - number of occupied registers
 
-    /** resolve input (memory type for arguments, like vertex input for vertex shader) */
-    function rinput(): number {
-        return 0;
-    }
+    // shortcuts for ref/deref
+    const deref = (sname: string) => callstack.deref(sname);
+    const ref = (sname: string, r: number) => callstack.ref(sname, r);
+    const cderef = (sname: string) => callstack.cderef(sname);
+    const cref = (sname: string, r: number) => callstack.cref(sname, r);
+    const alloca = (size: number) => callstack.alloca(size);
 
     /** resolve constant (all constants have been placed in global memory) */
     function rconst(lit: ILiteralInstruction): number {
@@ -214,7 +276,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IntInstruction:
                 {
                     let i32 = <number>(lit as ILiteralInstruction).value;
-                    let r = deref(sname.i32(i32));
+                    let r = cderef(sname.i32(i32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
                         // constants.checkInt32(i32) => returns address in global memory
@@ -222,7 +284,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                         icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32), sizeof.i32());
                         debug.map(lit);
 
-                        ref(sname.i32(i32), r);
+                        cref(sname.i32(i32), r);
                     }
                     return r;
                 }
@@ -230,14 +292,14 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_FloatInstruction:
                 {
                     let f32 = <number>(lit as ILiteralInstruction).value;
-                    let r = deref(sname.f32(f32));
+                    let r = cderef(sname.f32(f32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.f32());
                         // todo: remove last arument!
                         icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
                         debug.map(lit);
 
-                        ref(sname.f32(f32), r);
+                        cref(sname.f32(f32), r);
                     }
                     return r;
                 }
@@ -260,14 +322,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     //     return r;
     // }
 
-    /**
-     * (assuming that all registers for all types are placed in the same memory)
-     */
-    function alloca(size: number): number {
-        let rc = registerCounter;
-        registerCounter += size;
-        return rc;
-    }
+
 
     /** insert code */
     function icode(code: EOperation, ...args: number[]): void {
@@ -312,7 +367,8 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     function determMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
         if (decl.isParameter()) {
             if (decl.type.hasUsage('out') || decl.type.hasUsage('inout')) {
-                return EMemoryLocation.k_Input;
+                // entry point function can refer to input memory, for ex. vertex shader
+                return callstack.depth == 1 ? EMemoryLocation.k_Input : EMemoryLocation.k_Registers;
             }
         }
 
@@ -328,13 +384,13 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     function store(expr: IExprInstruction, dst: number, src: number, size: number) {
         const decl = ExprInstruction.UnwindExpr(expr);
         assert(!isNull(decl), 'declaration cannot be null');
-        
+
         let offset = 0;
         if (decl.isParameter()) {
             offset = VariableDeclInstruction.getParameterOffset(decl);
         }
 
-        switch(determMemoryLocation(decl)) {
+        switch (determMemoryLocation(decl)) {
             case EMemoryLocation.k_Input:
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                     icode(EOperation.k_I32StoreInput, offset + dst + i * 4, src);
@@ -485,7 +541,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     assert(false, 'not implemented!');
 
-                    // TOOD: add support for move_reg_ptr, move_ptr_ptr, move_ptr_reg
+                    // todo: add support for move_reg_ptr, move_ptr_ptr, move_ptr_reg
                     // if (padding > 0) {
                     //     const postfixReg = rconst_addr(padding);     // write element's padding to register
                     //     const elementReg = rconst_addr(elementAddr); // write element's addr to register
@@ -498,6 +554,43 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     return elementAddr;
                 }
                 break;
+            case EInstructionTypes.k_FunctionCallInstruction:
+                {
+                    
+                    const call = expr as IFunctionCallInstruction;
+                    const fdecl = call.declaration as IFunctionDeclInstruction;
+                    callstack.push(fdecl);
+
+                    for (let i = 0; i < fdecl.definition.paramList.length; ++ i) {
+                        let param = fdecl.definition.paramList[i];
+                        let arg = i < call.args.length ? call.args[i] : null;
+
+                        let src = !isNull(arg) ? raddr(arg, false) : raddr(param.initExpr);
+
+                        if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
+                            ref(sname.var(param), src);
+                        } else {
+                            // todo: handle expressions like "float4 v = 5.0;"
+
+                            let size = param.type.size;
+                            let dest = alloca(param.type.size);
+                            // store(arg || param.initExpr, dest, src, size);
+
+                            for (let j = 0, n = size / sizeof.i32(); j < n; ++j) {
+                                icode(EOperation.k_I32MoveRegToReg, dest + j * 4, src);
+                            }
+
+                            ref(sname.var(param), dest);
+                        }
+                    }
+
+                    translateFunction(ctx, fdecl);
+
+                    callstack.pop();
+
+                    // FIXME: return correct register!
+                    return REG_RAX;
+                }
             default:
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
                 return REG_INVALID;
@@ -505,24 +598,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     }
 
 
-    /**
-     * Add referene of the local variable.
-     * @param sname Variable name or hash.
-     * @param r Register number.
-     */
-    function ref(sname: string, r: number) {
-        assert(!isDef(symbolTable[sname]));
-        symbolTable[sname] = r;
-    }
 
-    /**
-     * @returns Register address of variable/constant or REG_INVALID.
-     * @param sname 
-     */
-    function deref(sname: string): number {
-        // is zero register available?
-        return isDef(symbolTable[sname]) ? symbolTable[sname] : REG_INVALID;
-    }
 
     // 
     // Handle all instruction types
@@ -606,6 +682,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     const assigment = instr as IAssignmentExprInstruction;
                     const size = assigment.type.size;
                     assert(size % sizeof.i32() === 0);
+                    assert(assigment.operator === '=');
 
                     // left address can be both from the registers and in the external memory
                     const leftAddr = raddr(assigment.left, false);

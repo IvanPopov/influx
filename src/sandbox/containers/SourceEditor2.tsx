@@ -1,11 +1,14 @@
 /* tslint:disable:no-for-in */
 /* tslint:disable:forin */
+/* tslint:disable:typedef */
+
 
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
+import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { mapProps } from '@sandbox/reducers';
@@ -17,7 +20,6 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import DistinctColor from '@lib/util/DistinctColor';
 
 export const styles = {
     yellowMarker: {
@@ -151,7 +153,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 
 
 export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
-    name?: string,
+    name?: string;
     actions: typeof sourceActions;
 }
 
@@ -192,8 +194,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             warning: classes.warningMarker
         };
 
-        for (let key in props.markers) {
-            let { range, type, tooltip, range: { start, end }, payload } = props.markers[key];
+        for (const key in props.markers) {
+            const { range, type, tooltip, range: { start, end }, payload } = props.markers[key];
             if (!tooltip && type === 'marker') {
                 decorations.push({
                     range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
@@ -234,8 +236,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    componentDidMount() {
-    }
+    // componentDidMount() {
+    // }
 
     componentDidUpdate() {
         this.updateDecorations();
@@ -243,12 +245,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     @autobind
     editorWillMount(monaco) {
-
     }
 
     @autobind
     editorDidMount(editor: monaco.editor.IStandaloneCodeEditor) {
-        editor.getModel().updateOptions({ tabSize: 4 });
+        editor.getModel()
+              .updateOptions({ tabSize: 4 });
 
         editor.onMouseDown((e: monaco.editor.IEditorMouseEvent) => {
             const data = e.target.detail as IMarginData;
@@ -260,15 +262,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             }
 
             let { props } = this;
-            let { lineNumber } = e.target.position;
             let { breakpoints } = props;
+            let { lineNumber } = e.target.position;
 
             lineNumber = cdlview(props.debugger.runtime.cdl).resolveBreakpointLocation(lineNumber - 1);
-            if (lineNumber == -1) {
+            if (lineNumber === -1) {
                 return;
             }
 
-            if (breakpoints.indexOf(lineNumber) == -1) {
+            if (breakpoints.indexOf(lineNumber) === -1) {
                 props.actions.addBreakpoint(lineNumber);
             } else {
                 props.actions.removeBreakpoint(lineNumber);
@@ -315,12 +317,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             !deepEqual(this.props.breakpoints, nextProps.breakpoints);
         // todo: add state checking
 
-        if (nextProps.root && this.props.root != nextProps.root) {
+        if (nextProps.analysis && this.props.analysis !== nextProps.analysis) {
             // console.log('codelens update required');
             if (!this.provider) {
                 this.provider = monaco.languages.registerCodeLensProvider(
                     '*',
-                    new MyCodeLensProvider(() => this.props.scope)
+                    new MyCodeLensProvider(() => this.props.analysis.scope)
                 );
             }
         }

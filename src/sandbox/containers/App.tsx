@@ -1,4 +1,6 @@
 /* tslint:disable:max-func-body-length */
+/* tslint:disable:typedef */
+
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode } from '@lib/idl/parser/IParser';
@@ -76,8 +78,8 @@ export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
 const Version = (props) => {
     return (
         <div>
-            <Message warning={ MODE != 'production' } size="tiny" compact className={ props.classes.versionFix }>
-                { MODE != 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+            <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
+                { MODE !== 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
             </Message>
         </div>
     );
@@ -101,12 +103,12 @@ class App extends React.Component<IAppProps> {
 
 
     static getDerivedStateFromProps(props: IAppProps, state) {
-        const nextRoot = props.sourceFile.root;
-        const contentChanged = !(state.prevRoot == nextRoot);
+        const nextAnalysis = props.sourceFile.analysis;
+        const contentChanged = !(state.prevAnalysis === nextAnalysis);
         let stateDiff = null;
 
         if (contentChanged) {
-            stateDiff = { prevRoot: nextRoot };
+            stateDiff = { prevAnalysis: nextAnalysis };
         }
 
         return stateDiff;
@@ -136,7 +138,7 @@ class App extends React.Component<IAppProps> {
 
 
     highlightInstruction(inst: IInstruction, show: boolean = true) {
-        let markerName = `ast-range-${inst.instructionID}`;
+        const markerName = `ast-range-${inst.instructionID}`;
         if (show) {
             this.props.actions.addMarker({
                 name: markerName,
@@ -159,6 +161,11 @@ class App extends React.Component<IAppProps> {
         } else {
             this.props.actions.removeMarker(`ast-range-${id}`);
         }
+    }
+
+    canCompile(): boolean {
+        const { sourceFile } = this.props;
+        return sourceFile.analysis && sourceFile.analysis.diag.errors === 0;
     }
 
     render() {
@@ -184,7 +191,7 @@ class App extends React.Component<IAppProps> {
                                     <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
                                 </Header.Content>
                             </Header>
-                            <Playground scope={ props.sourceFile.scope } />
+                            <Playground scope={ props.sourceFile.analysis && props.sourceFile.analysis.scope } />
                         </Tab.Pane>
                     </Route>
                 )
@@ -220,7 +227,11 @@ class App extends React.Component<IAppProps> {
                                             />
                                         </Table.Cell>
                                         <Table.Cell >
-                                            <Button disabled={ $debugger.options.autocompile } onClick={ this.compile } width={ 10 } >Compile</Button>
+                                            <Button
+                                                disabled={ $debugger.options.autocompile || !this.canCompile() }
+                                                onClick={ this.compile } width={ 10 } >
+                                                Compile
+                                            </Button>
                                             &nbsp;
                                             {/* <Checkbox
                                                 width={6}
@@ -274,6 +285,12 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Route path='/program' exact>
                         <Tab.Pane attached={ false } key='program-view'>
+                            <Header as='h4' dividing>
+                                <Header.Content>
+                                    <Icon name={'git compare' as UnknownIcon} />
+                                    Symantic Analysis
+                                </Header.Content>
+                            </Header>
                             <ProgramView
                                 onNodeOver={ inst => this.highlightInstruction(inst, true) }
                                 onNodeOut={ inst => this.highlightInstruction(inst, false) }
@@ -294,6 +311,12 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Route path='/ast' exact>
                         <Tab.Pane attached={ false } key='ast-view'>
+                            <Header as='h4' dividing>
+                                <Header.Content>
+                                    <Icon name='pencil' />
+                                    Syntax Analysis
+                                </Header.Content>
+                            </Header>
                             <ASTView
                                 onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
                                 onNodeOut={ idx => this.highlightPNode(idx, null, false) }
@@ -322,10 +345,7 @@ class App extends React.Component<IAppProps> {
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }
-                    // fixme: remove style from line below;
-                    // as={ ({ ...props }) => <Container fluid { ...props } /> }
-                    >
+                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
@@ -333,11 +353,14 @@ class App extends React.Component<IAppProps> {
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
                                     <Container style={ { paddingTop: '15px' } }>
-                                        <Tab
-                                            defaultActiveIndex={ defaultActiveIndex }
-                                            menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
-                                            panes={ analysisResults }
-                                            renderActiveOnly={ false } />
+                                        <Switch>
+                                            <Redirect from='/' strict exact to='/playground' />
+                                            <Tab
+                                                defaultActiveIndex={ defaultActiveIndex }
+                                                menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
+                                                panes={ analysisResults }
+                                                renderActiveOnly={ false } />
+                                        </Switch>
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -354,28 +377,42 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: (<Menu.Item key='ver' position='right' inverted disabled color='red'><Version classes={ props.classes } /></Menu.Item>),
+                menuItem: (
+                    <Menu.Item key='ver' position='right' inverted disabled color='red'>
+                        <Version classes={ props.classes } />
+                    </Menu.Item>),
                 render: () => null
             }
         ];
 
         return (
-            <Router>
+    <Router>
                 <div className={ props.classes.mainContentHotfix }>
                     <Sidebar.Pushable>
                         <Sidebar
                             as={ Segment }
                             animation='overlay'
-                            // onHide={ this.hideFileBrowser }
                             vertical
                             visible={ this.state.showFileBrowser }
                             className={ this.props.classes.fileBrowserSidebarHotfix }
                         >
-                            <FileListView path='./assets' filters={ ['.fx'] } onFileClick={ (file) => { props.actions.openFile(file) } } />
+                            <FileListView
+                                path='./assets'
+                                filters={ ['.fx'] }
+                                onFileClick={ (file) => { props.actions.openFile(file); } } />
                         </Sidebar>
                         <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
-                            {/* "renderActiveOnly" should always be true because only one instance of Monaco editor can be used simultaneously */ }
-                            <Tab menu={ { secondary: true, pointing: true } } panes={ panes } renderActiveOnly={ true }
+                            {
+                                /*
+                                    "renderActiveOnly" should always be true
+                                    because only one instance of Monaco editor
+                                    can be used simultaneously
+                                */
+                                }
+                            <Tab
+                                menu={ { secondary: true, pointing: true } }
+                                panes={ panes }
+                                renderActiveOnly={ true }
                                 className={ props.classes.topMenuFix } />
                         </Sidebar.Pusher>
                     </Sidebar.Pushable>
@@ -387,7 +424,6 @@ class App extends React.Component<IAppProps> {
                         </Menu.Item>
                     </Menu>
                 </div>
-                <Redirect from='/' exact to='/playground' />
             </Router>
         );
     }

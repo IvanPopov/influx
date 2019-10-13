@@ -1,9 +1,8 @@
-import { ExprInstruction } from "./ExprInstruction";
-import { IInstructionSettings } from "./Instruction";
-import { ILiteralInstruction, EInstructionTypes, IInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
-import * as SystemScope from "../SystemScope";
+import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
+import { T_FLOAT, SCOPE } from "@lib/fx/SystemScope";
+import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
+import { IInstructionSettings } from "@lib/fx/instructions/Instruction";
+import { VariableTypeInstruction } from "@lib/fx/instructions/VariableTypeInstruction";
 
 export interface IFloatInstructionSettings extends IInstructionSettings {
     value: string;
@@ -14,8 +13,11 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor({ value, ...settings }: IFloatInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FloatInstruction, type: SystemScope.T_FLOAT, ...settings });
+    constructor({ value, scope, ...settings }: IFloatInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_FloatInstruction, 
+            // NOTE: type wraping is no really necessary, just for debug purposes
+            type: VariableTypeInstruction.wrapAsConst(T_FLOAT, SCOPE), scope, ...settings });
+
         this._value = ((<number><any>value) * 1.0);
     }
 

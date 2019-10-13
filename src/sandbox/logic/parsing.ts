@@ -1,17 +1,18 @@
+/* tslint:disable:typedef */
+
 import { assert, isNull } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { EffectParser } from '@lib/fx/EffectParser';
 import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
-import * as evt from '@sandbox/actions/ActionTypeKeys';
-import IStoreState, { IFileState, IDebuggerState } from '@sandbox/store/IStoreState';
-import { createLogic } from 'redux-logic';
-import { IDebuggerCompile, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
-import { getSourceCode, getDebugger } from '@sandbox/reducers/sourceFile'
-import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import { IMarker } from '@sandbox/store/IStoreState';
 import { IDispatch } from '@sandbox/actions';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import { IDebuggerCompile, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
+import { getDebugger, getSourceCode } from '@sandbox/reducers/sourceFile';
+import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
+import { createLogic } from 'redux-logic';
 
 const PARSING_ERROR_PREFIX = 'parsing-error';
 const ANALYSIS_ERROR_PREFIX = 'analysis-error';
@@ -63,9 +64,12 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     let { ast, diag, result } = await Parser.parse(content, filename);
 
-    let errors = diag.messages.filter(msg => msg.category == EDiagnosticCategory.ERROR).map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+    const errors = diag.messages
+        .filter(msg => msg.category === EDiagnosticCategory.ERROR)
+        .map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+
     emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
-    
+
     console.log(Diagnostics.stringify(diag));
     dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
 }
@@ -81,19 +85,22 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-    const res = analyze(parseTree, filename);
+    const result = analyze(parseTree, filename);
 
-    let { diag, root, scope } = res;
+    const { diag, root, scope } = result;
 
-    let errors = diag.messages.map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+    const errors = diag.messages.map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
     emitErrors(errors, dispatch, ANALYSIS_ERROR_PREFIX);
 
-    let warnings = diag.messages.filter(msg => msg.category == EDiagnosticCategory.WARNING).map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+    const warnings = diag.messages
+        .filter(msg => msg.category === EDiagnosticCategory.WARNING)
+        .map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
+
     emitWarnings(warnings, dispatch, ANALYSIS_ERROR_PREFIX);
 
     console.log(Diagnostics.stringify(diag));
 
-    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { root, scope } });
+    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result } });
 }
 
 
@@ -101,13 +108,12 @@ const updateParserLogic = createLogic<IStoreState>({
     type: [evt.GRAMMAR_CONTENT_SPECIFIED, evt.PARSER_PARAMS_CHANGED],
 
     async process({ getState, action }, dispatch, done) {
-        let parserParams = getState().parserParams;
+        const parserParams = getState().parserParams;
         /**
          * !!! note: all inline functionality inside analyze.ts depends on this setup
          */
-        let isOk = Parser.init(parserParams, EffectParser);
+        const isOk = Parser.init(parserParams, EffectParser);
         assert(isOk);
-        
         // todo: add support for failed setup
         done();
     }
@@ -148,9 +154,9 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 
     async process({ getState, action, action$ }, dispatch, done) {
         await processAnalyze(getState(), dispatch);
-        
+
         // let begin = Date.now();
-        
+
         // action$.pipe(
         //     filter(a => a.type === evt.SOURCE_CODE_ANALYSIS_COMPLETE),
         //     take(1) // we only wait for one and then finish
@@ -158,21 +164,21 @@ const parsingCompleteLogic = createLogic<IStoreState>({
         //     console.log('await SOURCE_CODE_ANALYSIS_COMPLETE', Date.now() - begin);
         //     done()
         //  } })
-        
+
         done();
     }
 });
 
 
 function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
-    const fn = fileState.root.scope.findFunction(debuggerState.entryPoint, null);
+    const fn = fileState.analysis.root.scope.findFunction(debuggerState.entryPoint, null);
     const locList = [];
-    
+
     if (fn && debuggerState.runtime) {
         const from = fn.sourceNode.loc.start.line;
         const to = fn.sourceNode.loc.end.line;
         const cdl = cdlview(debuggerState.runtime.cdl);
-    
+
         for (let ln = from; ln <= to; ++ ln) {
             const color = cdl.resolveLineColor(ln);
             if (color !== 0) {
@@ -197,8 +203,8 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 
         let runtime = null;
 
-        if (!isNull(fileState.scope)) {
-            runtime = Bytecode.translate(entryPoint, fileState.scope);
+        if (!isNull(fileState.analysis.scope)) {
+            runtime = Bytecode.translate(entryPoint, fileState.analysis.scope);
             dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { entryPoint, runtime } });
         } else {
             console.error('invalid compile request!');
@@ -261,7 +267,7 @@ const debuggerAutocompileLogic = createLogic<IStoreState>({
 
     process({ getState }, dispatch, done) {
         const debuggerState = getDebugger(getState());
-        
+
         if (debuggerState.options.autocompile) {
             dispatch({ type: evt.DEBUGGER_COMPILE });
         }

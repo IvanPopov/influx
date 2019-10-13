@@ -1,10 +1,12 @@
+/* tslint:disable:typedef */
+
 import { isArray } from '@lib/common';
 import * as fs1 from 'fs';
+import * as isElectron from 'is-electron-renderer';
 import * as path from 'path';
 import * as React from 'react';
 import { List } from 'semantic-ui-react';
 import { promisify } from 'util';
-import * as isElectron from 'is-electron-renderer';
 
 interface IFileListViewProps {
     path: string;
@@ -12,8 +14,8 @@ interface IFileListViewProps {
     filters?: string[];
 }
 
-let FileDirectoryIcon: any = 'file directory';
-let FileCodeIcon: any = 'file code';
+const FileDirectoryIcon: any = 'file directory';
+const FileCodeIcon: any = 'file code';
 
 interface IFolder {
     path: string;
@@ -50,7 +52,7 @@ async function scan(dir: string, node: IFolder, filters?: string[]) {
         (await fs.readdir(dir)).forEach(async filename => {
             let filepath = path.join(dir, filename);
             let filestats = await fs.stat(filepath);
-            
+
             if (filestats.isFile()) {
                 if (!filters || filters.indexOf(path.extname(filename)) != -1) {
                     node.files = node.files || [];
@@ -75,7 +77,7 @@ async function scan(dir: string, node: IFolder, filters?: string[]) {
 }
 
 class FileListView extends React.Component<IFileListViewProps, {}> {
-    state: { root: IFolder; };
+    state: { root: IFolder };
 
     constructor(props: IFileListViewProps) {
         super(props);
@@ -85,7 +87,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
     componentWillUpdate(nextProps: IFileListViewProps, nextState) {
         const { state } = this;
 
-        if (state.root.path == nextProps.path) {
+        if (state.root.path === nextProps.path) {
             return;
         }
 
@@ -94,13 +96,17 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
 
 
     renderFolder(folder: IFolder) {
-        if (!folder || !folder.path || !folder.totalFiles) return null;
+        if (!folder || !folder.path || !folder.totalFiles) {
+            return null;
+        }
 
         return (
             <List.Item key={folder.path}>
                 <List.Icon name={ FileDirectoryIcon } />
                 <List.Content>
-                    <List.Header onClick={ () => { folder.shown = !folder.shown; this.forceUpdate(); } }>{ path.basename(folder.path) }</List.Header>
+                    <List.Header onClick={ () => { folder.shown = !folder.shown; this.forceUpdate(); } }>
+                        { path.basename(folder.path) }
+                    </List.Header>
                     { folder.shown && (isArray(folder.folders) || isArray(folder.files)) &&
                         <List.List>
                             { (folder.folders || []).map(folder => this.renderFolder(folder)) }
@@ -113,7 +119,9 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
     }
 
     renderFile(file: string) {
-        if (!file) return null;
+        if (!file) {
+            return null;
+        }
 
         return (
             <List.Item onClick={ () => this.props.onFileClick(file) } key={file}>

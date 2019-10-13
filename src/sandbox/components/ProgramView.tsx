@@ -19,7 +19,7 @@ import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstructi
     IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction,
     IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction,
     IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction,
-    ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction
+    ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IFunctionCallInstruction
     } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
@@ -204,7 +204,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     render() {
-        const { root } = this.props;
+        const { root } = this.props.analysis;
 
         if (isNull(root)) {
             return null;
@@ -281,6 +281,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.Cast(instr);
             case EInstructionTypes.k_ComplexExprInstruction:
                 return this.ComplexExpr(instr);
+            case EInstructionTypes.k_FunctionCallInstruction:
+                return this.FunctionCall(instr);
             default:
                 return this.NotImplemented(instr);
         }
@@ -519,9 +521,29 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    FunctionCall(instr: IFunctionCallInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } >
+                <Property name='declaration' >
+                    { this.FunctionDecl(instr.declaration as IFunctionDeclInstruction) }
+                </Property>
+                <PropertyOpt name='arguments'>
+                    { instr.args.map((arg) => this.Unknown(arg)) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
     Int(instr: ILiteralInstruction) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+            // <Property { ...this.bindProps(instr) } >
+            //     <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+            //     <Property name='type'>
+            //         { this.Unknown(instr.type) }
+            //     </Property>
+            // </Property>
         );
     }
 
