@@ -27,6 +27,11 @@ class InstructionList {
         return this._length;
     }
 
+
+    get pc(): number {
+        return this.length >> 2;
+    }
+
     
     add(op: EOperation, args: number[]) {
         assert(args.length <= 3);
@@ -37,13 +42,29 @@ class InstructionList {
     }
 
 
-    merge(list: InstructionList): void {
-        this.check(list.length);
-        this._data.set(list.data, this._length);
-        this._length += list.length;
+    // merge(list: InstructionList): void {
+    //     this.check(list.length);
+    //     this._data.set(list.data, this._length);
+    //     this._length += list.length;
+    // }
+
+    update(pc: number, op: EOperation, args: number[]) {
+        assert(pc < this.pc);
+        assert(args.length <= 3);
+
+        const pc4 = pc << 2;
+        
+        // FIXME: remove this assert
+        assert(this.data[pc4] === EOperation.k_Ret, 
+            `expected ${EOperation.k_Ret}, but given is ${this.data[pc4]} for pc = ${pc}`); 
+        
+        this.data[pc4] = op;
+
+        args.forEach((v, i) => { 
+            this.data[pc4 + 1 + i] = v; 
+        });
     }
 
-    
     private push(val: number) {
         assert(this.capacity - this._length >= 1);
         this._data[this._length++] = val;

@@ -91,6 +91,17 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     <Table.Body>
                         { this.renderOpList(ilist) }
                     </Table.Body>
+                    { props.options.disableOptimizations &&
+                        <Table.Footer>
+                            <Table.Row >
+                                <Table.Cell colSpan={ 4 } inverted warning textAlign='center'
+                                    style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
+                                >
+                                    optimizations are disabled
+                            </Table.Cell>
+                            </Table.Row>
+                        </Table.Footer>
+                    }
                 </Table>
                 <Button animated onClick={ () => { alert(VM.evaluate(code)); } }>
                     <Button.Content visible>Run</Button.Content>
@@ -141,6 +152,9 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_I32MoveRegToReg:
             case EOperation.k_I32StoreInput:
                 args.length = 2;
+                break;
+            case EOperation.k_Jump:
+                args.length = 1;
                 break;
             case EOperation.k_Ret:
                 args.length = 0;

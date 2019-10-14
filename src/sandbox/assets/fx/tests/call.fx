@@ -4,5 +4,7 @@ int mult(int a, int b) {
 
 int main(void)
 {
-    return mult(10, 5);
+    int a;
+    a = mult(10, 5);
+    return a;
 }

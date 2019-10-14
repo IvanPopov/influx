@@ -51,12 +51,8 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 
 
 export const REG_INVALID = (-1 >>> 0);
-export const REG_RAX = 256;
 export const DEFAULT_ENTRY_POINT_NAME = 'main';
 
-const REG_NAMES = {
-    [REG_RAX]: 'rax' // todo: get register adresses from bytecode generator
-}
 
 // symbol name id generation;
 const sname = {
@@ -87,34 +83,67 @@ class SymbolTable<SYMBOL_T>  {
 
 
 class Callstack {
-   // occupied registers count 
+    // occupied registers count 
     // same as stack pointer; 
     // counter grows forward;
-    registerCounter = 0;
-    stack: { fn: IFunctionDeclInstruction; symbols: SymbolTable<number>; rc: number; }[] = [];
+    rc: number = 0;
+    
+    stack: { 
+        fn: IFunctionDeclInstruction; 
+        // symbol table containing local variables of the function including parameters
+        symbols: SymbolTable<number>;
+        // registers count at the moment of function's call
+        rc: number;
+        // program counter's value before the function's start 
+        pc: number;
+        // address of register where return call should save its value
+        ret: number;
+
+        // addresses of function return instructions to be resolved
+        jumpList: number[];
+    }[] = [];
+
+    // global symbol table for all constants loaded during bytecode generation process
     constants: SymbolTable<number> = new SymbolTable<number>();
 
-    get fn(): IFunctionDeclInstruction {
-        return this.stack[this.depth - 1].fn;
+    // todo: rework this api (make it more explicit)
+    constructor(private ilist: InstructionList) {
+
     }
 
-    get symbols(): SymbolTable<number> {
-        return this.stack[this.depth - 1].symbols;
+    private get top() {
+        return this.stack[this.depth - 1];
     }
 
-    get depth(): number {
+    private get depth(): number {
         return this.stack.length;
     }
 
- 
-    rc() {
-        return this.registerCounter;
+    get fn(): IFunctionDeclInstruction {
+        return this.top.fn;
+    }
+
+    get symbols(): SymbolTable<number> {
+        return this.top.symbols;
+    }
+
+    get ret(): number {
+        return this.top.ret;
+    }
+
+    isEntryPoint(): boolean {
+        return this.depth === 1;
+    }
+
+    // next operation will be 'k_Ret'
+    addReturn() {
+        this.top.jumpList.push(this.ilist.pc);
     }
 
     /* (assuming that all registers for all types are placed in the same memory) */
     alloca(size: number){ 
-        let rc = this.registerCounter; 
-        this.registerCounter += size; 
+        let rc = this.rc; 
+        this.rc += size; 
         return rc; 
     }
 
@@ -154,15 +183,26 @@ class Callstack {
         return isDef(this.constants[sname]) ? this.constants[sname] : REG_INVALID;
     }
 
-    push(fn: IFunctionDeclInstruction) {
+    /** @returns Address of the return value. */
+    push(fn: IFunctionDeclInstruction): number {
+        // reserve memory for the return value
+        const ret = this.alloca(fn.definition.returnType.size);
         const symbols = new SymbolTable<number>();
-        const rc = this.rc();
-        this.stack.push({ fn, symbols, rc });
+        const rc = this.rc;
+        const pc = this.ilist.pc;
+        const jumpList = [];
+        this.stack.push({ fn, symbols, rc, ret, pc, jumpList });
+        return ret;
     }
 
     pop(): void {
-        let entry = this.stack.pop();
-        this.registerCounter = entry.rc;
+        const entryPoint = this.isEntryPoint();
+        const entry = this.stack.pop();
+        // updating all return adresses to correct values
+        if (!entryPoint) {
+            entry.jumpList.forEach(pc => this.ilist.update(pc, EOperation.k_Jump, [ this.ilist.pc ]));
+        }
+        this.rc = entry.rc;
     }
 }
 
@@ -179,10 +219,10 @@ function ContextBuilder() {
     const instructions = new InstructionList;
     // program counter: return current index of instruction 
     // (each instruction consists of 4th numbers)
-    const pc = () => instructions.length >> 2;
+    const pc = () => instructions.pc;
     
     const debug = debugLayout(pc);
-    const callstack = new Callstack;
+    const callstack = new Callstack(instructions);
 
     return {
         diag,
@@ -190,9 +230,7 @@ function ContextBuilder() {
         constants,
         instructions,
         debug,
-        pc,
-        // rc,
-        // alloca
+        pc
     }
 }
 
@@ -208,10 +246,11 @@ export interface ISubProgram {
 function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubProgram {
     const { diag, callstack, constants, instructions, debug } = ctx;
 
-    debug.beginCompilationUnit('[todo]'); // << it does nothing at the momemt :/
+    // NOTE: it does nothing at the momemt :/
+    debug.beginCompilationUnit('[todo]'); 
 
-    callstack.push(fn);
-    // fn.definition.paramList.
+    // simulate function call()
+    callstack.push(fn); 
     translateFunction(ctx, fn);
     callstack.pop();
     debug.endCompilationUnit();
@@ -280,8 +319,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.i32());
                         // constants.checkInt32(i32) => returns address in global memory
-                        // todo: remove last arument!
-                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32), sizeof.i32());
+                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32));
                         debug.map(lit);
 
                         cref(sname.i32(i32), r);
@@ -295,8 +333,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let r = cderef(sname.f32(f32));
                     if (r == REG_INVALID) {
                         r = alloca(sizeof.f32());
-                        // todo: remove last arument!
-                        icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32), sizeof.f32());
+                        icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32));
                         debug.map(lit);
 
                         cref(sname.f32(f32), r);
@@ -316,7 +353,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     //     let r = deref(sname.addr(addr));
     //     if (r == REG_INVALID) {
     //         r = alloca(sizeof.addr());
-    //         icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr), sizeof.addr());
+    //         icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr));
     //         ref(sname.addr(addr), r);
     //     }
     //     return r;
@@ -326,6 +363,14 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
     /** insert code */
     function icode(code: EOperation, ...args: number[]): void {
+        if (code === EOperation.k_Ret) {
+            // add the instruction address to the description of the
+            // function on the top of the colstack; when the code
+            // generation for this function is completed, all return
+            // instructions must receive the correct addresses for
+            // jumping to the end of the function
+            callstack.addReturn();
+        }
         // add this instruction to debug layout;
         debug.step();
         instructions.add(code, args);
@@ -341,7 +386,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         }
 
         if (decl.isParameter()) {
-            if (callstack.depth == 1) {
+            if (callstack.isEntryPoint()) {
                 const paramOffset = VariableDeclInstruction.getParameterOffset(decl);
                 const dest = alloca(size);
                 assert(size % sizeof.i32() === 0);
@@ -368,7 +413,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         if (decl.isParameter()) {
             if (decl.type.hasUsage('out') || decl.type.hasUsage('inout')) {
                 // entry point function can refer to input memory, for ex. vertex shader
-                return callstack.depth == 1 ? EMemoryLocation.k_Input : EMemoryLocation.k_Registers;
+                return callstack.isEntryPoint() ? EMemoryLocation.k_Input : EMemoryLocation.k_Registers;
             }
         }
 
@@ -559,25 +604,27 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     
                     const call = expr as IFunctionCallInstruction;
                     const fdecl = call.declaration as IFunctionDeclInstruction;
-                    callstack.push(fdecl);
+
+                    const ret = callstack.push(fdecl);
 
                     for (let i = 0; i < fdecl.definition.paramList.length; ++ i) {
-                        let param = fdecl.definition.paramList[i];
-                        let arg = i < call.args.length ? call.args[i] : null;
+                        const param = fdecl.definition.paramList[i];
+                        const arg = i < call.args.length ? call.args[i] : null;
 
-                        let src = !isNull(arg) ? raddr(arg, false) : raddr(param.initExpr);
+                        const src = !isNull(arg) ? raddr(arg, false) : raddr(param.initExpr);
 
+                        // todo: add support for 'in' usage
                         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
                             ref(sname.var(param), src);
                         } else {
                             // todo: handle expressions like "float4 v = 5.0;"
+                            const size = param.type.size;
+                            const dest = alloca(param.type.size);
 
-                            let size = param.type.size;
-                            let dest = alloca(param.type.size);
-                            // store(arg || param.initExpr, dest, src, size);
-
+                            // todo: move memcopy to separate function for better readability
                             for (let j = 0, n = size / sizeof.i32(); j < n; ++j) {
                                 icode(EOperation.k_I32MoveRegToReg, dest + j * 4, src);
+                                // debug.map(param);
                             }
 
                             ref(sname.var(param), dest);
@@ -585,11 +632,9 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     }
 
                     translateFunction(ctx, fdecl);
-
                     callstack.pop();
 
-                    // FIXME: return correct register!
-                    return REG_RAX;
+                    return ret;
                 }
             default:
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
@@ -644,8 +689,8 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 {
                     let ret = instr as ReturnStmtInstruction;
                     if (!isNull(ret.expr)) {
-                        // todo: check that the expr type is compatible with RAX register or should moved to stack 
-                        icode(EOperation.k_I32MoveRegToReg, REG_RAX, raddr(ret.expr));
+                        // move correct size!
+                        icode(EOperation.k_I32MoveRegToReg, callstack.ret, raddr(ret.expr));
                         debug.map(ret.expr);
                         debug.ns();
 

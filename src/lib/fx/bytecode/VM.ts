@@ -3,7 +3,7 @@ import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IMap } from "@lib/idl/IMap";
 // import { remote } from 'electron';
 import * as isElectron from 'is-electron-renderer';
-import { EChunkType, REG_RAX } from "./Bytecode";
+import { EChunkType } from "./Bytecode";
 
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;
@@ -66,7 +66,6 @@ class VM {
             switch (op) {
                 case EOperation.k_I32LoadConst:
                 {
-                    assert(c/*size*/ == 4);
                     // copy 4 bytes
                     rregs[a    ] = cb[b    ];
                     rregs[a + 1] = cb[b + 1];
@@ -116,17 +115,13 @@ class VM {
                     break end;
                 }
                 break;
+                default:
+                    console.error(`unknown operation found: ${op}`);
             }
             i4 += 4;
         }
 
-        // if (!isElectron) {
-            // alert(String());
-        // } else {
-            // remote.dialog.showMessageBox({ type: 'info', title: 'evaluation result', message: `${regs[REG_RAX]}` }, () => {});
-        // }
-
-        return iregs[REG_RAX >> 2];
+        return iregs[0];
     }
 }
 

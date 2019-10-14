@@ -85,6 +85,7 @@ const Version = (props) => {
     );
 }
 
+
 @injectSheet(styles)
 class App extends React.Component<IAppProps> {
 
@@ -233,13 +234,6 @@ class App extends React.Component<IAppProps> {
                                                 Compile
                                             </Button>
                                             &nbsp;
-                                            {/* <Checkbox
-                                                width={6}
-                                                label='auto compilation'
-                                                size='small'
-
-                                                onChange={(e, data) => this.setAutocompile(data.checked)}
-                                            /> */}
                                             <Dropdown text='Options' pointing='left' >
                                                 <Dropdown.Menu>
                                                     <Dropdown.Item>
@@ -257,6 +251,7 @@ class App extends React.Component<IAppProps> {
                                                     </Dropdown.Item>
                                                 </Dropdown.Menu>
                                             </Dropdown>
+                                            {/* <NoOptimizations /> */}
                                         </Table.Cell>
                                     </Table.Row>
                                 </Table.Body>

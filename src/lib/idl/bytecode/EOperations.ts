@@ -19,5 +19,10 @@ export enum EOperation {
     k_F32ToI32,
     k_I32ToF32,
 
+    k_Jump,
+
+    // the operation is only necessary to maintain the purity of the code, 
+    // when generating the code will be replaced by a jump for all 
+    // functions except entry point;
     k_Ret
 };
