@@ -90,7 +90,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 <Table size='small' unstackable basic compact style={ { fontFamily: 'consolas', whiteSpace: 'pre' } }>
                     <Table.Body style={ {
                         maxHeight: 'calc(100vh - 432px)',
-                        overflowY: 'scroll',
+                        overflowY: 'auto',
                         display: 'block'
                     } }>
                         { this.renderOpList(ilist) }
