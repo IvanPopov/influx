@@ -204,11 +204,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     render() {
-        const { root } = this.props.analysis;
+        const { analysis } = this.props;
 
-        if (isNull(root)) {
+        if (isNull(analysis)) {
             return null;
         }
+
+        const root = analysis.root;
 
         const style = {
             height: 'calc(100vh - 205px)',
