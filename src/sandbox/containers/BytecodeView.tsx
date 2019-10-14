@@ -167,7 +167,9 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         }
 
         return (
-            <Table.Row key={ `op-${code}-${i}` } onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
+            <Table.Row key={ `op-${code}-${i}` } 
+                style={ { width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' } }
+                onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
                 <Table.Cell
                     style={ this.props.options.colorize ?
                         {
