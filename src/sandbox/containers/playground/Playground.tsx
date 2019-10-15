@@ -1,101 +1,16 @@
-import React = require("react");
-import { Segment, Icon, Message, List, Loader, Button, Container } from "semantic-ui-react";
-import { IScope, ETechniqueType, ICompileExprInstruction } from "@lib/idl/IInstruction";
-import { IPartFxInstruction } from "@lib/idl/IPartFx";
-import * as VM from "@lib/fx/bytecode/VM"
-import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import autobind from "autobind-decorator";
+/* tslint:disable:typedef */
+/* tslint:disable:forin */
+/* tslint:disable:no-for-in */
+/* tslint:disable:newline-per-chained-call */
 
 
-type PartFx = IPartFxInstruction;
-
-interface IRunnable {
-    run(): VM.INT32;
-}
-
-function prebuild(expr: ICompileExprInstruction): IRunnable {
-    let code = Bytecode.translate(expr.function).code;
-    let bundle = VM.load(code);
-    return {
-        run() {
-            return VM.play(bundle);
-        }
-    }
-}
-
-class Emitter {
-    nPartAddFloat: number;
-    nPartAdd: number;
-
-    constructor() {
-        this.nPartAdd = 0;
-        this.nPartAddFloat = 0;
-    }
-
-    spawn(nPart: number, elapsedTime: number) {
-        this.nPartAddFloat += nPart * elapsedTime;
-        this.nPartAdd = Math.floor(this.nPartAddFloat);
-        this.nPartAddFloat -= this.nPartAdd;
-
-        if (this.nPartAdd > 0) {
-            console.log(`spawn ${this.nPartAdd} particles`);
-        }
-    }
-}
-
-function Pipeline(fx: PartFx) {
-
-    let emitter: Emitter;
-
-    let elapsedTime: number;
-    let elapsedTimeLevel: number;
-
-    let spawnRoutine: IRunnable;
-
-    let $startTime: number;
-    let $elapsedTimeLevel: number;
-    let $interval = null;
-
-    function load(fx: PartFx) {
-        emitter = new Emitter;
-        play();
-    }
-
-    function stop() {
-        clearInterval($interval);
-        $interval = null;
-        console.log('pipeline stopped');
-    }
-
-    function play() {
-        elapsedTime = 0;
-        elapsedTimeLevel = 0;
-        spawnRoutine = prebuild(fx.spawnRoutine);
-
-        $startTime = Date.now();
-        $elapsedTimeLevel = 0;
-        $interval = setInterval(() => {
-
-            const nPart = spawnRoutine.run();
-            emitter.spawn(nPart, elapsedTime);
-
-            let dt = Date.now() - $startTime;
-            elapsedTime = (dt - $elapsedTimeLevel) / 1000.0;
-            elapsedTimeLevel = $elapsedTimeLevel / 1000.0;
-            $elapsedTimeLevel = dt;
-        }, 33);
-    }
-
-    function isStopped() {
-        return $interval === null;
-    }
-
-
-    load(fx);
-
-    return { stop, play, isStopped, emitter };
-}
-
+import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
+import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import autobind from 'autobind-decorator';
+import * as React from 'react';
+import { Button, List, Message } from 'semantic-ui-react';
+import Pipeline from './Pipeline';
+import ThreeScene from './ThreeScene';
 
 
 interface IPlaygroundProps {
@@ -110,7 +25,6 @@ interface IPlaygroundState {
     scope: IScope;
     running: boolean;
 }
-
 
 
 class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
@@ -128,17 +42,18 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
     }
 
     static getDerivedStateFromProps(props: IPlaygroundProps, state: IPlaygroundState) {
-        if (props.scope != state.scope) {
+        if (props.scope !== state.scope) {
             console.log('playground has been updated.');
 
-            let list: IPartFxInstruction[] = [];
-            let { scope } = props;
+            const list: IPartFxInstruction[] = [];
+            const { scope } = props;
 
             if (scope) {
                 for (let name in scope.techniqueMap) {
                     let tech = scope.techniqueMap[name];
-                    if (tech.type != ETechniqueType.k_PartFx)
+                    if (tech.type != ETechniqueType.k_PartFx) {
                         continue;
+                    }
                     list.push(tech as IPartFxInstruction);
                 }
 
@@ -168,7 +83,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 }
 
                 if (active) {
-                    let i = list.map(fx => fx.name).indexOf(active);
+                    const i = list.map(fx => fx.name).indexOf(active);
                     pipeline = Pipeline(list[i]);
                     console.log('pipeline has been created.');
                     running = !pipeline.isStopped();
@@ -220,6 +135,14 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                             <Button icon='playback pause' color={ pipeline.isStopped() ? "black" : null } disabled={ pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                             <Button icon='playback play' color={ !pipeline.isStopped() ? "black" : null } disabled={ !pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                         </Button.Group>
+                        <ThreeScene style={ { 
+                            // width: '100%', 
+                            height: 'calc(100vh - 275px - 1em)', 
+                            position: 'relative',
+                            left: 0,
+                            right: 0,
+                            margin: '1em -20px -20px -20px'
+                             } } />
                     </div>
                 }
             </div>

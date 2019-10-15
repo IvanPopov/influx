@@ -57,7 +57,7 @@ render(
 );
 
 // store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
-store.dispatch(sourceCode.openFile(`./assets/fx/tests/call.fx`));
+store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
 store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
