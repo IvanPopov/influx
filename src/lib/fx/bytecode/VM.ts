@@ -125,12 +125,13 @@ class VM {
     }
 }
 
-interface Package {
+interface Bundle {
     instructions: Uint32Array;
     constants: Uint8Array;
+    input: Uint8Array;
 }
 
-export function load(code: Uint8Array): Package {
+export function load(code: Uint8Array): Bundle {
     let chunks = decodeChunks(code);
 
     let codeChunk = chunks[EChunkType.k_Code];
@@ -140,11 +141,12 @@ export function load(code: Uint8Array): Package {
 
     let instructions = decodeCodeChunk(codeChunk);
     let constants = decodeConstChunk(constChunk);
+    let input = null;
 
-    return { instructions, constants };
+    return { instructions, constants, input };
 }
 
-export function play(pack: Package): INT32 {
+export function play(pack: Bundle): INT32 {
     return VM.play(pack);
 }
 

@@ -173,8 +173,8 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         this.mount.appendChild(this.renderer.domElement);
 
         // FIXME: remove this ui hack
-        this.renderer.domElement.style.borderBottomLeftRadius = '4px';
-        this.renderer.domElement.style.borderBottomRightRadius = '4px';
+        this.renderer.domElement.style.borderBottomLeftRadius = '3px';
+        this.renderer.domElement.style.borderBottomRightRadius = '3px';
     }
 
 

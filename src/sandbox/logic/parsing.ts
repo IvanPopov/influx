@@ -185,7 +185,7 @@ function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileStat
 
         for (let ln = from; ln <= to; ++ ln) {
             const color = cdl.resolveLineColor(ln);
-            if (color !== 0) {
+            if (color !== -1) {
                 const loc = { start: { file: null, line: ln, column: 0 }, end: null };
                 locList.push({ loc, payload: { color } });
             }

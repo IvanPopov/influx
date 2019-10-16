@@ -393,6 +393,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                     icode(EOperation.k_I32LoadInput, dest, paramOffset + i * 4 + padding);
+                    debug.map(expr);
                 }
 
                 return dest;

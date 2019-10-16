@@ -68,7 +68,9 @@ function debugLine(pc: PC) {
         let cache = {};
         for (let entry of layout) {
             if (entry.line && entry.line !== line) {
-                color.pickNext();
+                if (line != -1) {
+                    color.pickNext();
+                }
                 line = entry.line;
             }
             cache[entry.line] = cache[entry.line] || color.value();
@@ -203,7 +205,7 @@ export function cdlview(cdlRaw: CdlRaw) {
 
     function resolveLineColor(ln: number) {
         let rec = line.layout.find(r => r.line === ln);
-        return rec ? rec.color : 0;
+        return rec ? rec.color : -1;
     }
     
 
