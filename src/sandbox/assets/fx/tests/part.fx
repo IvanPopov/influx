@@ -1,16 +1,14 @@
 
 struct Part {
-    float pos;
+    float3 pos;
     float size;
-
-    float3 _pad;
 };
 
 /* Example of default shader input. */
 struct DefaultShaderInput {
-    float pos : POSITION;
-    float size : SIZE;
-    float color : COLOR0;
+    float3 pos : POSITION;
+    float4 color : COLOR0;
+    float  size : SIZE;
 };
 
 
@@ -21,7 +19,8 @@ int spawn()
 
 void init(out Part part)
 {
-
+    part.pos = float3(0);
+    part.size = 0.1;
 }
 
 /** Return false if you want to kill particle. */
@@ -34,10 +33,11 @@ void prerender(inout Part part, out DefaultShaderInput input)
 {
     input.pos = part.pos;
     input.size = part.size;
-    input.color = 0.0;
+    input.color = float4(1.0, 0.0, 0.0, 1.0);
 }
 
 partFx project.awesome {
+    Capacity = 100;
     SpawnRoutine = compile spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();

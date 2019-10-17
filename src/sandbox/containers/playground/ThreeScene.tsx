@@ -5,6 +5,8 @@
 /* tslint:disable:number-literal-format */
 /* tslint:disable:no-string-literal */
 
+import { isDefAndNotNull } from '@lib/common';
+import { Emitter } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import * as THREE from 'three';
@@ -49,6 +51,7 @@ void main()	{
 
 interface ITreeSceneProps {
     style: React.CSSProperties;
+    emitter?: Emitter;
 }
 
 class Particle {
@@ -68,6 +71,9 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
     frameId: number;
     mount: HTMLDivElement;
 
+    emitter: Emitter;
+    passes: THREE.Points[];
+
     particles: Particle[];
 
     componentDidMount() {
@@ -84,11 +90,48 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
 
         this.createGridHelper();
         // this.createCube();
-        this.createPointCloud();
+        // this.createPointCloud();
+
+        this.addEmitter(this.props.emitter);
 
         this.start();
 
         window.addEventListener('resize', this.onWindowResize, false);
+    }
+
+    addEmitter(emitter: Emitter) {
+        this.emitter = null;
+        this.passes = [];
+
+        if (!isDefAndNotNull(emitter)) {
+            console.warn('no emitters found.');
+            return;
+        }
+        
+        this.emitter = emitter;
+
+        emitter.passes.forEach((pass, i) => {
+            const buffer =  new THREE.InterleavedBuffer(pass.data, pass.stride);
+            const geometry = new THREE.BufferGeometry();
+            // todo: remove hardcoded layout or check it's validity.
+            geometry.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
+            geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(buffer, 4, 3));
+            geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(buffer, 1, 7));
+            geometry.setDrawRange(0, pass.length);
+
+            const material = new THREE.RawShaderMaterial({
+                uniforms: {},
+                vertexShader,
+                fragmentShader,
+                transparent: true,
+                blending: THREE.NormalBlending,
+                depthTest: false
+            });
+
+            const points = new THREE.Points(geometry, material);
+            this.scene.add(points);
+            this.passes.push(points);
+        });
     }
 
     createPointCloud() {
@@ -213,14 +256,24 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
 
 
     animate = (time: number) => {
-        const geometry = this.pointCloud.geometry as THREE.BufferGeometry;
-        const positions = geometry.attributes['position'] as THREE.InterleavedBufferAttribute;
+        // if (this.pointCloud) {
+        //     const geometry = this.pointCloud.geometry as THREE.BufferGeometry;
+        //     const positions = geometry.attributes['position'] as THREE.InterleavedBufferAttribute;
 
-        for (let i = 0; i < this.particles.length; ++ i) {
-            const particle = this.particles[i];
-            const pos = particle.position;
-            // positions.setXYZ(i, pos.x, pos.y + Math.sin(time * 0.001), pos.z);
-            // positions.data.needsUpdate = true;
+        //     for (let i = 0; i < this.particles.length; ++ i) {
+        //         const particle = this.particles[i];
+        //         const pos = particle.position;
+        //         // positions.setXYZ(i, pos.x, pos.y + Math.sin(time * 0.001), pos.z);
+        //         positions.data.needsUpdate = true;
+        //     }
+        // }
+
+        for (const pass of this.passes) {
+            const geometry = pass.geometry as THREE.BufferGeometry;
+            for (const attrName in geometry.attributes) {
+                const attr = geometry.attributes[attrName] as THREE.InterleavedBufferAttribute;
+                attr.data.needsUpdate = true;
+            }
         }
 
         this.controls.update();
