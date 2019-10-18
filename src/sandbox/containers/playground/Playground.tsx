@@ -43,7 +43,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
 
     static getDerivedStateFromProps(props: IPlaygroundProps, state: IPlaygroundState) {
         if (props.scope !== state.scope) {
-            console.log('playground has been updated.');
+            console.log('playground has been updated (scope has beed changed).');
 
             const list: IPartFxInstruction[] = [];
             const { scope } = props;
@@ -108,7 +108,13 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
         }
     }
 
+    shouldComponentUpdate(nextProps: IPlaygroundProps) {
+        return this.state.scope !== nextProps.scope;
+    }
+
+
     render() {
+        console.log('Playground:render()');
         let { list, active, pipeline } = this.state;
         return (
             <div>
@@ -135,14 +141,16 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                             <Button icon='playback pause' color={ pipeline.isStopped() ? "black" : null } disabled={ pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                             <Button icon='playback play' color={ !pipeline.isStopped() ? "black" : null } disabled={ !pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                         </Button.Group>
-                        <ThreeScene style={ { 
-                            // width: '100%', 
-                            height: 'calc(100vh - 275px - 1em)', 
-                            position: 'relative',
-                            left: 0,
-                            right: 0,
-                            margin: '1em -20px -20px -20px'
-                             } } />
+                        <ThreeScene 
+                            style={ { 
+                                height: 'calc(100vh - 275px - 1em)', 
+                                position: 'relative',
+                                left: 0,
+                                right: 0,
+                                margin: '1em -20px -20px -20px'
+                             } } 
+                             emitter={ pipeline.emitter || null }
+                        />
                     </div>
                 }
             </div>

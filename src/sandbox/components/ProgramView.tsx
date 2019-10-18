@@ -19,7 +19,7 @@ import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstructi
     IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction,
     IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction,
     IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction,
-    ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IFunctionCallInstruction
+    ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IFunctionCallInstruction, IConstructorCallInstruction
     } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
@@ -269,6 +269,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.Assigment(instr);
             case EInstructionTypes.k_PostfixArithmeticInstruction:
                 return this.PostfixArithmetic(instr);
+            case EInstructionTypes.k_ConstructorCallInstruction:
+                return this.ConstructorCall(instr);
             case EInstructionTypes.k_IntInstruction:
                 return this.Int(instr);
             case EInstructionTypes.k_FloatInstruction:
@@ -482,6 +484,20 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </Property>
             </Property>
         )
+    }
+
+
+    ConstructorCall(instr: IConstructorCallInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name='type'>
+                    { this.VariableType(instr.ctor) }
+                </Property>
+                <PropertyOpt name='arguments'>
+                    { instr.arguments.map((arg) => this.Unknown(arg)) }
+                </PropertyOpt>
+            </Property>
+        );
     }
 
 

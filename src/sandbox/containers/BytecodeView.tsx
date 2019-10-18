@@ -149,12 +149,14 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         const { cdlView } = this.state;
 
         switch (code) {
+            case EOperation.k_I32LoadInput:
+            case EOperation.k_I32StoreInput:
+                args.length = 3;
+                break;
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
             case EOperation.k_I32LoadConst:
-            case EOperation.k_I32LoadInput:
             case EOperation.k_I32MoveRegToReg:
-            case EOperation.k_I32StoreInput:
                 args.length = 2;
                 break;
             case EOperation.k_Jump:

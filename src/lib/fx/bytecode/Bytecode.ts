@@ -9,7 +9,7 @@ import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstructio
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 // import { IInstruction as IOperation, IInstructionArgument } from "@lib/idl/bytecode/IInstruction";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IExprInstruction, IExprStmtInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionCallInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IExprInstruction, IExprStmtInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionCallInstruction, IConstructorCallInstruction } from "@lib/idl/IInstruction";
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { isNull, isString } from "util";
@@ -87,9 +87,9 @@ class Callstack {
     // same as stack pointer; 
     // counter grows forward;
     rc: number = 0;
-    
-    stack: { 
-        fn: IFunctionDeclInstruction; 
+
+    stack: {
+        fn: IFunctionDeclInstruction;
         // symbol table containing local variables of the function including parameters
         symbols: SymbolTable<number>;
         // registers count at the moment of function's call
@@ -141,10 +141,10 @@ class Callstack {
     }
 
     /* (assuming that all registers for all types are placed in the same memory) */
-    alloca(size: number){ 
-        let rc = this.rc; 
-        this.rc += size; 
-        return rc; 
+    alloca(size: number) {
+        let rc = this.rc;
+        this.rc += size;
+        return rc;
     }
 
     /**
@@ -200,7 +200,7 @@ class Callstack {
         const entry = this.stack.pop();
         // updating all return adresses to correct values
         if (!entryPoint) {
-            entry.jumpList.forEach(pc => this.ilist.update(pc, EOperation.k_Jump, [ this.ilist.pc ]));
+            entry.jumpList.forEach(pc => this.ilist.update(pc, EOperation.k_Jump, [this.ilist.pc]));
         }
         this.rc = entry.rc;
     }
@@ -220,7 +220,7 @@ function ContextBuilder() {
     // program counter: return current index of instruction 
     // (each instruction consists of 4th numbers)
     const pc = () => instructions.pc;
-    
+
     const debug = debugLayout(pc);
     const callstack = new Callstack(instructions);
 
@@ -247,10 +247,10 @@ function translateSubProgram(ctx: Context, fn: IFunctionDeclInstruction): ISubPr
     const { diag, callstack, constants, instructions, debug } = ctx;
 
     // NOTE: it does nothing at the momemt :/
-    debug.beginCompilationUnit('[todo]'); 
+    debug.beginCompilationUnit('[todo]');
 
     // simulate function call()
-    callstack.push(fn); 
+    callstack.push(fn);
     translateFunction(ctx, fn);
     callstack.pop();
     debug.endCompilationUnit();
@@ -341,6 +341,20 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     return r;
                 }
                 break;
+            case EInstructionTypes.k_BoolInstruction:
+                {
+                    let i32 = (<number>(lit as ILiteralInstruction).value) ? 1 : 0;
+                    let r = cderef(sname.i32(i32));
+                    if (r == REG_INVALID) {
+                        r = alloca(sizeof.i32());
+                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32));
+                        debug.map(lit);
+
+                        cref(sname.i32(i32), r);
+                    }
+                    return r;
+                }
+                break;
             default:
                 diag.critical(EErrors.k_UnsupportedConstantType, {});
         }
@@ -387,12 +401,12 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
         if (decl.isParameter()) {
             if (callstack.isEntryPoint()) {
-                const paramOffset = VariableDeclInstruction.getParameterOffset(decl);
+                const offset = 0;//VariableDeclInstruction.getParameterOffset(decl);
                 const dest = alloca(size);
                 assert(size % sizeof.i32() === 0);
-
+                const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32LoadInput, dest, paramOffset + i * 4 + padding);
+                    icode(EOperation.k_I32LoadInput, inputIndex, dest, offset + i * 4 + padding);
                     debug.map(expr);
                 }
 
@@ -433,19 +447,20 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
         let offset = 0;
         if (decl.isParameter()) {
-            offset = VariableDeclInstruction.getParameterOffset(decl);
+            offset = 0;//VariableDeclInstruction.getParameterOffset(decl);
         }
 
         switch (determMemoryLocation(decl)) {
             case EMemoryLocation.k_Input:
+                const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32StoreInput, offset + dst + i * 4, src);
+                    icode(EOperation.k_I32StoreInput, inputIndex, offset + dst + i * 4, src + i * 4);
                 }
                 break;
             case EMemoryLocation.k_Registers:
             default:
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32MoveRegToReg, offset + dst + i * 4, src);
+                    icode(EOperation.k_I32MoveRegToReg, offset + dst + i * 4, src + i * 4);
                 }
         }
     }
@@ -473,6 +488,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     return raddr(arg);
                 }
                 break;
+            case EInstructionTypes.k_BoolInstruction:
             case EInstructionTypes.k_IntInstruction:
             case EInstructionTypes.k_FloatInstruction:
                 return rconst(expr as ILiteralInstruction);
@@ -602,13 +618,12 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                 break;
             case EInstructionTypes.k_FunctionCallInstruction:
                 {
-                    
                     const call = expr as IFunctionCallInstruction;
                     const fdecl = call.declaration as IFunctionDeclInstruction;
 
                     const ret = callstack.push(fdecl);
 
-                    for (let i = 0; i < fdecl.definition.paramList.length; ++ i) {
+                    for (let i = 0; i < fdecl.definition.paramList.length; ++i) {
                         const param = fdecl.definition.paramList[i];
                         const arg = i < call.args.length ? call.args[i] : null;
 
@@ -637,6 +652,51 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                     return ret;
                 }
+                break;
+            case EInstructionTypes.k_ConstructorCallInstruction:
+                {
+                    const ctorCall = expr as IConstructorCallInstruction;
+                    // todo: add correct constructor call support for builtin type at the level of analyzer
+                    const type = ctorCall.type;
+                    const typeName = ctorCall.type.name;
+                    const args = (ctorCall.arguments as IExprInstruction[]);
+
+                    const addr = alloca(type.size);
+
+                    switch (typeName) {
+                        case 'float':
+                        case 'float1':
+                        case 'float2':
+                        case 'float3':
+                        case 'float4':
+                            switch (args.length) {
+                                case 1:
+                                    // todo: convert float to int if necessary
+                                    // handling for the case single same type argument and multiple floats
+                                    assert(Instruction.isExpression(args[0]));
+                                    const addr0 = raddr(args[0]);
+                                    for (let i = 0, n = type.size / args[0].type.size; i < n; ++i) {
+                                        icode(EOperation.k_I32MoveRegToReg, addr + i * sizeof.f32(), addr0);
+                                    }
+                                    break;
+                                default:
+                                    let offset = 0;
+                                    for (let i = 0; i < args.length; ++i) {
+                                        assert(Instruction.isExpression(args[i]));
+                                        icode(EOperation.k_I32MoveRegToReg, addr + offset, raddr(args[i]));
+                                        offset += args[i].type.size;
+                                    }
+                                    break;
+
+                            }
+                            return addr;
+                            break;
+                        default:
+                    }
+                    console.warn(`Unknown constructor found: ${ctorCall.toCode()}`);
+                    return REG_INVALID;
+                }
+                break;
             default:
                 console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
                 return REG_INVALID;

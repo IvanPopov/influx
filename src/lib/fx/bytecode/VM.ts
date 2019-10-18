@@ -41,16 +41,27 @@ export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
 export type INT32 = number;
 
 class VM {
-    static play(data: { instructions: Uint32Array; constants: Uint8Array; }): INT32 {
+    static $regs = new ArrayBuffer(512 * 4);
+
+    static play(data: Bundle): INT32 {
         let i4 = 0;                      // current instruction;
         let ilist = data.instructions;
 
-        let $regs = new ArrayBuffer(512 * 4);
-        let rregs = new Uint8Array($regs);
-        let iregs = new Int32Array($regs);
-        let fregs = new Float32Array($regs);
+        let iregs = new Int32Array(VM.$regs);
+        let fregs = new Float32Array(VM.$regs);
 
-        let cb = data.constants;
+        let $cb = data.constants;
+        let icb = new Int32Array($cb.buffer, $cb.byteOffset);
+
+        // todo: handle correctly empty input
+        let $input = data.input;
+        for (let i = 0; i < 2; ++ i) {
+            $input[i] = $input[i] || new Uint8Array(0);
+        }
+        let iinput = [
+            new Int32Array($input[0].buffer, $input[0].byteOffset),
+            new Int32Array($input[1].buffer, $input[1].byteOffset)
+        ];
 
         end:
         while (i4 < ilist.length) {
@@ -59,6 +70,7 @@ class VM {
             let b = ilist[i4 + 2];
             let c = ilist[i4 + 3];
 
+            // todo: use already aligned adresses
             let a4 = a >> 2;
             let b4 = b >> 2;
             let c4 = c >> 2;
@@ -66,11 +78,17 @@ class VM {
             switch (op) {
                 case EOperation.k_I32LoadConst:
                 {
-                    // copy 4 bytes
-                    rregs[a    ] = cb[b    ];
-                    rregs[a + 1] = cb[b + 1];
-                    rregs[a + 2] = cb[b + 2];
-                    rregs[a + 3] = cb[b + 3];
+                    iregs[a4] = icb[b4]
+                }
+                break;
+                case EOperation.k_I32LoadInput:
+                {
+                    iregs[b4] = iinput[a][c4];
+                }
+                break;
+                case EOperation.k_I32StoreInput:
+                {
+                    iinput[a][b4] = iregs[c4];
                 }
                 break;
                 case EOperation.k_I32MoveRegToReg:
@@ -128,7 +146,7 @@ class VM {
 interface Bundle {
     instructions: Uint32Array;
     constants: Uint8Array;
-    input: Uint8Array;
+    input: Uint8Array[];
 }
 
 export function load(code: Uint8Array): Bundle {

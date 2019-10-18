@@ -111,7 +111,7 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         this.emitter = emitter;
 
         emitter.passes.forEach((pass, i) => {
-            const buffer =  new THREE.InterleavedBuffer(pass.data, pass.stride);
+            const buffer =  new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
             const geometry = new THREE.BufferGeometry();
             // todo: remove hardcoded layout or check it's validity.
             geometry.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
@@ -131,6 +131,7 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
             const points = new THREE.Points(geometry, material);
             this.scene.add(points);
             this.passes.push(points);
+            console.log('emitter added.');
         });
     }
 
@@ -274,6 +275,7 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
                 const attr = geometry.attributes[attrName] as THREE.InterleavedBufferAttribute;
                 attr.data.needsUpdate = true;
             }
+            geometry.setDrawRange(0, this.emitter.length); // todo: use per pass values
         }
 
         this.controls.update();
@@ -281,8 +283,24 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         this.frameId = requestAnimationFrame(this.animate);
     }
 
+    shouldComponentUpdate(nextProps: ITreeSceneProps) {
+        return this.emitter !== nextProps.emitter;
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        this.emitter = null;
+        this.passes.forEach(pass => {
+            this.scene.remove(pass);
+            console.log('emitter removed.');
+        });
+
+        if (this.props.emitter) {
+            this.addEmitter(this.props.emitter);
+        }
+    }
 
     render() {
+        console.log('ThreeScene::render()');
         return (
             <div
                 style={ this.props.style }

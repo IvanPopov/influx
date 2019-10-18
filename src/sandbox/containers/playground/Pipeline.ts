@@ -9,16 +9,15 @@ import { assert } from '@lib/common';
 type PartFx = IPartFxInstruction;
 
 interface IRunnable {
-    run(input?: Uint8Array): VM.INT32;
+    run(...input: Uint8Array[]): VM.INT32;
 }
 
 function prebuild(expr: ICompileExprInstruction): IRunnable {
     const code = Bytecode.translate(expr.function).code;
     const bundle = VM.load(code);
     return {
-        run(input: Uint8Array = null) {
-            bundle.input = input;
-            return VM.play(bundle);
+        run(...input: Uint8Array[]) {
+            return VM.play({ ...bundle, input });
         }
     }
 }
@@ -33,14 +32,14 @@ interface IPassDesc {
 class Pass {
     private owner: Emitter;
     private prerenderRoutine: IRunnable;
-    private prerenderedParticles: ArrayBuffer;
+    private prerenderedParticles: Uint8Array;
     private matByteLength: number;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this.owner = owner;
         this.prerenderRoutine = desc.prerenderRoutine;
         this.matByteLength = desc.matByteLength;
-        this.prerenderedParticles = new ArrayBuffer(this.matByteLength * this.owner.capacity);
+        this.prerenderedParticles = new Uint8Array(this.matByteLength * this.owner.capacity);
     }
 
     // number of float elements in the prerendered particle (f32)
@@ -50,7 +49,7 @@ class Pass {
     }
 
     get data(): Uint8Array {
-        return new Uint8Array(this.prerenderedParticles, 0, this.owner.capacity);
+        return this.prerenderedParticles;
     }
 
     get length(): number {
@@ -59,25 +58,31 @@ class Pass {
 
     prerender(): void {
         for (let i = 0; i < this.owner.length; ++i) {
-            const ptr = this.getPrerenderedParticlePtr(i);
-            this.prerenderRoutine.run(ptr);
+            const partPtr = this.owner.getParticlePtr(i);
+            const prerenderedPartPtr = this.getPrerenderedParticlePtr(i);
+            this.prerenderRoutine.run(partPtr, prerenderedPartPtr); 
+                        
+            // const ptr = prerenderedPartPtr;
+            // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
+            // console.log(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
         }
     }
 
     private getPrerenderedParticlePtr(i: number) {
         assert(i >= 0 && i < this.owner.capacity);
-        return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
+        // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
+        return this.prerenderedParticles.subarray(i * this.matByteLength, (i + 1) * this.matByteLength);
     }
 }
 
 export class Emitter {
-    static CAPACITY = 50;
+    static CAPACITY = 1000;
 
     private nPartAddFloat: number;
     private nPartAdd: number;
     private nPart: number;          // number of alive particles
 
-    private particles: ArrayBuffer;
+    private particles: Uint8Array;
 
     private spawnRoutine: IRunnable;
     private initRoutine: IRunnable;
@@ -89,7 +94,7 @@ export class Emitter {
         this.nPartAdd = 0;
         this.nPartAddFloat = 0;
         this.nPart = 0;
-        this.particles = new ArrayBuffer(partByteLength * this.capacity);
+        this.particles = new Uint8Array(partByteLength * this.capacity);
 
         this.partByteLength = partByteLength;
         this.initRoutine = initRoutine;
@@ -131,10 +136,13 @@ export class Emitter {
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
             this.initRoutine.run(ptr);
+            
+            // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
+            // console.log(`init (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
 
         if (this.nPartAdd > 0) {
-            console.log(`spawn ${this.nPartAdd} particles`);
+            // console.log(`spawn ${this.nPartAdd} particles`);
             this.nPart += this.nPartAdd;
         }
 
@@ -155,6 +163,9 @@ export class Emitter {
         for (let i = 0; i < this.nPart; ++i) {
             const ptr = this.getParticlePtr(i);
             this.updateRoutine.run(ptr);
+
+            // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
+            // console.log(`update(${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
     }
 
@@ -164,9 +175,10 @@ export class Emitter {
         });
     }
 
-    private getParticlePtr(i: number): Uint8Array {
+    getParticlePtr(i: number): Uint8Array {
         assert(i >= 0 && i < this.capacity);
-        return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
+        return this.particles.subarray(i * this.partByteLength, (i + 1) * this.partByteLength);
+        // return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
     }
 }
 
