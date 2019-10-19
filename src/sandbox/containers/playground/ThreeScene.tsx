@@ -87,6 +87,9 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         this.createRenderer(width, height);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enabled = false;
+        // temp solution in order to not moving text cursor during movement 
+        this.controls.enableKeys = false;
 
         this.createGridHelper();
         // this.createCube();
@@ -96,6 +99,16 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         this.start();
 
         window.addEventListener('resize', this.onWindowResize, false);
+
+        // small hack for disabling arrow keys actings during the typing
+        this.canvas.addEventListener('mouseover', e => { this.controls.enabled = true; });
+        this.canvas.addEventListener('mouseout', e => { this.controls.enabled = false; });
+        // this.canvas.addEventListener('keydown', e => { if (this.controls.enabled) e.stopPropagation() });
+        // this.canvas.addEventListener('keyup', e => { if (this.controls.enabled) e.stopPropagation() });
+    }
+
+    get canvas(): HTMLCanvasElement {
+        return this.renderer.domElement;
     }
 
     addEmitter(emitter: Emitter) {
@@ -106,11 +119,11 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
             console.warn('no emitters found.');
             return;
         }
-        
+
         this.emitter = emitter;
 
         emitter.passes.forEach((pass, i) => {
-            const buffer =  new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+            const buffer = new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
             const geometry = new THREE.BufferGeometry();
             // todo: remove hardcoded layout or check it's validity.
             geometry.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
@@ -197,18 +210,6 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
 
 
     animate = (time: number) => {
-        // if (this.pointCloud) {
-        //     const geometry = this.pointCloud.geometry as THREE.BufferGeometry;
-        //     const positions = geometry.attributes['position'] as THREE.InterleavedBufferAttribute;
-
-        //     for (let i = 0; i < this.particles.length; ++ i) {
-        //         const particle = this.particles[i];
-        //         const pos = particle.position;
-        //         // positions.setXYZ(i, pos.x, pos.y + Math.sin(time * 0.001), pos.z);
-        //         positions.data.needsUpdate = true;
-        //     }
-        // }
-
         for (const pass of this.passes) {
             const geometry = pass.geometry as THREE.BufferGeometry;
             for (const attrName in geometry.attributes) {

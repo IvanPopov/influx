@@ -49,26 +49,27 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
             const { scope } = props;
 
             if (scope) {
-                for (let name in scope.techniqueMap) {
-                    let tech = scope.techniqueMap[name];
-                    if (tech.type != ETechniqueType.k_PartFx) {
+                for (const name in scope.techniqueMap) {
+                    const tech = scope.techniqueMap[name];
+                    if (tech.type !== ETechniqueType.k_PartFx) {
                         continue;
                     }
                     list.push(tech as IPartFxInstruction);
                 }
 
                 let active = null;
-                let pipeline = state.pipeline;
+                let pipelinePrev = state.pipeline;
+                let pipelineNext = null;
                 let running = false;
 
                 if (state.active) {
-                    if (list.map(fx => fx.name).indexOf(state.active) != -1) {
+                    if (list.map(fx => fx.name).indexOf(state.active) !== -1) {
                         active = state.active;
                     }
                 }
 
                 if (!active) {
-                    for (let fx of list) {
+                    for (const fx of list) {
                         if (fx.isValid()) {
                             active = fx.name;
                             break;
@@ -76,19 +77,23 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                     }
                 }
 
-                if (pipeline) {
-                    pipeline.stop();
-                    pipeline = null;
-                    console.log('pipeline has been dropped.');
-                }
-
                 if (active) {
                     const i = list.map(fx => fx.name).indexOf(active);
-                    pipeline = Pipeline(list[i]);
-                    console.log('pipeline has been created.');
-                    running = !pipeline.isStopped();
+
+                    if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
+                        pipelineNext = Pipeline(list[i]);
+                        console.log('next pipeline has been created.');
+                        running = !pipelineNext.isStopped();
+                    }
                 }
 
+                if (pipelineNext && pipelinePrev) {
+                    pipelinePrev.stop();
+                    pipelinePrev = null;
+                    console.log('previous pipeline has been dropped.');
+                }
+
+                const pipeline = pipelineNext || pipelinePrev;
                 return { list, active, scope, pipeline, running };
             }
         }
@@ -141,15 +146,15 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                             <Button icon='playback pause' color={ pipeline.isStopped() ? "black" : null } disabled={ pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                             <Button icon='playback play' color={ !pipeline.isStopped() ? "black" : null } disabled={ !pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
                         </Button.Group>
-                        <ThreeScene 
-                            style={ { 
-                                height: 'calc(100vh - 275px - 1em)', 
+                        <ThreeScene
+                            style={ {
+                                height: 'calc(100vh - 275px - 1em)',
                                 position: 'relative',
                                 left: 0,
                                 right: 0,
                                 margin: '1em -20px -20px -20px'
-                             } } 
-                             emitter={ pipeline.emitter || null }
+                            } }
+                            emitter={ pipeline.emitter || null }
                         />
                     </div>
                 }

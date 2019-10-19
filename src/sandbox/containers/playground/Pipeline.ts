@@ -1,6 +1,6 @@
 /* tslint:disable:typedef */
 
-import { assert } from '@lib/common';
+import { assert, isNull } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { ICompileExprInstruction } from '@lib/idl/IInstruction';
@@ -68,6 +68,10 @@ class Pass {
         }
     }
 
+    shadowReload({ prerenderRoutine }) {
+        this.prerenderRoutine = prerenderRoutine;
+    }
+
     private getPrerenderedParticlePtr(i: number) {
         assert(i >= 0 && i < this.owner.capacity);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
@@ -76,6 +80,7 @@ class Pass {
 }
 
 export class Emitter {
+    // todo: load capacity from PartFx
     static CAPACITY = 1000;
 
     private nPartAddFloat: number;
@@ -101,7 +106,18 @@ export class Emitter {
         this.spawnRoutine = spawnRoutine;
         this.updateRoutine = updateRoutine;
 
-        this.passList = passList.map(desc => new Pass(desc, this));
+        this.passList = passList.map((desc: IPassDesc) => new Pass(desc, this));
+    }
+
+
+    shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList }) {
+        this.initRoutine = initRoutine;
+        this.spawnRoutine = spawnRoutine;
+        this.updateRoutine = updateRoutine;
+        passList.forEach((desc: IPassDesc, i: number) => {
+            const prerenderRoutine = desc.prerenderRoutine;
+            this.passList[i].shadowReload({ prerenderRoutine });
+        });
     }
 
 
@@ -185,7 +201,7 @@ export class Emitter {
 
 function Pipeline(fx: PartFx) {
 
-    let emitter: Emitter;
+    let emitter: Emitter = null;
 
     let elapsedTime: number;
     let elapsedTimeLevel: number;
@@ -194,7 +210,7 @@ function Pipeline(fx: PartFx) {
     let $elapsedTimeLevel: number;
     let $interval = null;
 
-    function load() {
+    function load(fx: PartFx) {
 
         const spawnRoutine = prebuild(fx.spawnRoutine);
         const initRoutine = prebuild(fx.initRoutine);
@@ -207,9 +223,12 @@ function Pipeline(fx: PartFx) {
             };
         });
 
-        emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList });
-
-        play();
+        if (isNull(emitter)) {
+            emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList });
+            play();
+        } else {
+            emitter.shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList });
+        }
     }
 
     function stop() {
@@ -241,9 +260,28 @@ function Pipeline(fx: PartFx) {
         return $interval === null;
     }
 
-    load();
+    // todo: check capacity
+    const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.passList
+        .map(pass => pass.material.hash)
+        .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 
-    return { stop, play, isStopped, emitter };
+    console.log(fxHash(fx));
+
+    const isReplaceable = (fxNext: PartFx) => fxHash(fxNext) === fxHash(fx);
+
+    function shadowReload(fxNext: PartFx): boolean {
+        if (!isReplaceable(fxNext)) {
+            return false;
+        }
+
+        console.log('pipeline reloaded from the shadow');
+        load(fxNext);
+        return true;
+    }
+
+    load(fx);
+
+    return { stop, play, isStopped, emitter, shadowReload };
 }
 
 

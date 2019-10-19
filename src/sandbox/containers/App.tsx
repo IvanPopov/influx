@@ -1,7 +1,7 @@
 /* tslint:disable:max-func-body-length */
 /* tslint:disable:typedef */
 
-import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import * as Bytecode from '@lib/fx/bytecode';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
@@ -14,7 +14,7 @@ import * as path from 'path';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { HashRouter as Router, matchPath, NavLink, Route, Switch, Redirect } from 'react-router-dom';
+import { HashRouter as Router, matchPath, NavLink, Redirect, Route, Switch } from 'react-router-dom';
 import { Button, Checkbox, Container, Dropdown, Grid, Header, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;

@@ -48,7 +48,7 @@ class InstructionList {
     //     this._length += list.length;
     // }
 
-    update(pc: number, op: EOperation, args: number[]) {
+    replace(pc: number, op: EOperation, args: number[]) {
         assert(pc < this.pc);
         assert(args.length <= 3);
 

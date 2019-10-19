@@ -13,14 +13,16 @@ import { ForStmtInstruction } from '@lib/fx/instructions/ForStmtInstruction';
 import { Instruction } from '@lib/fx/instructions/Instruction';
 import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
 import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction,
-    ICastExprInstruction, IComplexExprInstruction, IFunctionDeclInstruction,
-    IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction,
-    IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction,
-    IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction,
-    IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction,
-    ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IFunctionCallInstruction, IConstructorCallInstruction
-    } from '@lib/idl/IInstruction';
+import {
+    EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction,
+    ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction,
+    IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction,
+    IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction,
+    IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction,
+    IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction,
+    IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction,
+    IVariableDeclInstruction, IVariableTypeInstruction
+} from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
 import { getSourceCode } from '@sandbox/reducers/sourceFile';
@@ -705,7 +707,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <PropertyOpt name='usages' value={ (instr.usageList.join(' ') || null) } />
-                <Property name='padding' value={ instr.padding == Instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
+                <Property name='padding' value={ instr.padding === Instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
                 <PropertyOpt name='subType' opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>

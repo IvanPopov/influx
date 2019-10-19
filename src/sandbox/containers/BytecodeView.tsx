@@ -1,16 +1,16 @@
-import { EChunkType } from '@lib/fx/bytecode/Bytecode';
-import { CdlRaw, cdlview } from '@lib/fx/bytecode/DebugLayout';
+import { isNull } from '@lib/common';
+import { cdlview } from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
+import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { getSourceCode, getDebugger } from '@sandbox/reducers/sourceFile';
-import { IFileState, IDebuggerState } from '@sandbox/store/IStoreState';
+import { getDebugger } from '@sandbox/reducers/sourceFile';
+import { IDebuggerState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
-import { isNull } from '@lib/common';
-import DistinctColor from '@lib/util/DistinctColor';
+import { EChunkType } from '@lib/idl/bytecode';
 
 
 export interface IBytecodeViewProps extends IDebuggerState {

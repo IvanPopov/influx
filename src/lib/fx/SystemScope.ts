@@ -237,35 +237,35 @@ function addSystemTypeMatrix(): void {
 }
 
 
-function generateSuffixLiterals(pLiterals: string[], pOutput: IMap<boolean>, iDepth: number = 0): void {
-    if (iDepth >= pLiterals.length) {
+function generateSuffixLiterals(literals: string[], output: IMap<boolean>, depth: number = 0): void {
+    if (depth >= literals.length) {
         return;
     }
 
-    if (iDepth === 0) {
-        for (let i = 0; i < pLiterals.length; i++) {
-            pOutput[pLiterals[i]] = true;
+    if (depth === 0) {
+        for (let i = 0; i < literals.length; i++) {
+            output[literals[i]] = true;
         }
 
-        iDepth = 1;
+        depth = 1;
     }
 
-    const pOutputKeys: string[] = Object.keys(pOutput);
+    const outputKeys = Object.keys(output);
 
-    for (let i = 0; i < pLiterals.length; i++) {
-        for (let j: number = 0; j < pOutputKeys.length; j++) {
-            if (pOutputKeys[j].indexOf(pLiterals[i]) !== -1) {
-                pOutput[pOutputKeys[j] + pLiterals[i]] = false;
+    for (let i = 0; i < literals.length; i++) {
+        for (let j = 0; j < outputKeys.length; j++) {
+            if (outputKeys[j].indexOf(literals[i]) !== -1) {
+                output[outputKeys[j] + literals[i]] = false;
             }
             else {
-                pOutput[pOutputKeys[j] + pLiterals[i]] = (pOutput[pOutputKeys[j]] === false) ? false : true;
+                output[outputKeys[j] + literals[i]] = (output[outputKeys[j]] === false) ? false : true;
             }
         }
     }
 
-    iDepth++;
+    depth++;
 
-    generateSuffixLiterals(pLiterals, pOutput, iDepth);
+    generateSuffixLiterals(literals, output, depth);
 }
 
 

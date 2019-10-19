@@ -1,9 +1,6 @@
 import { assert, isDefAndNotNull } from "@lib/common";
-import { EOperation } from "@lib/idl/bytecode/EOperations";
+import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
-// import { remote } from 'electron';
-import * as isElectron from 'is-electron-renderer';
-import { EChunkType } from "./Bytecode";
 
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;

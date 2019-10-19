@@ -1,21 +1,25 @@
 
 import { assert, isDef, isDefAndNotNull } from "@lib/common";
+import Callstack from "@lib/fx/bytecode/Callstack";
+import { REG_INVALID } from "@lib/fx/bytecode/common";
 import ConstanPool from "@lib/fx/bytecode/ConstantPool";
 import debugLayout, { CdlRaw } from "@lib/fx/bytecode/DebugLayout";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import sizeof from "@lib/fx/bytecode/sizeof";
 import { DeclStmtInstruction } from "@lib/fx/instructions/DeclStmtInstruction";
+import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
+import { Instruction } from "@lib/fx/instructions/Instruction";
 import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
+import { VariableDeclInstruction } from "@lib/fx/instructions/VariableDeclInstruction";
+import * as SystemScope from "@lib/fx/SystemScope";
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
+import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-// import { IInstruction as IOperation, IInstructionArgument } from "@lib/idl/bytecode/IInstruction";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IExprInstruction, IExprStmtInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IFunctionCallInstruction, IConstructorCallInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { isNull, isString } from "util";
-import { ExprInstruction } from "../instructions/ExprInstruction";
-import { Instruction } from "../instructions/Instruction";
-import { VariableDeclInstruction } from "../instructions/VariableDeclInstruction";
+
 
 enum EErrors {
     k_UnsupportedConstantType,
@@ -24,11 +28,7 @@ enum EErrors {
     k_UnsupportedArithmeticExpr
 }
 
-export enum EChunkType {
-    k_Constants,
-    k_Code
-}
-
+// FIXME: don't use 'any' type
 type ITranslatorDiagDesc = any;
 
 class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
@@ -37,7 +37,7 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
     }
 
     protected resolveFilename(code: number, desc: ITranslatorDiagDesc): string {
-        return '[unknown]';  // todo: fixme
+        return '[unknown]';  // FIXME: return correct filename
     }
 
     protected resolveRange(code: number, desc: ITranslatorDiagDesc): IRange {
@@ -50,8 +50,16 @@ class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 }
 
 
-export const REG_INVALID = (-1 >>> 0);
-export const DEFAULT_ENTRY_POINT_NAME = 'main';
+// class PromisedLocation {
+//     size: number;
+//     expr: IExprInstruction;
+    
+//     status: 'loaded' | 'unloaded';
+
+//     constructor(expr: IExprInstruction) {
+
+//     }
+// }
 
 
 // symbol name id generation;
@@ -64,153 +72,6 @@ const sname = {
     addr: (addr: number) => sname.i32(addr)
 };
 
-/**
- * A simplified symbol table containing the correspondence of unique 
- * hashes of symbols and their addresses in registers.
- * The table is global and does not depend on the stack of functions, 
- * because hashes are built on the basis of identifiers of instructions 
- * unique to each function and context.
- */
-class SymbolTable<SYMBOL_T>  {
-    [key: string]: SYMBOL_T;
-
-    *[Symbol.iterator]() {
-        for (let i in this) {
-            yield this[i];
-        }
-    }
-}
-
-
-class Callstack {
-    // occupied registers count 
-    // same as stack pointer; 
-    // counter grows forward;
-    rc: number = 0;
-
-    stack: {
-        fn: IFunctionDeclInstruction;
-        // symbol table containing local variables of the function including parameters
-        symbols: SymbolTable<number>;
-        // registers count at the moment of function's call
-        rc: number;
-        // program counter's value before the function's start 
-        pc: number;
-        // address of register where return call should save its value
-        ret: number;
-
-        // addresses of function return instructions to be resolved
-        jumpList: number[];
-    }[] = [];
-
-    // global symbol table for all constants loaded during bytecode generation process
-    constants: SymbolTable<number> = new SymbolTable<number>();
-
-    // todo: rework this api (make it more explicit)
-    constructor(private ilist: InstructionList) {
-
-    }
-
-    private get top() {
-        return this.stack[this.depth - 1];
-    }
-
-    private get depth(): number {
-        return this.stack.length;
-    }
-
-    get fn(): IFunctionDeclInstruction {
-        return this.top.fn;
-    }
-
-    get symbols(): SymbolTable<number> {
-        return this.top.symbols;
-    }
-
-    get ret(): number {
-        return this.top.ret;
-    }
-
-    isEntryPoint(): boolean {
-        return this.depth === 1;
-    }
-
-    // next operation will be 'k_Ret'
-    addReturn() {
-        this.top.jumpList.push(this.ilist.pc);
-    }
-
-    /* (assuming that all registers for all types are placed in the same memory) */
-    alloca(size: number) {
-        let rc = this.rc;
-        this.rc += size;
-        return rc;
-    }
-
-    /**
-     * Add referene of the local variable.
-     * @param sname Variable name or hash.
-     * @param r Register number.
-     */
-    ref(sname: string, r: number): void {
-        assert(!isDef(this.symbols[sname]));
-        this.symbols[sname] = r;
-    }
-
-    /**
-     * @returns Register address of variable/constant or REG_INVALID.
-     * @param sname 
-     */
-    deref(sname: string): number {
-        // is zero register available?
-        for (let i = this.depth - 1; i >= 0; --i) {
-            let symbols = this.stack[i].symbols;
-            if (isDef(symbols[sname])) {
-                return symbols[sname];
-            }
-        }
-        return REG_INVALID;
-    }
-
-    /** Same as ref but for constants only */
-    cref(sname: string, r: number): void {
-        assert(!isDef(this.constants[sname]));
-        this.constants[sname] = r;
-    }
-
-    cderef(sname: string): number {
-        // is zero register available?
-        return isDef(this.constants[sname]) ? this.constants[sname] : REG_INVALID;
-    }
-
-    /** @returns Address of the return value. */
-    push(fn: IFunctionDeclInstruction): number {
-        // reserve memory for the return value
-        const ret = this.alloca(fn.definition.returnType.size);
-        const symbols = new SymbolTable<number>();
-        const rc = this.rc;
-        const pc = this.ilist.pc;
-        const jumpList = [];
-        this.stack.push({ fn, symbols, rc, ret, pc, jumpList });
-        return ret;
-    }
-
-    pop(): void {
-        const entryPoint = this.isEntryPoint();
-        const entry = this.stack.pop();
-        // updating all return adresses to correct values
-        if (!entryPoint) {
-            entry.jumpList.forEach(pc => this.ilist.update(pc, EOperation.k_Jump, [this.ilist.pc]));
-        }
-        this.rc = entry.rc;
-    }
-}
-
-
-enum EMemoryLocation {
-    k_Registers,
-    k_Input
-};
 
 
 function ContextBuilder() {
@@ -390,26 +251,65 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         instructions.add(code, args);
     }
 
+    interface FnSwizzle {
+        (i: number): number;
+    }
 
-    function load(expr: IExprInstruction, size: number = 0, padding: number = 0) {
+    // move from register to register
+    function imove(dest: number, src: number, size: number,
+        destSwizzle?: FnSwizzle, srcSwizzle?: FnSwizzle): void {
+        destSwizzle = destSwizzle || (i => i);
+        srcSwizzle = srcSwizzle || (i => i);
+        assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+            icode(EOperation.k_I32MoveRegToReg, dest + destSwizzle(i) * sizeof.i32(), src + srcSwizzle(i) * sizeof.i32());
+        }
+    }
+
+
+    // move from input to registers
+    function iload(inputIndex: number, dest: number, src: number, size: number,
+        destSwizzle?: FnSwizzle, srcSwizzle?: FnSwizzle): void {
+        destSwizzle = destSwizzle || (i => i);
+        srcSwizzle = srcSwizzle || (i => i);
+        assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+            icode(EOperation.k_I32LoadInput, inputIndex, dest + destSwizzle(i) * sizeof.i32(), src + srcSwizzle(i) * sizeof.i32());
+        }
+    }
+
+
+    // move from registers to input
+    function istore(inputIndex: number, dest: number, src: number, size: number,
+        destSwizzle?: FnSwizzle, srcSwizzle?: FnSwizzle): void {
+        destSwizzle = destSwizzle || (i => i);
+        srcSwizzle = srcSwizzle || (i => i);
+        assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+            icode(EOperation.k_I32StoreInput, inputIndex, dest + destSwizzle(i) * sizeof.i32(), src + srcSwizzle(i) * sizeof.i32());
+        }
+    }
+
+
+    function load(expr: IExprInstruction, size: number = 0, padding: number = 0,
+        destSwizzle?: FnSwizzle, srcSwizzle?: FnSwizzle) {
         const decl = ExprInstruction.UnwindExpr(expr);
         assert(determMemoryLocation(decl) != EMemoryLocation.k_Registers);
 
-        if (!size) {
-            size = decl.type.size;
-        }
+        size = size || decl.type.size;
 
         if (decl.isParameter()) {
             if (callstack.isEntryPoint()) {
-                const offset = 0;//VariableDeclInstruction.getParameterOffset(decl);
+                // implies that each parameter is loaded from its stream, so 
+                // the offset is always zero. 
+                // Otherwise use 'VariableDeclInstruction.getParameterOffset(decl);'
+                // in order to determ correct offset between parameters
+                const offset = 0;
                 const dest = alloca(size);
-                assert(size % sizeof.i32() === 0);
+                const src = offset + padding;
                 const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32LoadInput, inputIndex, dest, offset + i * 4 + padding);
-                    debug.map(expr);
-                }
-
+                iload(inputIndex, dest, src, size, destSwizzle, srcSwizzle);
+                debug.map(expr);
                 return dest;
             } else {
                 assert(false, 'unsupported');
@@ -423,6 +323,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         assert(false, "all is bad :/");
         return 0;
     }
+
 
     function determMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
         if (decl.isParameter()) {
@@ -440,28 +341,31 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         return EMemoryLocation.k_Registers;
     }
 
+
     /** Universal memcopy() suitable both for registers and external memory */
-    function store(expr: IExprInstruction, dst: number, src: number, size: number) {
+    function store(expr: IExprInstruction, dest: number, src: number, size: number) {
         const decl = ExprInstruction.UnwindExpr(expr);
         assert(!isNull(decl), 'declaration cannot be null');
 
         let offset = 0;
         if (decl.isParameter()) {
-            offset = 0;//VariableDeclInstruction.getParameterOffset(decl);
+            // implies that each parameter is loaded from its stream, so 
+            // the offset is always zero. 
+            // Otherwise use 'VariableDeclInstruction.getParameterOffset(decl);'
+            // in order to determ correct offset between parameters
+            offset = 0;
         }
+
+        dest += offset;
 
         switch (determMemoryLocation(decl)) {
             case EMemoryLocation.k_Input:
                 const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32StoreInput, inputIndex, offset + dst + i * 4, src + i * 4);
-                }
+                istore(inputIndex, dest, src, size);
                 break;
             case EMemoryLocation.k_Registers:
             default:
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                    icode(EOperation.k_I32MoveRegToReg, offset + dst + i * 4, src + i * 4);
-                }
+                imove(dest, src, size);
         }
     }
 
@@ -470,6 +374,26 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         const decl = ExprInstruction.UnwindExpr(expr);
         assert(!isNull(decl), 'declaration cannot be null');
         return determMemoryLocation(decl) != EMemoryLocation.k_Registers;
+    }
+
+    const POSTFIX_COMPONENT_MAP = {
+        'r': 0, 'x': 0, 's': 0,
+        'g': 1, 'y': 1, 't': 1,
+        'b': 2, 'z': 2, 'p': 2,
+        'a': 3, 'w': 3, 'q': 3
+    };
+
+    function isValidPostfixNameForSwizzling(postfixName: string): boolean {
+        return postfixName
+            .split('')
+            .map(c => POSTFIX_COMPONENT_MAP[c])
+            .map(i => i >= 0 && i < 4)
+            .reduce((accum, val) => accum && val);
+    }
+
+    // xxwy => [0, 0, 3, 1]
+    function makeSwizzlePattern(postfixName: string): number[] {
+        return postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
     }
 
 
@@ -583,18 +507,44 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_PostfixPointInstruction:
                 {
                     const point = expr as IPostfixPointInstruction;
-                    const postfix = point.postfix;
-                    const elementAddr = raddr(point.element, false);
-                    const { size, padding } = postfix.type;
+                    const { element, postfix } = point;
+                    const elementAddr = raddr(element, false);
+
+                    let { size, padding } = postfix.type;
+
+                    let srcSwizzle = i => i;
 
                     // Does expression have dynamic indexing?
+                    // todo: rename isConstExpr() method to something more suitable
                     if (point.isConstExpr()) {
+
+                        // handle such types like float2, float3, int2, int3 etc.
+                        // all system types except matrix and samplers support swizzling
+                        const isSwizzlingSupported = SystemScope.isVectorType(element.type) ||
+                            SystemScope.isScalarType(element.type);
+
+                        if (isSwizzlingSupported) {
+                            assert(isValidPostfixNameForSwizzling(postfix.name));
+                            const swizzlingPattern = makeSwizzlePattern(postfix.name);
+                            srcSwizzle = i => swizzlingPattern[i];
+
+                            assert(padding === Instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
+                            padding = 0;
+                        }
 
                         // If loading not allowed then we are inside the recursive call to calculate the final address
                         // so in this case we just have to return address with padding added to it.
                         if (isLoadAllowed) {
-                            if (isLoadRequired(point.element)) {
-                                return load(point.element, size, padding);
+                            // check loading from input
+                            if (isLoadRequired(element)) {
+                                return load(element, size, padding, null, srcSwizzle);
+                            }
+
+                            // preload swizzled pattern
+                            if (srcSwizzle) {
+                                const dest = alloca(size);
+                                const src = elementAddr;
+                                imove(dest, src, size, null, srcSwizzle);
                             }
                         }
 
@@ -629,19 +579,15 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
 
                         const src = !isNull(arg) ? raddr(arg, false) : raddr(param.initExpr);
 
-                        // todo: add support for 'in' usage
+                        // by default all parameters are interpreted as 'in'
                         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
                             ref(sname.var(param), src);
                         } else {
                             // todo: handle expressions like "float4 v = 5.0;"
                             const size = param.type.size;
                             const dest = alloca(param.type.size);
-
-                            // todo: move memcopy to separate function for better readability
-                            for (let j = 0, n = size / sizeof.i32(); j < n; ++j) {
-                                icode(EOperation.k_I32MoveRegToReg, dest + j * 4, src);
-                                // debug.map(param);
-                            }
+                            imove(dest, src, size);
+                            // debug.map(param);
 
                             ref(sname.var(param), dest);
                         }
@@ -658,12 +604,11 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     const ctorCall = expr as IConstructorCallInstruction;
                     // todo: add correct constructor call support for builtin type at the level of analyzer
                     const type = ctorCall.type;
-                    const typeName = ctorCall.type.name;
                     const args = (ctorCall.arguments as IExprInstruction[]);
 
-                    const addr = alloca(type.size);
+                    const dest = alloca(type.size);
 
-                    switch (typeName) {
+                    switch (type.name) {
                         case 'float':
                         case 'float1':
                         case 'float2':
@@ -674,22 +619,22 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                                     // todo: convert float to int if necessary
                                     // handling for the case single same type argument and multiple floats
                                     assert(Instruction.isExpression(args[0]));
-                                    const addr0 = raddr(args[0]);
-                                    for (let i = 0, n = type.size / args[0].type.size; i < n; ++i) {
-                                        icode(EOperation.k_I32MoveRegToReg, addr + i * sizeof.f32(), addr0);
-                                    }
+                                    const src = raddr(args[0]);
+                                    // return always zero in case of float4(1.0) for ex. => always copy from zero register
+                                    const fnSourceSwizzle = (i: number) => type.size === args[0].type.size ? i : 0;
+                                    imove(dest, src, type.size, null, fnSourceSwizzle);
                                     break;
                                 default:
                                     let offset = 0;
                                     for (let i = 0; i < args.length; ++i) {
                                         assert(Instruction.isExpression(args[i]));
-                                        icode(EOperation.k_I32MoveRegToReg, addr + offset, raddr(args[i]));
+                                        imove(dest + offset, raddr(args[i]), args[i].type.size);
                                         offset += args[i].type.size;
                                     }
                                     break;
 
                             }
-                            return addr;
+                            return dest;
                             break;
                         default:
                     }
@@ -714,7 +659,7 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
         if (isNull(instr)) {
             return;
         }
-        
+
         switch (instr.instructionType) {
             case EInstructionTypes.k_VariableDeclInstruction:
                 {
@@ -755,7 +700,10 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
                     let ret = instr as ReturnStmtInstruction;
                     if (!isNull(ret.expr)) {
                         // move correct size!
-                        icode(EOperation.k_I32MoveRegToReg, callstack.ret, raddr(ret.expr));
+                        const size = ret.expr.type.size;
+                        const src = raddr(ret.expr);
+                        const dest = callstack.ret;
+                        imove(dest, src, size);
                         debug.map(ret.expr);
                         debug.ns();
 

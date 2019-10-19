@@ -2,7 +2,7 @@
 
 import { assert, isNull } from '@lib/common';
 import { analyze } from '@lib/fx/Analyzer';
-import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { EffectParser } from '@lib/fx/EffectParser';
 import { Parser } from '@lib/parser/Parser';
