@@ -1,10 +1,10 @@
 /* tslint:disable:typedef */
 
+import { assert } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { ICompileExprInstruction } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
-import { assert } from '@lib/common';
 
 type PartFx = IPartFxInstruction;
 
@@ -60,8 +60,8 @@ class Pass {
         for (let i = 0; i < this.owner.length; ++i) {
             const partPtr = this.owner.getParticlePtr(i);
             const prerenderedPartPtr = this.getPrerenderedParticlePtr(i);
-            this.prerenderRoutine.run(partPtr, prerenderedPartPtr); 
-                        
+            this.prerenderRoutine.run(partPtr, prerenderedPartPtr);
+
             // const ptr = prerenderedPartPtr;
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
             // console.log(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
@@ -117,6 +117,13 @@ export class Emitter {
         return this.passList;
     }
 
+
+    getParticlePtr(i: number): Uint8Array {
+        assert(i >= 0 && i < this.capacity);
+        return this.particles.subarray(i * this.partByteLength, (i + 1) * this.partByteLength);
+        // return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
+    }
+
     tick(elapsedTime: number) {
         this.update(elapsedTime);
         this.spawn(elapsedTime);
@@ -136,7 +143,7 @@ export class Emitter {
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
             this.initRoutine.run(ptr);
-            
+
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
             // console.log(`init (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
@@ -174,12 +181,6 @@ export class Emitter {
             pass.prerender();
         });
     }
-
-    getParticlePtr(i: number): Uint8Array {
-        assert(i >= 0 && i < this.capacity);
-        return this.particles.subarray(i * this.partByteLength, (i + 1) * this.partByteLength);
-        // return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
-    }
 }
 
 function Pipeline(fx: PartFx) {
@@ -199,7 +200,7 @@ function Pipeline(fx: PartFx) {
         const initRoutine = prebuild(fx.initRoutine);
         const updateRoutine = prebuild(fx.updateRoutine);
         const partByteLength = fx.particle.size;
-        const passList: IPassDesc[] = fx.passList.map(pass => {
+        const passList: IPassDesc[] = fx.passList.filter(pass => pass.material != null).map(pass => {
             return {
                 matByteLength: pass.material.size,
                 prerenderRoutine: prebuild(pass.prerenderRoutine)

@@ -711,6 +711,10 @@ function translateFunction(ctx: Context, func: IFunctionDeclInstruction) {
     //
 
     function translate(instr: IInstruction) {
+        if (isNull(instr)) {
+            return;
+        }
+        
         switch (instr.instructionType) {
             case EInstructionTypes.k_VariableDeclInstruction:
                 {

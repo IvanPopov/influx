@@ -3360,6 +3360,10 @@ function analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree
     const children = ast.getRoot().children;
     let globals: IInstruction[] = [];
 
+    if (isNull(children)) {
+        return [];
+    }
+
     for (let i = children.length - 1; i >= 0; i--) {
         switch (children[i].name) {
 
@@ -3596,6 +3600,12 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
 
                     /** first argument's type */
                     let argv = fn.definition.paramList.map(param => param.type);
+
+                    if (argv.length < 2) {
+                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, 
+                            { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' count mismatch.` });
+                        prerenderRoutine = null;
+                    }
 
                     if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particle || 
                         argv[0].isNotBaseArray() ||

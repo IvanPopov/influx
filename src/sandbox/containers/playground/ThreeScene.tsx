@@ -90,7 +90,6 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
 
         this.createGridHelper();
         // this.createCube();
-        // this.createPointCloud();
 
         this.addEmitter(this.props.emitter);
 
@@ -135,65 +134,6 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
         });
     }
 
-    createPointCloud() {
-        this.particles = [];
-        const count = 100;
-
-        for (let i = 0; i < count; ++ i) {
-            const x = (Math.random() - 0.5);
-            const y = (Math.random() - 0.5);
-            const z = (Math.random() - 0.5);
-
-            const position = new THREE.Vector3(x, y, z);
-            const color = new THREE.Color();
-            const size = 0.1;
-            const alpha = 1;
-            color.setHSL(i / count, 1.0, 0.5);
-
-            this.particles.push({ position, color, alpha, size });
-        }
-
-
-        const geometry = new THREE.BufferGeometry();
-        const data = new Float32Array(this.particles.length * (
-            3 +  // vertex xyz
-            4 +  // color  rgba
-            1    // size
-        ));
-
-        const buffer =  new THREE.InterleavedBuffer(data, 8);
-
-        for (let i = 0; i < this.particles.length; ++i) {
-            const i8 = i * 8;
-            const particle = this.particles[i];
-
-            data[i8    ] = particle.position.x;
-            data[i8 + 1] = particle.position.y;
-            data[i8 + 2] = particle.position.z;
-            data[i8 + 3] = particle.color.r;
-            data[i8 + 4] = particle.color.g;
-            data[i8 + 5] = particle.color.b;
-            data[i8 + 6] = particle.alpha;
-            data[i8 + 7] = particle.size;
-        }
-
-        geometry.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
-        geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(buffer, 4, 3));
-        geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(buffer, 1, 7));
-        geometry.setDrawRange(0, this.particles.length);
-
-        const material = new THREE.RawShaderMaterial({
-            uniforms: {},
-            vertexShader,
-            fragmentShader,
-            transparent: true,
-            blending: THREE.NormalBlending,
-            depthTest: false
-        });
-
-        this.pointCloud = new THREE.Points(geometry, material);
-        this.scene.add(this.pointCloud);
-    }
 
     createCamera(width, height) {
         this.camera = new THREE.PerspectiveCamera(
