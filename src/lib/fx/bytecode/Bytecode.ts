@@ -245,7 +245,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
 
     /** resolve address => returns address of temprary result of expression */
-    function raddr(expr: IExprInstruction, isLoadAllowed: boolean = true): PromisedAddress {
+    function raddr(expr: IExprInstruction): PromisedAddress {
         switch (expr.instructionType) {
             case EInstructionTypes.k_InitExprInstruction:
                 {
@@ -345,7 +345,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     if (castExpr.isUseless()) {
                         console.warn(`Useless cast found: ${castExpr.toCode()}`);
-                        return raddr(castExpr.expr, isLoadAllowed);
+                        return raddr(castExpr.expr);
                     }
 
                     const srcType = castExpr.expr.type;
@@ -373,7 +373,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 {
                     const point = expr as IPostfixPointInstruction;
                     const { element, postfix } = point;
-                    const elementAddr = raddr(element, false);
+                    const elementAddr = raddr(element);
 
                     let { size, padding } = postfix.type;
 
@@ -429,7 +429,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         const param = fdecl.definition.paramList[i];
                         const arg = i < call.args.length ? call.args[i] : null;
 
-                        const src = !isNull(arg) ? raddr(arg, false) : raddr(param.initExpr);
+                        const src = !isNull(arg) ? raddr(arg) : raddr(param.initExpr);
 
                         // by default all parameters are interpreted as 'in'
                         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
@@ -600,7 +600,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     assert(assigment.operator === '=');
 
                     // left address can be both from the registers and in the external memory
-                    const leftAddr = raddr(assigment.left, false);
+                    const leftAddr = raddr(assigment.left);
 
                     assert(Instruction.isExpression(assigment.right));
                     // right address always from the registers

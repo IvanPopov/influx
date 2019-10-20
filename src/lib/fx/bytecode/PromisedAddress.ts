@@ -30,7 +30,7 @@ class PromisedAddress {
         this.inputIndex = desc.inputIndex;
     }
 
-    // specify region insie original location
+    // specify region inside of the original location
     shift(offset: number, sizeOverride: number = 0): PromisedAddress {
         assert(sizeOverride + offset <= this.size,
             `current allocation (size ${this.size}) cannot accommodate size ${sizeOverride} with offset ${offset}`);
@@ -43,6 +43,9 @@ class PromisedAddress {
         return new PromisedAddress(this.ctx, { location, addr, size, inputIndex });
     }
 
+    /**
+     * Resolve/move this address/region to registers
+     */
     read(): PromisedAddress {
         switch (this.location) {
             case EMemoryLocation.k_Registers:
@@ -62,7 +65,6 @@ class PromisedAddress {
 
                     this.location = EMemoryLocation.k_Registers;
                     this.addr = Number(dest);
-                    // clean up this.exp ?
 
                     return this.read();
                 }
@@ -73,6 +75,12 @@ class PromisedAddress {
         return PromisedAddress.INVALID;
     }
 
+
+    /**
+     * Write something to this location/address
+     * @param src Source address.
+     * @param size Size of the source location.
+     */
     write(src: number | PromisedAddress, size: number): PromisedAddress {
         assert(this.size === size, `expected size is ${this.size}, but given is ${size}`);
         switch (this.location) {
@@ -83,6 +91,7 @@ class PromisedAddress {
                         this.addr + i * sizeof.i32(), Number(src) + i * sizeof.i32());
                 }
                 break;
+
             case EMemoryLocation.k_Input:
                 assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
@@ -90,6 +99,7 @@ class PromisedAddress {
                         this.addr + i * sizeof.i32(), Number(src) + i * sizeof.i32());
                 }
                 break;
+                
             default:
                 assert(false);
         }

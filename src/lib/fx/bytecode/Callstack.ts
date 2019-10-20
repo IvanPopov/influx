@@ -57,6 +57,7 @@ class Callstack {
         this.debug = debugLayout(this.pc);
     }
 
+    /** @returns Description of the top of the callstack */
     private get top() {
         return this.stack[this.depth - 1];
     }
