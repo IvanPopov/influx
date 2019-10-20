@@ -472,24 +472,37 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     // handling for the case single same type argument and multiple floats
                                     assert(Instruction.isExpression(args[0]));
                                     const src = raddr(args[0]);
+                                    
+                                    if (src.isUnread()) {
+                                        src.read();
+                                        debug.map(args[0]);
+                                    }
                                     // // return always zero in case of float4(1.0) for ex. => always copy from zero register
                                     // const fnSourceSwizzle = (i: number) => size === args[0].type.size ? i : 0;
                                     // todo: use swizzling!
-                                    dest.write(src, size)
+                                    dest.write(src, size);
+                                    debug.map(ctorCall);
                                     break;
                                 default:
                                     let offset = 0;
                                     for (let i = 0; i < args.length; ++i) {
                                         assert(Instruction.isExpression(args[i]));
                                         const size = args[i].type.size;
-                                        dest.shift(offset, size).write(raddr(args[i]), size);
+                                        const src = raddr(args[i]);
+                                        
+                                        if (src.isUnread()) {
+                                            src.read();
+                                            debug.map(args[i]);
+                                        }
+
+                                        dest.shift(offset, size).write(src, size);
                                         offset += args[i].type.size;
                                     }
+                                    debug.map(ctorCall);
                                     break;
 
                             }
                             return loc({ addr: dest, size });
-                            break;
                         default:
                     }
                     console.warn(`Unknown constructor found: ${ctorCall.toCode()}`);
@@ -605,6 +618,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     assert(Instruction.isExpression(assigment.right));
                     // right address always from the registers
                     const rightAddr = raddr(<IExprInstruction>assigment.right);
+                    if (rightAddr.isUnread()) {
+                        rightAddr.read();
+                        debug.map(assigment.right);
+                    }
 
                     leftAddr.write(rightAddr, size);
                     debug.map(assigment);

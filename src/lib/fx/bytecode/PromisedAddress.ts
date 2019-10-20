@@ -113,6 +113,11 @@ class PromisedAddress {
     }
 
 
+    isUnread(): boolean {
+        return this.location != EMemoryLocation.k_Registers;
+    }
+
+
     isValid(): boolean {
         return this.addr !== REG_INVALID;
     }
