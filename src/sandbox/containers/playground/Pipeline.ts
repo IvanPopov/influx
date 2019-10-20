@@ -265,7 +265,7 @@ function Pipeline(fx: PartFx) {
         .map(pass => pass.material.hash)
         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 
-    console.log(fxHash(fx));
+    // console.log(fxHash(fx));
 
     const isReplaceable = (fxNext: PartFx) => fxHash(fxNext) === fxHash(fx);
 

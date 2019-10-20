@@ -1,8 +1,11 @@
-import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
-import InstructionList from "@lib/fx/bytecode/InstructionList";
-import { isDef, assert } from "@lib/common";
+import { assert, isDef } from "@lib/common";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { REG_INVALID } from "@lib/fx/bytecode/common";
+import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
+import { REG_INVALID } from "./common";
+import debugLayout from './DebugLayout';
+import InstructionList from "./InstructionList";
+import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
+import autobind from "autobind-decorator";
 
 /**
  * A simplified symbol table containing the correspondence of unique 
@@ -45,20 +48,24 @@ class Callstack {
     }[] = [];
 
     // global symbol table for all constants loaded during bytecode generation process
-    constants: SymbolTable<number> = new SymbolTable<number>();
+    constants = new SymbolTable<number>();
+    instructions = new InstructionList;
+    debug = null;
 
-    // todo: rework this api (make it more explicit)
-    constructor(private ilist: InstructionList) {
-
+    constructor() {
+        // todo: make api less messy
+        this.debug = debugLayout(this.pc);
     }
 
     private get top() {
         return this.stack[this.depth - 1];
     }
 
+
     private get depth(): number {
         return this.stack.length;
     }
+
 
     get fn(): IFunctionDeclInstruction {
         return this.top.fn;
@@ -69,24 +76,54 @@ class Callstack {
         return this.top.symbols;
     }
 
+
     get ret(): number {
         return this.top.ret;
     }
 
+
+    @autobind
+    pc(): number {
+        return this.instructions.pc;
+    }
+
+
+    @autobind
     isEntryPoint(): boolean {
         return this.depth === 1;
     }
 
-    // next operation will be 'k_Ret'
-    addReturn() {
-        this.top.jumpList.push(this.ilist.pc);
-    }
 
     /* (assuming that all registers for all types are placed in the same memory) */
-    alloca(size: number) {
+    @autobind
+    alloca(size: number): PromisedAddress {
         let rc = this.rc;
         this.rc += size;
-        return rc;
+        return this.loc({ addr: rc, size });
+    }
+
+
+    /** insert code */
+    @autobind
+    icode(code: EOperation, ...args: Array<number | PromisedAddress>): void {
+        if (code === EOperation.k_Ret) {
+            // add the instruction address to the description of the
+            // function on the top of the colstack; when the code
+            // generation for this function is completed, all return
+            // instructions must receive the correct addresses for
+            // jumping to the end of the function
+            this.addReturn();
+        }
+        // add this instruction to debug layout;
+        this.debug.step();
+        // todo: make this call chain less messy :/
+        this.instructions.add(code, args.map(arg => Number(arg)));
+    }
+
+
+    @autobind
+    loc(desc: IAddrDesc) {
+        return new PromisedAddress(this, desc);
     }
 
     /**
@@ -94,60 +131,84 @@ class Callstack {
      * @param sname Variable name or hash.
      * @param r Register number.
      */
-    ref(sname: string, r: number): void {
+    @autobind
+    ref(sname: string, r: number | PromisedAddress): void {
         assert(!isDef(this.symbols[sname]));
-        this.symbols[sname] = r;
+        this.symbols[sname] = Number(r);
     }
+
 
     /**
      * @returns Register address of variable/constant or REG_INVALID.
      * @param sname 
      */
-    deref(sname: string): number {
+    @autobind
+    deref(sname: string, size: number): PromisedAddress {
         // is zero register available?
         for (let i = this.depth - 1; i >= 0; --i) {
             let symbols = this.stack[i].symbols;
             if (isDef(symbols[sname])) {
-                return symbols[sname];
+                return this.loc({addr: symbols[sname], size});
             }
         }
-        return REG_INVALID;
+        return PromisedAddress.INVALID;
     }
+
 
     /** Same as ref but for constants only */
-    cref(sname: string, r: number): void {
+    @autobind
+    cref(sname: string, r: number | PromisedAddress): void {
         assert(!isDef(this.constants[sname]));
-        this.constants[sname] = r;
+        this.constants[sname] = Number(r);
     }
+
 
     /** Derederence for constants */
-    cderef(sname: string): number {
+    @autobind
+    cderef(sname: string, size: number): PromisedAddress {
         // is zero register available?
-        return isDef(this.constants[sname]) ? this.constants[sname] : REG_INVALID;
+        if (isDef(this.constants[sname])) {
+            return this.loc({ addr: this.constants[sname], size });
+        }
+
+        return PromisedAddress.INVALID;
     }
 
+
     /** @returns Address of the return value. */
+    @autobind
     push(fn: IFunctionDeclInstruction): number {
         // reserve memory for the return value
-        const ret = this.alloca(fn.definition.returnType.size);
+        const ret = Number(this.alloca(fn.definition.returnType.size));
         const symbols = new SymbolTable<number>();
         const rc = this.rc;
-        const pc = this.ilist.pc;
+        const pc = this.instructions.pc;
         const jumpList = [];
         this.stack.push({ fn, symbols, rc, ret, pc, jumpList });
         return ret;
     }
 
+
+    @autobind
     pop(): void {
         const entryPoint = this.isEntryPoint();
         const entry = this.stack.pop();
         // updating all return adresses to correct values
         if (!entryPoint) {
-            entry.jumpList.forEach(pc => this.ilist.replace(pc, EOperation.k_Jump, [this.ilist.pc]));
+            entry.jumpList.forEach(pc => this.instructions.replace(pc, EOperation.k_Jump, [this.instructions.pc]));
         }
         this.rc = entry.rc;
     }
+
+
+    // next operation will be 'k_Ret'
+    private addReturn() {
+        this.top.jumpList.push(this.instructions.pc);
+    }
+
 }
+
+export type ICallstack = Callstack;
 
 
 export default Callstack;
