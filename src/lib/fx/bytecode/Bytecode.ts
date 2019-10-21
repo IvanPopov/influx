@@ -43,7 +43,8 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
     debug.beginCompilationUnit('[todo]');
 
     // simulate function call()
-    callstack.push(fn);
+    let ret = callstack.alloca(fn.definition.returnType.size);
+    callstack.push(fn, ret);
     translateFunction(ctx, fn);
     callstack.pop();
     debug.endCompilationUnit();
@@ -89,7 +90,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 }
 
 function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
-    const { diag, callstack, constants, alloca, loc, debug, cderef, cref, deref, ref, icode } = ctx;
+    const { diag, callstack, constants, alloca, loc, debug, cderef, cref, deref, ref, icode, ret } = ctx;
 
     // NOTE: pc - number of written instructions
     // NOTE: rc - number of occupied registers
@@ -186,41 +187,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
         assert(decl.isLocal());
         return EMemoryLocation.k_Registers;
-    }
-
-
-    // /** Universal memcopy() suitable both for registers and external memory */
-    // function store(expr: IExprInstruction, dest: number, src: number, size: number) {
-    //     const decl = ExprInstruction.UnwindExpr(expr);
-    //     assert(!isNull(decl), 'declaration cannot be null');
-
-    //     let offset = 0;
-    //     if (decl.isParameter()) {
-    //         // implies that each parameter is loaded from its stream, so 
-    //         // the offset is always zero. 
-    //         // Otherwise use 'VariableDeclInstruction.getParameterOffset(decl);'
-    //         // in order to determ correct offset between parameters
-    //         offset = 0;
-    //     }
-
-    //     dest += offset;
-
-    //     switch (resolveMemoryLocation(decl)) {
-    //         case EMemoryLocation.k_Input:
-    //             const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
-    //             istore(inputIndex, dest, src, size);
-    //             break;
-    //         case EMemoryLocation.k_Registers:
-    //         default:
-    //             imove(dest, src, size);
-    //     }
-    // }
-
-    /** determines if the expression is in external memory or not  */
-    function isLoadRequired(expr: IExprInstruction): boolean {
-        const decl = ExprInstruction.UnwindExpr(expr);
-        assert(!isNull(decl), 'declaration cannot be null');
-        return resolveMemoryLocation(decl) != EMemoryLocation.k_Registers;
     }
 
     const POSTFIX_COMPONENT_MAP = {
@@ -421,12 +387,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 {
                     const call = expr as IFunctionCallInstruction;
                     const fdecl = call.declaration as IFunctionDeclInstruction;
+                    const fdef = fdecl.definition;
 
-                    const ret = callstack.push(fdecl);
-                    const retSize = fdecl.definition.returnType.size;
+                    const ret = this.alloca(fdef.returnType.size);
+                    callstack.push(fdecl, ret);
 
-                    for (let i = 0; i < fdecl.definition.paramList.length; ++i) {
-                        const param = fdecl.definition.paramList[i];
+                    for (let i = 0; i < fdef.paramList.length; ++i) {
+                        const param = fdef.paramList[i];
                         const arg = i < call.args.length ? call.args[i] : null;
 
                         const src = !isNull(arg) ? raddr(arg) : raddr(param.initExpr);
@@ -438,6 +405,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             // todo: handle expressions like "float4 v = 5.0;"
                             const size = param.type.size;
                             const dest = alloca(size);
+
+                            dest.write(src, size);
                             // debug.map(param);
 
                             ref(sname.var(param), dest);
@@ -447,7 +416,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     translateFunction(ctx, fdecl);
                     callstack.pop();
 
-                    return loc({ addr: ret, size: retSize });
+                    return ret;
                 }
                 break;
             case EInstructionTypes.k_ConstructorCallInstruction:
@@ -473,7 +442,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     assert(Instruction.isExpression(args[0]));
                                     const src = raddr(args[0]);
                                     
-                                    if (src.isUnread()) {
+                                    if (src.location != EMemoryLocation.k_Registers) {
+
+                                        // const dest = alloca(src.size);
+                                        // move(dest, src);
+                                        // src = dest;
+
+                                        // load(dest)
+
                                         src.read();
                                         debug.map(args[0]);
                                     }
@@ -490,7 +466,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                         const size = args[i].type.size;
                                         const src = raddr(args[i]);
                                         
-                                        if (src.isUnread()) {
+                                        if (src.location != EMemoryLocation.k_Registers) {
                                             src.read();
                                             debug.map(args[i]);
                                         }
@@ -550,10 +526,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                             |
                     */
 
-                    ref(sname.var(decl), raddr(decl.initExpr)); // implicit load of address is 
-                                                                // implied while adding address to symbol table
-                    debug.map(decl.initExpr);
-                    debug.ns();
+                    const dest = raddr(decl.initExpr);
+                    if (dest.location != EMemoryLocation.k_Registers) {
+                        dest.read();
+                        debug.map(decl.initExpr);
+                        debug.ns();
+                    }
+                    
+                    ref(sname.var(decl), dest);
                     return;
                 }
             case EInstructionTypes.k_DeclStmtInstruction:
@@ -566,14 +546,21 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 }
             case EInstructionTypes.k_ReturnStmtInstruction:
                 {
-                    let ret = instr as ReturnStmtInstruction;
-                    if (!isNull(ret.expr)) {
-                        // move correct size!
-                        const size = ret.expr.type.size;
-                        const src = raddr(ret.expr);
-                        const dest = loc({ addr: callstack.ret, size });
-                        dest.write(src, size);
-                        debug.map(ret.expr);
+                    let retStmt = instr as ReturnStmtInstruction;
+                    const expr = retStmt.expr;
+                    if (!isNull(expr)) {
+                        const src = raddr(expr);
+
+                        if (src.location != EMemoryLocation.k_Registers) {
+                            src.read();
+                            debug.map(expr);
+                        }
+
+                        const dest = ret();
+
+                        assert(src.size === ret().size);
+                        dest.write(src, src.size);
+                        debug.map(expr);
                         debug.ns();
 
                         icode(EOperation.k_Ret);
@@ -618,7 +605,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     assert(Instruction.isExpression(assigment.right));
                     // right address always from the registers
                     const rightAddr = raddr(<IExprInstruction>assigment.right);
-                    if (rightAddr.isUnread()) {
+                    if (rightAddr.location != EMemoryLocation.k_Registers) {
                         rightAddr.read();
                         debug.map(assigment.right);
                     }

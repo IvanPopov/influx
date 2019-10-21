@@ -41,7 +41,7 @@ class Callstack {
         // program counter's value before the function's start 
         pc: number;
         // address of register where return call should save its value
-        ret: number;
+        ret: PromisedAddress;
 
         // addresses of function return instructions to be resolved
         jumpList: number[];
@@ -77,8 +77,8 @@ class Callstack {
         return this.top.symbols;
     }
 
-
-    get ret(): number {
+    @autobind
+    ret(): PromisedAddress {
         return this.top.ret;
     }
 
@@ -178,15 +178,12 @@ class Callstack {
 
     /** @returns Address of the return value. */
     @autobind
-    push(fn: IFunctionDeclInstruction): number {
-        // reserve memory for the return value
-        const ret = Number(this.alloca(fn.definition.returnType.size));
+    push(fn: IFunctionDeclInstruction, ret: PromisedAddress): void {
         const symbols = new SymbolTable<number>();
         const rc = this.rc;
         const pc = this.instructions.pc;
         const jumpList = [];
         this.stack.push({ fn, symbols, rc, ret, pc, jumpList });
-        return ret;
     }
 
 

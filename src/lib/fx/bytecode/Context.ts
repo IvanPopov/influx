@@ -45,7 +45,7 @@ export function ContextBuilder() {
 
     // program counter: return current index of instruction 
     // (each instruction consists of 4th numbers)
-    const { pc, loc, instructions, debug, deref, ref, cderef, cref, alloca, icode } = callstack;
+    const { pc, loc, instructions, debug, deref, ref, cderef, cref, alloca, icode, ret } = callstack;
 
     return {
         diag,
@@ -55,6 +55,7 @@ export function ContextBuilder() {
         debug,
         pc,
         icode,
+        ret,
 
         deref,
         ref,

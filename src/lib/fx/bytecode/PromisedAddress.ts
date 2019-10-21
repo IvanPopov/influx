@@ -1,5 +1,5 @@
 import { EMemoryLocation, EOperation } from "@lib/idl/bytecode";
-import { assert } from "@lib/common";
+import { assert, isNumber, isDefAndNotNull } from "@lib/common";
 import { REG_INVALID } from "./common";
 import sizeof from "./sizeof";
 import { ICallstack } from "./Callstack";
@@ -82,7 +82,10 @@ class PromisedAddress {
      * @param size Size of the source location.
      */
     write(src: number | PromisedAddress, size: number): PromisedAddress {
+        assert(isNumber(src) || (src as PromisedAddress).size <= size, 
+            `source size is ${(src as PromisedAddress).size} and less then the requested size ${size}.`);
         assert(this.size === size, `expected size is ${this.size}, but given is ${size}`);
+        
         switch (this.location) {
             case EMemoryLocation.k_Registers:
                 assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
@@ -109,12 +112,11 @@ class PromisedAddress {
 
 
     valueOf(): number {
+        if (this.location != EMemoryLocation.k_Registers) {
+            console.warn(`address has implicitly moved to ${EMemoryLocation[EMemoryLocation.k_Registers]} from ${EMemoryLocation[this.location]}`);
+            assert(false); // implicit loading is not allowed
+        }
         return this.read().addr;
-    }
-
-
-    isUnread(): boolean {
-        return this.location != EMemoryLocation.k_Registers;
     }
 
 
