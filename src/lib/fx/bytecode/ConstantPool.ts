@@ -1,6 +1,8 @@
 import { IMap } from "../../idl/IMap";
 import { isDef } from "../../common";
 import sizeof from "./sizeof";
+import PromisedAddress from "./PromisedAddress";
+import { EMemoryLocation } from "@lib/idl/bytecode";
 
 class ConstantPoolMemory {
     byteArray: ArrayBuffer;
@@ -53,32 +55,42 @@ class ConstantPoolMemory {
 
 class ConstanPool {
     _data: ConstantPoolMemory = new ConstantPoolMemory;
-    _int32Map: IMap<number> = {};
-    _float32Map: IMap<number> = {};
+    _int32Map: IMap<PromisedAddress> = {};
+    _float32Map: IMap<PromisedAddress> = {};
 
-    checkInt32(i32: number): number {
+
+    i32(i32: number): PromisedAddress {
         let addr = this._int32Map[i32];
         if (!isDef(addr)) {
-            this._int32Map[i32] = this._data.byteLength;
+            this._int32Map[i32] = new PromisedAddress({ 
+                addr: this._data.byteLength, 
+                size: sizeof.i32(), 
+                location: EMemoryLocation.k_Constants 
+            });
             this._data.addInt32(i32);
             return this._int32Map[i32];
         }
         return addr;
     }
 
-    checkFloat32(f32: number): number {
+
+    f32(f32: number): PromisedAddress {
         let addr = this._float32Map[f32];
         if (!isDef(addr)) {
-            this._float32Map[f32] = this._data.byteLength;
+            this._float32Map[f32] = new PromisedAddress({ 
+                addr: this._data.byteLength, 
+                size: sizeof.f32(), 
+                location: EMemoryLocation.k_Constants 
+            });
             this._data.addFloat32(f32);
             return this._float32Map[f32];
         }
         return addr;
     }
 
-    checkAddr(addr: number): number {
-        return this.checkInt32(addr);
-    }
+    // checkAddr(addr: number): number {
+    //     return this.checkInt32(addr);
+    // }
 
     get data(): ConstantPoolMemory {
         return this._data;

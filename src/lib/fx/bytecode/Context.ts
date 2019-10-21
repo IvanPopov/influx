@@ -40,22 +40,26 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 
 export function ContextBuilder() {
     const diag = new TranslatorDiagnostics; // todo: remove it?
-    const constants = new ConstanPool;
+    
     const callstack = new Callstack();
 
     // program counter: return current index of instruction 
     // (each instruction consists of 4th numbers)
-    const { pc, loc, instructions, debug, deref, ref, cderef, cref, alloca, icode, ret } = callstack;
+    const { pc, loc, instructions, debug, deref, ref, cderef, cref, alloca, icode, imove, iload, ret, consti32, constf32, constants } = callstack;
 
     return {
         diag,
         callstack,
-        constants,
         instructions,
         debug,
         pc,
         icode,
+        imove,
+        iload,
         ret,
+        consti32,
+        constf32,
+        constants,
 
         deref,
         ref,

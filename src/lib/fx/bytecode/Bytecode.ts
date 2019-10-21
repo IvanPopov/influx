@@ -51,7 +51,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 
 
     function constChunk(): ArrayBuffer {
-        const mem = constants.data;
+        const mem = constants().data;
         const size = mem.byteLength >> 2;
         const chunkHeader = [EChunkType.k_Constants, size];
         assert((size << 2) == mem.byteLength);
@@ -86,77 +86,16 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
     let code = binary();         // todo: stay only binary view
     let cdl = debug.dump();      // code debug layout;
 
-    return { code, constants, cdl };
+    return { code, constants: constants(), cdl };
 }
 
 function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
-    const { diag, callstack, constants, alloca, loc, debug, cderef, cref, deref, ref, icode, ret } = ctx;
+    const { diag, callstack, constants, alloca, loc, debug, cderef, cref, deref, ref, icode, imove, iload, ret, consti32, constf32 } = ctx;
 
     // NOTE: pc - number of written instructions
     // NOTE: rc - number of occupied registers
 
-    /** resolve constant (all constants have been placed in global memory) */
-    function rconst(lit: ILiteralInstruction): PromisedAddress {
-        switch (lit.instructionType) {
-            // assume only int32
-            case EInstructionTypes.k_IntInstruction:
-                {
-                    // todo: move all this code insoide PromisedAddress
-                    const i32 = <number>(lit as ILiteralInstruction).value;
-                    const size = sizeof.i32();
-                    let r = cderef(sname.i32(i32), sizeof.i32());
-                    if (!r.isValid()) {
-                        r = alloca(size);
-                        // constants.checkInt32(i32) => returns address in global memory
-                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32));
-                        debug.map(lit);
-
-                        cref(sname.i32(i32), r);
-                    }
-
-                    return loc({ size, addr: r });
-                }
-                break;
-            case EInstructionTypes.k_FloatInstruction:
-                {
-                    // todo: move all this code insoide PromisedAddress
-                    const f32 = <number>(lit as ILiteralInstruction).value;
-                    const size = sizeof.f32();
-                    let r = cderef(sname.f32(f32), sizeof.f32());
-                    if (!r.isValid()) {
-                        r = alloca(size);
-                        icode(EOperation.k_I32LoadConst, r, constants.checkFloat32(f32));
-                        debug.map(lit);
-
-                        cref(sname.f32(f32), r);
-                    }
-                    return loc({ size, addr: r });
-                }
-                break;
-            case EInstructionTypes.k_BoolInstruction:
-                {
-                    // todo: move all this code insoide PromisedAddress
-                    const i32 = (<number>(lit as ILiteralInstruction).value) ? 1 : 0;
-                    const size = sizeof.f32();
-                    let r = cderef(sname.i32(i32), sizeof.i32());
-                    if (!r.isValid()) {
-                        r = alloca(size);
-                        icode(EOperation.k_I32LoadConst, r, constants.checkInt32(i32));
-                        debug.map(lit);
-
-                        cref(sname.i32(i32), r);
-                    }
-                    return loc({ size, addr: r });
-                }
-                break;
-            default:
-                diag.critical(EErrors.k_UnsupportedConstantType, {});
-        }
-
-        return PromisedAddress.INVALID;
-    }
-
-
+   
     // function rconst_addr(addr: number): number {
     //     let r = deref(sname.addr(addr));
     //     if (r == REG_INVALID) {
@@ -171,7 +110,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     interface FnSwizzle {
         (i: number): number;
     }
-    
+
 
     function resolveMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
         if (decl.isParameter()) {
@@ -226,9 +165,23 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 }
                 break;
             case EInstructionTypes.k_BoolInstruction:
+                {
+                    const i32 = <boolean>(expr as ILiteralInstruction).value ? 1 : 0;
+                    return consti32(i32);
+                }
+                break;
             case EInstructionTypes.k_IntInstruction:
+                {
+                    const i32 = <number>(expr as ILiteralInstruction).value;
+                    return consti32(i32);
+                }
+                break;
             case EInstructionTypes.k_FloatInstruction:
-                return rconst(expr as ILiteralInstruction);
+                {
+                    const f32 = <number>(expr as ILiteralInstruction).value;
+                    return constf32(f32);
+                }
+                break;
             case EInstructionTypes.k_IdExprInstruction:
                 {
                     let id = (expr as IIdExprInstruction);
@@ -296,9 +249,21 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         return PromisedAddress.INVALID;
                     }
 
+                    const leftAddr = raddr(arithExpr.left);
+                    if (leftAddr.location !== EMemoryLocation.k_Registers) {
+                        iload(leftAddr);
+                        debug.map(arithExpr.left);
+                    }
+
+                    const rightAddr = raddr(arithExpr.right);
+                    if (rightAddr.location !== EMemoryLocation.k_Registers) {
+                        iload(rightAddr);
+                        debug.map(arithExpr.right);
+                    }
+
                     const size = arithExpr.type.size;
                     const dest = alloca(size);
-                    icode(op, dest, raddr(arithExpr.left), raddr(arithExpr.right));
+                    icode(op, dest, leftAddr, rightAddr);
                     debug.map(arithExpr);
                     debug.ns();
 
@@ -406,7 +371,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             const size = param.type.size;
                             const dest = alloca(size);
 
-                            dest.write(src, size);
+                            imove(dest, src, size);
                             // debug.map(param);
 
                             ref(sname.var(param), dest);
@@ -441,22 +406,15 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     // handling for the case single same type argument and multiple floats
                                     assert(Instruction.isExpression(args[0]));
                                     const src = raddr(args[0]);
-                                    
+
                                     if (src.location != EMemoryLocation.k_Registers) {
-
-                                        // const dest = alloca(src.size);
-                                        // move(dest, src);
-                                        // src = dest;
-
-                                        // load(dest)
-
-                                        src.read();
+                                        iload(src);
                                         debug.map(args[0]);
                                     }
                                     // // return always zero in case of float4(1.0) for ex. => always copy from zero register
                                     // const fnSourceSwizzle = (i: number) => size === args[0].type.size ? i : 0;
                                     // todo: use swizzling!
-                                    dest.write(src, size);
+                                    imove(dest, src, size);
                                     debug.map(ctorCall);
                                     break;
                                 default:
@@ -465,13 +423,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                         assert(Instruction.isExpression(args[i]));
                                         const size = args[i].type.size;
                                         const src = raddr(args[i]);
-                                        
+
                                         if (src.location != EMemoryLocation.k_Registers) {
-                                            src.read();
+                                            iload(src);
                                             debug.map(args[i]);
                                         }
 
-                                        dest.shift(offset, size).write(src, size);
+                                        imove(dest.shift(offset, size), src, size);
                                         offset += args[i].type.size;
                                     }
                                     debug.map(ctorCall);
@@ -528,11 +486,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     const dest = raddr(decl.initExpr);
                     if (dest.location != EMemoryLocation.k_Registers) {
-                        dest.read();
+                        iload(dest);
                         debug.map(decl.initExpr);
                         debug.ns();
                     }
-                    
+
                     ref(sname.var(decl), dest);
                     return;
                 }
@@ -552,14 +510,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         const src = raddr(expr);
 
                         if (src.location != EMemoryLocation.k_Registers) {
-                            src.read();
+                            iload(src);
                             debug.map(expr);
                         }
 
                         const dest = ret();
 
                         assert(src.size === ret().size);
-                        dest.write(src, src.size);
+                        imove(dest, src, src.size);
                         debug.map(expr);
                         debug.ns();
 
@@ -606,11 +564,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     // right address always from the registers
                     const rightAddr = raddr(<IExprInstruction>assigment.right);
                     if (rightAddr.location != EMemoryLocation.k_Registers) {
-                        rightAddr.read();
+                        iload(rightAddr);
                         debug.map(assigment.right);
                     }
 
-                    leftAddr.write(rightAddr, size);
+                    imove(leftAddr, rightAddr, size);
                     debug.map(assigment);
                     debug.ns();
                     return;

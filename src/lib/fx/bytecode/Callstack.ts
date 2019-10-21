@@ -1,4 +1,4 @@
-import { assert, isDef } from "@lib/common";
+import { assert, isDef, isNumber } from "@lib/common";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 import { REG_INVALID } from "./common";
@@ -6,6 +6,9 @@ import debugLayout from './DebugLayout';
 import InstructionList from "./InstructionList";
 import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import autobind from "autobind-decorator";
+import sizeof from "./sizeof";
+import { EMemoryLocation } from "@lib/idl/bytecode";
+import ConstanPool from "./ConstantPool";
 
 /**
  * A simplified symbol table containing the correspondence of unique 
@@ -48,8 +51,9 @@ class Callstack {
     }[] = [];
 
     // global symbol table for all constants loaded during bytecode generation process
-    constants = new SymbolTable<number>();
+    constSymbols = new SymbolTable<PromisedAddress>();
     instructions = new InstructionList;
+    constPool = new ConstanPool;
     debug = null;
 
     constructor() {
@@ -122,9 +126,101 @@ class Callstack {
     }
 
 
+    /**
+     * Write something to this location/address
+     * @param src Source address.
+     * @param size Size of the source location.
+     */
+    @autobind
+    imove(dest: PromisedAddress, src: PromisedAddress, size: number = 0): void {
+        if (size === 0) {
+            size = src.size;
+        }
+
+        assert(src.size <= size,
+            `source size is ${(src as PromisedAddress).size} and less then the requested size ${size}.`);
+        assert(dest.size === size, `expected size is ${dest.size}, but given is ${size}`);
+
+        switch (dest.location) {
+            case EMemoryLocation.k_Registers:
+                {
+                    switch (src.location) {
+                        case EMemoryLocation.k_Registers:
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                this.icode(EOperation.k_I32MoveRegToReg,
+                                    Number(dest) + i * sizeof.i32(), Number(src) + i * sizeof.i32());
+                            }
+                            break;
+                        case EMemoryLocation.k_Input:
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                this.icode(EOperation.k_I32LoadInput, src.inputIndex, 
+                                    Number(dest) + i * sizeof.i32(), src.addr + i * sizeof.i32());
+                            }
+                            break;
+                        case EMemoryLocation.k_Constants:
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                this.icode(EOperation.k_I32LoadConst,
+                                    Number(dest) + i * sizeof.i32(), src.addr + i * sizeof.i32());
+                            }
+                            break;
+                        default:
+                            assert(false, 'unsupported memory type found.');
+                    }
+                }
+                break;
+
+            case EMemoryLocation.k_Input:
+                assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                    this.icode(EOperation.k_I32StoreInput, dest.inputIndex,
+                        dest.addr + i * sizeof.i32(), Number(src) + i * sizeof.i32());
+                }
+                break;
+            default:
+                assert(false, 'unsupported memory type found.');
+        }
+    }
+
+
+
+    /**
+     * Resolve/move this address/region to registers
+     */
+    @autobind
+    iload(src: PromisedAddress): void {
+        assert(src.location !== EMemoryLocation.k_Registers);
+        if (src.location === EMemoryLocation.k_Registers) {
+            return;
+        }
+
+        let dest: PromisedAddress = null;
+        // Special case for constants
+        // Implementation of the global caching for all constantns across the program
+        if (src.location === EMemoryLocation.k_Constants) {
+            dest = this.cderef(src);
+            if (dest === PromisedAddress.INVALID) {
+                dest = this.alloca(src.size);
+                this.imove(dest, src);
+                this.cref(src, dest);
+            }
+        } else {
+            dest = this.alloca(src.size);
+        }
+
+        this.imove(dest, src);
+
+        src.location = dest.location;
+        src.addr = dest.addr;
+        src.inputIndex = undefined;
+    }
+
+
     @autobind
     loc(desc: IAddrDesc) {
-        return new PromisedAddress(this, desc);
+        return new PromisedAddress(desc);
     }
 
     /**
@@ -149,7 +245,7 @@ class Callstack {
         for (let i = this.depth - 1; i >= 0; --i) {
             let symbols = this.stack[i].symbols;
             if (isDef(symbols[sname])) {
-                return this.loc({addr: symbols[sname], size});
+                return this.loc({ addr: symbols[sname], size });
             }
         }
         return PromisedAddress.INVALID;
@@ -158,21 +254,18 @@ class Callstack {
 
     /** Same as ref but for constants only */
     @autobind
-    cref(sname: string, r: number | PromisedAddress): void {
-        assert(!isDef(this.constants[sname]));
-        this.constants[sname] = Number(r);
+    cref(caddr: PromisedAddress, raddr: PromisedAddress): void {
+        assert(raddr.location === EMemoryLocation.k_Registers &&
+            caddr.location === EMemoryLocation.k_Constants);
+        assert(!isDef(this.constSymbols[caddr.addr]));
+        this.constSymbols[caddr.addr] = raddr;
     }
 
 
     /** Derederence for constants */
     @autobind
-    cderef(sname: string, size: number): PromisedAddress {
-        // is zero register available?
-        if (isDef(this.constants[sname])) {
-            return this.loc({ addr: this.constants[sname], size });
-        }
-
-        return PromisedAddress.INVALID;
+    cderef(src: PromisedAddress): PromisedAddress {
+        return this.constSymbols[src.addr] || PromisedAddress.INVALID;
     }
 
 
@@ -196,6 +289,24 @@ class Callstack {
             entry.jumpList.forEach(pc => this.instructions.replace(pc, EOperation.k_Jump, [this.instructions.pc]));
         }
         this.rc = entry.rc;
+    }
+
+
+    @autobind
+    consti32(i32: number): PromisedAddress {
+        return this.constPool.i32(i32);
+    }
+
+
+    @autobind
+    constf32(f32: number): PromisedAddress {
+        return this.constPool.f32(f32);
+    }
+
+
+    @autobind
+    constants() {
+        return this.constPool;
     }
 
 
