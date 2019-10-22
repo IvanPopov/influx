@@ -355,14 +355,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const fdecl = call.declaration as IFunctionDeclInstruction;
                     const fdef = fdecl.definition;
 
-                    const ret = this.alloca(fdef.returnType.size);
+                    const ret = alloca(fdef.returnType.size);
                     push(fdecl, ret);
 
                     for (let i = 0; i < fdef.paramList.length; ++i) {
                         const param = fdef.paramList[i];
-                        const arg = i < call.args.length ? call.args[i] : null;
-
-                        const src = !isNull(arg) ? raddr(arg) : raddr(param.initExpr);
+                        const arg = i < call.args.length ? call.args[i] : param.initExpr;
+                        const src = raddr(arg);
 
                         // by default all parameters are interpreted as 'in'
                         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
@@ -373,7 +372,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             const dest = alloca(size);
 
                             imove(dest, src, size);
-                            // debug.map(param);
+                            debug.map(arg);
 
                             ref(sname.var(param), dest);
                         }
@@ -518,7 +517,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         const dest = ret();
 
                         assert(src.size === ret().size);
-                        imove(dest, src, src.size);
+                        imove(dest, src);
                         debug.map(expr);
                         debug.ns();
 

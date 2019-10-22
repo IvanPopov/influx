@@ -42,7 +42,7 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
     toCode(): string {
         let code: string = "";
 
-        code += this.declaration.id.toCode();
+        code += this.declaration.definition.id.toCode();
         code += "(";
         for (let i: number = 0; i < this._args.length; i++) {
             code += this._args[i].toCode();

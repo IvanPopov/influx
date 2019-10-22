@@ -17,9 +17,10 @@ struct DefaultShaderInput {
 };
 
 
+int summ(int a, int b) { return a + b; }
 int spawn()
 {
-    return 1;
+    return summ(1,2);
 }
 
 void init(out Part part)

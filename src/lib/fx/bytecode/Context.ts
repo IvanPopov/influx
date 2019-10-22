@@ -228,6 +228,7 @@ export function ContextBuilder() {
      * @param src Register number.
      */
     function ref(sname: string, src: PromisedAddress): void {
+        assert(src.location === EMemoryLocation.k_Registers);
         assert(!isDef(symbols()[sname]));
         symbols()[sname] = loc(src);
     }
@@ -254,12 +255,13 @@ export function ContextBuilder() {
         assert(raddr.location === EMemoryLocation.k_Registers &&
             caddr.location === EMemoryLocation.k_Constants);
         assert(!isDef(constSymbols[caddr.addr]));
-        constSymbols[caddr.addr] = raddr;
+        constSymbols[caddr.addr] = loc(raddr);
     }
 
 
     /** Derederence for constants */
     function cderef(src: PromisedAddress): PromisedAddress {
+        assert(src.location === EMemoryLocation.k_Constants);
         return constSymbols[src.addr] || PromisedAddress.INVALID;
     }
 

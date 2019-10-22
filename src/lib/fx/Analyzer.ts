@@ -1602,7 +1602,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
 
 
         const type = VariableTypeInstruction.wrap(func.definition.returnType, scope);
-        let funcCallExpr = new FunctionCallInstruction({ scope, type, decl: func, args });
+        let funcCallExpr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode });
 
         // if (!isNull(currentAnalyzedFunction)) {
         //     currentAnalyzedFunction.addUsedFunction(func);

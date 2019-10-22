@@ -73,7 +73,7 @@ function debugLine(pc: PC) {
                 }
                 line = entry.line;
             }
-            cache[entry.line] = cache[entry.line] || color.value();
+            cache[entry.line] = isDef(cache[entry.line]) ? cache[entry.line] : color.value();
             entry.color = cache[entry.line];
         }
         return { files, layout };

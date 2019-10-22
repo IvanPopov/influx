@@ -129,6 +129,11 @@ class VM {
                     // nothing to do here :)
                     fregs[a4] = iregs[b4];
                 break;
+                case EOperation.k_Jump:
+                    // TODO: don't use multiplication here
+                    i4 = a * 4;
+                    continue;
+                break;
                 case EOperation.k_Ret:
                 {
                     break end;

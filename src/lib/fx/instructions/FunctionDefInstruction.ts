@@ -53,6 +53,11 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         // todo: check order!!
         return this._parameterList.filter((param) => !param.initExpr).length;
     }
+    
+
+    get id(): IIdInstruction {
+        return this._id;
+    }
 
 
     toString(): string {
