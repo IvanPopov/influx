@@ -53,8 +53,9 @@ class VM {
         let $cb = data.constants;
         let icb = new Int32Array($cb.buffer, $cb.byteOffset);
 
-        // todo: handle correctly empty input
-        let $input = data.input;
+        // TODO: handle correctly empty input
+        // TODO: don't allocate inputs here
+        let $input = data.input || [];
         for (let i = 0; i < 2; ++ i) {
             $input[i] = $input[i] || new Uint8Array(0);
         }
@@ -70,7 +71,7 @@ class VM {
             let b = ilist[i4 + 2];
             let c = ilist[i4 + 3];
 
-            // todo: use already aligned adresses
+            // TODO: use already aligned adresses
             let a4 = a >> 2;
             let b4 = b >> 2;
             let c4 = c >> 2;

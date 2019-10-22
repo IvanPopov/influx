@@ -11,7 +11,7 @@ export interface IAddrDesc {
 }
 
 
-class PromisedAddress {
+class PromisedAddress implements IAddrDesc {
     location: EMemoryLocation;
     addr: number;
     size: number | undefined;

@@ -193,6 +193,7 @@ class ThreeScene extends React.Component<ITreeSceneProps> {
 
     componentWillUnmount() {
         this.stop();
+        window.removeEventListener('resize', this.onWindowResize, false);
         this.mount.removeChild(this.renderer.domElement);
     }
 
