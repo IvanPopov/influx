@@ -63,18 +63,17 @@ function debugLine(pc: PC) {
 
 
     function dump() {
-        let line = -1;
+        let line = undefined;
         let color = new DistinctColor;
         let cache = {};
-        for (let entry of layout) {
-            if (entry.line && entry.line !== line) {
-                if (line != -1) {
-                    color.pickNext();
-                }
-                line = entry.line;
-            }
-            cache[entry.line] = isDef(cache[entry.line]) ? cache[entry.line] : color.value();
-            entry.color = cache[entry.line];
+        for (let i = layout.length - 1; i >= 0; i--) {
+            let entry = layout[i];
+
+            if (line != entry.line) color.pickNext();
+            line = isDef(entry.line) ? entry.line : line;
+            entry.line = line;
+            cache[line] = isDef(cache[line])? cache[line] : color.value();
+            entry.color = cache[line];
         }
         return { files, layout };
     }

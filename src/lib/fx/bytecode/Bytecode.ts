@@ -5,17 +5,17 @@ import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
 import { Instruction } from "@lib/fx/instructions/Instruction";
 import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
 import { VariableDeclInstruction } from "@lib/fx/instructions/VariableDeclInstruction";
+import * as SystemScope from "@lib/fx/SystemScope";
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { isNull, isString } from "util";
 import ConstanPool from "./ConstantPool";
-import { EErrors, TranslatorDiagnostics, IContext, ContextBuilder } from "./Context";
+import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CdlRaw } from "./DebugLayout";
-import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
+import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-
 
 // symbol name id generation;
 const sname = {
@@ -96,7 +96,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     // NOTE: rc - number of occupied registers
 
     const isEntryPoint = () => depth() === 1;
-   
+
     // function rconst_addr(addr: number): number {
     //     let r = deref(sname.addr(addr));
     //     if (r == REG_INVALID) {
@@ -106,11 +106,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     //     }
     //     return r;
     // }
-
-
-    interface FnSwizzle {
-        (i: number): number;
-    }
 
 
     function resolveMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
@@ -136,7 +131,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         'a': 3, 'w': 3, 'q': 3
     };
 
-    function isValidPostfixNameForSwizzling(postfixName: string): boolean {
+    function checkPostfixNameForSwizzling(postfixName: string): boolean {
         return postfixName
             .split('')
             .map(c => POSTFIX_COMPONENT_MAP[c])
@@ -145,7 +140,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     }
 
     // xxwy => [0, 0, 3, 1]
-    function makeSwizzlePattern(postfixName: string): number[] {
+    function swizzlePatternFromName(postfixName: string): number[] {
         return postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
     }
 
@@ -308,30 +303,28 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const elementAddr = raddr(element);
 
                     let { size, padding } = postfix.type;
-
-                    let srcSwizzle = i => i;
+                    let swizzle: number[] = null;
 
                     // Does expression have dynamic indexing?
                     // todo: rename isConstExpr() method to something more suitable
                     if (point.isConstExpr()) {
 
-                        // // handle such types like float2, float3, int2, int3 etc.
-                        // // all system types except matrix and samplers support swizzling
-                        // const isSwizzlingSupported = SystemScope.isVectorType(element.type) ||
-                        //     SystemScope.isScalarType(element.type);
+                        // handle such types like float2, float3, int2, int3 etc.
+                        // all system types except matrix and samplers support swizzling
+                        const isSwizzlingSupported = SystemScope.isVectorType(element.type) ||
+                            SystemScope.isScalarType(element.type);
 
-                        // if (isSwizzlingSupported) {
-                        //     assert(isValidPostfixNameForSwizzling(postfix.name));
-                        //     const swizzlingPattern = makeSwizzlePattern(postfix.name);
-                        //     srcSwizzle = i => swizzlingPattern[i];
+                        if (isSwizzlingSupported) {
+                            assert(checkPostfixNameForSwizzling(postfix.name));
+                            swizzle = swizzlePatternFromName(postfix.name);
 
-                        //     assert(padding === Instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
-                        //     padding = 0;
-                        // }
+                            assert(padding === Instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
+                            padding = 0;
+                        }
 
                         // If loading not allowed then we are inside the recursive call to calculate the final address
                         // so in this case we just have to return address with padding added to it.
-                        return elementAddr.shift(padding, size);
+                        return elementAddr.override({ offset: padding, size, swizzle });
                     }
 
                     assert(false, 'not implemented!');
@@ -402,18 +395,27 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         case 'float4':
                             switch (args.length) {
                                 case 1:
-                                    // todo: convert float to int if necessary
+                                    // TODO: convert float to int if necessary
                                     // handling for the case single same type argument and multiple floats
                                     assert(Instruction.isExpression(args[0]));
-                                    const src = raddr(args[0]);
+                                    let src = raddr(args[0]);
 
                                     if (src.location !== EMemoryLocation.k_Registers) {
                                         iload(src);
                                         debug.map(args[0]);
                                     }
-                                    // // return always zero in case of float4(1.0) for ex. => always copy from zero register
-                                    // const fnSourceSwizzle = (i: number) => size === args[0].type.size ? i : 0;
-                                    // todo: use swizzling!
+
+                                    // FIXME: use 'length' property
+                                    let length = type.size / sizeof.f32();
+                                    let swizzle = null;
+                                    if (src.size === sizeof.f32()) {
+                                        swizzle = [...Array(length).fill(0)];
+                                    } else {
+                                        swizzle = [...Array(length).keys()];
+                                    }
+
+                                    src = src.override({ swizzle });
+
                                     imove(dest, src, size);
                                     debug.map(ctorCall);
                                     break;
@@ -421,18 +423,17 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     let offset = 0;
                                     for (let i = 0; i < args.length; ++i) {
                                         assert(Instruction.isExpression(args[i]));
-                                        const size = args[i].type.size;
-                                        const src = raddr(args[i]);
+                                        let src = raddr(args[i]);
 
                                         if (src.location !== EMemoryLocation.k_Registers) {
                                             iload(src);
                                             debug.map(args[i]);
                                         }
 
-                                        imove(dest.shift(offset, size), src, size);
+                                        imove(dest.override({ offset }), src);
+                                        debug.map(ctorCall);
                                         offset += args[i].type.size;
                                     }
-                                    debug.map(ctorCall);
                                     break;
 
                             }

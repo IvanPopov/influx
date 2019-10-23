@@ -141,7 +141,7 @@ export function ContextBuilder() {
 
         assert(src.size <= size,
             `source size is ${(src as PromisedAddress).size} and less then the requested size ${size}.`);
-        assert(dest.size === size, `expected size is ${dest.size}, but given is ${size}`);
+        assert(dest.size >= size, `expected size is ${dest.size}, but given is ${size}`);
 
         switch (dest.location) {
             case EMemoryLocation.k_Registers:
@@ -149,23 +149,30 @@ export function ContextBuilder() {
                     switch (src.location) {
                         case EMemoryLocation.k_Registers:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.location === EMemoryLocation.k_Registers);
+                            assert(src.location === EMemoryLocation.k_Registers);
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                                 icode(EOperation.k_I32MoveRegToReg,
-                                    Number(dest) + i * sizeof.i32(), Number(src) + i * sizeof.i32());
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+                                    src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         case EMemoryLocation.k_Input:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.location === EMemoryLocation.k_Registers);
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                                 icode(EOperation.k_I32LoadInput, src.inputIndex, 
-                                    Number(dest) + i * sizeof.i32(), src.addr + i * sizeof.i32());
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+                                    src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         case EMemoryLocation.k_Constants:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.location === EMemoryLocation.k_Registers);
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                                 icode(EOperation.k_I32LoadConst,
-                                    Number(dest) + i * sizeof.i32(), src.addr + i * sizeof.i32());
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+                                    src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         default:
@@ -176,9 +183,11 @@ export function ContextBuilder() {
 
             case EMemoryLocation.k_Input:
                 assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                assert(src.location === EMemoryLocation.k_Registers);
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                     icode(EOperation.k_I32StoreInput, dest.inputIndex,
-                        dest.addr + i * sizeof.i32(), Number(src) + i * sizeof.i32());
+                        dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+                        src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                 }
                 break;
             default:

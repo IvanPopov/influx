@@ -8,6 +8,14 @@ export interface IAddrDesc {
     size: number;
     // required for input locatons
     inputIndex?: number;
+    swizzle?: number[];
+}
+
+
+export interface IAddrOverride {
+    offset?: number;
+    size?: number;
+    swizzle?: number[];
 }
 
 
@@ -16,25 +24,36 @@ class PromisedAddress implements IAddrDesc {
     addr: number;
     size: number | undefined;
     inputIndex?: number;
+    swizzle?: number[];
 
     constructor( desc: IAddrDesc) {
         this.location = desc.location || EMemoryLocation.k_Registers;
         this.addr = Number(desc.addr);
         this.size = desc.size;           // todo: validate size
         this.inputIndex = desc.inputIndex;
+        this.swizzle = desc.swizzle;
     }
 
     // specify region inside of the original location
-    shift(offset: number, sizeOverride: number = 0): PromisedAddress {
-        assert(sizeOverride + offset <= this.size,
-            `current allocation (size ${this.size}) cannot accommodate size ${sizeOverride} with offset ${offset}`);
+    override({ offset, size, swizzle }: IAddrOverride): PromisedAddress {
+        offset = offset || 0;
+        size = size || 0;
 
-        let { location, addr, size, inputIndex } = this;
+        assert(size + offset <= this.size,
+            `current allocation (size ${this.size}) cannot accommodate size ${size} with offset ${offset}`);
+
+        let { location, addr, inputIndex } = this;
+
+        if (swizzle && this.swizzle) {
+            swizzle = swizzle.map(i => this.swizzle[i]);
+        }
 
         addr += offset;
-        size = sizeOverride ? sizeOverride : size - offset;
+        size = size || (this.size - offset);
+        swizzle = swizzle || this.swizzle;
         assert(size > 0);
-        return new PromisedAddress({ location, addr, size, inputIndex });
+        
+        return new PromisedAddress({ location, addr, size, inputIndex, swizzle });
     }
 
 
