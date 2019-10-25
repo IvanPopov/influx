@@ -49,6 +49,19 @@ float3 RndVUnitConus (float3 vBaseNorm, float angle)
    return vRand;
 }
 
+float3 RndSphere(float rad)
+{
+    float phi = random(float2(elapsedTimeLevel, 15.f)) * deg2rad(360.f);
+    float theta = random(float2(elapsedTimeLevel, 20.f)) * deg2rad(360.f);
+
+    float sinPhi = sin(phi);
+    float cosPhi = cos(phi);
+    float sinTheta = sin(theta);
+    float cosTheta = cos(theta);
+
+    return float3(sinPhi * cosTheta, sinPhi * sinTheta, cosTheta) * rad;
+}
+
 struct Part {
     float3 dir;
     float3 pos;
@@ -75,12 +88,12 @@ float4 foo() {
 int summ(int a, int b) { return a + b; }
 int spawn()
 {
-    return summ(1, 100);
+    return summ(1, 1000);
 }
 
 void init(out Part part)
 {
-    part.pos = float3(0.f, float2(0.0).x, 0.0);
+    part.pos = RndSphere(1.f);//float3(0.f, float2(0.0).x, 0.0);
     part.size = 0.1;
     part.timelife = 0.0;
     
@@ -95,7 +108,7 @@ void init(out Part part)
 /** Return false if you want to kill particle. */
 bool update(inout Part part)
 {
-    part.pos = part.dir * part.timelife * 3.0f;
+    part.pos = part.pos + part.dir * elapsedTime * 0.0f;
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     return part.timelife < 1.0f;
 }

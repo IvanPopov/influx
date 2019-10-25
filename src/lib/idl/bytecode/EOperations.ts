@@ -44,7 +44,7 @@ export enum EOperation {
     k_F32Cos,
     k_F32Abs,
     k_F32Sqrt,
-
+    
     // 
     // Cast operations
     //

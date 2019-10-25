@@ -121,7 +121,7 @@ class Pass {
 
 export class Emitter {
     // todo: load capacity from PartFx
-    static CAPACITY = 1000;
+    static CAPACITY = 60000;
 
     private nPartAddFloat: number;
     private nPartAdd: number;

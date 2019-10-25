@@ -9,14 +9,14 @@ import * as SystemScope from "@lib/fx/SystemScope";
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IRelationalExprInstruction, IVariableTypeInstruction, ITypeInstruction, IFunctionDefInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { isNull, isString } from "util";
+import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { i32ToU8Array } from "./common";
 
 
 
@@ -175,8 +175,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 return PromisedAddress.INVALID;
             }
 
-            // TODO: don't do alloca here, implicit using is bad pattern
-            dest = dest || alloca(size);
             iop3(op, dest, left, right);
             return dest;
         },
@@ -210,8 +208,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 return PromisedAddress.INVALID;
             }
 
-            // TODO: don't do alloca here, implicit using is bad pattern
-            dest = dest || alloca(size);
             iop3(op, dest, left, right);
             return dest;
         },
@@ -257,10 +253,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         sub: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('-', dest, left, right),
 
         dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            let mlr = intrinsics.mulf(null, left, right);
+            let temp = alloca(Math.max(left.size, right.size));
+            let mlr = intrinsics.mulf(temp, left, right);
             let n = mlr.size / sizeof.f32();
 
-            dest = dest || alloca(sizeof.f32());
             for (let i = 0; i < n; ++i) {
                 let offset = i * sizeof.f32();
                 let size = sizeof.f32();
@@ -272,40 +268,46 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
         // fraction (f32 only)
         frac(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            dest = dest || alloca(src.size);
             iop2(EOperation.k_F32Frac, dest, src);
             return dest;
         },
 
         sinf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            dest = dest || alloca(src.size);
             iop2(EOperation.k_F32Sin, dest, src);
             return dest;
         },
 
         cosf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            dest = dest || alloca(src.size);
             iop2(EOperation.k_F32Cos, dest, src);
             return dest;
         },
 
         absf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            dest = dest || alloca(src.size);
             iop2(EOperation.k_F32Abs, dest, src);
             return dest;
         },
 
         sqrtf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            dest = dest || alloca(src.size);
             iop2(EOperation.k_F32Sqrt, dest, src);
             return dest;
         },
 
+
+        lengthf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            intrinsics.dotf(dest, src, src);
+            intrinsics.sqrtf(dest, dest);
+            return dest;
+        },
+
         normalizef(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
-            // dest = dest || alloca(src.size);
-            // iop2(EOperation.k_F32Sqrt, dest, src);
-            // return dest;
-            assert(false);
+            const len = alloca(sizeof.f32());
+            intrinsics.lengthf(len, src);
+            intrinsics.divf(dest, src, len);
+            return dest;
+        },
+
+        lerpf(dest: PromisedAddress, from: PromisedAddress, to: PromisedAddress, k: PromisedAddress): PromisedAddress {
+            // iop2(EOperation.k_F32Lerp, dest, src);
             return PromisedAddress.INVALID;
         }
     }
@@ -570,7 +572,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const fdef = fdecl.definition;
                     const retType = fdef.returnType;
 
-                    function preloadArguments(fdef: IFunctionDefInstruction) {
+                    function preloadArguments(fdef: IFunctionDefInstruction): PromisedAddress[] {
                         // TODO: move to helper function: preloadArguments();
                         const args: PromisedAddress[] = [];
                         for (let i = 0; i < fdef.paramList.length; ++i) {
@@ -650,6 +652,22 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     // TODO: add support for INT type
                                     const dest = alloca(retType.size);
                                     return intrinsics.normalizef(dest, args[0]);
+                                }
+                            case 'length':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.lengthf(dest, args[0]);
+                                }
+                            case 'lerp':
+                                {
+                                    assert(fdef.paramList.length === 3);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.lerpf(dest, args[0], args[1], args[2]);
                                 }
                         }
                     }
