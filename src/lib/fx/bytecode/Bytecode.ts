@@ -27,14 +27,32 @@ export interface ISubProgram {
 }
 
 function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
-    const { diag, constants, instructions, debug, alloca, push, pop } = ctx;
+    const { constants, instructions, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
     // NOTE: it does nothing at the momemt :/
     debug.beginCompilationUnit('[todo]');
-
     // simulate function call()
-    let ret = alloca(fn.definition.returnType.size);
+    const fdef = fn.definition;
+    let ret = alloca(fdef.returnType.size);
     push(fn, ret);
+
+    // TODO: use the same code as FunctionCall;
+    // loading of all non-inpt parameters to registers
+    for (let i = 0; i < fdef.paramList.length; ++i) {
+        const param = fdef.paramList[i];
+        if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
+            continue;
+        }
+
+        const inputIndex = VariableDeclInstruction.getParameterIndex(param);
+        const size =  param.type.size;
+        const src = loc({ location: EMemoryLocation.k_Input, inputIndex, addr: 0, size });
+        const dest = alloca(size);
+        imove(dest, src, size);
+        debug.map(fdef); // FIXME: is it ok?
+        ref(param, dest);
+    }
+
     translateFunction(ctx, fn);
     pop();
     debug.endCompilationUnit();
@@ -529,7 +547,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     let swizzle: number[] = null;
 
                     // Does expression have dynamic indexing?
-                    // todo: rename isConstExpr() method to something more suitable
+                    // TODO: rename isConstExpr() method to something more suitable
                     if (point.isConstExpr()) {
 
                         // handle such types like float2, float3, int2, int3 etc.

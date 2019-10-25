@@ -13,5 +13,5 @@ export const sname = {
     // addr: (addr: number) => sname.i32(addr)
 };
 
-export const i32ToU8Array = (i32: number) => Array(4).fill(0).map((u8, i, self) => (i32 >> (self.length - i - 1) * 8) & (0xff));
-export const u8ArrayToI32 = (arr: Uint8Array | Array<number>) => (arr as number[]).reduce((acc, cv, i, self) => acc | (cv << (self.length - i - 1) * 8), 0);
+export const i32ToU8Array = (i32: number) => Array(4).fill(0).map((u8, i, self) => (i32 >> (i) * 8) & (0xff));
+export const u8ArrayToI32 = (arr: Uint8Array | Array<number>) => (arr as number[]).reduce((acc, cv, i, self) => acc | (cv << (i) * 8), 0);

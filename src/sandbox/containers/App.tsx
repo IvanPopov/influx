@@ -15,7 +15,9 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { HashRouter as Router, matchPath, NavLink, Redirect, Route, Switch } from 'react-router-dom';
-import { Button, Checkbox, Container, Dropdown, Grid, Header, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, Grid, Header,
+    Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table
+} from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -84,6 +86,7 @@ const Version = (props) => {
         </div>
     );
 }
+
 
 
 @injectSheet(styles)
@@ -172,18 +175,29 @@ class App extends React.Component<IAppProps> {
     render() {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
+        
+        // FIXME: use router api
+        // let request = (window.location.hash.match(/^\#\/(playground|bytecode|program|ast)\/(.*)$/) || [])[2] || '';
+        // if (request) {
+        //     if (props.sourceFile.filename !== request) {
+        //         console.log(props.sourceFile.filename, request);
+        //         // props.actions.openFile(request);
+        //     }
+        //     request = `/${request}`;
+        // }
+        let request = '';
 
         const analysisResults = [
             {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Playground</Menu.Header>),
-                    to: '/playground',
-                    exact: true,
+                    to: `/playground${request}`,
+                    // exact: true,
                     key: 'playground'
                 },
                 pane: (
-                    <Route path='/playground' exact>
+                    <Route path='/playground'>
                         <Tab.Pane attached={ false } key='playground-view'>
                             <Header as='h4' dividing>
                                 <Icon name={ 'flame' as any } />
@@ -201,12 +215,12 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Bytecode<br />Debugger</Menu.Header>),
-                    to: '/bytecode',
-                    exact: true,
+                    to: `/bytecode${request}`,
+                    // exact: true,
                     key: 'bytecode'
                 },
                 pane: (
-                    <Route path='/bytecode' exact>
+                    <Route path='/bytecode'>
                         <Tab.Pane attached={ false } key='bytecode-view'>
                             <Header as='h4' dividing>
                                 <Icon name='plug' />
@@ -251,7 +265,7 @@ class App extends React.Component<IAppProps> {
                                                     </Dropdown.Item>
                                                 </Dropdown.Menu>
                                             </Dropdown>
-                                            {/* <NoOptimizations /> */}
+                                            {/* <NoOptimizations /> */ }
                                         </Table.Cell>
                                     </Table.Row>
                                 </Table.Body>
@@ -273,16 +287,16 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Semantic<br />Analyzer</Menu.Header>,
-                    to: '/program',
-                    exact: true,
+                    to: `/program${request}`,
+                    // exact: true,
                     key: 'program'
                 },
                 pane: (
-                    <Route path='/program' exact>
+                    <Route path='/program'>
                         <Tab.Pane attached={ false } key='program-view'>
                             <Header as='h4' dividing>
                                 <Header.Content>
-                                    <Icon name={'git compare' as UnknownIcon} />
+                                    <Icon name={ 'git compare' as UnknownIcon } />
                                     Symantic Analysis
                                 </Header.Content>
                             </Header>
@@ -299,12 +313,12 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Syntax<br />Analyzer</Menu.Header>,
-                    to: '/ast',
-                    exact: true,
+                    to: `/ast${request}`,
+                    // exact: true,
                     key: 'ast'
                 },
                 pane: (
-                    <Route path='/ast' exact>
+                    <Route path='/ast'>
                         <Tab.Pane attached={ false } key='ast-view'>
                             <Header as='h4' dividing>
                                 <Header.Content>
@@ -325,7 +339,7 @@ class App extends React.Component<IAppProps> {
         const defaultActiveIndex = analysisResults.findIndex(pane => {
             return !!matchPath(window.location.pathname, {
                 path: pane.menuItem.to,
-                exact: true
+                exact: false
             });
         });
 
@@ -381,7 +395,7 @@ class App extends React.Component<IAppProps> {
         ];
 
         return (
-    <Router>
+            <Router>
                 <div className={ props.classes.mainContentHotfix }>
                     <Sidebar.Pushable>
                         <Sidebar
@@ -403,7 +417,7 @@ class App extends React.Component<IAppProps> {
                                     because only one instance of Monaco editor
                                     can be used simultaneously
                                 */
-                                }
+                            }
                             <Tab
                                 menu={ { secondary: true, pointing: true } }
                                 panes={ panes }

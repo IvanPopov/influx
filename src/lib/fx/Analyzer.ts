@@ -1286,7 +1286,7 @@ interface ICompileValidator {
  *         T_NON_TYPE_ID = 'main'
  *         T_KW_COMPILE = 'compile'
  */
-function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, validator?: ICompileValidator): CompileExprInstruction {
+function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, validators?: ICompileValidator[]): CompileExprInstruction {
     const children = sourceNode.children;
     const shaderFuncName = children[children.length - 2].value;
     const scope = program.currentScope;
@@ -1306,18 +1306,26 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
 
     args = compileArgs ? compileArgs.map(arg => arg.type) : null;
 
-    if (validator) {
-        if (validator.args) {
-            args = validator.args;
-        }
+    let func: IFunctionDeclInstruction = null;
 
-        if (validator.ret) {
-            retType = validator.ret;
+    if (validators) {
+        for (let validator of validators) {
+            args = compileArgs ? compileArgs.map(arg => arg.type) : null;
+            retType = null;
+
+            args = validator.args || args;
+            retType = validator.ret || retType;
+
+            func = program.globalScope.findFunction(shaderFuncName, args);
+            if (func) {
+                break;
+            }
         }
+    } else {
+        // let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
+        func = program.globalScope.findFunction(shaderFuncName, args);
     }
 
-    // let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
-    let func = program.globalScope.findFunction(shaderFuncName, args);
 
     if (isNull(func)) {
         context.error(sourceNode, EErrors.InvalidCompileNotFunction, { funcName: shaderFuncName });
@@ -1558,7 +1566,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
             const funcArguments = func.definition.paramList;
-            
+
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
                     const decl = ExprInstruction.UnwindExpr(args[i]);
@@ -1775,10 +1783,10 @@ function createFieldDecl(elementType: IVariableTypeInstruction, fieldName: strin
     //      elementType => original system type
 
     const scope = elementType.scope;
-    const { id, type, type: { padding, length }, semantics } = 
+    const { id, type, type: { padding, length }, semantics } =
         // FIXME: remove 'logical OR' operation, always use subType
         (elementType.subType || elementType).getField(fieldName); // arrayIndex
-    
+
     //// note: here is no sourceNode for field.
     // note: sourceNode for field is being used from the original complex structure.
 
@@ -1805,7 +1813,7 @@ function analyzePosifixPointField(context: Context, program: ProgramScope, sourc
     if (isNull(type)) {
         return null;
     }
-    
+
     const scope = program.currentScope;
     const name = sourceNode.value;              // fiedl name
     const decl = createFieldDecl(type, name);   // field decl
@@ -3606,15 +3614,15 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     let argv = fn.definition.paramList.map(param => param.type);
 
                     if (argv.length < 2) {
-                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, 
+                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
                             { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' count mismatch.` });
                         prerenderRoutine = null;
                     }
 
-                    if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particle || 
+                    if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particle ||
                         argv[0].isNotBaseArray() ||
                         !argv[1].hasUsage('out') || !argv[1].writable || argv[1].isNotBaseArray()) {
-                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid, 
+                        context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
                             { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' type mismatch.` });
                         prerenderRoutine = null;
                     }
@@ -3661,15 +3669,19 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                  */
                                 let validator = { ret: T_INT, args: [] };
                                 let objectExrNode = sourceNode.children[1].children[0];
-                                spawnRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+                                spawnRoutine = analyzeCompileExpr(context, program, objectExrNode, [validator]);
                             }
                             break;
                         case ('InitRoutine'.toUpperCase()):
                             {
                                 /** Init routine expected as 'void init(in Part part)'. */
-                                let validator: ICompileValidator = { ret: T_VOID, args: [null] };
+                                let validators: ICompileValidator[] = [
+                                    { ret: T_VOID, args: [null, T_INT] },  /* init(PART part, int partId) */
+                                    { ret: T_VOID, args: [null] },         /* init(PART part) */
+                                ];
+
                                 let objectExrNode = sourceNode.children[1].children[0];
-                                initRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+                                initRoutine = analyzeCompileExpr(context, program, objectExrNode, validators);
 
                                 if (!initRoutine) {
                                     break;
@@ -3684,13 +3696,13 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 let type = fn.definition.paramList[0].type;
 
                                 if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'InitRoutine' arguments' type mismatch.` });
                                     initRoutine = null;
                                 }
 
                                 if (particle && type.subType !== particle) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'InitRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
@@ -3705,9 +3717,13 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 /**
                                  * Update routine expected as 'void update(inout Part part)'.
                                  */
-                                let validator: ICompileValidator = { ret: T_BOOL, args: [null] };
+                                let validators: ICompileValidator[] = [
+                                    { ret: T_BOOL, args: [null, T_INT] }, /* update(PART part, int partId) */
+                                    { ret: T_BOOL, args: [null] },        /* update(PART part) */
+                                ];
+
                                 let objectExrNode = sourceNode.children[1].children[0];
-                                updateRoutine = analyzeCompileExpr(context, program, objectExrNode, validator);
+                                updateRoutine = analyzeCompileExpr(context, program, objectExrNode, validators);
 
                                 if (!updateRoutine) {
                                     break;
@@ -3717,24 +3733,27 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 // check arguments
                                 //
 
-                                let fn = updateRoutine.function;
-                                if (fn.definition.paramList.length != 1) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                const fn = updateRoutine.function;
+                                const fdef = fn.definition;
+                                const paramList = fdef.paramList;
+
+                                if (paramList.length < 1 || paramList.length > 2) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
 
                                 /** first argument's type */
-                                let type = fn.definition.paramList[0].type;
+                                let type = paramList[0].type;
 
                                 if (!type.hasUsage('out') && !type.hasUsage('inout') || type.isNotBaseArray()) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
 
                                 if (particle && type.subType !== particle) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                     updateRoutine = null;
                                 }
@@ -3743,8 +3762,8 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 // Check return type
                                 //
 
-                                if (!fn.definition.returnType.isEqual(T_BOOL)) {
-                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                if (!fdef.returnType.isEqual(T_BOOL)) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                         { funcName: fn.name, tooltip: `'UpdateRoutine' return type mismatch. 'boolean' is expected.` });
                                     updateRoutine = null;
                                 }

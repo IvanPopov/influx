@@ -5,6 +5,7 @@ import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { ICompileExprInstruction } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { i32ToU8Array } from '@lib/fx/bytecode/common';
 
 type PartFx = IPartFxInstruction;
 
@@ -121,7 +122,8 @@ class Pass {
 
 export class Emitter {
     // todo: load capacity from PartFx
-    static CAPACITY = 60000;
+    private static CAPACITY = 60000;
+    private static TEMP_INT32 = new Uint8Array(4);
 
     private nPartAddFloat: number;
     private nPartAdd: number;
@@ -134,6 +136,7 @@ export class Emitter {
     private updateRoutine: IRunnable;
     private partByteLength: number;
     private passList: Pass[];
+
 
     constructor({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList }) {
         this.nPartAdd = 0;
@@ -197,9 +200,14 @@ export class Emitter {
         this.nPartAdd = Math.min(this.nPartAdd, this.capacity - this.nPart);
 
         this.initRoutine.setPipelineConstants(constants);
+
+
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
-            this.initRoutine.run(ptr);
+            const partId = Emitter.TEMP_INT32;
+            partId.set(i32ToU8Array(i));
+
+            this.initRoutine.run(ptr, partId);
 
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
             // console.log(`init (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
@@ -218,11 +226,15 @@ export class Emitter {
 
     private update(constants: IPipelineConstants) {
         this.updateRoutine.setPipelineConstants(constants);
+
         for (let i = 0; i < this.nPart; ++i) {
             const currPtr = this.getParticlePtr(i);
-            if (!this.updateRoutine.run(currPtr)) {
+            const partId = Emitter.TEMP_INT32;
+            partId.set(i32ToU8Array(i));
+
+            if (!this.updateRoutine.run(currPtr, partId)) {
                 // swap last particle with current in order to remove particle
-                let lastPtr = this.getParticlePtr(this.nPart - 1);
+                const lastPtr = this.getParticlePtr(this.nPart - 1);
                 currPtr.set(lastPtr);
                 this.nPart--;
             }
