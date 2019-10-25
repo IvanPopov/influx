@@ -10,16 +10,42 @@ type PartFx = IPartFxInstruction;
 
 interface IRunnable {
     run(...input: Uint8Array[]): VM.INT32;
+    setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean;
 }
 
 function prebuild(expr: ICompileExprInstruction): IRunnable {
-    const code = Bytecode.translate(expr.function).code;
+    const program = Bytecode.translate(expr.function);
+    const code = program.code;
     const bundle = VM.load(code);
     return {
         run(...input: Uint8Array[]) {
             return VM.play({ ...bundle, input });
+        },
+
+        setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean {
+            const layout = bundle.layout;
+            const offset = layout[name];
+            const constants = bundle.constants;
+
+            if (!offset) {
+                return false;
+            }
+
+            // TODO: validate layout / constant type in memory / size
+            switch (type) {
+                case 'float32':
+                    (new DataView(constants.buffer, constants.byteOffset + offset)).setFloat32(0, <number>value, true);
+                    break;
+                case 'int32':
+                    (new DataView(constants.buffer, constants.byteOffset + offset)).setInt32(0, <number>value);
+                    break;
+                default:
+                    assert(false, 'unsupported');
+            }
+
+            return true;
         }
-    }
+    };
 }
 
 
@@ -183,6 +209,7 @@ export class Emitter {
 
 
     private update(elapsedTime: number) {
+        this.updateRoutine.setConstant('elapsedTime', 'float32', elapsedTime);
         for (let i = 0; i < this.nPart; ++i) {
             const ptr = this.getParticlePtr(i);
             this.updateRoutine.run(ptr);

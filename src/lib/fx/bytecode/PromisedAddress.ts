@@ -67,6 +67,11 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
+    toNumber() {
+        return this.addr;
+    }
+
+
     static INVALID = new PromisedAddress({ addr: REG_INVALID, size: undefined });
 }
 

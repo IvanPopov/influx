@@ -1,16 +1,14 @@
-import { IInstruction, IInstructionError, EInstructionTypes, EFunctionType, ECheckStage, IScope } from "../../idl/IInstruction";
-import { isNull, isDef } from "../../common";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
-import { ProgramScope } from "../ProgramScope";
+import { isNull } from "@lib/common";
+import { ECheckStage, EInstructionTypes, IInstruction, IInstructionError, IScope } from "@lib/idl/IInstruction";
+import { IParseNode } from "@lib/idl/parser/IParser";
 
 
 export interface IInstructionSettings {
     scope: IScope;
-    
+
     sourceNode?: IParseNode;
     visible?: boolean;
-    
+
     instrType?: EInstructionTypes;
 }
 
@@ -67,7 +65,7 @@ export class Instruction implements IInstruction {
         if (!isNull(this._scope)) {
             return this._scope;
         }
-        
+
         if (!isNull(this.parent)) {
             return this.parent.scope;
         }
@@ -163,8 +161,21 @@ export class Instruction implements IInstruction {
             case EInstructionTypes.k_PostfixArithmeticInstruction:
             case EInstructionTypes.k_PostfixIndexInstruction:
             case EInstructionTypes.k_PostfixPointInstruction:
-            // todo: add other types!!!
-            return true;
+                // todo: add other types!!!
+                return true;
+        }
+
+        return false;
+    }
+
+
+    static isLiteral(instr: IInstruction): boolean {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_StringInstruction:
+                return true;
         }
 
         return false;

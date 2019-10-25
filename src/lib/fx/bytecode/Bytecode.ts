@@ -16,17 +16,7 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-
-// symbol name id generation;
-const sname = {
-    i32: (i32: number) => `%i32:${i32}`,
-    f32: (f32: number) => `%f32:${f32}`,
-    var: (vdecl: IVariableDeclInstruction) => `${vdecl.name}:${vdecl.instructionID}`,
-    fun: (fdecl: IFunctionDeclInstruction) => `${fdecl.name}:${fdecl.instructionID}`,
-
-    addr: (addr: number) => sname.i32(addr)
-};
-
+import { i32ToU8Array } from "./common";
 
 
 
@@ -49,6 +39,31 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
     pop();
     debug.endCompilationUnit();
 
+    // TODO: rewrite with cleaner code
+    function constLayoutChunk(): ArrayBuffer {
+        const layout = constants.layout;
+        const byteLength = 4/* names.length */ + layout.names.map(entry => entry.name.length + 8/* sizeof(name.length) + sizeof(addr)*/).reduce((prev, curr) => prev + curr, 0);
+        const size = (byteLength + 4) >> 2;
+        const chunkHeader = [EChunkType.k_Layout, size];
+        const data = new Uint32Array(chunkHeader.length + size);
+        data.set(chunkHeader);
+        
+        const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+        let written = 0;
+        u8data.set(i32ToU8Array(layout.names.length), written);
+        written += 4;
+        for (let i = 0; i < layout.names.length; ++i) {
+            let { name, offset } = layout.names[i];
+            u8data.set(i32ToU8Array(name.length), written);
+            written += 4;
+            u8data.set(name.split('').map(c => c.charCodeAt(0)), written);
+            written += name.length;
+            u8data.set(i32ToU8Array(offset), written);
+            written += 4;
+        }
+        // console.log('after write', u8data.length, 'bytes', written);
+        return data.buffer;
+    }
 
     function constChunk(): ArrayBuffer {
         const mem = constants.data;
@@ -57,7 +72,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
         assert((size << 2) == mem.byteLength);
         const data = new Uint32Array(chunkHeader.length + size);
         data.set(chunkHeader);
-        data.set(new Uint32Array(mem.byteArray, 0, mem.byteLength >> 2), chunkHeader.length);
+        data.set(new Uint32Array(mem.byteArray.buffer, 0, mem.byteLength >> 2), chunkHeader.length);
         return data.buffer;
     }
 
@@ -72,7 +87,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
     }
 
     function binary(): Uint8Array {
-        const chunks = [constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
+        const chunks = [constLayoutChunk(), constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
         const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
         let data = new Uint8Array(byteLength);
         let offset = 0;
@@ -90,7 +105,22 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 }
 
 function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
-    const { diag, constants, alloca, loc, debug, push, pop, deref, ref, icode, imove, iload, ret, depth } = ctx;
+    const {
+        diag,
+        constants,
+        alloca,
+        loc,
+        debug,
+        push,
+        pop,
+        deref,
+        ref,
+        icode,
+        imove,
+        iload,
+        ret,
+        depth
+    } = ctx;
 
     // NOTE: pc - number of written instructions
     // NOTE: rc - number of occupied registers
@@ -117,6 +147,9 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         }
 
         if (decl.isGlobal()) {
+            if (decl.isUniform()) {
+                return EMemoryLocation.k_Constants;
+            }
             assert(false, 'unsupported');
         }
 
@@ -190,8 +223,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     switch (location) {
                         case EMemoryLocation.k_Registers:
                             {
-                                const addr = deref(sname.var(id.declaration as IVariableDeclInstruction));
-                                return addr;
+                                return deref(id.declaration);
                             }
                         case EMemoryLocation.k_Input:
                             {
@@ -203,6 +235,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 const src = offset;
                                 const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
                                 return loc({ inputIndex, addr: src, size, location });
+                            }
+                        case EMemoryLocation.k_Constants:
+                            {
+                                return constants.deref(id.declaration);
                             }
                     }
 
@@ -358,7 +394,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                         // by default all parameters are interpreted as 'in'
                         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
-                            ref(sname.var(param), src);
+                            ref(param, src);
                         } else {
                             // todo: handle expressions like "float4 v = 5.0;"
                             const size = param.type.size;
@@ -367,7 +403,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             imove(dest, src, size);
                             debug.map(arg);
 
-                            ref(sname.var(param), dest);
+                            ref(param, dest);
                         }
                     }
 
@@ -470,7 +506,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     if (isNull(decl.initExpr)) {
                         // There is no initial value, but allocation should be done anyway
                         // in order to assign register for this variable.
-                        ref(sname.var(decl), alloca(decl.type.size));
+                        ref(decl, alloca(decl.type.size));
                         return;
                     }
 
@@ -492,7 +528,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         debug.ns();
                     }
 
-                    ref(sname.var(decl), dest);
+                    ref(decl, dest);
                     return;
                 }
             case EInstructionTypes.k_DeclStmtInstruction:

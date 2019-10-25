@@ -1,15 +1,16 @@
 import { assert, isDef } from "@lib/common";
 import { EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
+import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import autobind from "autobind-decorator";
 import ConstanPool from "./ConstantPool";
 import debugLayout from './DebugLayout';
 import InstructionList from "./InstructionList";
 import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { IRange } from "@lib/idl/parser/IParser";
+import SymbolTable from "./SymbolTable";
+import { sname } from "./common";
 
 
 export enum EErrors {
@@ -42,23 +43,6 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 }
 
 
-
-/**
- * A simplified symbol table containing the correspondence of unique 
- * hashes of symbols and their addresses in registers.
- * The table is global and does not depend on the stack of functions, 
- * because hashes are built on the basis of identifiers of instructions 
- * unique to each function and context.
- */
-class SymbolTable<SYMBOL_T>  {
-    [key: string]: SYMBOL_T;
-
-    *[Symbol.iterator]() {
-        for (let i in this) {
-            yield this[i];
-        }
-    }
-}
 
 
 export function ContextBuilder() {
@@ -96,7 +80,7 @@ export function ContextBuilder() {
     const fn = () => top().fn;
     /** Symbol table of the function at the top of the callstack */
     const symbols = () => top().symbols;
-    const ret = () => top().ret;
+    const ret = () => loc(top().ret);
     const pc = () => instructions.pc;
     const loc = (desc: IAddrDesc) => new PromisedAddress(desc);
     // const consti32 = (i32: number) => constants.i32(i32);
@@ -219,9 +203,7 @@ export function ContextBuilder() {
         } else {
             dest = alloca(src.size);
             imove(dest, src);
-        }
-
-        
+        }        
 
         src.location = dest.location;
         src.addr = dest.addr;
@@ -233,26 +215,28 @@ export function ContextBuilder() {
 
     /**
      * Add referene of the local variable.
-     * @param sname Variable name or hash.
+     * @param decl Variable declaration.
      * @param src Register number.
      */
-    function ref(sname: string, src: PromisedAddress): void {
+    function ref(decl: IVariableDeclInstruction, src: PromisedAddress): void {
+        const name = sname.var(decl);
         assert(src.location === EMemoryLocation.k_Registers);
-        assert(!isDef(symbols()[sname]));
-        symbols()[sname] = loc(src);
+        assert(!isDef(symbols()[name]));
+        symbols()[name] = loc(src);
     }
 
 
     /**
      * @returns Register address of variable/constant or REG_INVALID.
-     * @param sname 
+     * @param decl
      */
-    function deref(sname: string): PromisedAddress {
+    function deref(decl: IVariableDeclInstruction): PromisedAddress {
+        const name = sname.var(decl);
         // is zero register available?
         for (let i = depth() - 1; i >= 0; --i) {
             let symbols = stack[i].symbols;
-            if (isDef(symbols[sname])) {
-                return symbols[sname];
+            if (isDef(symbols[name])) {
+                return loc(symbols[name]);
             }
         }
         return PromisedAddress.INVALID;
@@ -271,7 +255,7 @@ export function ContextBuilder() {
     /** Derederence for constants */
     function cderef(src: PromisedAddress): PromisedAddress {
         assert(src.location === EMemoryLocation.k_Constants);
-        return constSymbols[src.addr] || PromisedAddress.INVALID;
+        return constSymbols[src.addr] ? loc(constSymbols[src.addr]) : PromisedAddress.INVALID;
     }
 
 
@@ -316,7 +300,7 @@ export function ContextBuilder() {
         push,
         pop,
         ret, 
-        constants, 
+        constants,
         depth,
         diag
     };

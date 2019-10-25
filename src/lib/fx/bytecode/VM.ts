@@ -1,9 +1,10 @@
 import { assert, isDefAndNotNull } from "@lib/common";
 import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
+import { i32ToU8Array, u8ArrayToI32 } from "./common";
 
-// import { remote } from 'electron';
-import * as isElectron from 'is-electron-renderer';
+// // import { remote } from 'electron';
+// import * as isElectron from 'is-electron-renderer';
 
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;
@@ -38,6 +39,27 @@ export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
     return constChunk;
 }
 
+
+// TODO: rewrite with cleaner code
+export function decodeLayoutChunk(layoutChunk: Uint8Array): IMap<number> {
+    // console.log('before read', layoutChunk.length, 'bytes');
+    let offset = 0;
+    let count = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
+    offset += 4;
+
+    let layout = {};
+    for (let i = 0; i < count; ++ i) {
+        const nameLength = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
+        offset += 4;
+        const name = String.fromCharCode(...layoutChunk.subarray(offset, offset + nameLength));
+        offset += nameLength;
+        const addr = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
+        offset += 4;
+        layout[name] = addr;
+    }
+    return layout;
+}
+
 export type INT32 = number;
 
 class VM {
@@ -52,6 +74,7 @@ class VM {
 
         let $cb = data.constants;
         let icb = new Int32Array($cb.buffer, $cb.byteOffset);
+        let fcb = new Float32Array($cb.buffer, $cb.byteOffset);
 
         // TODO: handle correctly empty input
         // TODO: don't allocate inputs here
@@ -79,7 +102,7 @@ class VM {
             switch (op) {
                 case EOperation.k_I32LoadConst:
                 {
-                    iregs[a4] = icb[b4]
+                    iregs[a4] = icb[b4];
                 }
                 break;
                 case EOperation.k_I32LoadInput:
@@ -153,6 +176,7 @@ interface Bundle {
     instructions: Uint32Array;
     constants: Uint8Array;
     input: Uint8Array[];
+    layout: IMap<number>;
 }
 
 export function load(code: Uint8Array): Bundle {
@@ -162,12 +186,14 @@ export function load(code: Uint8Array): Bundle {
     assert(isDefAndNotNull(codeChunk) && isDefAndNotNull(chunks[EChunkType.k_Constants]));
 
     let constChunk = chunks[EChunkType.k_Constants];
+    let layoutChunk = chunks[EChunkType.k_Layout];
 
     let instructions = decodeCodeChunk(codeChunk);
     let constants = decodeConstChunk(constChunk);
+    let layout = decodeLayoutChunk(layoutChunk);
     let input = null;
 
-    return { instructions, constants, input };
+    return { instructions, constants, input, layout };
 }
 
 export function play(pack: Bundle): INT32 {

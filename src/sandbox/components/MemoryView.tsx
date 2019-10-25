@@ -1,3 +1,5 @@
+
+import { IMemoryRecord } from '@lib/idl/bytecode';
 import { IWithStyles } from '@sandbox/components';
 import * as React from 'react';
 import injectSheet from 'react-jss';
@@ -10,11 +12,11 @@ export const styles = {
         textAlign: `center`,
         zoom: 1
     }
-}
+};
 
 export interface IMemoryViewProps extends IWithStyles<typeof styles> {
-    binaryData: ArrayBuffer;
-    layout: { range: number }[];
+    binaryData: Uint8Array;
+    layout: IMemoryRecord[];
 }
 
 @injectSheet(styles)
@@ -39,9 +41,9 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
         const { binaryData, layout } = props;
 
         const WIDTH_MAX = 12;
-        const u8view = new Uint8Array(binaryData);
-        const f32view = new Float32Array(binaryData);
-        const i32view = new Int32Array(binaryData);
+        const u8view = new Uint8Array(binaryData.buffer);
+        const f32view = new Float32Array(binaryData.buffer);
+        const i32view = new Int32Array(binaryData.buffer);
 
         let n = 0;
 
@@ -63,7 +65,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                 for (let i = 0; i < segWidth; ++i) {
                     content.push(
                         <div key={ `mvk-d-${n}` }
-                            className={ props.classes.memoryVal }
+                            className={ `${props.classes.memoryVal}` }
                             style={ { width: `${100 / segWidth}%` } }>
                             { `${u8view[n] < 16 ? '0' : ''}${u8view[n++].toString(16).toUpperCase()}` }
                         </div>);
@@ -86,12 +88,17 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                         textAlign="center"
                         colSpan={ segWidth }
                         style={ style }>
-                        {section.range === 4 &&
+                        {['f32', 'i32'].indexOf(section.type) !== -1 &&
                             <Popup inverted
-                                content={ <div style={ { fontFamily: 'consolas' } }>f32: {f32view[n4]}<br/>i32: {i32view[n4]}</div> } 
+                                content={ <div style={ { fontFamily: 'consolas' } }>f32: {f32view[n4]}<br/>i32: {i32view[n4]}</div> }
                                 trigger={ <span>{content}</span> } />
                         }
-                        {section.range !== 4 &&
+                        {['uniform'].indexOf(section.type) !== -1 &&
+                            <Popup inverted
+                                content={ <div style={ { fontFamily: 'consolas' } }>{section.value}</div> }
+                                trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
+                        }
+                        {['unknown'].indexOf(section.type) !== -1 &&
                             content
                         }
                     </Table.Cell>

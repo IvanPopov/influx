@@ -26,15 +26,18 @@ int spawn()
 
 void init(out Part part)
 {
-    part.pos = float3(0.0, 0.0, 0.0);
+    part.pos = float3(float2(0.0).xx, 0.0);
     part.size = 0.1;
 }
+
+uniform float elapsedTime: ELAPSED_TIME;
+uniform float unknownGlobal;
 
 /** Return false if you want to kill particle. */
 bool update(inout Part part)
 {
     float y = part.pos.y;
-    y = y + 0.01;
+    y = y + 1.0f * elapsedTime + 0.f * unknownGlobal;
     part.pos.y = y;
     return true;
 }
