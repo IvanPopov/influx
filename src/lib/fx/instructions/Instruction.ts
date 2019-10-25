@@ -161,6 +161,7 @@ export class Instruction implements IInstruction {
             case EInstructionTypes.k_PostfixArithmeticInstruction:
             case EInstructionTypes.k_PostfixIndexInstruction:
             case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_ComplexExprInstruction:
                 // todo: add other types!!!
                 return true;
         }

@@ -6,6 +6,11 @@ export enum EOperation {
 
     k_I32MoveRegToReg,
 
+
+    //
+    // Arithemtic operations
+    //
+
     k_I32Add,
     k_I32Sub,
     k_I32Mul,
@@ -16,8 +21,40 @@ export enum EOperation {
     k_F32Mul,
     k_F32Div,
 
+    //
+    // Relational operations
+    //
+
+    k_I32LessThan,
+    k_I32GreaterThan,
+    k_I32LessThanEqual,
+    k_I32GreaterThanEqual,
+
+    k_F32LessThan,
+    k_F32GreaterThan,
+    k_F32LessThanEqual,
+    k_F32GreaterThanEqual,
+
+    //
+    // intrinsics
+    //
+
+    k_F32Frac,
+    k_F32Sin,
+    k_F32Cos,
+    k_F32Abs,
+    k_F32Sqrt,
+
+    // 
+    // Cast operations
+    //
+
     k_F32ToI32,
     k_I32ToF32,
+
+    //
+    // Flow control
+    //
 
     k_Jump,
 

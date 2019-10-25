@@ -29,12 +29,12 @@ export class RelationalExprInstruction extends ExprInstruction implements IRelat
     }
 
 
-    get left(): IInstruction {
+    get left(): IExprInstruction {
         return this._leftOperand;
     }
 
 
-    get right(): IInstruction {
+    get right(): IExprInstruction {
         return this._rightOperand;
     }
 

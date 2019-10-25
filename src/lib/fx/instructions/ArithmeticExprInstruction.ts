@@ -39,7 +39,7 @@ export class ArithmeticExprInstruction extends ExprInstruction implements IArith
         return this._rightOperand;
     }
 
-    get operator(): string {
+    get operator(): ArithmeticOperator {
         return this._operator;
     }
     

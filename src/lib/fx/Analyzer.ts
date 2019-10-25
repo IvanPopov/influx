@@ -3739,6 +3739,20 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                     updateRoutine = null;
                                 }
 
+                                //
+                                // Check return type
+                                //
+
+                                if (!fn.definition.returnType.isEqual(T_BOOL)) {
+                                    context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid, 
+                                        { funcName: fn.name, tooltip: `'UpdateRoutine' return type mismatch. 'boolean' is expected.` });
+                                    updateRoutine = null;
+                                }
+
+                                if (!updateRoutine) {
+                                    break;
+                                }
+
                                 // type is referencing to VariableType of argument,
                                 // while substitute type referencing to declaration. 
                                 particle = type.subType;

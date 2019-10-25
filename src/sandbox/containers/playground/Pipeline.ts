@@ -1,6 +1,6 @@
 /* tslint:disable:typedef */
 
-import { assert, isNull } from '@lib/common';
+import { assert, isNull, isDef } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { ICompileExprInstruction } from '@lib/idl/IInstruction';
@@ -11,7 +11,14 @@ type PartFx = IPartFxInstruction;
 interface IRunnable {
     run(...input: Uint8Array[]): VM.INT32;
     setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean;
+    setPipelineConstants(constants: IPipelineConstants): IRunnable;
 }
+
+interface IPipelineConstants {
+    elapsedTime: number;
+    elapsedTimeLevel: number;
+}
+
 
 function prebuild(expr: ICompileExprInstruction): IRunnable {
     const program = Bytecode.translate(expr.function);
@@ -27,7 +34,7 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
             const offset = layout[name];
             const constants = bundle.constants;
 
-            if (!offset) {
+            if (!isDef(offset)) {
                 return false;
             }
 
@@ -44,6 +51,12 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
             }
 
             return true;
+        },
+
+        setPipelineConstants(constants: IPipelineConstants): IRunnable {
+            this.setConstant('elapsedTime', 'float32', constants.elapsedTime);
+            this.setConstant('elapsedTimeLevel', 'float32', constants.elapsedTimeLevel);
+            return this;
         }
     };
 }
@@ -82,7 +95,8 @@ class Pass {
         return this.owner.length;
     }
 
-    prerender(): void {
+    prerender(constants: IPipelineConstants): void {
+        this.prerenderRoutine.setPipelineConstants(constants);
         for (let i = 0; i < this.owner.length; ++i) {
             const partPtr = this.owner.getParticlePtr(i);
             const prerenderedPartPtr = this.getPrerenderedParticlePtr(i);
@@ -166,22 +180,23 @@ export class Emitter {
         // return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
     }
 
-    tick(elapsedTime: number) {
-        this.update(elapsedTime);
-        this.spawn(elapsedTime);
-        this.prerender();
+    tick(constants: IPipelineConstants) {
+        this.update(constants);
+        this.spawn(constants);
+        this.prerender(constants);
     }
 
 
-    private spawn(elapsedTime: number) {
+    private spawn(constants: IPipelineConstants) {
         const nSpawn = this.spawnRoutine.run();
 
-        this.nPartAddFloat += nSpawn * elapsedTime;
+        this.nPartAddFloat += nSpawn * constants.elapsedTime;
         this.nPartAdd = Math.floor(this.nPartAddFloat);
         this.nPartAddFloat -= this.nPartAdd;
 
         this.nPartAdd = Math.min(this.nPartAdd, this.capacity - this.nPart);
 
+        this.initRoutine.setPipelineConstants(constants);
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
             this.initRoutine.run(ptr);
@@ -200,42 +215,44 @@ export class Emitter {
         }
     }
 
-    private init() {
-        for (let i = 0; i < this.nPart; ++i) {
-            const ptr = this.getParticlePtr(i);
-            this.initRoutine.run(ptr);
-        }
-    }
 
-
-    private update(elapsedTime: number) {
-        this.updateRoutine.setConstant('elapsedTime', 'float32', elapsedTime);
+    private update(constants: IPipelineConstants) {
+        this.updateRoutine.setPipelineConstants(constants);
         for (let i = 0; i < this.nPart; ++i) {
-            const ptr = this.getParticlePtr(i);
-            this.updateRoutine.run(ptr);
+            const currPtr = this.getParticlePtr(i);
+            if (!this.updateRoutine.run(currPtr)) {
+                // swap last particle with current in order to remove particle
+                let lastPtr = this.getParticlePtr(this.nPart - 1);
+                currPtr.set(lastPtr);
+                this.nPart--;
+            }
 
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
             // console.log(`update(${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
     }
 
-    private prerender() {
+    private prerender(constants: IPipelineConstants) {
         this.passList.forEach((pass) => {
-            pass.prerender();
+            pass.prerender(constants);
         });
     }
 }
+
+
 
 function Pipeline(fx: PartFx) {
 
     let emitter: Emitter = null;
 
-    let elapsedTime: number;
-    let elapsedTimeLevel: number;
-
     let $startTime: number;
     let $elapsedTimeLevel: number;
     let $interval = null;
+
+    let constants: IPipelineConstants = {
+        elapsedTime: 0,
+        elapsedTimeLevel: 0
+    };
 
     function load(fx: PartFx) {
 
@@ -265,8 +282,8 @@ function Pipeline(fx: PartFx) {
     }
 
     function play() {
-        elapsedTime = 0;
-        elapsedTimeLevel = 0;
+        constants.elapsedTime = 0.0;
+        constants.elapsedTimeLevel = 0.0;
 
         $startTime = Date.now();
         $elapsedTimeLevel = 0;
@@ -275,11 +292,12 @@ function Pipeline(fx: PartFx) {
     }
 
     function update() {
-        emitter.tick(elapsedTime);
+        emitter.tick(constants);
+
 
         const dt = Date.now() - $startTime;
-        elapsedTime = (dt - $elapsedTimeLevel) / 1000;
-        elapsedTimeLevel = $elapsedTimeLevel / 1000;
+        constants.elapsedTime = (dt - $elapsedTimeLevel) / 1000;
+        constants.elapsedTimeLevel = $elapsedTimeLevel / 1000;
         $elapsedTimeLevel = dt;
     }
 

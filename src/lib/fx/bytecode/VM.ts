@@ -18,7 +18,7 @@ export function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
     let type = view.getUint32(0, true);
     let byteLength = view.getUint32(4, true) << 2;
     let content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
-    
+
     chunks[type] = content;
 
     let nextChunkOffset = content.byteOffset + content.byteLength;
@@ -48,7 +48,7 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): IMap<number> {
     offset += 4;
 
     let layout = {};
-    for (let i = 0; i < count; ++ i) {
+    for (let i = 0; i < count; ++i) {
         const nameLength = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
         offset += 4;
         const name = String.fromCharCode(...layoutChunk.subarray(offset, offset + nameLength));
@@ -79,7 +79,7 @@ class VM {
         // TODO: handle correctly empty input
         // TODO: don't allocate inputs here
         let $input = data.input || [];
-        for (let i = 0; i < 2; ++ i) {
+        for (let i = 0; i < 2; ++i) {
             $input[i] = $input[i] || new Uint8Array(0);
         }
         let iinput = [
@@ -101,67 +101,134 @@ class VM {
 
             switch (op) {
                 case EOperation.k_I32LoadConst:
-                {
-                    iregs[a4] = icb[b4];
-                }
-                break;
+                    {
+                        iregs[a4] = icb[b4];
+                    }
+                    break;
                 case EOperation.k_I32LoadInput:
-                {
-                    iregs[b4] = iinput[a][c4];
-                }
-                break;
+                    {
+                        iregs[b4] = iinput[a][c4];
+                    }
+                    break;
                 case EOperation.k_I32StoreInput:
-                {
-                    iinput[a][b4] = iregs[c4];
-                }
-                break;
+                    {
+                        iinput[a][b4] = iregs[c4];
+                    }
+                    break;
                 case EOperation.k_I32MoveRegToReg:
                     iregs[a4] = iregs[b4];
-                break;
+                    break;
+
+                //
+                // Arithmetic operations
+                //
 
                 case EOperation.k_I32Add:
                     iregs[a4] = iregs[b4] + iregs[c4];
-                break;
+                    break;
                 case EOperation.k_I32Sub:
                     iregs[a4] = iregs[b4] - iregs[c4];
-                break;
+                    break;
                 case EOperation.k_I32Mul:
                     iregs[a4] = iregs[b4] * iregs[c4];
-                break;
+                    break;
                 case EOperation.k_I32Div:
                     iregs[a4] = iregs[b4] / iregs[c4];
-                break;
+                    break;
 
                 case EOperation.k_F32Add:
                     fregs[a4] = fregs[b4] + fregs[c4];
-                break;
+                    break;
                 case EOperation.k_F32Sub:
                     fregs[a4] = fregs[b4] - fregs[c4];
-                break;
+                    break;
                 case EOperation.k_F32Mul:
                     fregs[a4] = fregs[b4] * fregs[c4];
-                break;
+                    break;
                 case EOperation.k_F32Div:
                     fregs[a4] = fregs[b4] / fregs[c4];
-                break;
+                    break;
+
+                //
+                // Relational operations
+                //
+
+                case EOperation.k_I32LessThan:
+                    iregs[a4] = Number(iregs[b4] < iregs[c4]);
+                    break;
+                case EOperation.k_I32GreaterThan:
+                    iregs[a4] = Number(iregs[b4] > iregs[c4]);
+                    break;
+                case EOperation.k_I32LessThanEqual:
+                    iregs[a4] = Number(iregs[b4] <= iregs[c4]);
+                    break;
+                case EOperation.k_I32GreaterThanEqual:
+                    iregs[a4] = Number(iregs[b4] >= iregs[c4]);
+                    break;
+
+                case EOperation.k_F32LessThan:
+                    fregs[a4] = Number(fregs[b4] < fregs[c4]);
+                    break;
+                case EOperation.k_F32GreaterThan:
+                    fregs[a4] = Number(fregs[b4] > fregs[c4]);
+                    break;
+                case EOperation.k_F32LessThanEqual:
+                    fregs[a4] = Number(fregs[b4] <= fregs[c4]);
+                    break;
+                case EOperation.k_F32GreaterThanEqual:
+                    fregs[a4] = Number(fregs[b4] >= fregs[c4]);
+                    break;
+
+                //
+                // intrinsics
+                //
+
+                case EOperation.k_F32Frac:
+                    // same as frac() in HLSL
+                    fregs[a4] = fregs[b4] - Math.floor(fregs[b4]);
+                    break;
+
+                case EOperation.k_F32Sin:
+                    fregs[a4] = Math.sin(fregs[b4]);
+                    break;
+                case EOperation.k_F32Cos:
+                    fregs[a4] = Math.cos(fregs[b4]);
+                    break;
+
+                case EOperation.k_F32Abs:
+                    fregs[a4] = Math.abs(fregs[b4]);
+                    break;
+                case EOperation.k_F32Sqrt:
+                    fregs[a4] = Math.sqrt(fregs[b4]);
+                    break;
+
+                //
+                // Cast
+                //
 
                 case EOperation.k_F32ToI32:
                     iregs[a4] = Math.trunc(fregs[b4]);
-                break;
+                    break;
                 case EOperation.k_I32ToF32:
                     // nothing to do here :)
                     fregs[a4] = iregs[b4];
-                break;
+                    break;
+
+
+                //
+                // Flow controls
+                //
+
                 case EOperation.k_Jump:
                     // TODO: don't use multiplication here
                     i4 = a * 4;
                     continue;
-                break;
+                    break;
                 case EOperation.k_Ret:
-                {
-                    break end;
-                }
-                break;
+                    {
+                        break end;
+                    }
+                    break;
                 default:
                     console.error(`unknown operation found: ${op}`);
             }

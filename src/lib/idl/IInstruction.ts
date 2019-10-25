@@ -434,11 +434,10 @@ export interface IConstructorCallInstruction extends IExprInstruction {
     readonly ctor: IVariableTypeInstruction;
 }
 
-
 export interface IArithmeticExprInstruction extends IExprInstruction {
     readonly right: IExprInstruction;
     readonly left: IExprInstruction;
-    readonly operator: string;
+    readonly operator: '+' | '-' | '/' | '*' | '%';
 }
 
 export interface ICastExprInstruction extends IExprInstruction {
@@ -473,8 +472,8 @@ export interface ICompileExprInstruction extends IExprInstruction {
 
 
 export interface IRelationalExprInstruction extends IExprInstruction {
-    readonly left: IInstruction;
-    readonly right: IInstruction;
+    readonly left: IExprInstruction;
+    readonly right: IExprInstruction;
     readonly operator: string;
 } 
 

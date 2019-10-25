@@ -9,7 +9,7 @@ import * as SystemScope from "@lib/fx/SystemScope";
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IRelationalExprInstruction, IVariableTypeInstruction, ITypeInstruction, IFunctionDefInstruction } from "@lib/idl/IInstruction";
 import { isNull, isString } from "util";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
@@ -47,7 +47,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
         const chunkHeader = [EChunkType.k_Layout, size];
         const data = new Uint32Array(chunkHeader.length + size);
         data.set(chunkHeader);
-        
+
         const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
         let written = 0;
         u8data.set(i32ToU8Array(layout.names.length), written);
@@ -117,6 +117,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         ref,
         icode,
         imove,
+        iop3,
+        iop2,
         iload,
         ret,
         depth
@@ -136,6 +138,177 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     //     }
     //     return r;
     // }
+
+    type ArithmeticOp = IArithmeticExprInstruction['operator'];
+
+    const intrinsics = {
+
+        /**
+         * Float based arithmetics
+         * vector [op] vector | vector [op] scalar | scalar [op] vector
+         */
+        arithf(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            const size = Math.max(left.size, right.size);
+            const n = size / sizeof.f32();
+
+            // handle case: scalar * vector => scalar.xxxx * vector
+            if (left.size != right.size) {
+                if (left.size === sizeof.f32()) {
+                    left = left.override({ size: right.size, swizzle: Array(n).fill(0) });
+                } else if (right.size === sizeof.f32()) {
+                    right = right.override({ size: right.size, swizzle: Array(n).fill(0) });
+                } else {
+                    assert(false, 'vectors with differen length cannot be multipled');
+                }
+            }
+
+            const opFloatMap = {
+                '+': EOperation.k_F32Add,
+                '-': EOperation.k_F32Sub,
+                '*': EOperation.k_F32Mul,
+                '/': EOperation.k_F32Div
+            };
+
+            const op: EOperation = opFloatMap[opName];
+            if (!isDef(op)) {
+                diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                return PromisedAddress.INVALID;
+            }
+
+            // TODO: don't do alloca here, implicit using is bad pattern
+            dest = dest || alloca(size);
+            iop3(op, dest, left, right);
+            return dest;
+        },
+
+        // TODO: merhe with function above
+        arithi(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            const size = Math.max(left.size, right.size);
+            const n = size / sizeof.f32();
+
+            // handle case: scalar * vector => scalar.xxxx * vector
+            if (left.size !== right.size) {
+                if (left.size === sizeof.f32()) {
+                    left = left.override({ size: right.size, swizzle: Array(n).fill(0) });
+                } else if (right.size === sizeof.f32()) {
+                    right = right.override({ size: right.size, swizzle: Array(n).fill(0) });
+                } else {
+                    assert(false, 'vectors with differen length cannot be multipled');
+                }
+            }
+
+            const opIntMap = {
+                '+': EOperation.k_I32Add,
+                '-': EOperation.k_I32Sub,
+                '*': EOperation.k_I32Mul,
+                '/': EOperation.k_I32Div
+            }
+
+            const op: EOperation = opIntMap[opName];
+            if (!isDef(op)) {
+                diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                return PromisedAddress.INVALID;
+            }
+
+            // TODO: don't do alloca here, implicit using is bad pattern
+            dest = dest || alloca(size);
+            iop3(op, dest, left, right);
+            return dest;
+        },
+
+        arith(opName: ArithmeticOp, dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction): PromisedAddress {
+            assert(SystemScope.isScalarType(left.type) || SystemScope.isVectorType(left.type));
+            assert(SystemScope.isScalarType(right.type) || SystemScope.isVectorType(right.type));
+
+            let leftAddr = raddr(left);
+            if (leftAddr.location !== EMemoryLocation.k_Registers) {
+                leftAddr = iload(leftAddr);
+                debug.map(left);
+            }
+
+            let rightAddr = raddr(right);
+            if (rightAddr.location !== EMemoryLocation.k_Registers) {
+                rightAddr = iload(rightAddr);
+                debug.map(right);
+            }
+
+            if (SystemScope.isFloatBasedType(left.type)) {
+                assert(SystemScope.isFloatBasedType(right.type));
+                return intrinsics.arithf(opName, dest, leftAddr, rightAddr);
+            }
+
+            if (SystemScope.isIntBasedType(left.type)) {
+                assert(SystemScope.isIntBasedType(right.type));
+                return intrinsics.arithi(opName, dest, leftAddr, rightAddr);
+            }
+
+            assert(false);
+            return PromisedAddress.INVALID;
+        },
+
+        mulf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('*', dest, left, right),
+        divf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('/', dest, left, right),
+        addf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('+', dest, left, right),
+        subf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('-', dest, left, right),
+
+        mul: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('*', dest, left, right),
+        div: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('/', dest, left, right),
+        add: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('+', dest, left, right),
+        sub: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('-', dest, left, right),
+
+        dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            let mlr = intrinsics.mulf(null, left, right);
+            let n = mlr.size / sizeof.f32();
+
+            dest = dest || alloca(sizeof.f32());
+            for (let i = 0; i < n; ++i) {
+                let offset = i * sizeof.f32();
+                let size = sizeof.f32();
+                intrinsics.addf(dest, dest, mlr.override({ offset, size }));
+            }
+
+            return dest;
+        },
+
+        // fraction (f32 only)
+        frac(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            dest = dest || alloca(src.size);
+            iop2(EOperation.k_F32Frac, dest, src);
+            return dest;
+        },
+
+        sinf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            dest = dest || alloca(src.size);
+            iop2(EOperation.k_F32Sin, dest, src);
+            return dest;
+        },
+
+        cosf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            dest = dest || alloca(src.size);
+            iop2(EOperation.k_F32Cos, dest, src);
+            return dest;
+        },
+
+        absf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            dest = dest || alloca(src.size);
+            iop2(EOperation.k_F32Abs, dest, src);
+            return dest;
+        },
+
+        sqrtf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            dest = dest || alloca(src.size);
+            iop2(EOperation.k_F32Sqrt, dest, src);
+            return dest;
+        },
+
+        normalizef(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            // dest = dest || alloca(src.size);
+            // iop2(EOperation.k_F32Sqrt, dest, src);
+            // return dest;
+            assert(false);
+            return PromisedAddress.INVALID;
+        }
+    }
 
 
     function resolveMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
@@ -250,30 +423,42 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 {
                     const arithExpr = expr as IArithmeticExprInstruction;
+                    const dest = alloca(arithExpr.type.size);
+                    intrinsics.arith(arithExpr.operator, dest, arithExpr.left, arithExpr.right);
+                    debug.map(arithExpr);
+                    debug.ns();
+                    return dest;
+                }
+                break;
+            case EInstructionTypes.k_RelationalExprInstruction:
+                {
+                    const relExpr = expr as IRelationalExprInstruction;
 
                     const opIntMap = {
-                        '+': EOperation.k_I32Add,
-                        '-': EOperation.k_I32Sub,
-                        '*': EOperation.k_I32Mul,
-                        '/': EOperation.k_I32Div
+                        '<': EOperation.k_I32LessThan,
+                        '>': EOperation.k_I32GreaterThan,
+                        '<=': EOperation.k_I32LessThanEqual,
+                        '>=': EOperation.k_I32GreaterThanEqual
                     }
 
                     const opFloatMap = {
-                        '+': EOperation.k_F32Add,
-                        '-': EOperation.k_F32Sub,
-                        '*': EOperation.k_F32Mul,
-                        '/': EOperation.k_F32Div
+                        '<': EOperation.k_F32LessThan,
+                        '>': EOperation.k_F32GreaterThan,
+                        '<=': EOperation.k_F32LessThanEqual,
+                        '>=': EOperation.k_F32GreaterThanEqual
                     }
 
                     let op: EOperation;
 
-                    if (arithExpr.type.isEqual(T_INT)) {
-                        op = opIntMap[arithExpr.operator];
-                    } else if (arithExpr.type.isEqual(T_FLOAT)) {
-                        op = opFloatMap[arithExpr.operator];
+                    const { left, right } = relExpr;
+
+                    if (left.type.isEqual(T_INT) && right.type.isEqual(T_INT)) {
+                        op = opIntMap[relExpr.operator];
+                    } else if (left.type.isEqual(T_FLOAT) && right.type.isEqual(T_FLOAT)) {
+                        op = opFloatMap[relExpr.operator];
                     } else {
                         // todo: add type description
-                        diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                        diag.critical(EErrors.k_UnsupportedRelationalExpr, {});
                     }
 
                     if (!isDef(op)) {
@@ -281,22 +466,22 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         return PromisedAddress.INVALID;
                     }
 
-                    const leftAddr = raddr(arithExpr.left);
+                    let leftAddr = raddr(left);
                     if (leftAddr.location !== EMemoryLocation.k_Registers) {
-                        iload(leftAddr);
-                        debug.map(arithExpr.left);
+                        leftAddr = iload(leftAddr);
+                        debug.map(left);
                     }
 
-                    const rightAddr = raddr(arithExpr.right);
+                    let rightAddr = raddr(right);
                     if (rightAddr.location !== EMemoryLocation.k_Registers) {
-                        iload(rightAddr);
-                        debug.map(arithExpr.right);
+                        rightAddr = iload(rightAddr);
+                        debug.map(right);
                     }
 
-                    const size = arithExpr.type.size;
+                    const size = relExpr.type.size;
                     const dest = alloca(size);
                     icode(op, dest, leftAddr, rightAddr);
-                    debug.map(arithExpr);
+                    debug.map(relExpr);
                     debug.ns();
 
                     return loc({ addr: dest, size });
@@ -383,8 +568,93 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const call = expr as IFunctionCallInstruction;
                     const fdecl = call.declaration as IFunctionDeclInstruction;
                     const fdef = fdecl.definition;
+                    const retType = fdef.returnType;
 
-                    const ret = alloca(fdef.returnType.size);
+                    function preloadArguments(fdef: IFunctionDefInstruction) {
+                        // TODO: move to helper function: preloadArguments();
+                        const args: PromisedAddress[] = [];
+                        for (let i = 0; i < fdef.paramList.length; ++i) {
+                            const arg = call.args[i];
+                            let argAddr = raddr(arg);
+                            if (argAddr.location !== EMemoryLocation.k_Registers) {
+                                argAddr = iload(argAddr);
+                            }
+                            args.push(argAddr);
+                        }
+                        return args;
+                    }
+
+                    // TODO: replace with fecl.builtIn
+                    if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
+                        switch (fdecl.name) {
+                            case 'mul':
+                                {
+                                    assert(fdef.paramList.length === 2);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.mulf(dest, args[0], args[1]);
+                                }
+                            case 'dot':
+                                {
+                                    assert(fdef.paramList.length === 2);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(sizeof.f32());
+                                    return intrinsics.dotf(dest, args[0], args[1]);
+                                }
+                            case 'frac':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.frac(dest, args[0]);
+                                }
+                            case 'sin':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.sinf(dest, args[0]);
+                                }
+                            case 'cos':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.cosf(dest, args[0]);
+                                }
+                            case 'abs':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.absf(dest, args[0]);
+                                }
+                            case 'sqrt':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.sqrtf(dest, args[0]);
+                                }
+                            case 'normalize':
+                                {
+                                    assert(fdef.paramList.length === 1);
+                                    const args = preloadArguments(fdef);
+                                    // TODO: add support for INT type
+                                    const dest = alloca(retType.size);
+                                    return intrinsics.normalizef(dest, args[0]);
+                                }
+                        }
+                    }
+
+                    const ret = alloca(retType.size);
                     push(fdecl, ret);
 
                     for (let i = 0; i < fdef.paramList.length; ++i) {
@@ -433,11 +703,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 case 1:
                                     // TODO: convert float to int if necessary
                                     // handling for the case single same type argument and multiple floats
-                                    assert(Instruction.isExpression(args[0]));
+                                    assert(Instruction.isExpression(args[0]), EInstructionTypes[args[0].instructionType]);
                                     let src = raddr(args[0]);
 
                                     if (src.location !== EMemoryLocation.k_Registers) {
-                                        iload(src);
+                                        src = iload(src);
                                         debug.map(args[0]);
                                     }
 
@@ -458,11 +728,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 default:
                                     let offset = 0;
                                     for (let i = 0; i < args.length; ++i) {
-                                        assert(Instruction.isExpression(args[i]));
+                                        assert(Instruction.isExpression(args[i]), EInstructionTypes[args[i].instructionType]);
                                         let src = raddr(args[i]);
 
                                         if (src.location !== EMemoryLocation.k_Registers) {
-                                            iload(src);
+                                            src = iload(src);
                                             debug.map(args[i]);
                                         }
 
@@ -521,9 +791,9 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                             |
                     */
 
-                    const dest = raddr(decl.initExpr);
+                    let dest = raddr(decl.initExpr);
                     if (dest.location !== EMemoryLocation.k_Registers) {
-                        iload(dest);
+                        dest = iload(dest);
                         debug.map(decl.initExpr);
                         debug.ns();
                     }
@@ -544,10 +814,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     let retStmt = instr as ReturnStmtInstruction;
                     const expr = retStmt.expr;
                     if (!isNull(expr)) {
-                        const src = raddr(expr);
+                        let src = raddr(expr);
 
                         if (src.location !== EMemoryLocation.k_Registers) {
-                            iload(src);
+                            src = iload(src);
                             debug.map(expr);
                         }
 
@@ -597,17 +867,23 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     // left address can be both from the registers and in the external memory
                     const leftAddr = raddr(assigment.left);
 
-                    assert(Instruction.isExpression(assigment.right));
+                    assert(Instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
                     // right address always from the registers
-                    const rightAddr = raddr(<IExprInstruction>assigment.right);
+                    let rightAddr = raddr(<IExprInstruction>assigment.right);
                     if (rightAddr.location !== EMemoryLocation.k_Registers) {
-                        iload(rightAddr);
+                        rightAddr = iload(rightAddr);
                         debug.map(assigment.right);
                     }
 
                     imove(leftAddr, rightAddr, size);
                     debug.map(assigment);
                     debug.ns();
+                    return;
+                }
+            case EInstructionTypes.k_FunctionCallInstruction:
+                {
+                    // TODO: check function side effects and dont resolve in case of pure function.
+                    raddr(instr as IFunctionCallInstruction);
                     return;
                 }
             default:
