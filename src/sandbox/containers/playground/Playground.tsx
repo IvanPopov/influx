@@ -61,7 +61,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 let active = null;
                 let pipelinePrev = state.pipeline;
                 let pipelineNext = null;
-                let running = false;
+                // let running = false;
 
                 if (state.active) {
                     if (list.map(fx => fx.name).indexOf(state.active) !== -1) {
@@ -84,7 +84,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                     if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
                         pipelineNext = Pipeline(list[i]);
                         console.log('next pipeline has been created.');
-                        running = !pipelineNext.isStopped();
+                        // running = !pipelineNext.isStopped();
                     }
                 }
 
@@ -126,8 +126,40 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
         }
     }
 
-    shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return this.state.scope !== nextProps.scope;
+    pickEffect(active) {
+        const scope = this.state.scope;
+        const list: IPartFxInstruction[] = [];
+
+        let pipelinePrev = this.state.pipeline;
+        let pipelineNext = null;
+
+        for (const name in scope.techniqueMap) {
+            const tech = scope.techniqueMap[name];
+            if (tech.type !== ETechniqueType.k_PartFx) {
+                continue;
+            }
+            list.push(tech as IPartFxInstruction);
+        }
+
+        const i = list.map(fx => fx.name).indexOf(active);
+        if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
+            pipelineNext = Pipeline(list[i]);
+            console.log('next pipeline has been created.');
+        }
+
+
+        if (pipelineNext && pipelinePrev) {
+            pipelinePrev.stop();
+            pipelinePrev = null;
+            console.log('previous pipeline has been dropped.');
+        }
+
+        const pipeline = pipelineNext || pipelinePrev;
+        this.setState({ active, pipeline });
+    }
+
+    shouldComponentUpdate(nextProps: IPlaygroundProps, nextState: IPlaygroundState) {
+        return this.state.scope !== nextProps.scope || this.state.active !== nextState.active;
     }
 
 
@@ -154,7 +186,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 }
                 <List bulleted horizontal>
                     { list.map(fx => (
-                        <List.Item disabled={ !fx.isValid() } as={ (fx.name === active ? 'b' : 'a') }>
+                        <List.Item disabled={ !fx.isValid() } as={ (fx.name === active ? 'b' : 'a') } onClick={ () => this.pickEffect(fx.name) }  >
                             {/* <Icon name={'pulse' as any}/>&nbsp; */ }
                             {/* { fx.name == active && <Loader as="span" size='mini' active inline>{ fx.name }</Loader> } */ }
                             { fx.name }

@@ -50,7 +50,7 @@ float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
 }
 
 struct Part {
-    float3 dir;
+    float3 speed;
     float3 pos;
     float size;
     float timelife;
@@ -89,13 +89,13 @@ void init(out Part part, int partId)
     // dir.y = random(float2(elapsedTimeLevel, 2.f));
     // dir.z = random(float2(elapsedTimeLevel, 3.f));
 
-    part.dir = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
+    part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
 }
 
 /** Return false if you want to kill particle. */
 bool update(inout Part part)
 {
-    part.pos = part.dir * part.timelife * 3.0f;
+    part.pos = part.speed * part.timelife * 3.0f;
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     return part.timelife < 1.0f;
 }
@@ -104,8 +104,17 @@ void prerender(inout Part part, out DefaultShaderInput input)
 {
     input.pos.xyz = part.pos.xyz;
     input.size = part.size;
-    input.color = float4(abs(part.dir), 1.0f - part.timelife);
+    input.color = float4(abs(part.speed), 1.0f - part.timelife);
 }
+
+
+void prerender2(inout Part part, out DefaultShaderInput input)
+{
+    input.pos.xyz = part.pos.xyz;
+    input.size = part.size;
+    input.color = float4(float3(1.0f, 0.f, 0.f), 1.0f - part.timelife);
+}
+
 
 partFx project.awesome {
     Capacity = 1000;
@@ -119,6 +128,15 @@ partFx project.awesome {
     }
 }
 
-partFx incomplete {
 
+partFx some.example {
+    Capacity = 1000;
+    SpawnRoutine = compile spawn();
+    InitRoutine = compile init();
+    UpdateRoutine = compile update();
+
+    pass P0 {
+        Sorting = TRUE;
+        PrerenderRoutine = compile prerender2();
+    }
 }
