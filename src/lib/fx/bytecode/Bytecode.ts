@@ -531,7 +531,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 }
 
                                 
-                                intrinsics.arithf('*', dest, constant, src);
+                                intrinsics.arithi('*', dest, constant, src);
                                 debug.map(unary);
                                 return dest;
                             // fall to unsupported warning
