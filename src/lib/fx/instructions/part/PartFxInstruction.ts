@@ -10,6 +10,7 @@ export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSe
     initRoutine: ICompileExprInstruction;
     updateRoutine: ICompileExprInstruction;
     particle: ITypeInstruction;
+    capacity?: number;
 }
 
 // var s: IPartFxInstructionSettings;
@@ -21,14 +22,16 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
     protected _updateRoutine: ICompileExprInstruction;
     protected _particle: ITypeInstruction;
     protected _material: ITypeInstruction;
+    protected _capacity: number;
 
-    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, ...settings }: IPartFxInstructionSettings) {
+    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, capacity = -1, ...settings }: IPartFxInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PartFxDeclInstruction, techniqueType: ETechniqueType.k_PartFx, ...settings });
 
         this._spawnRoutine = spawnRoutine;
         this._initRoutine = initRoutine;
         this._updateRoutine = updateRoutine;
         this._particle = particle;
+        this._capacity = capacity;
     }
 
     get spawnRoutine(): ICompileExprInstruction {
@@ -47,6 +50,10 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
 
     get particle(): ITypeInstruction {
         return this._particle;
+    }
+
+    get capacity(): number {
+        return this._capacity;
     }
 
     isValid() {

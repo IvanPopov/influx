@@ -24,7 +24,7 @@ float deg2rad(float deg)
     return ((deg) * 3.14f / 180.f);
 }
 
-float3 RndVUnitConus (float3 vBaseNorm, float angle)
+float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
 {
    float3   vRand;
    float3   vBaseScale, vTangScale;
@@ -39,7 +39,7 @@ float3 RndVUnitConus (float3 vBaseNorm, float angle)
 
  //  if (sqrt(dot(vTang, vTang)) > 0.0001f)   {
       vTang = normalize(vTang);
-      angle = deg2rad(random(float2(elapsedTime, 100.f)) * angle);
+      angle = deg2rad(random(float2(elapsedTimeLevel, (float)partId * elapsedTime)) * angle);
       vRand = vBaseNorm * cos(angle) + vTang * sin(angle);
       vRand = normalize(vRand);
   // } else   {
@@ -75,10 +75,10 @@ float4 foo() {
 int summ(int a, int b) { return a + b; }
 int spawn()
 {
-    return summ(1, 100);
+    return summ(1, 200);
 }
 
-void init(out Part part)
+void init(out Part part, int partId)
 {
     part.pos = float3(0.f, float2(0.0).x, 0.0);
     part.size = 0.1;
@@ -89,7 +89,7 @@ void init(out Part part)
     // dir.y = random(float2(elapsedTimeLevel, 2.f));
     // dir.z = random(float2(elapsedTimeLevel, 3.f));
 
-    part.dir = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f);
+    part.dir = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
 }
 
 /** Return false if you want to kill particle. */
@@ -102,21 +102,19 @@ bool update(inout Part part)
 
 void prerender(inout Part part, out DefaultShaderInput input)
 {
-    // input.pos = part.pos;
     input.pos.xyz = part.pos.xyz;
     input.size = part.size;
-    input.color = float4(abs(part.dir), 1.0f - part.timelife);// + float4(1.0, 0.5, 10.0, 0.0).yxww;
+    input.color = float4(abs(part.dir), 1.0f - part.timelife);
 }
 
 partFx project.awesome {
-    Capacity = 100;
+    Capacity = 1000;
     SpawnRoutine = compile spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 
     pass P0 {
         Sorting = TRUE;
-        DefaultShader = TRUE;
         PrerenderRoutine = compile prerender();
     }
 }

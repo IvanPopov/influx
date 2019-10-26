@@ -11,6 +11,7 @@ import * as React from 'react';
 import { Button, List, Message } from 'semantic-ui-react';
 import Pipeline from './Pipeline';
 import ThreeScene from './ThreeScene';
+import { CSSProperties } from 'jss/css';
 
 
 interface IPlaygroundProps {
@@ -23,7 +24,7 @@ interface IPlaygroundState {
     list: IPartFxInstruction[];
     pipeline: ReturnType<typeof Pipeline>;
     scope: IScope;
-    running: boolean;
+    // running: boolean;
 }
 
 
@@ -37,7 +38,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
             pipeline: null,
             list: [],
             scope: null,
-            running: false
+            // running: false
         };
     }
 
@@ -94,7 +95,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 }
 
                 const pipeline = pipelineNext || pipelinePrev;
-                return { list, active, scope, pipeline, running };
+                return { list, active, scope, pipeline/*, running */ };
             }
         }
 
@@ -102,13 +103,25 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
     }
 
     @autobind
-    handlePlayPauseClick() {
-        let state = this.state;
+    handlePlayClick() {
+        const state = this.state;
         if (state.pipeline) {
-            let running = !state.running;
-            if (running != !state.pipeline.isStopped()) {
-                running ? state.pipeline.play() : state.pipeline.stop();
-                this.setState({ running });
+            // let running = !state.running;
+            if (state.pipeline.isStopped()) {
+                state.pipeline.play();
+                this.forceUpdate();
+            }
+        }
+    }
+
+    @autobind
+    handlePauseClick() {
+        const state = this.state;
+        if (state.pipeline) {
+            // let running = !state.running;
+            if (!state.pipeline.isStopped()) {
+                state.pipeline.stop();
+                this.forceUpdate();
             }
         }
     }
@@ -120,7 +133,16 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
 
     render() {
         console.log('Playground:render()');
-        let { list, active, pipeline } = this.state;
+        const { list, active, pipeline } = this.state;
+
+        const threeStylesHotfix: React.CSSProperties = {
+            height: 'calc(100vh - 275px - 1em)',
+            position: 'relative',
+            left: '0',
+            right: '0',
+            margin: '1em -20px -20px -20px'
+        };
+
         return (
             <div>
                 { !list.length &&
@@ -132,7 +154,7 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 }
                 <List bulleted horizontal>
                     { list.map(fx => (
-                        <List.Item disabled={ !fx.isValid() } as={ fx.name == active ? 'b' : 'a' }>
+                        <List.Item disabled={ !fx.isValid() } as={ (fx.name === active ? 'b' : 'a') }>
                             {/* <Icon name={'pulse' as any}/>&nbsp; */ }
                             {/* { fx.name == active && <Loader as="span" size='mini' active inline>{ fx.name }</Loader> } */ }
                             { fx.name }
@@ -143,18 +165,22 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                 { pipeline &&
                     <div>
                         <Button.Group compact >
-                            <Button icon='playback pause' color={ pipeline.isStopped() ? "black" : null } disabled={ pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
-                            <Button icon='playback play' color={ !pipeline.isStopped() ? "black" : null } disabled={ !pipeline.isStopped() } onClick={ this.handlePlayPauseClick } />
+                            <Button
+                                icon='playback pause'
+                                color={ (pipeline.isStopped() ? 'black' : null) }
+                                disabled={ pipeline.isStopped() }
+                                onClick={ this.handlePauseClick }
+                            />
+                            <Button
+                                icon='playback play'
+                                color={ (!pipeline.isStopped() ? 'black' : null) }
+                                disabled={ !pipeline.isStopped() }
+                                onClick={ this.handlePlayClick }
+                            />
                         </Button.Group>
                         <ThreeScene
-                            style={ {
-                                height: 'calc(100vh - 275px - 1em)',
-                                position: 'relative',
-                                left: 0,
-                                right: 0,
-                                margin: '1em -20px -20px -20px'
-                            } }
-                            emitter={ pipeline.emitter || null }
+                            style={ threeStylesHotfix }
+                            emitter={ pipeline.emitter }
                         />
                     </div>
                 }

@@ -59,6 +59,7 @@ import { DoWhileOperator, WhileStmtInstruction } from './instructions/WhileStmtI
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
+import { isNumber } from 'util';
 
 
 
@@ -3652,6 +3653,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
     let initRoutine: ICompileExprInstruction = null;
     let updateRoutine: ICompileExprInstruction = null;
     let particle: ITypeInstruction = null;
+    let capacity: number = null;
 
     const children = sourceNode.children;
 
@@ -3662,6 +3664,15 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                     let sourceNode = children[i];
                     let stateName = sourceNode.children[3].value; // "T_NON_TYPE_ID"
                     switch (stateName.toUpperCase()) {
+                        case ('Capacity'.toUpperCase()):
+                            {
+                                // TODO: make correct validation of the capacity value and emit errors
+                                //       through diagnostics system. 
+                                const snum = sourceNode.children[1].children[0].value;
+                                assert(isNumber(Number(snum)));
+                                capacity = Number(snum) || -1; 
+                                break;
+                            }
                         case ('SpawnRoutine'.toUpperCase()):
                             {
                                 /**
@@ -3680,6 +3691,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                     { ret: T_VOID, args: [null] },         /* init(PART part) */
                                 ];
 
+                                // TODO: show error in case of both functions are found
                                 let objectExrNode = sourceNode.children[1].children[0];
                                 initRoutine = analyzeCompileExpr(context, program, objectExrNode, validators);
 
@@ -3809,7 +3821,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
 
 
 
-    return { passList, spawnRoutine, initRoutine, updateRoutine, particle };
+    return { passList, spawnRoutine, initRoutine, updateRoutine, particle, capacity };
 }
 
 /**

@@ -121,8 +121,6 @@ class Pass {
 }
 
 export class Emitter {
-    // todo: load capacity from PartFx
-    private static CAPACITY = 60000;
     private static TEMP_INT32 = new Uint8Array(4);
 
     private nPartAddFloat: number;
@@ -138,11 +136,16 @@ export class Emitter {
     private passList: Pass[];
 
 
-    constructor({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList }) {
+    constructor({ spawnRoutine, initRoutine, updateRoutine, partByteLength, capacity = -1, passList }) {
+
+        if (capacity < 0) {
+            capacity = 1024;
+        }
+
         this.nPartAdd = 0;
         this.nPartAddFloat = 0;
         this.nPart = 0;
-        this.particles = new Uint8Array(partByteLength * this.capacity);
+        this.particles = new Uint8Array(partByteLength * capacity);
 
         this.partByteLength = partByteLength;
         this.initRoutine = initRoutine;
@@ -165,7 +168,7 @@ export class Emitter {
 
 
     get capacity(): number {
-        return Emitter.CAPACITY;
+        return this.particles.byteLength / this.partByteLength;
     }
 
     get length(): number {
@@ -200,8 +203,6 @@ export class Emitter {
         this.nPartAdd = Math.min(this.nPartAdd, this.capacity - this.nPart);
 
         this.initRoutine.setPipelineConstants(constants);
-
-
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
             const partId = Emitter.TEMP_INT32;
@@ -226,7 +227,6 @@ export class Emitter {
 
     private update(constants: IPipelineConstants) {
         this.updateRoutine.setPipelineConstants(constants);
-
         for (let i = 0; i < this.nPart; ++i) {
             const currPtr = this.getParticlePtr(i);
             const partId = Emitter.TEMP_INT32;
@@ -272,6 +272,7 @@ function Pipeline(fx: PartFx) {
         const initRoutine = prebuild(fx.initRoutine);
         const updateRoutine = prebuild(fx.updateRoutine);
         const partByteLength = fx.particle.size;
+        const capacity = fx.capacity;
         const passList: IPassDesc[] = fx.passList.filter(pass => pass.material != null).map(pass => {
             return {
                 matByteLength: pass.material.size,
@@ -280,10 +281,11 @@ function Pipeline(fx: PartFx) {
         });
 
         if (isNull(emitter)) {
-            emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList });
+            emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList, capacity });
             play();
         } else {
             emitter.shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList });
+            emitter.tick(constants);
         }
     }
 
@@ -318,7 +320,7 @@ function Pipeline(fx: PartFx) {
     }
 
     // todo: check capacity
-    const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.passList
+    const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.capacity}:${fx.passList
         .map(pass => pass.material.hash)
         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 

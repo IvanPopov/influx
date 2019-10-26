@@ -18,6 +18,7 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly updateRoutine: ICompileExprInstruction;
 
     readonly particle: ITypeInstruction;
+    readonly capacity: number;
 
     readonly passList: IPartFxPassInstruction[];
 
