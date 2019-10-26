@@ -1,4 +1,5 @@
 /* tslint:disable:typedef */
+/* tslint:disable:variable-name */
 
 import { assert, isNull, isDef } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
@@ -66,42 +67,49 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
 interface IPassDesc {
     matByteLength: number;
     prerenderRoutine: IRunnable;
+    sorting: boolean;
 }
 
 
 class Pass {
-    private owner: Emitter;
-    private prerenderRoutine: IRunnable;
-    private prerenderedParticles: Uint8Array;
-    private matByteLength: number;
+    private _owner: Emitter;
+    private _prerenderRoutine: IRunnable;
+    private _prerenderedParticles: Uint8Array;
+    private _matByteLength: number;
+    private _sorting: boolean;
 
     constructor(desc: IPassDesc, owner: Emitter) {
-        this.owner = owner;
-        this.prerenderRoutine = desc.prerenderRoutine;
-        this.matByteLength = desc.matByteLength;
-        this.prerenderedParticles = new Uint8Array(this.matByteLength * this.owner.capacity);
+        this._owner = owner;
+        this._prerenderRoutine = desc.prerenderRoutine;
+        this._matByteLength = desc.matByteLength;
+        this._prerenderedParticles = new Uint8Array(this._matByteLength * this._owner.capacity);
+        this._sorting = desc.sorting;
     }
 
     // number of float elements in the prerendered particle (f32)
     get stride(): number {
-        assert(this.matByteLength / 4 === Math.floor(this.matByteLength / 4));
-        return this.matByteLength / 4;
+        assert(this._matByteLength / 4 === Math.floor(this._matByteLength / 4));
+        return this._matByteLength / 4;
     }
 
     get data(): Uint8Array {
-        return this.prerenderedParticles;
+        return this._prerenderedParticles;
     }
 
     get length(): number {
-        return this.owner.length;
+        return this._owner.length;
+    }
+
+    get sorting(): boolean {
+        return this._sorting;
     }
 
     prerender(constants: IPipelineConstants): void {
-        this.prerenderRoutine.setPipelineConstants(constants);
-        for (let i = 0; i < this.owner.length; ++i) {
-            const partPtr = this.owner.getParticlePtr(i);
+        this._prerenderRoutine.setPipelineConstants(constants);
+        for (let i = 0; i < this._owner.length; ++i) {
+            const partPtr = this._owner.getParticlePtr(i);
             const prerenderedPartPtr = this.getPrerenderedParticlePtr(i);
-            this.prerenderRoutine.run(partPtr, prerenderedPartPtr);
+            this._prerenderRoutine.run(partPtr, prerenderedPartPtr);
 
             // const ptr = prerenderedPartPtr;
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
@@ -109,14 +117,15 @@ class Pass {
         }
     }
 
-    shadowReload({ prerenderRoutine }) {
-        this.prerenderRoutine = prerenderRoutine;
+    shadowReload({ prerenderRoutine, sorting }) {
+        this._prerenderRoutine = prerenderRoutine;
+        this._sorting = sorting;
     }
 
     private getPrerenderedParticlePtr(i: number) {
-        assert(i >= 0 && i < this.owner.capacity);
+        assert(i >= 0 && i < this._owner.capacity);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
-        return this.prerenderedParticles.subarray(i * this.matByteLength, (i + 1) * this.matByteLength);
+        return this._prerenderedParticles.subarray(i * this._matByteLength, (i + 1) * this._matByteLength);
     }
 }
 
@@ -162,7 +171,8 @@ export class Emitter {
         this.updateRoutine = updateRoutine;
         passList.forEach((desc: IPassDesc, i: number) => {
             const prerenderRoutine = desc.prerenderRoutine;
-            this.passList[i].shadowReload({ prerenderRoutine });
+            const sorting = desc.sorting;
+            this.passList[i].shadowReload({ prerenderRoutine, sorting });
         });
     }
 
@@ -276,7 +286,8 @@ function Pipeline(fx: PartFx) {
         const passList: IPassDesc[] = fx.passList.filter(pass => pass.material != null).map(pass => {
             return {
                 matByteLength: pass.material.size,
-                prerenderRoutine: prebuild(pass.prerenderRoutine)
+                prerenderRoutine: prebuild(pass.prerenderRoutine),
+                sorting: pass.sorting
             };
         });
 

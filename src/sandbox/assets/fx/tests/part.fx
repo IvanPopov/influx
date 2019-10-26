@@ -57,6 +57,7 @@ struct Part {
 };
 
 /* Example of default shader input. */
+// Warning: Do not change layout of this structure!
 struct DefaultShaderInput {
     //float3 pos : POSITION;
     float3 pos;

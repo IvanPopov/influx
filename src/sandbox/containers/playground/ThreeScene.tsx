@@ -4,50 +4,42 @@
 /* tslint:disable:newline-per-chained-call */
 /* tslint:disable:number-literal-format */
 /* tslint:disable:no-string-literal */
+/* tslint:disable:insecure-random */
 
 import { isDefAndNotNull } from '@lib/common';
 import { Emitter } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
+import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
-import { number } from 'prop-types';
-import { Progress } from 'semantic-ui-react';
 
 const vertexShader = `
-precision mediump float;
-precision mediump int;
-
+precision highp float;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
 attribute vec3 position;
 attribute vec4 color;
 attribute float size;
+attribute vec3 offset;
 
-varying vec3 vPosition;
 varying vec4 vColor;
 
-void main()	{
-    vPosition = position;
+void main() {
     vColor = color;
-
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = size * (300.0 / -mvPosition.z);
-
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    vec4 viewPos = modelViewMatrix * vec4(offset, 1.0) + vec4(position * size, 0.0);
+    gl_Position = projectionMatrix * viewPos;
 }
 `;
 
 const fragmentShader = `
-precision mediump float;
-precision mediump int;
-varying vec3 vPosition;
+precision highp float;
+
 varying vec4 vColor;
 
-void main()	{
-    vec4 color = vec4( vColor );
-    gl_FragColor = color;
+void main() {
+    gl_FragColor = vColor;
 }
 `;
 
@@ -101,9 +93,14 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     frameId: number;
     mount: HTMLDivElement;
 
-    passes: THREE.Points[];
+    passes: {
+        mesh: THREE.Mesh;
+        geometry: THREE.InstancedBufferGeometry;
+        instancedBuffer: THREE.InstancedInterleavedBuffer;
+    }[];
 
     particles: Particle[];
+
 
     componentDidMount() {
         const width = this.mount.clientWidth;
@@ -117,14 +114,13 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enabled = false;
-        // temp solution in order to not moving text cursor during movement 
+        // temp solution in order to not moving text cursor during movement
         this.controls.enableKeys = false;
 
         this.createGridHelper();
         // this.createCube();
 
         this.addEmitter(this.props.emitter);
-
         this.start();
 
         window.addEventListener('resize', this.onWindowResize, false);
@@ -143,7 +139,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     addEmitter(emitter: Emitter) {
-        // this.emitter = null;
         this.passes = [];
 
         if (!isDefAndNotNull(emitter)) {
@@ -151,16 +146,32 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
-        // this.emitter = emitter;
-
         emitter.passes.forEach((pass, i) => {
-            const buffer = new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
-            const geometry = new THREE.BufferGeometry();
+            const geometry = new THREE.InstancedBufferGeometry();
+
+            //
+            // Instance
+            //
+
+            const instanceGeometry = new THREE.PlaneBufferGeometry();
+            geometry.index = instanceGeometry.index;
+            geometry.attributes.position = instanceGeometry.attributes.position;
+            // geometry.attributes.uv = instanceGeometry.attributes.uv;
+
+            //
+            // Instanced data
+            //
+
+            // tslint:disable-next-line:max-line-length
+            const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+            instancedBuffer.setDynamic(true);
+
             // todo: remove hardcoded layout or check it's validity.
-            geometry.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0));
-            geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(buffer, 4, 3));
-            geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(buffer, 1, 7));
-            geometry.setDrawRange(0, pass.length);
+            geometry.addAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
+            geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
+            geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
+            geometry.maxInstancedCount = pass.length;
+
 
             const material = new THREE.RawShaderMaterial({
                 uniforms: {},
@@ -171,9 +182,9 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                 depthTest: false
             });
 
-            const points = new THREE.Points(geometry, material);
-            this.scene.add(points);
-            this.passes.push(points);
+            const mesh = new THREE.Mesh(geometry, material);
+            this.scene.add(mesh);
+            this.passes.push({ mesh, geometry, instancedBuffer });
             console.log('emitter added.');
         });
     }
@@ -207,7 +218,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
 
     createGridHelper() {
-        const size = 5;
+        const size = 10;
         const divisions = 10;
 
         const gridHelper = new THREE.GridHelper(size, divisions);
@@ -243,13 +254,55 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     animate = (time: number) => {
         const emitter = this.state.emitter;
-        for (const pass of this.passes) {
-            const geometry = pass.geometry as THREE.BufferGeometry;
-            for (const attrName in geometry.attributes) {
-                const attr = geometry.attributes[attrName] as THREE.InterleavedBufferAttribute;
-                attr.data.needsUpdate = true;
+
+        if (!emitter) {
+            return;
+        }
+
+        const indicies = [];
+        const v3 = new THREE.Vector3();
+        const copy = new Float32Array(emitter.length * 8);
+
+        for (let iPass = 0; iPass < this.passes.length; ++iPass) {
+            const pass = this.passes[iPass];
+            const emitPass = emitter.passes[iPass];
+
+            // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
+            //       I hate javascript for that :/
+            if (emitPass.sorting) {
+                const f32 = pass.instancedBuffer.array as Float32Array;
+                // const u8 = new Uint8Array(f32.buffer, f32.byteOffset);
+                const nStride = emitPass.stride; // stride in floats
+                // const temp = new Float32Array(nStride);
+
+                for (let iPart = 0; iPart < emitPass.length; ++iPart) {
+                    const offset = iPart * nStride;
+                    const dist = v3.fromArray(f32, offset).distanceTo(this.camera.position);
+                    indicies.push([iPart, dist]);
+                }
+
+                indicies.sort((a, b) => -a[1] + b[1]);
+
+                for (let i = 0; i < indicies.length; ++i) {
+                    const iFrom = indicies[i][0] * nStride;
+                    const iTo = i * nStride;
+
+                    // const to = f32.subarray(iTo, iTo + nStride);
+                    const from = f32.subarray(iFrom, iFrom + nStride);
+
+                    // temp.set(to);
+                    // to.set(from);
+                    // from.set(temp);
+
+                    const copyTo = copy.subarray(iTo, iTo + nStride);
+                    copyTo.set(from);
+                }
+
+                f32.set(copy);
             }
-            geometry.setDrawRange(0, emitter.length); // todo: use per pass values
+
+            pass.instancedBuffer.needsUpdate = true;
+            pass.geometry.maxInstancedCount = emitter.passes[iPass].length;
         }
 
         this.controls.update();
@@ -278,7 +331,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         }
 
         this.passes.forEach(pass => {
-            this.scene.remove(pass);
+            this.scene.remove(pass.mesh);
             console.log('emitter removed.');
         });
 
@@ -305,7 +358,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                 />
                 <div style={ statsStyleFix }>
                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: { this.state.nParticles }</span>
-                    <br/>
+                    <br />
                     <span>simulation: CPU</span>
                 </div>
             </div>
