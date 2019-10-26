@@ -5,7 +5,7 @@ import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
-import { IPartFxInstruction, IPartFxPassInstruction } from '@lib/idl/IPartFx';
+import { IPartFxInstruction, IPartFxPassInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, EDiagnosticCategory, IDiagnosticReport } from "@lib/util/Diagnostics";
@@ -3454,6 +3454,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
 
     const sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
     const prerenderRoutine = fxStates.prerenderRoutine || null;
+    const geometry = fxStates.geometry || EPartFxPassGeometry.k_Billboard;
 
     let id: IIdInstruction = null;
     for (let i = 0; i < children.length; ++i) {
@@ -3469,6 +3470,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
         id,
 
         sorting,
+        geometry,
         prerenderRoutine,
 
         renderStates,
@@ -3588,6 +3590,17 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
         }
 
         switch (stateName) {
+            case ('geometry'.toUpperCase()):
+                const types = [
+                    'Billboard',
+                    'Cylinder',
+                    'Box',
+                    'Sphere',
+                    'Line'
+                ].map(type => type.toUpperCase());
+                
+                fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
+                break;
             case ('sorting'.toUpperCase()):
                 // TODO: use correct validation with diag error output
                 assert(value == 'TRUE' || value == 'FALSE');
@@ -3670,7 +3683,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 //       through diagnostics system. 
                                 const snum = sourceNode.children[1].children[0].value;
                                 assert(isNumber(Number(snum)));
-                                capacity = Number(snum) || -1; 
+                                capacity = Number(snum) || -1;
                                 break;
                             }
                         case ('SpawnRoutine'.toUpperCase()):

@@ -13,6 +13,7 @@ import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
+import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
 
 const vertexShader = `
 precision highp float;
@@ -153,7 +154,22 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             // Instance
             //
 
-            const instanceGeometry = new THREE.PlaneBufferGeometry();
+            let instanceGeometry: THREE.BufferGeometry = null;
+            switch (pass.geometry) {
+                case EPartFxPassGeometry.k_Box:
+                    instanceGeometry = new THREE.BoxBufferGeometry();
+                    break;
+                case EPartFxPassGeometry.k_Sphere:
+                    instanceGeometry = new THREE.SphereBufferGeometry(0.5);
+                    break;
+                case EPartFxPassGeometry.k_Cylinder:
+                    instanceGeometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 1.0);
+                    break;
+                case EPartFxPassGeometry.k_Line:
+                case EPartFxPassGeometry.k_Billboard:
+                default:
+                    instanceGeometry = new THREE.PlaneBufferGeometry();
+            }
             geometry.index = instanceGeometry.index;
             geometry.attributes.position = instanceGeometry.attributes.position;
             // geometry.attributes.uv = instanceGeometry.attributes.uv;

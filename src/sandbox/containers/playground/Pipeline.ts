@@ -5,7 +5,7 @@ import { assert, isNull, isDef } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { ICompileExprInstruction } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { IPartFxInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
 
 type PartFx = IPartFxInstruction;
@@ -68,6 +68,7 @@ interface IPassDesc {
     matByteLength: number;
     prerenderRoutine: IRunnable;
     sorting: boolean;
+    geometry: EPartFxPassGeometry;
 }
 
 
@@ -77,6 +78,7 @@ class Pass {
     private _prerenderedParticles: Uint8Array;
     private _matByteLength: number;
     private _sorting: boolean;
+    private _geometry: EPartFxPassGeometry;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
@@ -84,6 +86,7 @@ class Pass {
         this._matByteLength = desc.matByteLength;
         this._prerenderedParticles = new Uint8Array(this._matByteLength * this._owner.capacity);
         this._sorting = desc.sorting;
+        this._geometry = desc.geometry;
     }
 
     // number of float elements in the prerendered particle (f32)
@@ -102,6 +105,10 @@ class Pass {
 
     get sorting(): boolean {
         return this._sorting;
+    }
+
+    get geometry(): EPartFxPassGeometry {
+        return this._geometry;
     }
 
     prerender(constants: IPipelineConstants): void {
@@ -169,9 +176,7 @@ export class Emitter {
         this.initRoutine = initRoutine;
         this.spawnRoutine = spawnRoutine;
         this.updateRoutine = updateRoutine;
-        passList.forEach((desc: IPassDesc, i: number) => {
-            const prerenderRoutine = desc.prerenderRoutine;
-            const sorting = desc.sorting;
+        passList.forEach(({ prerenderRoutine, sorting, geometry }, i) => {
             this.passList[i].shadowReload({ prerenderRoutine, sorting });
         });
     }
@@ -277,19 +282,21 @@ function Pipeline(fx: PartFx) {
     };
 
     function load(fx: PartFx) {
-
         const spawnRoutine = prebuild(fx.spawnRoutine);
         const initRoutine = prebuild(fx.initRoutine);
         const updateRoutine = prebuild(fx.updateRoutine);
         const partByteLength = fx.particle.size;
         const capacity = fx.capacity;
-        const passList: IPassDesc[] = fx.passList.filter(pass => pass.material != null).map(pass => {
-            return {
-                matByteLength: pass.material.size,
-                prerenderRoutine: prebuild(pass.prerenderRoutine),
-                sorting: pass.sorting
-            };
-        });
+        const passList = fx.passList
+            .filter(pass => pass.material != null)
+            .map(({ material, prerenderRoutine, sorting, geometry }): IPassDesc => {
+                return {
+                    matByteLength: material.size,
+                    prerenderRoutine: prebuild(prerenderRoutine),
+                    sorting,
+                    geometry
+                };
+            });
 
         if (isNull(emitter)) {
             emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList, capacity });
@@ -332,7 +339,7 @@ function Pipeline(fx: PartFx) {
 
     // todo: check capacity
     const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.capacity}:${fx.passList
-        .map(pass => pass.material.hash)
+        .map(pass => `${pass.material.hash}:${pass.geometry}`)
         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 
     // console.log(fxHash(fx));
