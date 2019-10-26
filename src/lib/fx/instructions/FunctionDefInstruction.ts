@@ -126,21 +126,18 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     static checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
-        let returnType = <IVariableTypeInstruction>funcDef.returnType;
-        let isGood = true;
-
+        const returnType = <IVariableTypeInstruction>funcDef.returnType;
+        
         if (returnType.isEqual(SystemScope.T_VOID)) {
             return true;
         }
 
         if (returnType.isComplex()) {
-            isGood = !returnType.hasFieldWithoutSemantics();
-            if (!isGood) {
+            if (returnType.hasFieldWithoutSemantics()) {
                 return false;
             }
 
-            isGood = returnType.hasAllUniqueSemantics();
-            if (!isGood) {
+            if (!returnType.hasAllUniqueSemantics()) {
                 return false;
             }
 
@@ -149,30 +146,27 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             // 	return false;
             // }
 
-            isGood = !returnType.isContainSampler();
-            if (!isGood) {
+            // samplers cant be interpolators
+            if (returnType.isContainSampler()) {
                 return false;
             }
 
-            isGood = !returnType.isContainComplexType();
-            if (!isGood) {
+            // Forbid fileds with user-defined types
+            // or any other complex types.
+            if (returnType.isContainComplexType()) {
+                return false;
+            }
+        } else { 
+            if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
                 return false;
             }
 
-            return true;
-        } else {
-            isGood = returnType.isEqual(SystemScope.T_FLOAT4);
-            if (!isGood) {
+            if (funcDef.semantics !== "POSITION") {
                 return false;
             }
-
-            isGood = (funcDef.semantics === "POSITION");
-            if (!isGood) {
-                return false;
-            }
-
-            return true;
         }
+
+        return true;
     }
 
     // todo: add support for dual source blending

@@ -80,8 +80,8 @@ partFx project.awesome {
     UpdateRoutine = compile update();
 
     pass P0 {
-        Sorting = TRUE;
-        DefaultShader = TRUE;
+        Sorting = true;
+        Geometry = sphere;
         PrerenderRoutine = compile prerender();
     }
 }

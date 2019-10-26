@@ -39,7 +39,7 @@ class PromisedAddress implements IAddrDesc {
         offset = offset || 0;
         size = size || 0;
 
-        assert(size + offset <= this.size,
+        assert(size + offset <= Math.max(swizzle ? swizzle.length * 4 : 0, this.size),
             `current allocation (size ${this.size}) cannot accommodate size ${size} with offset ${offset}`);
 
         let { location, addr, inputIndex } = this;

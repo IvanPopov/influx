@@ -1,12 +1,7 @@
-import { EInstructionTypes, EVarUsedMode, IExprInstruction, ITypeUseInfoContainer, IUnaryExprInstruction } from '../../idl/IInstruction';
-import { IMap } from '../../idl/IMap';
-import { ExprInstruction, IExprInstructionSettings } from './ExprInstruction';
-import { IParseNode } from '../../idl/parser/IParser';
-import * as Analyzer from '../Analyzer';
+import { EInstructionTypes, IExprInstruction, IUnaryExprInstruction, UnaryOperator } from '@lib/idl/IInstruction';
+import { ExprInstruction } from './ExprInstruction';
 import { IInstructionSettings, Instruction } from './Instruction';
 
-
-export type UnaryOperator = "+" | "-" | "!" | "++" | "--";
 
 
 export interface IUnaryExprInstructionSettings extends IInstructionSettings {
@@ -32,7 +27,7 @@ export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprI
     }
 
 
-    get operator(): string {
+    get operator(): UnaryOperator {
         return this._operator;
     }
 

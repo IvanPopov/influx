@@ -7,13 +7,13 @@
 /* tslint:disable:insecure-random */
 
 import { isDefAndNotNull } from '@lib/common';
+import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { Emitter } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
-import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
 
 const vertexShader = `
 precision highp float;
@@ -275,13 +275,13 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
-        const indicies = [];
         const v3 = new THREE.Vector3();
         const copy = new Float32Array(emitter.length * 8);
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const pass = this.passes[iPass];
             const emitPass = emitter.passes[iPass];
+            const indicies = [];
 
             // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
             //       I hate javascript for that :/

@@ -369,10 +369,16 @@ export interface IFunctionDeclInstruction extends IDeclInstruction {
     /** @deprecated */
     readonly functionType: EFunctionType;
 
-    /** @deprecated */
+    /**  
+     * Returns true if function can be used in vertex shader.
+     * @deprecated
+    */
     checkVertexUsage(): boolean;
     
-    /** @deprecated */
+    /** 
+     * Returns true if function can be used in pixel shader.
+     * @deprecated 
+    */
     checkPixelUsage(): boolean;
 
     /** @deprecated */
@@ -411,10 +417,11 @@ export interface IExprInstruction extends ITypedInstruction {
     isConstExpr(): boolean;
 }
 
+export type UnaryOperator = "+" | "-" | "!" | "++" | "--";
 
 export interface IUnaryExprInstruction extends IExprInstruction {
     readonly expr: IExprInstruction;
-    readonly operator: string;
+    readonly operator: UnaryOperator;
 }
 
 export interface IPostfixPointInstruction extends IExprInstruction {

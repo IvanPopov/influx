@@ -9,7 +9,7 @@ import * as SystemScope from "@lib/fx/SystemScope";
 import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IUnaryExprInstruction } from "@lib/idl/IInstruction";
 import { isNull, isString } from "util";
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
@@ -17,7 +17,6 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { SystemFunctionInstruction } from "../instructions/SystemFunctionInstruction";
 
 
 
@@ -175,7 +174,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 if (left.size === sizeof.f32()) {
                     left = left.override({ size: right.size, swizzle: Array(n).fill(0) });
                 } else if (right.size === sizeof.f32()) {
-                    right = right.override({ size: right.size, swizzle: Array(n).fill(0) });
+                    right = right.override({ size: left.size, swizzle: Array(n).fill(0) });
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
                 }
@@ -510,6 +509,49 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return dest;
                 }
                 break;
+            case EInstructionTypes.k_UnaryExprInstruction:
+                {
+                    const unary = expr as IUnaryExprInstruction;
+                    const op = unary.operator;
+                    const dest = alloca(unary.type.size);
+
+                    let src = raddr(unary.expr);
+                    if (src.location !== EMemoryLocation.k_Registers) {
+                        src = iload(src);
+                    }
+
+
+                    if (SystemScope.isIntBasedType(unary.type)) {
+                        switch(op) {
+                            case '-':
+                                        
+                                let constant = constants.i32(-1);
+                                if (constant.location !== EMemoryLocation.k_Registers) {
+                                    constant = iload(constant);
+                                }
+
+                                
+                                intrinsics.arithf('*', dest, constant, src);
+                                debug.map(unary);
+                                return dest;
+                            // fall to unsupported warning
+                        }
+                    } else {
+                        switch(op) {
+                            case '-':
+                                        
+                                let constant = constants.f32(-1.0);
+                                if (constant.location !== EMemoryLocation.k_Registers) {
+                                    constant = iload(constant);
+                                }
+
+                                intrinsics.arithf('*', dest, constant, src);
+                                debug.map(unary);
+                                return dest;
+                            // fall to unsupported warning
+                        }
+                    }
+                }
             case EInstructionTypes.k_RelationalExprInstruction:
                 {
                     const relExpr = expr as IRelationalExprInstruction;
