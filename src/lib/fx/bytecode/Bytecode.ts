@@ -17,6 +17,7 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+import { SystemFunctionInstruction } from "../instructions/SystemFunctionInstruction";
 
 
 
@@ -45,7 +46,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
         }
 
         const inputIndex = VariableDeclInstruction.getParameterIndex(param);
-        const size =  param.type.size;
+        const size = param.type.size;
         const src = loc({ location: EMemoryLocation.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
         imove(dest, src, size);
@@ -372,6 +373,65 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     }
 
 
+    function iintrinsic(call: IFunctionCallInstruction): PromisedAddress {
+        const fdecl = call.declaration as IFunctionDeclInstruction;
+        const fdef = fdecl.definition;
+        const retType = fdef.returnType;
+
+        const dest = alloca(retType.size);
+        const args = preloadArguments(fdef);
+        // TODO: add support for INT type
+
+        function preloadArguments(fdef: IFunctionDefInstruction): PromisedAddress[] {
+            const args: PromisedAddress[] = [];
+            for (let i = 0; i < fdef.paramList.length; ++i) {
+                const arg = call.args[i];
+                let argAddr = raddr(arg);
+                if (argAddr.location !== EMemoryLocation.k_Registers) {
+                    argAddr = iload(argAddr);
+                }
+                args.push(argAddr);
+            }
+            return args;
+        }
+
+        switch (fdecl.name) {
+            case 'mul':
+                assert(fdef.paramList.length === 2);
+                return intrinsics.mulf(dest, args[0], args[1]);
+            case 'dot':
+                assert(fdef.paramList.length === 2 && dest.size === sizeof.f32());
+                return intrinsics.dotf(dest, args[0], args[1]);
+            case 'frac':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.frac(dest, args[0]);
+            case 'sin':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.sinf(dest, args[0]);
+            case 'cos':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.cosf(dest, args[0]);
+            case 'abs':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.absf(dest, args[0]);
+            case 'sqrt':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.sqrtf(dest, args[0]);
+            case 'normalize':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.normalizef(dest, args[0]);
+            case 'length':
+                assert(fdef.paramList.length === 1);
+                return intrinsics.lengthf(dest, args[0]);
+            case 'lerp':
+                assert(fdef.paramList.length === 3);
+                return intrinsics.lerpf(dest, args[0], args[1], args[2]);
+        }
+
+        return PromisedAddress.INVALID;
+    }
+
+
     /** resolve address => returns address of temprary result of expression */
     function raddr(expr: IExprInstruction): PromisedAddress {
         switch (expr.instructionType) {
@@ -447,7 +507,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const dest = alloca(arithExpr.type.size);
                     intrinsics.arith(arithExpr.operator, dest, arithExpr.left, arithExpr.right);
                     debug.map(arithExpr);
-                    debug.ns();
                     return dest;
                 }
                 break;
@@ -503,7 +562,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const dest = alloca(size);
                     icode(op, dest, leftAddr, rightAddr);
                     debug.map(relExpr);
-                    debug.ns();
 
                     return loc({ addr: dest, size });
                 }
@@ -591,104 +649,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const fdef = fdecl.definition;
                     const retType = fdef.returnType;
 
-                    function preloadArguments(fdef: IFunctionDefInstruction): PromisedAddress[] {
-                        // TODO: move to helper function: preloadArguments();
-                        const args: PromisedAddress[] = [];
-                        for (let i = 0; i < fdef.paramList.length; ++i) {
-                            const arg = call.args[i];
-                            let argAddr = raddr(arg);
-                            if (argAddr.location !== EMemoryLocation.k_Registers) {
-                                argAddr = iload(argAddr);
-                            }
-                            args.push(argAddr);
-                        }
-                        return args;
-                    }
-
                     // TODO: replace with fecl.builtIn
                     if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
-                        switch (fdecl.name) {
-                            case 'mul':
-                                {
-                                    assert(fdef.paramList.length === 2);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.mulf(dest, args[0], args[1]);
-                                }
-                            case 'dot':
-                                {
-                                    assert(fdef.paramList.length === 2);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(sizeof.f32());
-                                    return intrinsics.dotf(dest, args[0], args[1]);
-                                }
-                            case 'frac':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.frac(dest, args[0]);
-                                }
-                            case 'sin':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.sinf(dest, args[0]);
-                                }
-                            case 'cos':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.cosf(dest, args[0]);
-                                }
-                            case 'abs':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.absf(dest, args[0]);
-                                }
-                            case 'sqrt':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.sqrtf(dest, args[0]);
-                                }
-                            case 'normalize':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.normalizef(dest, args[0]);
-                                }
-                            case 'length':
-                                {
-                                    assert(fdef.paramList.length === 1);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.lengthf(dest, args[0]);
-                                }
-                            case 'lerp':
-                                {
-                                    assert(fdef.paramList.length === 3);
-                                    const args = preloadArguments(fdef);
-                                    // TODO: add support for INT type
-                                    const dest = alloca(retType.size);
-                                    return intrinsics.lerpf(dest, args[0], args[1], args[2]);
-                                }
-                        }
+                        // breakpoint before intrinsic call
+                        // TODO: is it's breakpoint really usefull?
+                        debug.ns();
+                        const dest = iintrinsic(call);
+                        debug.map(call);
+                        return dest;
                     }
 
                     const ret = alloca(retType.size);
@@ -830,8 +798,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     let dest = raddr(decl.initExpr);
                     if (dest.location !== EMemoryLocation.k_Registers) {
+                        //breakpoint before variable initialization
+                        debug.ns();
                         dest = iload(dest);
                         debug.map(decl.initExpr);
+                        // breakpoint right after variable initialization
                         debug.ns();
                     }
 
@@ -863,6 +834,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         assert(src.size === ret().size);
                         imove(dest, src);
                         debug.map(expr);
+                        // breakpoint before leaving function
                         debug.ns();
 
                         icode(EOperation.k_Ret);
@@ -914,6 +886,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     imove(leftAddr, rightAddr, size);
                     debug.map(assigment);
+                    // breakpoint right after assingment
                     debug.ns();
                     return;
                 }
