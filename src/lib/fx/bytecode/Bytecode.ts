@@ -275,7 +275,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             let mlr = intrinsics.mulf(temp, left, right);
             let n = mlr.size / sizeof.f32();
 
-            for (let i = 0; i < n; ++i) {
+            imove(dest, mlr.override({ size: sizeof.f32() }));
+            for (let i = 1; i < n; ++i) {
                 let offset = i * sizeof.f32();
                 let size = sizeof.f32();
                 intrinsics.addf(dest, dest, mlr.override({ offset, size }));
