@@ -551,6 +551,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             // fall to unsupported warning
                         }
                     }
+                    console.error('unsupported type of unary expression found');
+                    return PromisedAddress.INVALID;
                 }
             case EInstructionTypes.k_RelationalExprInstruction:
                 {
