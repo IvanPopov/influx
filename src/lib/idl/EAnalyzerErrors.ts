@@ -74,5 +74,5 @@ export enum EAnalyzerErrors {
     UnsupportedProvideAs,
     UnreachableCode,
 
-    // PartFx_InvalidInitRoutine
+    PartFx_VertexShaderParametersMismatch
 };

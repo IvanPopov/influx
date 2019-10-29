@@ -24,7 +24,7 @@ export class PartFxPassInstruction extends PassInstruction implements IPartFxPas
         this.geometry = geometry;
     }
 
-    get material(): ITypeInstruction {
+    get particleInstance(): ITypeInstruction {
         if (isNull(this.prerenderRoutine)) {
             return null;
         }
@@ -33,7 +33,7 @@ export class PartFxPassInstruction extends PassInstruction implements IPartFxPas
     }
 
     isValid(): boolean {
-        return !!this.material && !!this.prerenderRoutine;
+        return !!this.particleInstance && !!this.prerenderRoutine;
     }
 }
 

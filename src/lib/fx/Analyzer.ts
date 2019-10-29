@@ -2478,7 +2478,7 @@ function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode:
     }
 
     let paramList = analyzeParamList(context, program, children[children.length - 3]);
-    let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList })
+    let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList, semantics })
 
     checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -3441,10 +3441,11 @@ function analyzePartFXProperty(context: Context, program: ProgramScope, sourceNo
  */
 function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
 
-    context.beginPass();
+    context.beginPartFxPass();
 
     const children = sourceNode.children;
     const scope = program.currentScope;
+    const entry = analyzePassStateBlockForShaders(context, program, children[0]);
     const renderStates = analyzePassStateBlock(context, program, children[0]);
 
     // temp solution in order to not highlight useless pass states in the next analysis call.
@@ -3455,6 +3456,43 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
     const sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
     const prerenderRoutine = fxStates.prerenderRoutine || null;
     const geometry = fxStates.geometry || EPartFxPassGeometry.k_Billboard;
+
+    //
+    // Validation of the shader input
+    //
+
+    let pixelShader = entry.pixel;
+
+    /**
+     * Vertex shader validation pattern:
+     *  PixelInputType VertexShader(PartInstance partInstance, Geometry geometry);
+     */
+
+    let vertexShader = entry.vertex;
+    if (vertexShader) {
+        const requiredSemantics = ['POSITION', 'POSITION0'];
+        let hasInstance = false;
+        let hasRequiredSemantics = false;
+        for (const param of vertexShader.definition.paramList) {
+            hasInstance = hasInstance ||
+                param.type.subType === context.particleInstance;
+            hasRequiredSemantics = hasRequiredSemantics ||
+                !!requiredSemantics.find(semantic => param.type.hasFieldWithSematics(semantic));
+        }
+
+        if (!hasInstance) {
+            context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch, 
+                { tooltip: 'vertex shader must have a valid material param which is compatible with prerender routine.' });
+            vertexShader = pixelShader = null;
+        }
+
+        if (!hasRequiredSemantics) {
+            context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch,
+                { tooltip: 'doesn\'t have requiredsemantics.' });
+            vertexShader = pixelShader = null;
+        }
+    }
+
 
     let id: IIdInstruction = null;
     for (let i = 0; i < children.length; ++i) {
@@ -3474,14 +3512,13 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
         prerenderRoutine,
 
         renderStates,
-        // TODO: rework shaders setup
-        pixelShader: null,
-        vertexShader: null
+        pixelShader,
+        vertexShader
     });
 
     //TODO: add annotation and id
 
-    context.endPass();
+    context.endPartFxPass();
 
     return pass;
 }
@@ -3598,7 +3635,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     'Sphere',
                     'Line'
                 ].map(type => type.toUpperCase());
-                
+
                 fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
                 break;
             case ('sorting'.toUpperCase()):
@@ -3611,7 +3648,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     /**
                      * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
                      */
-                    let validator = { ret: T_VOID, args: [context.particle, null] };
+                    let validator = { ret: T_VOID, args: [context.particleCore, null] };
                     let prerenderRoutine = analyzeCompileExpr(context, program, exprNode);
 
                     if (!prerenderRoutine) {
@@ -3633,7 +3670,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                         prerenderRoutine = null;
                     }
 
-                    if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particle ||
+                    if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particleCore ||
                         argv[0].isNotBaseArray() ||
                         !argv[1].hasUsage('out') || !argv[1].writable || argv[1].isNotBaseArray()) {
                         context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
@@ -3641,15 +3678,13 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                         prerenderRoutine = null;
                     }
 
+                    //         argv[1]: "out PartInstance"
+                    // argv[1].subType: "PartInstance"
+                    context.particleInstance = argv[1].subType;
                     fxStates.prerenderRoutine = prerenderRoutine;
                 }
                 break;
             default:
-                // TODO: remove this hack
-                if (!context.renderStates[ERenderStates[stateName]]) {
-                    context.warn(children[children.length - 1], EWarnings.UselessPassState, {});
-                }
-                break;
         }
     }
 
@@ -3810,7 +3845,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
 
     // Note: all fx properties should be parsed prior to pass declaraion analysis
     // because some of them are critical for pass validation
-    context.particle = particle;
+    context.particleCore = particle;
 
     for (let i = children.length - 2; i > 0; i--) {
         switch (children[i].name) {
@@ -3920,9 +3955,15 @@ class Context {
     funcDef: IFunctionDefInstruction | null;    // Current function definition.
     haveCurrentFunctionReturnOccur: boolean;    // TODO: replace with array of return statements.
 
+    //
     // part fx states
-    particle: ITypeInstruction;
-    material: ITypeInstruction;
+    //
+
+    /** Main particle structure type describing particle's simulation. */
+    particleCore: ITypeInstruction;
+    /** Particle instance structure type which describe per pass render instance of the particle. */
+    particleInstance: ITypeInstruction;
+
     renderStates: IMap<ERenderStateValues>;
 
     constructor(filename: string, ) {
@@ -3953,14 +3994,22 @@ class Context {
         this.renderStates = null;
     }
 
+    beginPartFxPass(): void {
+        this.beginPass();
+        this.particleInstance = null;
+    }
+
+    endPartFxPass(): void {
+        this.particleInstance = null;
+        this.endPass();
+    }
+
     beginPartFx(): void {
-        this.particle = null;
-        this.material = null;
+        this.particleCore = null;
     }
 
     endPartFx(): void {
-        this.particle = null;
-        this.material = null;
+        this.particleCore = null;
     }
 
 

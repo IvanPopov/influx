@@ -594,6 +594,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='name' value={ instr.name } />
                 <Property name='type' value={ instr.returnType.name } />
                 <Property name='numArgsRequired' value={ String(instr.numArgsRequired) } />
+                <PropertyOpt name='semantic' value={ String(instr.semantics) } />
                 <PropertyOpt name='arguments'>
                     { instr.paramList.map((param) => this.VariableDecl(param)) }
                 </PropertyOpt>

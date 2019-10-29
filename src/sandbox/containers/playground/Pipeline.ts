@@ -1,12 +1,12 @@
 /* tslint:disable:typedef */
 /* tslint:disable:variable-name */
 
-import { assert, isNull, isDef } from '@lib/common';
+import { assert, isDef, isNull } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import * as VM from '@lib/fx/bytecode/VM';
-import { ICompileExprInstruction } from '@lib/idl/IInstruction';
-import { IPartFxInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
+import * as VM from '@lib/fx/bytecode/VM';
+import { ICompileExprInstruction, IFunctionDeclInstruction } from '@lib/idl/IInstruction';
+import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/IPartFx';
 
 type PartFx = IPartFxInstruction;
 
@@ -65,10 +65,12 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
 
 
 interface IPassDesc {
-    matByteLength: number;
+    instanceByteLength: number;
     prerenderRoutine: IRunnable;
     sorting: boolean;
     geometry: EPartFxPassGeometry;
+    vertexShader?: IFunctionDeclInstruction;
+    pixelShader?: IFunctionDeclInstruction;
 }
 
 
@@ -80,13 +82,22 @@ class Pass {
     private _sorting: boolean;
     private _geometry: EPartFxPassGeometry;
 
+
+    // tslint:disable-next-line:member-ordering
+    readonly $vertexShader: IFunctionDeclInstruction;
+    // tslint:disable-next-line:member-ordering
+    readonly $pixelShader: IFunctionDeclInstruction;
+
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
         this._prerenderRoutine = desc.prerenderRoutine;
-        this._matByteLength = desc.matByteLength;
+        this._matByteLength = desc.instanceByteLength;
         this._prerenderedParticles = new Uint8Array(this._matByteLength * this._owner.capacity);
         this._sorting = desc.sorting;
         this._geometry = desc.geometry;
+
+        this.$vertexShader = desc.vertexShader;
+        this.$pixelShader = desc.pixelShader;
     }
 
     // number of float elements in the prerendered particle (f32)
@@ -276,7 +287,7 @@ function Pipeline(fx: PartFx) {
     let $elapsedTimeLevel: number;
     let $interval = null;
 
-    let constants: IPipelineConstants = {
+    const constants: IPipelineConstants = {
         elapsedTime: 0,
         elapsedTimeLevel: 0
     };
@@ -288,13 +299,15 @@ function Pipeline(fx: PartFx) {
         const partByteLength = fx.particle.size;
         const capacity = fx.capacity;
         const passList = fx.passList
-            .filter(pass => pass.material != null)
-            .map(({ material, prerenderRoutine, sorting, geometry }): IPassDesc => {
+            .filter(pass => pass.particleInstance != null)
+            .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader }): IPassDesc => {
                 return {
-                    matByteLength: material.size,
+                    instanceByteLength: particleInstance.size,
                     prerenderRoutine: prebuild(prerenderRoutine),
                     sorting,
-                    geometry
+                    geometry,
+                    vertexShader,
+                    pixelShader
                 };
             });
 
@@ -339,7 +352,7 @@ function Pipeline(fx: PartFx) {
 
     // todo: check capacity
     const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.capacity}:${fx.passList
-        .map(pass => `${pass.material.hash}:${pass.geometry}`)
+        .map(pass => `${pass.particleInstance.hash}:${pass.geometry}`)
         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 
     // console.log(fxHash(fx));

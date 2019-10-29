@@ -47,8 +47,8 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         PassInstruction.clearRenderStateMap(this._passStateMap);
         PassInstruction.copyRenderStateMap(renderStates, this._passStateMap);
 
-        this._vertexShader = Instruction.$withParent(vertexShader, this);
-        this._pixelShader = Instruction.$withParent(pixelShader, this);
+        this._vertexShader = Instruction.$withNoParent(vertexShader);
+        this._pixelShader = Instruction.$withNoParent(pixelShader);
 
         this._id = id;
 

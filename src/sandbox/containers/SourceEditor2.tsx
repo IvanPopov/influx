@@ -112,7 +112,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                             range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
                             lenses.push({ range, command: { id: null, title: `[prerender routine]` } });
 
-                            sourceNode = pass.material.sourceNode;
+                            sourceNode = pass.particleInstance.sourceNode;
                             loc = sourceNode.loc;
                             range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
                             lenses.push({ range, command: { id: null, title: `[material]` } });

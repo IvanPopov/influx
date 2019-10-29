@@ -173,24 +173,21 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     // todo: add support for MRT
     static checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
         let returnType = <IVariableTypeInstruction>funcDef.returnType;
-        let isGood: boolean = true;
 
         if (returnType.isEqual(SystemScope.T_VOID)) {
             return true;
         }
 
-        isGood = returnType.isBase();
-        if (!isGood) {
+        // TODO: add MRT support
+        if (!returnType.isBase()) {
             return false;
         }
 
-        isGood = returnType.isEqual(SystemScope.T_FLOAT4);
-        if (!isGood) {
+        if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
             return false;
         }
 
-        isGood = funcDef.semantics === "COLOR";
-        if (!isGood) {
+        if (funcDef.semantics !== "COLOR") {
             return false;
         }
 
@@ -203,7 +200,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         let params = funcDef.paramList;
         let shaderInput: IVariableDeclInstruction[] = [];
 
-        for (let i: number = 0; i < params.length; i++) {
+        for (let i = 0; i < params.length; i++) {
             let param = params[i];
             if (param.isUniform()) {
                 continue;
@@ -217,7 +214,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     static hasComplexShaderInput(funcDef: IFunctionDefInstruction): boolean {
         let params = funcDef.paramList;
 
-        for (let i: number = 0; i < params.length; i++) {
+        for (let i = 0; i < params.length; i++) {
             let param = params[i];
             if (param.isUniform()) {
                 continue;

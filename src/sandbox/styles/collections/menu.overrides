@@ -1,0 +1,4 @@
+.ui.tabular.menu .active.item {
+    clip-path: inset(0 0 0px 0);
+    z-index: 2;
+}

@@ -150,6 +150,14 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         emitter.passes.forEach((pass, i) => {
             const geometry = new THREE.InstancedBufferGeometry();
 
+            if (pass.$vertexShader) {
+                console.log(pass.$vertexShader.toCode());
+            }
+
+            if (pass.$pixelShader) {
+                console.log(pass.$pixelShader.toCode());
+            }
+
             //
             // Instance
             //
@@ -172,7 +180,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             }
             geometry.index = instanceGeometry.index;
             geometry.attributes.position = instanceGeometry.attributes.position;
-            // geometry.attributes.uv = instanceGeometry.attributes.uv;
+            geometry.attributes.normal = instanceGeometry.attributes.normal;
+            geometry.attributes.uv = instanceGeometry.attributes.uv;
 
             //
             // Instanced data

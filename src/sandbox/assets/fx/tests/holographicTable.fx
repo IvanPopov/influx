@@ -65,12 +65,24 @@ struct DefaultShaderInput {
     float  size  : SIZE;
 };
 
+
+
+uniform float4x4 modelMatrix;
+uniform float4x4 viewMatrix;
+uniform float4x4 projectionMatrix;
+
+struct PartInstance {
+    float3 pos   : POSITION1;
+    float4 color : COLOR;
+    float  size  : SIZE;
+};
+
 /////////////////////////////////////////////////////////////////////
 // Spawn Routine
 /////////////////////////////////////////////////////////////////////
 int Spawn()
 {
-    return 100;
+    return 400;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -97,11 +109,11 @@ bool Update(inout Part part)
 /////////////////////////////////////////////////////////////////////
 // Prerender Routine
 /////////////////////////////////////////////////////////////////////
-void PrerenderCylinders(inout Part part, out DefaultShaderInput input)
+void PrerenderCylinders(inout Part part, out PartInstance instance)
 {
-    input.pos.xyz = part.pos.xyz;
-    input.size = part.size;
-    input.color = float4(abs(part.speed), 1.0f - part.timelife);
+    instance.pos.xyz = part.pos.xyz;
+    instance.size = part.size;
+    instance.color = float4(abs(part.speed), sin(part.timelife * 3.14));
 }
 
 
@@ -110,14 +122,60 @@ void PrerenderCylinders(inout Part part, out DefaultShaderInput input)
 /////////////////////////////////////////////////////////////////////
 void PrerenderLines(inout Part part, out DefaultShaderInput input)
 {
-    input.pos.xyz = -part.pos.zyx;
+    input.pos.xyz = part.pos * float3(1.f, -1.f, 1.f);
     input.size = part.size;
-    input.color = float4(abs(part.speed).zxy, 1.0f - part.timelife);
+    input.color = float4(abs(part.speed).zxy, sin(part.timelife * 3.14));
 }
 
+
+/////////////////////////////////////////////////////////////////////
+// Shaders
+/////////////////////////////////////////////////////////////////////
+
+
+/* Billboard geometry */
+struct Geometry {
+    float3 position: POSITION0;
+    // float3 normal: NORMAL;
+    float2 uv: TEXCOORD0;
+};
+
+struct PixelInputType
+{
+    float4 position : POSITION;
+    float4 color : COLOR;
+};
+
+
+PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
+{
+    PixelInputType output;
+    
+    // Calculate the position of the vertex against the world, view, and projection matrices.
+    output.position = mul(float4(partInstance, 1.f), modelMatrix);
+    output.position = mul(output.position, viewMatrix) + 
+        float4(geometry.position, 1.f);
+    output.position = mul(output.position, projectionMatrix);
+    
+    // Store the input color for the pixel shader to use.
+    output.color = partInstance.color;
+    
+    return output;
+}
+
+
+float4 ColorPixelShader(PixelInputType input) : COLOR
+{
+    return input.color;
+}
+
+
+/////////////////////////////////////////////////////////////////////
+// Setup
+/////////////////////////////////////////////////////////////////////
  
 partFx holographicTable {
-    Capacity = 1000;
+    Capacity = 2048;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile Init();
     UpdateRoutine = compile Update();
@@ -126,12 +184,21 @@ partFx holographicTable {
         Sorting = true;
         PrerenderRoutine = compile PrerenderCylinders();
         Geometry = sphere;
+
+        ZWriteEnable = false;
+		AlphaBlendEnable = true;
+
+        VertexShader = compile ColorVertexShader();
+        PixelShader = compile ColorPixelShader();
     }
 
     pass Lines {
         Sorting = true;
         PrerenderRoutine = compile PrerenderLines();
         Geometry = billboard;
+
+        ZWriteEnable = false;
+		AlphaBlendEnable = true;
     }
 }
 

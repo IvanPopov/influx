@@ -8,7 +8,7 @@ import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
-import { Button, List, Message } from 'semantic-ui-react';
+import { Button, List, Message, Tab, Header, Icon, Menu } from 'semantic-ui-react';
 import Pipeline from './Pipeline';
 import ThreeScene from './ThreeScene';
 import { CSSProperties } from 'jss/css';
@@ -175,6 +175,60 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
             margin: '1em -20px -20px -20px'
         };
 
+        const panes = [
+            {
+                menuItem: (
+                    <Menu.Item key='Playground'>
+                        <Icon name={ "flame" as any } />Playground
+                    </Menu.Item>
+                ),
+                render: () => (
+                    <Tab.Pane>
+                        <List bulleted horizontal>
+                            { list.map(fx => (
+                                <List.Item disabled={ !fx.isValid() } as={ (fx.name === active ? 'b' : 'a') } onClick={ () => this.pickEffect(fx.name) }  >
+                                    {/* <Icon name={'pulse' as any}/>&nbsp; */ }
+                                    {/* { fx.name == active && <Loader as="span" size='mini' active inline>{ fx.name }</Loader> } */ }
+                                    { fx.name }
+                                    {/* { fx.name == active && (" (active)") } */ }
+                                </List.Item>
+                            )) }
+                        </List>
+                        { pipeline &&
+                            <div>
+                                <Button.Group compact >
+                                    <Button
+                                        icon='playback pause'
+                                        color={ (pipeline.isStopped() ? 'black' : null) }
+                                        disabled={ pipeline.isStopped() }
+                                        onClick={ this.handlePauseClick }
+                                    />
+                                    <Button
+                                        icon='playback play'
+                                        color={ (!pipeline.isStopped() ? 'black' : null) }
+                                        disabled={ !pipeline.isStopped() }
+                                        onClick={ this.handlePlayClick }
+                                    />
+                                </Button.Group>
+                                <ThreeScene
+                                    style={ threeStylesHotfix }
+                                    emitter={ pipeline.emitter }
+                                />
+                            </div>
+                        }
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: 'Tab 2',
+                render: () => <Tab.Pane>Tab 2 Content</Tab.Pane>
+            },
+            {
+                menuItem: 'Tab 3',
+                render: () => <Tab.Pane>Tab 3 Content</Tab.Pane>
+            },
+        ]
+
         return (
             <div>
                 { !list.length &&
@@ -184,36 +238,9 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
                     </Message.Content>
                     </Message>
                 }
-                <List bulleted horizontal>
-                    { list.map(fx => (
-                        <List.Item disabled={ !fx.isValid() } as={ (fx.name === active ? 'b' : 'a') } onClick={ () => this.pickEffect(fx.name) }  >
-                            {/* <Icon name={'pulse' as any}/>&nbsp; */ }
-                            {/* { fx.name == active && <Loader as="span" size='mini' active inline>{ fx.name }</Loader> } */ }
-                            { fx.name }
-                            {/* { fx.name == active && (" (active)") } */ }
-                        </List.Item>
-                    )) }
-                </List>
                 { pipeline &&
                     <div>
-                        <Button.Group compact >
-                            <Button
-                                icon='playback pause'
-                                color={ (pipeline.isStopped() ? 'black' : null) }
-                                disabled={ pipeline.isStopped() }
-                                onClick={ this.handlePauseClick }
-                            />
-                            <Button
-                                icon='playback play'
-                                color={ (!pipeline.isStopped() ? 'black' : null) }
-                                disabled={ !pipeline.isStopped() }
-                                onClick={ this.handlePlayClick }
-                            />
-                        </Button.Group>
-                        <ThreeScene
-                            style={ threeStylesHotfix }
-                            emitter={ pipeline.emitter }
-                        />
+                        <Tab panes={ panes } />
                     </div>
                 }
             </div>

@@ -198,16 +198,16 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/playground'>
-                        <Tab.Pane attached={ false } key='playground-view'>
-                            <Header as='h4' dividing>
+                        {/* <Tab.Pane attached={ false } key='playground-view'> */}
+                            {/* <Header as='h4' dividing>
                                 <Icon name={ 'flame' as any } />
                                 <Header.Content>
                                     Playground
                                     <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
                                 </Header.Content>
-                            </Header>
+                            </Header> */}
                             <Playground scope={ props.sourceFile.analysis && props.sourceFile.analysis.scope } />
-                        </Tab.Pane>
+                        {/* </Tab.Pane> */}
                     </Route>
                 )
             },

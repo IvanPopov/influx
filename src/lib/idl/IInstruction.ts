@@ -563,8 +563,8 @@ export interface IPassInstruction extends IDeclInstruction {
     // readonly fullUniformMap: IMap<IVariableDeclInstruction>;
     // readonly fullTextureMap: IMap<IVariableDeclInstruction>;
 
-    // readonly vertexShader: IFunctionDeclInstruction;
-    // readonly pixelShader: IFunctionDeclInstruction;
+    readonly vertexShader: IFunctionDeclInstruction;
+    readonly pixelShader: IFunctionDeclInstruction;
 
     readonly renderStates: IMap<ERenderStateValues>;
     getState(type: ERenderStates): ERenderStateValues;

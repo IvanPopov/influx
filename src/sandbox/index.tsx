@@ -58,7 +58,7 @@ render(
 
 
 // store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
-store.dispatch(sourceCode.openFile(`./assets/fx/tests/${(window.location.search.match(/\?(.*)/) || [])[1] || 'part.fx'}`));
+store.dispatch(sourceCode.openFile(`./assets/fx/tests/${(window.location.search.match(/\?(.*)/) || [])[1] || 'holographicTable.fx'}`));
 store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');

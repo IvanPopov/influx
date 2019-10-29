@@ -13,7 +13,7 @@ export interface IDeclInstructionSettings extends IInstructionSettings {
 
 
 export class DeclInstruction extends Instruction implements IDeclInstruction {
-    protected _semantics: string
+    protected _semantic: string
     protected _annotation: IAnnotationInstruction;
     
     protected _bIsBuiltIn: boolean;
@@ -21,7 +21,7 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
     constructor({ semantics = null, annotation = null, builtIn = false, ...settings }: IDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
-        this._semantics = semantics;
+        this._semantic = semantics;
         this._annotation = Instruction.$withParent(annotation, this);
 
         this._bIsBuiltIn = builtIn;
@@ -29,7 +29,7 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
     
 
     get semantics(): string {
-        return this._semantics;
+        return this._semantic;
     }
 
 
