@@ -17,6 +17,7 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
             dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
         } catch (error) {
             dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
+            // dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
         } finally {
             done();
         }

@@ -16,6 +16,7 @@
     "@types/react": "^16.9.4",
     "@types/react-dom": "^16.8.4",
     "@types/react-redux": "^7.0.9",
+    "@types/react-router-dom": "^5.1.0",
     "@types/react-swipeable-views": "^0.13.0",
     "@types/recompose": "^0.30.6",
     "@types/redux-immutable-state-invariant": "^2.1.0",

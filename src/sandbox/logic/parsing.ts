@@ -20,7 +20,8 @@ const ANALYSIS_WARNING_PREFIX = 'analysis-warning';
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
 function cleanupMarkers(state: IStoreState, dispatch: IDispatch, type: IMarkerType, prefix: string) {
-    for (let name in state.sourceFile.markers) {
+    // tslint:disable-next-line:no-for-in
+    for (const name in state.sourceFile.markers) {
         if (name.startsWith(`${prefix}-`)) {
             dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER, payload: { name } });
         }
@@ -223,8 +224,8 @@ const debuggerResetLogic = createLogic<IStoreState>({
     type: evt.DEBUGGER_RESET,
 
     async process({ getState, action }, dispatch, done) {
-        let debuggerState = getDebugger(getState());
-        if (debuggerState.options.colorize) {
+        const $debugger = getDebugger(getState());
+        if ($debugger.options.colorize) {
             cleanupDebuggerColorization(getState(), dispatch);
         }
         done();
@@ -256,7 +257,7 @@ const debuggerStartLogic = createLogic<IStoreState>({
     async process({ getState, action }, dispatch, done) {
         const fileState = getSourceCode(getState());
         const debuggerState = getDebugger(getState());
-        
+
         if (debuggerState.options.colorize) {
             const markers = buildDebuggerSourceColorization(debuggerState, fileState);
             emitDebuggerColorization(markers, dispatch);

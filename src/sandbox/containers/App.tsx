@@ -1,5 +1,6 @@
 /* tslint:disable:max-func-body-length */
 /* tslint:disable:typedef */
+/* tslint:disable:no-single-line-block-comment */
 
 import * as Bytecode from '@lib/fx/bytecode';
 import { IInstruction } from '@lib/idl/IInstruction';
@@ -14,10 +15,10 @@ import * as path from 'path';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { HashRouter as Router, matchPath, NavLink, Redirect, Route, Switch } from 'react-router-dom';
+import { matchPath, NavLink, Route, RouteComponentProps, withRouter } from 'react-router-dom';
 import {
-    Button, Checkbox, Container, Dropdown, Grid, Header,
-    Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table, Breadcrumb
+    Button, Checkbox, Container, Dropdown, Grid, Header, Icon, Input,
+    Menu, Message, Segment, Sidebar, Tab, Table
 } from 'semantic-ui-react';
 
 declare const VERSION: string;
@@ -25,8 +26,7 @@ declare const COMMITHASH: string;
 declare const BRANCH: string;
 declare const MODE: string;
 
-
-// process.chdir(`${__dirname}/../../`); // making ./build as cwd
+const DEFAULT_FX_NAME = `./assets/fx/tests/new`;
 
 type UnknownIcon = any;
 
@@ -89,11 +89,15 @@ export const styles = {
         position: 'relative',
         zIndex: 1,
         borderBottom: '1px solid #101010 !important',
+        height: 'auto !important',
+        minHeight: 'auto !important',
 
         '& .item': {
             opacity: '0.6 !important',
             alignSelf: 'baseline !important',
             paddingRight: '0 !important',
+            paddingTop: '5px !important',
+            paddingBottom: '5px !important',
 
             '&:not(:first-child)': {
                 paddingLeft: '0 !important',
@@ -101,7 +105,8 @@ export const styles = {
 
             '&.active': {
                 border: '0 !important',
-                opacity: '0.75 !important'
+                opacity: '0.75 !important',
+                fontWeight: 'normal !important'
             }
         }
     }
@@ -109,7 +114,7 @@ export const styles = {
 };
 
 // todo: remove the inheritance of the type of data
-export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
+export interface IAppProps extends IStoreState, IWithStyles<typeof styles>, RouteComponentProps<any> {
     actions: typeof sourceActions;
 }
 
@@ -153,7 +158,7 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
                     active={ activeItem === 'vertexshader' }
                     onClick={ this.handleItemClick }
                 >
-                    holographicTable <Icon name={ 'chevron right' as any } /> 
+                    holographicTable <Icon name={ 'chevron right' as any } />
                     Cylinders <Icon name={ 'chevron right' as any } /> VertexShader
                 </Menu.Item>
             </Menu>
@@ -164,12 +169,15 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
 
 
 @injectSheet(styles)
+@(withRouter as any) // << NOTE: known issue with TS decorators :/
 class App extends React.Component<IAppProps> {
 
     state: {
         showFileBrowser: boolean;
     };
 
+    // history api callback
+    private unlisten: any;
     private entryPointRef = React.createRef<Input>();
 
     constructor(props) {
@@ -215,6 +223,7 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    /** @deprecated */
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         const markerName = `ast-range-${inst.instructionID}`;
         if (show) {
@@ -229,6 +238,7 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    /** @deprecated */
     highlightPNode(id: string, pnode: IParseNode = null, show: boolean = true) {
         if (show) {
             this.props.actions.addMarker({
@@ -245,6 +255,29 @@ class App extends React.Component<IAppProps> {
         const { sourceFile } = this.props;
         return sourceFile.analysis && sourceFile.analysis.diag.errors === 0;
     }
+
+    @autobind
+    handleCurrentLocation() {
+        const filePrev = this.props.sourceFile.filename;
+        const fileNext = `./assets/fx/tests/${this.props.match.params.fx}`;
+        if (fileNext !== filePrev) {
+            this.props.actions.openFile(fileNext);
+        }
+    }
+
+    componentDidMount() {
+        // FIXME: temp solution for history event POP handling
+        this.unlisten = this.props.history.listen(this.handleCurrentLocation);
+        this.handleCurrentLocation();
+    }
+
+    componentWillUnmount() {
+        this.unlisten();
+    }
+
+    // componentDidUpdate() {
+
+    // }
 
     render() {
         const { props, state, props: { sourceFile } } = this;
@@ -265,7 +298,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Playground</Menu.Header>),
-                    to: `/playground`,
+                    to: `/playground/${props.match.params.fx}`,
                     // exact: true,
                     key: 'playground'
                 },
@@ -288,7 +321,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Bytecode<br />Debugger</Menu.Header>),
-                    to: `/bytecode`,
+                    to: `/bytecode/${props.match.params.fx}`,
                     // exact: true,
                     key: 'bytecode'
                 },
@@ -364,7 +397,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Semantic<br />Analyzer</Menu.Header>,
-                    to: `/program`,
+                    to: `/program/${props.match.params.fx}`,
                     // exact: true,
                     key: 'program'
                 },
@@ -390,7 +423,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Syntax<br />Analyzer</Menu.Header>,
-                    to: `/ast`,
+                    to: `/ast/${props.match.params.fx}`,
                     // exact: true,
                     key: 'ast'
                 },
@@ -440,14 +473,11 @@ class App extends React.Component<IAppProps> {
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
                                     <Container style={ { paddingTop: '15px' } }>
-                                        <Switch>
-                                            <Redirect from='/' strict exact to='/playground' />
-                                            <Tab
-                                                defaultActiveIndex={ defaultActiveIndex }
-                                                menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
-                                                panes={ analysisResults }
-                                                renderActiveOnly={ false } />
-                                        </Switch>
+                                        <Tab
+                                            defaultActiveIndex={ defaultActiveIndex }
+                                            menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
+                                            panes={ analysisResults }
+                                            renderActiveOnly={ false } />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -473,46 +503,44 @@ class App extends React.Component<IAppProps> {
         ];
 
         return (
-            <Router>
-                <div className={ props.classes.mainContentHotfix }>
-                    <Sidebar.Pushable>
-                        <Sidebar
-                            as={ Segment }
-                            animation='overlay'
-                            vertical
-                            visible={ this.state.showFileBrowser }
-                            className={ this.props.classes.fileBrowserSidebarFix }
-                        >
-                            <FileListView
-                                path='./assets'
-                                filters={ ['.fx'] }
-                                onFileClick={ (file) => { props.actions.openFile(file); } } />
-                        </Sidebar>
-                        <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
-                            {
-                                /*
-                                    NOTE: "renderActiveOnly" should always be true
-                                           because only one instance of Monaco editor
-                                           can be used simultaneously
-                                */
-                            }
-                            <Tab
-                                menu={ { secondary: true, pointing: true } }
-                                panes={ panes }
-                                renderActiveOnly={ true }
-                                size='tiny'
-                                className={ props.classes.topMenuFix } />
-                        </Sidebar.Pusher>
-                    </Sidebar.Pushable>
+            <div className={ props.classes.mainContentHotfix }>
+                <Sidebar.Pushable>
+                    <Sidebar
+                        as={ Segment }
+                        animation='overlay'
+                        vertical
+                        visible={ this.state.showFileBrowser }
+                        className={ this.props.classes.fileBrowserSidebarFix }
+                    >
+                        <FileListView
+                            path='./assets'
+                            filters={ ['.fx'] }
+                            onFileClick={ (file) => { props.actions.openFile(file); } } />
+                    </Sidebar>
+                    <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
+                        {
+                            /*
+                                NOTE: "renderActiveOnly" should always be true
+                                       because only one instance of Monaco editor
+                                       can be used simultaneously
+                            */
+                        }
+                        <Tab
+                            menu={ { secondary: true, pointing: true } }
+                            panes={ panes }
+                            renderActiveOnly={ true }
+                            size='tiny'
+                            className={ props.classes.topMenuFix } />
+                    </Sidebar.Pusher>
+                </Sidebar.Pushable>
 
-                    <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
-                        <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
-                            <Icon name={ 'three bars' as UnknownIcon } />
-                            File Browser
+                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
+                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
+                        <Icon name={ 'three bars' as UnknownIcon } />
+                        File Browser
                         </Menu.Item>
-                    </Menu>
-                </div>
-            </Router>
+                </Menu>
+            </div>
         );
     }
 

@@ -7,6 +7,7 @@ import * as isElectron from 'is-electron-renderer';
 import * as React from 'react';
 import { render } from 'react-dom';
 import { Provider } from 'react-redux';
+import { HashRouter as Router, Route, Redirect, Switch } from 'react-router-dom';
 import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
@@ -48,17 +49,29 @@ const store = createStore<IStoreState, any, any, any>(
     reducer,
     applyMiddleware(...middleware)
 );
-// console.log(store);
+
+const initialState: IStoreState = store.getState();
+const defaultName = initialState.sourceFile.filename;
+
 render(
     <Provider store={ store }>
-        <App />
+        <Router>
+            <Switch>
+                <Redirect from='/' strict exact to={ `/playground/${defaultName}` } />
+                <Redirect from='/playground' strict exact to={ `/playground/${defaultName}` } />
+                <Redirect from='/bytecode' strict exact to={ `/bytecode/${defaultName}` } />
+                <Redirect from='/program' strict exact to={ `/program/${defaultName}` } />
+                <Redirect from='/ast' strict exact to={ `/ast/${defaultName}` } />
+                <Route path='/:view/:fx' component={ App } />
+            </Switch>
+        </Router>
     </Provider>,
     document.getElementById('app')
 );
 
 
 // store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
-store.dispatch(sourceCode.openFile(`./assets/fx/tests/${(window.location.search.match(/\?(.*)/) || [])[1] || 'holographicTable.fx'}`));
+// store.dispatch(sourceCode.openFile(`./assets/fx/tests/${DEFAULT_FX_NAME}`));
 store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
