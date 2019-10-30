@@ -15,9 +15,14 @@ export interface IDebuggerState {
         colorize: boolean;
         disableOptimizations: boolean;
         autocompile: boolean;
-    }
+    };
 
     entryPoint: string;
+
+    // (current debugger runtime)
+    // BytecodeView shows instructions
+    // with additional debug info, like colorization using
+    // cdl view.
     runtime: ISubProgram;
 }
 

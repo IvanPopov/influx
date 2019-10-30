@@ -15,8 +15,9 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { HashRouter as Router, matchPath, NavLink, Redirect, Route, Switch } from 'react-router-dom';
-import { Button, Checkbox, Container, Dropdown, Grid, Header,
-    Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table
+import {
+    Button, Checkbox, Container, Dropdown, Grid, Header,
+    Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table, Breadcrumb
 } from 'semantic-ui-react';
 
 declare const VERSION: string;
@@ -40,7 +41,7 @@ export const styles = {
     mainViewHeightHotfix: {
         marginBottom: '0 !important'
     },
-    fileBrowserSidebarHotfix: {
+    fileBrowserSidebarFix: {
         padding: '10px !important',
         background: 'rgba(255,255,255,0.95) !important'
     },
@@ -55,12 +56,21 @@ export const styles = {
             zIndex: '2',
             // boxShadow: '0 2px 5px rgba(10,10,10, 0.1) !important',
             backgroundColor: 'white !important'
+        },
+
+        '& > .menu:first-child': {
+            '& .item': {
+                '&.active': {
+                    border: '0 !important'
+                }
+            }
         }
     },
     rightColumnFix: {
         // boxShadow: '-5px 0 5px black',
         zIndex: 1,
-        paddingLeft: '0 !important'
+        paddingLeft: '0 !important',
+        backgroundColor: 'white'
     },
     leftColumnFix: {
         paddingRight: '0px !important'
@@ -68,8 +78,35 @@ export const styles = {
     versionFix: {
         padding: '5px !important',
         margin: '-5px !important'
+    },
+
+    //
+    // SourceCodeMenu
+    //
+
+    mebFix: {
+        background: '#1e1e1e !important',
+        position: 'relative',
+        zIndex: 1,
+        borderBottom: '1px solid #101010 !important',
+
+        '& .item': {
+            opacity: '0.6 !important',
+            alignSelf: 'baseline !important',
+            paddingRight: '0 !important',
+
+            '&:not(:first-child)': {
+                paddingLeft: '0 !important',
+            },
+
+            '&.active': {
+                border: '0 !important',
+                opacity: '0.75 !important'
+            }
+        }
     }
-}
+
+};
 
 // todo: remove the inheritance of the type of data
 export interface IAppProps extends IStoreState, IWithStyles<typeof styles> {
@@ -85,6 +122,43 @@ const Version = (props) => {
             </Message>
         </div>
     );
+};
+
+interface ISourceCodeMenuProps extends IWithStyles<typeof styles> {
+}
+
+@injectSheet(styles)
+class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
+    state = { activeItem: 'vertexshader' };
+
+    handleItemClick = (e, { name }) => this.setState({ activeItem: name })
+
+    render() {
+        const { activeItem } = this.state;
+
+        return (
+            <Menu size='mini' pointing secondary inverted attached className={ this.props.classes.mebFix }>
+                <Menu.Item
+                    name='sourcecode'
+                    // position='right'
+                    active={ activeItem === 'sourcecode' }
+                    onClick={ this.handleItemClick }
+                >
+                    source code <Icon name={ 'chevron right' as any } />
+                </Menu.Item>
+
+                <Menu.Item
+                    name='vertexshader'
+                    // position='right'
+                    active={ activeItem === 'vertexshader' }
+                    onClick={ this.handleItemClick }
+                >
+                    holographicTable <Icon name={ 'chevron right' as any } /> 
+                    Cylinders <Icon name={ 'chevron right' as any } /> VertexShader
+                </Menu.Item>
+            </Menu>
+        );
+    }
 }
 
 
@@ -175,7 +249,7 @@ class App extends React.Component<IAppProps> {
     render() {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
-        
+
         // FIXME: use router api
         // let request = (window.location.hash.match(/^\#\/(playground|bytecode|program|ast)\/(.*)$/) || [])[2] || '';
         // if (request) {
@@ -185,29 +259,28 @@ class App extends React.Component<IAppProps> {
         //     }
         //     request = `/${request}`;
         // }
-        let request = '';
 
         const analysisResults = [
             {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Playground</Menu.Header>),
-                    to: `/playground${request}`,
+                    to: `/playground`,
                     // exact: true,
                     key: 'playground'
                 },
                 pane: (
                     <Route path='/playground'>
-                        {/* <Tab.Pane attached={ false } key='playground-view'> */}
-                            {/* <Header as='h4' dividing>
+                        {/* <Tab.Pane attached={ false } key='playground-view'> */ }
+                        {/* <Header as='h4' dividing>
                                 <Icon name={ 'flame' as any } />
                                 <Header.Content>
                                     Playground
                                     <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
                                 </Header.Content>
                             </Header> */}
-                            <Playground scope={ props.sourceFile.analysis && props.sourceFile.analysis.scope } />
-                        {/* </Tab.Pane> */}
+                        <Playground scope={ props.sourceFile.analysis && props.sourceFile.analysis.scope } />
+                        {/* </Tab.Pane> */ }
                     </Route>
                 )
             },
@@ -215,7 +288,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: (<Menu.Header>Bytecode<br />Debugger</Menu.Header>),
-                    to: `/bytecode${request}`,
+                    to: `/bytecode`,
                     // exact: true,
                     key: 'bytecode'
                 },
@@ -243,7 +316,7 @@ class App extends React.Component<IAppProps> {
                                         </Table.Cell>
                                         <Table.Cell >
                                             <Button
-                                                disabled={ $debugger.options.autocompile || !this.canCompile() }
+                                                disabled={ ($debugger.options.autocompile || !this.canCompile()) }
                                                 onClick={ this.compile } width={ 10 } >
                                                 Compile
                                             </Button>
@@ -253,7 +326,9 @@ class App extends React.Component<IAppProps> {
                                                     <Dropdown.Item>
                                                         <Checkbox label='auto compilation' size='small'
                                                             checked={ $debugger.options.autocompile }
-                                                            onMouseDown={ e => this.setAutocompile(!$debugger.options.autocompile) } />
+                                                            onMouseDown={
+                                                                e => this.setAutocompile(!$debugger.options.autocompile)
+                                                            } />
                                                     </Dropdown.Item>
                                                     <Dropdown.Item>
                                                         <Checkbox disabled label='no optimisations' size='small' checked />
@@ -261,7 +336,9 @@ class App extends React.Component<IAppProps> {
                                                     <Dropdown.Item>
                                                         <Checkbox label='colorize' size='small'
                                                             checked={ $debugger.options.colorize }
-                                                            onMouseDown={ e => this.setBytecodeColorization(!$debugger.options.colorize) } />
+                                                            onMouseDown={
+                                                                e => this.setBytecodeColorization(!$debugger.options.colorize)
+                                                            } />
                                                     </Dropdown.Item>
                                                 </Dropdown.Menu>
                                             </Dropdown>
@@ -287,7 +364,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Semantic<br />Analyzer</Menu.Header>,
-                    to: `/program${request}`,
+                    to: `/program`,
                     // exact: true,
                     key: 'program'
                 },
@@ -303,7 +380,7 @@ class App extends React.Component<IAppProps> {
                             <ProgramView
                                 onNodeOver={ inst => this.highlightInstruction(inst, true) }
                                 onNodeOut={ inst => this.highlightInstruction(inst, false) }
-                                onNodeClick={ inst => { } }
+                            // onNodeClick={ inst => { } }
                             />
                         </Tab.Pane>
                     </Route>
@@ -313,7 +390,7 @@ class App extends React.Component<IAppProps> {
                 menuItem: {
                     as: NavLink,
                     content: <Menu.Header>Syntax<br />Analyzer</Menu.Header>,
-                    to: `/ast${request}`,
+                    to: `/ast`,
                     // exact: true,
                     key: 'ast'
                 },
@@ -358,6 +435,7 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
+                                    <SourceCodeMenu />
                                     <SourceEditor2 name='source-code' />
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
@@ -403,7 +481,7 @@ class App extends React.Component<IAppProps> {
                             animation='overlay'
                             vertical
                             visible={ this.state.showFileBrowser }
-                            className={ this.props.classes.fileBrowserSidebarHotfix }
+                            className={ this.props.classes.fileBrowserSidebarFix }
                         >
                             <FileListView
                                 path='./assets'
@@ -413,15 +491,16 @@ class App extends React.Component<IAppProps> {
                         <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
                             {
                                 /*
-                                    "renderActiveOnly" should always be true
-                                    because only one instance of Monaco editor
-                                    can be used simultaneously
+                                    NOTE: "renderActiveOnly" should always be true
+                                           because only one instance of Monaco editor
+                                           can be used simultaneously
                                 */
                             }
                             <Tab
                                 menu={ { secondary: true, pointing: true } }
                                 panes={ panes }
                                 renderActiveOnly={ true }
+                                size='tiny'
                                 className={ props.classes.topMenuFix } />
                         </Sidebar.Pusher>
                     </Sidebar.Pushable>

@@ -1,6 +1,10 @@
+// tslint:disable:typedef
+
+
 import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
+import { EChunkType } from '@lib/idl/bytecode';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
@@ -10,7 +14,6 @@ import { IDebuggerState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
-import { EChunkType } from '@lib/idl/bytecode';
 
 
 export interface IBytecodeViewProps extends IDebuggerState {
@@ -72,6 +75,13 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         count: 0,
         cdlView: null
     };
+
+    static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
+        const count = 0;
+        const cdlView = cdlview(props.runtime.cdl);
+
+        return { count, cdlView };
+    }
 
     render() {
         const { props } = this;
@@ -144,6 +154,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     }
 
+
     renderOpInternal(code: EOperation, args: string[]) {
         const i = this.state.count++;
         const { cdlView } = this.state;
@@ -168,31 +179,27 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             default:
         }
 
+        let specColor = null;
+
+        if (this.props.options.colorize) {
+            specColor = {
+                padding: '0.2em 0',
+                opacity: 0.5,
+                background: DistinctColor.make(cdlView.resolvePcColor(i)).toRGBAString(),
+                width: '4px'
+            };
+        }
+
         return (
-            <Table.Row key={ `op-${code}-${i}` } 
+            <Table.Row key={ `op-${code}-${i}` }
                 style={ { width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' } }
                 onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
-                <Table.Cell
-                    style={ this.props.options.colorize ?
-                        {
-                            padding: '0.2em 0',
-                            opacity: 0.5,
-                            background: DistinctColor.make(cdlView.resolvePcColor(i)).toRGBAString(),
-                            width: '4px'
-                        } : null
-                    }></Table.Cell>
+                <Table.Cell style={ specColor }></Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ args.join(' ') }</Table.Cell>
             </Table.Row>
         );
-    }
-
-    static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
-        const count = 0;
-        const cdlView = cdlview(props.runtime.cdl);
-
-        return { count, cdlView };
     }
 }
 

@@ -179,6 +179,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     };
 
     provider: monaco.IDisposable = null;
+    mouseDownEvent: monaco.IDisposable = null;
 
     // cache for previously set decorations/breakpoints
     decorations: string[] = [];
@@ -244,15 +245,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
     @autobind
-    editorWillMount(monaco) {
-    }
+    editorWillMount(editor) {}
+
 
     @autobind
     editorDidMount(editor: monaco.editor.IStandaloneCodeEditor) {
         editor.getModel()
               .updateOptions({ tabSize: 4 });
 
-        editor.onMouseDown((e: monaco.editor.IEditorMouseEvent) => {
+        this.mouseDownEvent = editor.onMouseDown((e: monaco.editor.IEditorMouseEvent) => {
             const data = e.target.detail as IMarginData;
             if (e.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN
                 //  || data.isAfterLines
@@ -261,11 +262,14 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 return;
             }
 
-            let { props } = this;
-            let { breakpoints } = props;
+            const { props } = this;
+            const { breakpoints } = props;
+
             let { lineNumber } = e.target.position;
 
-            lineNumber = cdlview(props.debugger.runtime.cdl).resolveBreakpointLocation(lineNumber - 1);
+            lineNumber = cdlview(props.debugger.runtime.cdl)
+                .resolveBreakpointLocation(lineNumber - 1);
+
             if (lineNumber === -1) {
                 return;
             }
@@ -280,8 +284,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         // editor.setPosition({ lineNumber: 1, column: 1 });
         // editor.focus();
         // console.log('editor did mount!');
-
-
     }
 
     @autobind
@@ -338,15 +340,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         const options: monaco.editor.IEditorConstructionOptions = {
             selectOnLineNumbers: true,
             fontSize: 12,
-            renderWhitespace: showWhitespaces ? "all" : "none",
+            renderWhitespace: showWhitespaces ? 'all' : 'none',
             lineHeight: 14,
             minimap: {
                 enabled: false
             },
             automaticLayout: true,
             glyphMargin: true,
-            theme: "vs-dark",
-            language: "cpp",
+            theme: 'vs-dark',
+            language: 'cpp',
             lineDecorationsWidth: 0,
             cursorSmoothCaretAnimation: true,
             fontLigatures: true
@@ -354,11 +356,11 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
         return (
             <MonacoEditor
-                ref="monaco"
+                ref='monaco'
                 value={ (props.content || '') }
 
-                width="100%"
-                height="calc(100vh - 41px)" // todo: fixme
+                width='100%'
+                height='calc(100vh - 74px)' // todo: fixme
 
                 options={ options }
                 onChange={ this.onChange }
