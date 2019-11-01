@@ -11,10 +11,9 @@ import {
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
-export const DEFAULT_FILENAME = 'new';
 
 const initialState: IFileState = {
-    filename: DEFAULT_FILENAME,
+    filename: null,
     content: null,
     error: null,
     markers: {},
@@ -45,13 +44,16 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.SOURCE_FILE_LOADING_FAILED]: (state, action: ISourceFileLoadingFailed) =>
         ({
-            ...state, error: action.payload.error,
+            ...state, 
+            error: action.payload.error,
             // NOTE: temp solution (clean up all info about prev file)
             content: null,
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
             parseTree: null,
-            analysis: null
+            analysis: null,
+            pipeline: null,
+            $pipeline: 0
         }),
 
     [evt.SOURCE_CODE_MODIFED]: (state, action: ISourceCodeModified) =>

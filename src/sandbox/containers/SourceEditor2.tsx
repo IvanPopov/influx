@@ -142,7 +142,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
         // console.log('on did change');
         return {
             dispose() {
-                console.log('onDidChange() => dispose()');
+                // console.log('onDidChange() => dispose()');
             }
         }
     }

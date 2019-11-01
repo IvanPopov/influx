@@ -199,8 +199,6 @@ class App extends React.Component<IAppProps> {
         showFileBrowser: boolean;
     };
 
-    // history api callback
-    // private unlisten: any;
     private entryPointRef = React.createRef<Input>();
 
     constructor(props) {
@@ -224,8 +222,8 @@ class App extends React.Component<IAppProps> {
     }
 
 
-    handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser })
-    hideFileBrowser = () => this.setState({ showFileBrowser: false })
+    handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser });
+    hideFileBrowser = () => this.setState({ showFileBrowser: false });
 
     @autobind
     compile() {
@@ -279,28 +277,6 @@ class App extends React.Component<IAppProps> {
         return sourceFile.analysis && sourceFile.analysis.diag.errors === 0;
     }
 
-    // @autobind
-    // handleCurrentLocation() {
-    //     const filePrev = this.props.sourceFile.filename;
-    //     const fileNext = `./assets/fx/tests/${this.props.match.params.fx}`;
-    //     if (fileNext !== filePrev) {
-    //         this.props.actions.openFile(fileNext);
-    //     }
-    // }
-
-    componentDidMount() {
-        // // FIXME: temp solution for history event POP handling
-        // this.unlisten = this.props.history.listen(this.handleCurrentLocation);
-        // this.handleCurrentLocation();
-    }
-
-    componentWillUnmount() {
-        // this.unlisten();
-    }
-
-    // componentDidUpdate() {
-
-    // }
 
     render() {
         const { props, state, props: { sourceFile } } = this;
