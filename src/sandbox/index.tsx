@@ -1,16 +1,20 @@
-import { parser, sourceCode } from '@sandbox/actions';
+import { parser } from '@sandbox/actions';
+import ActionTypes from '@sandbox/actions/ActionTypes';
 import { App } from '@sandbox/containers';
-import logic from '@sandbox/logic';
+import logic, { LOCATION_NOT_FOUND } from '@sandbox/logic';
 import reducer from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
+import { ConnectedRouter } from 'connected-react-router';
 import * as isElectron from 'is-electron-renderer';
 import * as React from 'react';
 import { render } from 'react-dom';
 import { Provider } from 'react-redux';
-import { HashRouter as Router, Route, Redirect, Switch } from 'react-router-dom';
+import { Route, Switch } from 'react-router-dom';
 import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
+import { history } from '@sandbox/reducers/router';
+import { Message, Segment, Container, Modal, Header } from 'semantic-ui-react';
 
 require('semantic-ui-less/semantic.less');
 
@@ -35,7 +39,6 @@ const reduxImmutableState = reduxImmutableStateInvariant({
     ignore: [
         'sourceFile.parseTree',
         'sourceFile.analysis',
-
         'sourceFile.debugger.runtime',
         'sourceFile.pipeline'
     ]
@@ -46,26 +49,28 @@ const middleware: Middleware[] = !PRODUCTION ?
     [/*thunk, */logic, logger, reduxImmutableState] :
     [logic];
 
-const store = createStore<IStoreState, any, any, any>(
+const store = createStore<IStoreState, ActionTypes, any, any>(
     reducer,
     applyMiddleware(...middleware)
 );
 
-const initialState: IStoreState = store.getState();
-const defaultName = initialState.sourceFile.filename;
+// const initialState: IStoreState = store.getState();
+// const defaultName = initialState.sourceFile.filename;
 
 render(
-    <Provider store={ store }>
-        <Router>
+    <Provider store={store}>
+        <ConnectedRouter history={history}>
             <Switch>
-                <Redirect from='/' strict exact to={ `/playground/${defaultName}` } />
-                <Redirect from='/playground' strict exact to={ `/playground/${defaultName}` } />
-                <Redirect from='/bytecode' strict exact to={ `/bytecode/${defaultName}` } />
-                <Redirect from='/program' strict exact to={ `/program/${defaultName}` } />
-                <Redirect from='/ast' strict exact to={ `/ast/${defaultName}` } />
-                <Route path='/:view/:fx/:name?/:pass?/:property?' component={ App } />
+                <Route path='/:view/:fx/:name?/:pass?/:property?' component={App} />
+                <Route exact path={LOCATION_NOT_FOUND}>
+                    <Modal open basic size='small'>
+                        <Header icon='archive' content='Location not found :/' />
+                        <Modal.Content>
+                        </Modal.Content>
+                    </Modal>
+                </Route>
             </Switch>
-        </Router>
+        </ConnectedRouter>
     </Provider>,
     document.getElementById('app')
 );

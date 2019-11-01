@@ -11,7 +11,8 @@ import {
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
-const DEFAULT_FILENAME = 'new';
+export const DEFAULT_FILENAME = 'new';
+
 const initialState: IFileState = {
     filename: DEFAULT_FILENAME,
     content: null,
@@ -30,6 +31,7 @@ const initialState: IFileState = {
         }
     },
     pipeline: null,
+    // HACK: additional counter in order to call component's update in case of shadow pipeline reloading
     $pipeline: 0
 };
 

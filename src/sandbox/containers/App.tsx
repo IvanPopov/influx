@@ -11,22 +11,20 @@ import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, Sourc
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
+import { routerActions } from 'connected-react-router';
 import * as path from 'path';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
-import {
-    Button, Checkbox, Container, Dropdown, Grid, Icon, Input,
-    Menu, Message, Segment, Sidebar, Tab, Table
-} from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
 declare const BRANCH: string;
 declare const MODE: string;
 
-const DEFAULT_FX_NAME = `./assets/fx/tests/new`;
+// const DEFAULT_FX_NAME = `./assets/fx/tests/new`;
 
 type UnknownIcon = any;
 
@@ -122,7 +120,7 @@ export const styles = {
 
 // todo: remove the inheritance of the type of data
 export interface IAppProps extends IStoreState, IWithStyles<typeof styles>, RouteComponentProps<any> {
-    actions: typeof sourceActions;
+    actions: typeof sourceActions & typeof routerActions;
 }
 
 
@@ -186,7 +184,7 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
                         </div>
                     }
                 </Menu.Item>
-            </Menu>
+            </Menu> 
         );
     }
 }
@@ -202,7 +200,7 @@ class App extends React.Component<IAppProps> {
     };
 
     // history api callback
-    private unlisten: any;
+    // private unlisten: any;
     private entryPointRef = React.createRef<Input>();
 
     constructor(props) {
@@ -281,23 +279,23 @@ class App extends React.Component<IAppProps> {
         return sourceFile.analysis && sourceFile.analysis.diag.errors === 0;
     }
 
-    @autobind
-    handleCurrentLocation() {
-        const filePrev = this.props.sourceFile.filename;
-        const fileNext = `./assets/fx/tests/${this.props.match.params.fx}`;
-        if (fileNext !== filePrev) {
-            this.props.actions.openFile(fileNext);
-        }
-    }
+    // @autobind
+    // handleCurrentLocation() {
+    //     const filePrev = this.props.sourceFile.filename;
+    //     const fileNext = `./assets/fx/tests/${this.props.match.params.fx}`;
+    //     if (fileNext !== filePrev) {
+    //         this.props.actions.openFile(fileNext);
+    //     }
+    // }
 
     componentDidMount() {
-        // FIXME: temp solution for history event POP handling
-        this.unlisten = this.props.history.listen(this.handleCurrentLocation);
-        this.handleCurrentLocation();
+        // // FIXME: temp solution for history event POP handling
+        // this.unlisten = this.props.history.listen(this.handleCurrentLocation);
+        // this.handleCurrentLocation();
     }
 
     componentWillUnmount() {
-        this.unlisten();
+        // this.unlisten();
     }
 
     // componentDidUpdate() {
@@ -601,4 +599,4 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions(sourceActions))(App) as any;
+export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions }))(App) as any;

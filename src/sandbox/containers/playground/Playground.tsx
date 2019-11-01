@@ -34,7 +34,7 @@ const threeStylesHotfix: React.CSSProperties = {
 };
 
 
-class Playground extends React.PureComponent<IPlaygroundProps> {
+class Playground extends React.Component<IPlaygroundProps> {
     $pipelineName: string = null;
 
     constructor(props) {

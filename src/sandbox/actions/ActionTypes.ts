@@ -68,6 +68,6 @@ export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { m
 
 export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;
 
-export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions;
+export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions;
 
 export default ActionTypes;

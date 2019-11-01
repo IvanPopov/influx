@@ -6,7 +6,6 @@ import { IMarkerDesc } from './ActionTypes';
 import { MakeOptional } from '@lib/common';
 
 
-
 export type IDispatch = Dispatch<any>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
 
@@ -93,7 +92,6 @@ export const sourceCode = {
         return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
     }
 };
-
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };
 export function mapActions(actions): mapDispatchToProps<typeof actions> {

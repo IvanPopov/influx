@@ -24,6 +24,7 @@
     "@types/redux-thunk": "^2.1.32",
     "autobind-decorator": "^2.4.0",
     "awesome-typescript-loader": "^5.2.1",
+    "connected-react-router": "^6.5.2",
     "copy-to-clipboard": "^3.2.0",
     "copy-webpack-plugin": "^5.0.3",
     "cross-env": "^6.0.3",

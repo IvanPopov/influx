@@ -2,6 +2,7 @@ import { IAnalyzeResult as ISemanticAnalysisResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { EParserType, IParserParams, IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { RouterState } from 'connected-react-router';
 
 export interface IMarker {
     range: IRange;
@@ -53,6 +54,7 @@ export interface IParserState extends IParserParams {
 export interface IStoreState {
     readonly sourceFile: IFileState;
     readonly parserParams: IParserState;
+    readonly router: RouterState;
 }
 
 export default IStoreState;
