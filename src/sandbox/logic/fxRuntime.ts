@@ -1,49 +1,34 @@
 // tslint:disable:no-for-in
 // tslint:disable:forin
 
+import { verbose } from '@lib/common';
+import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
+import Pipeline from '@sandbox/containers/playground/Pipeline';
+import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import { assert } from '@lib/common';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
-import { ETechniqueType } from '@lib/idl/IInstruction';
-import Pipeline from '@sandbox/containers/playground/Pipeline';
 import { isNull } from 'util';
-import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
     type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT ],
 
     async process({ getState, action }, dispatch, done) {
-        // setTimeout(() =>
-        // // let { parseTree } = getSourceCode(getState());
-        // done(), 5000);
+        const file = getFileState(getState());
 
-        const sourceCode = getSourceCode(getState());
-
-        if (!sourceCode.analysis) {
+        if (!file.analysis) {
             done();
             return;
         }
 
-        // console.log('playground has been updated (scope has beed changed).');
+        verbose('playground has been updated.');
 
-        const scope = sourceCode.analysis.scope;
-        assert(scope);
-
-        const list: IPartFxInstruction[] = [];
-
-        for (const name in scope.techniqueMap) {
-            const tech = scope.techniqueMap[name];
-            if (tech.type !== ETechniqueType.k_PartFx) {
-                continue;
-            }
-            list.push(<IPartFxInstruction>tech);
-        }
+        const scope = getScope(file);
+        const list: IPartFxInstruction[] = filterPartFx(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
-        let pipelinePrev = <ReturnType<typeof Pipeline>>sourceCode.pipeline;
+        let pipelinePrev = file.pipeline;
         let pipelineNext = null;
 
         if (!isNull(pipelinePrev) && isNull(active)) {
@@ -53,7 +38,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
-        if (!active) { 
+        if (!active) {
             for (const fx of list) {
                 if (fx.isValid()) {
                     active = fx.name;
@@ -68,14 +53,14 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
             if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
                 pipelineNext = Pipeline(list[i]);
-                // console.log('next pipeline has been created.');
+                verbose('next pipeline has been created.');
             }
         }
 
         if (pipelineNext && pipelinePrev) {
             pipelinePrev.stop();
             pipelinePrev = null;
-            // console.log('previous pipeline has been dropped.');
+            verbose('previous pipeline has been dropped.');
         }
 
         const pipeline = pipelineNext || pipelinePrev;

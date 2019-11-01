@@ -1,8 +1,9 @@
 import { parser } from '@sandbox/actions';
 import ActionTypes from '@sandbox/actions/ActionTypes';
 import { App } from '@sandbox/containers';
-import logic, { LOCATION_NOT_FOUND } from '@sandbox/logic';
+import logic, { LOCATION_NOT_FOUND, LOCATION_PATTERN } from '@sandbox/logic';
 import reducer from '@sandbox/reducers';
+import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
 import { ConnectedRouter } from 'connected-react-router';
 import * as isElectron from 'is-electron-renderer';
@@ -13,8 +14,7 @@ import { Route, Switch } from 'react-router-dom';
 import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
-import { history } from '@sandbox/reducers/router';
-import { Message, Segment, Container, Modal, Header } from 'semantic-ui-react';
+import { Header, Modal } from 'semantic-ui-react';
 
 require('semantic-ui-less/semantic.less');
 
@@ -61,7 +61,7 @@ render(
     <Provider store={store}>
         <ConnectedRouter history={history}>
             <Switch>
-                <Route path='/:view/:fx/:name?/:pass?/:property?' component={App} />
+                <Route path={LOCATION_PATTERN} component={App} />
                 <Route exact path={LOCATION_NOT_FOUND}>
                     <Modal open basic size='small'>
                         <Header icon='archive' content='Location not found :/' />

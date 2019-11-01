@@ -1,12 +1,13 @@
 import { assert } from '@lib/common';
+import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
+import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import {
-    IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, 
-    IPlaygroundPipelineUpdate,
-    ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete,
-    ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
-    ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed,
-    ISourceFileRequest
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug,
+    IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint,
+    ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified,
+    ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
+    ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded,
+    ISourceFileLoadingFailed, ISourceFileRequest
 } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
@@ -44,7 +45,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.SOURCE_FILE_LOADING_FAILED]: (state, action: ISourceFileLoadingFailed) =>
         ({
-            ...state, 
+            ...state,
             error: action.payload.error,
             // NOTE: temp solution (clean up all info about prev file)
             content: null,
@@ -128,9 +129,19 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
 //- Selectors
 
-/** @deprecated */
-export const getSourceCode = (state: IStoreState): IFileState => state.sourceFile;
-/** @deprecated */
-export const getDebugger = (state: IStoreState): IDebuggerState => state.sourceFile.debugger;
-/** @deprecated */
-export const getPlayground = (state: IStoreState): any => state.sourceFile.pipeline;
+export const getFileState = (state: IStoreState): IFileState => state.sourceFile;
+export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(state).debugger;
+export const getScope = (file: IFileState): IScope => file.analysis ? file.analysis.scope : null;
+export const getPipelineName = (file: IFileState) => file.pipeline ? file.pipeline.name() : null;
+export function filterPartFx(scope: IScope): IPartFxInstruction[] {
+    if (!scope) {
+        return [];
+    }
+
+    const map = scope.techniqueMap;
+    return Object.keys(map)
+        .filter(name => map[name].type === ETechniqueType.k_PartFx)
+        .map(name => <IPartFxInstruction>map[name]);
+}
+
+

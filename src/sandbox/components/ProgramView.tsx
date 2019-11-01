@@ -25,7 +25,7 @@ import {
 } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
@@ -839,4 +839,4 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 }
 
-export default connect<{}, {}, IProgramViewProps>(mapProps(getSourceCode), {})(ProgramView) as any;
+export default connect<{}, {}, IProgramViewProps>(mapProps(getFileState), {})(ProgramView) as any;

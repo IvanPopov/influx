@@ -10,7 +10,7 @@ import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
-import { getDebugger, getSourceCode } from '@sandbox/reducers/sourceFile';
+import { getDebugger, getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
@@ -202,7 +202,7 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
     latest: true,
 
     async process({ getState, action }, dispatch, done) {
-        const fileState = getSourceCode(getState());
+        const fileState = getFileState(getState());
         const debuggerState = getDebugger(getState());
         const entryPoint = (action.payload && action.payload.entryPoint) || debuggerState.entryPoint ||Bytecode.DEFAULT_ENTRY_POINT_NAME;
 
@@ -243,7 +243,7 @@ const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsCha
         if (action.payload.options.colorize === false) {
             cleanupDebuggerColorization(getState(), dispatch);
         } else {
-            const markers = buildDebuggerSourceColorization(getDebugger(getState()), getSourceCode(getState()));
+            const markers = buildDebuggerSourceColorization(getDebugger(getState()), getFileState(getState()));
             emitDebuggerColorization(markers, dispatch);
         }
         done();
@@ -255,7 +255,7 @@ const debuggerStartLogic = createLogic<IStoreState>({
     type: evt.DEBUGGER_START_DEBUG,
 
     async process({ getState, action }, dispatch, done) {
-        const fileState = getSourceCode(getState());
+        const fileState = getFileState(getState());
         const debuggerState = getDebugger(getState());
 
         if (debuggerState.options.colorize) {

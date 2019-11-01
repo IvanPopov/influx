@@ -2,6 +2,7 @@ import { IAnalyzeResult as ISemanticAnalysisResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { EParserType, IParserParams, IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { IPipeline } from '@sandbox/containers/playground/Pipeline';
 import { RouterState } from 'connected-react-router';
 
 export interface IMarker {
@@ -40,7 +41,7 @@ export interface IFileState {
     breakpoints: number[];
 
     debugger: IDebuggerState;
-    pipeline: any; // todo: add type.
+    pipeline: IPipeline; // todo: add type.
     $pipeline: number;
 }
 

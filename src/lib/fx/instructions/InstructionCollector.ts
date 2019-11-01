@@ -25,9 +25,15 @@ export class InstructionCollector extends Instruction implements IInstructionCol
     }
 
     toCode(): string {
-        var code: string = "";
-        for (var i: number = 0; i < this.instructions.length; i++) {
-            code += this.instructions[i].toCode();
+        let code = "";
+        for (const instr of  this.instructions) {
+            switch (instr.instructionType) {
+                case EInstructionTypes.k_VariableDeclInstruction:
+                    code += instr.toCode() + ';\n';
+                break;
+                default:
+                    code += instr.toCode() + '\n';
+            }
         }
         return code;
     }

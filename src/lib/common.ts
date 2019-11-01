@@ -78,4 +78,5 @@ export type NonFunctionDiff<T1, T2> = NonFunctionProperties<Diff<T1, T2>>;
 export type PropertiesDiff<T1, T2> = Writeable<NonFunctionDiff<T1, T2>>;
 export type MakeOptional<T> = { [P in keyof T]?: T[P]; };
 
-export let assert = console.assert.bind(console);
+export const assert = console.assert.bind(console);
+export const verbose = console.log.bind(console);

@@ -12,7 +12,7 @@ import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { mapProps } from '@sandbox/reducers';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
@@ -371,6 +371,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 }
 
-export default connect<{}, {}, ISourceEditorProps>(mapProps(getSourceCode), mapActions(sourceActions))(SourceEditor) as any;
+export default connect<{}, {}, ISourceEditorProps>(mapProps(getFileState), mapActions(sourceActions))(SourceEditor) as any;
 
 

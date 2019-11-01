@@ -18,6 +18,7 @@ import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
 import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { filterPartFx, getScope, getFileState } from '@sandbox/reducers/sourceFile';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -184,7 +185,7 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
                         </div>
                     }
                 </Menu.Item>
-            </Menu> 
+            </Menu>
         );
     }
 }
@@ -278,6 +279,21 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    buildShaderMenu(): string[] {
+        const props = this.props;
+        const file = getFileState(props);
+        const list = filterPartFx(getScope(file));
+
+        let links: string[] = [];
+        for (const fx of list) {
+            links = links.concat(fx.passList
+                .filter(pass => !!pass.vertexShader)
+                .map((pass, i) => `/playground/${path.basename(file.filename)}/${fx.name}/${pass.name || i}/VertexShader`));
+        }
+        return links;
+    }
+
+
     render() {
         console.log('App::Render()');
         const { props, state, props: { sourceFile } } = this;
@@ -302,11 +318,15 @@ class App extends React.Component<IAppProps> {
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Dropdown item icon='gear' simple>
                                 <Dropdown.Menu>
-                                    <Dropdown.Item
-                                        as={ NavLink }
-                                        to={ '/playground/speed.fx/project.awesome/pass/' } >
-                                            GLSL shader
-                                    </Dropdown.Item>
+                                    {
+                                        this.buildShaderMenu().map(link => (
+                                            <Dropdown.Item
+                                                as={ NavLink }
+                                                to={ link } >
+                                                { link }
+                                            </Dropdown.Item>
+                                        ))
+                                    }
                                 </Dropdown.Menu>
                             </Dropdown>
                             <Menu.Menu position='right'>
@@ -482,6 +502,7 @@ class App extends React.Component<IAppProps> {
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceCodeMenu path={ props.match.params } />
                                     <Switch>
+                                        {/* TODO: sync all pathes with business logic */}
                                         <Route path='/playground/:fx/:name/:pass/vertexshader'>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>

@@ -1,14 +1,14 @@
+import { sourceCode as sourceActions } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IGrammarFileSpecified, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import fxRuntime from '@sandbox/logic/fxRuntime';
 import parsing from '@sandbox/logic/parsing';
-import IStoreState from '@sandbox/store/IStoreState';
-import { createLogic, createLogicMiddleware } from 'redux-logic';
-import { LOCATION_CHANGE, LocationChangeAction, push } from 'connected-react-router';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
 import { history } from '@sandbox/reducers/router';
+import { getFileState } from '@sandbox/reducers/sourceFile';
+import IStoreState from '@sandbox/store/IStoreState';
+import { LocationChangeAction, LOCATION_CHANGE } from 'connected-react-router';
 import { matchPath } from 'react-router';
-import { sourceCode as sourceActions } from '@sandbox/actions';
+import { createLogic, createLogicMiddleware } from 'redux-logic';
 
 
 const readFile = fname => fetch(fname).then(resp => resp.text());
@@ -48,7 +48,9 @@ const fetchGrammarFileLogic = createLogic<IStoreState, IGrammarFileSpecified['pa
 });
 
 export const LOCATION_NOT_FOUND = '/NotFound';
+export const LOCATION_PATTERN = '/:view/:fx?/:name?/:pass?/:property?';
 export const DEFAULT_FILENAME = '@new';
+export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
 
 
 const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']>({
@@ -58,7 +60,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
     async process({ getState, action }, dispatch, done) {
         const location = action.payload.location.pathname;
-        const sourceFile = getSourceCode(getState());
+        const sourceFile = getFileState(getState());
 
         if (location === '/') {
             // dispatch(push(`/playground/${DEFAULT_FILENAME}/`));
@@ -66,8 +68,8 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
             return done();
         }
 
-        let match = matchPath<{ view: string; fx: string; name: string }>(location, {
-            path: '/:view/:fx?/:name?/:pass?/:property?',
+        const match = matchPath<PATH_PARAMS_TYPE>(location, {
+            path: LOCATION_PATTERN,
             exact: false
         });
 
@@ -82,16 +84,15 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                     return done();
                 }
 
-                const fxRequest = fx !== DEFAULT_FILENAME ? 
-                    `./assets/fx/tests/${fx}` : 
+                const fxRequest = fx !== DEFAULT_FILENAME ?
+                    `./assets/fx/tests/${fx}` :
                     DEFAULT_FILENAME;
 
                 if (sourceFile.filename !== fxRequest) {
-                    console.log(fxRequest);
                     dispatch(sourceActions.openFile(fxRequest));
                 }
             }
-            
+
             return done();
         }
 
@@ -103,12 +104,16 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
     }
 });
 
+
+/**
+ * Redirect to default source (@new) if requested file was not found.
+ */
 const sourceFileNotFoundLogic = createLogic<IStoreState>({
     type: evt.SOURCE_FILE_LOADING_FAILED,
     async process({ getState }, dispatch, done) {
         const location = getState().router.location.pathname;
-        let match = matchPath<{ view: string; fx: string; name: string }>(location, {
-            path: '/:view/:fx?/:name?/:pass?/:property?',
+        const match = matchPath<PATH_PARAMS_TYPE>(location, {
+            path: LOCATION_PATTERN,
             exact: false
         });
 
@@ -117,7 +122,6 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
             if (fx !== DEFAULT_FILENAME) {
                 history.push(`/${view}/${DEFAULT_FILENAME}`);
             }
-            return done();
         }
 
         return done();

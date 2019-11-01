@@ -8,7 +8,7 @@ import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { getSourceCode } from '@sandbox/reducers/sourceFile';
+import { getFileState, getScope, filterPartFx, getPipelineName } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
@@ -89,21 +89,12 @@ class Playground extends React.Component<IPlaygroundProps> {
 
     render() {
         // console.log('Playground:render()');
-        const pipeline = this.props.pipeline as ReturnType<typeof Pipeline>;
-        const scope = this.props.analysis ? this.props.analysis.scope : null;
+        const props = this.props;
+        const pipeline = props.pipeline;
+        const scope = getScope(props);
 
-        const list: IPartFxInstruction[] = [];
-        const active = pipeline ? pipeline.name() : null;
-
-        if (scope) {
-            for (const name in scope.techniqueMap) {
-                const tech = scope.techniqueMap[name];
-                if (tech.type !== ETechniqueType.k_PartFx) {
-                    continue;
-                }
-                list.push(tech as IPartFxInstruction);
-            }
-        }
+        const list: IPartFxInstruction[] = filterPartFx(scope);
+        const active = getPipelineName(props);
 
         return (
             <div>
@@ -118,7 +109,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                     <div>
                         <List bulleted horizontal>
                             { list.map(fx => (
-                                <List.Item 
+                                <List.Item
                                     disabled={ !fx.isValid() }
                                     as={ (fx.name === active ? 'b' : 'a') }
                                     onClick={ () => this.pickEffect(fx.name) }
@@ -154,4 +145,4 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 }
 
-export default connect<{}, {}, IPlaygroundProps>(mapProps(getSourceCode), mapActions(sourceActions))(Playground) as any;
+export default connect<{}, {}, IPlaygroundProps>(mapProps(getFileState), mapActions(sourceActions))(Playground) as any;

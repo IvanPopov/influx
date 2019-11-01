@@ -162,24 +162,20 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
 
     toCode(): string {
-        var code: string = '';
+        var code = '';        
+        code = this.type.toCode();
+        code += ' ' + this.id.toCode();
 
-        {
-            code = this.type.toCode();
-            code += ' ' + this.id.toCode();
-
-            if (this.type.isNotBaseArray()) {
-                var iLength: number = this.type.length;
-                code += '[' + iLength + ']';
-            }
-
-            if (!isNull(this.initExpr) &&
-                !this.isSampler() &&
-                !this.isUniform()) {
-                code += '=' + this.initExpr.toCode();
-            }
+        if (this.type.isNotBaseArray()) {
+            var iLength: number = this.type.length;
+            code += '[' + iLength + ']';
         }
 
+        if (!isNull(this.initExpr) &&
+            !this.isSampler() &&
+            !this.isUniform()) {
+            code += '=' + this.initExpr.toCode();
+        }
         return code;
     }
 

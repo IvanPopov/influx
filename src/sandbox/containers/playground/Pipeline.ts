@@ -1,7 +1,7 @@
 /* tslint:disable:typedef */
 /* tslint:disable:variable-name */
 
-import { assert, isDef, isNull } from '@lib/common';
+import { assert, isDef, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
@@ -131,7 +131,7 @@ class Pass {
 
             // const ptr = prerenderedPartPtr;
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
-            // console.log(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
+            // verbose(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
         }
     }
 
@@ -237,11 +237,11 @@ export class Emitter {
             this.initRoutine.run(ptr, partId);
 
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
-            // console.log(`init (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
+            // verbose(`init (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
 
         if (this.nPartAdd > 0) {
-            // console.log(`spawn ${this.nPartAdd} particles`);
+            // verbose(`spawn ${this.nPartAdd} particles`);
             this.nPart += this.nPartAdd;
         }
 
@@ -266,7 +266,7 @@ export class Emitter {
             }
 
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
-            // console.log(`update(${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
+            // verbose(`update(${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
     }
 
@@ -281,16 +281,16 @@ export class Emitter {
 
 function Pipeline(fx: PartFx) {
     let emitter: Emitter = null;
-    
+
     let $startTime: number;
     let $elapsedTimeLevel: number;
     let $interval = null;
-    
+
     const constants: IPipelineConstants = {
         elapsedTime: 0,
         elapsedTimeLevel: 0
     };
-    
+
     let $name: string = null;
     function name() {
         return $name;
@@ -329,7 +329,7 @@ function Pipeline(fx: PartFx) {
     function stop() {
         clearInterval($interval);
         $interval = null;
-        console.log('pipeline stopped');
+        verbose('pipeline stopped');
     }
 
     function play() {
@@ -338,7 +338,7 @@ function Pipeline(fx: PartFx) {
 
         $startTime = Date.now();
         $elapsedTimeLevel = 0;
-        // todo: replace with requestAnimationFrame() ?
+        // TODO: replace with requestAnimationFrame() ?
         $interval = setInterval(update, 33);
     }
 
@@ -361,7 +361,7 @@ function Pipeline(fx: PartFx) {
         .map(pass => `${pass.particleInstance.hash}:${pass.geometry}`)
         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
 
-    // console.log(fxHash(fx));
+    // verbose(fxHash(fx));
 
     const isReplaceable = (fxNext: PartFx) => fxHash(fxNext) === fxHash(fx);
 
@@ -370,7 +370,7 @@ function Pipeline(fx: PartFx) {
             return false;
         }
 
-        console.log('pipeline reloaded from the shadow');
+        verbose('pipeline reloaded from the shadow');
         load(fxNext);
         return true;
     }
@@ -382,3 +382,6 @@ function Pipeline(fx: PartFx) {
 
 
 export default Pipeline;
+
+
+export type IPipeline = ReturnType<typeof Pipeline>;
