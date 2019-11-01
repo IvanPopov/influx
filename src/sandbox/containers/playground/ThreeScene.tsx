@@ -232,7 +232,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     createRenderer(width, height) {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         // this.renderer.setClearColor('#000000');
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height - 3);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.mount.appendChild(this.renderer.domElement);
 

@@ -83,6 +83,14 @@ export const sourceCode = {
 
     specifyOptions(options: MakeOptional<IDebuggerState['options']>) {
         return { type: evt.DEBUGGER_OPTIONS_CHANGED, payload: { options } };
+    },
+
+    //
+    //
+    //
+
+    selectEffect(name: string) {
+        return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
     }
 };
 

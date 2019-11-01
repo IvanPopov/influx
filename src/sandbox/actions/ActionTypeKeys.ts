@@ -16,8 +16,10 @@ export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakp
 
 export const DEBUGGER_COMPILE                       = 'debugger-compile';
 export const DEBUGGER_START_DEBUG                   = 'debugger-start-debug';
-export const DEBUGGER_RESET                         = 'debugger-reset'; // cancel compilation or jut clean up all previous results from store
+// cancel compilation or jut clean up all previous results from store
+export const DEBUGGER_RESET                         = 'debugger-reset';
 export const DEBUGGER_COLORIZE                      = 'debugger-colorize';
-export const DEBUGGER_OPTIONS_CHANGED             = 'debugger-options-changed';
+export const DEBUGGER_OPTIONS_CHANGED               = 'debugger-options-changed';
 
+export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
 

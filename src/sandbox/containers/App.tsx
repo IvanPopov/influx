@@ -7,7 +7,7 @@ import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
-import { BytecodeView, ParserParameters, Playground, SourceEditor2 } from '@sandbox/containers';
+import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -15,9 +15,9 @@ import * as path from 'path';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { matchPath, NavLink, Route, RouteComponentProps, withRouter } from 'react-router-dom';
+import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
 import {
-    Button, Checkbox, Container, Dropdown, Grid, Header, Icon, Input,
+    Button, Checkbox, Container, Dropdown, Grid, Icon, Input,
     Menu, Message, Segment, Sidebar, Tab, Table
 } from 'semantic-ui-react';
 
@@ -70,7 +70,10 @@ export const styles = {
         // boxShadow: '-5px 0 5px black',
         zIndex: 1,
         paddingLeft: '0 !important',
-        backgroundColor: 'white'
+        backgroundColor: 'white',
+        '& > .container': {
+            paddingTop: '15px'
+        }
     },
     leftColumnFix: {
         paddingRight: '0px !important'
@@ -78,6 +81,11 @@ export const styles = {
     versionFix: {
         padding: '5px !important',
         margin: '-5px !important'
+    },
+
+    tabHeaderFix: {
+        marginTop: 0,
+        boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.075)'
     },
 
     //
@@ -88,7 +96,6 @@ export const styles = {
         background: '#1e1e1e !important',
         position: 'relative',
         zIndex: 1,
-        borderBottom: '1px solid #101010 !important',
         height: 'auto !important',
         minHeight: 'auto !important',
 
@@ -130,6 +137,11 @@ const Version = (props) => {
 };
 
 interface ISourceCodeMenuProps extends IWithStyles<typeof styles> {
+    path: {
+        name?: string;
+        pass?: string;
+        property?: string;
+    };
 }
 
 @injectSheet(styles)
@@ -139,7 +151,7 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
     handleItemClick = (e, { name }) => this.setState({ activeItem: name })
 
     render() {
-        const { activeItem } = this.state;
+        const { state: { activeItem }, props: { path } } = this;
 
         return (
             <Menu size='mini' pointing secondary inverted attached className={ this.props.classes.mebFix }>
@@ -158,8 +170,21 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
                     active={ activeItem === 'vertexshader' }
                     onClick={ this.handleItemClick }
                 >
-                    holographicTable <Icon name={ 'chevron right' as any } />
-                    Cylinders <Icon name={ 'chevron right' as any } /> VertexShader
+                    { path.name &&
+                        <div>
+                            { path.name } < Icon name={ 'chevron right' as any } />
+                        </div>
+                    }
+                    { path.pass &&
+                        <div>
+                            { `pass[${path.pass}]` } < Icon name={ 'chevron right' as any } />
+                        </div>
+                    }
+                    { path.property &&
+                        <div>
+                            { path.property }
+                        </div>
+                    }
                 </Menu.Item>
             </Menu>
         );
@@ -283,15 +308,7 @@ class App extends React.Component<IAppProps> {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
 
-        // FIXME: use router api
-        // let request = (window.location.hash.match(/^\#\/(playground|bytecode|program|ast)\/(.*)$/) || [])[2] || '';
-        // if (request) {
-        //     if (props.sourceFile.filename !== request) {
-        //         console.log(props.sourceFile.filename, request);
-        //         // props.actions.openFile(request);
-        //     }
-        //     request = `/${request}`;
-        // }
+        // console.log(JSON.stringify(props.match, null, '\t'));
 
         const analysisResults = [
             {
@@ -304,16 +321,28 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/playground'>
-                        {/* <Tab.Pane attached={ false } key='playground-view'> */ }
-                        {/* <Header as='h4' dividing>
-                                <Icon name={ 'flame' as any } />
-                                <Header.Content>
+                        {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
+                            Playground
+                        </Header> */}
+                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Dropdown item icon='gear' simple>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item
+                                        as={ NavLink }
+                                        to={ '/playground/speed.fx/project.awesome/pass/' } >
+                                            GLSL shader
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
+                            <Menu.Menu position='right'>
+                                <div className='ui right aligned category search item'>
                                     Playground
-                                    <Header.Subheader>Take a look at what's under the hood</Header.Subheader>
-                                </Header.Content>
-                            </Header> */}
-                        <Playground scope={ props.sourceFile.analysis && props.sourceFile.analysis.scope } />
-                        {/* </Tab.Pane> */ }
+                                </div>
+                            </Menu.Menu>
+                        </Menu>
+                        <Tab.Pane attached={ 'bottom' } key='playground-view'>
+                            <Playground />
+                        </Tab.Pane>
                     </Route>
                 )
             },
@@ -327,16 +356,19 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/bytecode'>
-                        <Tab.Pane attached={ false } key='bytecode-view'>
-                            <Header as='h4' dividing>
-                                <Icon name='plug' />
-                                <Header.Content>
+                        {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
+                            Bytecode Debugger
+                        </Header> */}
+                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Menu.Menu position='right'>
+                                <div className='ui right aligned category search item'>
                                     Bytecode Debugger
-                                </Header.Content>
-                            </Header>
+                                </div>
+                            </Menu.Menu>
+                        </Menu>
+                        <Tab.Pane attached={ 'bottom' } key='bytecode-view'>
                             <Table size='small' basic='very' compact='very'>
                                 <Table.Body>
-                                    {/* todo: remove this padding hack */ }
                                     <Table.Row style={ { paddingTop: 0 } }>
                                         <Table.Cell>
                                             <Input
@@ -403,13 +435,14 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/program'>
-                        <Tab.Pane attached={ false } key='program-view'>
-                            <Header as='h4' dividing>
-                                <Header.Content>
-                                    <Icon name={ 'git compare' as UnknownIcon } />
-                                    Symantic Analysis
-                                </Header.Content>
-                            </Header>
+                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Menu.Menu position='right'>
+                                <div className='ui right aligned category search item'>
+                                    Semantic Analisys
+                                </div>
+                            </Menu.Menu>
+                        </Menu>
+                        <Tab.Pane attached={ 'bottom' } key='program-view'>
                             <ProgramView
                                 onNodeOver={ inst => this.highlightInstruction(inst, true) }
                                 onNodeOut={ inst => this.highlightInstruction(inst, false) }
@@ -429,13 +462,17 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/ast'>
-                        <Tab.Pane attached={ false } key='ast-view'>
-                            <Header as='h4' dividing>
-                                <Header.Content>
-                                    <Icon name='pencil' />
+                        {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
+                            Syntax Analysis
+                        </Header> */}
+                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Menu.Menu position='right'>
+                                <div className='ui right aligned category search item'>
                                     Syntax Analysis
-                                </Header.Content>
-                            </Header>
+                                </div>
+                            </Menu.Menu>
+                        </Menu>
+                        <Tab.Pane attached={ 'bottom' } key='ast-view'>
                             <ASTView
                                 onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
                                 onNodeOut={ idx => this.highlightPNode(idx, null, false) }
@@ -468,11 +505,18 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
-                                    <SourceCodeMenu />
-                                    <SourceEditor2 name='source-code' />
+                                    <SourceCodeMenu path={ props.match.params } />
+                                    <Switch>
+                                        <Route exact path='/playground/:fx'>
+                                            <SourceEditor2 name='source-code' />
+                                        </Route>
+                                        <Route exact path='/playground/:fx/:name/:pass/vertexshader'>
+                                            <ShaderTranslatorView name='shader-translator-view' />
+                                        </Route>
+                                    </Switch>
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
-                                    <Container style={ { paddingTop: '15px' } }>
+                                    <Container>
                                         <Tab
                                             defaultActiveIndex={ defaultActiveIndex }
                                             menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }

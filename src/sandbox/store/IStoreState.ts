@@ -26,6 +26,7 @@ export interface IDebuggerState {
     runtime: ISubProgram;
 }
 
+
 export interface IFileState {
     filename: string;               // source file's path
     content: string;                // source file's content
@@ -38,6 +39,7 @@ export interface IFileState {
     breakpoints: number[];
 
     debugger: IDebuggerState;
+    pipeline: any; // todo: add type.
 }
 
 export interface IParserState extends IParserParams {

@@ -36,7 +36,8 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.parseTree',
         'sourceFile.analysis',
 
-        'sourceFile.debugger.runtime'
+        'sourceFile.debugger.runtime',
+        'sourceFile.playground'
     ]
 } as any);
 
@@ -62,7 +63,7 @@ render(
                 <Redirect from='/bytecode' strict exact to={ `/bytecode/${defaultName}` } />
                 <Redirect from='/program' strict exact to={ `/program/${defaultName}` } />
                 <Redirect from='/ast' strict exact to={ `/ast/${defaultName}` } />
-                <Route path='/:view/:fx' component={ App } />
+                <Route path='/:view/:fx/:name?/:pass?/:property?' component={ App } />
             </Switch>
         </Router>
     </Provider>,

@@ -1,7 +1,8 @@
 import { assert } from '@lib/common';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import {
-    IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug,
+    IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, 
+    IPlaygroundSelectEffect,
     ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete,
     ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
     ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed,
@@ -27,11 +28,12 @@ const initialState: IFileState = {
             disableOptimizations: true,
             autocompile: false
         }
-    }
+    },
+    pipeline: null
 };
 
 
-export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>({
+export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IPlaygroundActions>({
     [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
         ({ ...state, filename: action.payload.filename }),
 
@@ -107,7 +109,14 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
         const $debugger = { ...state.debugger, options };
         // console.log(JSON.stringify(options, null, '\t'));
         return { ...state, debugger: $debugger };
-    }
+    },
+
+    //
+    // playground
+    //
+
+    [evt.PLAYGROUND_SELECT_EFFECT]: (state, action: IPlaygroundSelectEffect) =>
+        ({ ...state, pipeline: action.payload.pipeline })
 
 }, initialState);
 
@@ -118,3 +127,5 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
 export const getSourceCode = (state: IStoreState): IFileState => state.sourceFile;
 /** @deprecated */
 export const getDebugger = (state: IStoreState): IDebuggerState => state.sourceFile.debugger;
+/** @deprecated */
+export const getPlayground = (state: IStoreState): any => state.sourceFile.pipeline;

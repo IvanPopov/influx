@@ -279,7 +279,7 @@ const debuggerAutocompileLogic = createLogic<IStoreState>({
 
         done();
     }
-})
+});
 
 
 export default [

@@ -50,6 +50,13 @@ export type IDebuggerOptionsChanged = IAction<typeof evt.DEBUGGER_OPTIONS_CHANGE
 export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStartDebug | IDebuggerOptionsChanged;
 
 //
+// playground
+//
+
+export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { pipeline: any }>;
+export type IPlaygroundActions = IPlaygroundSelectEffect;
+
+//
 // grammar api (simplified)
 //
 

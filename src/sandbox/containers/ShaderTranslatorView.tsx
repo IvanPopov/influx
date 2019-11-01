@@ -21,5 +21,5 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 export default connect<{}, {}, IShaderTranslatorViewProps>(
     mapProps(getSourceCode),
     mapActions(sourceActions))
-    (ShaderTranslatorView);
+    (ShaderTranslatorView) as any;
 

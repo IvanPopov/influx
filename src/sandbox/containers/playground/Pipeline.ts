@@ -280,6 +280,7 @@ export class Emitter {
 
 
 function Pipeline(fx: PartFx) {
+    const name = fx.name;
 
     let emitter: Emitter = null;
 
@@ -371,7 +372,7 @@ function Pipeline(fx: PartFx) {
 
     load(fx);
 
-    return { stop, play, isStopped, emitter, shadowReload };
+    return { stop, play, isStopped, emitter, shadowReload, name };
 }
 
 

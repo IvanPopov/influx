@@ -13,7 +13,7 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
     latest: true,
     async process({ getState, action }, dispatch, done) {
         try {
-            let content = await readFile(action.payload.filename);
+            const content = await readFile(action.payload.filename);
             dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
         } catch (error) {
             dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
@@ -31,7 +31,7 @@ const fetchGrammarFileLogic = createLogic<IStoreState, IGrammarFileSpecified['pa
     latest: true,
     async process({ getState, action }, dispatch, done) {
         try {
-            let content = await readFile(action.payload.filename);
+            const content = await readFile(action.payload.filename);
             dispatch({ type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
         } catch (error) {
             // todo: add event;
