@@ -507,11 +507,20 @@ class App extends React.Component<IAppProps> {
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceCodeMenu path={ props.match.params } />
                                     <Switch>
+                                        <Route path='/playground/:fx/:name/:pass/vertexshader'>
+                                            <ShaderTranslatorView name='shader-translator-view' />
+                                        </Route>
                                         <Route exact path='/playground/:fx'>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path='/playground/:fx/:name/:pass/vertexshader'>
-                                            <ShaderTranslatorView name='shader-translator-view' />
+                                        <Route exact path='/bytecode/:fx'>
+                                            <SourceEditor2 name='source-code' />
+                                        </Route>
+                                        <Route exact path='/program/:fx'>
+                                            <SourceEditor2 name='source-code' />
+                                        </Route>
+                                        <Route exact path='/ast/:fx'>
+                                            <SourceEditor2 name='source-code' />
                                         </Route>
                                     </Switch>
                                 </Grid.Column>

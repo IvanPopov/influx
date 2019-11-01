@@ -9,23 +9,25 @@ import { assert } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { ETechniqueType } from '@lib/idl/IInstruction';
 import Pipeline from '@sandbox/containers/playground/Pipeline';
+import { isNull } from 'util';
+import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 
-const analysisCompleteLogic = createLogic<IStoreState>({
-    type: evt.SOURCE_CODE_ANALYSIS_COMPLETE,
+const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
+    type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT ],
 
-    async process({ getState }, dispatch, done) {
+    async process({ getState, action }, dispatch, done) {
         // setTimeout(() =>
         // // let { parseTree } = getSourceCode(getState());
         // done(), 5000);
 
         const sourceCode = getSourceCode(getState());
-        
+
         if (!sourceCode.analysis) {
             done();
             return;
         }
 
-        console.log('playground has been updated (scope has beed changed).');
+        // console.log('playground has been updated (scope has beed changed).');
 
         const scope = sourceCode.analysis.scope;
         assert(scope);
@@ -40,18 +42,18 @@ const analysisCompleteLogic = createLogic<IStoreState>({
             list.push(<IPartFxInstruction>tech);
         }
 
-        let active = null;
+        let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
         let pipelinePrev = <ReturnType<typeof Pipeline>>sourceCode.pipeline;
         let pipelineNext = null;
 
-        if (pipelinePrev) {
+        if (!isNull(pipelinePrev) && isNull(active)) {
             if (list.map(fx => fx.name)
-                    .indexOf(pipelinePrev.name) !== -1) {
-                active = pipelinePrev.name;
+                .indexOf(pipelinePrev.name()) !== -1) {
+                active = pipelinePrev.name();
             }
         }
 
-        if (!active) {
+        if (!active) { 
             for (const fx of list) {
                 if (fx.isValid()) {
                     active = fx.name;
@@ -62,27 +64,27 @@ const analysisCompleteLogic = createLogic<IStoreState>({
 
         if (active) {
             const i = list.map(fx => fx.name)
-                          .indexOf(active);
+                .indexOf(active);
 
             if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
                 pipelineNext = Pipeline(list[i]);
-                console.log('next pipeline has been created.');
+                // console.log('next pipeline has been created.');
             }
         }
 
         if (pipelineNext && pipelinePrev) {
             pipelinePrev.stop();
             pipelinePrev = null;
-            console.log('previous pipeline has been dropped.');
+            // console.log('previous pipeline has been dropped.');
         }
 
         const pipeline = pipelineNext || pipelinePrev;
-        dispatch({ type: evt.PLAYGROUND_SELECT_EFFECT, payload: { pipeline } });
+        dispatch({ type: evt.PLAYGROUND_PIPELINE_UPDATE, payload: { pipeline } });
         done();
     }
 });
 
 
 export default [
-    analysisCompleteLogic
+    playgroundUpdateLogic
 ];

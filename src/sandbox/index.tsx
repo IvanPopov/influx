@@ -37,7 +37,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.analysis',
 
         'sourceFile.debugger.runtime',
-        'sourceFile.playground'
+        'sourceFile.pipeline'
     ]
 } as any);
 

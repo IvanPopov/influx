@@ -2,7 +2,7 @@ import { assert } from '@lib/common';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import {
     IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, 
-    IPlaygroundSelectEffect,
+    IPlaygroundPipelineUpdate,
     ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete,
     ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
     ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded, ISourceFileLoadingFailed,
@@ -29,7 +29,8 @@ const initialState: IFileState = {
             autocompile: false
         }
     },
-    pipeline: null
+    pipeline: null,
+    $pipeline: 0
 };
 
 
@@ -115,8 +116,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
     // playground
     //
 
-    [evt.PLAYGROUND_SELECT_EFFECT]: (state, action: IPlaygroundSelectEffect) =>
-        ({ ...state, pipeline: action.payload.pipeline })
+    [evt.PLAYGROUND_PIPELINE_UPDATE]: (state, action: IPlaygroundPipelineUpdate) =>
+        ({ ...state, pipeline: action.payload.pipeline, $pipeline: state.$pipeline + 1 })
 
 }, initialState);
 

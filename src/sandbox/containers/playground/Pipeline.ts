@@ -280,18 +280,21 @@ export class Emitter {
 
 
 function Pipeline(fx: PartFx) {
-    const name = fx.name;
-
     let emitter: Emitter = null;
-
+    
     let $startTime: number;
     let $elapsedTimeLevel: number;
     let $interval = null;
-
+    
     const constants: IPipelineConstants = {
         elapsedTime: 0,
         elapsedTimeLevel: 0
     };
+    
+    let $name: string = null;
+    function name() {
+        return $name;
+    }
 
     function load(fx: PartFx) {
         const spawnRoutine = prebuild(fx.spawnRoutine);
@@ -319,6 +322,8 @@ function Pipeline(fx: PartFx) {
             emitter.shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList });
             emitter.tick(constants);
         }
+
+        $name = fx.name;
     }
 
     function stop() {

@@ -19,16 +19,12 @@ import ThreeScene from './ThreeScene';
 
 
 interface IPlaygroundProps extends IFileState {
-    
-}
-
-
-interface IPlaygroundState {
-
+    actions: typeof sourceActions;
 }
 
 
 
+// TODO: remove it
 const threeStylesHotfix: React.CSSProperties = {
     height: 'calc(100vh - 275px - 1em)',
     position: 'relative',
@@ -38,12 +34,11 @@ const threeStylesHotfix: React.CSSProperties = {
 };
 
 
-class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
-    state: IPlaygroundState;
+class Playground extends React.PureComponent<IPlaygroundProps> {
+    $pipelineName: string = null;
 
     constructor(props) {
         super(props);
-        this.state = {};
     }
 
     // static getDerivedStateFromProps(props: IPlaygroundProps, state: IPlaygroundState) {
@@ -73,23 +68,28 @@ class Playground extends React.Component<IPlaygroundProps, IPlaygroundState> {
     }
 
 
-    pickEffect(active) {}
+    pickEffect(active) {
+        this.props.actions.selectEffect(active);
+    }
 
 
-    shouldComponentUpdate(nextProps: IPlaygroundProps, nextState: IPlaygroundState) {
-        // return this.state.active !== nextProps.playground.active ||
-        //        this.state.scope !== nextProps.analysis.scope;
-        return true;
+    shouldComponentUpdate(nextProps: IPlaygroundProps) {
+        return nextProps.pipeline !== this.props.pipeline || 
+        (this.props.pipeline && this.$pipelineName !== this.props.pipeline.name());
+    }
+
+    componentDidUpdate() {
+        this.$pipelineName = this.props.pipeline.name();
     }
 
 
     render() {
-        console.log('Playground:render()');
+        // console.log('Playground:render()');
         const pipeline = this.props.pipeline as ReturnType<typeof Pipeline>;
         const scope = this.props.analysis ? this.props.analysis.scope : null;
 
         const list: IPartFxInstruction[] = [];
-        const active = pipeline ? pipeline.name : null;
+        const active = pipeline ? pipeline.name() : null;
 
         if (scope) {
             for (const name in scope.techniqueMap) {

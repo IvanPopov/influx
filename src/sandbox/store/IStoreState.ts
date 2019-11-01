@@ -40,6 +40,7 @@ export interface IFileState {
 
     debugger: IDebuggerState;
     pipeline: any; // todo: add type.
+    $pipeline: number;
 }
 
 export interface IParserState extends IParserParams {

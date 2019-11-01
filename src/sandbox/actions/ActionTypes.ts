@@ -53,8 +53,9 @@ export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStar
 // playground
 //
 
-export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { pipeline: any }>;
-export type IPlaygroundActions = IPlaygroundSelectEffect;
+export type IPlaygroundPipelineUpdate = IAction<typeof evt.PLAYGROUND_PIPELINE_UPDATE, { pipeline: any }>;
+export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { name: string }>;
+export type IPlaygroundActions = IPlaygroundPipelineUpdate | IPlaygroundSelectEffect;
 
 //
 // grammar api (simplified)
