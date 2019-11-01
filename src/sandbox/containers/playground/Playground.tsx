@@ -79,7 +79,11 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 
     componentDidUpdate() {
-        this.$pipelineName = this.props.pipeline.name();
+        if (this.props.pipeline) {
+            this.$pipelineName = this.props.pipeline.name();
+        } else {
+            this.$pipelineName = null;
+        }
     }
 
 
