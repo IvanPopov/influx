@@ -21,11 +21,11 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
     // helpers
     protected _decl: IFunctionDeclInstruction; // << move to resolveDecl() method.
     
-    constructor({ decl, args = [], ...settings }: IFunctionCallInstructionSettings) {
+    constructor({ decl, args, ...settings }: IFunctionCallInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionCallInstruction, ...settings });
         
         this._decl = decl;
-        this._args = args.map(arg => Instruction.$withParent(arg, this));
+        this._args = (args || []).map(arg => Instruction.$withParent(arg, this));
     }
 
 

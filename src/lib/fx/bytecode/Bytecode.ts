@@ -693,7 +693,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const fdef = fdecl.definition;
                     const retType = fdef.returnType;
 
-                    // TODO: replace with fecl.builtIn
                     if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
                         // breakpoint before intrinsic call
                         // TODO: is it's breakpoint really usefull?
@@ -897,8 +896,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_FunctionDeclInstruction:
                 {
                     let func = instr as IFunctionDeclInstruction;
+
+                    // resolve function's implementation
+                    func = func.scope.findFunctionInScope(func);
+
                     let def = func.definition; // todo: handle all arguments!!
                     let impl = func.implementation;
+
 
                     translate(impl);
 

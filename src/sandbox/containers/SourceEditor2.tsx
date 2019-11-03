@@ -5,7 +5,7 @@
 
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
+import { ETechniqueType, IScope, EInstructionTypes } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import DistinctColor from '@lib/util/DistinctColor';
@@ -96,7 +96,8 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                         lenses.push({ range, command: { id: null, title: `[update routine]` } });
                     }
 
-                    if (partFx.particle && !partFx.particle.builtIn) {
+                    if (partFx.particle &&
+                            partFx.particle.instructionType !== EInstructionTypes.k_SystemTypeInstruction) {
                         sourceNode = partFx.particle.sourceNode;
                         loc = sourceNode.loc;
 

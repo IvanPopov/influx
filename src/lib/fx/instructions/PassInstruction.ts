@@ -1,16 +1,12 @@
-import { IFunctionDeclInstruction, IPassInstruction, EFunctionType, IVariableDeclInstruction, EInstructionTypes, ITypeInstruction } from "../../idl/IInstruction";
-import { IIdInstruction } from "../../idl/IInstruction";
-import { IInstructionSettings, Instruction } from "./Instruction";
-import { IDeclInstructionSettings } from "./DeclInstruction";
-import { IAnnotationInstruction } from "../../idl/IInstruction";
-import { ERenderStateValues } from "../../idl/ERenderStateValues";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
-import { DeclInstruction } from "./DeclInstruction";
-import { isNull } from "../../common";
-import { ERenderStates } from "../../idl/ERenderStates";
-import { ETextureWrapModes, ETextureFilters } from "../../idl/ITexture";
-import { ISamplerState } from "../../idl/ISamplerState";
+import { isNull } from "@lib/common";
+import { ERenderStates } from "@lib/idl/ERenderStates";
+import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
+import { EInstructionTypes, IAnnotationInstruction, IFunctionDeclInstruction, IIdInstruction, IPassInstruction } from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
+import { ISamplerState } from "@lib/idl/ISamplerState";
+import { ETextureFilters, ETextureWrapModes } from "@lib/idl/ITexture";
+import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
+import { Instruction } from "./Instruction";
 
 
 export interface IPassInstructionSettings extends IDeclInstructionSettings {
@@ -28,18 +24,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _id: IIdInstruction;
     protected _annotation: IAnnotationInstruction;
 
-    protected _uniformVariableMapV: IMap<IVariableDeclInstruction>;
-    protected _textureVariableMapV: IMap<IVariableDeclInstruction>;
-    protected _usedComplexTypeMapV: IMap<ITypeInstruction>;
-
-    protected _uniformVariableMapP: IMap<IVariableDeclInstruction>;
-    protected _textureVariableMapP: IMap<IVariableDeclInstruction>;
-    protected _usedComplexTypeMapP: IMap<ITypeInstruction>;
-
-    // todo: remove this extra info
-    protected _fullUniformVariableMap: IMap<IVariableDeclInstruction>;
-    protected _fullTextureVariableMap: IMap<IVariableDeclInstruction>;
-
     constructor({ id = null, vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PassInstruction, ...settings });
 
@@ -51,20 +35,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         this._pixelShader = Instruction.$withNoParent(pixelShader);
 
         this._id = id;
-
-        console.assert(isNull(vertexShader) || vertexShader.functionType === EFunctionType.k_Vertex);
-        console.assert(isNull(pixelShader) || pixelShader.functionType === EFunctionType.k_Pixel);
-
-        this._uniformVariableMapV = {};
-        this._textureVariableMapV = {};
-        this._usedComplexTypeMapV = {};
-
-        this._uniformVariableMapP = {};
-        this._textureVariableMapP = {};
-        this._usedComplexTypeMapP = {};
-
-        this._fullUniformVariableMap = {};
-        this._fullTextureVariableMap = {};
     }
 
 
@@ -81,38 +51,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     }
 
 
-    get uniformVariableMapV(): IMap<IVariableDeclInstruction> {
-        return this._uniformVariableMapV;
-    }
-
-    get textureVariableMapV(): IMap<IVariableDeclInstruction> {
-        return this._textureVariableMapV;
-    }
-
-    get usedComplexTypeMapV(): IMap<ITypeInstruction> {
-        return this._usedComplexTypeMapV;
-    }
-
-    get uniformVariableMapP(): IMap<IVariableDeclInstruction> {
-        return this._uniformVariableMapP;
-    }
-
-    get textureVariableMapP(): IMap<IVariableDeclInstruction> {
-        return this._textureVariableMapP;
-    }
-
-    get usedComplexTypeMapP(): IMap<ITypeInstruction> {
-        return this._usedComplexTypeMapP;
-    }
-
-    get fullUniformMap(): IMap<IVariableDeclInstruction> {
-        return this._fullUniformVariableMap;
-    }
-
-    get fullTextureMap(): IMap<IVariableDeclInstruction> {
-        return this._fullTextureVariableMap;
-    }
-
     get vertexShader(): IFunctionDeclInstruction {
         return this._vertexShader;
     }
@@ -121,9 +59,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         return this._pixelShader;
     }
 
-    $finalizePass(): void {
-        this.generateInfoAboutUsedVaraibles();
-    }
 
     getState(eType: ERenderStates): ERenderStateValues {
         return this._passStateMap[eType];
@@ -131,57 +66,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
 
     get renderStates(): IMap<ERenderStateValues> {
         return this._passStateMap;
-    }
-
-
-    private generateInfoAboutUsedVaraibles(): void {
-        {
-            if (!isNull(this._vertexShader)) {
-                this.addInfoAbouUsedVariablesFromFunction(this._vertexShader);
-            }
-            if (!isNull(this._pixelShader)) {
-                this.addInfoAbouUsedVariablesFromFunction(this._pixelShader);
-            }
-        }
-    }
-
-    private addInfoAbouUsedVariablesFromFunction(func: IFunctionDeclInstruction): void {
-        // let uniformVars: IMap<IVariableDeclInstruction> = func.uniformVariableMap;
-        // let textureVars: IMap<IVariableDeclInstruction> = func.textureVariableMap;
-        // let types: IMap<ITypeInstruction> = func.usedComplexTypeMap;
-
-        // let uniformVarsTo: IMap<IVariableDeclInstruction> = null;
-        // let textureVarsTo: IMap<IVariableDeclInstruction> = null;
-        // let typesTo: IMap<ITypeInstruction> = null;
-
-        // if (func.functionType === EFunctionType.k_Vertex) {
-        //     uniformVarsTo = this._uniformVariableMapV;
-        //     textureVarsTo = this._textureVariableMapV;
-        //     typesTo = this._usedComplexTypeMapV;
-        // }
-        // else {
-        //     uniformVarsTo = this._uniformVariableMapP;
-        //     textureVarsTo = this._textureVariableMapP;
-        //     typesTo = this._usedComplexTypeMapP;
-        // }
-
-        // for (let i in uniformVars) {
-        //     if (!isNull(uniformVars[i])) {
-        //         uniformVarsTo[i] = uniformVars[i];
-        //         this._fullUniformVariableMap[i] = uniformVars[i];
-        //     }
-        // }
-        // for (let i in textureVars) {
-        //     if (!isNull(textureVars[i])) {
-        //         textureVarsTo[i] = textureVars[i];
-        //         this._fullTextureVariableMap[i] = textureVars[i];
-        //     }
-        // }
-        // for (let i in types) {
-        //     if (!isNull(types[i])) {
-        //         typesTo[i] = types[i];
-        //     }
-        // }
     }
 
     static createRenderStateMap(): IMap<ERenderStateValues> {

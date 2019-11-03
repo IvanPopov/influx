@@ -33,10 +33,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this.addFields(fields.map(field => Instruction.$withParent(field, this)));
     }
 
-    get builtIn(): boolean {
-        return false;
-    }
-    
     
     get writable(): boolean {
         return true;

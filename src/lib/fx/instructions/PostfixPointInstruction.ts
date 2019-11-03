@@ -1,7 +1,5 @@
+import { EInstructionTypes, IExprInstruction, IIdExprInstruction, IPostfixPointInstruction } from "@lib/idl/IInstruction";
 import { ExprInstruction } from "./ExprInstruction";
-import { EInstructionTypes, IIdExprInstruction, EFunctionType, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction, IPostfixPointInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings, Instruction } from "./Instruction";
 
 
@@ -34,7 +32,7 @@ export class PostfixPointInstruction extends ExprInstruction implements IPostfix
     }
 
 
-    get element(): IExprInstruction {
+    get element(): IExprInstruction { 
         return this._element;
     }
 
@@ -47,9 +45,9 @@ export class PostfixPointInstruction extends ExprInstruction implements IPostfix
     toCode(): string {
         var code: string = '';
 
-        code += this.element.visible ? this.element.toCode() : "";
-        code += this.element.visible ? "." : "";
-        code += this.postfix.visible ? this.postfix.toCode() : "";
+        code += this.element.toCode();
+        code += '.';
+        code += this.postfix.toCode();
 
         return code;
     }

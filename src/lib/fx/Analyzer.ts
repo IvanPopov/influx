@@ -1,9 +1,9 @@
-﻿import { assert, isBoolean, isDef, isDefAndNotNull, isNull, PropertiesDiff } from '@lib/common';
+﻿import { assert, isBoolean, isDef, isDefAndNotNull, isNull, PropertiesDiff, mwalk } from '@lib/common';
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EFunctionType, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, UnaryOperator } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IUnaryOperator, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IStmtDerived, IIfStmtInstruction, IForStmtInstruction, IWhileStmtInstruction, IDoWhileOperator } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IPartFxInstruction, IPartFxPassInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
@@ -55,7 +55,7 @@ import { TypeDeclInstruction } from './instructions/TypeDeclInstruction';
 import { UnaryExprInstruction } from './instructions/UnaryExprInstruction';
 import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
-import { DoWhileOperator, WhileStmtInstruction } from './instructions/WhileStmtInstruction';
+import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
@@ -246,176 +246,6 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 
     program.globalScope.addTechnique(technique);
 }
-
-
-// function checkFunctionsForRecursion(context: Context): void {
-//     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
-//     let isNewAdd: boolean = true;
-//     let isNewDelete: boolean = true;
-
-//     while (isNewAdd || isNewDelete) {
-//         isNewAdd = false;
-//         isNewDelete = false;
-
-//         mainFor:
-//         for (let i = 0; i < funcList.length; i++) {
-//             let testedFunction: IFunctionDeclInstruction = funcList[i];
-//             let usedFunctionList: IFunctionDeclInstruction[] = testedFunction.usedFunctionList;
-
-//             if (!testedFunction.isUsed()) {
-//                 //logger.warn("Unused function '" + testedFunction.stringDef + "'.");
-//                 continue mainFor;
-//             }
-//             if (testedFunction.isBlackListFunction()) {
-//                 continue mainFor;
-//             }
-
-//             if (isNull(usedFunctionList)) {
-//                 continue mainFor;
-//             }
-
-//             for (let j: number = 0; j < usedFunctionList.length; j++) {
-//                 let addedUsedFunctionList: IFunctionDeclInstruction[] = usedFunctionList[j].usedFunctionList;
-
-//                 if (isNull(addedUsedFunctionList)) {
-//                     continue;
-//                 }
-
-//                 for (let k: number = 0; k < addedUsedFunctionList.length; k++) {
-//                     let addedFunction: IFunctionDeclInstruction = addedUsedFunctionList[k];
-//                     let sourceNode = addedFunction.sourceNode;
-
-//                     if (testedFunction === addedFunction) {
-//                         testedFunction.addToBlackList();
-//                         isNewDelete = true;
-//                         context.error(sourceNode, EErrors.InvalidFunctionUsageRecursion, { funcDef: testedFunction.stringDef });
-//                         continue mainFor;
-//                     }
-
-//                     if (addedFunction.isBlackListFunction() ||
-//                         !addedFunction.canUsedAsFunction()) {
-//                         testedFunction.addToBlackList();
-//                         context.error(sourceNode, EErrors.InvalidFunctionUsageBlackList, { funcDef: testedFunction.stringDef });
-//                         isNewDelete = true;
-//                         continue mainFor;
-//                     }
-
-//                     if (testedFunction.addUsedFunction(addedFunction)) {
-//                         isNewAdd = true;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-// function checkFunctionForCorrectUsage(context: Context): void {
-//     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
-//     let isNewUsageSet: boolean = true;
-//     let isNewDelete: boolean = true;
-
-//     while (isNewUsageSet || isNewDelete) {
-//         isNewUsageSet = false;
-//         isNewDelete = false;
-
-//         mainFor:
-//         for (let i = 0; i < funcList.length; i++) {
-//             let testedFunction: IFunctionDeclInstruction = funcList[i];
-//             let usedFunctionList: IFunctionDeclInstruction[] = testedFunction.usedFunctionList;
-
-//             if (!testedFunction.isUsed()) {
-//                 //logger.warn("Unused function '" + testedFunction.stringDef + "'.");
-//                 continue mainFor;
-//             }
-//             if (testedFunction.isBlackListFunction()) {
-//                 continue mainFor;
-//             }
-
-//             if (!testedFunction.checkVertexUsage()) {
-//                 context.error(testedFunction.sourceNode, EErrors.InvalidFunctionUsageVertex, { funcDef: testedFunction.stringDef });
-//                 testedFunction.addToBlackList();
-//                 isNewDelete = true;
-//                 continue mainFor;
-//             }
-
-//             if (!testedFunction.checkPixelUsage()) {
-//                 context.error(testedFunction.sourceNode, EErrors.InvalidFunctionUsagePixel, { funcDef: testedFunction.stringDef });
-//                 testedFunction.addToBlackList();
-//                 isNewDelete = true;
-//                 continue mainFor;
-//             }
-
-//             if (isNull(usedFunctionList)) {
-//                 continue mainFor;
-//             }
-
-//             for (let j: number = 0; j < usedFunctionList.length; j++) {
-//                 let usedFunction: IFunctionDeclInstruction = usedFunctionList[j];
-
-//                 if (testedFunction.isUsedInVertex()) {
-//                     if (!usedFunction.vertex) {
-//                         context.error(usedFunction.sourceNode, EErrors.InvalidFunctionUsageVertex, { funcDef: testedFunction.stringDef });
-//                         testedFunction.addToBlackList();
-//                         isNewDelete = true;
-//                         continue mainFor;
-//                     }
-
-//                     if (!usedFunction.isUsedInVertex()) {
-//                         usedFunction.markUsedInVertex();
-//                         isNewUsageSet = true;
-//                     }
-
-//                 }
-
-//                 if (testedFunction.isUsedInPixel()) {
-//                     if (!usedFunction.pixel) {
-//                         context.error(usedFunction.sourceNode, EErrors.InvalidFunctionUsagePixel, { funcDef: testedFunction.stringDef });
-//                         testedFunction.addToBlackList();
-//                         isNewDelete = true;
-//                         continue mainFor;
-//                     }
-
-//                     if (!usedFunction.isUsedInPixel()) {
-//                         usedFunction.markUsedInPixel();
-//                         isNewUsageSet = true;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-// function generateInfoAboutUsedData(context: Context): void {
-//     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
-
-//     for (let i = 0; i < funcList.length; i++) {
-//         funcList[i].generateInfoAboutUsedData();
-//     }
-// }
-
-
-// function generateShadersFromFunctions(context: Context): void {
-//     let funcList: IFunctionDeclInstruction[] = context.functionWithImplementationList;
-
-//     for (let i = 0; i < funcList.length; i++) {
-
-//         if (funcList[i].isUsedAsVertex()) {
-//             funcList[i].convertToVertexShader();
-//         }
-//         if (funcList[i].isUsedAsPixel()) {
-//             funcList[i].convertToPixelShader();
-//         }
-
-//         if (funcList[i]._isErrorOccured()) {
-//             _errorFromInstruction(context, funcList[i].sourceNode, funcList[i]._getLastError());
-//             funcList[i]._clearError();
-//         }
-//     }
-// }
-
-
 
 
 
@@ -1323,7 +1153,6 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
             }
         }
     } else {
-        // let shaderFunc = program.globalScope.findShaderFunction(shaderFuncName, args);
         func = program.globalScope.findFunction(shaderFuncName, args);
     }
 
@@ -1539,7 +1368,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         }
     }
 
-    let func = globalScope.findFunction(funcName, args.map(arg => arg.type));
+    let func = globalScope.findFunction(funcName, args ? args.map(arg => arg.type) : null);
 
     if (isNull(func)) {
         context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName: funcName });
@@ -1616,7 +1445,6 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         //     currentAnalyzedFunction.addUsedFunction(func);
         // }
 
-        func.$overwriteType(EFunctionType.k_Function);
         expr = funcCallExpr;
     }
     else {
@@ -1892,7 +1720,7 @@ function analyzePostfixArithmetic(context: Context, program: ProgramScope, sourc
 function analyzeUnaryExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
 
     const children = sourceNode.children;
-    const operator = <UnaryOperator>children[1].value;
+    const operator = <IUnaryOperator>children[1].value;
     const scope = program.currentScope;
 
     let expr = analyzeExpr(context, program, children[0]);
@@ -2190,17 +2018,6 @@ function analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IPar
         return null;
     }
 
-    if (context.func) {
-        // TODO: rewrite this!
-        if (!decl.checkPixelUsage()) {
-            // context.currentFunction.$overwriteType(EFunctionType.k_Function);
-        }
-
-        if (!decl.checkVertexUsage()) {
-            // context.currentFunction.$overwriteType(EFunctionType.k_Function);
-        }
-    }
-
     let id = new IdInstruction({ scope, sourceNode, name });
     let varId = new IdExprInstruction({ scope, sourceNode, id, decl });
     return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
@@ -2429,13 +2246,13 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         }
     }
 
-
-    if (isNull(func)) {
-        assert(scope == globalScope);
-        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
-        if (!globalScope.addFunction(func)) {
-            context.error(sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
-        }
+    assert(scope == globalScope);
+    func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
+    
+    // NOTE: possible implicit replacement of function 
+    //       without implementaion inside addFunction() call.
+    if (!globalScope.addFunction(func)) {
+        context.error(sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
     }
 
     if (!hasVoidType && !context.haveCurrentFunctionReturnOccur && !isNull(implementation)) {
@@ -2791,7 +2608,7 @@ function analyzeWhileStmt(context: Context, program: ProgramScope, sourceNode: I
     let cond: IExprInstruction = null;
     let conditionType: IVariableTypeInstruction = null;
     let body: IStmtInstruction = null;
-    let operator: DoWhileOperator = "do";
+    let operator: IDoWhileOperator = "do";
 
     if (isDoWhile) {
         operator = "do";
@@ -3093,15 +2910,27 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
     let pixel: IFunctionDeclInstruction = null;
     let vertex: IFunctionDeclInstruction = null;
 
+    const supportedTypeNames = ['vertexshader', 'pixelshader'];
+
     for (let i = children.length - 2; i >= 1; i--) {
-        let func = analyzePassStateForShader(context, program, children[i]);
+        let func: IFunctionDeclInstruction = null;
+
+        const childrenIth = children[i].children;
+        const shaderTypeName = childrenIth[childrenIth.length - 1].value.toLowerCase();
+
+        if (supportedTypeNames.indexOf(shaderTypeName) === -1) {
+            continue;
+        }
+
+        func = analyzePassStateForShader(context, program, children[i], shaderTypeName);
+
         if (!isNull(func)) {
-            switch (func.functionType) {
-                case EFunctionType.k_Vertex:
+            switch (shaderTypeName) {
+                case 'vertexshader':
                     assert(vertex == null);
                     vertex = func;
                     break;
-                case EFunctionType.k_Pixel:
+                case 'pixelshader':
                     assert(pixel == null);
                     pixel = func;
                     break;
@@ -3117,23 +2946,11 @@ function analyzePassStateBlockForShaders(context: Context, program: ProgramScope
 
 
 function analyzePassStateForShader(context: Context, program: ProgramScope,
-    sourceNode: IParseNode): IFunctionDeclInstruction {
+    sourceNode: IParseNode, shaderType: string): IFunctionDeclInstruction {
+
+    assert(shaderType === 'vertexshader' || shaderType === 'pixelshader');
 
     const children = sourceNode.children;
-
-    const shaderTypeName = children[children.length - 1].value.toUpperCase();
-    let shaderType = EFunctionType.k_Vertex;
-
-    if (shaderTypeName === 'VERTEXSHADER') {
-        shaderType = EFunctionType.k_Vertex
-    }
-    else if (shaderTypeName === 'PIXELSHADER') {
-        shaderType = EFunctionType.k_Pixel;
-    }
-    else {
-        console.error('unknown shader type');
-        return null;
-    }
 
     const stateExprNode = children[children.length - 3];
     const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
@@ -3141,18 +2958,17 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
     const compileExpr = <CompileExprInstruction>analyzeExpr(context, program, exprNode);
     const shaderFunc = compileExpr.function;
 
-    if (shaderType === EFunctionType.k_Vertex) {
+    if (shaderType === 'vertexshader') {
         if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
-            context.error(sourceNode, EErrors.FunctionVertexRedefinition, { funcDef: String(shaderFunc) });
+            context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithVertexShader, { funcDef: String(shaderFunc) });
         }
     }
     else {
         if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
-            context.error(sourceNode, EErrors.FunctionPixelRedefinition, { funcDef: String(shaderFunc) });
+            context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithPixelShader, { funcDef: String(shaderFunc) });
         }
     }
 
-    shaderFunc.$overwriteType(shaderType);
     return shaderFunc;
 }
 
@@ -3481,7 +3297,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
         }
 
         if (!hasInstance) {
-            context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch, 
+            context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch,
                 { tooltip: 'vertex shader must have a valid material param which is compatible with prerender routine.' });
             vertexShader = pixelShader = null;
         }
@@ -3931,18 +3747,7 @@ function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: 
 
 
 
-// function analyzeFunctionDecls(context: Context, program: ProgramScope): void {
-//     for (let i = 0; i < context.functionWithImplementationList.length; i++) {
-//         resumeFunctionAnalysis(context, program, context.functionWithImplementationList[i]);
-//     }
-
-//     checkFunctionsForRecursion(context);
-//     checkFunctionForCorrectUsage(context);
-//     generateInfoAboutUsedData(context);
-//     generateShadersFromFunctions(context);
-// }
-
-
+// TODO: separate base context from part fx context.
 class Context {
     readonly filename: string | null;
     readonly diagnostics: AnalyzerDiagnostics;
@@ -3978,7 +3783,7 @@ class Context {
     beginFunc(): void {
         this.func = true;
         this.haveCurrentFunctionReturnOccur = false;
-        this.funcDef = null;
+        this.funcDef = null; // << will be set inside analyzeFunctionDecl();
     }
 
     endFunc(): void {
@@ -4082,6 +3887,110 @@ export async function fromString(content: string, filename: string = "stdin"): P
     return root;
 }
 
+/**
+ IStmtDerived =
+    | IStmtBlockInstruction
+    | IWhileStmtInstruction
+    | IForStmtInstruction;
+ */
+function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: IInstruction) => void) {
+    if (!owner) {
+        return;
+    }
+
+    const visit = (instr: IInstruction) => { cb(instr, owner); visitor(instr, cb) };
+
+    switch (owner.instructionType) {
+
+        //
+        // Stmt
+        //
+
+        case EInstructionTypes.k_ReturnStmtInstruction:
+            visit((owner as IReturnStmtInstruction).expr);
+            break;
+        case EInstructionTypes.k_DeclStmtInstruction:
+            (owner as IDeclStmtInstruction).declList.forEach(decl => visit(decl));
+            break;
+        case EInstructionTypes.k_ExprStmtInstruction:
+            visit((owner as IExprStmtInstruction).expr);
+            break;
+        case EInstructionTypes.k_IfStmtInstruction:
+            visit((owner as IIfStmtInstruction).cond);
+            visit((owner as IIfStmtInstruction).conseq);
+            visit((owner as IIfStmtInstruction).contrary);
+            break;
+        case EInstructionTypes.k_StmtBlockInstruction:
+            (owner as IStmtBlockInstruction).stmtList.forEach(stmt => visit(stmt));
+            break;
+        case EInstructionTypes.k_ForStmtInstruction:
+            visit((owner as IForStmtInstruction).init);
+            visit((owner as IForStmtInstruction).cond);
+            visit((owner as IForStmtInstruction).body);
+            visit((owner as IForStmtInstruction).step);
+            break;
+        case EInstructionTypes.k_WhileStmtInstruction:
+            visit((owner as IWhileStmtInstruction).cond);
+            visit((owner as IWhileStmtInstruction).body);
+            break;
+        default:
+            console.error('unsupported instruction type found');
+    }
+}
+
+function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruction, stack: number[]): boolean {
+    if (stack.indexOf(func.instructionID) !== -1) {
+        context.error(func.sourceNode, 
+            EErrors.InvalidFunctionRecursionNotAllowed, 
+            { funcName: func.name });
+        return false;
+    }
+
+    let recursionFound = false;
+
+    stack = [...stack, func.instructionID];
+    visitor(func.implementation, instr => {
+        if (instr.instructionType === EInstructionTypes.k_FunctionCallInstruction) {
+            let decl = (instr as IFunctionCallInstruction).declaration;
+            if (decl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
+                return;
+            }
+
+            // NOTE: it is possible that the declaration was not complete 
+            //       at the time of the call, so you need to look for a 
+            //       version with implementation
+            decl = decl.scope.findFunctionInScope(decl);
+            if (isNull(decl.implementation)) {
+                context.error(instr.sourceNode, 
+                    EErrors.InvalidFunctionImplementationNotFound, 
+                    { funcName: decl.name });
+                    return;
+            }
+
+            recursionFound = recursionFound || 
+                checkFunctionForRecursion(context, decl, stack);
+        }
+    });
+
+    return !recursionFound;
+}
+
+
+function checkFunctionsForRecursion(context: Context, program: ProgramScope) {
+    const gs = program.globalScope;
+
+    let recusrionFound = false;
+    mwalk(gs.functionMap, funcOverloads => {
+        funcOverloads.forEach(func => {
+            recusrionFound = recusrionFound || 
+                !checkFunctionForRecursion(context, func, []);
+        })
+    });
+
+    return !recusrionFound;
+}
+
+
 export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
     console.time(`analyze(${filename})`);
 
@@ -4092,6 +4001,7 @@ export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeRe
     let globals: IInstruction[] = null;
     try {
         globals = analyzeGlobals(context, program, ast);
+        checkFunctionsForRecursion(context, program);
         program.validate();
     } catch (e) {
         // critical errors were occured

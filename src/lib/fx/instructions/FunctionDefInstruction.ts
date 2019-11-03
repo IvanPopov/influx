@@ -100,6 +100,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
+    // TOOD: move this code to analyzer!
     static checkForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
         if (!FunctionDefInstruction.checkReturnTypeForVertexUsage(funcDef)) {
             return false;
@@ -112,6 +113,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         return true;
     }
 
+    // TOOD: move this code to analyzer!
     static checkForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
         if (!FunctionDefInstruction.checkReturnTypeForPixelUsage(funcDef)) {
             return false;
@@ -125,6 +127,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
+    // TOOD: move this code to analyzer!
     static checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
         const returnType = <IVariableTypeInstruction>funcDef.returnType;
         

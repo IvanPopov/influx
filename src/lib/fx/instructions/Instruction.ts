@@ -13,7 +13,6 @@ export interface IInstructionSettings {
 }
 
 export class Instruction implements IInstruction {
-    private _visible: boolean;
     private _sourceNode: IParseNode;
     private _instructionID: number;
     private _instructionType: EInstructionTypes;
@@ -30,7 +29,6 @@ export class Instruction implements IInstruction {
         visible = true
     }: IInstructionSettings) {
 
-        this._visible = true;
         this._sourceNode = sourceNode;
         this._instructionType = instrType;
         this._instructionID = (Instruction.INSTRUCTION_COUNTER++);
@@ -77,10 +75,6 @@ export class Instruction implements IInstruction {
         return this._sourceNode;
     }
 
-    get visible(): boolean {
-        return this._visible;
-    }
-
     _getLastError(): IInstructionError {
         return this._lastError;
     }
@@ -120,12 +114,6 @@ export class Instruction implements IInstruction {
     toCode(): string {
         console.error("@pure_virtual");
         return null;
-    }
-
-
-    $hide(): void {
-        console.assert(this._visible, "parent redefenition detected!");
-        this._visible = false;
     }
 
 
@@ -183,6 +171,8 @@ export class Instruction implements IInstruction {
 
         return false;
     }
+
+
 
 
     static $withParent<T extends IInstruction>(child: T, parent: IInstruction): T | null {

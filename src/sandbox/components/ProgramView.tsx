@@ -353,7 +353,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             <SystemProperty { ...this.bindProps(instr, false) } name={ instr.strongHash }>
                 <SystemProperty name='writable' value={ `${instr.writable}` } />
                 <SystemProperty name='readable' value={ `${instr.readable}` } />
-                <SystemProperty name='builtIn' value={ `${instr.builtIn}` } />
+                {/* <SystemProperty name='builtIn' value={ `${instr.builtIn}` } /> */}
                 <SystemProperty name='hash' value={ `${instr.hash}` } />
                 <SystemProperty name='strongHash' value={ `${instr.strongHash}` } />
                 <SystemProperty name='size' value={ `${instr.size} bytes` } />

@@ -19,6 +19,7 @@ function locMax(a: IPosition, b: IPosition): IPosition {
     };
 }
 
+
 export class ParseTree implements IParseTree {
     private _root: IParseNode;
     private _nodes: IParseNode[];
@@ -151,14 +152,24 @@ export class ParseTree implements IParseTree {
             parent.children = <IParseNode[]>[];
         }
         
+       
+        
         // if (!node) {
         //     console.warn('node is undefined!');
         // } 
         // else 
         {
-            // todo: remove min/max in order to correct start/end calculation based on node order
-            parent.loc.start = locMin(node.loc.start, parent.loc.start);
-            parent.loc.end = locMax(node.loc.end, parent.loc.end);
+            if (node.loc.start.line < parent.loc.start.line) {
+                parent.loc.start = { ...node.loc.start };
+            } else if (node.loc.start.line === parent.loc.start.line) {
+                parent.loc.start = locMin(node.loc.start, parent.loc.start);
+            }
+    
+            if (node.loc.end.line > parent.loc.end.line) {
+                parent.loc.end = { ...node.loc.end };
+            } else if (node.loc.end.line === parent.loc.end.line) {
+                parent.loc.end = locMax(node.loc.end, parent.loc.end);
+            }
 
             parent.children.push(node);
             node.parent = parent;

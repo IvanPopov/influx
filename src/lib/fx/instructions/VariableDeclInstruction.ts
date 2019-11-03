@@ -44,11 +44,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     protected _initExpr: IInitExprInstruction;
     protected _usageFlags: number;
 
-    /** @deprecated */
-    protected _bForVertex: boolean;
-    /** @deprecated */
-    protected _bForPixel: boolean;
-
  
     constructor({ id, type, init = null, usageFlags = 0, ...settings }: IVariableDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
@@ -57,9 +52,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         this._type = Instruction.$withNoParent(type);
         this._initExpr = Instruction.$withParent(init, this);
         this._usageFlags = usageFlags;
-
-        this._bForVertex = true;
-        this._bForPixel = true;
 
         assert(!this.isParameter() || (isNull(this.parent) || this.parent.instructionType == EInstructionTypes.k_FunctionDefInstruction));
         assert(this.isLocal() || !this.isLocal());
@@ -96,7 +88,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     get fullName(): string {
         if (this.isField() &&
-            VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>this.parent).visible) {
+            VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>this.parent)) {
 
             var name = '';
             var parentType = this.parent.instructionType;
@@ -108,9 +100,8 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
             name += '.' + this.name;
             return name;
         }
-        else {
-            return this.name;
-        }
+
+        return this.name;
     }
 
 
@@ -179,25 +170,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return code;
     }
 
-    /** @deprecated */
-    $makeVertexCompatible(val: boolean): void {
-        this._bForVertex = val;
-    }
-
-    /** @deprecated */
-    $makePixelCompatible(val: boolean): void {
-        this._bForPixel = val;
-    }
-
-    /** @deprecated */
-    checkVertexUsage(): boolean {
-        return this._bForVertex;
-    }
-
-    /** @deprecated */
-    checkPixelUsage(): boolean {
-        return this._bForPixel;
-    }
 
     /**
      * @param decl Variable declaraion (decl.isParameter() must be true).

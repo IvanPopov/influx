@@ -1,22 +1,21 @@
-import { StmtInstruction } from "./StmtInstruction";
-import { IExprInstruction } from "../../idl/IInstruction";
-import { EInstructionTypes, EFunctionType, ITypedInstruction } from "../../idl/IInstruction";
-import { isNull } from "../../common";
-import { IParseNode } from "../../idl/parser/IParser";
+import { EInstructionTypes, IExprInstruction, IReturnStmtInstruction, IReturnOperator } from "@lib/idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
+import { StmtInstruction } from "./StmtInstruction";
 
-export type ReturnOperator = "return";
+
 
 export interface IReturnStmtInstructionSettings extends IInstructionSettings {
     expr?: IExprInstruction;
 }
 
+
+
 /**
  * Represent return expr;
  * return ExprInstruction
  */
-export class ReturnStmtInstruction extends StmtInstruction {
-    protected _operator: ReturnOperator;
+export class ReturnStmtInstruction extends StmtInstruction implements IReturnStmtInstruction {
+    protected _operator: IReturnOperator;
     protected _expr: IExprInstruction;
 
     constructor({ expr = null, ...settings }: IReturnStmtInstructionSettings) {
@@ -24,6 +23,11 @@ export class ReturnStmtInstruction extends StmtInstruction {
         
         this._operator = "return";
         this._expr = Instruction.$withParent(expr, this);
+    }
+
+    
+    get operator(): IReturnOperator {
+        return this._operator;
     }
 
 

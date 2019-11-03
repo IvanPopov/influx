@@ -1,13 +1,6 @@
-import { IFunctionDeclInstruction, ISimpleInstruction, ITypeDeclInstruction, IIdInstruction, ITypeInstruction, EInstructionTypes, IVariableTypeInstruction, EFunctionType, IInstruction, IDeclInstruction, IVariableDeclInstruction, EVarUsedMode, IStmtInstruction, ITypedInstruction, IScope } from "../../idl/IInstruction";
-import { IDeclInstructionSettings } from "./DeclInstruction";
-import { DeclInstruction } from "./DeclInstruction";
-import { IdInstruction } from "./IdInstruction";
-import { isNull, assert } from "../../common";
-import { IMap } from "../../idl/IMap";
-import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import { TypedInstruction } from "./TypedInstruction";
-import * as SystemScope from "../SystemScope";
-import { IFunctionDeclInstructionSettings, FunctionDeclInstruction } from "./FunctionDeclInstruction";
+import { assert, isNull } from "@lib/common";
+import { EInstructionTypes, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
+import { FunctionDeclInstruction, IFunctionDeclInstructionSettings } from "./FunctionDeclInstruction";
 
 
 export interface ISystemFunctionInstructionSettings extends IFunctionDeclInstructionSettings {
@@ -38,11 +31,6 @@ export class SystemFunctionInstruction extends FunctionDeclInstruction implement
     checkPixelUsage(): boolean {
         return this._bForPixel;
     }
-
-
-    $overwriteType(type: EFunctionType) {
-        console.error("@undefined_behavior");
-    } 
 
 
     $makeVertexCompatible(val: boolean): void {

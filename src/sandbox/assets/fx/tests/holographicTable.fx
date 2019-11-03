@@ -147,7 +147,7 @@ struct PixelInputType
 };
 
 
-PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
+/* foo.. */  PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
 {
     PixelInputType output;
     
@@ -161,7 +161,7 @@ PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
     output.color = partInstance.color;
     
     return output;
-}
+/* foo.. */  } int foo = 1;
 
 
 float4 ColorPixelShader(PixelInputType input) : COLOR

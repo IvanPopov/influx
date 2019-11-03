@@ -1,6 +1,6 @@
 import { isNull } from "../../common";
 import { EAnalyzerErrors } from '../../idl/EAnalyzerErrors';
-import { ECheckStage, EInstructionTypes, IExprInstruction, IStmtInstruction, ITypedInstruction } from "../../idl/IInstruction";
+import { ECheckStage, EInstructionTypes, IExprInstruction, IStmtInstruction, ITypedInstruction, IForStmtInstruction } from "../../idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 import { StmtInstruction } from "./StmtInstruction";
 
@@ -17,7 +17,7 @@ export interface IForStmtInstructionSettings extends IInstructionSettings {
  * Represent for(forInit forCond ForStep) stmt
  * for ExprInstruction or VarDeclInstruction ExprInstruction ExprInstruction StmtInstruction
  */
-export class ForStmtInstruction extends StmtInstruction {
+export class ForStmtInstruction extends StmtInstruction implements IForStmtInstruction {
     protected _init: ITypedInstruction;
     protected _cond: IExprInstruction;
     protected _step: IExprInstruction;

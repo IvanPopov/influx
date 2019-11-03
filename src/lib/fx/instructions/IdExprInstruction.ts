@@ -1,14 +1,6 @@
-import { IIdExprInstruction, IVariableTypeInstruction, EInstructionTypes, IVariableDeclInstruction, EFunctionType, IInstruction, EVarUsedMode, ITypeUseInfoContainer } from "../../idl/IInstruction";
-import { IFunctionDeclInstruction } from "../../idl/IInstruction";
-import { IInstructionSettings, Instruction } from "./Instruction";
-import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import { IDeclInstruction } from "../../idl/IInstruction";
-import { IIdInstruction } from "../../idl/IInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
+import { EInstructionTypes, IIdExprInstruction, IIdInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ExprInstruction } from "./ExprInstruction";
-import { isNull, isDef } from "../../common";
-import { IMap } from "../../idl/IMap";
-import { IdInstruction } from "./IdInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface IIdExprInstructionSettings extends IInstructionSettings {
@@ -56,11 +48,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
 
 
     toCode(): string {
-        var scode = "";
-        if (this.visible) {
-            scode += this._decl.id.toCode();
-        }
-        return scode;
+        return this._decl.id.toCode();
     }
 }
 

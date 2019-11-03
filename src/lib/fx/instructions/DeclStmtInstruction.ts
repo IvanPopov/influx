@@ -1,9 +1,6 @@
-import { EVarUsedMode, IDeclInstruction, ITypeUseInfoContainer, EInstructionTypes, IVariableDeclInstruction, IVariableTypeInstruction } from "../../idl/IInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
-import { StmtInstruction } from "./StmtInstruction";
-import { IMap } from "../../idl/IMap";
-import { isNull } from "../../common";
+import { EInstructionTypes, IDeclInstruction, IVariableDeclInstruction, IDeclStmtInstruction } from "@lib/idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
+import { StmtInstruction } from "./StmtInstruction";
 
 export interface IDeclStmtInstructionSettings extends IInstructionSettings {
     declList?: IDeclInstruction[];
@@ -13,7 +10,7 @@ export interface IDeclStmtInstructionSettings extends IInstructionSettings {
  * Represent TypeDecl or VariableDecl or VarStructDecl
  * EMPTY DeclInstruction
  */
-export class DeclStmtInstruction extends StmtInstruction {
+export class DeclStmtInstruction extends StmtInstruction implements IDeclStmtInstruction {
     private _declList: IDeclInstruction[];
 
     

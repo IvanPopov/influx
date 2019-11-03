@@ -1,16 +1,13 @@
-import { EInstructionTypes } from "../../idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IStmtInstruction, IWhileStmtInstruction, IDoWhileOperator } from "@lib/idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
-import { IStmtInstruction } from "../../idl/IInstruction";
-import { IExprInstruction } from "../../idl/IInstruction";
 import { StmtInstruction } from "./StmtInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
 
-export type DoWhileOperator = "do" | "while";
+
 
 export interface IWhileStmtInstructionSettings extends IInstructionSettings {
     cond: IExprInstruction;
     body: IStmtInstruction;
-    operator: DoWhileOperator;
+    operator: IDoWhileOperator;
 }
 
 
@@ -18,8 +15,8 @@ export interface IWhileStmtInstructionSettings extends IInstructionSettings {
  * Represent while(expr) stmt
  * ( while || do_while) ExprInstruction StmtInstruction
  */
-export class WhileStmtInstruction extends StmtInstruction {
-    protected _operator: DoWhileOperator;
+export class WhileStmtInstruction extends StmtInstruction implements IWhileStmtInstruction {
+    protected _operator: IDoWhileOperator;
     protected _cond: IExprInstruction;
     protected _body: IStmtInstruction;
 
@@ -43,7 +40,7 @@ export class WhileStmtInstruction extends StmtInstruction {
     }
 
 
-    get operator(): string {
+    get operator(): IDoWhileOperator {
         return this._operator;
     }
 

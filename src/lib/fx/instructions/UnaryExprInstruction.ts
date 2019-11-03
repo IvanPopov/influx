@@ -1,4 +1,4 @@
-import { EInstructionTypes, IExprInstruction, IUnaryExprInstruction, UnaryOperator } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IExprInstruction, IUnaryExprInstruction, IUnaryOperator } from '@lib/idl/IInstruction';
 import { ExprInstruction } from './ExprInstruction';
 import { IInstructionSettings, Instruction } from './Instruction';
 
@@ -6,7 +6,7 @@ import { IInstructionSettings, Instruction } from './Instruction';
 
 export interface IUnaryExprInstructionSettings extends IInstructionSettings {
     expr: IExprInstruction;
-    operator: UnaryOperator;
+    operator: IUnaryOperator;
 }
 
 
@@ -15,7 +15,7 @@ export interface IUnaryExprInstructionSettings extends IInstructionSettings {
  * (+|-|!|++|--|) Instruction
  */
 export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprInstruction {
-    protected _operator: UnaryOperator;
+    protected _operator: IUnaryOperator;
     protected _expr: IExprInstruction;
 
 
@@ -27,7 +27,7 @@ export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprI
     }
 
 
-    get operator(): UnaryOperator {
+    get operator(): IUnaryOperator {
         return this._operator;
     }
 

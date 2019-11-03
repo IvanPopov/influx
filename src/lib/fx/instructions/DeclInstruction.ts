@@ -8,7 +8,6 @@ import { IdInstruction } from "./IdInstruction";
 export interface IDeclInstructionSettings extends IInstructionSettings {
     readonly semantics?: string;
     readonly annotation?: IAnnotationInstruction;
-    readonly builtIn?: boolean;
 }
 
 
@@ -16,15 +15,11 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
     protected _semantic: string
     protected _annotation: IAnnotationInstruction;
     
-    protected _bIsBuiltIn: boolean;
-    
-    constructor({ semantics = null, annotation = null, builtIn = false, ...settings }: IDeclInstructionSettings) {
+    constructor({ semantics = null, annotation = null, ...settings }: IDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
         this._semantic = semantics;
         this._annotation = Instruction.$withParent(annotation, this);
-
-        this._bIsBuiltIn = builtIn;
     }
     
 
@@ -45,10 +40,5 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
 
     get id(): IIdInstruction {
         return null;
-    }
-
-    
-    get builtIn(): boolean {
-        return this._bIsBuiltIn;
     }
 }

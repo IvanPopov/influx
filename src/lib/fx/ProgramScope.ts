@@ -142,80 +142,6 @@ export class Scope implements IScope {
     }
 
 
-
-    /**
-     * Find shader function by name and list of types.
-     * returns:
-     *   'null' if threre are not function; 
-     *   'undefined' if there more then one function; 
-     *   function if all is ok;
-     * @deprecated
-     */
-    findShaderFunction(funcName: string, args: ITypedInstruction[]): IFunctionDeclInstruction {
-        let scope: Scope = this;
-        let func: IFunctionDeclInstruction = null;
-
-        while (!isNull(scope)) {
-            let funcList = scope.functionMap[funcName];
-
-            if (isDef(funcList)) {
-                for (let i = 0; i < funcList.length; i++) {
-                    let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.definition.paramList;
-
-                    if (args.length > testedArguments.length ||
-                        args.length < testedFunction.definition.numArgsRequired) {
-                        continue;
-                    }
-
-                    let isParamsEqual: boolean = true;
-                    let iArg: number = 0;
-
-                    if (args.length === 0) {
-                        if (!isNull(func)) {
-                            return undefined;
-                        }
-
-                        func = testedFunction;
-                        continue;
-                    }
-
-                    for (let j: number = 0; j < testedArguments.length; j++) {
-                        isParamsEqual = false;
-
-                        if (iArg >= args.length) {
-                            if (testedArguments[j].isUniform()) {
-                                break;
-                            }
-                            else {
-                                isParamsEqual = true;
-                            }
-                        }
-                        else if (testedArguments[j].isUniform()) {
-                            if (!args[iArg].type.isEqual(testedArguments[j].type)) {
-                                break;
-                            }
-                            else {
-                                iArg++;
-                                isParamsEqual = true;
-                            }
-                        }
-                    }
-
-                    if (isParamsEqual) {
-                        if (!isNull(func)) {
-                            return undefined;
-                        }
-                        func = testedFunction;
-                    }
-                }
-            }
-            scope = scope.parent;
-        }
-        return func;
-    }
-
-
     findTechnique(techName: string): ITechniqueInstruction | null | undefined {
         let scope: Scope = this;
         while (!isNull(scope)) {
@@ -302,28 +228,28 @@ export class Scope implements IScope {
     }
 
 
-    hasFunctionInScope(func: IFunctionDeclInstruction): boolean {
-        let scope: Scope = this;
-        let funcListMap = scope.functionMap;
-        let funcList = funcListMap[func.name];
 
-        if (!isDef(funcList)) {
-            return false;
+    findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction {
+        const scope: Scope = this;
+        const funcListMap = scope.functionMap;
+        const funcOverloads = funcListMap[func.name];
+
+        if (!isDef(funcOverloads)) {
+            return null;
         }
 
-        let funcArgs = <IVariableDeclInstruction[]>func.definition.paramList;
-        let hasFunction = false;
+        const funcArgs = func.definition.paramList;
+        let targetFunc = null;
 
-        for (let i: number = 0; i < funcList.length; i++) {
-            let testedArguments =
-                <IVariableDeclInstruction[]>funcList[i].definition.paramList;
+        for (let i = 0; i < funcOverloads.length; i++) {
+            let testedArguments = funcOverloads[i].definition.paramList;
 
             if (testedArguments.length !== funcArgs.length) {
                 continue;
             }
 
             let isParamsEqual = true;
-            for (let j: number = 0; j < funcArgs.length; j++) {
+            for (let j = 0; j < funcArgs.length; j++) {
                 isParamsEqual = false;
 
                 if (!testedArguments[j].type.isEqual(funcArgs[j].type)) {
@@ -334,12 +260,16 @@ export class Scope implements IScope {
             }
 
             if (isParamsEqual) {
-                hasFunction = true;
+                targetFunc = funcOverloads[i];
                 break;
             }
         }
 
-        return hasFunction;
+        return targetFunc;
+    }
+
+    hasFunctionInScope(func: IFunctionDeclInstruction): boolean {
+        return !isNull(this.findFunctionInScope(func));
     }
 
 
@@ -377,20 +307,24 @@ export class Scope implements IScope {
 
     addFunction(func: IFunctionDeclInstruction): boolean {
         assert(this.type <= EScopeType.k_Global);
+        assert(func.scope === this);
 
         let funcMap = this.functionMap;
         let funcName = func.name;
 
-        if (this.hasFunctionInScope(func)) {
-            return false;
-        }
+        funcMap[funcName] = funcMap[funcName] || [];
+        const funcOverloads = funcMap[funcName];
 
-        if (!isDef(funcMap[funcName])) {
-            funcMap[funcName] = [];
-        }
+        let targetFunc = this.findFunctionInScope(func);
 
-        funcMap[funcName].push(func);
-        assert(func.scope === this);
+        if (!targetFunc) {
+            funcOverloads.push(func);
+        } else {
+            assert(!isNull(func.implementation));
+            assert(isNull(targetFunc.implementation));
+            let i = funcOverloads.indexOf(targetFunc);
+            funcOverloads[i] = func;
+        }
 
         return true;
     }
@@ -412,6 +346,8 @@ export class Scope implements IScope {
         return false;
     }
 }
+
+
 
 export class ProgramScope {
     globalScope: IScope;

@@ -93,11 +93,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     // }
 
 
-    get builtIn(): boolean {
-        return false;
-    }
-
-
     set readable(isReadable: boolean) {
         this._isReadable = isReadable;
     }

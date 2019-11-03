@@ -299,7 +299,6 @@ function generateSystemFunction(
     templateTypes: string[],
     isForVertex: boolean = true,
     isForPixel: boolean = true): void {
-    const builtIn = true;
 
     if (!isNull(templateTypes)) {
         for (let i = 0; i < templateTypes.length; i++) {
@@ -556,22 +555,22 @@ function addSystemFunctions(): void {
 
 
 
-function generateSystemVariable(name: string, typeName: string,
-    isForVertex: boolean, isForPixel: boolean, readonly: boolean): void {
+// function generateSystemVariable(name: string, typeName: string,
+//     isForVertex: boolean, isForPixel: boolean, readonly: boolean): void {
 
-    if (scope.hasVariable(name)) {
-        return;
-    }
+//     if (scope.hasVariable(name)) {
+//         return;
+//     }
 
-    let id = new IdInstruction({ scope, name });
-    let type = new VariableTypeInstruction({ scope, type: getSystemType(typeName), writable: readonly });
-    let variableDecl = new VariableDeclInstruction({ scope, id, type, builtIn: true });
+//     let id = new IdInstruction({ scope, name });
+//     let type = new VariableTypeInstruction({ scope, type: getSystemType(typeName), writable: readonly });
+//     let variableDecl = new VariableDeclInstruction({ scope, id, type, builtIn: true });
 
-    variableDecl.$makeVertexCompatible(isForVertex);
-    variableDecl.$makePixelCompatible(isForPixel);
+//     variableDecl.$makeVertexCompatible(isForVertex);
+//     variableDecl.$makePixelCompatible(isForPixel);
 
-    scope.addVariable(variableDecl);
-}
+//     scope.addVariable(variableDecl);
+// }
 
 
 function getSystemType(typeName: string): SystemTypeInstruction {
@@ -582,12 +581,12 @@ function getSystemType(typeName: string): SystemTypeInstruction {
 }
 
 
-function addSystemVariables(): void {
+// function addSystemVariables(): void {
     // generateSystemVariable("fragColor", "gl_FragColor", "float4", false, true, true);
     // generateSystemVariable("fragCoord", "gl_FragCoord", "float4", false, true, true);
     // generateSystemVariable("frontFacing", "gl_FrontFacing", "bool", false, true, true);
     // generateSystemVariable("pointCoord", "gl_PointCoord", "float2", false, true, true);
-}
+// }
 
 
 function initSystemTypes(): void {
@@ -602,14 +601,14 @@ function initSystemFunctions(): void {
 }
 
 
-function initSystemVariables(): void {
-    addSystemVariables();
-}
+// function initSystemVariables(): void {
+//     addSystemVariables();
+// }
 
 
 initSystemTypes();
 initSystemFunctions();
-initSystemVariables();
+// initSystemVariables();
 
 /**
  * Export API
@@ -655,7 +654,6 @@ export const findType = (typeName: string) => scope.findType(typeName);
 export const findVariable = (varName: string) => scope.findVariable(varName);
 export const findTechnique = (techName: string) => scope.findTechnique(techName);
 export const findFunction = (funcName: string, args?: ITypeInstruction[]) => scope.findFunction(funcName, args);
-export const findShaderFunction = (funcName: string, args?: ITypedInstruction[]) => scope.findShaderFunction(funcName, args);
 
 export const hasType = (typeName: string) => scope.hasType(typeName);
 export const hasVariable = (varName: string) => scope.hasVariable(varName);

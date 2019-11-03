@@ -16,7 +16,6 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     fields?: IVariableDeclInstruction[];
     writable?: boolean;
     readable?: boolean;
-    builtIn?: boolean;
     declaration?: string;
 }
 
@@ -28,7 +27,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _fields: IVariableDeclInstruction[];
     protected _bIsWritable: boolean;
     protected _bIsReadable: boolean;
-    protected _bBuiltIn: boolean;
     protected _declaration: string;
 
     constructor({
@@ -39,7 +37,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         fields = [],
         writable = true, 
         readable = true, 
-        builtIn = true,
         declaration = null, 
         ...settings
     }: ISystemTypeInstructionSettings) {
@@ -53,14 +50,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._declaration = declaration;
-        this._bBuiltIn = builtIn;
 
         fields.forEach(field => this.addField(field));
-    }
-
-
-    get builtIn(): boolean {
-        return this._bBuiltIn;
     }
 
 
@@ -113,10 +104,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     get typeDecl(): ITypeDeclInstruction {
-        if (this.builtIn) {
-            return null;
-        }
-
         return <ITypeDeclInstruction>this.parent;
     }
 

@@ -1,9 +1,9 @@
 /* tslint:disable:typedef */
 
-import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { mapProps, getCommon, matchLocation } from '@sandbox/reducers';
-import { getFileState, filterPartFx, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState, { IFileState } from '@sandbox/store/IStoreState';
+import { IRange } from '@lib/idl/parser/IParser';
+import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
+import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
 import * as React from 'react';
@@ -16,6 +16,16 @@ interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
 }
 
+
+function cutSourceRange(content: string, range: IRange): string {
+    const { start, end } = range;
+    console.log(range);
+    const lines = content.split('\n').slice(start.line, end.line + 1);
+    lines[0] = lines[0].substr(start.column);
+    lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
+    return lines.join('\n');
+}
+
 @(withRouter as any)
 class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
@@ -26,8 +36,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         original.updateOptions({ tabSize: 4 });
     }
 
-    // shouldComponentUpdate(nextProps) {
-
+    // shouldComponentUpdate(nextProps: IShaderTranslatorViewProps) {
+    //     return getFileState(this.props).content !== getFileState(nextProps).content;
     // }
 
     // tslint:disable-next-line:typedef
@@ -44,9 +54,16 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
         const fxList = filterPartFx(scope);
         const fx = fxList.find(tech => tech.name === match.params.name);
+
+        if (!fx) {
+            return null;
+        }
+
         const pass = fx.passList.find((pass, i) => isNumber(match.params.pass)
             ? i === Number(match.params.pass)
             : pass.name === match.params.pass);
+
+            // vs.sourceNode.loc
 
         const options: monaco.editor.IEditorConstructionOptions = {
             selectOnLineNumbers: true,
@@ -71,7 +88,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             <MonacoDiffEditor
                 ref='monaco'
 
-                original={ file.content }
+                original={ cutSourceRange(file.content, vs.sourceNode.loc) }
                 value={ vs.toCode() }
 
                 width='100%'

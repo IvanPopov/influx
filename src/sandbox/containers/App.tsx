@@ -295,7 +295,6 @@ class App extends React.Component<IAppProps> {
 
 
     render() {
-        console.log('App::Render()');
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
 

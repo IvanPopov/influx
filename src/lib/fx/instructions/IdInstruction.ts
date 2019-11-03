@@ -19,11 +19,6 @@ export class IdInstruction extends Instruction implements IIdInstruction {
     }
     
 
-    get visible(): boolean {
-        return this.parent.visible;
-    }
-
-
     get name(): string {
         return this._name;
     }

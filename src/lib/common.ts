@@ -1,4 +1,5 @@
 ﻿import { isEqual } from "./bf/bf";
+import { IMap } from "./idl/IMap";
 
 export let typeOf: (x: any) => string = (x: any): string => {
     const s: string = typeof x;
@@ -80,3 +81,13 @@ export type MakeOptional<T> = { [P in keyof T]?: T[P]; };
 
 export const assert = console.assert.bind(console);
 export const verbose = console.log.bind(console);
+
+/** 'ForEach' for maps. */
+export function mwalk<T>(map: IMap<T>, cb: (element: T, i?: number) => boolean | void) {
+    let i = 0;
+    for (const key in map) {
+        if (cb(map[key], i++) === false) {
+            break;
+        }
+    }
+}

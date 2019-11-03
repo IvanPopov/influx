@@ -68,12 +68,6 @@ export enum EInstructionTypes {
 }
 
 
-export enum EFunctionType {
-    k_Vertex = 0,
-    k_Pixel = 1,
-    k_Function = 2
-}
-
 export enum ECheckStage {
     CODE_TARGET_SUPPORT, /* Отсутсвуют конструкции не поддерживаемые языком назначения (GLSL) */
     SELF_CONTAINED /* Код замкнут, нет не определенных функций, пассов, техник. Нет мертвых функций. */
@@ -150,8 +144,6 @@ export interface IScope {
     findVariable(variableName: string): IVariableDeclInstruction;
     findType(typeName: string): ITypeInstruction;
     findFunction(funcName: string, args: ITypeInstruction[]): IFunctionDeclInstruction | null | undefined;
-    /** @deprecated */
-    findShaderFunction(funcName: string, argTypes: ITypedInstruction[]): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
 
     hasVariable(variableName: string): boolean;
@@ -163,6 +155,8 @@ export interface IScope {
     hasTypeInScope(typeName: string): boolean;
     hasFunctionInScope(func: IFunctionDeclInstruction): boolean;
     hasTechniqueInScope(tech: ITechniqueInstruction): boolean;
+
+    findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction;
 
     addVariable(variable: IVariableDeclInstruction): boolean;
     addType(type: ITypeInstruction): boolean;
@@ -180,9 +174,6 @@ export interface IInstruction {
     readonly parent: IInstruction;
     readonly scope: IScope;
 
-    /** Specifies whether to display the instruction in the code. */
-    readonly visible: boolean;
-
     readonly sourceNode: IParseNode | null;
     readonly instructionType: EInstructionTypes;
     readonly instructionID: number;
@@ -192,15 +183,18 @@ export interface IInstruction {
     toCode(): string;
 
     /** Internal API */
-
-    $hide(): void;
     $withParent<T extends IInstruction>(parent: IInstruction): T;
     $withNoParent<T extends IInstruction>(): T;
 
+    /** @deprecated */
     _check(eStage: ECheckStage): boolean;
+    /** @deprecated */
     _getLastError(): IInstructionError;
+    /** @deprecated */
     _setError(eCode: number, pInfo?: any): void;
+    /** @deprecated */
     _clearError(): void;
+    /** @deprecated */
     _isErrorOccured(): boolean;
 }
 
@@ -228,7 +222,6 @@ export interface ITypeInstruction extends IInstruction {
     readonly length: number;
     readonly arrayElementType: ITypeInstruction;
 
-    readonly builtIn: boolean;
     readonly hash: string;
     readonly strongHash: string;
 
@@ -250,7 +243,7 @@ export interface ITypeInstruction extends IInstruction {
     isSampler(): boolean;
     isSamplerCube(): boolean;
     isSampler2D(): boolean;
-    
+
     isContainArray(): boolean;
     isContainSampler(): boolean;
     isContainComplexType(): boolean;
@@ -301,14 +294,11 @@ export interface IDeclInstruction extends IInstruction {
 
     readonly semantics: string;
     readonly annotation: IAnnotationInstruction;
-
-    // todo: remove it?
-    readonly builtIn: boolean;
 }
 
 
 export interface IFunctionDefInstruction extends IDeclInstruction {
-    readonly returnType: ITypeInstruction; 
+    readonly returnType: ITypeInstruction;
     readonly functionName: IIdInstruction;
     readonly name: string;
     readonly paramList: IVariableDeclInstruction[];
@@ -335,7 +325,7 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly id: IIdInstruction;
     readonly type: IVariableTypeInstruction;
     readonly initExpr: IInitExprInstruction;
-    
+
     readonly defaultValue: any;
 
     /**
@@ -356,33 +346,12 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     isUniform(): boolean;
     /** @deprecated */
     isVarying(): boolean;
-
-    checkVertexUsage(): boolean;
-    checkPixelUsage(): boolean;
 }
 
 
 export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly definition: IFunctionDefInstruction;
     readonly implementation: IStmtBlockInstruction;
-
-    /** @deprecated */
-    readonly functionType: EFunctionType;
-
-    /**  
-     * Returns true if function can be used in vertex shader.
-     * @deprecated
-    */
-    checkVertexUsage(): boolean;
-    
-    /** 
-     * Returns true if function can be used in pixel shader.
-     * @deprecated 
-    */
-    checkPixelUsage(): boolean;
-
-    /** @deprecated */
-    $overwriteType(type: EFunctionType): void;
 }
 
 
@@ -393,10 +362,6 @@ export interface IStructDeclInstruction extends IInstruction {
 
 export interface IIdInstruction extends IInstruction {
     readonly name: string;
-
-    /** Specifies whether to emit ID to source code or not. */
-    /** @deprecated */
-    readonly visible: boolean;
 }
 
 
@@ -417,11 +382,11 @@ export interface IExprInstruction extends ITypedInstruction {
     isConstExpr(): boolean;
 }
 
-export type UnaryOperator = "+" | "-" | "!" | "++" | "--";
+export type IUnaryOperator = "+" | "-" | "!" | "++" | "--";
 
 export interface IUnaryExprInstruction extends IExprInstruction {
     readonly expr: IExprInstruction;
-    readonly operator: UnaryOperator;
+    readonly operator: IUnaryOperator;
 }
 
 export interface IPostfixPointInstruction extends IExprInstruction {
@@ -482,7 +447,7 @@ export interface IRelationalExprInstruction extends IExprInstruction {
     readonly left: IExprInstruction;
     readonly right: IExprInstruction;
     readonly operator: string;
-} 
+}
 
 export interface IAssignmentExprInstruction extends IExprInstruction {
     readonly operator: string;
@@ -496,7 +461,7 @@ export interface IInitExprInstruction extends IExprInstruction {
 
     isArray(): boolean;
     isConst(): boolean;
-    
+
     // todo: refactor this!!
     optimizeForVariableType(type: IVariableTypeInstruction): boolean;
 }
@@ -514,7 +479,7 @@ export interface IIdExprInstruction extends IExprInstruction {
 
 export interface IFunctionCallInstruction extends IExprInstruction {
     readonly args: IExprInstruction[];
-    readonly declaration: IDeclInstruction;
+    readonly declaration: IFunctionDeclInstruction;
 }
 
 
@@ -523,11 +488,57 @@ export interface ILiteralInstruction extends IExprInstruction {
 }
 
 
+export type IExprDerived =
+    | IConditionalExprInstruction
+    | IUnaryExprInstruction
+    | IPostfixPointInstruction
+    | IPostfixIndexInstruction
+    | IConstructorCallInstruction
+    | IArithmeticExprInstruction
+    | ICastExprInstruction
+    | IComplexExprInstruction
+    | IPostfixArithmeticInstruction
+    | ISamplerStateBlockInstruction
+    | ICompileExprInstruction
+    | IRelationalExprInstruction
+    | IAssignmentExprInstruction
+    | IInitExprInstruction
+    | IIdExprInstruction
+    | IFunctionCallInstruction
+    | ILiteralInstruction;
+
 export interface IAnnotationInstruction extends IInstruction {
 }
 
 
 export interface IStmtInstruction extends IInstruction {
+}
+
+
+export interface IForStmtInstruction extends IStmtInstruction {
+    readonly init: ITypedInstruction;
+    readonly cond: IExprInstruction;
+    readonly step: IExprInstruction;
+    readonly body: IStmtInstruction;
+}
+
+export type IDoWhileOperator = "do" | "while";
+
+export interface IWhileStmtInstruction extends IStmtInstruction {
+    readonly cond: IExprInstruction;
+    readonly body: IStmtInstruction;
+    readonly operator: IDoWhileOperator;
+}
+
+export interface IDeclStmtInstruction extends IStmtInstruction {
+    readonly declList: IDeclInstruction[];
+}
+
+export type IReturnOperator = "return";
+
+export interface IReturnStmtInstruction extends IStmtInstruction {
+    readonly operator: IReturnOperator;
+    readonly expr: IExprInstruction;
 }
 
 export interface IIfStmtInstruction extends IStmtInstruction {
@@ -552,26 +563,22 @@ export interface IExprStmtInstruction extends IStmtInstruction {
 export interface IPassInstruction extends IDeclInstruction {
     readonly id: IIdInstruction;
 
-    // readonly uniformVariableMapV: IMap<IVariableDeclInstruction>;
-    // readonly textureVariableMapV: IMap<IVariableDeclInstruction>;
-    // readonly usedComplexTypeMapV: IMap<ITypeInstruction>;
-
-    // readonly uniformVariableMapP: IMap<IVariableDeclInstruction>;
-    // readonly textureVariableMapP: IMap<IVariableDeclInstruction>;
-    // readonly usedComplexTypeMapP: IMap<ITypeInstruction>;
-
-    // readonly fullUniformMap: IMap<IVariableDeclInstruction>;
-    // readonly fullTextureMap: IMap<IVariableDeclInstruction>;
-
     readonly vertexShader: IFunctionDeclInstruction;
     readonly pixelShader: IFunctionDeclInstruction;
 
     readonly renderStates: IMap<ERenderStateValues>;
     getState(type: ERenderStates): ERenderStateValues;
-
-    // todo: remove it?
-    $finalizePass(): void;
 }
+
+
+export type IStmtDerived =
+    | IDeclStmtInstruction
+    | IReturnStmtInstruction
+    | IIfStmtInstruction
+    | IStmtBlockInstruction
+    | IExprStmtInstruction
+    | IWhileStmtInstruction
+    | IForStmtInstruction;
 
 
 export enum ETechniqueType {
