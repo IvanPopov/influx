@@ -9,6 +9,7 @@ import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
+import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
@@ -17,8 +18,8 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
-import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
-import { filterPartFx, getScope, getFileState } from '@sandbox/reducers/sourceFile';
+// tslint:disable-next-line:max-line-length
+import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -127,11 +128,19 @@ export interface IAppProps extends IStoreState, IWithStyles<typeof styles>, Rout
 
 const Version = (props) => {
     return (
-        <div>
-            <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
-                { MODE !== 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
-            </Message>
-        </div>
+        <Popup
+            trigger={
+                <div>
+                    <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
+                        { MODE !== 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+                    </Message>
+                </div>
+            }
+            // position='left center'
+            size='small'
+            content={ String(new Date()) }
+            inverted
+        />
     );
 };
 
@@ -501,7 +510,7 @@ class App extends React.Component<IAppProps> {
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
                                     <SourceCodeMenu path={ props.match.params } />
                                     <Switch>
-                                        {/* TODO: sync all pathes with business logic */}
+                                        {/* TODO: sync all pathes with business logic */ }
                                         <Route path='/playground/:fx/:name/:pass/vertexshader'>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>

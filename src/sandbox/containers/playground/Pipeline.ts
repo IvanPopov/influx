@@ -333,8 +333,8 @@ function Pipeline(fx: PartFx) {
     }
 
     function play() {
-        constants.elapsedTime = 0.0;
-        constants.elapsedTimeLevel = 0.0;
+        constants.elapsedTime = 0;
+        constants.elapsedTimeLevel = 0;
 
         $startTime = Date.now();
         $elapsedTimeLevel = 0;

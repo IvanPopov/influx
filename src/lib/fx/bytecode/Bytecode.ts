@@ -959,27 +959,16 @@ const hex4 = (v: number) => `0x${v.toString(16).padStart(4, '0')}`;
 // const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
 
 
-export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram;
-export function translate(entryPoint: string, scope: IScope): ISubProgram;
-export function translate(...argv): ISubProgram {
-    let func: IFunctionDeclInstruction;
-    if (isString(argv[0])) {
-        let fname = argv[0];
-        let scope = argv[1];
-        func = scope.findFunction(fname, null);
-    } else {
-        func = argv[0];
-    }
-
+export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
     let ctx = ContextBuilder();
     let res: ISubProgram = null;
 
     try {
-        if (!isDefAndNotNull(func)) {
-            console.error(`Entry point '${func.name}' not found.`);
+        if (!isDefAndNotNull(entryFunc)) {
+            console.error(`Entry point '${entryFunc.name}' not found.`);
             return null;
         }
-        res = translateSubProgram(ctx, func);
+        res = translateSubProgram(ctx, entryFunc);
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));

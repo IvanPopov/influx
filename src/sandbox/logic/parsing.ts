@@ -10,7 +10,7 @@ import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged } from '@sandbox/actions/ActionTypes';
-import { getDebugger, getFileState } from '@sandbox/reducers/sourceFile';
+import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
@@ -202,14 +202,16 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
     latest: true,
 
     async process({ getState, action }, dispatch, done) {
-        const fileState = getFileState(getState());
+        const file = getFileState(getState());
         const debuggerState = getDebugger(getState());
         const entryPoint = (action.payload && action.payload.entryPoint) || debuggerState.entryPoint ||Bytecode.DEFAULT_ENTRY_POINT_NAME;
 
         let runtime = null;
 
-        if (!isNull(fileState.analysis.scope)) {
-            runtime = Bytecode.translate(entryPoint, fileState.analysis.scope);
+        if (!isNull(file.analysis.scope)) {
+            const scope = getScope(file);
+            const func = scope.findFunction(entryPoint, null);
+            runtime = Bytecode.translate(func);
             dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { entryPoint, runtime } });
         } else {
             console.error('invalid compile request!');
