@@ -382,6 +382,14 @@ export interface IExprInstruction extends ITypedInstruction {
     isConstExpr(): boolean;
 }
 
+export type ILogicalOperator = "&&" | "||";
+
+export interface ILogicalExprInstruction extends IExprInstruction {
+    operator: ILogicalOperator;
+    left: IExprInstruction;
+    right: IExprInstruction;
+}
+
 export type IUnaryOperator = "+" | "-" | "!" | "++" | "--";
 
 export interface IUnaryExprInstruction extends IExprInstruction {
@@ -489,23 +497,24 @@ export interface ILiteralInstruction extends IExprInstruction {
 
 
 export type IExprDerived =
-    | IConditionalExprInstruction
-    | IUnaryExprInstruction
-    | IPostfixPointInstruction
-    | IPostfixIndexInstruction
-    | IConstructorCallInstruction
     | IArithmeticExprInstruction
-    | ICastExprInstruction
-    | IComplexExprInstruction
-    | IPostfixArithmeticInstruction
-    | ISamplerStateBlockInstruction
-    | ICompileExprInstruction
-    | IRelationalExprInstruction
     | IAssignmentExprInstruction
-    | IInitExprInstruction
-    | IIdExprInstruction
+    | ICastExprInstruction
+    | ICompileExprInstruction
+    | IComplexExprInstruction
+    | IConditionalExprInstruction
+    | IConstructorCallInstruction
     | IFunctionCallInstruction
-    | ILiteralInstruction;
+    | IIdExprInstruction
+    | IInitExprInstruction
+    | ILiteralInstruction
+    | ILogicalExprInstruction
+    | IPostfixArithmeticInstruction
+    | IPostfixIndexInstruction
+    | IPostfixPointInstruction
+    | IRelationalExprInstruction
+    | ISamplerStateBlockInstruction
+    | IUnaryExprInstruction;
 
 export interface IAnnotationInstruction extends IInstruction {
 }

@@ -1,17 +1,15 @@
+import { EInstructionTypes, IExprInstruction, ILogicalExprInstruction, ILogicalOperator } from "@lib/idl/IInstruction";
+import * as SystemScope from "@lib/fx/SystemScope";
 import { ExprInstruction } from "./ExprInstruction";
-import { EInstructionTypes, ITypeUseInfoContainer, EVarUsedMode, IExprInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
 import { IInstructionSettings, Instruction } from "./Instruction";
-import * as SystemScope from '../SystemScope';
 
 
-export type LogicalOperator = "&&" | "||";
+
 
 export interface ILogicalExprInstructionSettings extends IInstructionSettings {
     left: IExprInstruction;
     right: IExprInstruction;
-    operator: LogicalOperator;
+    operator: ILogicalOperator;
 }
 
 
@@ -19,8 +17,8 @@ export interface ILogicalExprInstructionSettings extends IInstructionSettings {
  * Represent boolExpr && || boolExpr
  * (&& | ||) Instruction Instruction
  */
-export class LogicalExprInstruction extends ExprInstruction {
-    protected _operator: LogicalOperator;
+export class LogicalExprInstruction extends ExprInstruction implements ILogicalExprInstruction {
+    protected _operator: ILogicalOperator;
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
 
@@ -33,7 +31,7 @@ export class LogicalExprInstruction extends ExprInstruction {
     }
 
 
-    get operator(): LogicalOperator {
+    get operator(): ILogicalOperator {
         return this._operator;
     }
 

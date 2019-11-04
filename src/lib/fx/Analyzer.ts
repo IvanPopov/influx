@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IUnaryOperator, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IStmtDerived, IIfStmtInstruction, IForStmtInstruction, IWhileStmtInstruction, IDoWhileOperator } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IUnaryOperator, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IStmtDerived, IIfStmtInstruction, IForStmtInstruction, IWhileStmtInstruction, IDoWhileOperator, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ILogicalOperator } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IPartFxInstruction, IPartFxPassInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
@@ -34,7 +34,7 @@ import { InitExprInstruction } from './instructions/InitExprInstruction';
 import { Instruction } from './instructions/Instruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
 import { IntInstruction } from './instructions/IntInstruction';
-import { LogicalExprInstruction, LogicalOperator } from './instructions/LogicalExprInstruction';
+import { LogicalExprInstruction } from './instructions/LogicalExprInstruction';
 import { PartFxInstruction } from './instructions/part/PartFxInstruction';
 import { PartFxPassInstruction } from './instructions/part/PartFxPassInstruction';
 import { PassInstruction } from './instructions/PassInstruction';
@@ -60,6 +60,7 @@ import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
 import { isNumber } from 'util';
+import { visitor } from './Visitors';
 
 
 
@@ -335,7 +336,7 @@ function getRenderState(state: string): ERenderStates {
             break;
 
         default:
-            console.warn(EWarnings[EWarnings.UnsupportedRenderStateTypeUsed], { state });
+            // console.warn(EWarnings[EWarnings.UnsupportedRenderStateTypeUsed], { state });
             break;
     }
 
@@ -1903,7 +1904,7 @@ function analyzeRelationExpr(context: Context, program: ProgramScope, sourceNode
 function analyzeLogicalExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
     const children = sourceNode.children;
     const scope = program.currentScope;
-    const operator = <LogicalOperator>sourceNode.children[1].value;
+    const operator = <ILogicalOperator>sourceNode.children[1].value;
 
     const left = analyzeExpr(context, program, children[children.length - 1]);
     const right = analyzeExpr(context, program, children[0]);
@@ -2248,7 +2249,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
 
     assert(scope == globalScope);
     func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
-    
+
     // NOTE: possible implicit replacement of function 
     //       without implementaion inside addFunction() call.
     if (!globalScope.addFunction(func)) {
@@ -3004,12 +3005,17 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
 
     const children = sourceNode.children;
 
-    const stateType: string = children[children.length - 1].value.toUpperCase();
-    const stateName: ERenderStates = getRenderState(stateType);
-    const stateExprNode: IParseNode = children[children.length - 3];
-    const exprNode: IParseNode = stateExprNode.children[stateExprNode.children.length - 1];
+    const stateType = children[children.length - 1].value.toUpperCase();
+    const stateName = getRenderState(stateType);
 
-    if (isNull(exprNode.value) || isNull(stateName)) {
+    if (isNull(stateName)) {
+        return {};
+    }
+
+    const stateExprNode = children[children.length - 3];
+    const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
+
+    if (isNull(exprNode.value)) {
         console.warn('Pass state is incorrect.'); // TODO: move to warnings
         return {};
     }
@@ -3887,61 +3893,11 @@ export async function fromString(content: string, filename: string = "stdin"): P
     return root;
 }
 
-/**
- IStmtDerived =
-    | IStmtBlockInstruction
-    | IWhileStmtInstruction
-    | IForStmtInstruction;
- */
-function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: IInstruction) => void) {
-    if (!owner) {
-        return;
-    }
-
-    const visit = (instr: IInstruction) => { cb(instr, owner); visitor(instr, cb) };
-
-    switch (owner.instructionType) {
-
-        //
-        // Stmt
-        //
-
-        case EInstructionTypes.k_ReturnStmtInstruction:
-            visit((owner as IReturnStmtInstruction).expr);
-            break;
-        case EInstructionTypes.k_DeclStmtInstruction:
-            (owner as IDeclStmtInstruction).declList.forEach(decl => visit(decl));
-            break;
-        case EInstructionTypes.k_ExprStmtInstruction:
-            visit((owner as IExprStmtInstruction).expr);
-            break;
-        case EInstructionTypes.k_IfStmtInstruction:
-            visit((owner as IIfStmtInstruction).cond);
-            visit((owner as IIfStmtInstruction).conseq);
-            visit((owner as IIfStmtInstruction).contrary);
-            break;
-        case EInstructionTypes.k_StmtBlockInstruction:
-            (owner as IStmtBlockInstruction).stmtList.forEach(stmt => visit(stmt));
-            break;
-        case EInstructionTypes.k_ForStmtInstruction:
-            visit((owner as IForStmtInstruction).init);
-            visit((owner as IForStmtInstruction).cond);
-            visit((owner as IForStmtInstruction).body);
-            visit((owner as IForStmtInstruction).step);
-            break;
-        case EInstructionTypes.k_WhileStmtInstruction:
-            visit((owner as IWhileStmtInstruction).cond);
-            visit((owner as IWhileStmtInstruction).body);
-            break;
-        default:
-            console.error('unsupported instruction type found');
-    }
-}
 
 function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruction, stack: number[]): boolean {
     if (stack.indexOf(func.instructionID) !== -1) {
-        context.error(func.sourceNode, 
-            EErrors.InvalidFunctionRecursionNotAllowed, 
+        context.error(func.sourceNode,
+            EErrors.InvalidFunctionRecursionNotAllowed,
             { funcName: func.name });
         return false;
     }
@@ -3961,13 +3917,13 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
             //       version with implementation
             decl = decl.scope.findFunctionInScope(decl);
             if (isNull(decl.implementation)) {
-                context.error(instr.sourceNode, 
-                    EErrors.InvalidFunctionImplementationNotFound, 
+                context.error(instr.sourceNode,
+                    EErrors.InvalidFunctionImplementationNotFound,
                     { funcName: decl.name });
-                    return;
+                return;
             }
 
-            recursionFound = recursionFound || 
+            recursionFound = recursionFound ||
                 checkFunctionForRecursion(context, decl, stack);
         }
     });
@@ -3982,7 +3938,7 @@ function checkFunctionsForRecursion(context: Context, program: ProgramScope) {
     let recusrionFound = false;
     mwalk(gs.functionMap, funcOverloads => {
         funcOverloads.forEach(func => {
-            recusrionFound = recusrionFound || 
+            recusrionFound = recusrionFound ||
                 !checkFunctionForRecursion(context, func, []);
         })
     });
