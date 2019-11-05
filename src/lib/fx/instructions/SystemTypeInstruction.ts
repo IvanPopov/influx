@@ -1,12 +1,6 @@
-import { isDef, isNull } from "../../common";
-import { IInstructionSettings } from "./Instruction";
-import { IVariableDeclInstruction, IInstruction, ITypeInstruction, IVariableTypeInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { Instruction } from "./Instruction";
-import { IdInstruction } from "./IdInstruction";
-import { VariableTypeInstruction } from "./VariableTypeInstruction";
-import { VariableDeclInstruction } from "./VariableDeclInstruction";
-import { IParseNode } from "../../idl/parser/IParser";
+import { isNull } from "@lib/common";
+import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     name: string;

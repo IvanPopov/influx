@@ -1,5 +1,7 @@
 /* tslint:disable:typedef */
 
+import { isNumber } from '@lib/common';
+import * as Glsl from '@lib/fx/GLSL';
 import { IRange } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
@@ -10,7 +12,8 @@ import * as React from 'react';
 import { MonacoDiffEditor } from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import { isNumber } from 'util';
+
+
 
 interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
@@ -19,7 +22,7 @@ interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
 function cutSourceRange(content: string, range: IRange): string {
     const { start, end } = range;
-    console.log(range);
+    // console.log(range);
     const lines = content.split('\n').slice(start.line, end.line + 1);
     lines[0] = lines[0].substr(start.column);
     lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
@@ -89,7 +92,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                 ref='monaco'
 
                 original={ cutSourceRange(file.content, vs.sourceNode.loc) }
-                value={ vs.toCode() }
+                value={ Glsl.translate(vs, { type: 'vertex' }) }
 
                 width='100%'
                 height='calc(100vh - 74px)' // todo: fixme

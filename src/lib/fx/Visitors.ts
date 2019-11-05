@@ -1,4 +1,4 @@
-import { IInstruction, EInstructionTypes, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IIfStmtInstruction, IStmtBlockInstruction, IForStmtInstruction, IWhileStmtInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, ISamplerStateBlockInstruction, IUnaryExprInstruction, IVariableTypeInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IInstruction, EInstructionTypes, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IIfStmtInstruction, IStmtBlockInstruction, IForStmtInstruction, IWhileStmtInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, ISamplerStateBlockInstruction, IUnaryExprInstruction, IVariableTypeInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IVariableDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 
 export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: IInstruction) => void) {
     if (!owner) {
@@ -123,7 +123,9 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
         //
         // Others
         //
-
+        case EInstructionTypes.k_ComplexTypeInstruction:
+            (owner as ITypeInstruction).fields.forEach(field => visit(field));
+            break;
         case EInstructionTypes.k_FunctionDefInstruction:
             visit((owner as IFunctionDefInstruction).functionName);
             visit((owner as IFunctionDefInstruction).returnType);

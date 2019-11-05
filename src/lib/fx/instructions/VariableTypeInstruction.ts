@@ -227,10 +227,16 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get fields(): IVariableDeclInstruction[] {
-        if (!this.canHaveSubDecls()) {
+        // if (!this.canHaveSubDecls()) {
+        //     return null;
+        // }
+        // return this.generateSubDeclList();
+
+        if (!this.isComplex()) {
             return null;
         }
-        return this.generateSubDeclList();
+
+        return this.subType.fields;
     }
 
 
@@ -487,36 +493,36 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    private generateSubDeclList(): IVariableDeclInstruction[] {
-        if (!this.canHaveSubDecls()) {
-            return [];
-        }
+    // private generateSubDeclList(): IVariableDeclInstruction[] {
+    //     if (!this.canHaveSubDecls()) {
+    //         return [];
+    //     }
 
-        let declList: IVariableDeclInstruction[] = [];
-        let i: number = 0;
+    //     let declList: IVariableDeclInstruction[] = [];
+    //     let i: number = 0;
 
-        if (this.isComplex()) {
-            let fieldNameList = this.fieldNames;
+    //     if (this.isComplex()) {
+    //         let fieldNameList = this.fieldNames;
 
-            for (i = 0; i < fieldNameList.length; i++) {
-                const field: IVariableDeclInstruction = this.getField(fieldNameList[i]);
-                const fieldSubDeclList = field.type.fields;
+    //         for (i = 0; i < fieldNameList.length; i++) {
+    //             const field: IVariableDeclInstruction = this.getField(fieldNameList[i]);
+    //             const fieldSubDeclList = field.type.fields;
 
-                if (!isNull(fieldSubDeclList)) {
-                    for (let j: number = 0; j < fieldSubDeclList.length; j++) {
-                        declList.push(fieldSubDeclList[j]);
-                    }
-                }
-            }
-        }
+    //             if (!isNull(fieldSubDeclList)) {
+    //                 for (let j = 0; j < fieldSubDeclList.length; j++) {
+    //                     declList.push(fieldSubDeclList[j]);
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        return declList;
-    }
+    //     return declList;
+    // }
 
 
-    private canHaveSubDecls(): boolean {
-        return this.isComplex();
-    }
+    // private canHaveSubDecls(): boolean {
+    //     return this.isComplex();
+    // }
 
     
     /**
