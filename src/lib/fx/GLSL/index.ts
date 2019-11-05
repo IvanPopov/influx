@@ -167,7 +167,7 @@ function ContextBuilder() {
 
     function print(): string {
         const out = Output();
-        const { newline, keyword: kw, add, push, pop } = out;
+        const { newline: nl, keyword: kw, add, push, pop } = out;
 
         const variable = (v: IGlslVariable) => (
             kw(v.type.type === EGlslType.k_Struct ? v.type.name : GlslTypeNames[v.type.type]),
@@ -178,7 +178,7 @@ function ContextBuilder() {
             kw('struct'),
             add(name),
     
-            newline(),
+            nl(),
             add('{'),
             push(),
             type.fields.forEach(field => variable(field)),
@@ -191,18 +191,14 @@ function ContextBuilder() {
         const varying = (attr: IGlslVariable) => (kw('varying'), variable(attr));
 
         add('precision highp float;');
-        newline(2);
-
-        mwalk(complexTypes, type => (complexType(type), add(';'), newline(2) ));
-
-        newline(2);
-        mwalk(attributes, attr => (attribute(attr), add(';'), newline()));
-
-        newline(2);
-        mwalk(uniforms, uni => (uniform(uni), add(';'), newline()));
-
-        newline(2);
-        mwalk(varyings, vary => (varying(vary), add(';'), newline()));
+        nl(2);
+        mwalk(complexTypes, type => (complexType(type), add(';'), nl(2) ));
+        nl(2);
+        mwalk(attributes, attr => (attribute(attr), add(';'), nl()));
+        nl(2);
+        mwalk(uniforms, uni => (uniform(uni), add(';'), nl()));
+        nl(2);
+        mwalk(varyings, vary => (varying(vary), add(';'), nl()));
 
         return out.toString();
     }
