@@ -263,13 +263,15 @@ export interface ITypeInstruction extends IInstruction {
 }
 
 
+export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout';
+
 export interface IVariableTypeInstruction extends ITypeInstruction {
-    readonly usageList: string[];
+    readonly usageList: IVariableUsage[];
     readonly subType: ITypeInstruction;
     readonly padding: number;
 
     isUniform(): boolean;
-    hasUsage(usageName: string): boolean;
+    hasUsage(usageName: IVariableUsage): boolean;
 
     // for structures internal usage
     $overwritePadding(val: number): void;
@@ -342,10 +344,8 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     isField(): boolean;
     isSampler(): boolean;
 
-    /** @deprecated */
+    /** Alias for type.isUniform() */
     isUniform(): boolean;
-    /** @deprecated */
-    isVarying(): boolean;
 }
 
 

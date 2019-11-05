@@ -1,20 +1,13 @@
-import { Instruction, IInstructionSettings } from "./Instruction";
-import { isDefAndNotNull } from "../../common";
-import { assert } from "../../common";
-import { IVariableTypeInstruction, ITypeInstruction, IExprInstruction, IVariableDeclInstruction, EInstructionTypes, IIdInstruction, ITypeDeclInstruction, IIdExprInstruction, IInstruction, IScope } from '../../idl/IInstruction';
-import { IMap } from "../../idl/IMap";
-import { isNull, isNumber, isDef } from '../../common';
+import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
+import { EInstructionTypes, IExprInstruction, IScope, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IdInstruction } from "./IdInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 import { VariableDeclInstruction } from "./VariableDeclInstruction";
-import { IntInstruction } from "./IntInstruction";
-import { IdExprInstruction } from "./IdExprInstruction"
-import * as Analyzer from "../Analyzer"
-import { IParseNode } from "../../idl/parser/IParser";
 
 
 export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     type: ITypeInstruction;
-    usages?: string[];
+    usages?: IVariableUsage[];
     arrayIndex?: IExprInstruction;
     writable?: boolean;
     readable?: boolean;
@@ -24,7 +17,7 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
 
 export class VariableTypeInstruction extends Instruction implements IVariableTypeInstruction {
     protected _subType: ITypeInstruction;
-    protected _usageList: string[];
+    protected _usageList: IVariableUsage[];
 
     /** overrites for defautl read/write tests */
     protected _isWritable: boolean;
@@ -216,7 +209,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    get usageList(): string[] {
+    get usageList(): IVariableUsage[] {
         return this._usageList;
     }
 
@@ -357,9 +350,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    private addUsage(sUsage: string): void {
-        if (!this.hasUsage(sUsage)) {
-            this._usageList.push(sUsage);
+    private addUsage(usage: IVariableUsage): void {
+        if (!this.hasUsage(usage)) {
+            this._usageList.push(usage);
         }
     }
 
@@ -369,12 +362,12 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    hasFieldWithSematics(sSemantic: string): boolean {
+    hasFieldWithSematics(semantic: string): boolean {
         if (!this.isComplex()) {
             return false;
         }
 
-        return this.subType.hasFieldWithSematics(sSemantic);
+        return this.subType.hasFieldWithSematics(semantic);
     }
 
 
@@ -440,15 +433,15 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    hasUsage(sUsageName: string): boolean {
+    hasUsage(usageName: IVariableUsage): boolean {
         for (let i = 0; i < this._usageList.length; i++) {
-            if (this._usageList[i] === sUsageName) {
+            if (this._usageList[i] === usageName) {
                 return true;
             }
         }
 
         if (!isNull(this.subType) && this.subType.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
-            return (<IVariableTypeInstruction>this.subType).hasUsage(sUsageName);
+            return (<IVariableTypeInstruction>this.subType).hasUsage(usageName);
         }
 
         return false;

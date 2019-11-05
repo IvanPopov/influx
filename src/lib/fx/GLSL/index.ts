@@ -3,15 +3,8 @@ import { assert, isDef, mwalk } from "@lib/common";
 import { IMap } from "@lib/idl/IMap";
 import { visitor } from "@lib/fx/Visitors";
 import { IOutput, Output } from './Output';
+import { EGlslType, IGlslType, IGlslVariable, EGlslVariableUsage } from "./IGlsl";
 
-enum EGlslType {
-    k_Float_f32,
-    k_Int_i32,
-    k_Vec2_f32,
-    k_Vec3_f32,
-    k_Vec4_f32,
-    k_Struct
-};
 
 const GlslTypeNames = {
     [EGlslType.k_Float_f32]: 'float',
@@ -22,17 +15,6 @@ const GlslTypeNames = {
     [EGlslType.k_Struct]: 'struct'
 }
 
-class IGlslType {
-    type: EGlslType;
-    name?: string;
-    length?: number;
-    fields?: IGlslVariable[];
-}
-
-interface IGlslVariable {
-    name: string;
-    type: IGlslType;
-}
 
 
 const sname = {
@@ -54,6 +36,7 @@ interface IStackEntry {
 function ContextBuilder() {
 
     const stack: IStackEntry[] = [];
+    const out = Output();
 
     const complexTypes: IMap<IGlslType> = {};
     const attributes: IMap<IGlslVariable> = {};
@@ -61,14 +44,21 @@ function ContextBuilder() {
     const varyings: IMap<IGlslVariable> = {};
 
     const depth = () => stack.length;
+    const toString = () => out.toString();
 
     function push(fn: IFunctionDeclInstruction) {
+        if (!stack.length) {
+            printPrologue();
+        }
         stack.push({ fn });
     }
 
 
     function pop() {
         stack.pop();
+        if (!stack.length) {
+            printEpilogue();
+        }
     }
 
     function variable(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): IGlslVariable {
@@ -87,7 +77,6 @@ function ContextBuilder() {
         return attr;
     }
 
-
     function uniform(src: IVariableDeclInstruction): IGlslVariable {
         assert(src.isUniform());
         const uniform = variable(src, sname.uniform);
@@ -97,7 +86,6 @@ function ContextBuilder() {
 
         return uniform;
     }
-
 
     function varying(src: IVariableDeclInstruction): IGlslVariable {
         assert(!src.type.isNotBaseArray() && !src.type.isComplex());
@@ -118,6 +106,7 @@ function ContextBuilder() {
         let name: string;
         let type: EGlslType;
         let fields: IGlslVariable[];
+        // let usages: EGlslVariableUsage[];
 
         if (!complex) {
             switch (src.name) {
@@ -153,6 +142,17 @@ function ContextBuilder() {
             length = src.length;
         }
 
+        // if (src.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
+        //     (src as IVariableTypeInstruction).usageList.forEach(usage => {
+        //         usages = usages || [];
+        //         switch (usage) {
+        //             case 'uniform':
+        //                 break;
+        //             case 'const':
+        //         }
+        //     });
+        // }
+
         const dest: IGlslType = { length, type, name, fields };
 
         if (complex && allowCaching) {
@@ -165,8 +165,13 @@ function ContextBuilder() {
     }
 
 
-    function print(): string {
-        const out = Output();
+    // function printVar(v: IGlslVariable) {
+    //     const { keyword: kw } = out;
+    //     kw(v.type.type === EGlslType.k_Struct ? v.type.name : GlslTypeNames[v.type.type]),
+    //     kw(v.name)
+    // }
+
+    function printPrologue() {
         const { newline: nl, keyword: kw, add, push, pop } = out;
 
         const variable = (v: IGlslVariable) => (
@@ -187,8 +192,8 @@ function ContextBuilder() {
         );
 
         const attribute = (attr: IGlslVariable) => (kw('attribute'), variable(attr));
-        const uniform = (attr: IGlslVariable) => (kw('uniform'), variable(attr));
-        const varying = (attr: IGlslVariable) => (kw('varying'), variable(attr));
+        const uniform = (uni: IGlslVariable) => (kw('uniform'), variable(uni));
+        const varying = (vary: IGlslVariable) => (kw('varying'), variable(vary));
 
         add('precision highp float;');
         nl(2);
@@ -200,7 +205,20 @@ function ContextBuilder() {
         nl(2);
         mwalk(varyings, vary => (varying(vary), add(';'), nl()));
 
-        return out.toString();
+        add('void main(void)');
+        nl();
+        add('{');
+        push();
+    }
+
+
+
+    function printEpilogue() {
+        const { newline: nl, keyword: kw, add, push, pop } = out;
+
+        pop();
+        add('}');
+        nl();
     }
 
 
@@ -210,11 +228,12 @@ function ContextBuilder() {
         depth,
         rtype,
 
+        // variable,
         attribute,
         uniform,
         varying,
 
-        print
+        toString
     };
 }
 
@@ -254,7 +273,7 @@ function preloadVaryings(ctx: IContext, def: IFunctionDefInstruction) {
 
 
 function preloadEntry(ctx: IContext, fn: IFunctionDeclInstruction) {
-    const { depth, attribute, uniform, rtype } = ctx;
+    const { depth, uniform } = ctx;
     const def = fn.definition;
 
     assert(depth() === 0);
@@ -274,21 +293,22 @@ function preloadEntry(ctx: IContext, fn: IFunctionDeclInstruction) {
 
 
 function translateVertexShader(ctx: IContext, fn: IFunctionDeclInstruction): string {
-    const { push, pop, print } = ctx;
+    const { push, pop } = ctx;
 
     preloadEntry(ctx, fn);
+
     push(fn);
 
     visitor(fn.implementation, instr => {
         switch (instr.instructionType) {
             case EInstructionTypes.k_VariableDeclInstruction:
-
+            // variable(instr as IVariableDeclInstruction)
         }
     });
 
     pop();
 
-    return print();
+    return ctx.toString();
 }
 
 

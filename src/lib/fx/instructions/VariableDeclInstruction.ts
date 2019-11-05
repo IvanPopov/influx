@@ -119,15 +119,8 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    /** @deprecated */
     isUniform(): boolean {
         return this.type.hasUsage('uniform');
-    }
-
-    /** @deprecated */
-    isVarying(): boolean {
-        console.log('probably will not work');
-        return this.type.hasUsage('varying');
     }
 
 

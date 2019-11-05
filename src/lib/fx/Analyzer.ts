@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IUnaryOperator, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IStmtDerived, IIfStmtInstruction, IForStmtInstruction, IWhileStmtInstruction, IDoWhileOperator, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ILogicalOperator } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IUnaryOperator, IReturnStmtInstruction, IDeclStmtInstruction, IExprStmtInstruction, IStmtDerived, IIfStmtInstruction, IForStmtInstruction, IWhileStmtInstruction, IDoWhileOperator, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ILogicalOperator, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IPartFxInstruction, IPartFxPassInstruction, EPartFxPassGeometry } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
@@ -790,7 +790,7 @@ function analyzeUsageType(context: Context, program: ProgramScope, sourceNode: I
     const scope = program.currentScope;
 
     let type: ITypeInstruction = null;
-    let usages: string[] = [];
+    let usages: IVariableUsage[] = [];
 
     for (let i = children.length - 1; i >= 0; i--) {
         if (children[i].name === 'Type') {
@@ -857,9 +857,11 @@ function analyzeType(context: Context, program: ProgramScope, sourceNode: IParse
 }
 
 
-function analyzeUsage(sourceNode: IParseNode): string {
+function analyzeUsage(sourceNode: IParseNode): IVariableUsage {
     sourceNode = sourceNode.children[0];
-    return sourceNode.value;
+    const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout'];
+    assert(supportedUsages.indexOf(sourceNode.value) !== -1);
+    return <IVariableUsage>sourceNode.value;
 }
 
 
@@ -2098,7 +2100,7 @@ function analyzeUsageStructDecl(context: Context, program: ProgramScope, sourceN
     const children = sourceNode.children;
     const scope = program.currentScope;
 
-    let usages: string[] = [];
+    let usages: IVariableUsage[] = [];
     let type: ITypeInstruction = null;
 
     for (let i = children.length - 1; i >= 0; i--) {
@@ -2353,7 +2355,7 @@ function analyzeParamUsageType(context: Context, program: ProgramScope, sourceNo
     const children = sourceNode.children;
     const scope = program.currentScope;
 
-    let usages: string[] = [];
+    let usages: IVariableUsage[] = [];
     let type: ITypeInstruction = null;
 
     for (let i = children.length - 1; i >= 0; i--) {
