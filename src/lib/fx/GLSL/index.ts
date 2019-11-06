@@ -269,17 +269,24 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
                 assigment(expr as IAssignmentExprInstruction);
                 break;
             case EInstructionTypes.k_PostfixPointInstruction:
+                {
+                    const pfxp = expr as IPostfixPointInstruction;
+                    if (isAttributeAlias(pfxp)) {
+                        kw(sname.attr(pfxp.postfix.declaration));
+                        return;
+                    }
+                }
                 postfixPoint(expr as IPostfixPointInstruction);
-                break;
+                return;
             case EInstructionTypes.k_IdExprInstruction:
                 identifier(expr as IIdExprInstruction);
-                break;
+                return;
             case EInstructionTypes.k_FunctionCallInstruction:
                 fcall(expr as IFunctionCallInstruction);
-                break;
+                return;
             case EInstructionTypes.k_ConstructorCallInstruction:
                 ccall(expr as IConstructorCallInstruction);
-                break;
+                return;
             case EInstructionTypes.k_FloatInstruction:
                 {
                     const lit = expr as ILiteralInstruction<number>;
@@ -288,19 +295,19 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
                     (sval.indexOf('.') === -1) && add('.');
                     add('f');
                 }
-                break;
+                return;
             case EInstructionTypes.k_IntInstruction:
                 {
                     const lit = expr as ILiteralInstruction<number>;
                     kw(lit.value.toFixed(0));
                 }
-                break;
+                return;
             case EInstructionTypes.k_BoolInstruction:
                 {
                     const lit = expr as ILiteralInstruction<boolean>;
                     kw(lit.value ? 'true' : 'false');
                 }
-                break;
+                return;
         }
     }
 
@@ -317,17 +324,19 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         expression(asgm.right as IExprInstruction);
     }
 
-    function postfixPoint(pfxp: IPostfixPointInstruction) {
+    function isAttributeAlias(pfxp: IPostfixPointInstruction) {
         if (isMain()) {
             if (pfxp.element.instructionType === EInstructionTypes.k_IdExprInstruction) {
                 const id = pfxp.element as IdExprInstruction;
                 if (id.declaration.isParameter() && !id.declaration.isUniform()) {
-                    kw(sname.attr(pfxp.postfix.declaration));
-                    return;
+                    return true;
                 }
             }
         }
-        
+        return false;
+    }
+
+    function postfixPoint(pfxp: IPostfixPointInstruction) {
         expression(pfxp.element);
         add('.');
         add(pfxp.postfix.name);
@@ -343,7 +352,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         // }
 
         const isUniformArg = isMain() && decl.isParameter() && decl.isUniform();
-        
+
         if (decl.isGlobal() || isUniformArg) {
             assert(decl.isUniform());
 
