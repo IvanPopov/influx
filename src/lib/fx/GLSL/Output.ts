@@ -1,24 +1,29 @@
 export function Output({ tab = '\t', nl = '\n' } = {}) {
     let data: string[] = [''];
     let nesting = 0;
+    let count = 0;
 
-    const push = () => ++nesting;
-    const pop = () => --nesting;
+    const push = () => (++nesting, count && newline());
+    const pop = () => (--nesting, count && newline());
     const toString = () => data.join(nl);
-    const cl = () => data[data.length - 1];
 
     function add(val: string) {
+        if (!count) {
+            for (let i = 0; i < nesting; ++i) val = tab + val;
+        }
+        
         data[data.length - 1] += val;
+        count++;
     }
 
     function keyword(token: string) {
-        cl() && add(' ');
+        count && add(' ');
         add(token);
     }
 
-    function newline(count = 1) {
-        for (let i = 0; i < count; ++i) data.push('');
-        for (let i = 0; i < nesting; ++i) add(tab);
+    function newline() {
+        data.push('');
+        count = 0;
     }
 
     return {

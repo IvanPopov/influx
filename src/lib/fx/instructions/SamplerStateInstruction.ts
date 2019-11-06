@@ -1,8 +1,5 @@
-import { Instruction } from "./Instruction";
-import { IInstructionSettings } from "./Instruction";
-import { ISimpleInstruction, EInstructionTypes, IInstruction, ILiteralInstruction, IVariableDeclInstruction, ISamplerStateInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
+import { EInstructionTypes, IInstruction, ISamplerStateInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface ISamplerStateInstructionSettings extends IInstructionSettings {
     name: string;

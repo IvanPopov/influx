@@ -448,19 +448,19 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 break;
             case EInstructionTypes.k_BoolInstruction:
                 {
-                    const i32 = <boolean>(expr as ILiteralInstruction).value ? 1 : 0;
+                    const i32 = (expr as ILiteralInstruction<boolean>).value ? 1 : 0;
                     return constants.i32(i32);
                 }
                 break;
             case EInstructionTypes.k_IntInstruction:
                 {
-                    const i32 = <number>(expr as ILiteralInstruction).value;
+                    const i32 = (expr as ILiteralInstruction<number>).value;
                     return constants.i32(i32);
                 }
                 break;
             case EInstructionTypes.k_FloatInstruction:
                 {
-                    const f32 = <number>(expr as ILiteralInstruction).value;
+                    const f32 = (expr as ILiteralInstruction<number>).value;
                     return constants.f32(f32);
                 }
                 break;

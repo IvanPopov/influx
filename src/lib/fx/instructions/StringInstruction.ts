@@ -10,7 +10,7 @@ export interface IStringInstructionSettings extends IInstructionSettings {
 }
 
 
-export class StringInstruction extends ExprInstruction implements ILiteralInstruction {
+export class StringInstruction extends ExprInstruction implements ILiteralInstruction<string> {
     protected _value: string;
 
 	/**

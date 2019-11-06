@@ -8,7 +8,7 @@ export interface IIntInstructionSettings extends IInstructionSettings {
     value: string;
 }
 
-export class IntInstruction extends ExprInstruction implements ILiteralInstruction {
+export class IntInstruction extends ExprInstruction implements ILiteralInstruction<number> {
     protected _value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS

@@ -8,7 +8,7 @@ export interface IBoolInstructionSettings extends IInstructionSettings {
     value: "true" | "false";
 }
 
-export class BoolInstruction extends ExprInstruction implements ILiteralInstruction {
+export class BoolInstruction extends ExprInstruction implements ILiteralInstruction<boolean> {
     protected _value: boolean;
 
     constructor({ value, scope, ...settings }: IBoolInstructionSettings) {

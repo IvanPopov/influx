@@ -491,8 +491,8 @@ export interface IFunctionCallInstruction extends IExprInstruction {
 }
 
 
-export interface ILiteralInstruction extends IExprInstruction {
-    readonly value: number | string | boolean;
+export interface ILiteralInstruction<T> extends IExprInstruction {
+    readonly value: T;
 }
 
 

@@ -555,7 +555,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    Int(instr: ILiteralInstruction) {
+    Int(instr: ILiteralInstruction<number>) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
             // <Property { ...this.bindProps(instr) } >
@@ -567,21 +567,21 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         );
     }
 
-    Float(instr: ILiteralInstruction) {
+    Float(instr: ILiteralInstruction<number>) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
         );
     }
 
 
-    Bool(instr: ILiteralInstruction) {
+    Bool(instr: ILiteralInstruction<boolean>) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
         );
     }
 
 
-    String(instr: ILiteralInstruction) {
+    String(instr: ILiteralInstruction<string>) {
         return (
             <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
         );
