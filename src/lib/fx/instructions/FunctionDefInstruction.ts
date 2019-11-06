@@ -48,7 +48,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         // todo: check order!!
         return this._parameterList.filter((param) => !param.initExpr).length;
     }
-    
+
 
     get id(): IIdInstruction {
         return this._id;
@@ -125,7 +125,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     // TOOD: move this code to analyzer!
     static checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
         const returnType = <IVariableTypeInstruction>funcDef.returnType;
-        
+
         if (returnType.isEqual(SystemScope.T_VOID)) {
             return true;
         }
@@ -154,7 +154,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             if (returnType.isContainComplexType()) {
                 return false;
             }
-        } else { 
+        } else {
             if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
                 return false;
             }
@@ -191,174 +191,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
         return true;
     }
-
-
-    // should be called only after checkArgumentsFor[Vertex|Pixel]Usage
-    static fetchShaderInput(funcDef: IFunctionDefInstruction): IVariableDeclInstruction[] {
-        let params = funcDef.params;
-        let shaderInput: IVariableDeclInstruction[] = [];
-
-        for (let i = 0; i < params.length; i++) {
-            let param = params[i];
-            if (param.isUniform()) {
-                continue;
-            }
-            shaderInput.push(param);
-        }
-
-        return shaderInput;
-    }
-
-    static hasComplexShaderInput(funcDef: IFunctionDefInstruction): boolean {
-        let params = funcDef.params;
-
-        for (let i = 0; i < params.length; i++) {
-            let param = params[i];
-            if (param.isUniform()) {
-                continue;
-            }
-         
-            if (isNull(param.semantics)) {
-                return true;
-            } 
-        }
-
-        return false;
-    }
-
-    /*
-    static checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
-        let params = funcDef.arguments;
-        let isAttributeByStruct = false;
-        let isAttributeByParams = false;
-        let isStartAnalyze = false;
-
-        for (let i: number = 0; i < params.length; i++) {
-            let param = params[i];
-
-            if (param.isUniform()) {
-                this._paramListForShaderCompile.push(param);
-                continue;
-            }
-
-            if (!isStartAnalyze) {
-                if (isNull(param.semantics)) {
-                    if (param.type.isBase() ||
-                        param.type.hasFieldWithoutSemantics() ||
-                        !param.type.hasAllUniqueSemantics()) {
-                        return false;
-                    }
-
-                    isAttributeByStruct = true;
-                } else if (!isNull(param.semantics)) {
-                    if (param.type.isComplex() &&
-                        (param.type.hasFieldWithoutSemantics() ||
-                            !param.type.hasAllUniqueSemantics())) {
-                        return false;
-                    }
-
-                    isAttributeByParams = true;
-                }
-
-                isStartAnalyze = true;
-            } else if (isAttributeByStruct) {
-                return false;
-            } else if (isAttributeByParams) {
-                if (param.semantics === "") {
-                    return false;
-                }
-
-                if (param.type.isComplex() &&
-                    (param.type.hasFieldWithoutSemantics() ||
-                        !param.type.hasAllUniqueSemantics())) {
-                    return false;
-                }
-            }
-
-            this._paramListForShaderInput.push(param);
-        }
-
-        if (isAttributeByStruct) {
-            this._bIsComplexShaderInput = true;
-        }
-
-        return true;
-    }
-
-
-    private checkArgumentsForPixelUsage(): boolean {
-        let params: IVariableDeclInstruction[] = this._parameterList;
-        let isVaryingsByStruct: boolean = false;
-        let isVaryingsByParams: boolean = false;
-        let isStartAnalyze: boolean = false;
-
-        for (let i: number = 0; i < params.length; i++) {
-            let param: IVariableDeclInstruction = params[i];
-
-            if (param.isUniform()) {
-                this._paramListForShaderCompile.push(param);
-                continue;
-            }
-
-            if (!isStartAnalyze) {
-                if (param.semantics === "") {
-                    if (param.type.isBase() ||
-                        param.type.hasFieldWithoutSemantics() ||
-                        !param.type.hasAllUniqueSemantics() ||
-                        param.type.isContainSampler()) {
-                        return false;
-                    }
-
-                    isVaryingsByStruct = true;
-                }
-                else if (param.semantics !== "") {
-                    if (param.type.isContainSampler() ||
-                        Effect.isSamplerType(param.type)) {
-                        return false;
-                    }
-
-                    if (param.type.isComplex() &&
-                        (param.type.hasFieldWithoutSemantics() ||
-                            !param.type.hasAllUniqueSemantics())) {
-                        return false;
-                    }
-
-                    isVaryingsByParams = true;
-                }
-
-                isStartAnalyze = true;
-            }
-            else if (isVaryingsByStruct) {
-                return false;
-            }
-            else if (isVaryingsByParams) {
-                if (param.semantics === "") {
-                    return false;
-                }
-
-                if (param.type.isContainSampler() ||
-                    Effect.isSamplerType(param.type)) {
-                    return false;
-                }
-
-                if (param.type.isComplex() &&
-                    (param.type.hasFieldWithoutSemantics() ||
-                        !param.type.hasAllUniqueSemantics())) {
-                    return false;
-                }
-            }
-
-            this._paramListForShaderInput.push(param);
-        }
-
-        if (isVaryingsByStruct) {
-            this._bIsComplexShaderInput = true;
-        }
-
-        return true;
-    }
-
-    */
+   
 
     static checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
         let params = funcDef.params;

@@ -25,8 +25,7 @@ const sname = {
     // uniform: (decl: IVariableDeclInstruction) => `u_${decl.name}`
 };
 
-
-function ContextBuilder() {
+function createBaseEmitter() {
 
     let blocks: IOutput[] = [];
     let stack: IOutput[] = [];
@@ -71,14 +70,14 @@ function ContextBuilder() {
 }
 
 
-type IContext = ReturnType<typeof ContextBuilder>;
 
-type IOptions = {
-    type: 'vertex' | 'pixel';
-};
+interface ITypeInfo {
+    typeName: string;
+    length: number;
+    usage?: string;
+}
 
-
-function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
+function createCodeEmitter(ctx = createBaseEmitter()) {
     const {
         depth,
         begin,
@@ -90,11 +89,24 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         pop
     } = ctx;
 
-    const isMain = () => depth() === 1;
-
+    const knownGlobals: string[] = [];
     const knownTypes: string[] = [];
-    function type(src: ITypeInstruction): { typeName: string; length: number; usage?: string } {
-        let complex = src.isComplex();
+
+    const isMain = () => depth() === 0;
+
+    function resolveTypeName(type: ITypeInstruction): string {
+        const typeName = GlslTypeNames[type.name];
+        if (!isDef(typeName)) {
+            assert(false, 'unknown built in type found');
+            return null;
+        }
+
+        return typeName;
+    }
+
+
+    function resolveType(type: ITypeInstruction): ITypeInfo {
+        let complex = type.isComplex();
 
         let length: number;
         let typeName: string;
@@ -102,42 +114,29 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         let usage: string;
 
         if (!complex) {
-            typeName = GlslTypeNames[src.name];
-            if (!isDef(typeName)) {
-                assert(false, 'unknown built in type found');
-                return null;
-            }
+            typeName = resolveTypeName(type);
         } else {
-            typeName = src.name;
+            typeName = type.name;
 
             if (knownTypes.indexOf(typeName) === -1) {
                 begin();
-                kw('struct');
-                kw(src.name);
-                nl();
-                add('{');
-                push();
-
-                src.fields.map(field => (vdecl(field), add(';'), nl()));
-
-                pop();
-                add('}');
+                emitComplexType(type);
                 end();
 
                 knownTypes.push(typeName);
             }
         }
 
-        if (src.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
-            const vtype = src as IVariableTypeInstruction;
+        if (type.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
+            const vtype = type as IVariableTypeInstruction;
             if (vtype.isUniform()) {
                 usages = usages || [];
                 usages.push('uniform');
             }
         }
 
-        if (src.isNotBaseArray()) {
-            length = src.length;
+        if (type.isNotBaseArray()) {
+            length = type.length;
         }
 
         if (usages) {
@@ -147,9 +146,25 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         return { typeName, length, usage };
     }
 
-    
-    function vdecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        const { typeName, length, usage } = type(src.type);
+
+    function emitComplexType(ctype: ITypeInstruction) {
+        assert(ctype.isComplex());
+
+        kw('struct');
+        kw(ctype.name);
+        nl();
+        add('{');
+        push();
+
+        ctype.fields.map(field => (emitStmt(field), nl()));
+
+        pop();
+        add('}');
+    }
+
+
+    function emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        const { typeName, length, usage } = resolveType(src.type);
         const name = rename ? rename(src) : src.name;
 
         usage && kw(usage);
@@ -159,11 +174,11 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
     }
 
     const attribute = (src: IVariableDeclInstruction) =>
-        (kw('attribute'), vdecl(src, sname.attr), add(';'), nl());
+        (kw('attribute'), emitVariableDecl(src, sname.attr), add(';'), nl());
     const varying = (src: IVariableDeclInstruction) =>
-        (kw('varying'), vdecl(src, sname.varying), add(';'), nl());
+        (kw('varying'), emitVariableDecl(src, sname.varying), add(';'), nl());
 
-    function prologue(def: IFunctionDefInstruction): void {
+    function emitPrologue(def: IFunctionDefInstruction): void {
         begin();
         {
             for (const param of def.params) {
@@ -197,7 +212,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
                     continue;
                 }
 
-                vdecl(param);
+                emitVariableDecl(param);
             }
         }
         end();
@@ -216,34 +231,81 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         end();
     }
 
-    function func(fn: IFunctionDeclInstruction) {
-        const omitParameters = isMain();
+    function emitFunction(fn: IFunctionDeclInstruction) {
         const def = fn.def;
-        const { typeName } = type(def.returnType);
-        kw(typeName);
-        kw(fn.name);
-        add('(');
-        if (!omitParameters) {
+        const retType = def.returnType;
+        const { typeName } = resolveType(def.returnType);
+
+        if (isMain()) {
+            emitPrologue(fn.def);
+
+            // emit original function witout parameters
+            begin();
+            {
+                kw(typeName);
+                kw(fn.name);
+                add('(');
+                add(')');
+                nl();
+                emitBlock(fn.impl);
+            }
+            end();
+
+            // emit main()
+            begin();
+            {
+                add('void main(void)');
+                nl();
+                add('{');
+                push();
+                {
+                  
+                    assert(retType.isComplex());
+
+                    const tempName = 'temp';
+
+                    kw(typeName);
+                    kw(tempName);
+                    kw('=');
+                    kw(fn.name);
+                    add('()');
+                    add(';');
+                    nl();
+
+                    retType.fields.forEach(field => {
+                        kw(sname.varying(field));
+                        kw('=');
+                        kw(tempName);
+                        add('.');
+                        add(field.name);
+                        add(';');
+                        nl();
+                    });
+                }
+                pop();
+                add('}');
+            }
+            end();
+            return;
+        }
+
+        begin();
+        {
+            kw(typeName);
+            kw(fn.name);
+            add('(');
             def.params.forEach((param, i, list) => {
-                vdecl(param);
+                emitVariableDecl(param);
                 (i + 1 != list.length) && add(',');
             });
+            add(')');
+            nl();
+            emitBlock(fn.impl);
         }
-        add(')');
-        nl();
-        block(fn.impl);
+        end();
     }
 
-    function decl(dcl: IDeclInstruction) {
-        switch (dcl.instructionType) {
-            case EInstructionTypes.k_VariableDeclInstruction:
-                vdecl(dcl as IVariableDeclInstruction);
-                add(';');
-                break;
-        }
-    }
-
-    function expression(expr: IExprInstruction) {
+    function emitExpression(expr: IExprInstruction) {
         if (!expr) {
             return;
         }
@@ -255,7 +317,6 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         | IComplexExprInstruction
         | IConditionalExprInstruction
         | IInitExprInstruction
-        | ILiteralInstruction
         | ILogicalExprInstruction
         | IPostfixArithmeticInstruction
         | IPostfixIndexInstruction
@@ -265,11 +326,9 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         */
         switch (expr.instructionType) {
             case EInstructionTypes.k_ArithmeticExprInstruction:
-                arithmetic(expr as IArithmeticExprInstruction);
-                break;
+                return emitArithmetic(expr as IArithmeticExprInstruction);
             case EInstructionTypes.k_AssignmentExprInstruction:
-                assigment(expr as IAssignmentExprInstruction);
-                break;
+                return emitAssigment(expr as IAssignmentExprInstruction);
             case EInstructionTypes.k_PostfixPointInstruction:
                 {
                     const pfxp = expr as IPostfixPointInstruction;
@@ -278,52 +337,48 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
                         return;
                     }
                 }
-                postfixPoint(expr as IPostfixPointInstruction);
-                return;
+                return emitPostfixPoint(expr as IPostfixPointInstruction);
             case EInstructionTypes.k_IdExprInstruction:
-                identifier(expr as IIdExprInstruction);
-                return;
+                return emitIdentifier(expr as IIdExprInstruction);
             case EInstructionTypes.k_FunctionCallInstruction:
-                fcall(expr as IFunctionCallInstruction);
-                return;
+                return emitFCall(expr as IFunctionCallInstruction);
             case EInstructionTypes.k_ConstructorCallInstruction:
-                ccall(expr as IConstructorCallInstruction);
-                return;
+                return emitCCall(expr as IConstructorCallInstruction);
             case EInstructionTypes.k_FloatInstruction:
-                {
-                    const lit = expr as ILiteralInstruction<number>;
-                    const sval = String(lit.value);
-                    kw(sval);
-                    (sval.indexOf('.') === -1) && add('.');
-                    add('f');
-                }
-                return;
+                return emitFloat(expr as ILiteralInstruction<number>);
             case EInstructionTypes.k_IntInstruction:
-                {
-                    const lit = expr as ILiteralInstruction<number>;
-                    kw(lit.value.toFixed(0));
-                }
-                return;
+                return emitInteger(expr as ILiteralInstruction<number>);
             case EInstructionTypes.k_BoolInstruction:
-                {
-                    const lit = expr as ILiteralInstruction<boolean>;
-                    kw(lit.value ? 'true' : 'false');
-                }
-                return;
+                return emitBool(expr as ILiteralInstruction<boolean>);
         }
     }
 
-    function arithmetic(arthm: IArithmeticExprInstruction) {
-        expression(arthm.left);
-        kw(arthm.operator);
-        expression(arthm.right);
+    function emitFloat(lit: ILiteralInstruction<number>) {
+        const sval = String(lit.value);
+        kw(sval);
+        (sval.indexOf('.') === -1) && add('.');
+        add('f');
     }
 
-    function assigment(asgm: IAssignmentExprInstruction) {
-        expression(asgm.left);
+    function emitBool(lit: ILiteralInstruction<boolean>) {
+        kw(lit.value ? 'true' : 'false');
+    }
+
+    function emitInteger(lit: ILiteralInstruction<number>) {
+        kw(lit.value.toFixed(0));
+    }
+
+    function emitArithmetic(arthm: IArithmeticExprInstruction) {
+        emitExpression(arthm.left);
+        kw(arthm.operator);
+        emitExpression(arthm.right);
+    }
+
+    function emitAssigment(asgm: IAssignmentExprInstruction) {
+        emitExpression(asgm.left);
         kw('=');
         assert(Instruction.isExpression(asgm.right));
-        expression(asgm.right as IExprInstruction);
+        emitExpression(asgm.right as IExprInstruction);
     }
 
     function isAttributeAlias(pfxp: IPostfixPointInstruction) {
@@ -338,14 +393,14 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         return false;
     }
 
-    function postfixPoint(pfxp: IPostfixPointInstruction) {
-        expression(pfxp.element);
+    function emitPostfixPoint(pfxp: IPostfixPointInstruction) {
+        emitExpression(pfxp.element);
         add('.');
         add(pfxp.postfix.name);
     }
 
-    const knownGlobals: string[] = [];
-    function identifier(id: IIdExprInstruction) {
+
+    function emitIdentifier(id: IIdExprInstruction) {
         const decl = id.decl;
         const name = id.name;
 
@@ -361,9 +416,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
 
             if (knownGlobals.indexOf(name) === -1) {
                 begin();
-                vdecl(decl);
-                add(';');
-                nl();
+                emitStmt(decl);
                 end();
                 knownGlobals.push(name);
             }
@@ -372,130 +425,120 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         kw(name);
     }
 
-    function retStmt(stmt: IReturnStmtInstruction) {
-        kw('return');
-        expression(stmt.expr);
-        add(';');
-    }
 
-    function ccall(call: IConstructorCallInstruction) {
+    function emitCCall(call: IConstructorCallInstruction) {
         const args = call.args as IExprInstruction[];
-        const { typeName } = type(call.ctor);
+        const { typeName } = resolveType(call.ctor);
 
         kw(typeName);
         add('(');
         args.forEach((arg, i, list) => {
-            expression(arg);
+            emitExpression(arg);
             (i + 1 != list.length) && add(',');
         });
         add(' )');
     }
 
-    function fcall(call: IFunctionCallInstruction) {
+    const intrinsics = {
+        mul(left: IExprInstruction, right: IExprInstruction) {
+            emitExpression(left);
+            kw('*');
+            emitExpression(right);
+        }
+    }
+
+    function emitFCall(call: IFunctionCallInstruction) {
         const decl = call.decl;
         const args = call.args;
 
         switch (decl.name) {
             case 'mul':
                 assert(args.length == 2);
-                expression(args[0]);
-                kw('*');
-                expression(args[1]);
+                intrinsics.mul(args[0], args[1]);
                 return;
         }
 
         kw(decl.name);
         add('(');
         args.forEach((arg, i, list) => {
-            expression(arg);
+            emitExpression(arg);
             (i + 1 != list.length) && add(',');
         });
         add(' )');
     }
 
-    function block(blk: IStmtBlockInstruction) {
-        add('{');
-        push();
-
-        /*
-            | IDeclStmtInstruction
-            | IReturnStmtInstruction
-            | IIfStmtInstruction
-            | IStmtBlockInstruction
-            | IExprStmtInstruction
-            | IWhileStmtInstruction
-            | IForStmtInstruction;
-        */
-
-        blk.stmtList.forEach(stmt => {
-            switch (stmt.instructionType) {
-                case EInstructionTypes.k_DeclStmtInstruction:
-                    (stmt as IDeclStmtInstruction).declList.forEach(dcl => (decl(dcl), nl()));
-                    break;
-                case EInstructionTypes.k_ExprStmtInstruction:
-                    expression((stmt as IExprStmtInstruction).expr);
-                    add(';');
-                    nl();
-                    break;
-                case EInstructionTypes.k_ReturnStmtInstruction:
-                    retStmt(stmt as IReturnStmtInstruction);
-                    nl();
-                    break;
-            }
-        });
-
-        pop();
-        add('}');
-    }
-
-    prologue(fn.def);
-
-    begin();
-    func(fn);
-    end();
-
-    begin();
-    {
-        add('void main(void)');
-        add('{');
-        push();
-        {
-            const def = fn.def;
-            const retType = def.returnType;
-            assert(retType.isComplex());
-
-            const tempName = 'temp';
-
-            const { typeName } = type(retType);
-            kw(typeName);
-            kw(tempName);
-            kw('=');
-            kw(fn.name);
-            add('()');
-            add(';');
-            nl();
-
-            retType.fields.forEach(field => {
-                kw(sname.varying(field));
-                kw('=');
-                kw(tempName);
-                add('.');
-                add(field.name);
+    /*
+        | IDeclStmtInstruction
+        | IReturnStmtInstruction
+        | IIfStmtInstruction
+        | IStmtBlockInstruction
+        | IExprStmtInstruction
+        | IWhileStmtInstruction
+        | IForStmtInstruction;
+    */
+    function emitStmt(stmt: IInstruction) {
+        switch (stmt.instructionType) {
+            case EInstructionTypes.k_DeclStmtInstruction:
+                (stmt as IDeclStmtInstruction).declList.forEach(dcl => (emitStmt(dcl), nl()));
+                break;
+            case EInstructionTypes.k_ExprStmtInstruction:
+                emitExpression((stmt as IExprStmtInstruction).expr);
                 add(';');
-                nl();
-            });
+                break;
+            case EInstructionTypes.k_ReturnStmtInstruction:
+                kw('return');
+                emitExpression((stmt as IReturnStmtInstruction).expr);
+                add(';');
+                break;
+            case EInstructionTypes.k_VariableDeclInstruction:
+                emitVariableDecl(stmt as IVariableDeclInstruction);
+                add(';');
+                break;
         }
+    }
+
+    function emitBlock(blk: IStmtBlockInstruction) {
+        add('{');
+        push();
+        blk.stmtList.forEach(stmt => (emitStmt(stmt), nl()));
         pop();
         add('}');
     }
-    end();
+
+    return {
+        isMain,
+
+        resolveTypeName,
+        resolveType,
+
+        emitComplexType,
+        emitVariableDecl,
+        emitPrologue,
+        emitFunction,
+        emitExpression,
+        emitFloat,
+        emitBool,
+        emitInteger,
+        emitArithmetic,
+        emitAssigment,
+        emitIdentifier,
+        emitCCall,
+        emitFCall,
+        emitStmt,
+        emitBlock,
+
+        ...ctx
+    }
 }
+
+type ICodeEmitter = ReturnType<typeof createCodeEmitter>;
+
+type IOptions = {
+    type: 'vertex' | 'pixel';
+};
 
 
 export function translate(entryFunc: IFunctionDeclInstruction, options: IOptions): string {
-    const ctx = ContextBuilder();
-
-    $emit(ctx, entryFunc);
 
     switch (options.type) {
         case 'vertex':
@@ -505,7 +548,10 @@ export function translate(entryFunc: IFunctionDeclInstruction, options: IOptions
             console.error('unsupported shader type');
     }
 
-    return ctx.toString();
+    const emitter: ICodeEmitter = createCodeEmitter();
+    emitter.emitFunction(entryFunc);
+
+    return emitter.toString();
 }
 
 
