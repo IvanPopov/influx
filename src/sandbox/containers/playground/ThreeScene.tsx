@@ -15,7 +15,7 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
 
-const vertexShader = `
+const $vertexShader = `
 precision highp float;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -34,7 +34,7 @@ void main() {
 }
 `;
 
-const fragmentShader = `
+const $fragmentShader = `
 precision highp float;
 
 varying vec4 vColor;
@@ -96,7 +96,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     passes: {
         mesh: THREE.Mesh;
-        geometry: THREE.InstancedBufferGeometry;
         instancedBuffer: THREE.InstancedInterleavedBuffer;
     }[];
 
@@ -177,7 +176,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             // tslint:disable-next-line:max-line-length
             const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
 
-            if (pass.pixelShader && pass.vertexShader) {
+            if (!pass.requiresDefaultMaterial()) {
 
                 //
                 // Instance data
@@ -239,8 +238,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
                 material = new THREE.RawShaderMaterial({
                     uniforms: {},
-                    vertexShader,
-                    fragmentShader,
+                    vertexShader: $vertexShader,
+                    fragmentShader: $fragmentShader,
                     transparent: true,
                     blending: THREE.NormalBlending,
                     depthTest: false
@@ -248,8 +247,9 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             }
 
             const mesh = new THREE.Mesh(geometry, material);
+            mesh.name = 'emitter';
             this.scene.add(mesh);
-            this.passes.push({ mesh, geometry, instancedBuffer });
+            this.passes.push({ mesh, instancedBuffer });
             verbose('emitter added.');
         });
     }
@@ -367,7 +367,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             }
 
             pass.instancedBuffer.needsUpdate = true;
-            pass.geometry.maxInstancedCount = emitter.passes[iPass].length;
+            (pass.mesh.geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitter.passes[iPass].length;
         }
 
         this.controls.update();
@@ -392,6 +392,38 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     componentDidUpdate(prevProps, prevState) {
         if (prevState.emitter === this.state.emitter) {
+            const emitter = this.props.emitter;
+            emitter.passes.forEach((pass, i) => {
+                let { mesh } = this.passes[i];
+                let material = mesh.material as THREE.RawShaderMaterial;
+                let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
+
+                if (pass.requiresDefaultMaterial()) {
+                    return;
+                }
+
+                const { vertexShader, pixelShader: fragmentShader } = pass;
+
+                if (material.vertexShader !== vertexShader ||
+                    material.fragmentShader !== fragmentShader) {
+                    verbose('material shadow reload.');
+
+                    material.dispose();
+                    material = new THREE.RawShaderMaterial({
+                        uniforms: {},
+                        vertexShader,
+                        fragmentShader,
+                        transparent: true,
+                        blending: THREE.NormalBlending,
+                        depthTest: false
+                    });
+
+                    // this.scene.remove(mesh);
+                    mesh.material = material;
+
+                    // mesh = new THREE.Mesh(geometry, material);
+                }
+            });
             return;
         }
 

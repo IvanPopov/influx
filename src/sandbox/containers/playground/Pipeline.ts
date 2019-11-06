@@ -108,10 +108,9 @@ class Pass {
     private _prerenderedParticles: Uint8Array;
     private _instance: ITypeInstruction;
     private _sorting: boolean;
-
-    readonly geometry: EPartFxPassGeometry;
-    readonly vertexShader: string;
-    readonly pixelShader: string;
+    private _geometry: EPartFxPassGeometry;
+    private _vertexShader: string;
+    private _pixelShader: string;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
@@ -119,10 +118,10 @@ class Pass {
         this._instance = desc.instance;
         this._prerenderedParticles = new Uint8Array(desc.instance.size * this._owner.capacity);
         this._sorting = desc.sorting;
-        this.geometry = desc.geometry;
+        this._geometry = desc.geometry;
 
-        this.vertexShader = desc.vertexShader;
-        this.pixelShader = desc.pixelShader;
+        this._vertexShader = desc.vertexShader;
+        this._pixelShader = desc.pixelShader;
     }
 
     get instanceLayout() {
@@ -134,8 +133,19 @@ class Pass {
         });
     }
 
-    //// console.log(`geometry.addAttribute('${attrName}', new THREE.InterleavedBufferAttribute(instancedBuffer, ${size}, ${offset}));`);
 
+    get geometry(): EPartFxPassGeometry {
+        return this._geometry;
+    }
+
+    get vertexShader(): string {
+        return this._vertexShader;
+    }
+
+    get pixelShader(): string {
+        return this._pixelShader;
+    }
+    
     // number of float elements in the prerendered particle (f32)
     get stride(): number {
         assert(this._instance.size / 4 === Math.floor(this._instance.size / 4));
@@ -154,6 +164,9 @@ class Pass {
         return this._sorting;
     }
 
+    requiresDefaultMaterial(): boolean {
+        return !this.vertexShader || !this.pixelShader;
+    }
 
     prerender(constants: IPipelineConstants): void {
         this._prerenderRoutine.setPipelineConstants(constants);
@@ -172,6 +185,8 @@ class Pass {
     shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader }) {
         this._prerenderRoutine = prerenderRoutine;
         this._sorting = sorting;
+        this._vertexShader = vertexShader;
+        this._pixelShader = pixelShader;
     }
 
     private getPrerenderedParticlePtr(i: number) {
@@ -394,13 +409,11 @@ function Pipeline(fx: PartFx) {
     function fxHash(fx: PartFx) {
 
         const hashPart = fx.passList
-            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:` +
-                `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
+            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:`) // +
+                // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
             .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
         return `${fx.particle.hash}:${fx.capacity}:${hashPart}`;
     }
-
-    // verbose(fxHash(fx));
 
     const isReplaceable = (fxNext: PartFx) => {
         const left = fxHash(fxNext);
