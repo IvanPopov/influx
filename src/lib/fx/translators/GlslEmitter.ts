@@ -1,5 +1,5 @@
-import { CodeEmitter } from "./CodeEmitter";
-import { IVariableDeclInstruction, ITypeInstruction, IPostfixPointInstruction, EInstructionTypes, IFunctionDefInstruction, IIdExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IExprInstruction } from "@lib/idl/IInstruction";
+import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
+import { IVariableDeclInstruction, ITypeInstruction, IPostfixPointInstruction, EInstructionTypes, IFunctionDefInstruction, IIdExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IExprInstruction, IInstruction, ILiteralInstruction } from "@lib/idl/IInstruction";
 import { isDef, assert } from "@lib/common";
 import { IdExprInstruction } from "@lib/fx/instructions/IdExprInstruction";
 
@@ -14,11 +14,11 @@ const GlslTypeNames = {
  
 
 const sname = {
-    attr: (decl: IVariableDeclInstruction) => decl.semantics ?
-        `a_${decl.semantics.toLowerCase()}` :
+    attr: (decl: IVariableDeclInstruction) => decl.semantic ?
+        `a_${decl.semantic.toLowerCase()}` :
         `a_${decl.name}_${decl.instructionID}`,
-    varying: (decl: IVariableDeclInstruction) => decl.semantics ?
-        `v_${decl.semantics.toLowerCase()}` :
+    varying: (decl: IVariableDeclInstruction) => decl.semantic ?
+        `v_${decl.semantic.toLowerCase()}` :
         `v_${decl.name}_${decl.instructionID}`,
     // uniform: (decl: IVariableDeclInstruction) => `u_${decl.name}`
 };
@@ -56,6 +56,11 @@ export class GlslEmitter extends CodeEmitter {
 
 
     protected emitPrologue(def: IFunctionDefInstruction): void {
+        this.begin();
+        {
+            this.emitChar('precision highp float;');
+        }
+        this.end();
         this.begin();
         {
             for (const param of def.params) {
@@ -125,6 +130,12 @@ export class GlslEmitter extends CodeEmitter {
             case 'pixel':
                 return this.emitVarying(decl);
         }
+    }
+
+    emitFloat(lit: ILiteralInstruction<number>) {
+        const sval = String(lit.value);
+        this.emitKeyword(sval);
+        (sval.indexOf('.') === -1) && this.emitChar('.0');
     }
 
     emitPostfixPoint(pfxp: IPostfixPointInstruction) {
@@ -218,9 +229,6 @@ export class GlslEmitter extends CodeEmitter {
                     if (this.mode === 'vertex') {
                         retType.fields.forEach(field => {
                             const varyingName = sname.varying(field);
-                            // if (field.semantics === 'POSITION') {
-                            //     varyingName = 
-                            // }
                             this.emitKeyword(varyingName);
                             this.emitKeyword('=');
                             this.emitKeyword(tempName);
@@ -230,7 +238,7 @@ export class GlslEmitter extends CodeEmitter {
                             this.emitNewline();
                         });
 
-                        const fieldPos = retType.fields.filter(field => (field.semantics === 'POSITION'))[0];
+                        const fieldPos = retType.fields.filter(field => (field.semantic === 'POSITION'))[0];
                         this.emitKeyword('gl_Position');
                         this.emitKeyword('=');
                         this.emitKeyword(tempName);
@@ -266,4 +274,14 @@ export class GlslEmitter extends CodeEmitter {
         this.emitKeyword('*');
         this.emitExpression(right);
     }
+
+
+    static $declToAttributeName(decl: IVariableDeclInstruction) {
+        return sname.attr(decl);
+    }
+}
+
+
+export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
+    return (new GlslEmitter(options)).emit(instr).toString();
 }

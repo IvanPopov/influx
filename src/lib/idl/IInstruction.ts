@@ -252,12 +252,12 @@ export interface ITypeInstruction extends IInstruction {
     isStrongEqual(type: ITypeInstruction): boolean;
 
     hasField(fieldName: string): boolean;
-    hasFieldWithSematics(semantics: string);
+    hasFieldWithSematics(semantic: string);
     hasAllUniqueSemantics(): boolean;
     hasFieldWithoutSemantics(): boolean;
 
     getField(fieldName: string): IVariableDeclInstruction;
-    getFieldBySemantics(semantics: string): IVariableDeclInstruction;
+    getFieldBySemantics(semantic: string): IVariableDeclInstruction;
 
     toDeclString(): string;
 }
@@ -294,7 +294,7 @@ export interface IDeclInstruction extends IInstruction {
     readonly name: string;
     readonly id: IIdInstruction;
 
-    readonly semantics: string;
+    readonly semantic: string;
     readonly annotation: IAnnotationInstruction;
 }
 

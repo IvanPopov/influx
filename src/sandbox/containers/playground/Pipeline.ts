@@ -1,11 +1,14 @@
 /* tslint:disable:typedef */
 /* tslint:disable:variable-name */
+/* tslint:disable:member-ordering */
 
 import { assert, isDef, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
-import { ICompileExprInstruction, IFunctionDeclInstruction } from '@lib/idl/IInstruction';
+import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import * as Code from '@lib/fx/translators/CodeEmitter';
+import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/IPartFx';
 
 type PartFx = IPartFxInstruction;
@@ -21,6 +24,31 @@ interface IPipelineConstants {
     elapsedTimeLevel: number;
 }
 
+
+const makeCRCTable = () => {
+    let c: number;
+    const table = [];
+    for (let n = 0; n < 256; n++) {
+        c = n;
+        for (let k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        table[n] = c;
+    }
+    return table;
+};
+
+const crcTable = makeCRCTable();
+
+const crc32 = (str: string) => {
+    let crc = 0 ^ (-1);
+
+    for (let i = 0; i < str.length; i++) {
+        crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
+    }
+
+    return (crc ^ (-1)) >>> 0;
+};
 
 function prebuild(expr: ICompileExprInstruction): IRunnable {
     const program = Bytecode.translate(expr.function);
@@ -65,12 +93,12 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
 
 
 interface IPassDesc {
-    instanceByteLength: number;
+    instance: ITypeInstruction;
     prerenderRoutine: IRunnable;
     sorting: boolean;
     geometry: EPartFxPassGeometry;
-    vertexShader?: IFunctionDeclInstruction;
-    pixelShader?: IFunctionDeclInstruction;
+    vertexShader?: string;
+    pixelShader?: string;
 }
 
 
@@ -78,32 +106,40 @@ class Pass {
     private _owner: Emitter;
     private _prerenderRoutine: IRunnable;
     private _prerenderedParticles: Uint8Array;
-    private _matByteLength: number;
+    private _instance: ITypeInstruction;
     private _sorting: boolean;
-    private _geometry: EPartFxPassGeometry;
 
-
-    // tslint:disable-next-line:member-ordering
-    readonly $vertexShader: IFunctionDeclInstruction;
-    // tslint:disable-next-line:member-ordering
-    readonly $pixelShader: IFunctionDeclInstruction;
+    readonly geometry: EPartFxPassGeometry;
+    readonly vertexShader: string;
+    readonly pixelShader: string;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
         this._prerenderRoutine = desc.prerenderRoutine;
-        this._matByteLength = desc.instanceByteLength;
-        this._prerenderedParticles = new Uint8Array(this._matByteLength * this._owner.capacity);
+        this._instance = desc.instance;
+        this._prerenderedParticles = new Uint8Array(desc.instance.size * this._owner.capacity);
         this._sorting = desc.sorting;
-        this._geometry = desc.geometry;
+        this.geometry = desc.geometry;
 
-        this.$vertexShader = desc.vertexShader;
-        this.$pixelShader = desc.pixelShader;
+        this.vertexShader = desc.vertexShader;
+        this.pixelShader = desc.pixelShader;
     }
+
+    get instanceLayout() {
+        return this._instance.fields.map(field => {
+            const size = field.type.size >> 2;
+            const offset = field.type.padding >> 2;
+            const attrName = Glsl.GlslEmitter.$declToAttributeName(field);
+            return { attrName, size, offset };
+        });
+    }
+
+    //// console.log(`geometry.addAttribute('${attrName}', new THREE.InterleavedBufferAttribute(instancedBuffer, ${size}, ${offset}));`);
 
     // number of float elements in the prerendered particle (f32)
     get stride(): number {
-        assert(this._matByteLength / 4 === Math.floor(this._matByteLength / 4));
-        return this._matByteLength / 4;
+        assert(this._instance.size / 4 === Math.floor(this._instance.size / 4));
+        return this._instance.size / 4;
     }
 
     get data(): Uint8Array {
@@ -118,9 +154,6 @@ class Pass {
         return this._sorting;
     }
 
-    get geometry(): EPartFxPassGeometry {
-        return this._geometry;
-    }
 
     prerender(constants: IPipelineConstants): void {
         this._prerenderRoutine.setPipelineConstants(constants);
@@ -131,11 +164,12 @@ class Pass {
 
             // const ptr = prerenderedPartPtr;
             // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
-            // verbose(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
+            // verbose(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, 
+            //  ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
         }
     }
 
-    shadowReload({ prerenderRoutine, sorting }) {
+    shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader }) {
         this._prerenderRoutine = prerenderRoutine;
         this._sorting = sorting;
     }
@@ -143,7 +177,7 @@ class Pass {
     private getPrerenderedParticlePtr(i: number) {
         assert(i >= 0 && i < this._owner.capacity);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
-        return this._prerenderedParticles.subarray(i * this._matByteLength, (i + 1) * this._matByteLength);
+        return this._prerenderedParticles.subarray(i * this._instance.size, (i + 1) * this._instance.size);
     }
 }
 
@@ -187,8 +221,8 @@ export class Emitter {
         this.initRoutine = initRoutine;
         this.spawnRoutine = spawnRoutine;
         this.updateRoutine = updateRoutine;
-        passList.forEach(({ prerenderRoutine, sorting, geometry }, i) => {
-            this.passList[i].shadowReload({ prerenderRoutine, sorting });
+        passList.forEach(({ prerenderRoutine, sorting, vertexShader, pixelShader }, i) => {
+            this.passList[i].shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader });
         });
     }
 
@@ -279,6 +313,7 @@ export class Emitter {
 
 
 
+// tslint:disable-next-line:max-func-body-length
 function Pipeline(fx: PartFx) {
     let emitter: Emitter = null;
 
@@ -306,12 +341,12 @@ function Pipeline(fx: PartFx) {
             .filter(pass => pass.particleInstance != null)
             .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader }): IPassDesc => {
                 return {
-                    instanceByteLength: particleInstance.size,
+                    instance: particleInstance,
                     prerenderRoutine: prebuild(prerenderRoutine),
                     sorting,
                     geometry,
-                    vertexShader,
-                    pixelShader
+                    vertexShader: Glsl.translate(vertexShader, { mode: 'vertex' }),
+                    pixelShader: Glsl.translate(pixelShader, { mode: 'pixel' })
                 };
             });
 
@@ -356,14 +391,22 @@ function Pipeline(fx: PartFx) {
         return $interval === null;
     }
 
-    // todo: check capacity
-    const fxHash = (fx: PartFx) => `${fx.particle.hash}:${fx.capacity}:${fx.passList
-        .map(pass => `${pass.particleInstance.hash}:${pass.geometry}`)
-        .reduce((commonHash, passHash) => `${commonHash}:${passHash}`)}`;
+    function fxHash(fx: PartFx) {
+
+        const hashPart = fx.passList
+            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:` +
+                `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
+            .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
+        return `${fx.particle.hash}:${fx.capacity}:${hashPart}`;
+    }
 
     // verbose(fxHash(fx));
 
-    const isReplaceable = (fxNext: PartFx) => fxHash(fxNext) === fxHash(fx);
+    const isReplaceable = (fxNext: PartFx) => {
+        const left = fxHash(fxNext);
+        const right = fxHash(fx);
+        return left === right;
+    }
 
     function shadowReload(fxNext: PartFx): boolean {
         if (!isReplaceable(fxNext)) {

@@ -50,6 +50,7 @@ export class CodeEmitter extends BaseEmitter {
             if (this.knownTypes.indexOf(typeName) === -1) {
                 this.begin();
                 this.emitComplexType(type);
+                this.emitChar(';');
                 this.end();
 
                 this.knownTypes.push(typeName);
@@ -99,7 +100,7 @@ export class CodeEmitter extends BaseEmitter {
         length && this.emitChar(`[${length}]`);
     }
 
-   
+
     emitFunction(fn: IFunctionDeclInstruction) {
         const def = fn.def;
         const { typeName } = this.resolveType(def.returnType);
@@ -274,5 +275,52 @@ export class CodeEmitter extends BaseEmitter {
         this.pop();
         this.emitChar('}');
     }
+
+    emit(instr: IInstruction): CodeEmitter {
+        if (!instr) {
+            return this;
+        }
+
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_ConditionalExprInstruction:
+            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_PostfixArithmeticInstruction:
+            case EInstructionTypes.k_PostfixIndexInstruction:
+            case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_ComplexExprInstruction:
+            case EInstructionTypes.k_CastExprInstruction:
+            case EInstructionTypes.k_UnaryExprInstruction:
+                this.emitExpression(instr as IExprInstruction);
+                break
+            case EInstructionTypes.k_DeclStmtInstruction:
+            case EInstructionTypes.k_ReturnStmtInstruction:
+            case EInstructionTypes.k_IfStmtInstruction:
+            case EInstructionTypes.k_StmtBlockInstruction:
+            case EInstructionTypes.k_ExprStmtInstruction:
+            case EInstructionTypes.k_WhileStmtInstruction:
+            case EInstructionTypes.k_ForStmtInstruction:
+                this.emitStmt(instr);
+                break;
+            case EInstructionTypes.k_FunctionDeclInstruction:
+                this.emitFunction(instr as IFunctionDeclInstruction);
+                break;
+            default:
+                assert(false, 'unsupported instruction found');
+        }
+        
+        return this;
+    }
 }
 
+
+export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
+    return (new CodeEmitter(options)).emit(instr).toString();
+}

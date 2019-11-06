@@ -60,9 +60,9 @@ struct Part {
 /* Example of default shader input. */
 // Warning: Do not change layout of this structure!
 struct DefaultShaderInput {
-    float3 pos   : POSITION;
-    float4 color : COLOR;
-    float  size  : SIZE;
+    float3 pos   : POSITION1;
+    float4 color : COLOR1;
+    float  size  : SIZE1;
 };
 
 
@@ -73,8 +73,8 @@ uniform float4x4 projectionMatrix;
 
 struct PartInstance {
     float3 pos   : POSITION1;
-    float4 color : COLOR;
-    float  size  : SIZE;
+    float4 color : COLOR1;
+    float  size  : SIZE1;
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -133,10 +133,9 @@ void PrerenderLines(inout Part part, out DefaultShaderInput input)
 /////////////////////////////////////////////////////////////////////
 
 
-/* Billboard geometry */
 struct Geometry {
     float3 position: POSITION0;
-    // float3 normal: NORMAL;
+    float3 normal: NORMAL0;
     float2 uv: TEXCOORD0;
 };
 
@@ -147,27 +146,24 @@ struct PixelInputType
 };
 
 
-float4 redify(inout float4 src)
-{
-    return src * float4(1.f, 0.f, 0.f, 0.f);
-}
 
+// vec4 viewPos = modelViewMatrix * vec4(offset, 1.0) + vec4(position * size, 0.0);
+// gl_Position = projectionMatrix * viewPos;
 
-/* foo.. */  PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
+PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
 {
-    PixelInputType output;
+    PixelInputType res;
     
     // Calculate the position of the vertex against the world, view, and projection matrices.
-    output.position = mul(float4(partInstance, 1.f), modelMatrix);
-    output.position = mul(output.position, viewMatrix) + 
-        float4(geometry.position, 1.f);
-    output.position = mul(output.position, projectionMatrix);
+    res.position = mul(modelMatrix, float4(partInstance.pos, 1.f));
+    res.position = mul(viewMatrix, res.position) + float4(geometry.position * partInstance.size, 1.f);
+    res.position = mul(projectionMatrix, res.position);
     
     // Store the input color for the pixel shader to use.
-    output.color = redify(partInstance.color);
+    res.color = partInstance.color;
     
-    return output;
-/* foo.. */  } int foo = 1;
+    return res;
+}
 
 
 float4 ColorPixelShader(PixelInputType input) : COLOR

@@ -63,7 +63,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
         }
 
         def += ")";
-        // todo: add semantics
+        // todo: add semantic
         return def;
     }
 
@@ -159,7 +159,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 return false;
             }
 
-            if (funcDef.semantics !== "POSITION") {
+            if (funcDef.semantic !== "POSITION") {
                 return false;
             }
         }
@@ -185,7 +185,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             return false;
         }
 
-        if (funcDef.semantics !== "COLOR") {
+        if (funcDef.semantic !== "COLOR") {
             return false;
         }
 
@@ -207,7 +207,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             }
 
             if (!isStartAnalyze) {
-                if (isNull(param.semantics)) {
+                if (isNull(param.semantic)) {
                     if (param.type.isBase() ||
                         param.type.hasFieldWithoutSemantics() ||
                         !param.type.hasAllUniqueSemantics()) {
@@ -215,7 +215,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                     }
 
                     isAttributeByStruct = true;
-                } else if (!isNull(param.semantics)) {
+                } else if (!isNull(param.semantic)) {
                     if (param.type.isComplex() &&
                         (param.type.hasFieldWithoutSemantics() ||
                             !param.type.hasAllUniqueSemantics())) {
@@ -229,7 +229,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             } else if (isAttributeByStruct) {
                 return false;
             } else if (isAttributeByParams) {
-                if (isNull(param.semantics)) {
+                if (isNull(param.semantic)) {
                     return false;
                 }
 
@@ -259,7 +259,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
             }
 
             if (!isStartAnalyze) {
-                if (param.semantics === "") {
+                if (param.semantic === "") {
                     if (param.type.isBase() ||
                         param.type.hasFieldWithoutSemantics() ||
                         !param.type.hasAllUniqueSemantics() ||
@@ -268,7 +268,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                     }
 
                     isVaryingsByStruct = true;
-                } else if (param.semantics !== "") {
+                } else if (param.semantic !== "") {
                     if (param.type.isContainSampler() ||
                         SystemScope.isSamplerType(param.type)) {
                         return false;
@@ -289,7 +289,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
                 return false;
             }
             else if (isVaryingsByParams) {
-                if (param.semantics === "") {
+                if (param.semantic === "") {
                     return false;
                 }
 

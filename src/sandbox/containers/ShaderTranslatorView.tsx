@@ -1,7 +1,6 @@
 /* tslint:disable:typedef */
 
 import { isNumber } from '@lib/common';
-import * as Glsl from '@lib/fx/translators';
 // import { IRange } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
@@ -12,6 +11,8 @@ import * as React from 'react';
 import { MonacoDiffEditor } from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
+import * as Hlsl from '@lib/fx/translators/CodeEmitter';
+import * as Glsl from '@lib/fx/translators/GlslEmitter';
 
 
 
@@ -45,6 +46,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
     // tslint:disable-next-line:typedef
     render() {
+        // console.log('ShaderTranslatorView::render()');
         const { props } = this;
 
         const match = matchLocation(props);
@@ -66,7 +68,9 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             ? i === Number(match.params.pass)
             : pass.name === match.params.pass);
 
-            // vs.sourceNode.loc
+
+
+
 
         const options: monaco.editor.IEditorConstructionOptions = {
             selectOnLineNumbers: true,
@@ -87,21 +91,21 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
         const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
         const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
-        
+
         return (
             <MonacoDiffEditor
                 ref='monaco'
 
-                original={ Glsl.emitCode(shader, { mode }) }
-                value={ Glsl.emitGlsl(shader, { mode }) }
+                original={ Hlsl.translate(shader, { mode }) }
+                value={ Glsl.translate(shader, { mode }) }
 
                 width='100%'
                 height='calc(100vh - 74px)' // todo: fixme
 
                 options={ options }
                 editorDidMount={ this.editorDidMount }
-                // onChange={ this.onChange }
-                // editorWillMount={ this.editorWillMount }
+            // onChange={ this.onChange }
+            // editorWillMount={ this.editorWillMount }
             />
         );
     }

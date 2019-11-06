@@ -6,7 +6,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 import { IdInstruction } from "./IdInstruction";
 
 export interface IDeclInstructionSettings extends IInstructionSettings {
-    readonly semantics?: string;
+    readonly semantic?: string;
     readonly annotation?: IAnnotationInstruction;
 }
 
@@ -15,15 +15,15 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
     protected _semantic: string
     protected _annotation: IAnnotationInstruction;
     
-    constructor({ semantics = null, annotation = null, ...settings }: IDeclInstructionSettings) {
+    constructor({ semantic = null, annotation = null, ...settings }: IDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
 
-        this._semantic = semantics;
+        this._semantic = semantic;
         this._annotation = Instruction.$withParent(annotation, this);
     }
     
 
-    get semantics(): string {
+    get semantic(): string {
         return this._semantic;
     }
 

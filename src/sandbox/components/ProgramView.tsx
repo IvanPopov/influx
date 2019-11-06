@@ -380,7 +380,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='name' value={ instr.name } />
-                <PropertyOpt name='semantics' value={ instr.semantics } />
+                <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='passes'>
                     { instr.passList.map((pass) => this.Pass(pass)) }
                 </PropertyOpt>
@@ -594,7 +594,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='name' value={ instr.name } />
                 <Property name='type' value={ instr.returnType.name } />
                 <Property name='numArgsRequired' value={ String(instr.numArgsRequired) } />
-                <PropertyOpt name='semantic' value={ String(instr.semantics) } />
+                <PropertyOpt name='semantic' value={ String(instr.semantic) } />
                 <PropertyOpt name='arguments'>
                     { instr.params.map((param) => this.VariableDecl(param)) }
                 </PropertyOpt>

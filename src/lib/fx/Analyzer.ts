@@ -885,7 +885,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
 
     let annotation: IAnnotationInstruction = null;
     let init: IInitExprInstruction = null;
-    let semantics = '';
+    let semantic = '';
     let usageFlags = 0;
 
     if (!context.func) {
@@ -931,7 +931,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         if (children[i].name === 'Annotation') {
             annotation = analyzeAnnotation(children[i]);
         } else if (children[i].name === 'Semantic') {
-            semantics = analyzeSemantic(children[i]);
+            semantic = analyzeSemantic(children[i]);
         } else if (children[i].name === 'Initializer') {
             let args = analyzeInitializerArguments(context, program, children[i]);
             init = new InitExprInstruction({ scope, sourceNode: children[i], args, type });
@@ -949,7 +949,7 @@ function analyzeVariable(context: Context, program: ProgramScope, sourceNode: IP
         }
     }
 
-    const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantics, annotation, usageFlags });
+    const varDecl = new VariableDeclInstruction({ sourceNode, scope, type, init, id, semantic, annotation, usageFlags });
     assert(scope.type != EScopeType.k_System);
 
     if (SystemScope.hasVariable(varDecl.name)) {
@@ -990,12 +990,12 @@ function analyzeAnnotation(sourceNode: IParseNode): IAnnotationInstruction {
 /**
  * AST example:
  *    Semantic
- *         T_NON_TYPE_ID = 'SEMANTICS'
+ *         T_NON_TYPE_ID = 'SEMANTIC'
  *         T_PUNCTUATOR_58 = ':'
  */
 function analyzeSemantic(sourceNode: IParseNode): string {
-    let semantics: string = sourceNode.children[0].value;
-    return semantics;
+    let semantic = sourceNode.children[0].value;
+    return semantic;
 }
 
 
@@ -1615,7 +1615,7 @@ function createFieldDecl(elementType: IVariableTypeInstruction, fieldName: strin
     //      elementType => original system type
 
     const scope = elementType.scope;
-    const { id, type, type: { padding, length }, semantics } =
+    const { id, type, type: { padding, length }, semantic } =
         // FIXME: remove 'logical OR' operation, always use subType
         (elementType.subType || elementType).getField(fieldName); // arrayIndex
 
@@ -1631,7 +1631,7 @@ function createFieldDecl(elementType: IVariableTypeInstruction, fieldName: strin
 
     const fieldType = new VariableTypeInstruction({ type, scope, padding, sourceNode: type.sourceNode/*, arrayIndex*/ });
     const fieldId = new IdInstruction({ scope, name: id.name, sourceNode: id.sourceNode });
-    const field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantics, sourceNode: fieldId.sourceNode });
+    const field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantic, sourceNode: fieldId.sourceNode });
 
     return Instruction.$withParent(field, elementType);
 }
@@ -2292,13 +2292,13 @@ function analyzeFunctionDef(context: Context, program: ProgramScope, sourceNode:
 
     let id = new IdInstruction({ scope, name, sourceNode: nameNode });
 
-    let semantics: string = null;
+    let semantic: string = null;
     if (children.length === 4) {
-        semantics = analyzeSemantic(children[0]);
+        semantic = analyzeSemantic(children[0]);
     }
 
     let paramList = analyzeParamList(context, program, children[children.length - 3]);
-    let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList, semantics })
+    let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList, semantic })
 
     checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
 
@@ -2822,7 +2822,7 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
     const scope = program.currentScope;
 
     let annotation: IAnnotationInstruction = null;
-    let semantics: string = null;
+    let semantic: string = null;
     let passList: IPassInstruction[] = null;
     let techniqueType: ETechniqueType = ETechniqueType.k_BasicFx;
 
@@ -2830,13 +2830,13 @@ function analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNod
         if (children[i].name === 'Annotation') {
             annotation = analyzeAnnotation(children[i]);
         } else if (children[i].name === 'Semantic') {
-            semantics = analyzeSemantic(children[i]);
+            semantic = analyzeSemantic(children[i]);
         } else {
             passList = analyzeTechnique(context, program, children[i]);
         }
     }
 
-    const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantics, annotation, passList, scope });
+    const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantic, annotation, passList, scope });
     addTechnique(context, program, technique);
     return technique;
 }
@@ -3713,7 +3713,7 @@ function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: 
     const scope = program.currentScope;
 
     let annotation: IAnnotationInstruction = null;
-    let semantics: string = null;
+    let semantic: string = null;
     let props: IPartFxProperties = null;
 
     context.beginPartFx();
@@ -3725,7 +3725,7 @@ function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: 
                 annotation = analyzeAnnotation(children[i]);
                 break;
             case 'Semantic':
-                semantics = analyzeSemantic(children[i]);
+                semantic = analyzeSemantic(children[i]);
                 break;
             case 'PartFxBody':
                 props = analyzePartFXBody(context, program, children[i]);
@@ -3737,7 +3737,7 @@ function analyzePartFXDecl(context: Context, program: ProgramScope, sourceNode: 
     context.endPartFx();
 
     const partFx = new PartFxInstruction({
-        sourceNode, name, semantics, annotation, scope, ...props
+        sourceNode, name, semantic, annotation, scope, ...props
     });
 
     if (!partFx.isValid()) {

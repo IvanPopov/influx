@@ -36,4 +36,8 @@ export class BaseEmitter {
             .filter(code => !!code)
             .join('\n\n');
     }
+
+    valueOf(): string {
+        return this.toString();
+    }
 }

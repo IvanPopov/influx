@@ -400,26 +400,26 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         // let id        = subField.id;
         // let type      = subField.type;
         // let padding   = subField.type.padding;
-        // let semantics = subField.semantics;
+        // let semantic = subField.semantic;
 
-        let { id, type, type: { padding }, semantics } = this.subType.getField(fieldName);
+        let { id, type, type: { padding }, semantic } = this.subType.getField(fieldName);
         
 
         let fieldType = VariableTypeInstruction.wrap(type, scope);
         fieldType.$overwritePadding(padding);
 
         let fieldId = new IdInstruction({ scope, name: id.name });
-        let field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantics });
+        let field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantic });
         return Instruction.$withParent(field, this);
     }
 
 
-    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction {
-        if (this.hasFieldWithSematics(sSemantic)) {
+    getFieldBySemantics(semantic: string): IVariableDeclInstruction {
+        if (this.hasFieldWithSematics(semantic)) {
             return null;
         }
 
-        let subField: IVariableDeclInstruction = this.subType.getFieldBySemantics(sSemantic);
+        let subField: IVariableDeclInstruction = this.subType.getFieldBySemantics(semantic);
 
         // todo: review this code!
 

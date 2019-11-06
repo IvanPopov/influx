@@ -74,7 +74,7 @@ export class ConstanPool {
 
     // variable name => addr map
     protected _variableMap: SymbolTable<PromisedAddress> = new SymbolTable;
-    // semantics => varible name map
+    // semantic => varible name map
     protected _semanticToNameMap: IMap<string> = {};
 
 
@@ -110,20 +110,20 @@ export class ConstanPool {
 
     deref(decl: IVariableDeclInstruction): PromisedAddress {
         assert(decl.isGlobal() && decl.isUniform());
-        const { name, semantics, initExpr, type: { size } } = decl;
+        const { name, semantic, initExpr, type: { size } } = decl;
 
         let addr = this._variableMap[name];
         if (!addr) {
             if (isNull(initExpr)) {
                 // TODO: add type to description
-                addr = this.addUniform(size, `${name}${semantics? `:${semantics}`: '' }`);
+                addr = this.addUniform(size, `${name}${semantic? `:${semantic}`: '' }`);
             } else {
                 assert(false, 'unsupported');
             }
 
-            if (semantics) {
-                assert(!this._semanticToNameMap[semantics], `semantic ${semantics} already exists.`);
-                this._semanticToNameMap[semantics] = name;
+            if (semantic) {
+                assert(!this._semanticToNameMap[semantic], `semantic ${semantic} already exists.`);
+                this._semanticToNameMap[semantic] = name;
             }
 
             assert(!this._variableMap[name], `global variable ${name} already exists.`);

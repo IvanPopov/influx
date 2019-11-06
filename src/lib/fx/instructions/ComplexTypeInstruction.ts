@@ -215,8 +215,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
 
-    hasFieldWithSematics(semantics: string): boolean {
-        return !!this.getFieldBySemantics(semantics);
+    hasFieldWithSematics(semantic: string): boolean {
+        return !!this.getFieldBySemantics(semantic);
     }
 
 
@@ -225,10 +225,10 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
 
-    getFieldBySemantics(semantics: string): IVariableDeclInstruction {
+    getFieldBySemantics(semantic: string): IVariableDeclInstruction {
         for (let i in this._fields) {
             let field = this._fields[i];
-            if (semantics == field.semantics) {
+            if (semantic == field.semantic) {
                 return field;
             }
         }
@@ -278,8 +278,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     hasFieldWithoutSemantics(): boolean {
         for (let i in this._fields) {
             let field = this._fields[i];
-            let semantics = field.semantics;
-            if (semantics == null || semantics == '') {
+            let semantic = field.semantic;
+            if (semantic == null || semantic == '') {
                 return true;
             }
             if (field.type.hasFieldWithoutSemantics()) {
@@ -296,13 +296,13 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
         for (let i in this._fields) {
             let field = this._fields[i];
-            let semantics = field.semantics;
+            let semantic = field.semantic;
             
-            if (isDefAndNotNull(fieldBySemantics[semantics])) {
+            if (isDefAndNotNull(fieldBySemantics[semantic])) {
                 return false;
             }
 
-            fieldBySemantics[semantics] = field;
+            fieldBySemantics[semantic] = field;
 
             if (field.type.isComplex() && !field.type.hasAllUniqueSemantics()) {
                 return false;
