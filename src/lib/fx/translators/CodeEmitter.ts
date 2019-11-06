@@ -11,10 +11,23 @@ export interface ITypeInfo {
     usage?: string;
 }
 
+export interface ICodeEmitterOptions {
+    mode: 'vertex' | 'pixel' | 'raw';
+}
 
 export class CodeEmitter extends BaseEmitter {
     protected knownGlobals: string[] = [];
     protected knownTypes: string[] = [];
+    protected options: ICodeEmitterOptions;
+
+    constructor(options: ICodeEmitterOptions = { mode: 'raw' }) {
+        super();
+        this.options = options;
+    }
+
+    get mode(): string {
+        return this.options.mode;
+    }
 
     protected resolveTypeName(type: ITypeInstruction): string {
         return type.name;
@@ -45,17 +58,14 @@ export class CodeEmitter extends BaseEmitter {
 
         if (type.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
             const vtype = type as IVariableTypeInstruction;
-            if (vtype.isUniform()) {
-                usages = usages || [];
-                usages.push('uniform');
-            }
+            usages = vtype.usages as string[];
         }
 
         if (type.isNotBaseArray()) {
             length = type.length;
         }
 
-        if (usages) {
+        if (usages && usages.length) {
             usage = usages.join(' ');
         }
 
@@ -213,12 +223,17 @@ export class CodeEmitter extends BaseEmitter {
         const decl = call.decl;
         const args = call.args;
 
+        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDeclInstruction) {
+            this.emitFunction(decl);
+        }
+
         this.emitKeyword(decl.name);
         this.emitChar('(');
         args.forEach((arg, i, list) => {
             this.emitExpression(arg);
             (i + 1 != list.length) && this.emitChar(',');
         });
+        // TODO: fix this hack
         this.emitChar(' )');
     }
 

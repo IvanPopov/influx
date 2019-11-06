@@ -147,6 +147,12 @@ struct PixelInputType
 };
 
 
+float4 redify(inout float4 src)
+{
+    return src * float4(1.f, 0.f, 0.f, 0.f);
+}
+
+
 /* foo.. */  PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
 {
     PixelInputType output;
@@ -158,7 +164,7 @@ struct PixelInputType
     output.position = mul(output.position, projectionMatrix);
     
     // Store the input color for the pixel shader to use.
-    output.color = partInstance.color;
+    output.color = redify(partInstance.color);
     
     return output;
 /* foo.. */  } int foo = 1;

@@ -28,7 +28,7 @@ const sname = {
 export class GlslEmitter extends CodeEmitter {
 
     protected isMain() {
-        return this.depth() <= 1;
+        return this.depth() === 1;
     }
     
     protected resolveTypeName(type: ITypeInstruction): string {
@@ -42,8 +42,8 @@ export class GlslEmitter extends CodeEmitter {
     }
 
 
-    protected isAttributeAlias(pfxp: IPostfixPointInstruction) {
-        if (this.isMain()) {
+    protected isVaryingOrAttributeAlias(pfxp: IPostfixPointInstruction) {
+        if (this.isMain() && this.mode !== 'raw') {
             if (pfxp.element.instructionType === EInstructionTypes.k_IdExprInstruction) {
                 const id = pfxp.element as IdExprInstruction;
                 if (id.decl.isParameter() && !id.decl.isUniform()) {
@@ -70,13 +70,13 @@ export class GlslEmitter extends CodeEmitter {
 
                 if (!type.isComplex()) {
                     assert(type.isNotBaseArray());
-                    this.emitAttribute(param);
+                    this.emitVaryingOrAttribute(param);
                     continue;
                 }
 
                 type.fields.forEach(field => {
                     assert(!field.type.isNotBaseArray() && !field.type.isComplex());
-                    this.emitAttribute(field);
+                    this.emitVaryingOrAttribute(field);
                 });
             }
         }
@@ -95,30 +95,41 @@ export class GlslEmitter extends CodeEmitter {
         this.end();
 
 
-        this.begin();
-        {
-            const retType = def.returnType;
-            assert(retType.isComplex(), 'basic types unsupported yet');
+        if (this.mode === 'vertex') {
+            this.begin();
+            {
+                const retType = def.returnType;
+                assert(retType.isComplex(), 'basic types unsupported yet');
 
-            retType.fields.forEach(field => {
-                assert(!field.type.isNotBaseArray() && !field.type.isComplex());
-                this.emitVarying(field);
-            });
+                retType.fields.forEach(field => {
+                    assert(!field.type.isNotBaseArray() && !field.type.isComplex());
+                    this.emitVarying(field);
+                });
+            }
+            this.end();
         }
-        this.end();
     }
 
-    protected emitAttribute(src: IVariableDeclInstruction) {
-        return (this.emitKeyword('attribute'), this.emitVariableDecl(src, sname.attr), this.emitChar(';'), this.emitNewline());
+    protected emitAttribute(decl: IVariableDeclInstruction) {
+        return (this.emitKeyword('attribute'), this.emitVariableDecl(decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
 
-    protected emitVarying(src: IVariableDeclInstruction) {
-        return (this.emitKeyword('varying'), this.emitVariableDecl(src, sname.varying), this.emitChar(';'), this.emitNewline());
+    protected emitVarying(decl: IVariableDeclInstruction) {
+        return (this.emitKeyword('varying'), this.emitVariableDecl(decl, sname.varying), this.emitChar(';'), this.emitNewline());
+    }
+
+    protected emitVaryingOrAttribute(decl: IVariableDeclInstruction) {
+        switch(this.mode) {
+            case 'vertex':
+                return this.emitAttribute(decl);
+            case 'pixel':
+                return this.emitVarying(decl);
+        }
     }
 
     emitPostfixPoint(pfxp: IPostfixPointInstruction) {
-        if (this.isAttributeAlias(pfxp)) {
-            this.emitKeyword(sname.attr(pfxp.postfix.decl));
+        if (this.isVaryingOrAttributeAlias(pfxp)) {
+            this.emitKeyword(this.mode === 'vertex' ? sname.attr(pfxp.postfix.decl) : sname.varying(pfxp.postfix.decl));
             return;
         }
         
@@ -171,7 +182,7 @@ export class GlslEmitter extends CodeEmitter {
         const retType = def.returnType;
         const { typeName } = this.resolveType(def.returnType);
 
-        if (this.isMain()) {
+        if (this.depth() === 0 && this.mode !== 'raw') {
             this.emitPrologue(fn.def);
 
             // emit original function witout parameters
@@ -194,9 +205,6 @@ export class GlslEmitter extends CodeEmitter {
                 this.emitChar('{');
                 this.push();
                 {
-
-                    assert(retType.isComplex());
-
                     const tempName = 'temp';
 
                     this.emitKeyword(typeName);
@@ -207,15 +215,27 @@ export class GlslEmitter extends CodeEmitter {
                     this.emitChar(';');
                     this.emitNewline();
 
-                    retType.fields.forEach(field => {
-                        this.emitKeyword(sname.varying(field));
+                    if (this.mode === 'vertex') {
+                        retType.fields.forEach(field => {
+                            const varyingName = sname.varying(field);
+                            // if (field.semantics === 'POSITION') {
+                            //     varyingName = 
+                            // }
+                            this.emitKeyword(varyingName);
+                            this.emitKeyword('=');
+                            this.emitKeyword(tempName);
+                            this.emitChar('.');
+                            this.emitChar(field.name);
+                            this.emitChar(';');
+                            this.emitNewline();
+                        });
+                    } else { // pixel
+                        this.emitKeyword('gl_FragColor');
                         this.emitKeyword('=');
                         this.emitKeyword(tempName);
-                        this.emitChar('.');
-                        this.emitChar(field.name);
                         this.emitChar(';');
                         this.emitNewline();
-                    });
+                    }
                 }
                 this.pop();
                 this.emitChar('}');

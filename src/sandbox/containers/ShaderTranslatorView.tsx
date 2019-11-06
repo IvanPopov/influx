@@ -85,14 +85,15 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             fontLigatures: true
         };
 
-        const vs = pass.vertexShader;
-
+        const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
+        const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
+        
         return (
             <MonacoDiffEditor
                 ref='monaco'
 
-                original={ Glsl.emitCode(vs, { type: 'vertex' }) }
-                value={ Glsl.emitGlsl(vs, { type: 'vertex' }) }
+                original={ Glsl.emitCode(shader, { mode }) }
+                value={ Glsl.emitGlsl(shader, { mode }) }
 
                 width='100%'
                 height='calc(100vh - 74px)' // todo: fixme
