@@ -1,8 +1,8 @@
 /* tslint:disable:typedef */
 
 import { isNumber } from '@lib/common';
-import * as Glsl from '@lib/fx/GLSL';
-import { IRange } from '@lib/idl/parser/IParser';
+import * as Glsl from '@lib/fx/translators';
+// import { IRange } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -20,14 +20,14 @@ interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 }
 
 
-function cutSourceRange(content: string, range: IRange): string {
-    const { start, end } = range;
-    // console.log(range);
-    const lines = content.split('\n').slice(start.line, end.line + 1);
-    lines[0] = lines[0].substr(start.column);
-    lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
-    return lines.join('\n');
-}
+// function cutSourceRange(content: string, range: IRange): string {
+//     const { start, end } = range;
+//     // console.log(range);
+//     const lines = content.split('\n').slice(start.line, end.line + 1);
+//     lines[0] = lines[0].substr(start.column);
+//     lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
+//     return lines.join('\n');
+// }
 
 @(withRouter as any)
 class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
@@ -91,8 +91,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             <MonacoDiffEditor
                 ref='monaco'
 
-                original={ cutSourceRange(file.content, vs.sourceNode.loc) }
-                value={ Glsl.translate(vs, { type: 'vertex' }) }
+                original={ Glsl.emitCode(vs, { type: 'vertex' }) }
+                value={ Glsl.emitGlsl(vs, { type: 'vertex' }) }
 
                 width='100%'
                 height='calc(100vh - 74px)' // todo: fixme

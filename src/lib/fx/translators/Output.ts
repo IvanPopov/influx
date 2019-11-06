@@ -1,4 +1,4 @@
-export function Output({ tab = '\t', nl = '\n' } = {}) {
+export function createOutput({ tab = '\t', nl = '\n' } = {}) {
     let data: string[] = [''];
     let nesting = 0;
     let count = 0;
@@ -37,4 +37,4 @@ export function Output({ tab = '\t', nl = '\n' } = {}) {
 }
 
 
-export type IOutput = ReturnType<typeof Output>;
+export type IOutput = ReturnType<typeof createOutput>;
