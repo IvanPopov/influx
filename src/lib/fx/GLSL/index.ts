@@ -166,7 +166,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
     function prologue(def: IFunctionDefInstruction): void {
         begin();
         {
-            for (const param of def.paramList) {
+            for (const param of def.params) {
                 if (param.isUniform()) {
                     continue;
                 }
@@ -192,7 +192,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
 
         begin();
         {
-            for (const param of def.paramList) {
+            for (const param of def.params) {
                 if (!param.isUniform()) {
                     continue;
                 }
@@ -224,7 +224,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         kw(fn.name);
         add('(');
         if (!omitParameters) {
-            def.paramList.forEach((param, i, list) => {
+            def.params.forEach((param, i, list) => {
                 vdecl(param);
                 (i + 1 != list.length) && add(',');
             });

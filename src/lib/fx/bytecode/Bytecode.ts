@@ -38,8 +38,8 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 
     // TODO: use the same code as FunctionCall;
     // loading of all non-inpt parameters to registers
-    for (let i = 0; i < fdef.paramList.length; ++i) {
-        const param = fdef.paramList[i];
+    for (let i = 0; i < fdef.params.length; ++i) {
+        const param = fdef.params[i];
         if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
             continue;
         }
@@ -381,7 +381,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
         function preloadArguments(fdef: IFunctionDefInstruction): PromisedAddress[] {
             const args: PromisedAddress[] = [];
-            for (let i = 0; i < fdef.paramList.length; ++i) {
+            for (let i = 0; i < fdef.params.length; ++i) {
                 const arg = call.args[i];
                 let argAddr = raddr(arg);
                 if (argAddr.location !== EMemoryLocation.k_Registers) {
@@ -394,34 +394,34 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
         switch (fdecl.name) {
             case 'mul':
-                assert(fdef.paramList.length === 2);
+                assert(fdef.params.length === 2);
                 return intrinsics.mulf(dest, args[0], args[1]);
             case 'dot':
-                assert(fdef.paramList.length === 2 && dest.size === sizeof.f32());
+                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
                 return intrinsics.dotf(dest, args[0], args[1]);
             case 'frac':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.frac(dest, args[0]);
             case 'sin':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.sinf(dest, args[0]);
             case 'cos':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.cosf(dest, args[0]);
             case 'abs':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.absf(dest, args[0]);
             case 'sqrt':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.sqrtf(dest, args[0]);
             case 'normalize':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.normalizef(dest, args[0]);
             case 'length':
-                assert(fdef.paramList.length === 1);
+                assert(fdef.params.length === 1);
                 return intrinsics.lengthf(dest, args[0]);
             case 'lerp':
-                assert(fdef.paramList.length === 3);
+                assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
         }
 
@@ -703,8 +703,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const ret = alloca(retType.size);
                     push(fdecl, ret);
 
-                    for (let i = 0; i < fdef.paramList.length; ++i) {
-                        const param = fdef.paramList[i];
+                    for (let i = 0; i < fdef.params.length; ++i) {
+                        const param = fdef.params[i];
                         const arg = i < call.args.length ? call.args[i] : param.initExpr;
                         const src = raddr(arg);
 

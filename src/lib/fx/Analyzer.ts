@@ -1398,7 +1398,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
     if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction ||
         func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
-            const funcArguments = func.def.paramList;
+            const funcArguments = func.def.params;
 
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
@@ -2194,7 +2194,7 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
     program.push(EScopeType.k_Default);
 
     let definition = analyzeFunctionDef(context, program, children[children.length - 1]);
-    let func = globalScope.findFunction(definition.name, definition.paramList.map(param => param.type));
+    let func = globalScope.findFunction(definition.name, definition.params.map(param => param.type));
 
     if (!isDef(func)) {
         context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
@@ -3297,7 +3297,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
         const requiredSemantics = ['POSITION', 'POSITION0'];
         let hasInstance = false;
         let hasRequiredSemantics = false;
-        for (const param of vertexShader.def.paramList) {
+        for (const param of vertexShader.def.params) {
             hasInstance = hasInstance ||
                 param.type.subType === context.particleInstance;
             hasRequiredSemantics = hasRequiredSemantics ||
@@ -3486,7 +3486,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     let fn = prerenderRoutine.function;
 
                     /** first argument's type */
-                    let argv = fn.def.paramList.map(param => param.type);
+                    let argv = fn.def.params.map(param => param.type);
 
                     if (argv.length < 2) {
                         context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
@@ -3577,7 +3577,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
 
                                 let fn = initRoutine.function;
                                 /** first argument's type */
-                                let type = fn.def.paramList[0].type;
+                                let type = fn.def.params[0].type;
 
                                 if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
                                     context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
@@ -3619,7 +3619,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
 
                                 const fn = updateRoutine.function;
                                 const fdef = fn.def;
-                                const paramList = fdef.paramList;
+                                const paramList = fdef.params;
 
                                 if (paramList.length < 1 || paramList.length > 2) {
                                     context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,

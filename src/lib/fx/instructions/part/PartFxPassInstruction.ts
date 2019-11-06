@@ -29,7 +29,7 @@ export class PartFxPassInstruction extends PassInstruction implements IPartFxPas
             return null;
         }
 
-        return this.prerenderRoutine.function.def.paramList[1].type.subType;
+        return this.prerenderRoutine.function.def.params[1].type.subType;
     }
 
     isValid(): boolean {

@@ -266,7 +266,7 @@ export interface ITypeInstruction extends IInstruction {
 export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout';
 
 export interface IVariableTypeInstruction extends ITypeInstruction {
-    readonly usageList: IVariableUsage[];
+    readonly usages: IVariableUsage[];
     readonly subType: ITypeInstruction;
     readonly padding: number;
 
@@ -301,9 +301,9 @@ export interface IDeclInstruction extends IInstruction {
 
 export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly returnType: ITypeInstruction;
-    readonly functionName: IIdInstruction;
     readonly name: string;
-    readonly paramList: IVariableDeclInstruction[];
+    readonly params: IVariableDeclInstruction[];
+    
     // todo: remove it.
     readonly numArgsRequired: number;
 

@@ -175,7 +175,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         }
         // all parameters must be a children on function definition!
         assert(decl.parent.instructionType === EInstructionTypes.k_FunctionDefInstruction);
-        return (<IFunctionDefInstruction>decl.parent).paramList.indexOf(decl);
+        return (<IFunctionDefInstruction>decl.parent).params.indexOf(decl);
     }
 
     /**
@@ -191,7 +191,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         let idx = VariableDeclInstruction.getParameterIndex(decl);
         let offset = 0;
         for (let i = 0; i < idx; ++i) {
-            offset += (<IFunctionDefInstruction>decl.parent).paramList[i].type.size;
+            offset += (<IFunctionDefInstruction>decl.parent).params[i].type.size;
         }
         return offset;
     }

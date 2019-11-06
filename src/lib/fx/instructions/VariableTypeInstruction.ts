@@ -43,7 +43,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             // todo: review this code
             if (!varType.isNotBaseArray()) {
                 this._subType = varType.subType;
-                varType.usageList.forEach( usage => this.addUsage(usage) )
+                varType.usages.forEach( usage => this.addUsage(usage) )
             }
             else {
                 this._subType = type;
@@ -209,7 +209,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    get usageList(): IVariableUsage[] {
+    get usages(): IVariableUsage[] {
         return this._usageList;
     }
 

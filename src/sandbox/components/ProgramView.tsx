@@ -596,7 +596,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='numArgsRequired' value={ String(instr.numArgsRequired) } />
                 <PropertyOpt name='semantic' value={ String(instr.semantics) } />
                 <PropertyOpt name='arguments'>
-                    { instr.paramList.map((param) => this.VariableDecl(param)) }
+                    { instr.params.map((param) => this.VariableDecl(param)) }
                 </PropertyOpt>
             </Property>
         )
@@ -707,7 +707,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
-                <PropertyOpt name='usages' value={ (instr.usageList.join(' ') || null) } />
+                <PropertyOpt name='usages' value={ (instr.usages.join(' ') || null) } />
                 <Property name='padding' value={ instr.padding === Instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
                 <PropertyOpt name='subType' opened={ true }>
                     { this.Unknown(instr.subType) }

@@ -95,7 +95,7 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.def.paramList;
+                    let testedArguments = testedFunction.def.params;
 
                     if (isNull(args)) {
                         // if (testedFunction.definition.numArgsRequired === 0) 
@@ -177,7 +177,7 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i: number = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.def.paramList;
+                    let testedArguments = testedFunction.def.params;
 
                     if (argTypes.length > testedArguments.length ||
                         argTypes.length < testedFunction.def.numArgsRequired) {
@@ -238,11 +238,11 @@ export class Scope implements IScope {
             return null;
         }
 
-        const funcArgs = func.def.paramList;
+        const funcArgs = func.def.params;
         let targetFunc = null;
 
         for (let i = 0; i < funcOverloads.length; i++) {
-            let testedArguments = funcOverloads[i].def.paramList;
+            let testedArguments = funcOverloads[i].def.params;
 
             if (testedArguments.length !== funcArgs.length) {
                 continue;

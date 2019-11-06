@@ -129,7 +129,7 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
         case EInstructionTypes.k_FunctionDefInstruction:
             visit((owner as IFunctionDefInstruction).functionName);
             visit((owner as IFunctionDefInstruction).returnType);
-            (owner as IFunctionDefInstruction).paramList.forEach(param => visit(param));
+            (owner as IFunctionDefInstruction).params.forEach(param => visit(param));
             break;
         case EInstructionTypes.k_FunctionDeclInstruction:
             visit((owner as IFunctionDeclInstruction).def);

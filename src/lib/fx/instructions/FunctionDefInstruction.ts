@@ -39,12 +39,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    get functionName(): IIdInstruction {
-        return this._id;
-    }
-
-
-    get paramList(): IVariableDeclInstruction[] {
+    get params(): IVariableDeclInstruction[] {
         return this._parameterList;
     }
 
@@ -200,7 +195,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     // should be called only after checkArgumentsFor[Vertex|Pixel]Usage
     static fetchShaderInput(funcDef: IFunctionDefInstruction): IVariableDeclInstruction[] {
-        let params = funcDef.paramList;
+        let params = funcDef.params;
         let shaderInput: IVariableDeclInstruction[] = [];
 
         for (let i = 0; i < params.length; i++) {
@@ -215,7 +210,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
     static hasComplexShaderInput(funcDef: IFunctionDefInstruction): boolean {
-        let params = funcDef.paramList;
+        let params = funcDef.params;
 
         for (let i = 0; i < params.length; i++) {
             let param = params[i];
@@ -366,7 +361,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     */
 
     static checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
-        let params = funcDef.paramList;
+        let params = funcDef.params;
         let isAttributeByStruct = false;
         let isAttributeByParams = false;
         let isStartAnalyze = false;
@@ -418,7 +413,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     static checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
-        let params = funcDef.paramList;
+        let params = funcDef.params;
         let isVaryingsByStruct = false;
         let isVaryingsByParams = false;
         let isStartAnalyze = false;
