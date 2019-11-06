@@ -229,6 +229,15 @@ export class GlslEmitter extends CodeEmitter {
                             this.emitChar(';');
                             this.emitNewline();
                         });
+
+                        const fieldPos = retType.fields.filter(field => (field.semantics === 'POSITION'))[0];
+                        this.emitKeyword('gl_Position');
+                        this.emitKeyword('=');
+                        this.emitKeyword(tempName);
+                        this.emitChar('.');
+                        this.emitChar(fieldPos.name);
+                        this.emitChar(';');
+                        this.emitNewline();
                     } else { // pixel
                         this.emitKeyword('gl_FragColor');
                         this.emitKeyword('=');
