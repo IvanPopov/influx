@@ -147,7 +147,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         return { typeName, length, usage };
     }
 
-    const knownGlobals: string[] = [];
+    
     function vdecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         const { typeName, length, usage } = type(src.type);
         const name = rename ? rename(src) : src.name;
@@ -158,8 +158,10 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         length && add(`[${length}]`);
     }
 
-    const attribute = src => (kw('attribute'), vdecl(src, sname.attr), add(';'), nl());
-    const varying = src => (kw('varying'), vdecl(src, sname.varying), add(';'), nl());
+    const attribute = (src: IVariableDeclInstruction) =>
+        (kw('attribute'), vdecl(src, sname.attr), add(';'), nl());
+    const varying = (src: IVariableDeclInstruction) =>
+        (kw('varying'), vdecl(src, sname.varying), add(';'), nl());
 
     function prologue(def: IFunctionDefInstruction): void {
         begin();
@@ -216,7 +218,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
 
     function func(fn: IFunctionDeclInstruction) {
         const omitParameters = isMain();
-        const def = fn.definition;
+        const def = fn.def;
         const { typeName } = type(def.returnType);
         kw(typeName);
         kw(fn.name);
@@ -229,7 +231,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         }
         add(')');
         nl();
-        block(fn.implementation);
+        block(fn.impl);
     }
 
     function decl(dcl: IDeclInstruction) {
@@ -272,7 +274,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
                 {
                     const pfxp = expr as IPostfixPointInstruction;
                     if (isAttributeAlias(pfxp)) {
-                        kw(sname.attr(pfxp.postfix.declaration));
+                        kw(sname.attr(pfxp.postfix.decl));
                         return;
                     }
                 }
@@ -328,7 +330,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         if (isMain()) {
             if (pfxp.element.instructionType === EInstructionTypes.k_IdExprInstruction) {
                 const id = pfxp.element as IdExprInstruction;
-                if (id.declaration.isParameter() && !id.declaration.isUniform()) {
+                if (id.decl.isParameter() && !id.decl.isUniform()) {
                     return true;
                 }
             }
@@ -342,8 +344,9 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         add(pfxp.postfix.name);
     }
 
+    const knownGlobals: string[] = [];
     function identifier(id: IIdExprInstruction) {
-        const decl = id.declaration;
+        const decl = id.decl;
         const name = id.name;
 
 
@@ -376,7 +379,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
     }
 
     function ccall(call: IConstructorCallInstruction) {
-        const args = call.arguments as IExprInstruction[];
+        const args = call.args as IExprInstruction[];
         const { typeName } = type(call.ctor);
 
         kw(typeName);
@@ -389,7 +392,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
     }
 
     function fcall(call: IFunctionCallInstruction) {
-        const decl = call.declaration;
+        const decl = call.decl;
         const args = call.args;
 
         switch (decl.name) {
@@ -445,7 +448,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         add('}');
     }
 
-    prologue(fn.definition);
+    prologue(fn.def);
 
     begin();
     func(fn);
@@ -457,7 +460,7 @@ function $emit(ctx: IContext, fn: IFunctionDeclInstruction): void {
         add('{');
         push();
         {
-            const def = fn.definition;
+            const def = fn.def;
             const retType = def.returnType;
             assert(retType.isComplex());
 

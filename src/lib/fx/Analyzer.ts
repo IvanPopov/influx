@@ -1166,17 +1166,17 @@ function analyzeCompileExpr(context: Context, program: ProgramScope, sourceNode:
     }
 
     if (retType) {
-        if (!func.definition.returnType.isEqual(retType)) {
+        if (!func.def.returnType.isEqual(retType)) {
             context.error(sourceNode, EErrors.InvalidCompileFunctionNotValid, {
                 funcName: shaderFuncName,
                 funcType: retType.toCode(),
-                tooltip: `Return type mismatch: expected '${retType.toCode()}' a is a '${func.definition.returnType.toCode()}' `
+                tooltip: `Return type mismatch: expected '${retType.toCode()}' a is a '${func.def.returnType.toCode()}' `
             });
             return null;
         }
     }
 
-    let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>func.definition.returnType, scope);
+    let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>func.def.returnType, scope);
 
     let expr = new CompileExprInstruction({ args: compileArgs, scope, type, operand: func, sourceNode });
     return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -1398,7 +1398,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
     if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction ||
         func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
         if (!isNull(args)) {
-            const funcArguments = func.definition.paramList;
+            const funcArguments = func.def.paramList;
 
             for (let i = 0; i < args.length; i++) {
                 if (funcArguments[i].type.hasUsage('out')) {
@@ -1441,7 +1441,7 @@ function analyzeFunctionCallExpr(context: Context, program: ProgramScope, source
         }
 
 
-        const type = VariableTypeInstruction.wrap(func.definition.returnType, scope);
+        const type = VariableTypeInstruction.wrap(func.def.returnType, scope);
         let funcCallExpr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode });
 
         // if (!isNull(currentAnalyzedFunction)) {
@@ -2202,14 +2202,14 @@ function analyzeFunctionDecl(context: Context, program: ProgramScope, sourceNode
         return null;
     }
 
-    if (!isNull(func) && func.implementation) {
+    if (!isNull(func) && func.impl) {
         context.error(sourceNode, EErrors.FunctionRedefinition, { funcName: definition.name });
         program.pop();
         return null;
     }
 
     if (!isNull(func)) {
-        if (!func.definition.returnType.isEqual(definition.returnType)) {
+        if (!func.def.returnType.isEqual(definition.returnType)) {
             context.error(sourceNode, EErrors.InvalidFuncDefenitionReturnType, { funcName: definition.name });
             program.pop();
             return null;
@@ -2962,12 +2962,12 @@ function analyzePassStateForShader(context: Context, program: ProgramScope,
     const shaderFunc = compileExpr.function;
 
     if (shaderType === 'vertexshader') {
-        if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.definition)) {
+        if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.def)) {
             context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithVertexShader, { funcDef: String(shaderFunc) });
         }
     }
     else {
-        if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.definition)) {
+        if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.def)) {
             context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithPixelShader, { funcDef: String(shaderFunc) });
         }
     }
@@ -3297,7 +3297,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
         const requiredSemantics = ['POSITION', 'POSITION0'];
         let hasInstance = false;
         let hasRequiredSemantics = false;
-        for (const param of vertexShader.definition.paramList) {
+        for (const param of vertexShader.def.paramList) {
             hasInstance = hasInstance ||
                 param.type.subType === context.particleInstance;
             hasRequiredSemantics = hasRequiredSemantics ||
@@ -3486,7 +3486,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
                     let fn = prerenderRoutine.function;
 
                     /** first argument's type */
-                    let argv = fn.definition.paramList.map(param => param.type);
+                    let argv = fn.def.paramList.map(param => param.type);
 
                     if (argv.length < 2) {
                         context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
@@ -3577,7 +3577,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
 
                                 let fn = initRoutine.function;
                                 /** first argument's type */
-                                let type = fn.definition.paramList[0].type;
+                                let type = fn.def.paramList[0].type;
 
                                 if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
                                     context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
@@ -3618,7 +3618,7 @@ function analyzePartFXBody(context: Context, program: ProgramScope, sourceNode: 
                                 //
 
                                 const fn = updateRoutine.function;
-                                const fdef = fn.definition;
+                                const fdef = fn.def;
                                 const paramList = fdef.paramList;
 
                                 if (paramList.length < 1 || paramList.length > 2) {
@@ -3907,9 +3907,9 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
     let recursionFound = false;
 
     stack = [...stack, func.instructionID];
-    visitor(func.implementation, instr => {
+    visitor(func.impl, instr => {
         if (instr.instructionType === EInstructionTypes.k_FunctionCallInstruction) {
-            let decl = (instr as IFunctionCallInstruction).declaration;
+            let decl = (instr as IFunctionCallInstruction).decl;
             if (decl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
                 return;
             }
@@ -3918,7 +3918,7 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
             //       at the time of the call, so you need to look for a 
             //       version with implementation
             decl = decl.scope.findFunctionInScope(decl);
-            if (isNull(decl.implementation)) {
+            if (isNull(decl.impl)) {
                 context.error(instr.sourceNode,
                     EErrors.InvalidFunctionImplementationNotFound,
                     { funcName: decl.name });

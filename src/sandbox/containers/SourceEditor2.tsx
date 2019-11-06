@@ -73,7 +73,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                     const partFx = technique as IPartFxInstruction;
 
                     if (partFx.spawnRoutine) {
-                        sourceNode = partFx.spawnRoutine.function.definition.sourceNode;
+                        sourceNode = partFx.spawnRoutine.function.def.sourceNode;
                         loc = sourceNode.loc;
 
                         range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
@@ -81,7 +81,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                     }
 
                     if (partFx.initRoutine) {
-                        sourceNode = partFx.initRoutine.function.definition.sourceNode;
+                        sourceNode = partFx.initRoutine.function.def.sourceNode;
                         loc = sourceNode.loc;
 
                         range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
@@ -89,7 +89,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                     }
 
                     if (partFx.updateRoutine) {
-                        sourceNode = partFx.updateRoutine.function.definition.sourceNode;
+                        sourceNode = partFx.updateRoutine.function.def.sourceNode;
                         loc = sourceNode.loc;
 
                         range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });
@@ -107,7 +107,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
 
                     for (let pass of partFx.passList) {
                         if (pass.prerenderRoutine) {
-                            sourceNode = pass.prerenderRoutine.function.definition.sourceNode;
+                            sourceNode = pass.prerenderRoutine.function.def.sourceNode;
                             loc = sourceNode.loc;
 
                             range = monaco.Range.fromPositions({ lineNumber: loc.start.line + 1, column: loc.start.column + 1 });

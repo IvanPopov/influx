@@ -47,7 +47,7 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
             case EInstructionTypes.k_PostfixIndexInstruction:
                 return ExprInstruction.UnwindExpr((<IPostfixIndexInstruction>expr).element);
             case EInstructionTypes.k_IdExprInstruction:
-                return (<IIdExprInstruction>expr).declaration;
+                return (<IIdExprInstruction>expr).decl;
             case EInstructionTypes.k_ArithmeticExprInstruction:
                 // arithmetic expression returns right-hand value;
                 return null;

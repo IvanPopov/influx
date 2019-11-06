@@ -32,7 +32,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
     // NOTE: it does nothing at the momemt :/
     debug.beginCompilationUnit('[todo]');
     // simulate function call()
-    const fdef = fn.definition;
+    const fdef = fn.def;
     let ret = alloca(fdef.returnType.size);
     push(fn, ret);
 
@@ -358,23 +358,21 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         'a': 3, 'w': 3, 'q': 3
     };
 
-    function checkPostfixNameForSwizzling(postfixName: string): boolean {
-        return postfixName
+    const checkPostfixNameForSwizzling = (postfixName: string) => 
+        postfixName
             .split('')
             .map(c => POSTFIX_COMPONENT_MAP[c])
             .map(i => i >= 0 && i < 4)
             .reduce((accum, val) => accum && val);
-    }
 
     // xxwy => [0, 0, 3, 1]
-    function swizzlePatternFromName(postfixName: string): number[] {
-        return postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
-    }
+    const swizzlePatternFromName = (postfixName: string) =>
+        postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
 
 
     function iintrinsic(call: IFunctionCallInstruction): PromisedAddress {
-        const fdecl = call.declaration as IFunctionDeclInstruction;
-        const fdef = fdecl.definition;
+        const fdecl = call.decl as IFunctionDeclInstruction;
+        const fdef = fdecl.def;
         const retType = fdef.returnType;
 
         const dest = alloca(retType.size);
@@ -442,7 +440,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         diag.critical(EErrors.k_UnsupportedExprType, {});
                     }
 
-                    let arg = init.arguments[0];
+                    let arg = init.args[0];
                     return raddr(arg);
                 }
                 break;
@@ -467,16 +465,16 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IdExprInstruction:
                 {
                     let id = (expr as IIdExprInstruction);
-                    assert(id.declaration === ExprInstruction.UnwindExpr(id));
+                    assert(id.decl === ExprInstruction.UnwindExpr(id));
 
-                    const size = id.declaration.type.size;
+                    const size = id.decl.type.size;
                     const decl = ExprInstruction.UnwindExpr(id);
                     const location = resolveMemoryLocation(decl);
 
                     switch (location) {
                         case EMemoryLocation.k_Registers:
                             {
-                                return deref(id.declaration);
+                                return deref(id.decl);
                             }
                         case EMemoryLocation.k_Input:
                             {
@@ -491,7 +489,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             }
                         case EMemoryLocation.k_Constants:
                             {
-                                return constants.deref(id.declaration);
+                                return constants.deref(id.decl);
                             }
                     }
 
@@ -522,24 +520,24 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
 
                     if (SystemScope.isIntBasedType(unary.type)) {
-                        switch(op) {
+                        switch (op) {
                             case '-':
-                                        
+
                                 let constant = constants.i32(-1);
                                 if (constant.location !== EMemoryLocation.k_Registers) {
                                     constant = iload(constant);
                                 }
 
-                                
+
                                 intrinsics.arithi('*', dest, constant, src);
                                 debug.map(unary);
                                 return dest;
                             // fall to unsupported warning
                         }
                     } else {
-                        switch(op) {
+                        switch (op) {
                             case '-':
-                                        
+
                                 let constant = constants.f32(-1.0);
                                 if (constant.location !== EMemoryLocation.k_Registers) {
                                     constant = iload(constant);
@@ -689,8 +687,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_FunctionCallInstruction:
                 {
                     const call = expr as IFunctionCallInstruction;
-                    const fdecl = call.declaration as IFunctionDeclInstruction;
-                    const fdef = fdecl.definition;
+                    const fdecl = call.decl;
+                    const fdef = fdecl.def;
                     const retType = fdef.returnType;
 
                     if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
@@ -736,7 +734,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const ctorCall = expr as IConstructorCallInstruction;
                     // todo: add correct constructor call support for builtin type at the level of analyzer
                     const type = ctorCall.type;
-                    const args = (ctorCall.arguments as IExprInstruction[]);
+                    const args = (ctorCall.args as IExprInstruction[]);
 
                     const size = type.size;
                     const dest = alloca(size);
@@ -900,8 +898,8 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     // resolve function's implementation
                     func = func.scope.findFunctionInScope(func);
 
-                    let def = func.definition; // todo: handle all arguments!!
-                    let impl = func.implementation;
+                    let def = func.def; // todo: handle all arguments!!
+                    let impl = func.impl;
 
 
                     translate(impl);

@@ -408,10 +408,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, true) } >
                 <Property name='definition' >
-                    { this.FunctionDefinition(instr.definition) }
+                    { this.FunctionDefinition(instr.def) }
                 </Property>
                 <PropertyOpt name='implementation' >
-                    { this.StmtBlock(instr.implementation) }
+                    { this.StmtBlock(instr.impl) }
                 </PropertyOpt>
             </Property>
         )
@@ -423,7 +423,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             <Property { ...this.bindProps(instr) }>
                 { this.Id(instr.id) }
                 <Property name='declaration' >
-                    { this.Unknown(instr.declaration) }
+                    { this.Unknown(instr.decl) }
                 </Property>
             </Property>
         )
@@ -496,7 +496,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                     { this.VariableType(instr.ctor) }
                 </Property>
                 <PropertyOpt name='arguments'>
-                    { instr.arguments.map((arg) => this.Unknown(arg)) }
+                    { instr.args.map((arg) => this.Unknown(arg)) }
                 </PropertyOpt>
             </Property>
         );
@@ -545,7 +545,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) } >
                 <Property name='declaration' >
-                    { this.FunctionDecl(instr.declaration as IFunctionDeclInstruction) }
+                    { this.FunctionDecl(instr.decl as IFunctionDeclInstruction) }
                 </Property>
                 <PropertyOpt name='arguments'>
                     { instr.args.map((arg) => this.Unknown(arg)) }
@@ -727,7 +727,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='const' value={ String(instr.isConst()) } />
                 <Property name='array' value={ String(instr.isArray()) } />
                 <Property name='arguments'>
-                    { instr.arguments.map(arg => this.Unknown(arg)) }
+                    { instr.args.map(arg => this.Unknown(arg)) }
                 </Property>
             </Property>
         );

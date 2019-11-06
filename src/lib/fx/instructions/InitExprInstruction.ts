@@ -36,7 +36,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
     }
 
 
-    get arguments(): IExprInstruction[] {
+    get args(): IExprInstruction[] {
         return this._args;
     }
 
@@ -54,10 +54,10 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         }
         code += "(";
 
-        for (let i: number = 0; i < this.arguments.length; i++) {
-            code += this.arguments[i].toCode();
+        for (let i: number = 0; i < this.args.length; i++) {
+            code += this.args[i].toCode();
 
-            if (i !== this.arguments.length - 1) {
+            if (i !== this.args.length - 1) {
                 code += ",";
             }
         }
@@ -69,7 +69,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
     isConst(): boolean {
         let bConst: boolean;
-        let args: IExprInstruction[] = <IExprInstruction[]>this.arguments;
+        let args: IExprInstruction[] = <IExprInstruction[]>this.args;
 
         for (let i: number = 0; i < args.length; i++) {
             if (!args[i].isConst()) {
@@ -88,11 +88,11 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         // It's a global user defined array or just not unit array;
         // Trying to exclude types like float1.
         if ((type.isNotBaseArray() && type.scope.type <= EScopeType.k_Global) ||
-            (type.isArray() && this.arguments.length > 1)) {
+            (type.isArray() && this.args.length > 1)) {
 
             if (type.length === Instruction.UNDEFINE_LENGTH ||
-                (type.isNotBaseArray() && this.arguments.length !== type.length) ||
-                (!type.isNotBaseArray() && this.arguments.length !== type.baseType.length)) {
+                (type.isNotBaseArray() && this.args.length !== type.length) ||
+                (!type.isNotBaseArray() && this.args.length !== type.baseType.length)) {
                 return false;
             }
 
@@ -104,8 +104,8 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             let isOk = false;
             let testedInstruction: IExprInstruction = null;
 
-            for (let i = 0; i < this.arguments.length; i++) {
-                testedInstruction = (<IExprInstruction>this.arguments[i]);
+            for (let i = 0; i < this.args.length; i++) {
+                testedInstruction = (<IExprInstruction>this.args[i]);
 
                 if (testedInstruction.instructionType === EInstructionTypes.k_InitExprInstruction) {
                     isOk = (<IInitExprInstruction>testedInstruction).optimizeForVariableType(arrayElementType);
@@ -132,9 +132,9 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             return true;
         }
         else {
-            let firstInstruction = <IExprInstruction>this.arguments[0];
+            let firstInstruction = <IExprInstruction>this.args[0];
 
-            if (this.arguments.length === 1 &&
+            if (this.args.length === 1 &&
                 firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
 
                 if (SystemScope.isSamplerType(type)) {
@@ -153,11 +153,11 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     return false;
                 }
             }
-            else if (this.arguments.length === 1) {
+            else if (this.args.length === 1) {
                 return false;
             }
 
-            let args = <IInitExprInstruction[]>this.arguments;
+            let args = <IInitExprInstruction[]>this.args;
             let fieldNameList = type.fieldNames;
 
             for (let i = 0; i < args.length; i++) {
@@ -181,24 +181,24 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         let res: any = null;
 
         if (this._isArray) {
-            res = new Array(this.arguments.length);
+            res = new Array(this.args.length);
 
-            for (let i: number = 0; i < this.arguments.length; i++) {
-                let evalInstruction = (<IExprInstruction>this.arguments[i]);
+            for (let i: number = 0; i < this.args.length; i++) {
+                let evalInstruction = (<IExprInstruction>this.args[i]);
 
                 if (evalInstruction.evaluate()) {
                     res[i] = evalInstruction.getEvalValue();
                 }
             }
         }
-        else if (this.arguments.length === 1) {
-            let pEvalInstruction = (<IExprInstruction>this.arguments[0]);
+        else if (this.args.length === 1) {
+            let pEvalInstruction = (<IExprInstruction>this.args[0]);
             pEvalInstruction.evaluate();
             res = pEvalInstruction.getEvalValue();
         }
         else {
             let jsTypeCtor: any = SystemScope.getExternalType(this.type);
-            let args: any[] = new Array(this.arguments.length);
+            let args: any[] = new Array(this.args.length);
 
             if (isNull(jsTypeCtor)) {
                 return false;
@@ -206,16 +206,16 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
             try {
                 if (SystemScope.isScalarType(this.type)) {
-                    let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[1];
-                    if (this.arguments.length > 2 || !testedInstruction.evaluate()) {
+                    let testedInstruction: IExprInstruction = <IExprInstruction>this.args[1];
+                    if (this.args.length > 2 || !testedInstruction.evaluate()) {
                         return false;
                     }
 
                     res = jsTypeCtor(testedInstruction.getEvalValue());
                 }
                 else {
-                    for (let i: number = 0; i < this.arguments.length; i++) {
-                        let testedInstruction: IExprInstruction = <IExprInstruction>this.arguments[i];
+                    for (let i: number = 0; i < this.args.length; i++) {
+                        let testedInstruction: IExprInstruction = <IExprInstruction>this.args[i];
 
                         if (testedInstruction.evaluate()) {
                             args[i] = testedInstruction.getEvalValue();

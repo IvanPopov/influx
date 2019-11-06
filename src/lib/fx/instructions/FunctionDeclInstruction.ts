@@ -26,12 +26,12 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
 
-    get implementation(): IStmtBlockInstruction {
+    get impl(): IStmtBlockInstruction {
         return this._implementation;
     }
 
 
-    get definition(): IFunctionDefInstruction {
+    get def(): IFunctionDefInstruction {
         return this._definition;
     }
 
@@ -43,21 +43,21 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
 
     // shortcut for definition.name
     get name(): string {
-        return this.definition.name;
+        return this.def.name;
     }
 
 
     // shortcut for definition.id
     get id(): IIdInstruction {
-        return this.definition.id;
+        return this.def.id;
     }
 
 
     toCode(): string {
         let code = '';
-        code += this.definition.toCode();
-        if (this.implementation) {
-            code += this.implementation.toCode();
+        code += this.def.toCode();
+        if (this.impl) {
+            code += this.impl.toCode();
         } else {
             code += ';';
         }

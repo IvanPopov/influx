@@ -74,18 +74,18 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             visit((owner as IConditionalExprInstruction).condition);
             break;
         case EInstructionTypes.k_ConstructorCallInstruction:
-            (owner as IConstructorCallInstruction).arguments.forEach(arg => visit(arg));
+            (owner as IConstructorCallInstruction).args.forEach(arg => visit(arg));
             visit((owner as IConstructorCallInstruction).ctor);
             break;
         case EInstructionTypes.k_FunctionCallInstruction:
             (owner as IFunctionCallInstruction).args.forEach(arg => visit(arg));
-            visit((owner as IFunctionCallInstruction).declaration);
+            visit((owner as IFunctionCallInstruction).decl);
             break;
         case EInstructionTypes.k_IdExprInstruction:
             visit((owner as IIdExprInstruction).id);
             break;
         case EInstructionTypes.k_InitExprInstruction:
-            (owner as IInitExprInstruction).arguments.forEach(arg => visit(arg));
+            (owner as IInitExprInstruction).args.forEach(arg => visit(arg));
             break;
         case EInstructionTypes.k_IntInstruction:
         case EInstructionTypes.k_FloatInstruction:
@@ -132,8 +132,8 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             (owner as IFunctionDefInstruction).paramList.forEach(param => visit(param));
             break;
         case EInstructionTypes.k_FunctionDeclInstruction:
-            visit((owner as IFunctionDeclInstruction).definition);
-            visit((owner as IFunctionDeclInstruction).implementation);
+            visit((owner as IFunctionDeclInstruction).def);
+            visit((owner as IFunctionDeclInstruction).impl);
             break;
         case EInstructionTypes.k_VariableDeclInstruction:
             visit((owner as IVariableDeclInstruction).type);

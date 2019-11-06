@@ -79,7 +79,7 @@ const UNDEF: INode = { id: (0xffffffff >>> 0), value: '[undefined]', usages: nul
 
 
 function localID(instr: IIdExprInstruction) {
-    return instr.declaration.id.instructionID;
+    return instr.decl.id.instructionID;
 }
 
 export class Flow {
@@ -150,7 +150,7 @@ export class Flow {
             {
                 let init = <IInitExprInstruction>instr;
                 assert(!init.isArray());
-                return this.placeExpr(init.arguments[0]);
+                return this.placeExpr(init.args[0]);
             }
             
             case EInstructionTypes.k_IntInstruction:
@@ -231,7 +231,7 @@ export class Flow {
 export function analyze (func: IFunctionDeclInstruction) 
 {
     let flow = new Flow;
-    let body = func.implementation;
+    let body = func.impl;
 
     let res = body.stmtList.map(stmt => flow.place(stmt));
     let graphContent = res.map( n => dotString(n) ).join('\n');

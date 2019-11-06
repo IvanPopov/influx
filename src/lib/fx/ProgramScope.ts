@@ -95,7 +95,7 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.definition.paramList;
+                    let testedArguments = testedFunction.def.paramList;
 
                     if (isNull(args)) {
                         // if (testedFunction.definition.numArgsRequired === 0) 
@@ -111,7 +111,7 @@ export class Scope implements IScope {
                     }
 
                     if (args.length > testedArguments.length ||
-                        args.length < testedFunction.definition.numArgsRequired) {
+                        args.length < testedFunction.def.numArgsRequired) {
                         continue;
                     }
 
@@ -177,10 +177,10 @@ export class Scope implements IScope {
             if (isDef(funcList)) {
                 for (let i: number = 0; i < funcList.length; i++) {
                     let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.definition.paramList;
+                    let testedArguments = testedFunction.def.paramList;
 
                     if (argTypes.length > testedArguments.length ||
-                        argTypes.length < testedFunction.definition.numArgsRequired) {
+                        argTypes.length < testedFunction.def.numArgsRequired) {
                         continue;
                     }
 
@@ -238,11 +238,11 @@ export class Scope implements IScope {
             return null;
         }
 
-        const funcArgs = func.definition.paramList;
+        const funcArgs = func.def.paramList;
         let targetFunc = null;
 
         for (let i = 0; i < funcOverloads.length; i++) {
-            let testedArguments = funcOverloads[i].definition.paramList;
+            let testedArguments = funcOverloads[i].def.paramList;
 
             if (testedArguments.length !== funcArgs.length) {
                 continue;
@@ -320,8 +320,8 @@ export class Scope implements IScope {
         if (!targetFunc) {
             funcOverloads.push(func);
         } else {
-            assert(!isNull(func.implementation));
-            assert(isNull(targetFunc.implementation));
+            assert(!isNull(func.impl));
+            assert(isNull(targetFunc.impl));
             let i = funcOverloads.indexOf(targetFunc);
             funcOverloads[i] = func;
         }

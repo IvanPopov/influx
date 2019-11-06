@@ -31,7 +31,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
     }
 
     
-    get arguments() : IInstruction[] {
+    get args() : IInstruction[] {
         return this._args;
     }
 
@@ -47,9 +47,9 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
         code += this.ctor.toCode();
         code += "(";
 
-        for (var i: number = 0; i < this.arguments.length; i++) {
-            code += this.arguments[i].toCode();
-            if (i !== this.arguments.length - 1) {
+        for (var i: number = 0; i < this.args.length; i++) {
+            code += this.args[i].toCode();
+            if (i !== this.args.length - 1) {
                 code += ",";
             }
         }
@@ -61,8 +61,8 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
 
 
     isConst(): boolean {
-        for (var i: number = 0; i < this.arguments.length; i++) {
-            if (!(<IExprInstruction>this.arguments[i]).isConst()) {
+        for (var i: number = 0; i < this.args.length; i++) {
+            if (!(<IExprInstruction>this.args[i]).isConst()) {
                 return false;
             }
         }
@@ -78,7 +78,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
 
         var res: any = null;
         var jsTypeCtor: any = SystemScope.getExternalType(this.type);
-        var args: any[] = new Array(this.arguments.length);
+        var args: any[] = new Array(this.args.length);
 
         if (isNull(jsTypeCtor)) {
             return false;
@@ -86,16 +86,16 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
 
         try {
             if (SystemScope.isScalarType(this.type)) {
-                var pTestedInstruction: IExprInstruction = <IExprInstruction>this.arguments[0];
-                if (this.arguments.length > 1 || !pTestedInstruction.evaluate()) {
+                var pTestedInstruction: IExprInstruction = <IExprInstruction>this.args[0];
+                if (this.args.length > 1 || !pTestedInstruction.evaluate()) {
                     return false;
                 }
 
                 res = jsTypeCtor(pTestedInstruction.getEvalValue());
             }
             else {
-                for (var i: number = 0; i < this.arguments.length; i++) {
-                    var pTestedInstruction: IExprInstruction = <IExprInstruction>this.arguments[i];
+                for (var i: number = 0; i < this.args.length; i++) {
+                    var pTestedInstruction: IExprInstruction = <IExprInstruction>this.args[i];
 
                     if (pTestedInstruction.evaluate()) {
                         args[i - 1] = pTestedInstruction.getEvalValue();

@@ -22,7 +22,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     }
 
     
-    get declaration(): IVariableDeclInstruction {
+    get decl(): IVariableDeclInstruction {
         return this._decl;
     }
     

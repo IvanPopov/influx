@@ -29,7 +29,7 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
     }
 
 
-    get declaration(): IFunctionDeclInstruction {
+    get decl(): IFunctionDeclInstruction {
         return this._decl;
     }
 
@@ -42,7 +42,7 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
     toCode(): string {
         let code: string = "";
 
-        code += this.declaration.definition.id.toCode();
+        code += this.decl.def.id.toCode();
         code += "(";
         for (let i: number = 0; i < this._args.length; i++) {
             code += this._args[i].toCode();

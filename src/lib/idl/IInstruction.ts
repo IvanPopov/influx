@@ -350,8 +350,8 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
 
 
 export interface IFunctionDeclInstruction extends IDeclInstruction {
-    readonly definition: IFunctionDefInstruction;
-    readonly implementation: IStmtBlockInstruction;
+    readonly def: IFunctionDefInstruction;
+    readonly impl: IStmtBlockInstruction;
 }
 
 
@@ -410,7 +410,7 @@ export interface IPostfixIndexInstruction extends IExprInstruction {
 
 
 export interface IConstructorCallInstruction extends IExprInstruction {
-    readonly arguments: IInstruction[];
+    readonly args: IInstruction[];
     readonly ctor: IVariableTypeInstruction;
 }
 
@@ -465,7 +465,7 @@ export interface IAssignmentExprInstruction extends IExprInstruction {
 
 
 export interface IInitExprInstruction extends IExprInstruction {
-    readonly arguments: IExprInstruction[];
+    readonly args: IExprInstruction[];
 
     isArray(): boolean;
     isConst(): boolean;
@@ -481,13 +481,13 @@ export interface IIdExprInstruction extends IExprInstruction {
 
     /** @helpers */
     readonly type: IVariableTypeInstruction;
-    readonly declaration: IVariableDeclInstruction;
+    readonly decl: IVariableDeclInstruction;
 }
 
 
 export interface IFunctionCallInstruction extends IExprInstruction {
     readonly args: IExprInstruction[];
-    readonly declaration: IFunctionDeclInstruction;
+    readonly decl: IFunctionDeclInstruction;
 }
 
 
@@ -507,7 +507,9 @@ export type IExprDerived =
     | IFunctionCallInstruction
     | IIdExprInstruction
     | IInitExprInstruction
-    | ILiteralInstruction
+    | ILiteralInstruction<number>
+    | ILiteralInstruction<boolean>
+    | ILiteralInstruction<string>
     | ILogicalExprInstruction
     | IPostfixArithmeticInstruction
     | IPostfixIndexInstruction
