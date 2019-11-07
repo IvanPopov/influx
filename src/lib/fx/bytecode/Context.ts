@@ -280,6 +280,7 @@ export function ContextBuilder() {
                 return symbols[name];
             }
         }
+        assert(false, `cannot dereference varaible ${name} (${decl.toCode()})`);
         return PromisedAddress.INVALID;
     }
 

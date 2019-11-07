@@ -26,10 +26,6 @@ const sname = {
 
 
 export class GlslEmitter extends CodeEmitter {
-
-    protected isMain() {
-        return this.depth() === 1;
-    }
     
     protected resolveTypeName(type: ITypeInstruction): string {
         const typeName = GlslTypeNames[type.name];
@@ -148,27 +144,6 @@ export class GlslEmitter extends CodeEmitter {
     }
 
     emitIdentifier(id: IIdExprInstruction) {
-        const decl = id.decl;
-        const name = id.name;
-
-
-        // if (isMain() && decl.isParameter() && !decl.isUniform()) {
-        // TODO: add support of main arguments with basic types (attributes)
-        // }
-
-        const isUniformArg = this.isMain() && decl.isParameter() && decl.isUniform();
-
-        if (decl.isGlobal() || isUniformArg) {
-            assert(decl.isUniform());
-
-            if (this.knownGlobals.indexOf(name) === -1) {
-                this.begin();
-                this.emitStmt(decl);
-                this.end();
-                this.knownGlobals.push(name);
-            }
-        }
-
         super.emitIdentifier(id);
     }
 
@@ -191,10 +166,10 @@ export class GlslEmitter extends CodeEmitter {
     emitFunction(fn: IFunctionDeclInstruction) {
         const def = fn.def;
         const retType = def.returnType;
-        const { typeName } = this.resolveType(def.returnType);
 
         if (this.depth() === 0 && this.mode !== 'raw') {
             this.emitPrologue(fn.def);
+            const { typeName } = this.resolveType(def.returnType);
 
             // emit original function witout parameters
             this.begin();
@@ -270,9 +245,11 @@ export class GlslEmitter extends CodeEmitter {
     //
 
     emitMulIntrinsic(left: IExprInstruction, right: IExprInstruction) {
+        this.emitChar('(');
         this.emitExpression(left);
         this.emitKeyword('*');
         this.emitExpression(right);
+        this.emitChar(')');
     }
 
 

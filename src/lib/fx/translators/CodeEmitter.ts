@@ -29,6 +29,10 @@ export class CodeEmitter extends BaseEmitter {
         return this.options.mode;
     }
 
+    protected isMain() {
+        return this.depth() === 1;
+    }
+
     protected resolveTypeName(type: ITypeInstruction): string {
         return type.name;
     }
@@ -200,7 +204,26 @@ export class CodeEmitter extends BaseEmitter {
 
 
     emitIdentifier(id: IIdExprInstruction) {
+        const decl = id.decl;
         const name = id.name;
+
+
+        // if (isMain() && decl.isParameter() && !decl.isUniform()) {
+        // TODO: add support of main arguments with basic types (attributes)
+        // }
+
+        const isUniformArg = this.isMain() && decl.isParameter() && decl.isUniform();
+
+        if (decl.isGlobal() || isUniformArg) {
+            assert(decl.isUniform());
+
+            if (this.knownGlobals.indexOf(name) === -1) {
+                this.begin();
+                this.emitStmt(decl);
+                this.end();
+                this.knownGlobals.push(name);
+            }
+        }
 
         this.emitKeyword(name);
     }

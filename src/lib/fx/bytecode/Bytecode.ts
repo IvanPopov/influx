@@ -291,6 +291,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             return dest;
         },
 
+        floorf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            iop2(EOperation.k_F32Floor, dest, src);
+            return dest;
+        },
+
         sinf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             iop2(EOperation.k_F32Sin, dest, src);
             return dest;
@@ -311,6 +316,16 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             return dest;
         },
 
+        minf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32Min, dest, left, right);
+            return dest;
+        },
+
+        maxf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32Max, dest, left, right);
+            return dest;
+        },
+
 
         lengthf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             intrinsics.dotf(dest, src, src);
@@ -326,8 +341,26 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         },
 
         lerpf(dest: PromisedAddress, from: PromisedAddress, to: PromisedAddress, k: PromisedAddress): PromisedAddress {
-            // iop2(EOperation.k_F32Lerp, dest, src);
-            return PromisedAddress.INVALID;
+            assert(from.size === to.size);
+
+            const size = from.size;
+            const n = size / sizeof.f32();
+            const swizzle = Array(n).fill(0);
+
+            if (k.size === sizeof.f32()) {
+                k = k.override({ size, swizzle });
+            }
+
+            let one = iload(constants.f32(1.0)).override({ size, swizzle });
+            let kInv = intrinsics.subf(one, one, k);
+
+            let temp = alloca(size);
+
+            intrinsics.mulf(temp, to, k);
+            intrinsics.mulf(dest, from, kInv);
+            intrinsics.addf(dest, dest, temp);
+
+            return dest;
         }
     }
 
@@ -358,7 +391,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         'a': 3, 'w': 3, 'q': 3
     };
 
-    const checkPostfixNameForSwizzling = (postfixName: string) => 
+    const checkPostfixNameForSwizzling = (postfixName: string) =>
         postfixName
             .split('')
             .map(c => POSTFIX_COMPONENT_MAP[c])
@@ -420,11 +453,21 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case 'length':
                 assert(fdef.params.length === 1);
                 return intrinsics.lengthf(dest, args[0]);
+            case 'floor':
+                assert(fdef.params.length === 1);
+                return intrinsics.floorf(dest, args[0]);
+            case 'min':
+                assert(fdef.params.length === 2);
+                return intrinsics.minf(dest, args[0], args[1]);
+            case 'max':
+                assert(fdef.params.length === 2);
+                return intrinsics.maxf(dest, args[0], args[1]);
             case 'lerp':
                 assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
         }
 
+        assert(false, `unsupported intrinsic found '${fdecl.name}'`);
         return PromisedAddress.INVALID;
     }
 
@@ -701,25 +744,31 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     }
 
                     const ret = alloca(retType.size);
+
+                    const params = fdef.params;
+                    const args = params
+                        .map((param, i) => i < call.args.length ? call.args[i] : param.initExpr);
+                    const paramSources = args
+                        .map(arg => raddr(arg))
+                        .map(arg => arg.location === EMemoryLocation.k_Registers ? arg : iload(arg));
+
                     push(fdecl, ret);
 
                     for (let i = 0; i < fdef.params.length; ++i) {
-                        const param = fdef.params[i];
-                        const arg = i < call.args.length ? call.args[i] : param.initExpr;
-                        const src = raddr(arg);
+                        const src = paramSources[i];
 
                         // by default all parameters are interpreted as 'in'
-                        if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
-                            ref(param, src);
+                        if (params[i].type.hasUsage('out') || params[i].type.hasUsage('inout')) {
+                            ref(params[i], src);
                         } else {
                             // todo: handle expressions like "float4 v = 5.0;"
-                            const size = param.type.size;
+                            const size = params[i].type.size;
                             const dest = alloca(size);
 
                             imove(dest, src, size);
-                            debug.map(arg);
+                            debug.map(args[i]);
 
-                            ref(param, dest);
+                            ref(params[i], dest);
                         }
                     }
 

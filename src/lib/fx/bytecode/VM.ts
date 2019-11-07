@@ -187,6 +187,9 @@ class VM {
                     // same as frac() in HLSL
                     fregs[a4] = fregs[b4] - Math.floor(fregs[b4]);
                     break;
+                case EOperation.k_F32Floor:
+                    fregs[a4] = Math.floor(fregs[b4]);
+                    break;
 
                 case EOperation.k_F32Sin:
                     fregs[a4] = Math.sin(fregs[b4]);
@@ -200,6 +203,12 @@ class VM {
                     break;
                 case EOperation.k_F32Sqrt:
                     fregs[a4] = Math.sqrt(fregs[b4]);
+                    break;
+                case EOperation.k_F32Min:
+                    fregs[a4] = Math.min(fregs[b4], fregs[c4]);
+                    break;
+                case EOperation.k_F32Max:
+                    fregs[a4] = Math.max(fregs[b4], fregs[c4]);
                     break;
 
                 //

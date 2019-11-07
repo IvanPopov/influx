@@ -324,8 +324,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
+        // const strideMax = emitter.passes.map(pass => pass.stride).reduce((max, stride) => Math.max(max, stride));
+
         const v3 = new THREE.Vector3();
-        const copy = new Float32Array(emitter.length * 8);
+        const copy = emitter.passes.map(pass => new Float32Array(emitter.length * pass.stride));
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const pass = this.passes[iPass];
@@ -359,11 +361,11 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                     // to.set(from);
                     // from.set(temp);
 
-                    const copyTo = copy.subarray(iTo, iTo + nStride);
+                    const copyTo = copy[iPass].subarray(iTo, iTo + nStride);
                     copyTo.set(from);
                 }
 
-                f32.set(copy);
+                f32.set(copy[iPass]);
             }
 
             pass.instancedBuffer.needsUpdate = true;
