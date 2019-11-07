@@ -9,18 +9,6 @@ float random (float2 uv)
 }
 
 
-float3 randVUnit (float seed)
-{
-   float3 v;
-   v.x =  random(float2(seed, 0.f)) - 0.5f; 
-   v.y =  random(float2(seed, 1.f)) - 0.5f;
-   v.z =  random(float2(seed, 2.f)) - 0.5f; 
-   return normalize(v);
-}
-
-float4 myLerp(float4 a, float4 b) {
-    return lerp(a, b, 0.5f);
-}
 
 float noise (in float2 st) {
     float2 i = floor(st);
@@ -42,37 +30,6 @@ float noise (in float2 st) {
     return lerp(a, b, u.x) +
             (c - a) * u.y * (1.0f - u.x) +
             (d - b) * u.x * u.y;
-}
-
-float deg2rad(float deg) 
-{
-    return ((deg) * 3.14f / 180.f);
-}
-
-float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
-{
-   float3   vRand;
-   float3   vBaseScale, vTangScale;
-   float3   v, vTang;
-
-//    if (!normalize(vBaseNorm)) {
-//       return float3(0.f);
-//    }
-
-   v = randVUnit(elapsedTimeLevel);
-   vTang = v - vBaseNorm * dot(v, vBaseNorm);
-
- //  if (sqrt(dot(vTang, vTang)) > 0.0001f)   {
-      vTang = normalize(vTang);
-      angle = deg2rad(random(float2(elapsedTimeLevel, 
-        (float)partId * elapsedTime)) * angle);
-      vRand = vBaseNorm * cos(angle) + vTang * sin(angle);
-      vRand = normalize(vRand);
-  // } else   {
-  //    vRand = vBase;
- //  }
-
-   return vRand;
 }
 
 
@@ -133,7 +90,7 @@ void Init(out Part part, int partId)
     //float h = random(float2(elapsedTime, (float)partId)) * 20.f;
     part.size = sizeFromPos(part.pos);
     part.timelife = 0.0;
-    part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
+    part.speed = float3(0.f);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -154,7 +111,7 @@ void PrerenderCylinders(inout Part part, out PartInstance instance)
 {
     instance.pos.xyz = part.pos.xyz + float3(part.size) * 0.5f;
     instance.size = float3(part.size);
-    instance.color = float4(0.f, 0.f, 1.f, 0.5f * sin(part.timelife * 3.14));
+    instance.color = float4(0.f, 0.f, 1.f, 0.75f * sin(part.timelife * 3.14));
 }
 
 
@@ -235,7 +192,7 @@ partFx holographicTable {
     pass Cylinders {
         Sorting = true;
         PrerenderRoutine = compile PrerenderCylinders();
-        Geometry = Box;
+        Geometry = Cylinder;
 
         ZWriteEnable = false;
 		AlphaBlendEnable = true;
