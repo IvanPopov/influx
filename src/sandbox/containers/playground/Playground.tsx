@@ -135,7 +135,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             </Button.Group>
                             <ThreeScene
                                 style={ threeStylesHotfix }
-                                emitter={ pipeline.emitter }
+                                pipeline={ pipeline }
                             />
                         </div>
                     </div>

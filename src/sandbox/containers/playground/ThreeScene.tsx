@@ -8,7 +8,7 @@
 
 import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
-import { Emitter } from '@sandbox/containers/playground/Pipeline';
+import { IPipeline, Emitter } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
@@ -46,11 +46,11 @@ void main() {
 
 interface ITreeSceneProps {
     style: React.CSSProperties;
-    emitter?: Emitter;
+    pipeline?: IPipeline;
 }
 
 interface IThreeSceneState {
-    emitter: Emitter;
+    pipeline: IPipeline;
     nParticles: number;
 }
 
@@ -81,7 +81,7 @@ const progressStyleFix: React.CSSProperties = {
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     state: IThreeSceneState = {
-        emitter: null,
+        pipeline: null,
         nParticles: 0
     };
 
@@ -120,7 +120,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.createGridHelper();
         // this.createCube();
 
-        this.addEmitter(this.props.emitter);
+        this.addEmitter(this.props.pipeline.emitter);
         this.start();
 
         window.addEventListener('resize', this.onWindowResize, false);
@@ -318,58 +318,25 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
 
     animate = (time: number) => {
-        const emitter = this.state.emitter;
+        const pipeline = this.state.pipeline;
 
-        if (!emitter) {
+        if (!pipeline) {
             return;
         }
 
-        // const strideMax = emitter.passes.map(pass => pass.stride).reduce((max, stride) => Math.max(max, stride));
-
-        const v3 = new THREE.Vector3();
-        const copy = emitter.passes.map(pass => new Float32Array(emitter.length * pass.stride));
+        const emitter = pipeline.emitter;
+        pipeline.update();
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
-            const pass = this.passes[iPass];
+            const rendPass = this.passes[iPass];
             const emitPass = emitter.passes[iPass];
-            const indicies = [];
 
-            // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
-            //       I hate javascript for that :/
             if (emitPass.sorting) {
-                const f32 = pass.instancedBuffer.array as Float32Array;
-                // const u8 = new Uint8Array(f32.buffer, f32.byteOffset);
-                const nStride = emitPass.stride; // stride in floats
-                // const temp = new Float32Array(nStride);
-
-                for (let iPart = 0; iPart < emitPass.length; ++iPart) {
-                    const offset = iPart * nStride;
-                    const dist = v3.fromArray(f32, offset).distanceTo(this.camera.position);
-                    indicies.push([iPart, dist]);
-                }
-
-                indicies.sort((a, b) => -a[1] + b[1]);
-
-                for (let i = 0; i < indicies.length; ++i) {
-                    const iFrom = indicies[i][0] * nStride;
-                    const iTo = i * nStride;
-
-                    // const to = f32.subarray(iTo, iTo + nStride);
-                    const from = f32.subarray(iFrom, iFrom + nStride);
-
-                    // temp.set(to);
-                    // to.set(from);
-                    // from.set(temp);
-
-                    const copyTo = copy[iPass].subarray(iTo, iTo + nStride);
-                    copyTo.set(from);
-                }
-
-                f32.set(copy[iPass]);
+                emitPass.sort(this.camera.position);
             }
 
-            pass.instancedBuffer.needsUpdate = true;
-            (pass.mesh.geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitter.passes[iPass].length;
+            rendPass.instancedBuffer.needsUpdate = true;
+            (rendPass.mesh.geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length;
         }
 
         this.controls.update();
@@ -380,21 +347,23 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     shouldComponentUpdate(nextProps: ITreeSceneProps, nexState) {
-        return this.state.emitter !== nextProps.emitter || this.state.nParticles !== nexState.nParticles;
+        return this.state.pipeline !== nextProps.pipeline || this.state.nParticles !== nexState.nParticles;
     }
 
     // tslint:disable-next-line:member-ordering
-    static getDerivedStateFromProps(props: ITreeSceneProps, state) {
-        if (state.emitter === props.emitter) {
+    static getDerivedStateFromProps(props: ITreeSceneProps, state: IThreeSceneState) {
+        if (state.pipeline === props.pipeline) {
             return null;
         }
 
-        return { emitter: props.emitter };
+        return { pipeline: props.pipeline };
     }
 
     componentDidUpdate(prevProps, prevState) {
-        if (prevState.emitter === this.state.emitter) {
-            const emitter = this.props.emitter;
+        if (prevState.pipeline === this.state.pipeline) {
+            const pipeline = this.props.pipeline;
+            const emitter = pipeline.emitter;
+
             emitter.passes.forEach((pass, i) => {
                 let { mesh } = this.passes[i];
                 let material = mesh.material as THREE.RawShaderMaterial;
@@ -434,8 +403,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             verbose('emitter removed.');
         });
 
-        if (this.props.emitter) {
-            this.addEmitter(this.props.emitter);
+        if (this.props.pipeline) {
+            this.addEmitter(this.props.pipeline.emitter);
         }
     }
 
@@ -449,7 +418,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             >
                 <Progress
                     value={ this.state.nParticles }
-                    total={ this.state.emitter.capacity }
+                    total={ this.state.pipeline.emitter.capacity }
                     attached='top'
                     size='medium'
                     indicating

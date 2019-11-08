@@ -10,6 +10,7 @@ import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import * as Code from '@lib/fx/translators/CodeEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/IPartFx';
+import THREE = require('three');
 
 type PartFx = IPartFxInstruction;
 
@@ -105,18 +106,20 @@ interface IPassDesc {
 class Pass {
     private _owner: Emitter;
     private _prerenderRoutine: IRunnable;
-    private _prerenderedParticles: Uint8Array;
+    private _prerenderedParticles: Uint8Array[];
     private _instance: ITypeInstruction;
     private _sorting: boolean;
     private _geometry: EPartFxPassGeometry;
     private _vertexShader: string;
     private _pixelShader: string;
+    private _curBufIdx: number;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
         this._prerenderRoutine = desc.prerenderRoutine;
         this._instance = desc.instance;
-        this._prerenderedParticles = new Uint8Array(desc.instance.size * this._owner.capacity);
+        this._prerenderedParticles = Array(2).fill(null).map(i => new Uint8Array(desc.instance.size * this._owner.capacity));
+        this._curBufIdx = 0;
         this._sorting = desc.sorting;
         this._geometry = desc.geometry;
 
@@ -145,15 +148,15 @@ class Pass {
     get pixelShader(): string {
         return this._pixelShader;
     }
-    
-    // number of float elements in the prerendered particle (f32)
+
+    // number of float elements in the prerendered particle (src)
     get stride(): number {
         assert(this._instance.size / 4 === Math.floor(this._instance.size / 4));
         return this._instance.size / 4;
     }
 
     get data(): Uint8Array {
-        return this._prerenderedParticles;
+        return this._prerenderedParticles[this._curBufIdx];
     }
 
     get length(): number {
@@ -182,17 +185,58 @@ class Pass {
         }
     }
 
+    sort(targetPos: THREE.Vector3) {
+        assert(this.sorting);
+
+        // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
+        //       I hate javascript for that :/
+
+        const currBufIdx = 0;//this._curBufIdx;
+        const nextBufIdx = 1;//currBufIdx ^ 1;
+        assert(this._prerenderedParticles[nextBufIdx].length % 4 === 0);
+        // this._curBufIdx = nextBufIdx;
+
+        const v3 = new THREE.Vector3();
+
+        const src = new Float32Array(this._prerenderedParticles[currBufIdx].buffer, 0, this.stride * this._owner.capacity);
+        const dst = new Float32Array(this._prerenderedParticles[nextBufIdx].buffer, 0, this.stride * this._owner.capacity);
+
+        const indicies = [];
+        const nStride = this.stride; // stride in floats
+
+        for (let iPart = 0; iPart < this.length; ++iPart) {
+            const offset = iPart * nStride;
+            const dist = v3.fromArray(src, offset/* add offset of POSTION semantic */).distanceTo(targetPos);
+            indicies.push([iPart, dist]);
+        }
+
+        indicies.sort((a, b) => -a[1] + b[1]);
+
+        for (let i = 0; i < indicies.length; ++i) {
+            const iFrom = indicies[i][0] * nStride;
+            const iTo = i * nStride;
+
+            const from = src.subarray(iFrom, iFrom + nStride);
+            const copyTo = dst.subarray(iTo, iTo + nStride);
+            copyTo.set(from);
+        }
+
+        // TODO: use ping-pong scheme
+        this._prerenderedParticles[currBufIdx].set(this._prerenderedParticles[nextBufIdx]);
+    }
+
     shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader }) {
         this._prerenderRoutine = prerenderRoutine;
         this._sorting = sorting;
         this._vertexShader = vertexShader;
         this._pixelShader = pixelShader;
+        this._curBufIdx = 0;
     }
 
     private getPrerenderedParticlePtr(i: number) {
         assert(i >= 0 && i < this._owner.capacity);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
-        return this._prerenderedParticles.subarray(i * this._instance.size, (i + 1) * this._instance.size);
+        return this.data.subarray(i * this._instance.size, (i + 1) * this._instance.size);
     }
 }
 
@@ -334,7 +378,8 @@ function Pipeline(fx: PartFx) {
 
     let $startTime: number;
     let $elapsedTimeLevel: number;
-    let $interval = null;
+    // let $interval = null;
+    let $active: boolean;
 
     const constants: IPipelineConstants = {
         elapsedTime: 0,
@@ -377,8 +422,9 @@ function Pipeline(fx: PartFx) {
     }
 
     function stop() {
-        clearInterval($interval);
-        $interval = null;
+        // clearInterval($interval);
+        // $interval = null;
+        $active = false;
         verbose('pipeline stopped');
     }
 
@@ -388,14 +434,17 @@ function Pipeline(fx: PartFx) {
 
         $startTime = Date.now();
         $elapsedTimeLevel = 0;
+        $active = true;
         // TODO: replace with requestAnimationFrame() ?
-        $interval = setInterval(update, 33);
+        // $interval = setInterval(update, 33);
     }
 
     function update() {
+        if (!$active) {
+            return;
+        }
+
         emitter.tick(constants);
-
-
         const dt = Date.now() - $startTime;
         constants.elapsedTime = (dt - $elapsedTimeLevel) / 1000;
         constants.elapsedTimeLevel = $elapsedTimeLevel / 1000;
@@ -403,14 +452,15 @@ function Pipeline(fx: PartFx) {
     }
 
     function isStopped() {
-        return $interval === null;
+        // return $interval === null;
+        return !$active;
     }
 
     function fxHash(fx: PartFx) {
 
         const hashPart = fx.passList
             .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:`) // +
-                // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
+            // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
             .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
         return `${fx.particle.hash}:${fx.capacity}:${hashPart}`;
     }
@@ -433,7 +483,7 @@ function Pipeline(fx: PartFx) {
 
     load(fx);
 
-    return { stop, play, isStopped, emitter, shadowReload, name };
+    return { stop, play, isStopped, emitter, shadowReload, name, update };
 }
 
 
