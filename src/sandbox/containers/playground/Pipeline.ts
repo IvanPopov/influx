@@ -112,14 +112,12 @@ class Pass {
     private _geometry: EPartFxPassGeometry;
     private _vertexShader: string;
     private _pixelShader: string;
-    private _curBufIdx: number;
 
     constructor(desc: IPassDesc, owner: Emitter) {
         this._owner = owner;
         this._prerenderRoutine = desc.prerenderRoutine;
         this._instance = desc.instance;
         this._prerenderedParticles = Array(2).fill(null).map(i => new Uint8Array(desc.instance.size * this._owner.capacity));
-        this._curBufIdx = 0;
         this._sorting = desc.sorting;
         this._geometry = desc.geometry;
 
@@ -156,7 +154,7 @@ class Pass {
     }
 
     get data(): Uint8Array {
-        return this._prerenderedParticles[this._curBufIdx];
+        return this._prerenderedParticles[this.sorting ? 1 : 0];
     }
 
     get length(): number {
@@ -191,15 +189,10 @@ class Pass {
         // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
         //       I hate javascript for that :/
 
-        const currBufIdx = 0;//this._curBufIdx;
-        const nextBufIdx = 1;//currBufIdx ^ 1;
-        assert(this._prerenderedParticles[nextBufIdx].length % 4 === 0);
-        // this._curBufIdx = nextBufIdx;
-
         const v3 = new THREE.Vector3();
 
-        const src = new Float32Array(this._prerenderedParticles[currBufIdx].buffer, 0, this.stride * this._owner.capacity);
-        const dst = new Float32Array(this._prerenderedParticles[nextBufIdx].buffer, 0, this.stride * this._owner.capacity);
+        const src = new Float32Array(this._prerenderedParticles[0].buffer, 0, this.stride * this._owner.capacity);
+        const dst = new Float32Array(this._prerenderedParticles[1].buffer, 0, this.stride * this._owner.capacity);
 
         const indicies = [];
         const nStride = this.stride; // stride in floats
@@ -220,9 +213,6 @@ class Pass {
             const copyTo = dst.subarray(iTo, iTo + nStride);
             copyTo.set(from);
         }
-
-        // TODO: use ping-pong scheme
-        this._prerenderedParticles[currBufIdx].set(this._prerenderedParticles[nextBufIdx]);
     }
 
     shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader }) {
@@ -230,13 +220,12 @@ class Pass {
         this._sorting = sorting;
         this._vertexShader = vertexShader;
         this._pixelShader = pixelShader;
-        this._curBufIdx = 0;
     }
 
     private getPrerenderedParticlePtr(i: number) {
         assert(i >= 0 && i < this._owner.capacity);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
-        return this.data.subarray(i * this._instance.size, (i + 1) * this._instance.size);
+        return this._prerenderedParticles[0].subarray(i * this._instance.size, (i + 1) * this._instance.size);
     }
 }
 
@@ -459,7 +448,7 @@ function Pipeline(fx: PartFx) {
     function fxHash(fx: PartFx) {
 
         const hashPart = fx.passList
-            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:`) // +
+            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:${pass.sorting}:`) // +
             // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
             .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
         return `${fx.particle.hash}:${fx.capacity}:${hashPart}`;
