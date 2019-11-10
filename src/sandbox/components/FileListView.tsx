@@ -27,22 +27,24 @@ interface IFolder {
 
 
 const fs = {
-    stat: isElectron ? 
-        promisify(fs1.lstat) : 
-        (dir) => ({ 
-            isDirectory() { return false }, 
+    stat: isElectron ?
+        promisify(fs1.lstat) :
+        (dir) => ({
+            isDirectory() { return false },
             isFile() { return false }
         }),
-    readdir: isElectron ? 
+    readdir: isElectron ?
         promisify(fs1.readdir) : null
 }
 
 
 // todo: remove "sync" calls
 
-async function scan(dir: string, node: IFolder, filters?: string[]) {
+async function scan($dir: string, node: IFolder, filters?: string[]) {
     try {
-        node.path = dir;
+        node.path = $dir;
+
+        const dir = path.join(path.dirname(window.location.pathname.substr(1)), $dir);
 
         let stats = await fs.stat(dir);
         if (!stats.isDirectory()) {
@@ -50,22 +52,23 @@ async function scan(dir: string, node: IFolder, filters?: string[]) {
         }
 
         (await fs.readdir(dir)).forEach(async filename => {
+            let $filepath = path.join($dir, filename);
             let filepath = path.join(dir, filename);
             let filestats = await fs.stat(filepath);
 
             if (filestats.isFile()) {
                 if (!filters || filters.indexOf(path.extname(filename)) != -1) {
                     node.files = node.files || [];
-                    node.files.push(filepath);
-                    node.totalFiles ++;
+                    node.files.push($filepath);
+                    node.totalFiles++;
                 }
             }
 
             if (filestats.isDirectory()) {
                 node.folders = node.folders || [];
 
-                let subfolder = { path: filepath, totalFiles: 0 };
-                scan(filepath, subfolder, filters);
+                let subfolder = { path: $filepath, totalFiles: 0 };
+                scan($filepath, subfolder, filters);
 
                 node.folders.push(subfolder);
                 node.totalFiles += subfolder.totalFiles;
@@ -101,7 +104,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         }
 
         return (
-            <List.Item key={folder.path}>
+            <List.Item key={ folder.path }>
                 <List.Icon name={ FileDirectoryIcon } />
                 <List.Content>
                     <List.Header onClick={ () => { folder.shown = !folder.shown; this.forceUpdate(); } }>
@@ -124,7 +127,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         }
 
         return (
-            <List.Item onClick={ () => this.props.onFileClick(file) } key={file}>
+            <List.Item onClick={ () => this.props.onFileClick(file) } key={ file }>
                 <List.Icon name={ FileCodeIcon } />
                 <List.Content>
                     <List.Header>{ path.basename(file) }</List.Header>

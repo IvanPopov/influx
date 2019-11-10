@@ -573,7 +573,7 @@ class App extends React.Component<IAppProps> {
                         className={this.props.classes.fileBrowserSidebarFix}
                     >
                         <FileListView
-                            path='./assets'
+                            path='./assets/fx/tests/'
                             filters={['.fx']}
                             onFileClick={(file) => { props.actions.openFile(file); }} />
                     </Sidebar>
