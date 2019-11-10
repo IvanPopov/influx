@@ -41,6 +41,19 @@ const fs = {
 // todo: remove "sync" calls
 
 async function scan($dir: string, node: IFolder, filters?: string[]) {
+    if (!isElectron) {
+        node.files = [
+            'sphere.fx',
+            'part.fx',
+            'holographicTable.fx',
+            'messy.fx',
+            'speed.fx'
+        ].map(file => `./assets/fx/tests/${file}`);
+        node.path = 'tests';
+        node.totalFiles = 5;
+        return;
+    }
+
     try {
         node.path = $dir;
 
@@ -138,9 +151,9 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
 
     render() {
         // temp check in order to be compatible with browsers;
-        if (!isElectron) {
-            return null;
-        }
+        // if (!isElectron) {
+        //     return null;
+        // }
 
         const { root } = this.state;
         return (
