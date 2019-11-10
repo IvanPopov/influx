@@ -1,10 +1,11 @@
+import { LOCATION_PATTERN, PATH_PARAMS_TYPE } from '@sandbox/logic';
 import IStoreState from '@sandbox/store/IStoreState';
-import { combineReducers } from 'redux';
-import parserParams from './parserParams';
-import sourceFile from './sourceFile';
-import router from './router';
-import { PATH_PARAMS_TYPE, LOCATION_PATTERN } from '@sandbox/logic';
 import { matchPath } from 'react-router';
+import { combineReducers } from 'redux';
+
+import parserParams from './parserParams';
+import router from './router';
+import sourceFile from './sourceFile';
 
 /**
  * selectors

@@ -1,6 +1,7 @@
 export const SOURCE_FILE_REQUEST                    = 'source-file-request';
 export const SOURCE_FILE_LOADED                     = 'source-file-loaded';
 export const SOURCE_FILE_LOADING_FAILED             = 'source-file-loading-failed';
+export const SOURCE_FILE_DROP_STATE                 = 'source-file-drop-state';
 
 export const GRAMMAR_FILE_SPECIFIED                 = 'grammar-file-specified';
 export const GRAMMAR_CONTENT_SPECIFIED              = 'grammar-content-specified';

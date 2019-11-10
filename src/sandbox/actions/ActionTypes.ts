@@ -19,6 +19,7 @@ export interface IAction<T extends String, P> extends IBaseAction<T> {
 export type ISourceFileRequest = IAction<typeof evt.SOURCE_FILE_REQUEST, { filename: string }>;
 export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { content: string }>;
 export type ISourceFileLoadingFailed = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
+export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}>;
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
 export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { parseTree: IParseTree }>;
 export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: IAnalyzeResult }>;
@@ -33,7 +34,7 @@ export type ISourceCodeAddBreakpoint = IAction<typeof evt.SOURCE_CODE_ADD_BREAKP
 export type ISourceCodeRemoveBreakpoint = IAction<typeof evt.SOURCE_CODE_REMOVE_BREAKPOINT, { line: number }>;
 
 export type ISourceFileActions =
-    ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed |
+    ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
     ISourceCodeAnalysisComplete;

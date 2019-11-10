@@ -50,10 +50,10 @@ int spawn()
 void init(out Part part, int partId)
 {
     part.startTime = elapsedTimeLevel;
-    part.pos = rndSphere(1.f, partId);//float3(0.f, float2(0.0).x, 0.0);
+    part.pos = rndSphere(1.f, partId) * 0.2f;//float3(0.f, float2(0.0).x, 0.0);
     part.size = 0.1;
     part.timelife = 0.0;
-    part.speed = normalize(part.pos);
+    part.speed = normalize(part.pos) * 0.2f + float3(0,2.0,0);
 }
 
 
@@ -62,7 +62,7 @@ bool update(inout Part part)
 {
     //part.pos = part.pos + sin(part.dir) * 0.2f;
     // max timelime is 3 sec;
-    part.timelife = (part.timelife + elapsedTime / 3.0f);
+    part.timelife = (part.timelife + elapsedTime / 5.0f);
     return part.timelife < 1.0f;
 }
 

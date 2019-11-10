@@ -6,10 +6,9 @@ import parsing from '@sandbox/logic/parsing';
 import { history } from '@sandbox/reducers/router';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
-import { LocationChangeAction, LOCATION_CHANGE } from 'connected-react-router';
+import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
-
 
 const readFile = fname => fetch(fname).then(resp => resp.text());
 
@@ -19,9 +18,11 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
     async process({ getState, action }, dispatch, done) {
         try {
             const content = await readFile(action.payload.filename);
+            dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
             dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
         } catch (error) {
             console.warn(`Could not find file ${action.payload.filename}.`);
+            dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
             dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
             // dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
         } finally {
@@ -77,16 +78,14 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
             const { view, fx, name } = match.params;
 
             const supportedViews = ['playground', 'bytecode', 'program', 'ast'];
-            if (supportedViews.indexOf(view) != -1) {
+            if (supportedViews.indexOf(view) !== -1) {
                 if (!fx) {
                     // dispatch(push(`/${view}/${DEFAULT_FILENAME}/`));
                     history.push(`/${view}/${DEFAULT_FILENAME}`);
                     return done();
                 }
 
-                const fxRequest = fx !== DEFAULT_FILENAME ?
-                    `./assets/fx/tests/${fx}` :
-                    DEFAULT_FILENAME;
+                const fxRequest = `./assets/fx/tests/${fx}`;
 
                 if (sourceFile.filename !== fxRequest) {
                     dispatch(sourceActions.openFile(fxRequest));

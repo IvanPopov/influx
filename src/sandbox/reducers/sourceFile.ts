@@ -2,16 +2,9 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug,
-    IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint,
-    ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified,
-    ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint,
-    ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileLoaded,
-    ISourceFileLoadingFailed, ISourceFileRequest
-} from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
-
 
 const initialState: IFileState = {
     filename: null,
@@ -48,6 +41,19 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             ...state,
             error: action.payload.error,
             // NOTE: temp solution (clean up all info about prev file)
+            content: null,
+            debugger: { ...state.debugger, runtime: null },
+            breakpoints: [],
+            parseTree: null,
+            analysis: null,
+            pipeline: null,
+            $pipeline: 0
+        }),
+
+    [evt.SOURCE_FILE_DROP_STATE]: (state, action: ISourceFileDropState) =>
+        ({
+            ...state,
+            error: null,
             content: null,
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],

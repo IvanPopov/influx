@@ -5,14 +5,14 @@
 
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import { ETechniqueType, IScope, EInstructionTypes } from '@lib/idl/IInstruction';
+import { EInstructionTypes, ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { mapProps } from '@sandbox/reducers';
-import { getFileState } from '@sandbox/reducers/sourceFile';
+import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
@@ -325,7 +325,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             if (!this.provider) {
                 this.provider = monaco.languages.registerCodeLensProvider(
                     '*',
-                    new MyCodeLensProvider(() => this.props.analysis.scope)
+                    new MyCodeLensProvider(() => getScope(this.props))
                 );
             }
         }
