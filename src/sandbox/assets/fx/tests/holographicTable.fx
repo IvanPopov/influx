@@ -1,4 +1,3 @@
-
 uniform float elapsedTime;
 uniform float elapsedTimeLevel;
 
@@ -44,20 +43,12 @@ float3 randUnitCircle(int partId)
 struct Part {
     float3 speed;
     float3 pos;
-    float3  size;
+    float3 size;
     float  timelife;
 };
 
-/* Example of default shader input. */
-// Warning: Do not change layout of this structure!
-struct DefaultShaderInput {
-    float3 pos   : POSITION1;
-    float4 color : COLOR1;
-    float  size  : SIZE1;
-};
 
-
-
+uniform float4x4 modelViewMatrix;
 uniform float4x4 modelMatrix;
 uniform float4x4 viewMatrix;
 uniform float4x4 projectionMatrix;
@@ -68,16 +59,30 @@ struct PartInstance {
     float3 size  : SIZE1;
 };
 
+struct PointInstance {
+    float3 pos   : POSITION1;
+    float4 color : COLOR1;
+};
+
+
+float4 ColorOverAge(Part part) {
+    float h = part.size.y / 0.9f;
+    float3 w = float3(0.7f);
+    float3 bc = float3(0.f, 0.7f, 0.9f) * 0.4;
+    float3 c = float3(lerp(bc.x, w.x, h), lerp(bc.y, w.y, h), lerp(bc.z, w.z, h));
+    return float4(c, 0.8f * (h + 0.5f) * sin(part.timelife * 3.14));
+}
+
 /////////////////////////////////////////////////////////////////////
 // Spawn Routine
 /////////////////////////////////////////////////////////////////////
 int Spawn()
 {
-    return 400;
+    return 700;
 }
 
 float3 sizeFromPos(float3 pos) {
-    return float3(1.f, noise(pos.xz + float2(elapsedTimeLevel * 1.f, 0.f)) * 20.f, 1.f) * 0.04f;
+    return float3(1.f, noise(pos.xz * 1.3f + float2(elapsedTimeLevel * 1.f, 0.f)) / 0.06f, 1.f) * 0.03f;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -111,18 +116,21 @@ void PrerenderCylinders(inout Part part, out PartInstance instance)
 {
     instance.pos.xyz = part.pos.xyz + float3(part.size) * 0.5f;
     instance.size = float3(part.size);
-    instance.color = float4(0.f, 0.f, 1.f, 0.75f * sin(part.timelife * 3.14));
+    instance.color = ColorOverAge(part);
 }
+
+
 
 
 /////////////////////////////////////////////////////////////////////
 // Prerender Routine
 /////////////////////////////////////////////////////////////////////
-void PrerenderLines(inout Part part, out DefaultShaderInput input)
+void PrerenderLines(inout Part part, out PointInstance instance, int instanceId)
 {
-    input.pos.xyz = part.pos * float3(1.f, -1.f, 1.f);
-    input.size = part.size.x;
-    input.color = float4(abs(part.speed).zxy, sin(part.timelife * 3.14));
+    float k = (float)instanceId;
+    float3 pos = part.pos.xyz + float3(part.size.x * 0.5f, part.size.y, part.size.z * 0.5f);
+    instance.pos = lerp(pos, float3(0.0, 0.7, 0.0), k);
+    instance.color = lerp(ColorOverAge(part), float4(1.f, 1.f, 1.f, 0.f), k);
 }
 
 
@@ -148,7 +156,7 @@ struct PixelInputType
 // vec4 viewPos = modelViewMatrix * vec4(offset, 1.0) + vec4(position * size, 0.0);
 // gl_Position = projectionMatrix * viewPos;
 
-PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
+PixelInputType VSCylinders(PartInstance partInstance, Geometry geometry)
 {
     PixelInputType res;
 
@@ -162,7 +170,7 @@ PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
     
     // Store the input color for the pixel shader to use.
     float3 lightDir;
-    lightDir = normalize(float3(0.f, 1.f, 1.f));
+    lightDir = normalize(float3(1.f, 4.f, 0.f));
 
     float NdL;
     NdL = max(0.f, dot(geometry.normal, lightDir) * 0.5);
@@ -173,18 +181,31 @@ PixelInputType ColorVertexShader(PartInstance partInstance, Geometry geometry)
 }
 
 
-float4 ColorPixelShader(PixelInputType input) : COLOR
+float4 PSCylinders(PixelInputType input) : COLOR
 {
     return input.color;
 }
 
+PixelInputType VSLines(PointInstance instance)
+{
+    PixelInputType res;
+
+    res.position = mul(projectionMatrix, mul(modelViewMatrix, float4(instance.pos, 1.f)));
+    res.color = instance.color;
+    
+    return res;
+}
+
+float4 PSLines(PixelInputType input) : COLOR
+{
+    return input.color;
+}
 
 /////////////////////////////////////////////////////////////////////
 // Setup
 /////////////////////////////////////////////////////////////////////
- 
 partFx holographicTable {
-    Capacity = 2048;
+    Capacity = 4000;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile Init();
     UpdateRoutine = compile Update();
@@ -195,19 +216,22 @@ partFx holographicTable {
         Geometry = Cylinder;
 
         ZWriteEnable = false;
-		AlphaBlendEnable = true;
 
-        VertexShader = compile ColorVertexShader();
-        PixelShader = compile ColorPixelShader();
+        VertexShader = compile VSCylinders();
+        PixelShader = compile PSCylinders();
     }
 
-    // pass Lines {
-    //     Sorting = true;
-    //     PrerenderRoutine = compile PrerenderLines();
-    //     Geometry = billboard;
+    pass Lines {
+        Sorting = false;
+        PrerenderRoutine = compile PrerenderLines();
+        Geometry = Line;
 
-    //     ZWriteEnable = false;
-	// 	AlphaBlendEnable = true;
-    // }
+        ZWriteEnable = false;
+
+        InstanceCount = 2;
+        // PrimitiveTopology = LineList;
+
+        VertexShader = compile VSLines();
+        PixelShader = compile PSLines();
+    }
 }
-

@@ -7,6 +7,7 @@ import { ISamplerState } from "@lib/idl/ISamplerState";
 import { ETextureFilters, ETextureWrapModes } from "@lib/idl/ITexture";
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
+import { isNumber } from "@lib/common";
 
 
 export interface IPassInstructionSettings extends IDeclInstructionSettings {
@@ -80,72 +81,20 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
             return;
         }
 
-        to[ERenderStates.BLENDENABLE] = from[ERenderStates.BLENDENABLE] || to[ERenderStates.BLENDENABLE];
-        to[ERenderStates.CULLFACEENABLE] = from[ERenderStates.CULLFACEENABLE] || to[ERenderStates.CULLFACEENABLE];
-        to[ERenderStates.ZENABLE] = from[ERenderStates.ZENABLE] || to[ERenderStates.ZENABLE];
-        to[ERenderStates.ZWRITEENABLE] = from[ERenderStates.ZWRITEENABLE] || to[ERenderStates.ZWRITEENABLE];
-        to[ERenderStates.DITHERENABLE] = from[ERenderStates.DITHERENABLE] || to[ERenderStates.DITHERENABLE];
-        to[ERenderStates.SCISSORTESTENABLE] = from[ERenderStates.SCISSORTESTENABLE] || to[ERenderStates.SCISSORTESTENABLE];
-        to[ERenderStates.STENCILTESTENABLE] = from[ERenderStates.STENCILTESTENABLE] || to[ERenderStates.STENCILTESTENABLE];
-        to[ERenderStates.POLYGONOFFSETFILLENABLE] = from[ERenderStates.POLYGONOFFSETFILLENABLE] || to[ERenderStates.POLYGONOFFSETFILLENABLE];
-        to[ERenderStates.CULLFACE] = from[ERenderStates.CULLFACE] || to[ERenderStates.CULLFACE];
-        to[ERenderStates.FRONTFACE] = from[ERenderStates.FRONTFACE] || to[ERenderStates.FRONTFACE];
-        to[ERenderStates.SRCBLENDCOLOR] = from[ERenderStates.SRCBLENDCOLOR] || to[ERenderStates.SRCBLENDCOLOR];
-        to[ERenderStates.DESTBLENDCOLOR] = from[ERenderStates.DESTBLENDCOLOR] || to[ERenderStates.DESTBLENDCOLOR];
-        to[ERenderStates.SRCBLENDALPHA] = from[ERenderStates.SRCBLENDALPHA] || to[ERenderStates.SRCBLENDALPHA];
-        to[ERenderStates.DESTBLENDALPHA] = from[ERenderStates.DESTBLENDALPHA] || to[ERenderStates.DESTBLENDALPHA];
-        to[ERenderStates.BLENDEQUATIONCOLOR] = from[ERenderStates.BLENDEQUATIONCOLOR] || to[ERenderStates.BLENDEQUATIONCOLOR];
-        to[ERenderStates.BLENDEQUATIONALPHA] = from[ERenderStates.BLENDEQUATIONALPHA] || to[ERenderStates.BLENDEQUATIONALPHA];
-        to[ERenderStates.ZFUNC] = from[ERenderStates.ZFUNC] || to[ERenderStates.ZFUNC];
-        to[ERenderStates.ALPHABLENDENABLE] = from[ERenderStates.ALPHABLENDENABLE] || to[ERenderStates.ALPHABLENDENABLE];
-        to[ERenderStates.ALPHATESTENABLE] = from[ERenderStates.ALPHATESTENABLE] || to[ERenderStates.ALPHATESTENABLE];
+        Object
+            .keys(ERenderStates)
+            .filter(k => isNumber(ERenderStates[k]))
+            .map(k => ERenderStates[k])
+            .forEach(rs => { to[rs] = from[rs] || to[rs] });
     }
 
-    static mergeRenderStateMap(fromA: IMap<ERenderStateValues>, fromB: IMap<ERenderStateValues>, to: IMap<ERenderStateValues>): void {
-        if (isNull(fromA) || isNull(fromB)) {
-            return;
-        }
-        to[ERenderStates.BLENDENABLE] = fromA[ERenderStates.BLENDENABLE] || fromB[ERenderStates.BLENDENABLE];
-        to[ERenderStates.CULLFACEENABLE] = fromA[ERenderStates.CULLFACEENABLE] || fromB[ERenderStates.CULLFACEENABLE];
-        to[ERenderStates.ZENABLE] = fromA[ERenderStates.ZENABLE] || fromB[ERenderStates.ZENABLE];
-        to[ERenderStates.ZWRITEENABLE] = fromA[ERenderStates.ZWRITEENABLE] || fromB[ERenderStates.ZWRITEENABLE];
-        to[ERenderStates.DITHERENABLE] = fromA[ERenderStates.DITHERENABLE] || fromB[ERenderStates.DITHERENABLE];
-        to[ERenderStates.SCISSORTESTENABLE] = fromA[ERenderStates.SCISSORTESTENABLE] || fromB[ERenderStates.SCISSORTESTENABLE];
-        to[ERenderStates.STENCILTESTENABLE] = fromA[ERenderStates.STENCILTESTENABLE] || fromB[ERenderStates.STENCILTESTENABLE];
-        to[ERenderStates.POLYGONOFFSETFILLENABLE] = fromA[ERenderStates.POLYGONOFFSETFILLENABLE] || fromB[ERenderStates.POLYGONOFFSETFILLENABLE];
-        to[ERenderStates.CULLFACE] = fromA[ERenderStates.CULLFACE] || fromB[ERenderStates.CULLFACE];
-        to[ERenderStates.FRONTFACE] = fromA[ERenderStates.FRONTFACE] || fromB[ERenderStates.FRONTFACE];
-        to[ERenderStates.SRCBLENDCOLOR] = fromA[ERenderStates.SRCBLENDCOLOR] || fromB[ERenderStates.SRCBLENDCOLOR];
-        to[ERenderStates.DESTBLENDCOLOR] = fromA[ERenderStates.DESTBLENDCOLOR] || fromB[ERenderStates.DESTBLENDCOLOR];
-        to[ERenderStates.SRCBLENDALPHA] = fromA[ERenderStates.SRCBLENDALPHA] || fromB[ERenderStates.SRCBLENDALPHA];
-        to[ERenderStates.DESTBLENDALPHA] = fromA[ERenderStates.DESTBLENDALPHA] || fromB[ERenderStates.DESTBLENDALPHA];
-        to[ERenderStates.BLENDEQUATIONCOLOR] = fromA[ERenderStates.BLENDEQUATIONCOLOR] || fromB[ERenderStates.BLENDEQUATIONCOLOR];
-        to[ERenderStates.BLENDEQUATIONALPHA] = fromA[ERenderStates.BLENDEQUATIONALPHA] || fromB[ERenderStates.BLENDEQUATIONALPHA];
-        to[ERenderStates.ZFUNC] = fromA[ERenderStates.ZFUNC] || fromB[ERenderStates.ZFUNC];
-        to[ERenderStates.ALPHABLENDENABLE] = fromA[ERenderStates.ALPHABLENDENABLE] || fromB[ERenderStates.ALPHABLENDENABLE];
-        to[ERenderStates.ALPHATESTENABLE] = fromA[ERenderStates.ALPHATESTENABLE] || fromB[ERenderStates.ALPHATESTENABLE];
-    }
 
     static clearRenderStateMap(map: IMap<ERenderStateValues>): void {
-        map[ERenderStates.BLENDENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.CULLFACEENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.ZENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.ZWRITEENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.DITHERENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.SCISSORTESTENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.STENCILTESTENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.POLYGONOFFSETFILLENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.CULLFACE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.FRONTFACE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.SRCBLENDCOLOR] = ERenderStateValues.UNDEF;
-        map[ERenderStates.DESTBLENDCOLOR] = ERenderStateValues.UNDEF;
-        map[ERenderStates.SRCBLENDALPHA] = ERenderStateValues.UNDEF;
-        map[ERenderStates.DESTBLENDALPHA] = ERenderStateValues.UNDEF;
-        map[ERenderStates.BLENDEQUATIONCOLOR] = ERenderStateValues.UNDEF;
-        map[ERenderStates.BLENDEQUATIONALPHA] = ERenderStateValues.UNDEF;
-        map[ERenderStates.ZFUNC] = ERenderStateValues.UNDEF;
-        map[ERenderStates.ALPHABLENDENABLE] = ERenderStateValues.UNDEF;
-        map[ERenderStates.ALPHATESTENABLE] = ERenderStateValues.UNDEF;
+        Object
+            .keys(ERenderStates)
+            .filter(k => isNumber(ERenderStates[k]))
+            .map(k => ERenderStates[k])
+            .forEach(rs => { map[rs] = ERenderStateValues.UNDEF });
     }
 
 

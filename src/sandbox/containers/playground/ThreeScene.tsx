@@ -8,7 +8,7 @@
 
 import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
-import { IPipeline, Emitter } from '@sandbox/containers/playground/Pipeline';
+import { Emitter, IPipeline, Pass } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
@@ -95,8 +95,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     mount: HTMLDivElement;
 
     passes: {
-        mesh: THREE.Mesh;
-        instancedBuffer: THREE.InstancedInterleavedBuffer;
+        mesh: THREE.Mesh | THREE.LineSegments;
+        instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
     }[];
 
     particles: Particle[];
@@ -138,6 +138,167 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         return this.renderer.domElement;
     }
 
+    addPassLine(pass: Pass) {
+        const geometry = new THREE.BufferGeometry();
+        const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+
+        //
+        // Instance data
+        //
+
+        pass.instanceLayout.forEach(desc => {
+            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
+            geometry.addAttribute(desc.attrName, interleavedAttr);
+        });
+
+
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {},
+            vertexShader: pass.vertexShader,
+            fragmentShader: pass.pixelShader,
+            transparent: true,
+            blending: THREE.NormalBlending,
+            depthTest: false
+            // linewidth: 5
+        });
+
+        // geometry.setIndex(Array(pass.capacity).fill(0).map((x, i) => i));
+        geometry.setDrawRange(0, pass.length);
+        // geometry.index = new THREE.Uint16BufferAttribute(Array(pass.length).fill(0).map((x, i) => i), 1);
+
+        const mesh = new THREE.LineSegments(geometry, material);
+
+        mesh.name = 'emitter';
+        this.scene.add(mesh);
+        this.passes.push({ mesh, instancedBuffer });
+        verbose('emitter added.');
+    }
+
+
+    addPass(pass: Pass) {
+
+        if (pass.geometry === EPartFxPassGeometry.k_Line) {
+            this.addPassLine(pass);
+            return;
+        }
+
+        const geometry = new THREE.InstancedBufferGeometry();
+        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
+
+        // tslint:disable-next-line:max-line-length
+        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+
+        //
+        // Instance data
+        //
+
+        pass.instanceLayout.forEach(desc => {
+            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
+            geometry.addAttribute(desc.attrName, interleavedAttr);
+        });
+
+        //
+        // Geometry
+        //
+
+        // FIXME: do not use hardcoded layout
+        const geometryFixedLayout = {
+            a_position0: instanceGeometry.attributes.position,
+            a_normal0: instanceGeometry.attributes.normal,
+            a_texcoord0: instanceGeometry.attributes.uv
+        };
+
+        geometry.index = instanceGeometry.index;
+        for (const attrName in geometryFixedLayout) {
+            geometry.attributes[attrName] = geometryFixedLayout[attrName];
+        }
+
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {},
+            vertexShader: pass.vertexShader,
+            fragmentShader: pass.pixelShader,
+            transparent: true,
+            blending: THREE.NormalBlending,
+            depthTest: false,
+            // TODO: do not use for billboards
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+
+        mesh.name = 'emitter';
+        this.scene.add(mesh);
+        this.passes.push({ mesh, instancedBuffer });
+        verbose('emitter added.');
+    }
+
+
+    addPassDefaultMat(pass: Pass) {
+        const geometry = new THREE.InstancedBufferGeometry();
+        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
+        // tslint:disable-next-line:max-line-length
+        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+
+        //
+        // Geometry
+        //
+
+        geometry.index = instanceGeometry.index;
+        geometry.attributes.position = instanceGeometry.attributes.position;
+        geometry.attributes.normal = instanceGeometry.attributes.normal;
+        geometry.attributes.uv = instanceGeometry.attributes.uv;
+
+        //
+        // Instanced data
+        //
+
+        instancedBuffer.setDynamic(true);
+
+        // todo: remove hardcoded layout or check it's validity.
+        geometry.addAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
+        geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
+        geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
+        geometry.maxInstancedCount = pass.length;
+
+
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {},
+            vertexShader: $vertexShader,
+            fragmentShader: $fragmentShader,
+            transparent: true,
+            blending: THREE.NormalBlending,
+            depthTest: false
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+
+        mesh.name = 'emitter';
+        this.scene.add(mesh);
+        this.passes.push({ mesh, instancedBuffer });
+        verbose('emitter added.');
+    }
+
+    createInstinceGeometry(pass: Pass): THREE.BufferGeometry {
+        let instanceGeometry: THREE.BufferGeometry = null;
+        switch (pass.geometry) {
+            case EPartFxPassGeometry.k_Box:
+                instanceGeometry = new THREE.BoxBufferGeometry();
+                break;
+            case EPartFxPassGeometry.k_Sphere:
+                instanceGeometry = new THREE.SphereBufferGeometry(0.5);
+                break;
+            case EPartFxPassGeometry.k_Cylinder:
+                instanceGeometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 1.0);
+                break;
+            case EPartFxPassGeometry.k_Line:
+                break;
+            case EPartFxPassGeometry.k_Billboard:
+            default:
+                instanceGeometry = new THREE.PlaneBufferGeometry();
+        }
+        return instanceGeometry;
+    }
+
     // tslint:disable-next-line:max-func-body-length
     addEmitter(emitter: Emitter) {
         this.passes = [];
@@ -149,108 +310,11 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         // tslint:disable-next-line:max-func-body-length
         emitter.passes.forEach((pass, i) => {
-            const geometry = new THREE.InstancedBufferGeometry();
-
-            //
-            // Instance
-            //
-
-            let instanceGeometry: THREE.BufferGeometry = null;
-            switch (pass.geometry) {
-                case EPartFxPassGeometry.k_Box:
-                    instanceGeometry = new THREE.BoxBufferGeometry();
-                    break;
-                case EPartFxPassGeometry.k_Sphere:
-                    instanceGeometry = new THREE.SphereBufferGeometry(0.5);
-                    break;
-                case EPartFxPassGeometry.k_Cylinder:
-                    instanceGeometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 1.0);
-                    break;
-                case EPartFxPassGeometry.k_Line:
-                case EPartFxPassGeometry.k_Billboard:
-                default:
-                    instanceGeometry = new THREE.PlaneBufferGeometry();
-            }
-
-            let material: THREE.RawShaderMaterial = null;
-            // tslint:disable-next-line:max-line-length
-            const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
-
             if (!pass.requiresDefaultMaterial()) {
-
-                //
-                // Instance data
-                //
-
-                pass.instanceLayout.forEach(desc => {
-                    const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-                    geometry.addAttribute(desc.attrName, interleavedAttr);
-                });
-
-                //
-                // Geometry
-                //
-
-                // FIXME: do not use hardcoded layout
-                const geometryFixedLayout = {
-                    a_position0: instanceGeometry.attributes.position,
-                    a_normal0: instanceGeometry.attributes.normal,
-                    a_texcoord0: instanceGeometry.attributes.uv
-                };
-
-                geometry.index = instanceGeometry.index;
-                for (const attrName in geometryFixedLayout) {
-                    geometry.attributes[attrName] = geometryFixedLayout[attrName];
-                }
-
-                material = new THREE.RawShaderMaterial({
-                    uniforms: {},
-                    vertexShader: pass.vertexShader,
-                    fragmentShader: pass.pixelShader,
-                    transparent: true,
-                    blending: THREE.NormalBlending,
-                    depthTest: false
-                });
-
+               this.addPass(pass);
             } else {
-
-                //
-                // Geometry
-                //
-
-                geometry.index = instanceGeometry.index;
-                geometry.attributes.position = instanceGeometry.attributes.position;
-                geometry.attributes.normal = instanceGeometry.attributes.normal;
-                geometry.attributes.uv = instanceGeometry.attributes.uv;
-
-                //
-                // Instanced data
-                //
-
-                instancedBuffer.setDynamic(true);
-
-                // todo: remove hardcoded layout or check it's validity.
-                geometry.addAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
-                geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
-                geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
-                geometry.maxInstancedCount = pass.length;
-
-
-                material = new THREE.RawShaderMaterial({
-                    uniforms: {},
-                    vertexShader: $vertexShader,
-                    fragmentShader: $fragmentShader,
-                    transparent: true,
-                    blending: THREE.NormalBlending,
-                    depthTest: false
-                });
+                this.addPassDefaultMat(pass);
             }
-
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.name = 'emitter';
-            this.scene.add(mesh);
-            this.passes.push({ mesh, instancedBuffer });
-            verbose('emitter added.');
         });
     }
 
@@ -335,8 +399,14 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                 emitPass.sort(this.camera.position);
             }
 
+            const geometry = rendPass.mesh.geometry as THREE.BufferGeometry;
+
             rendPass.instancedBuffer.needsUpdate = true;
-            (rendPass.mesh.geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length;
+            if (emitPass.geometry === EPartFxPassGeometry.k_Line) {
+                geometry.setDrawRange(0, emitPass.length);
+            } else {
+                (geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length;
+            }
         }
 
         this.controls.update();
@@ -367,7 +437,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             emitter.passes.forEach((pass, i) => {
                 let { mesh } = this.passes[i];
                 let material = mesh.material as THREE.RawShaderMaterial;
-                let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
+                // let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
 
                 if (pass.requiresDefaultMaterial()) {
                     return;

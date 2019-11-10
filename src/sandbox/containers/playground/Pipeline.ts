@@ -100,14 +100,20 @@ interface IPassDesc {
     geometry: EPartFxPassGeometry;
     vertexShader?: string;
     pixelShader?: string;
+    instanceCount: number;
 }
 
+const TEMP_INT32 = new Uint8Array(4);
+const TEMP_INT32_ARRAY = Array(10)
+    .fill(null)
+    .map(x => new Uint8Array(4));
 
-class Pass {
+export class Pass {
     private _owner: Emitter;
     private _prerenderRoutine: IRunnable;
     private _prerenderedParticles: Uint8Array[];
     private _instance: ITypeInstruction;
+    private _instanceCount: number;
     private _sorting: boolean;
     private _geometry: EPartFxPassGeometry;
     private _vertexShader: string;
@@ -117,9 +123,12 @@ class Pass {
         this._owner = owner;
         this._prerenderRoutine = desc.prerenderRoutine;
         this._instance = desc.instance;
-        this._prerenderedParticles = Array(2).fill(null).map(i => new Uint8Array(desc.instance.size * this._owner.capacity));
+        this._prerenderedParticles = Array(2)
+            .fill(null)
+            .map(i => new Uint8Array(desc.instance.size * desc.instanceCount * this._owner.capacity));
         this._sorting = desc.sorting;
         this._geometry = desc.geometry;
+        this._instanceCount = desc.instanceCount;
 
         this._vertexShader = desc.vertexShader;
         this._pixelShader = desc.pixelShader;
@@ -158,7 +167,11 @@ class Pass {
     }
 
     get length(): number {
-        return this._owner.length;
+        return this._owner.length * this._instanceCount;
+    }
+
+    get capacity(): number {
+        return this._owner.capacity * this._instanceCount;
     }
 
     get sorting(): boolean {
@@ -171,15 +184,27 @@ class Pass {
 
     prerender(constants: IPipelineConstants): void {
         this._prerenderRoutine.setPipelineConstants(constants);
-        for (let i = 0; i < this._owner.length; ++i) {
-            const partPtr = this._owner.getParticlePtr(i);
-            const prerenderedPartPtr = this.getPrerenderedParticlePtr(i);
-            this._prerenderRoutine.run(partPtr, prerenderedPartPtr);
+        const len = this._owner.length;
+        const ic = this._instanceCount;
 
-            // const ptr = prerenderedPartPtr;
-            // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
-            // verbose(`prerender (${i}) => pos: [${f32View[0]}, ${f32View[1]}, 
-            //  ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}], size: ${f32View[7]}`);
+        assert(ic < TEMP_INT32_ARRAY.length);
+        for (let iInstance = 0; iInstance < ic; ++iInstance) {
+            TEMP_INT32_ARRAY[iInstance].set(i32ToU8Array(iInstance));
+        }
+
+        for (let iPart = 0; iPart < len; ++iPart) {
+            for (let iInstance = 0; iInstance < ic; ++iInstance) {
+                const partPtr = this._owner.getParticlePtr(iPart);
+                const prerenderedPartPtr = this.getPrerenderedParticlePtr(iPart * ic + iInstance);
+                const instanceId = TEMP_INT32_ARRAY[iInstance];
+                this._prerenderRoutine.run(partPtr, prerenderedPartPtr, instanceId);
+                // if (iPart === 0) {
+                //     const ptr = prerenderedPartPtr;
+                //     const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 8);
+                //     verbose(`prerender ${iInstance} (${iPart}) => pos: [${f32View[0]}, ${f32View[1]}, 
+                //     ${f32View[2]}], color: [${f32View[3]}, ${f32View[4]}, ${f32View[5]}, ${f32View[6]}]`);
+                // }
+            }
         }
     }
 
@@ -191,15 +216,23 @@ class Pass {
 
         const v3 = new THREE.Vector3();
 
-        const src = new Float32Array(this._prerenderedParticles[0].buffer, 0, this.stride * this._owner.capacity);
-        const dst = new Float32Array(this._prerenderedParticles[1].buffer, 0, this.stride * this._owner.capacity);
+        const length = this._owner.length;
+        const capacity = this._owner.capacity;
+        const instanceCount = this._instanceCount;
+
+        const nStride = this.stride * instanceCount; // stride in floats
+
+        const src = new Float32Array(this._prerenderedParticles[0].buffer, 0, nStride * capacity);
+        const dst = new Float32Array(this._prerenderedParticles[1].buffer, 0, nStride * capacity);
 
         const indicies = [];
-        const nStride = this.stride; // stride in floats
 
-        for (let iPart = 0; iPart < this.length; ++iPart) {
+        // NOTE: sort using only first instance's postion
+        for (let iPart = 0; iPart < length; ++iPart) {
             const offset = iPart * nStride;
-            const dist = v3.fromArray(src, offset/* add offset of POSTION semantic */).distanceTo(targetPos);
+            const dist = v3
+                .fromArray(src, offset/* add offset of POSTION semantic */)
+                .distanceTo(targetPos);
             indicies.push([iPart, dist]);
         }
 
@@ -223,15 +256,13 @@ class Pass {
     }
 
     private getPrerenderedParticlePtr(i: number) {
-        assert(i >= 0 && i < this._owner.capacity);
+        assert(i >= 0 && i < this._owner.capacity * this._instanceCount);
         // return new Uint8Array(this.prerenderedParticles, i * this.matByteLength, this.matByteLength);
         return this._prerenderedParticles[0].subarray(i * this._instance.size, (i + 1) * this._instance.size);
     }
 }
 
 export class Emitter {
-    private static TEMP_INT32 = new Uint8Array(4);
-
     private nPartAddFloat: number;
     private nPartAdd: number;
     private nPart: number;          // number of alive particles
@@ -313,7 +344,7 @@ export class Emitter {
         this.initRoutine.setPipelineConstants(constants);
         for (let i = this.nPart; i < this.nPart + this.nPartAdd; ++i) {
             const ptr = this.getParticlePtr(i);
-            const partId = Emitter.TEMP_INT32;
+            const partId = TEMP_INT32;
             partId.set(i32ToU8Array(i));
 
             this.initRoutine.run(ptr, partId);
@@ -337,7 +368,7 @@ export class Emitter {
         this.updateRoutine.setPipelineConstants(constants);
         for (let i = 0; i < this.nPart; ++i) {
             const currPtr = this.getParticlePtr(i);
-            const partId = Emitter.TEMP_INT32;
+            const partId = TEMP_INT32;
             partId.set(i32ToU8Array(i));
 
             if (!this.updateRoutine.run(currPtr, partId)) {
@@ -388,14 +419,15 @@ function Pipeline(fx: PartFx) {
         const capacity = fx.capacity;
         const passList = fx.passList
             .filter(pass => pass.particleInstance != null)
-            .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader }): IPassDesc => {
+            .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader, instanceCount }): IPassDesc => {
                 return {
                     instance: particleInstance,
                     prerenderRoutine: prebuild(prerenderRoutine),
                     sorting,
                     geometry,
+                    instanceCount,
                     vertexShader: Glsl.translate(vertexShader, { mode: 'vertex' }),
-                    pixelShader: Glsl.translate(pixelShader, { mode: 'pixel' })
+                    pixelShader: Glsl.translate(pixelShader, { mode: 'pixel' }),
                 };
             });
 

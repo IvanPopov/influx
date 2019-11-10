@@ -54,7 +54,8 @@ export class GlslEmitter extends CodeEmitter {
     protected emitPrologue(def: IFunctionDefInstruction): void {
         this.begin();
         {
-            this.emitChar('precision highp float;');
+            this.emitChar(`precision highp float;`);
+            this.emitChar(`precision highp int;`);
         }
         this.end();
         this.begin();

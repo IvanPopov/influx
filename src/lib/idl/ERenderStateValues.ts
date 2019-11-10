@@ -32,5 +32,12 @@ export enum ERenderStateValues {
 
     FUNCADD,
     FUNCSUBTRACT,
-    FUNCREVERSESUBTRACT
+    FUNCREVERSESUBTRACT,
+
+    // HACK: temp hack
+    LINELIST,
+    LINESTRIP,
+    TRIANGLELIST,
+    TRAINGLESTRIP,
+    POINTLIST
 }

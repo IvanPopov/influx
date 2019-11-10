@@ -79,13 +79,11 @@ class VM {
         // TODO: handle correctly empty input
         // TODO: don't allocate inputs here
         let $input = data.input || [];
-        for (let i = 0; i < 2; ++i) {
+        for (let i = 0; i < 3; ++i) {
             $input[i] = $input[i] || new Uint8Array(0);
         }
-        let iinput = [
-            new Int32Array($input[0].buffer, $input[0].byteOffset),
-            new Int32Array($input[1].buffer, $input[1].byteOffset)
-        ];
+        let iinput = $input.map(u8 => new Int32Array(u8.buffer, u8.byteOffset));
+
 
         end:
         while (i4 < ilist.length) {

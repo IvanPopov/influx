@@ -347,12 +347,17 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             const n = size / sizeof.f32();
             const swizzle = Array(n).fill(0);
 
+            let one = iload(constants.f32(1.0));
+            // todo: fix bu with vectored koef.
+            let kInv: PromisedAddress;
             if (k.size === sizeof.f32()) {
+                kInv = intrinsics.subf(one, one, k);
+                kInv.override({ size, swizzle });
+            } else {
                 k = k.override({ size, swizzle });
+                one = one.override({ size, swizzle });
+                kInv = intrinsics.subf(one, one, k);
             }
-
-            let one = iload(constants.f32(1.0)).override({ size, swizzle });
-            let kInv = intrinsics.subf(one, one, k);
 
             let temp = alloca(size);
 

@@ -13,6 +13,7 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly prerenderRoutine: ICompileExprInstruction;
     readonly particleInstance: ITypeInstruction;
     readonly geometry: EPartFxPassGeometry;
+    readonly instanceCount: number;
 
     /** check if the pass is ready for runtime */
     isValid(): boolean;

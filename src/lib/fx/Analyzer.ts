@@ -249,101 +249,6 @@ function addTechnique(context: Context, program: ProgramScope, technique: ITechn
 }
 
 
-
-function getRenderState(state: string): ERenderStates {
-    let type: ERenderStates = null;
-
-    switch (state) {
-        case 'BLENDENABLE':
-            type = ERenderStates.BLENDENABLE;
-            break;
-        case 'CULLFACEENABLE':
-            type = ERenderStates.CULLFACEENABLE;
-            break;
-        case 'ZENABLE':
-            type = ERenderStates.ZENABLE;
-            break;
-        case 'ZWRITEENABLE':
-            type = ERenderStates.ZWRITEENABLE;
-            break;
-        case 'DITHERENABLE':
-            type = ERenderStates.DITHERENABLE;
-            break;
-        case 'SCISSORTESTENABLE':
-            type = ERenderStates.SCISSORTESTENABLE;
-            break;
-        case 'STENCILTESTENABLE':
-            type = ERenderStates.STENCILTESTENABLE;
-            break;
-        case 'POLYGONOFFSETFILLENABLE':
-            type = ERenderStates.POLYGONOFFSETFILLENABLE;
-            break;
-        case 'CULLFACE':
-            type = ERenderStates.CULLFACE;
-            break;
-        case 'FRONTFACE':
-            type = ERenderStates.FRONTFACE;
-            break;
-
-        case 'SRCBLENDCOLOR':
-            type = ERenderStates.SRCBLENDCOLOR;
-            break;
-        case 'DESTBLENDCOLOR':
-            type = ERenderStates.DESTBLENDCOLOR;
-            break;
-        case 'SRCBLENDALPHA':
-            type = ERenderStates.SRCBLENDALPHA;
-            break;
-        case 'DESTBLENDALPHA':
-            type = ERenderStates.DESTBLENDALPHA;
-            break;
-
-        case 'BLENDEQUATIONCOLOR':
-            type = ERenderStates.BLENDEQUATIONCOLOR;
-            break;
-        case 'BLENDEQUATIONALPHA':
-            type = ERenderStates.BLENDEQUATIONALPHA;
-            break;
-
-        case 'SRCBLEND':
-            type = ERenderStates.SRCBLEND;
-            break;
-        case 'DESTBLEND':
-            type = ERenderStates.DESTBLEND;
-            break;
-        case 'BLENDFUNC':
-            type = ERenderStates.BLENDFUNC;
-            break;
-        case 'BLENDFUNCSEPARATE':
-            type = ERenderStates.BLENDFUNCSEPARATE;
-            break;
-
-        case 'BLENDEQUATION':
-            type = ERenderStates.BLENDEQUATION;
-            break;
-        case 'BLENDEQUATIONSEPARATE':
-            type = ERenderStates.BLENDEQUATIONSEPARATE;
-            break;
-
-        case 'ZFUNC':
-            type = ERenderStates.ZFUNC;
-            break;
-        case 'ALPHABLENDENABLE':
-            type = ERenderStates.ALPHABLENDENABLE;
-            break;
-        case 'ALPHATESTENABLE':
-            type = ERenderStates.ALPHATESTENABLE;
-            break;
-
-        default:
-            // console.warn(EWarnings[EWarnings.UnsupportedRenderStateTypeUsed], { state });
-            break;
-    }
-
-    return type;
-}
-
-
 function getRenderStateValue(state: ERenderStates, value: string): ERenderStateValues {
     let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
 
@@ -508,6 +413,20 @@ function getRenderStateValue(state: ERenderStates, value: string): ERenderStateV
                     eValue = ERenderStateValues.ALWAYS;
                     break;
 
+                default:
+                    console.warn('Unsupported render state ZFUNC value used: ' +
+                        value + '.');
+                    return eValue;
+            }
+            break;
+        case ERenderStates.PRIMITIVETOPOLOGY:
+            switch (value) {
+                case 'TRIANGLELIST':
+                    eValue = ERenderStateValues.TRIANGLELIST;
+                    break;
+                case 'LINELIST':
+                    eValue = ERenderStateValues.LINELIST;
+                    break;
                 default:
                     console.warn('Unsupported render state ZFUNC value used: ' +
                         value + '.');
@@ -3008,7 +2927,7 @@ function analyzePassState(context: Context, program: ProgramScope, sourceNode: I
     const children = sourceNode.children;
 
     const stateType = children[children.length - 1].value.toUpperCase();
-    const stateName = getRenderState(stateType);
+    const stateName = ERenderStates[stateType] || null;
 
     if (isNull(stateName)) {
         return {};
@@ -3280,6 +3199,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
     const sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
     const prerenderRoutine = fxStates.prerenderRoutine || null;
     const geometry = fxStates.geometry || EPartFxPassGeometry.k_Billboard;
+    const instanceCount = fxStates.instanceCount || 1;
 
     //
     // Validation of the shader input
@@ -3310,11 +3230,11 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
             vertexShader = pixelShader = null;
         }
 
-        if (!hasRequiredSemantics) {
-            context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch,
-                { tooltip: 'doesn\'t have requiredsemantics.' });
-            vertexShader = pixelShader = null;
-        }
+        // if (!hasRequiredSemantics) {
+        //     context.error(sourceNode, EErrors.PartFx_VertexShaderParametersMismatch,
+        //         { tooltip: 'doesn\'t have requiredsemantics.' });
+        //     vertexShader = pixelShader = null;
+        // }
     }
 
 
@@ -3333,6 +3253,7 @@ function analyzePartFXPassDecl(context: Context, program: ProgramScope, sourceNo
 
         sorting,
         geometry,
+        instanceCount,
         prerenderRoutine,
 
         renderStates,
@@ -3451,7 +3372,10 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
         }
 
         switch (stateName) {
-            case ('geometry'.toUpperCase()):
+            case ('InstanceCount'.toUpperCase()):
+                fxStates.instanceCount = Number(value) || 1;
+                break;
+            case ('Geometry'.toUpperCase()):
                 const types = [
                     'Billboard',
                     'Cylinder',
@@ -3462,7 +3386,7 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
 
                 fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
                 break;
-            case ('sorting'.toUpperCase()):
+            case ('Sorting'.toUpperCase()):
                 // TODO: use correct validation with diag error output
                 assert(value == 'TRUE' || value == 'FALSE');
                 fxStates.sorting = (value === 'TRUE');
@@ -3470,10 +3394,21 @@ function analyzePartFXPassProperies(context: Context, program: ProgramScope, sou
             case ('PrerenderRoutine'.toUpperCase()):
                 {
                     /**
-                     * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
-                     */
-                    let validator = { ret: T_VOID, args: [context.particleCore, null] };
-                    let prerenderRoutine = analyzeCompileExpr(context, program, exprNode);
+                    * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
+                    */
+                    let validators: ICompileValidator[] = [
+                        /* prerender(Part part, PartInstance instance) */
+                        { ret: T_VOID, args: [context.particleCore, null] },
+                        /* prerender(Part part, PartInstance instance, int instanceId) */
+                        { ret: T_VOID, args: [context.particleCore, null, SystemScope.T_INT] },
+                    ];
+
+                    //
+                    // TODO: add string-based validators like this:
+                    // void prerender(Part part, PartInstance instance, int instanceId?: INSTANCE_ID);
+                    //
+
+                    let prerenderRoutine = analyzeCompileExpr(context, program, exprNode, validators);
 
                     if (!prerenderRoutine) {
                         break;
