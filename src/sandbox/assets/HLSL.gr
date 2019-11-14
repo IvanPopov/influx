@@ -174,9 +174,17 @@ VariableDim : VariableDim '[' ConstantExpr ']'
 # 
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509607(v=vs.85).aspx
 
+FunctionDecl : Attributes FunctionDef ';' --AN
 FunctionDecl : FunctionDef ';' --AN
+FunctionDecl : Attributes FunctionDef AnnotationOpt StmtBlock
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
 FunctionDef : UsageType Id ParamList SemanticsOpt
+
+Attribute : '[' NonTypeId '(' ArgumentsOpt ')' ']'
+Attribute : '[' NonTypeId ']'
+Attributes : Attribute --NN
+Attributes : Attributes Attribute
+
 
 ParamList : ParamListBegin ParamListEnd
 ParamList : ParamListBegin T_KW_VOID ParamListEnd

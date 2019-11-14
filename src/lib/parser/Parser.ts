@@ -1,16 +1,16 @@
 import bf from "@lib/bf";
-import { isDef, isDefAndNotNull, isNull, deepEqual } from "@lib/common";
+import { deepEqual, isDef, isDefAndNotNull, isNull, verbose } from "@lib/common";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { IFile, IPosition, IRange, IParserParams } from "@lib/idl/parser/IParser";
+import { IFile, IParserParams, IPosition, IRange } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
+
 import { ENodeCreateMode, EOperationType, EParseMode, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "../idl/parser/IParser";
 import { Item } from "./Item";
 import { Lexer } from "./Lexer";
 import { ParseTree } from "./ParseTree";
 import { State } from "./State";
 import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "./symbols";
-
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -268,6 +268,8 @@ export class Parser implements IParser {
             }
         } catch (e) {
             if (e instanceof DiagnosticException) {
+                // verbose(e.message);
+                verbose(e.stack);
                 return false;
             }
             throw e;
