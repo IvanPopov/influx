@@ -55,6 +55,10 @@ TypeDecl : StructDecl --F addType ';'
 TypeDefs : VariableDim
 TypeDefs : VariableDim ',' TypeDefs
 
+# GenericParams : '<' Arguments '>'
+# GenericParamsOpt: --NN
+# GenericParamsOpt: GenericParams
+
 Type : BaseType --AN
 Type : Struct
 Type : TypeId
@@ -99,6 +103,8 @@ ObjectType : T_KW_VERTEXSHADER
 ObjectType : T_KW_PIXELFRAGMENT
 ObjectType : T_KW_VERTEXFRAGMENT
 ObjectType : T_KW_STATEBLOCK
+ObjectType : T_KW_RWBUFFER '<' Type '>'
+ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
 
 
 # struct Name
@@ -355,6 +361,7 @@ ComplexExpr : '(' Expr ')'
 ComplexExpr : TypeId '(' ArgumentsOpt ')'
 ComplexExpr : BaseType '(' ArgumentsOpt ')'
 ComplexExpr : NonTypeId '(' ArgumentsOpt ')'
+ComplexExpr : PostfixPointExpr '(' ArgumentsOpt ')'
 ComplexExpr : ObjectExpr
 
 ObjectExpr : T_KW_COMPILE NonTypeId '(' ArgumentsOpt ')'
@@ -369,6 +376,8 @@ PostfixExpr : PostfixExpr '[' Expr ']'
 PostfixExpr : PostfixExpr '.' Id
 PostfixExpr : PostfixExpr T_OP_INC
 PostfixExpr : PostfixExpr T_OP_DEC
+
+PostfixPointExpr : PostfixExpr '.' Id
 
 UnaryExpr : PostfixExpr
 UnaryExpr : T_OP_INC UnaryExpr
@@ -498,6 +507,8 @@ T_KW_SAMPLER1D : "sampler1D"
 T_KW_SAMPLER2D : "sampler2D"
 T_KW_SAMPLER3D : "sampler3D"
 T_KW_SAMPLERCUBE : "samplerCUBE"
+T_KW_RWBUFFER : "RWBuffer"
+T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_PIXELSHADER : "pixelshader"
 T_KW_VERTEXSHADER : "vertexshader"
 T_KW_PIXELFRAGMENT : "pixelfragment"
