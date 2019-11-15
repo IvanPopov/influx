@@ -9,6 +9,7 @@ import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
 import { getCommon, mapProps } from '@sandbox/reducers';
+import { history } from '@sandbox/reducers/router';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -18,7 +19,6 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
-// tslint:disable-next-line:max-line-length
 import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
@@ -310,6 +310,9 @@ class App extends React.Component<IAppProps> {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
 
+        // console.log(props.match.params);
+        // console.log(`/${props.match.params.view}/${props.match.params.fx}`);
+
         // console.log(JSON.stringify(props.match, null, '\t'));
 
         const analysisResults = [
@@ -575,7 +578,7 @@ class App extends React.Component<IAppProps> {
                         <FileListView
                             path='./assets/fx/tests/'
                             filters={['.fx']}
-                            onFileClick={(file) => { props.actions.openFile(file); }} />
+                            onFileClick={(file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); }} />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
                         {

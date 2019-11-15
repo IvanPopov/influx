@@ -1,10 +1,10 @@
 /* tslint:disable:typedef */
 
 import { assert, isNull } from '@lib/common';
-import { analyze } from '@lib/fx/Analyzer';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { EffectParser } from '@lib/fx/EffectParser';
+import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { Parser } from '@lib/parser/Parser';
 import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
@@ -86,7 +86,7 @@ async function processAnalyze(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-    const result = analyze(parseTree, filename);
+    const result = FxAnalyzer.analyze(parseTree, filename);
 
     const { diag, root, scope } = result;
 

@@ -74,7 +74,7 @@ float4 foo() {
 
 
 int summ(int a, int b) { return a + b; }
-int spawn()
+int Spawn()
 {
     return summ(1, 200);
 }
@@ -119,7 +119,7 @@ void prerender2(inout Part part, out DefaultShaderInput input)
 
 partFx project.awesome {
     Capacity = 1000;
-    SpawnRoutine = compile spawn();
+    SpawnRoutine = compile Spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 
@@ -132,7 +132,7 @@ partFx project.awesome {
 
 partFx some.example {
     Capacity = 1000;
-    SpawnRoutine = compile spawn();
+    SpawnRoutine = compile Spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 

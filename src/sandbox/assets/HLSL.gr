@@ -302,6 +302,11 @@ SimpleStmt : VarStructDecl
 SimpleStmt : T_KW_BREAK ';'
 SimpleStmt : T_KW_CONTINUE ';'
 
+#if FX_PART
+SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
+#endif
+
+
 NonIfStmt : SimpleStmt --AN
 NonIfStmt : T_KW_WHILE '(' Expr ')' NonIfStmt
 NonIfStmt : For '(' ForInit ForCond ForStep ')' NonIfStmt
@@ -531,6 +536,9 @@ T_KW_SWITCH : "switch"
 T_KW_CASE : "case"
 T_KW_DEFAULT : "default"
 T_KW_BREAK : "break"
+#if FX_PART
+T_KW_SPAWN : "spawn"
+#endif
 T_KW_CONTINUE : "continue"
 T_KW_AS : "as"
 T_KW_INCLUDE : "include"

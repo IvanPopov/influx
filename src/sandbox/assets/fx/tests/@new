@@ -1,4 +1,0 @@
-[some]
-[foo()]
-[foo(1,2,3)]
-extern void main(void);

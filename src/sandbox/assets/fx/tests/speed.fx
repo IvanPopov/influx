@@ -42,7 +42,7 @@ struct DefaultShaderInput {
 };
 
 
-int spawn()
+int Spawn()
 {
     return 300;
 }
@@ -78,7 +78,7 @@ void prerender(inout Part part, out DefaultShaderInput input)
 
 partFx project.awesome {
     Capacity = 6000;
-    SpawnRoutine = compile spawn();
+    SpawnRoutine = compile Spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 
