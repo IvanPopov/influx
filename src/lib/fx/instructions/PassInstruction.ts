@@ -1,14 +1,14 @@
 import { isNull } from "@lib/common";
+import { isNumber } from "@lib/common";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { EInstructionTypes, IAnnotationInstruction, IFunctionDeclInstruction, IIdInstruction, IPassInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISamplerState } from "@lib/idl/ISamplerState";
 import { ETextureFilters, ETextureWrapModes } from "@lib/idl/ITexture";
+
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
-import { isNumber } from "@lib/common";
-
 
 export interface IPassInstructionSettings extends IDeclInstructionSettings {
     vertexShader?: IFunctionDeclInstruction;
@@ -61,8 +61,8 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     }
 
 
-    getState(eType: ERenderStates): ERenderStateValues {
-        return this._passStateMap[eType];
+    getState(state: ERenderStates): ERenderStateValues {
+        return this._passStateMap[state];
     }
 
     get renderStates(): IMap<ERenderStateValues> {

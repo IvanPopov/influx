@@ -2,7 +2,7 @@
 // tslint:disable:forin
 
 import { verbose } from '@lib/common';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 import Pipeline from '@sandbox/containers/playground/Pipeline';

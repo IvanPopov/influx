@@ -204,7 +204,8 @@ float4 PSLines(PixelInputType input) : COLOR
 /////////////////////////////////////////////////////////////////////
 // Setup
 /////////////////////////////////////////////////////////////////////
-partFx holographicTable {
+partFx holographicTable 
+{
     Capacity = 4000;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile Init();

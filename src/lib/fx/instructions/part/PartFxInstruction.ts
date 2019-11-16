@@ -1,8 +1,8 @@
 import { EInstructionTypes, ETechniqueType, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+
 import { ICompileExprInstruction } from "../../../idl/IInstruction";
 import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
-import { IPartFxPassInstruction, IPartFxInstruction } from "@lib/idl/IPartFx";
-
 
 // prohibition of explicitly indicating the type of technique
 export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSettings<IPartFxPassInstruction>, "techniqueType"> {

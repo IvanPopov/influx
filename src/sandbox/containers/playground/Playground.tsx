@@ -5,18 +5,18 @@
 
 
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { getFileState, getScope, filterPartFx, getPipelineName } from '@sandbox/reducers/sourceFile';
+import { filterPartFx, getFileState, getPipelineName, getScope } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, List, Message } from 'semantic-ui-react';
+
 import Pipeline from './Pipeline';
 import ThreeScene from './ThreeScene';
-
 
 interface IPlaygroundProps extends IFileState {
     actions: typeof sourceActions;

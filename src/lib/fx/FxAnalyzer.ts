@@ -2,7 +2,7 @@ import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IIdInstruction, IInstruction, IPassInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/IPartFx";
+import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 import { IParseNode, IParseTree } from "@lib/idl/parser/IParser";
 
 import { Analyzer, Context, IAnalyzeResult, ICompileValidator } from "./Analyzer";

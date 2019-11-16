@@ -1,7 +1,8 @@
-import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
-import { IVariableDeclInstruction, ITypeInstruction, IPostfixPointInstruction, EInstructionTypes, IFunctionDefInstruction, IIdExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IExprInstruction, IInstruction, ILiteralInstruction } from "@lib/idl/IInstruction";
-import { isDef, assert } from "@lib/common";
+import { assert, isDef } from "@lib/common";
 import { IdExprInstruction } from "@lib/fx/instructions/IdExprInstruction";
+import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+
+import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
 
 const GlslTypeNames = {
     'int': 'int',
@@ -50,12 +51,15 @@ export class GlslEmitter extends CodeEmitter {
         return false;
     }
 
+    emitSemantic(semantic: string) {
+        // disabling of semantics emission.
+    }
 
     protected emitPrologue(def: IFunctionDefInstruction): void {
         this.begin();
         {
-            this.emitChar(`precision highp float;`);
-            this.emitChar(`precision highp int;`);
+            this.emitLine(`precision highp float;`);
+            this.emitLine(`precision highp int;`);
         }
         this.end();
         this.begin();
@@ -67,7 +71,7 @@ export class GlslEmitter extends CodeEmitter {
 
                 const type = param.type;
 
-                this.emitChar(`/* ${param.toCode()}; */`);
+                this.emitComment(param.toCode());
                 this.emitNewline();
 
                 if (!type.isComplex()) {

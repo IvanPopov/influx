@@ -1,7 +1,10 @@
 /* tslint:disable:typedef */
 
 import { isNumber } from '@lib/common';
-// import { IRange } from '@lib/idl/parser/IParser';
+import * as Hlsl from '@lib/fx/translators/CodeEmitter';
+import * as FxHlsl from '@lib/fx/translators/FxEmitter';
+import * as Glsl from '@lib/fx/translators/GlslEmitter';
+// import { getCommon, mapProps, matchLocation } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -11,10 +14,6 @@ import * as React from 'react';
 import { MonacoDiffEditor } from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import * as Hlsl from '@lib/fx/translators/CodeEmitter';
-import * as Glsl from '@lib/fx/translators/GlslEmitter';
-
-
 
 interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
@@ -29,6 +28,30 @@ interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 //     lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
 //     return lines.join('\n');
 // }
+
+const diffOptions: monaco.editor.IDiffEditorConstructionOptions = {
+    selectOnLineNumbers: true,
+    fontSize: 12,
+    renderWhitespace: 'none',
+    lineHeight: 14,
+    minimap: {
+        enabled: false
+    },
+    automaticLayout: true,
+    glyphMargin: false,
+    theme: 'vs-dark',
+    lineDecorationsWidth: 0,
+    cursorSmoothCaretAnimation: false,
+    fontLigatures: true,
+
+    // diff specific options
+    occurrencesHighlight: false,
+    renderLineHighlight: 'none',
+    renderIndentGuides: false,
+    readOnly: true,
+    renderControlCharacters: false,
+    ignoreTrimWhitespace: true
+};
 
 @(withRouter as any)
 class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
@@ -64,45 +87,36 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             return null;
         }
 
-        const pass = fx.passList.find((pass, i) => isNumber(match.params.pass)
-            ? i === Number(match.params.pass)
-            : pass.name === match.params.pass);
+        let original: string;
+        let value: string;
 
+        if (match.params.pass) {
 
+            const pass = fx.passList.find((instr, i) => isNumber(match.params.pass)
+                ? i === Number(match.params.pass)
+                : instr.name === match.params.pass);
 
+            const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
+            const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
 
-
-        const options: monaco.editor.IEditorConstructionOptions = {
-            selectOnLineNumbers: true,
-            fontSize: 12,
-            renderWhitespace: 'none',
-            lineHeight: 14,
-            minimap: {
-                enabled: false
-            },
-            automaticLayout: true,
-            glyphMargin: false,
-            theme: 'vs-dark',
-            language: 'cpp',
-            lineDecorationsWidth: 0,
-            cursorSmoothCaretAnimation: false,
-            fontLigatures: true
-        };
-
-        const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
-        const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
+            original = Hlsl.translate(shader, { mode });
+            value = Glsl.translate(shader, { mode });
+        } else {
+            original = file.content;
+            value = FxHlsl.translate(fx);
+        }
 
         return (
             <MonacoDiffEditor
                 ref='monaco'
 
-                original={ Hlsl.translate(shader, { mode }) }
-                value={ Glsl.translate(shader, { mode }) }
+                original = { original }
+                value={ value }
 
                 width='100%'
                 height='calc(100vh - 74px)' // todo: fixme
 
-                options={ options }
+                options={ diffOptions }
                 editorDidMount={ this.editorDidMount }
             // onChange={ this.onChange }
             // editorWillMount={ this.editorWillMount }

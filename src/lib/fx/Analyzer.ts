@@ -5,11 +5,8 @@ import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
-import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, EDiagnosticCategory, IDiagnosticReport } from "@lib/util/Diagnostics";
-import { isNumber } from 'util';
+import { IDiagnosticReport } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from './AnalyzerDiagnostics';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
@@ -38,8 +35,6 @@ import { Instruction } from './instructions/Instruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
 import { IntInstruction } from './instructions/IntInstruction';
 import { LogicalExprInstruction } from './instructions/LogicalExprInstruction';
-import { PartFxInstruction } from './instructions/part/PartFxInstruction';
-import { PartFxPassInstruction } from './instructions/part/PartFxPassInstruction';
 import { PassInstruction } from './instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
@@ -368,10 +363,6 @@ export interface ICompileValidator {
 
 
 
-
-
-
-// TODO: separate base context from part fx context.
 export class Context {
     readonly filename: string | null;
     readonly diagnostics: AnalyzerDiagnostics;
@@ -2967,10 +2958,6 @@ export class Analyzer {
 
     protected analyzeUnknDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IInstruction[] {
         switch (sourceNode.name) {
-
-            // case 'PartFxDecl':
-            //     return [this.analyzePartFXDecl(context, program, sourceNode)];
-
             case 'TechniqueDecl':
                 return [this.analyzeTechniqueDecl(context, program, sourceNode)];
             case 'UseDecl':

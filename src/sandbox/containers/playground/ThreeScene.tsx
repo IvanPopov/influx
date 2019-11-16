@@ -7,7 +7,7 @@
 /* tslint:disable:insecure-random */
 
 import { assert, isDefAndNotNull, verbose } from '@lib/common';
-import { EPartFxPassGeometry } from '@lib/idl/IPartFx';
+import { EPartFxPassGeometry } from '@lib/idl/part/IPartFx';
 import { Emitter, IPipeline, Pass } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';

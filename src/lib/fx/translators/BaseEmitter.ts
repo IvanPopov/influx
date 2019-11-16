@@ -1,4 +1,4 @@
-import { IOutput, createOutput } from "./Output";
+import { createOutput, IOutput } from "./Output";
 
 export class BaseEmitter {
     private blocks: IOutput[] = [];
@@ -18,8 +18,8 @@ export class BaseEmitter {
         this.blocks.push(this.stack.pop());
     }
 
-    protected push() {
-        this.top().push();
+    protected push(pad?) {
+        this.top().push(pad);
     }
 
     protected pop() {
@@ -28,7 +28,13 @@ export class BaseEmitter {
 
     emitNewline() { this.top().newline(); }
     emitKeyword(kw: string) { this.top().keyword(kw); }
+    emitNoSpace() { this.top().ignoreNextSpace(); }
+    emitSpace() { this.emitChar(' '); this.emitNoSpace(); }
     emitChar(char: string) { this.top().add(char); }
+    emitLine(line: string) { 
+        this.top().add(line);
+        this.emitNewline(); 
+    }
 
     toString(): string {
         return this.blocks

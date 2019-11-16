@@ -6,8 +6,8 @@
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { EInstructionTypes, ETechniqueType, IScope } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
@@ -331,6 +331,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         }
 
         return renderRequired;
+    }
+
+    componentWillUnmount() {
+        if (this.provider) {
+            this.provider.dispose();
+        }
     }
 
 

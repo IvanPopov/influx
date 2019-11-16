@@ -1,4 +1,6 @@
-import { IPassInstruction, IFunctionDeclInstruction, ITechniqueInstruction, ICompileExprInstruction, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+
+// import { EPartFxInstructionTypes } from "./IPartFxInstruction";
 
 export enum EPartFxPassGeometry {
     k_Billboard,

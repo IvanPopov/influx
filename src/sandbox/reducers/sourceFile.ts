@@ -1,6 +1,6 @@
 import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/IPartFx';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';

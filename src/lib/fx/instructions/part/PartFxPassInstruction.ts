@@ -1,8 +1,7 @@
+import { isNull } from "@lib/common";
 import { IPassInstructionSettings, PassInstruction } from "@lib/fx/instructions/PassInstruction";
 import { EInstructionTypes, ICompileExprInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { IPartFxPassInstruction, EPartFxPassGeometry } from "@lib/idl/IPartFx";
-import { isNull } from "@lib/common";
-
+import { EPartFxPassGeometry, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 export interface IPartFxPassInstructionSettings extends IPassInstructionSettings {
     sorting?: boolean;

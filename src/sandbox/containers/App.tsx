@@ -288,21 +288,23 @@ class App extends React.Component<IAppProps> {
     }
 
 
-    buildShaderMenu(): string[] {
+    buildShaderMenu(): { name: string; link: string }[] {
         const props = this.props;
         const file = getFileState(props);
         const list = filterPartFx(getScope(file));
 
-        let links: string[] = [];
+        const links: string[] = [];
+        const basepath = `/playground/${path.basename(file.filename)}`;
         for (const fx of list) {
-            links = links.concat(fx.passList
+            links.push(`${fx.name}`);
+            links.push(...fx.passList
                 .filter(pass => !!pass.vertexShader)
-                .map((pass, i) => `/playground/${path.basename(file.filename)}/${fx.name}/${pass.name || i}/VertexShader`));
-            links = links.concat(fx.passList
+                .map((pass, i) => `${fx.name}/${pass.name || i}/VertexShader`));
+            links.push(...fx.passList
                 .filter(pass => !!pass.pixelShader)
-                .map((pass, i) => `/playground/${path.basename(file.filename)}/${fx.name}/${pass.name || i}/PixelShader`));
+                .map((pass, i) => `${fx.name}/${pass.name || i}/PixelShader`));
         }
-        return links;
+        return links.map(name => ({ name, basepath, link: `${basepath}/${name}` }));
     }
 
 
@@ -333,11 +335,11 @@ class App extends React.Component<IAppProps> {
                             <Dropdown item icon='gear' simple>
                                 <Dropdown.Menu>
                                     {
-                                        this.buildShaderMenu().map(link => (
+                                        this.buildShaderMenu().map(item => (
                                             <Dropdown.Item
                                                 as={NavLink}
-                                                to={link} >
-                                                {link}
+                                                to={item.link} >
+                                                {item.name}
                                             </Dropdown.Item>
                                         ))
                                     }
@@ -518,6 +520,9 @@ class App extends React.Component<IAppProps> {
                                     <Switch>
                                         {/* TODO: sync all pathes with business logic */}
                                         <Route path='/playground/:fx/:name/:pass/(vertexshader|pixelshader)'>
+                                            <ShaderTranslatorView name='shader-translator-view' />
+                                        </Route>
+                                        <Route path='/playground/:fx/:name'>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
                                         <Route exact path='/playground/:fx'>

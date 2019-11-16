@@ -6,10 +6,11 @@ import { assert, isDef, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
-import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import * as Code from '@lib/fx/translators/CodeEmitter';
+import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
-import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/IPartFx';
+import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
+
 import THREE = require('three');
 
 type PartFx = IPartFxInstruction;

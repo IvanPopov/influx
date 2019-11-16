@@ -1,23 +1,26 @@
 export function createOutput({ tab = '\t', nl = '\n' } = {}) {
     let data: string[] = [''];
-    let nesting = 0;
+    let nesting = [];
     let count = 0;
+    let noNextSpace = false;
 
-    const push = () => (++nesting, count && newline());
-    const pop = () => (--nesting, count && newline());
+    const push = (pad = tab) => (nesting.push(pad), count && newline());
+    const pop = () => (nesting.pop(), count && newline());
     const toString = () => data.join(nl);
+    const ignoreNextSpace = () => noNextSpace = true;
 
     function add(val: string) {
         if (!count) {
-            for (let i = 0; i < nesting; ++i) val = tab + val;
+            for (let i = 0; i < nesting.length; ++i) val = nesting[i] + val;
         }
         
         data[data.length - 1] += val;
         count++;
+        noNextSpace = false;
     }
 
     function keyword(token: string) {
-        count && add(' ');
+        !noNextSpace && count && add(' ');
         add(token);
     }
 
@@ -28,6 +31,7 @@ export function createOutput({ tab = '\t', nl = '\n' } = {}) {
 
     return {
         keyword,
+        ignoreNextSpace,
         push,
         pop,
         newline,
