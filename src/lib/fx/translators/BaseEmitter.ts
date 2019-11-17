@@ -32,7 +32,7 @@ export class BaseEmitter {
     emitSpace() { this.emitChar(' '); this.emitNoSpace(); }
     emitChar(char: string) { this.top().add(char); }
     emitLine(line: string) { 
-        this.top().add(line);
+        this.emitChar(line);
         this.emitNewline(); 
     }
 

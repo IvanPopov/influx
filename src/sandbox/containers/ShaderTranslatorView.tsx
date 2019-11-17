@@ -102,8 +102,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             original = Hlsl.translate(shader, { mode });
             value = Glsl.translate(shader, { mode });
         } else {
-            original = file.content;
-            value = FxHlsl.translate(fx);
+            original = FxHlsl.translate(fx);
+            value = FxHlsl.translateFlat(fx);
         }
 
         return (

@@ -80,6 +80,13 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitLine(line: string, comment?: string) {
+        this.emitChar(line);
+        comment && assert(comment.split('\n').length === 1);
+        comment && (this.emitChar('\t'), this.emitComment(comment));
+        this.emitNewline(); 
+    }
+
     emitComment(comment: string) {
         //
         if (comment.indexOf('\n') === -1) {
