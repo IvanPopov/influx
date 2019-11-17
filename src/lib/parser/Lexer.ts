@@ -74,35 +74,35 @@ export class Lexer {
         return this._diag.resolve();
     }
 
-    addPunctuator(value: string, sName: string = Lexer.getPunctuatorName(value)): string {
-        this._punctuatorsMap[value] = sName;
+    addPunctuator(value: string, name: string = Lexer.getPunctuatorName(value)): string {
+        this._punctuatorsMap[value] = name;
         this._punctuatorsFirstSymbols[value[0]] = true;
-        return sName;
+        return name;
     }
 
 
-    addKeyword(value: string, sName: string): string {
-        this._keywordsMap[value] = sName;
-        return sName;
+    addKeyword(value: string, name: string): string {
+        this._keywordsMap[value] = name;
+        return name;
     }
 
 
-    getTerminalValueByName(sName: string): string {
+    getTerminalValueByName(name: string): string {
         var value: string = "";
 
         for (value in this._punctuatorsMap) {
-            if (this._punctuatorsMap[value] === sName) {
+            if (this._punctuatorsMap[value] === name) {
                 return value;
             }
         }
 
         for (value in this._keywordsMap) {
-            if (this._keywordsMap[value] === sName) {
+            if (this._keywordsMap[value] === name) {
                 return value;
             }
         }
 
-        return sName;
+        return name;
     }
 
 
@@ -464,9 +464,9 @@ export class Lexer {
         }
 
         if (isGoodFinish) {
-            let sName = isFloat ? T_FLOAT : T_UINT;
+            let name = isFloat ? T_FLOAT : T_UINT;
             return <IToken>{
-                name: sName,
+                name: name,
                 value: value,
                 loc: {
                     start: start,
@@ -526,9 +526,9 @@ export class Lexer {
                 };
             }
             else {
-                let sName = this._onResolveTypeID(value) ? T_TYPE_ID : T_NON_TYPE_ID;
+                let name = this._onResolveTypeID(value) ? T_TYPE_ID : T_NON_TYPE_ID;
                 return <IToken>{
-                    name: sName,
+                    name: name,
                     value: value,
                     loc: {
                         start: start,

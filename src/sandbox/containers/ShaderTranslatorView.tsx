@@ -3,6 +3,7 @@
 import { isNumber } from '@lib/common';
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
+import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
 // import { getCommon, mapProps, matchLocation } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
@@ -103,7 +104,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             value = Glsl.translate(shader, { mode });
         } else {
             original = FxHlsl.translate(fx);
-            value = FxHlsl.translateFlat(fx);
+            value = FxTranslator.translateFlat(fx);
         }
 
         return (
