@@ -105,7 +105,7 @@ export class FxTranslator extends FxEmitter {
                 {
                     this.emitComment(`not very beautiful, but a cheap way not to`);
                     this.emitComment(`think about the correctness of this counter`);
-                    this.emitLine(`${uavDeadIndices}.IncrementCounter()`);
+                    this.emitLine(`${uavDeadIndices}.IncrementCounter();`);
                     this.emitLine('return;');
                 }
                 this.pop();

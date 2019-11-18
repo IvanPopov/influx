@@ -192,7 +192,8 @@ Attribute : '[' NonTypeId '(' ArgumentsOpt ')' ']'
 Attribute : '[' NonTypeId ']'
 Attributes : Attribute --NN
 Attributes : Attributes Attribute
-
+AttributesOpt : --NN
+AttributesOpt : Attributes
 
 ParamList : ParamListBegin ParamListEnd
 ParamList : ParamListBegin T_KW_VOID ParamListEnd
@@ -316,16 +317,19 @@ SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
 
 
 NonIfStmt : SimpleStmt --AN
-NonIfStmt : T_KW_WHILE '(' Expr ')' NonIfStmt
-NonIfStmt : For '(' ForInit ForCond ForStep ')' NonIfStmt
+NonIfStmt : WhileStmt NonIfStmt
+NonIfStmt : ForStmt NonIfStmt
 
 Stmt : SimpleStmt --AN
 Stmt : UseDecl
-Stmt : T_KW_WHILE '(' Expr ')' Stmt
-Stmt : For '(' ForInit ForCond ForStep ')' Stmt
-Stmt : T_KW_IF '(' Expr ')' Stmt
-Stmt : T_KW_IF '(' Expr ')' NonIfStmt T_KW_ELSE Stmt
+Stmt : WhileStmt Stmt
+Stmt : ForStmt Stmt
+Stmt : IfStmt Stmt
+Stmt : IfStmt NonIfStmt T_KW_ELSE Stmt
 
+IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --NN
+WhileStmt : T_KW_WHILE '(' Expr ')' --NN
+ForStmt : For '(' ForInit ForCond ForStep ')' --NN
 
 For : T_KW_FOR
 ForInit : ';' --AN
@@ -459,17 +463,7 @@ IdOpt : Id
 Target : NonTypeId
 
 Uint : T_UINT
-Uint : T_INT16
-Uint : T_INT32
-Uint : T_INT64
-Uint : T_UINT16
-Uint : T_UINT32
-Uint : T_UINT64
-
 Float : T_FLOAT
-Float : T_FLOAT16
-Float : T_FLOAT32
-Float : T_FLOAT64
 
 Strings : String
 Strings : Strings String

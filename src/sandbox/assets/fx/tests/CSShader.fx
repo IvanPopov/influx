@@ -79,7 +79,7 @@ void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3
 	{
 		// not very beautiful, but a cheap way not to
 		// think about the correctness of this counter
-		uavDeadIndices.IncrementCounter()
+		uavDeadIndices.IncrementCounter();
 		return;
 	}
 

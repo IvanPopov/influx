@@ -441,19 +441,19 @@ export class Parser implements IParser {
     }
 
 
-    addAdditionalFunction(sFuncName: string, fnRuleFunction: IRuleFunction): void {
+    addAdditionalFunction(funcName: string, fnRuleFunction: IRuleFunction): void {
         if (isNull(this._additionalFunctionsMap)) {
             this._additionalFunctionsMap = <IRuleFunctionMap>{};
         }
-        this._additionalFunctionsMap[sFuncName] = fnRuleFunction;
+        this._additionalFunctionsMap[funcName] = fnRuleFunction;
     }
 
 
-    addTypeId(sIdentifier: string): void {
+    addTypeId(identifier: string): void {
         if (isNull(this._typeIdMap)) {
             this._typeIdMap = <IMap<boolean>>{};
         }
-        this._typeIdMap[sIdentifier] = true;
+        this._typeIdMap[identifier] = true;
     }
 
 
@@ -1655,8 +1655,8 @@ export class Parser implements IParser {
         if (isNull(ParserConstructor)) {
             ParserConstructor = Parser;
         }
-
-        console.log('%c Creating parser....', 'background: #222; color: #bada55');
+        console.time();
+        verbose('%c Creating parser....', 'background: #222; color: #bada55');
         Parser.$parserParams = parserParams;
         Parser.$parser = new ParserConstructor();
 
@@ -1664,8 +1664,9 @@ export class Parser implements IParser {
             console.error('Could not initialize parser!');
             Parser.$parser = null;
         } else {
-            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
+            verbose('%c [ DONE ]', 'background: #222; color: #bada55');
         }
+        console.timeEnd();
 
         return Parser.$parser;
     }

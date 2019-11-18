@@ -1,7 +1,7 @@
 import { StmtInstruction } from "./StmtInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 import { isNull } from "../../common";
-import { IStmtInstruction, EInstructionTypes, IExprInstruction, IIfStmtInstruction } from "../../idl/IInstruction";
+import { IStmtInstruction, EInstructionTypes, IExprInstruction, IIfStmtInstruction, IAttributeInstruction } from "../../idl/IInstruction";
 import { IParseNode } from "../../idl/parser/IParser";
 
 
@@ -9,6 +9,7 @@ export interface IIfStmtInstructionSettings extends IInstructionSettings {
     cond: IExprInstruction;
     conseq: IStmtInstruction;
     contrary?: IStmtInstruction;
+    attributes?: IAttributeInstruction[];
 }
 
 
@@ -17,49 +18,36 @@ export interface IIfStmtInstructionSettings extends IInstructionSettings {
  * ( if || if_else ) Expr Stmt [Stmt]
  */
 export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruction {
-    protected _cond: IExprInstruction;
-    protected _conseq: IStmtInstruction;
-    protected _contrary: IStmtInstruction;
-
+    readonly cond: IExprInstruction;
+    readonly conseq: IStmtInstruction;
+    readonly contrary: IStmtInstruction;
+    readonly attributes: IAttributeInstruction[];
     
-    constructor({ cond, conseq, contrary = null, ...settings }: IIfStmtInstructionSettings) {
-
+    constructor({ cond, conseq, attributes = null, contrary = null, ...settings }: IIfStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IfStmtInstruction, ...settings });
 
-        this._cond = Instruction.$withParent(cond, this);
-        this._conseq = Instruction.$withParent(conseq, this);
-        this._contrary = Instruction.$withParent(contrary, this);
+        this.cond = Instruction.$withParent(cond, this);
+        this.conseq = Instruction.$withParent(conseq, this);
+        this.contrary = Instruction.$withParent(contrary, this);
+        this.attributes = (attributes || []).map(attr => Instruction.$withParent(attr, this));
     }
 
 
-    get cond(): IExprInstruction {
-        return this._cond;
-    }
-
-
-    get conseq(): IStmtInstruction {
-        return this._conseq;
-    }
-
-
-    get contrary(): IStmtInstruction {
-        return this._contrary;
-    }
 
 
     toCode(): string {
         var code: string = "";
-        if (isNull(this._contrary)) {
+        if (isNull(this.contrary)) {
             code += "if(";
-            code += this._cond.toCode() + ")";
-            code += this._conseq.toCode();
+            code += this.cond.toCode() + ")";
+            code += this.conseq.toCode();
         }
         else {
             code += "if(";
-            code += this._cond.toCode() + ") ";
-            code += this._conseq.toCode();
+            code += this.cond.toCode() + ") ";
+            code += this.conseq.toCode();
             code += "else ";
-            code += this._contrary.toCode();
+            code += this.contrary.toCode();
         }
 
         return code;

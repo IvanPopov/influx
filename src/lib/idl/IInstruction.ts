@@ -55,6 +55,7 @@ export enum EInstructionTypes {
     k_WhileStmtInstruction,
     k_ForStmtInstruction,
     k_IfStmtInstruction,
+    k_AttributeInstruction,
     k_DeclStmtInstruction,
     k_ReturnStmtInstruction,
     k_SemicolonStmtInstruction,
@@ -491,7 +492,7 @@ export interface IFunctionCallInstruction extends IExprInstruction {
 }
 
 
-export interface ILiteralInstruction<T> extends IExprInstruction {
+export interface ILiteralInstruction<T = number | boolean | string> extends IExprInstruction {
     readonly value: T;
 }
 
@@ -525,6 +526,10 @@ export interface IAnnotationInstruction extends IInstruction {
 export interface IStmtInstruction extends IInstruction {
 }
 
+export interface IAttributeInstruction extends IInstruction {
+    readonly name: string;
+    readonly args: ILiteralInstruction<number | boolean>[];
+}
 
 export interface IForStmtInstruction extends IStmtInstruction {
     readonly init: ITypedInstruction;

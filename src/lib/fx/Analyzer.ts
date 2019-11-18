@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction, IAttributeInstruction, ILiteralInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { IDiagnosticReport } from '@lib/util/Diagnostics';
@@ -58,6 +58,7 @@ import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
 import { visitor } from './Visitors';
+import { AttributeInstruction } from './instructions/AttributeInstruction';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -2165,11 +2166,15 @@ export class Analyzer {
 
 
     protected analyzeStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
-
         const children = sourceNode.children;
-        const firstNodeName: string = children[children.length - 1].name;
+        let nonAttrNode = children.length;
+        let nonAttrNodeName: string;
 
-        switch (firstNodeName) {
+        do {
+            nonAttrNodeName = children[--nonAttrNode].name;
+        } while (nonAttrNodeName === 'Attribute');
+
+        switch (nonAttrNodeName) {
             case 'SimpleStmt':
                 return this.analyzeSimpleStmt(context, program, children[0]);
             case 'UseDecl':
@@ -2414,6 +2419,49 @@ export class Analyzer {
 
     /**
      * AST example:
+     *    Attribute
+     *         T_PUNCTUATOR_93 = ']'
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_UINT = '3'
+     *         T_PUNCTUATOR_44 = ','
+     *         T_UINT = '2'
+     *         T_PUNCTUATOR_44 = ','
+     *         T_UINT = '1'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_NON_TYPE_ID = 'loop'
+     *         T_PUNCTUATOR_91 = '['
+     */
+    protected analyzeAttribute(context: Context, program: ProgramScope, sourceNode: IParseNode): IAttributeInstruction {
+        const scope = program.currentScope;
+        const children = sourceNode.children;
+        const name = children[children.length - 2].value;
+
+        let args: ILiteralInstruction<number | boolean>[] = null;
+
+        if (children.length > 3) {
+            let argumentExpr: ILiteralInstruction<boolean | number> = null;
+
+            args = [];
+            for (let i = children.length - 4; i > 1; i--) {
+                if (children[i].value !== ',') {
+                    argumentExpr = <ILiteralInstruction<number | boolean>>this.analyzeSimpleExpr(context, program, children[i]);
+                    
+                    // TODO: emit diagnostics error
+                    assert(
+                        argumentExpr.instructionType === EInstructionTypes.k_BoolInstruction ||
+                        argumentExpr.instructionType === EInstructionTypes.k_FloatInstruction || 
+                        argumentExpr.instructionType === EInstructionTypes.k_IntInstruction);
+
+                    args.push(argumentExpr);
+                }
+            }
+        }
+
+        return new AttributeInstruction({ scope, sourceNode, name, args });
+    }
+
+    /**
+     * AST example:
      *    Stmt
      *       + Stmt 
      *         T_KW_ELSE = 'else'
@@ -2422,19 +2470,26 @@ export class Analyzer {
      *         T_UINT = '1'
      *         T_PUNCTUATOR_40 = '('
      *         T_KW_IF = 'if'
+     *       + Attribute 
+     *       + Attribute 
      */
     protected analyzeIfStmt(context: Context, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
         const scope = program.currentScope;
         const children = sourceNode.children;
-        const isIfElse = (children.length === 7);
 
-        const cond = this.analyzeExpr(context, program, children[children.length - 3]);
+        let attributes = [];
+        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
+            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        }
+
+        const isIfElse = (children.length - attributes.length === 7);
+
+        const cond = this.analyzeExpr(context, program, children[children.length - 3 - attributes.length]);
         const conditionType = <IVariableTypeInstruction>cond.type;
         const boolType = T_BOOL;
 
         let conseq: IStmtInstruction = null;
         let contrary: IStmtInstruction = null;
-        let operator: string = null;
 
         if (!conditionType.isEqual(boolType)) {
             context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: String(conditionType) });
@@ -2442,16 +2497,14 @@ export class Analyzer {
         }
 
         if (isIfElse) {
-            operator = 'if_else';
             conseq = this.analyzeNonIfStmt(context, program, children[2]);
             contrary = this.analyzeStmt(context, program, children[0]);
         }
         else {
-            operator = 'if';
             conseq = this.analyzeNonIfStmt(context, program, children[0]);
         }
 
-        const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary });
+        const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attributes });
         checkInstruction(context, ifStmt, ECheckStage.CODE_TARGET_SUPPORT);
 
         return ifStmt;

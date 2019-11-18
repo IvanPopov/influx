@@ -31,6 +31,10 @@ export class EffectParser extends Parser {
         this.addTypeId("int3");
         this.addTypeId("int4");
 
+        this.addTypeId("uint2");
+        this.addTypeId("uint3");
+        this.addTypeId("uint4");
+
         this.addTypeId("bool2");
         this.addTypeId("bool3");
         this.addTypeId("bool4");
