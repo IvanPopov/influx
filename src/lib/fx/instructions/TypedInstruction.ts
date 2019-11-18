@@ -1,8 +1,6 @@
-import { Instruction, IInstructionSettings } from "./Instruction";
-import { ITypedInstruction, ITypeInstruction, EInstructionTypes, IInstruction, ITypeUseInfoContainer, EVarUsedMode } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { isNull } from "../../common";
-import { IParseNode } from "../../idl/parser/IParser";
+import { isNull } from "@lib/common";
+import { EInstructionTypes, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 
 export interface ITypedInstructionSettings extends IInstructionSettings {
@@ -14,7 +12,7 @@ export class TypedInstruction extends Instruction implements ITypedInstruction {
     protected _type: ITypeInstruction;
 
     constructor({ type, ...settings }: ITypedInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_TypedInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Typed, ...settings });
         
         this._type = Instruction.$withNoParent(type);
 

@@ -24,7 +24,7 @@ export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruc
     readonly attributes: IAttributeInstruction[];
     
     constructor({ cond, conseq, attributes = null, contrary = null, ...settings }: IIfStmtInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_IfStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_IfStmt, ...settings });
 
         this.cond = Instruction.$withParent(cond, this);
         this.conseq = Instruction.$withParent(conseq, this);

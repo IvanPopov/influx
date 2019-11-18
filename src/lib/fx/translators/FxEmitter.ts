@@ -78,10 +78,10 @@ export class FxEmitter extends CodeEmitter {
         }
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_PartFxDeclInstruction:
+            case EInstructionTypes.k_PartFxDecl:
                 this.emitPartFxDecl(instr as IPartFxInstruction);
                 break;
-            case EInstructionTypes.k_PartFxPassInstruction:
+            case EInstructionTypes.k_PartFxPass:
                 this.emitPartFxPass(instr as IPartFxPassInstruction);
                 break;
             default:

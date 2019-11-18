@@ -20,7 +20,7 @@ export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprI
 
 
     constructor({ expr, operator, ...settings }: IUnaryExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_UnaryExprInstruction, type: expr.type, ...settings });
+        super({ instrType: EInstructionTypes.k_UnaryExpr, type: expr.type, ...settings });
         
         this._expr = Instruction.$withParent(expr, this);
         this._operator = operator;

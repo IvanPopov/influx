@@ -10,7 +10,7 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
     protected _evalResult: any;
 
     constructor({ ...settings }: ITypedInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ExprInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Expr, ...settings });
         this._evalResult = null;
     }
 
@@ -42,44 +42,44 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
      */
     static UnwindExpr(expr: IExprInstruction): IVariableDeclInstruction {
         switch(expr.instructionType) {
-            case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_PostfixPointExpr:
                 return ExprInstruction.UnwindExpr((<IPostfixPointInstruction>expr).element);
-            case EInstructionTypes.k_PostfixIndexInstruction:
+            case EInstructionTypes.k_PostfixIndexExpr:
                 return ExprInstruction.UnwindExpr((<IPostfixIndexInstruction>expr).element);
-            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_IdExpr:
                 return (<IIdExprInstruction>expr).decl;
-            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_ArithmeticExpr:
                 // arithmetic expression returns right-hand value;
                 return null;
-            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_InitExpr:
                 assert(false, 'init expression doesn\'t support unwind operation');
                 return null;
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_AssignmentExpr:
                 // todo: reseach how it work in HLSL
                 //// assigment expression returns right-hand value;
                 return ExprInstruction.UnwindExpr((<IAssignmentExprInstruction>expr).left);
-            case EInstructionTypes.k_CastExprInstruction:
+            case EInstructionTypes.k_CastExpr:
                 // cast expression returns right-hand value;
                 return null;
-            case EInstructionTypes.k_UnaryExprInstruction:
+            case EInstructionTypes.k_UnaryExpr:
                 // unary expression returns right-hand value;
                 return null;
-            case EInstructionTypes.k_RelationalExprInstruction:
+            case EInstructionTypes.k_RelationalExpr:
                 // relation expression returns right-hand value;
                 return null;
-            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_ConstructorCallExpr:
                 // ctor call expression is not allowed as l-value;
                 // todo: allow it?
                 return null;
-            case EInstructionTypes.k_ComplexExprInstruction:
+            case EInstructionTypes.k_ComplexExpr:
                 return ExprInstruction.UnwindExpr((<IComplexExprInstruction>expr).expr);
-            case EInstructionTypes.k_IntInstruction:
-            case EInstructionTypes.k_FloatInstruction:
-            case EInstructionTypes.k_StringInstruction:
-            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_IntExpr:
+            case EInstructionTypes.k_FloatExpr:
+            case EInstructionTypes.k_StringExpr:
+            case EInstructionTypes.k_BoolExpr:
                 // literal cannot be a left-hand value;
                 return null;
-            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FunctionCallExpr:
                 // function call expression returns right-hand value;
                 return null;
             default:

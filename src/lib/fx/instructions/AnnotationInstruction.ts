@@ -7,6 +7,6 @@ export class AnnotationInstruction extends Instruction implements IAnnotationIns
     // TODO: implement it!
 
     constructor({ ...settings }: IInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_AnnotationInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Annotation, ...settings });
     }
 }

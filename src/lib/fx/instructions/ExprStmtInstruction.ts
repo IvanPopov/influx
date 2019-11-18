@@ -15,7 +15,7 @@ export class ExprStmtInstruction extends StmtInstruction implements IExprStmtIns
     protected _expr: IExprInstruction;
 
     constructor({ expr, ...settings }: IExprStmtInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ExprStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_ExprStmt, ...settings });
 
         this._expr = Instruction.$withParent(expr, this);
     }

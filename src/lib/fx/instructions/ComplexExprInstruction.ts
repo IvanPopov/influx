@@ -18,7 +18,7 @@ export class ComplexExprInstruction extends ExprInstruction implements IComplexE
 
 
     constructor({ expr, ...settings }: IComplexExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ComplexExprInstruction, type: expr.type, ...settings });
+        super({ instrType: EInstructionTypes.k_ComplexExpr, type: expr.type, ...settings });
 
         this._expr = Instruction.$withParent(expr, this);
     }

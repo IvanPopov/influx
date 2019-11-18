@@ -24,7 +24,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
     private _isArray: boolean; // todo: remove
 
     constructor({ type, args = [], ...settings }: IInitExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_InitExprInstruction, type, ...settings });
+        super({ instrType: EInstructionTypes.k_InitExpr, type, ...settings });
 
         this._isArray = false;
         this._args = args.map(arg => Instruction.$withParent(arg, this));
@@ -107,7 +107,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             for (let i = 0; i < this.args.length; i++) {
                 testedInstruction = (<IExprInstruction>this.args[i]);
 
-                if (testedInstruction.instructionType === EInstructionTypes.k_InitExprInstruction) {
+                if (testedInstruction.instructionType === EInstructionTypes.k_InitExpr) {
                     isOk = (<IInitExprInstruction>testedInstruction).optimizeForVariableType(arrayElementType);
                     if (!isOk) {
                         return false;
@@ -115,7 +115,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 }
                 else {
                     if (SystemScope.isSamplerType(arrayElementType)) {
-                        if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockInstruction) {
+                        if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockExpr) {
                             return false;
                         }
                     }
@@ -135,10 +135,10 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             let firstInstruction = <IExprInstruction>this.args[0];
 
             if (this.args.length === 1 &&
-                firstInstruction.instructionType !== EInstructionTypes.k_InitExprInstruction) {
+                firstInstruction.instructionType !== EInstructionTypes.k_InitExpr) {
 
                 if (SystemScope.isSamplerType(type)) {
-                    if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockInstruction) {
+                    if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockExpr) {
                         return true;
                     }
                     else {

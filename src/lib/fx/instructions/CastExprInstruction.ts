@@ -19,7 +19,7 @@ export class CastExprInstruction extends ExprInstruction implements ICastExprIns
     private _srcExpr: IExprInstruction;
 
     constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_CastExprInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_CastExpr, ...settings });
 
         this._srcExpr = Instruction.$withParent(sourceExpr, this);
     }

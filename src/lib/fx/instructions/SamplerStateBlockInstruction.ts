@@ -26,7 +26,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
 
     constructor({ operator, params = [], ...settings }: ISamplerStateBlockInstructionSettings) {
         // todo: resolve type from texture type!
-        super({ instrType: EInstructionTypes.k_SamplerStateBlockInstruction, type: SystemScope.T_SAMPLER, ...settings } );
+        super({ instrType: EInstructionTypes.k_SamplerStateBlockExpr, type: SystemScope.T_SAMPLER, ...settings } );
         
         this._samplerParams = params.map(param => Instruction.$withParent(param, this));
         this._operator = operator;

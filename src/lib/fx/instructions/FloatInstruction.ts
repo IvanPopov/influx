@@ -14,7 +14,7 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
     constructor({ value, scope, ...settings }: IFloatInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FloatInstruction, 
+        super({ instrType: EInstructionTypes.k_FloatExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes
             type: VariableTypeInstruction.wrapAsConst(T_FLOAT, SCOPE), scope, ...settings });
 

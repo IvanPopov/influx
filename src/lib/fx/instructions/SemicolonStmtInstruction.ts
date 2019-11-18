@@ -11,7 +11,7 @@ import { IInstructionSettings } from "./Instruction";
 export class SemicolonStmtInstruction extends StmtInstruction {
     
     constructor({ ...settings }: IInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SemicolonStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_SemicolonStmt, ...settings });
     }
 
     toCode(): string {

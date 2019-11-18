@@ -1,9 +1,5 @@
-import { TypedInstruction, ITypedInstructionSettings } from "./TypedInstruction";
-import { IDeclInstruction, IAnnotationInstruction, EInstructionTypes, IIdInstruction, IInstruction } from "../../idl/IInstruction";
-import { IMap } from "../../idl/IMap";
-import { IParseNode } from "../../idl/parser/IParser";
+import { EInstructionTypes, IAnnotationInstruction, IDeclInstruction, IIdInstruction } from "@lib/idl/IInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
-import { IdInstruction } from "./IdInstruction";
 
 export interface IDeclInstructionSettings extends IInstructionSettings {
     readonly semantic?: string;
@@ -16,7 +12,7 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
     protected _annotation: IAnnotationInstruction;
     
     constructor({ semantic = null, annotation = null, ...settings }: IDeclInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_DeclInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Decl, ...settings });
 
         this._semantic = semantic;
         this._annotation = Instruction.$withParent(annotation, this);

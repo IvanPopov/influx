@@ -18,7 +18,7 @@ export class StmtBlockInstruction extends StmtInstruction implements IStmtBlockI
 
     
     constructor({ stmtList, ...settings }: IStmtBlockInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_StmtBlockInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_StmtBlock, ...settings });
         this._stmtList = stmtList.map(stmt => Instruction.$withParent(stmt, this));
     }
 

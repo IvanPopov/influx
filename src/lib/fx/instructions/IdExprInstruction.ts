@@ -15,7 +15,7 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     protected _decl: IVariableDeclInstruction; // << move to resolveDecl() method.
 
     constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_IdExprInstruction, type: decl.type, ...settings });
+        super({ instrType: EInstructionTypes.k_IdExpr, type: decl.type, ...settings });
 
         this._id = Instruction.$withParent(id, this);
         this._decl = decl;

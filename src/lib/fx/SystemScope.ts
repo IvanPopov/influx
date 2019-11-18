@@ -576,7 +576,7 @@ function addSystemFunctions(): void {
 function getSystemType(typeName: string): SystemTypeInstruction {
     //boolean, string, float and others
     let type = <SystemTypeInstruction>scope.findType(typeName);
-    assert(!type || (type.instructionType === EInstructionTypes.k_SystemTypeInstruction));
+    assert(!type || (type.instructionType === EInstructionTypes.k_SystemType));
     return type;
 }
 

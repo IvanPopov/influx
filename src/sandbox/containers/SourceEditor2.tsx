@@ -97,7 +97,7 @@ class MyCodeLensProvider implements monaco.languages.CodeLensProvider {
                     }
 
                     if (partFx.particle &&
-                            partFx.particle.instructionType !== EInstructionTypes.k_SystemTypeInstruction) {
+                            partFx.particle.instructionType !== EInstructionTypes.k_SystemType) {
                         sourceNode = partFx.particle.sourceNode;
                         loc = sourceNode.loc;
 

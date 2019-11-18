@@ -21,7 +21,7 @@ export class TechniqueInstruction<PassType extends IPassInstruction> extends Dec
     protected _passList: PassType[];
 
     constructor({ name, techniqueType, passList, ...settings }: ITechniqueInstructionSettings<PassType>) {
-        super({ instrType: EInstructionTypes.k_TechniqueInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_TechniqueDecl, ...settings });
         
         this._name = name;
         this._passList = passList.map(pass => Instruction.$withParent(pass, this));

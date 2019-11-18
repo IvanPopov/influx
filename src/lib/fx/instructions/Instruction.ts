@@ -119,7 +119,7 @@ export class Instruction implements IInstruction {
 
     $withParent<T extends IInstruction>(parent: IInstruction | null): T {
         console.assert(this._parent == null, "parent redefenition detected!");
-        if (this.instructionType === EInstructionTypes.k_SystemTypeInstruction && (this as any).name === 'float' && this._parent == null && parent != null) {
+        if (this.instructionType === EInstructionTypes.k_SystemType && (this as any).name === 'float' && this._parent == null && parent != null) {
             debugger;
         }
         this._parent = parent;
@@ -136,22 +136,22 @@ export class Instruction implements IInstruction {
 
     static isExpression(instr: IInstruction): boolean {
         switch (instr.instructionType) {
-            case EInstructionTypes.k_ConditionalExprInstruction:
-            case EInstructionTypes.k_ConstructorCallInstruction:
-            case EInstructionTypes.k_AssignmentExprInstruction:
-            case EInstructionTypes.k_ArithmeticExprInstruction:
-            case EInstructionTypes.k_InitExprInstruction:
-            case EInstructionTypes.k_IdExprInstruction:
-            case EInstructionTypes.k_FunctionCallInstruction:
-            case EInstructionTypes.k_FloatInstruction:
-            case EInstructionTypes.k_IntInstruction:
-            case EInstructionTypes.k_BoolInstruction:
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
-            case EInstructionTypes.k_PostfixIndexInstruction:
-            case EInstructionTypes.k_PostfixPointInstruction:
-            case EInstructionTypes.k_ComplexExprInstruction:
-            case EInstructionTypes.k_CastExprInstruction:
-            case EInstructionTypes.k_UnaryExprInstruction:
+            case EInstructionTypes.k_ConditionalExpr:
+            case EInstructionTypes.k_ConstructorCallExpr:
+            case EInstructionTypes.k_AssignmentExpr:
+            case EInstructionTypes.k_ArithmeticExpr:
+            case EInstructionTypes.k_InitExpr:
+            case EInstructionTypes.k_IdExpr:
+            case EInstructionTypes.k_FunctionCallExpr:
+            case EInstructionTypes.k_FloatExpr:
+            case EInstructionTypes.k_IntExpr:
+            case EInstructionTypes.k_BoolExpr:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
+            case EInstructionTypes.k_PostfixIndexExpr:
+            case EInstructionTypes.k_PostfixPointExpr:
+            case EInstructionTypes.k_ComplexExpr:
+            case EInstructionTypes.k_CastExpr:
+            case EInstructionTypes.k_UnaryExpr:
                 // todo: add other types!!!
                 return true;
         }
@@ -162,10 +162,10 @@ export class Instruction implements IInstruction {
 
     static isLiteral(instr: IInstruction): boolean {
         switch (instr.instructionType) {
-            case EInstructionTypes.k_IntInstruction:
-            case EInstructionTypes.k_FloatInstruction:
-            case EInstructionTypes.k_BoolInstruction:
-            case EInstructionTypes.k_StringInstruction:
+            case EInstructionTypes.k_IntExpr:
+            case EInstructionTypes.k_FloatExpr:
+            case EInstructionTypes.k_BoolExpr:
+            case EInstructionTypes.k_StringExpr:
                 return true;
         }
 

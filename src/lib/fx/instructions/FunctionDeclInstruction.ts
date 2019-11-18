@@ -1,7 +1,6 @@
-import { EInstructionTypes, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IStmtBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IStmtBlockInstruction } from "@lib/idl/IInstruction";
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
-import { assert, isNull } from "@lib/common";
 
 
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {
@@ -19,7 +18,7 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     protected _implementation: IStmtBlockInstruction;
 
     constructor({ definition, implementation = null, ...settings }: IFunctionDeclInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FunctionDeclInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_FunctionDecl, ...settings });
 
         this._definition = Instruction.$withParent(definition, this);
         this._implementation = Instruction.$withParent(implementation, this);
@@ -36,20 +35,18 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
 
-    get arguments(): IVariableDeclInstruction[] {
-        console.error("@not_implemented");
-        return null;
-    }
-
-    // shortcut for definition.name
     get name(): string {
         return this.def.name;
     }
 
 
-    // shortcut for definition.id
     get id(): IIdInstruction {
         return this.def.id;
+    }
+
+
+    get semantic(): string {
+        return this.def.semantic;
     }
 
 
@@ -63,9 +60,4 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
         }
         return code;
     }
-
-    // $setImplementation(impl: IStmtBlockInstruction): void {
-    //     assert(isNull(this.implementation));
-    //     this._implementation = impl;
-    // }
 }

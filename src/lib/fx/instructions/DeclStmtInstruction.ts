@@ -15,7 +15,7 @@ export class DeclStmtInstruction extends StmtInstruction implements IDeclStmtIns
 
     
     constructor({ declList = null, ...settings }: IDeclStmtInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_DeclStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_DeclStmt, ...settings });
         
         this._declList = (declList || []).map(decl => Instruction.$withParent(decl, this));
     }

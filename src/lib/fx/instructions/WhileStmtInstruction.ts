@@ -22,7 +22,7 @@ export class WhileStmtInstruction extends StmtInstruction implements IWhileStmtI
 
     
     constructor({ cond, body, operator, ...settings }: IWhileStmtInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_WhileStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_WhileStmt, ...settings });
         
         this._cond = Instruction.$withParent(cond, this);
         this._body = Instruction.$withParent(body, this);

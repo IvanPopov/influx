@@ -46,14 +46,14 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
  
     constructor({ id, type, init = null, usageFlags = 0, ...settings }: IVariableDeclInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_VariableDeclInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_VariableDecl, ...settings });
 
         this._id = Instruction.$withParent(id, this);
         this._type = Instruction.$withNoParent(type);
         this._initExpr = Instruction.$withParent(init, this);
         this._usageFlags = usageFlags;
 
-        assert(!this.isParameter() || (isNull(this.parent) || this.parent.instructionType == EInstructionTypes.k_FunctionDefInstruction));
+        assert(!this.isParameter() || (isNull(this.parent) || this.parent.instructionType == EInstructionTypes.k_FunctionDef));
         assert(this.isLocal() || !this.isLocal());
         assert(!this.isParameter() || this.isLocal());
     }
@@ -93,7 +93,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
             var name = '';
             var parentType = this.parent.instructionType;
 
-            if (parentType === EInstructionTypes.k_VariableTypeInstruction) {
+            if (parentType === EInstructionTypes.k_VariableType) {
                 name = VariableTypeInstruction.resolveVariableDeclFullName(<IVariableTypeInstruction>this.parent);
             }
 
@@ -130,9 +130,9 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         }
 
         var eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_VariableTypeInstruction ||
-            eParentType === EInstructionTypes.k_ComplexTypeInstruction ||
-            eParentType === EInstructionTypes.k_SystemTypeInstruction) {
+        if (eParentType === EInstructionTypes.k_VariableType ||
+            eParentType === EInstructionTypes.k_ComplexType ||
+            eParentType === EInstructionTypes.k_SystemType) {
             return true;
         }
 
@@ -174,7 +174,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
             return -1;
         }
         // all parameters must be a children on function definition!
-        assert(decl.parent.instructionType === EInstructionTypes.k_FunctionDefInstruction);
+        assert(decl.parent.instructionType === EInstructionTypes.k_FunctionDef);
         return (<IFunctionDefInstruction>decl.parent).params.indexOf(decl);
     }
 

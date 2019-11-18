@@ -41,7 +41,7 @@ export class GlslEmitter extends CodeEmitter {
 
     protected isVaryingOrAttributeAlias(pfxp: IPostfixPointInstruction) {
         if (this.isMain() && this.mode !== 'raw') {
-            if (pfxp.element.instructionType === EInstructionTypes.k_IdExprInstruction) {
+            if (pfxp.element.instructionType === EInstructionTypes.k_IdExpr) {
                 const id = pfxp.element as IdExprInstruction;
                 if (id.decl.isParameter() && !id.decl.isUniform()) {
                     return true;

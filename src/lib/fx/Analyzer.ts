@@ -306,9 +306,9 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
 
     stack = [...stack, func.instructionID];
     visitor(func.impl, instr => {
-        if (instr.instructionType === EInstructionTypes.k_FunctionCallInstruction) {
+        if (instr.instructionType === EInstructionTypes.k_FunctionCallExpr) {
             let decl = (instr as IFunctionCallInstruction).decl;
-            if (decl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
+            if (decl.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
                 return;
             }
 
@@ -1159,8 +1159,8 @@ export class Analyzer {
         //     }
         // }
 
-        if (func.instructionType === EInstructionTypes.k_FunctionDeclInstruction ||
-            func.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
+        if (func.instructionType === EInstructionTypes.k_FunctionDecl ||
+            func.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
             if (!isNull(args)) {
                 const funcArguments = func.def.params;
 
@@ -2004,7 +2004,7 @@ export class Analyzer {
 
             // stmtList = stmtList.slice().reverse();
             for (let i = stmtList.length - 1; i >= 0; --i) {
-                if (stmtList[i].instructionType == EInstructionTypes.k_ReturnStmtInstruction) {
+                if (stmtList[i].instructionType == EInstructionTypes.k_ReturnStmt) {
                     if (i != stmtList.length - 1) {
                         context.error(stmtList[i + 1].sourceNode, EErrors.UnreachableCode);
                     }
@@ -2448,9 +2448,9 @@ export class Analyzer {
                     
                     // TODO: emit diagnostics error
                     assert(
-                        argumentExpr.instructionType === EInstructionTypes.k_BoolInstruction ||
-                        argumentExpr.instructionType === EInstructionTypes.k_FloatInstruction || 
-                        argumentExpr.instructionType === EInstructionTypes.k_IntInstruction);
+                        argumentExpr.instructionType === EInstructionTypes.k_BoolExpr ||
+                        argumentExpr.instructionType === EInstructionTypes.k_FloatExpr || 
+                        argumentExpr.instructionType === EInstructionTypes.k_IntExpr);
 
                     args.push(argumentExpr);
                 }
@@ -3300,7 +3300,7 @@ g
 
         if (operator === '!') {
             const boolType = <IVariableTypeInstruction>T_BOOL;
-            validate(boolType, EInstructionTypes.k_VariableDeclInstruction);
+            validate(boolType, EInstructionTypes.k_VariableDecl);
 
             if (type.isEqual(boolType)) {
                 return boolType;

@@ -18,7 +18,7 @@ export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclIns
     protected _type: ITypeInstruction;
 
     constructor({ type, ...settings }: ITypeDeclInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_TypeDeclInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_TypeDecl, ...settings });
         
         this._type =  Instruction.$withParent(type, this);
 

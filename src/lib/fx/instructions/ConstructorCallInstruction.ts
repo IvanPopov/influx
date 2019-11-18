@@ -24,7 +24,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
     
 
     constructor({ ctor, args = null, ...settings }: IConstructorCallInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ConstructorCallInstruction, type: ctor.subType, ...settings });
+        super({ instrType: EInstructionTypes.k_ConstructorCallExpr, type: ctor.subType, ...settings });
 
         this._args = (args || []).map(arg => Instruction.$withParent(arg, this));
         this._ctor = Instruction.$withParent(ctor, this);

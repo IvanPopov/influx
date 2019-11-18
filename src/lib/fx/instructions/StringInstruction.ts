@@ -17,7 +17,7 @@ export class StringInstruction extends ExprInstruction implements ILiteralInstru
 	 * EMPTY_OPERATOR EMPTY_ARGUMENTS
 	 */
     constructor({ value, scope, ...settings }: IStringInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_StringInstruction, 
+        super({ instrType: EInstructionTypes.k_StringExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes
             type: VariableTypeInstruction.wrapAsConst(T_STRING, SCOPE), scope, ...settings });
         

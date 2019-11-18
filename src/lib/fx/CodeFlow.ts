@@ -96,13 +96,13 @@ export class Flow {
         }
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_DeclStmtInstruction:
+            case EInstructionTypes.k_DeclStmt:
             {
                 let deps: INode[] = (<DeclStmtInstruction>instr).declList.map( decl => this.placeUnknown(decl) );
                 return new Node(instr, deps);
             }
 
-            case EInstructionTypes.k_VariableDeclInstruction:
+            case EInstructionTypes.k_VariableDecl:
             {
                 let variable = <IVariableDeclInstruction>instr;
                 let id = variable.id;
@@ -116,16 +116,16 @@ export class Flow {
                 return local;
             }
 
-            case EInstructionTypes.k_ReturnStmtInstruction:
+            case EInstructionTypes.k_ReturnStmt:
             {
                 let ret = <ReturnStmtInstruction>instr;
                 return new Node(instr, [ this.placeExpr(ret.expr) ]);
             }
 
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
-            case EInstructionTypes.k_ArithmeticExprInstruction:
-            case EInstructionTypes.k_IdExprInstruction:
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
+            case EInstructionTypes.k_ArithmeticExpr:
+            case EInstructionTypes.k_IdExpr:
+            case EInstructionTypes.k_AssignmentExpr:
             {
                 return this.placeExpr(instr);
             }
@@ -146,21 +146,21 @@ export class Flow {
         assert(Instruction.isExpression(instr));
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_InitExpr:
             {
                 let init = <IInitExprInstruction>instr;
                 assert(!init.isArray());
                 return this.placeExpr(init.args[0]);
             }
             
-            case EInstructionTypes.k_IntInstruction:
-            case EInstructionTypes.k_FloatInstruction:
-            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_IntExpr:
+            case EInstructionTypes.k_FloatExpr:
+            case EInstructionTypes.k_BoolExpr:
             {
                 return new Node(instr);
             }
 
-            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_ArithmeticExpr:
             {
                 let arithmetic = <ArithmeticExprInstruction>instr;
                 let left = this.placeExpr(arithmetic.left);
@@ -169,7 +169,7 @@ export class Flow {
                 return new Node(instr, [ left, right ]);
             }
 
-            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_IdExpr:
             {
                 let idExpr = <IdExprInstruction>instr;
                 let local = this.locals[localID(idExpr)];
@@ -180,12 +180,12 @@ export class Flow {
                 return local;
             }
 
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_AssignmentExpr:
             {
                 let assign = <IAssignmentExprInstruction>instr;
                 let isSubstitution = (assign.operator === '='); // todo: refactor this!
                 
-                assert(assign.left.instructionType === EInstructionTypes.k_IdExprInstruction);
+                assert(assign.left.instructionType === EInstructionTypes.k_IdExpr);
                 let left = this.placeExpr(assign.left);
                 assert(left === this.locals[localID(<IIdExprInstruction>assign.left)]);
 
@@ -198,7 +198,7 @@ export class Flow {
                 return right;
             }
 
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
             {
                 let postfix = <PostfixArithmeticInstruction>instr;
 

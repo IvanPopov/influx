@@ -24,7 +24,7 @@ export class PostfixArithmeticInstruction extends ExprInstruction implements IPo
 
     
     constructor({ expr, operator, ...settings }: IPostfixArithmeticInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_PostfixArithmeticInstruction, type: expr.type, ...settings });
+        super({ instrType: EInstructionTypes.k_PostfixArithmeticExpr, type: expr.type, ...settings });
 
         this._operator = operator;
         this._expr = Instruction.$withParent(expr, this);

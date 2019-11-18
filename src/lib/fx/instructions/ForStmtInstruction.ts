@@ -24,7 +24,7 @@ export class ForStmtInstruction extends StmtInstruction implements IForStmtInstr
     protected _body: IStmtInstruction;
 
     constructor({ init = null, cond = null, step = null, body = null, ...settings }: IForStmtInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ForStmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_ForStmt, ...settings });
 
         this._init = Instruction.$withParent(init, this);
         this._cond = Instruction.$withParent(cond, this);
@@ -74,7 +74,7 @@ export class ForStmtInstruction extends StmtInstruction implements IForStmtInstr
             return false;
         }
 
-        if (this._init.instructionType !== EInstructionTypes.k_VariableDeclInstruction) {
+        if (this._init.instructionType !== EInstructionTypes.k_VariableDecl) {
             this._setError(EAnalyzerErrors.InvalidForInitExpr);
             return false;
         }
@@ -84,14 +84,14 @@ export class ForStmtInstruction extends StmtInstruction implements IForStmtInstr
             return false;
         }
 
-        if (this._cond.instructionType !== EInstructionTypes.k_RelationalExprInstruction) {
+        if (this._cond.instructionType !== EInstructionTypes.k_RelationalExpr) {
             this._setError(EAnalyzerErrors.InvalidForConditionRelation);
             return false;
         }
 
-        if (this._step.instructionType === EInstructionTypes.k_UnaryExprInstruction ||
-            this._step.instructionType === EInstructionTypes.k_AssignmentExprInstruction ||
-            this._step.instructionType === EInstructionTypes.k_PostfixArithmeticInstruction) {
+        if (this._step.instructionType === EInstructionTypes.k_UnaryExpr ||
+            this._step.instructionType === EInstructionTypes.k_AssignmentExpr ||
+            this._step.instructionType === EInstructionTypes.k_PostfixArithmeticExpr) {
             
             // todo: rewrite this check!!
             // var sOperator: string = this._step.operator;

@@ -34,7 +34,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         declaration = null, 
         ...settings
     }: ISystemTypeInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SystemTypeInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_SystemType, ...settings });
 
         this._name = name;
         this._size = size;

@@ -26,12 +26,12 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     protected _annotation: IAnnotationInstruction;
 
     constructor({ id = null, vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_PassInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_PassDecl, ...settings });
 
         this._passStateMap = {};
         PassInstruction.clearRenderStateMap(this._passStateMap);
         PassInstruction.copyRenderStateMap(renderStates, this._passStateMap);
-
+ 
         this._vertexShader = Instruction.$withNoParent(vertexShader);
         this._pixelShader = Instruction.$withNoParent(pixelShader);
 

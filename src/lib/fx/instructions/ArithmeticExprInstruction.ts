@@ -24,7 +24,7 @@ export class ArithmeticExprInstruction extends ExprInstruction implements IArith
     protected _operator: ArithmeticOperator;
 
     constructor({ left, right, operator, ...settings }: IArithmeticExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ArithmeticExprInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_ArithmeticExpr, ...settings });
 
         this._leftOperand = Instruction.$withParent(left, this);
         this._rightOperand = Instruction.$withParent(right, this);

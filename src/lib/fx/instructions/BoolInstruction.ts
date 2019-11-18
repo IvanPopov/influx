@@ -12,7 +12,7 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
     protected _value: boolean;
 
     constructor({ value, scope, ...settings }: IBoolInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_BoolInstruction, 
+        super({ instrType: EInstructionTypes.k_BoolExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes
             type: VariableTypeInstruction.wrapAsConst(T_BOOL, SCOPE), scope, ...settings });
 

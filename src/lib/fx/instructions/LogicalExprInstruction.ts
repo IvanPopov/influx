@@ -23,7 +23,7 @@ export class LogicalExprInstruction extends ExprInstruction implements ILogicalE
     protected _rightOperand: IExprInstruction;
 
     constructor({ left, right, operator, ...settings }: ILogicalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_LogicalExprInstruction, type: SystemScope.T_BOOL, ...settings });
+        super({ instrType: EInstructionTypes.k_LogicalExpr, type: SystemScope.T_BOOL, ...settings });
 
         this._leftOperand = Instruction.$withParent(left, this);
         this._rightOperand = Instruction.$withParent(right, this);

@@ -18,7 +18,7 @@ export class PartFxPassInstruction extends PassInstruction implements IPartFxPas
     readonly instanceCount: number;
 
     constructor({ sorting = false, instanceCount = 1, prerenderRoutine, geometry, ...settings }: IPartFxPassInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_PartFxPassInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_PartFxPass, ...settings });
         
         this.sorting = sorting;
         this.prerenderRoutine = prerenderRoutine;

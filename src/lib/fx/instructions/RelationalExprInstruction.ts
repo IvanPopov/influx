@@ -22,7 +22,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IRelat
 
 
     constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_RelationalExprInstruction, type: SystemScope.T_BOOL, ...settings });
+        super({ instrType: EInstructionTypes.k_RelationalExpr, type: SystemScope.T_BOOL, ...settings });
         this._leftOperand = left;
         this._rightOperand = right;
         this._operator = operator;

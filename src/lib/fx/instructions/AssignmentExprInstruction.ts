@@ -26,7 +26,7 @@ export class AssignmentExprInstruction extends ExprInstruction implements IAssig
     protected _operator: AssigmentOperator;
 
     constructor({ left, right, operator, ...settings }: IAssignmentExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_AssignmentExprInstruction, type: left.type, ...settings });
+        super({ instrType: EInstructionTypes.k_AssignmentExpr, type: left.type, ...settings });
 
         this._leftValue = Instruction.$withParent(left, this);
         this._rightValue = Instruction.$withParent(right, this);

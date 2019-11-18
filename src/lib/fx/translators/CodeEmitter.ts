@@ -63,7 +63,7 @@ export class CodeEmitter extends BaseEmitter {
             }
         }
 
-        if (type.instructionType === EInstructionTypes.k_VariableTypeInstruction) {
+        if (type.instructionType === EInstructionTypes.k_VariableType) {
             const vtype = type as IVariableTypeInstruction;
             usages = vtype.usages as string[];
         }
@@ -187,39 +187,39 @@ export class CodeEmitter extends BaseEmitter {
         | ISamplerStateBlockInstruction
         */
         switch (expr.instructionType) {
-            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_ArithmeticExpr:
                 return this.emitArithmetic(expr as IArithmeticExprInstruction);
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_AssignmentExpr:
                 return this.emitAssigment(expr as IAssignmentExprInstruction);
-            case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_PostfixPointExpr:
                 return this.emitPostfixPoint(expr as IPostfixPointInstruction);
-            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_IdExpr:
                 return this.emitIdentifier(expr as IIdExprInstruction);
-            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FunctionCallExpr:
                 return this.emitFCall(expr as IFunctionCallInstruction);
-            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_ConstructorCallExpr:
                 return this.emitCCall(expr as IConstructorCallInstruction);
-            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_FloatExpr:
                 return this.emitFloat(expr as ILiteralInstruction<number>);
-            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_IntExpr:
                 return this.emitInteger(expr as ILiteralInstruction<number>);
-            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_BoolExpr:
                 return this.emitBool(expr as ILiteralInstruction<boolean>);
-            case EInstructionTypes.k_ComplexExprInstruction:
+            case EInstructionTypes.k_ComplexExpr:
                 return this.emitComplexExpr(expr as IComplexExprInstruction);
-            case EInstructionTypes.k_CompileExprInstruction:
+            case EInstructionTypes.k_CompileExpr:
                 return this.emitCompile(expr as ICompileExprInstruction);
-            case EInstructionTypes.k_ConditionalExprInstruction:
+            case EInstructionTypes.k_ConditionalExpr:
                 return this.emitConditionalExpr(expr as IConditionalExprInstruction);
-            case EInstructionTypes.k_RelationalExprInstruction:
+            case EInstructionTypes.k_RelationalExpr:
                 return this.emitRelationalExpr(expr as IRelationalExprInstruction);
-            case EInstructionTypes.k_UnaryExprInstruction:
+            case EInstructionTypes.k_UnaryExpr:
                 return this.emitUnaryExpr(expr as IUnaryExprInstruction);
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
                 return this.emitPostfixArithmetic(expr as IPostfixArithmeticInstruction);
-            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_InitExpr:
                 return this.emitInitExpr(expr as IInitExprInstruction);
-            case EInstructionTypes.k_CastExprInstruction:
+            case EInstructionTypes.k_CastExpr:
                 return this.emitCast(expr as ICastExprInstruction);
             default:
                 assert(false, 'unsupported instruction found');
@@ -372,7 +372,7 @@ export class CodeEmitter extends BaseEmitter {
         const decl = call.decl;
         const args = call.args;
 
-        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDeclInstruction) {
+        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
             if (this.knownFunctions.indexOf(decl.instructionID) === -1) {
                 this.emitFunction(decl);
                 this.knownFunctions.push(decl.instructionID);
@@ -411,16 +411,16 @@ export class CodeEmitter extends BaseEmitter {
     */
     emitStmt(stmt: IInstruction) {
         switch (stmt.instructionType) {
-            case EInstructionTypes.k_DeclStmtInstruction:
+            case EInstructionTypes.k_DeclStmt:
                 (stmt as IDeclStmtInstruction).declList.forEach(dcl => (this.emitStmt(dcl)));
                 break;
-            case EInstructionTypes.k_ExprStmtInstruction:
+            case EInstructionTypes.k_ExprStmt:
                 this.emitExpressionStmt(stmt as IExprStmtInstruction);
                 break;
-            case EInstructionTypes.k_ReturnStmtInstruction:
+            case EInstructionTypes.k_ReturnStmt:
                 this.emitReturnStmt(stmt as IReturnStmtInstruction);
                 break;
-            case EInstructionTypes.k_VariableDeclInstruction:
+            case EInstructionTypes.k_VariableDecl:
                 this.emitVariableDecl(stmt as IVariableDeclInstruction);
                 this.emitChar(';');
                 break;
@@ -488,34 +488,34 @@ export class CodeEmitter extends BaseEmitter {
         }
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_ConditionalExprInstruction:
-            case EInstructionTypes.k_ConstructorCallInstruction:
-            case EInstructionTypes.k_AssignmentExprInstruction:
-            case EInstructionTypes.k_ArithmeticExprInstruction:
-            case EInstructionTypes.k_InitExprInstruction:
-            case EInstructionTypes.k_IdExprInstruction:
-            case EInstructionTypes.k_FunctionCallInstruction:
-            case EInstructionTypes.k_FloatInstruction:
-            case EInstructionTypes.k_IntInstruction:
-            case EInstructionTypes.k_BoolInstruction:
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
-            case EInstructionTypes.k_PostfixIndexInstruction:
-            case EInstructionTypes.k_PostfixPointInstruction:
-            case EInstructionTypes.k_ComplexExprInstruction:
-            case EInstructionTypes.k_CastExprInstruction:
-            case EInstructionTypes.k_UnaryExprInstruction:
+            case EInstructionTypes.k_ConditionalExpr:
+            case EInstructionTypes.k_ConstructorCallExpr:
+            case EInstructionTypes.k_AssignmentExpr:
+            case EInstructionTypes.k_ArithmeticExpr:
+            case EInstructionTypes.k_InitExpr:
+            case EInstructionTypes.k_IdExpr:
+            case EInstructionTypes.k_FunctionCallExpr:
+            case EInstructionTypes.k_FloatExpr:
+            case EInstructionTypes.k_IntExpr:
+            case EInstructionTypes.k_BoolExpr:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
+            case EInstructionTypes.k_PostfixIndexExpr:
+            case EInstructionTypes.k_PostfixPointExpr:
+            case EInstructionTypes.k_ComplexExpr:
+            case EInstructionTypes.k_CastExpr:
+            case EInstructionTypes.k_UnaryExpr:
                 this.emitExpression(instr as IExprInstruction);
                 break
-            case EInstructionTypes.k_DeclStmtInstruction:
-            case EInstructionTypes.k_ReturnStmtInstruction:
-            case EInstructionTypes.k_IfStmtInstruction:
-            case EInstructionTypes.k_StmtBlockInstruction:
-            case EInstructionTypes.k_ExprStmtInstruction:
-            case EInstructionTypes.k_WhileStmtInstruction:
-            case EInstructionTypes.k_ForStmtInstruction:
+            case EInstructionTypes.k_DeclStmt:
+            case EInstructionTypes.k_ReturnStmt:
+            case EInstructionTypes.k_IfStmt:
+            case EInstructionTypes.k_StmtBlock:
+            case EInstructionTypes.k_ExprStmt:
+            case EInstructionTypes.k_WhileStmt:
+            case EInstructionTypes.k_ForStmt:
                 this.emitStmt(instr);
                 break;
-            case EInstructionTypes.k_FunctionDeclInstruction:
+            case EInstructionTypes.k_FunctionDecl:
                 this.emitFunction(instr as IFunctionDeclInstruction);
                 break;
             default:

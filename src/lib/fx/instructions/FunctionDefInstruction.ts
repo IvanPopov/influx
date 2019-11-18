@@ -21,7 +21,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     protected _id: IIdInstruction;
 
     constructor({ returnType, id, paramList = [], ...settings }: IFunctionDefInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_FunctionDefInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_FunctionDef, ...settings });
 
         this._parameterList = paramList.map(param => Instruction.$withParent(param, this));
         this._returnType = Instruction.$withParent(returnType, this);

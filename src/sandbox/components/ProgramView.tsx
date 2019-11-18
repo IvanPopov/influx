@@ -67,7 +67,7 @@ function PropertyStyle(names: Object) {
 
 function prettifyEName(econstName: string): string {
     let m;
-    return (m = /k_([a-zA-Z]+)Instruction/g.exec(econstName), (m && m[1]) || econstName);
+    return (m = /k_([a-zA-Z]+)/g.exec(econstName), (m && m[1]) || econstName);
 }
 
 
@@ -235,59 +235,59 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         }
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_InstructionCollector:
+            case EInstructionTypes.k_Collector:
                 return this.InstructionCollector(instr);
 
-            case EInstructionTypes.k_TypeDeclInstruction:
+            case EInstructionTypes.k_TypeDecl:
                 return this.TypeDecl(instr);
-            case EInstructionTypes.k_ComplexTypeInstruction:
+            case EInstructionTypes.k_ComplexType:
                 return this.ComplexType(instr);
-            case EInstructionTypes.k_ProvideInstruction:
+            case EInstructionTypes.k_Provide:
                 return this.ProvideDecl(instr);
-            case EInstructionTypes.k_TechniqueInstruction:
+            case EInstructionTypes.k_TechniqueDecl:
                 return this.Technique(instr);
-            case EInstructionTypes.k_VariableDeclInstruction:
+            case EInstructionTypes.k_VariableDecl:
                 return this.VariableDecl(instr);
-            case EInstructionTypes.k_VariableTypeInstruction:
+            case EInstructionTypes.k_VariableType:
                 return this.VariableType(instr);
-            case EInstructionTypes.k_SystemTypeInstruction:
+            case EInstructionTypes.k_SystemType:
                 return this.SystemType(instr);
-            case EInstructionTypes.k_FunctionDeclInstruction:
+            case EInstructionTypes.k_FunctionDecl:
                 return this.FunctionDecl(instr);
 
             //
             // Expressions
             //
 
-            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_InitExpr:
                 return this.InitExpr(instr);
-            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_IdExpr:
                 return this.IdExpr(instr);
-            case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_PostfixPointExpr:
                 return this.PostfixPointExpr(instr);
-            case EInstructionTypes.k_PostfixIndexInstruction:
+            case EInstructionTypes.k_PostfixIndexExpr:
                 return this.PostfixIndexExpr(instr);
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_AssignmentExpr:
                 return this.Assigment(instr);
-            case EInstructionTypes.k_PostfixArithmeticInstruction:
+            case EInstructionTypes.k_PostfixArithmeticExpr:
                 return this.PostfixArithmetic(instr);
-            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_ConstructorCallExpr:
                 return this.ConstructorCall(instr);
-            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_IntExpr:
                 return this.Int(instr);
-            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_FloatExpr:
                 return this.Float(instr);
-            case EInstructionTypes.k_StringInstruction:
+            case EInstructionTypes.k_StringExpr:
                 return this.String(instr);
-            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_BoolExpr:
                 return this.Bool(instr);
-            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_ArithmeticExpr:
                 return this.ArithmeticExpr(instr);
-            case EInstructionTypes.k_CastExprInstruction:
+            case EInstructionTypes.k_CastExpr:
                 return this.Cast(instr);
-            case EInstructionTypes.k_ComplexExprInstruction:
+            case EInstructionTypes.k_ComplexExpr:
                 return this.ComplexExpr(instr);
-            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FunctionCallExpr:
                 return this.FunctionCall(instr);
             default:
                 return this.NotImplemented(instr);
@@ -616,17 +616,17 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     Stmt(instr: IStmtInstruction) {
         switch (instr.instructionType) {
-            case EInstructionTypes.k_DeclStmtInstruction:
+            case EInstructionTypes.k_DeclStmt:
                 return this.DeclStmt(instr as DeclStmtInstruction);
-            case EInstructionTypes.k_ReturnStmtInstruction:
+            case EInstructionTypes.k_ReturnStmt:
                 return this.ReturnStmt(instr as ReturnStmtInstruction);
-            case EInstructionTypes.k_StmtBlockInstruction:
+            case EInstructionTypes.k_StmtBlock:
                 return this.StmtBlock(instr as IStmtBlockInstruction);
-            case EInstructionTypes.k_ExprStmtInstruction:
+            case EInstructionTypes.k_ExprStmt:
                 return this.ExprStmt(instr as ExprStmtInstruction);
-            case EInstructionTypes.k_ForStmtInstruction:
+            case EInstructionTypes.k_ForStmt:
                 return this.ForStmt(instr as ForStmtInstruction);
-            case EInstructionTypes.k_SemicolonStmtInstruction:
+            case EInstructionTypes.k_SemicolonStmt:
                 return this.SemicolonStmt(instr as IStmtInstruction);
             default:
                 return this.NotImplemented(instr); // TODO: remove it
@@ -635,9 +635,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     Type(instr: ITypeInstruction) {
         switch (instr.instructionType) {
-            case EInstructionTypes.k_VariableTypeInstruction:
+            case EInstructionTypes.k_VariableType:
                 return this.VariableType(instr as IVariableTypeInstruction);
-            case EInstructionTypes.k_SystemTypeInstruction:
+            case EInstructionTypes.k_SystemType:
                 return this.SystemType(instr as SystemTypeInstruction);
             default:
                 return this.NotImplemented(instr); // TODO: remove it

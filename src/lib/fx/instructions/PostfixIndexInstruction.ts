@@ -25,7 +25,7 @@ export class PostfixIndexInstruction extends ExprInstruction implements IPostfix
 
     constructor({ element, index, ...settings }: IPostfixIndexInstructionSettings) {
         super({ 
-            instrType: EInstructionTypes.k_PostfixIndexInstruction, 
+            instrType: EInstructionTypes.k_PostfixIndexExpr, 
             type: (element.type as IVariableTypeInstruction).arrayElementType, ...settings });
             
         this._element = Instruction.$withParent(element, this);

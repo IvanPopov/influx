@@ -1,17 +1,16 @@
-import { EInstructionTypes, IKeywordInstruction } from "../../idl/IInstruction";
-import { IInstructionSettings } from "./Instruction";
-import { Instruction } from "./Instruction";
-import { IParseNode } from "../../idl/parser/IParser";
+import { EInstructionTypes, IKeywordInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 interface IKeywordInstructionSettings extends IInstructionSettings {
     keyword: string;
 }
 
+// TODO: remove it? (no one use it)
 export class KeywordInstruction extends Instruction implements IKeywordInstruction {
     protected _value: string;
 
     constructor({ keyword, ...settings }: IKeywordInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_KeywordInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Keyword, ...settings });
 
         this._value = keyword;
     }

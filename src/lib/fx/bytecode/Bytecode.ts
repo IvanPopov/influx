@@ -480,7 +480,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     /** resolve address => returns address of temprary result of expression */
     function raddr(expr: IExprInstruction): PromisedAddress {
         switch (expr.instructionType) {
-            case EInstructionTypes.k_InitExprInstruction:
+            case EInstructionTypes.k_InitExpr:
                 {
                     const init = expr as IInitExprInstruction;
 
@@ -492,25 +492,25 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return raddr(arg);
                 }
                 break;
-            case EInstructionTypes.k_BoolInstruction:
+            case EInstructionTypes.k_BoolExpr:
                 {
                     const i32 = (expr as ILiteralInstruction<boolean>).value ? 1 : 0;
                     return constants.i32(i32);
                 }
                 break;
-            case EInstructionTypes.k_IntInstruction:
+            case EInstructionTypes.k_IntExpr:
                 {
                     const i32 = (expr as ILiteralInstruction<number>).value;
                     return constants.i32(i32);
                 }
                 break;
-            case EInstructionTypes.k_FloatInstruction:
+            case EInstructionTypes.k_FloatExpr:
                 {
                     const f32 = (expr as ILiteralInstruction<number>).value;
                     return constants.f32(f32);
                 }
                 break;
-            case EInstructionTypes.k_IdExprInstruction:
+            case EInstructionTypes.k_IdExpr:
                 {
                     let id = (expr as IIdExprInstruction);
                     assert(id.decl === ExprInstruction.UnwindExpr(id));
@@ -544,9 +544,9 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     assert(false, 'unsupported branch found');
                     return PromisedAddress.INVALID;
                 }
-            case EInstructionTypes.k_ComplexExprInstruction:
+            case EInstructionTypes.k_ComplexExpr:
                 return raddr((expr as IComplexExprInstruction).expr);
-            case EInstructionTypes.k_ArithmeticExprInstruction:
+            case EInstructionTypes.k_ArithmeticExpr:
                 {
                     const arithExpr = expr as IArithmeticExprInstruction;
                     const dest = alloca(arithExpr.type.size);
@@ -555,7 +555,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return dest;
                 }
                 break;
-            case EInstructionTypes.k_UnaryExprInstruction:
+            case EInstructionTypes.k_UnaryExpr:
                 {
                     const unary = expr as IUnaryExprInstruction;
                     const op = unary.operator;
@@ -600,7 +600,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     console.error('unsupported type of unary expression found');
                     return PromisedAddress.INVALID;
                 }
-            case EInstructionTypes.k_RelationalExprInstruction:
+            case EInstructionTypes.k_RelationalExpr:
                 {
                     const relExpr = expr as IRelationalExprInstruction;
 
@@ -656,7 +656,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return loc({ addr: dest, size });
                 }
                 break;
-            case EInstructionTypes.k_CastExprInstruction:
+            case EInstructionTypes.k_CastExpr:
                 {
                     const castExpr = expr as ICastExprInstruction;
 
@@ -686,7 +686,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return loc({ addr: dest, size });
                 }
                 break;
-            case EInstructionTypes.k_PostfixPointInstruction:
+            case EInstructionTypes.k_PostfixPointExpr:
                 {
                     const point = expr as IPostfixPointInstruction;
                     const { element, postfix } = point;
@@ -732,14 +732,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return elementAddr;
                 }
                 break;
-            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FunctionCallExpr:
                 {
                     const call = expr as IFunctionCallInstruction;
                     const fdecl = call.decl;
                     const fdef = fdecl.def;
                     const retType = fdef.returnType;
 
-                    if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDeclInstruction) {
+                    if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
                         // breakpoint before intrinsic call
                         // TODO: is it's breakpoint really usefull?
                         debug.ns();
@@ -783,7 +783,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     return ret;
                 }
                 break;
-            case EInstructionTypes.k_ConstructorCallInstruction:
+            case EInstructionTypes.k_ConstructorCallExpr:
                 {
                     const ctorCall = expr as IConstructorCallInstruction;
                     // todo: add correct constructor call support for builtin type at the level of analyzer
@@ -869,7 +869,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         }
 
         switch (instr.instructionType) {
-            case EInstructionTypes.k_VariableDeclInstruction:
+            case EInstructionTypes.k_VariableDecl:
                 {
                     let decl = instr as IVariableDeclInstruction;
 
@@ -904,7 +904,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     ref(decl, dest);
                     return;
                 }
-            case EInstructionTypes.k_DeclStmtInstruction:
+            case EInstructionTypes.k_DeclStmt:
                 {
                     let stmt = instr as DeclStmtInstruction;
                     for (let decl of stmt.declList) {
@@ -912,7 +912,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     }
                     return;
                 }
-            case EInstructionTypes.k_ReturnStmtInstruction:
+            case EInstructionTypes.k_ReturnStmt:
                 {
                     let retStmt = instr as ReturnStmtInstruction;
                     const expr = retStmt.expr;
@@ -937,7 +937,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     }
                     return;
                 }
-            case EInstructionTypes.k_StmtBlockInstruction:
+            case EInstructionTypes.k_StmtBlock:
                 {
                     let block = instr as IStmtBlockInstruction;
                     for (let stmt of block.stmtList) {
@@ -945,7 +945,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     }
                     return;
                 }
-            case EInstructionTypes.k_FunctionDeclInstruction:
+            case EInstructionTypes.k_FunctionDecl:
                 {
                     let func = instr as IFunctionDeclInstruction;
 
@@ -960,13 +960,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     return;
                 }
-            case EInstructionTypes.k_ExprStmtInstruction:
+            case EInstructionTypes.k_ExprStmt:
                 {
                     let stmt = instr as IExprStmtInstruction;
                     translate(stmt.expr);
                     return;
                 }
-            case EInstructionTypes.k_AssignmentExprInstruction:
+            case EInstructionTypes.k_AssignmentExpr:
                 {
                     const assigment = instr as IAssignmentExprInstruction;
                     const size = assigment.type.size;
@@ -990,7 +990,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     debug.ns();
                     return;
                 }
-            case EInstructionTypes.k_FunctionCallInstruction:
+            case EInstructionTypes.k_FunctionCallExpr:
                 {
                     // TODO: check function side effects and dont resolve in case of pure function.
                     raddr(instr as IFunctionCallInstruction);

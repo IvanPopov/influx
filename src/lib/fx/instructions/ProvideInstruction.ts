@@ -12,7 +12,7 @@ export class ProvideInstruction extends Instruction implements IProvideInstructi
     protected _value: string;
 
     constructor({ moduleName, ...settings }: IProvideInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ProvideInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Provide, ...settings });
         
         this._value = moduleName;
     }

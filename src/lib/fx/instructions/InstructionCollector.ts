@@ -10,7 +10,7 @@ export class InstructionCollector extends Instruction implements IInstructionCol
     protected _instructions: IInstruction[];
 
     constructor({ instructions = [], ...settings }: IInstructionCollectorSettings) {
-        super({ instrType: EInstructionTypes.k_InstructionCollector, ...settings });
+        super({ instrType: EInstructionTypes.k_Collector, ...settings });
 
         this._instructions = instructions;
     }
@@ -28,7 +28,7 @@ export class InstructionCollector extends Instruction implements IInstructionCol
         let code = "";
         for (const instr of  this.instructions) {
             switch (instr.instructionType) {
-                case EInstructionTypes.k_VariableDeclInstruction:
+                case EInstructionTypes.k_VariableDecl:
                     code += instr.toCode() + ';\n';
                 break;
                 default:

@@ -23,7 +23,7 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
 
     constructor({ cond, left, right, ...settings }: IConditionalExprInstructionSettings) {
         // todo: do not use {left.type} here
-        super({ instrType: EInstructionTypes.k_ConditionalExprInstruction, type: left.type, ...settings});
+        super({ instrType: EInstructionTypes.k_ConditionalExpr, type: left.type, ...settings});
 
         console.assert(left.type.isStrongEqual(right.type));
         

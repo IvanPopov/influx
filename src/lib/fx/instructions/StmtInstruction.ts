@@ -8,7 +8,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 export class StmtInstruction extends Instruction implements IStmtInstruction {
     
     constructor({ ...settings }: IInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_StmtInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Stmt, ...settings });
     }
 
 

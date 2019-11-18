@@ -21,7 +21,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     protected _isContainComplexType: boolean;
 
     constructor({ name = null, fields, ...settings }: IComplexTypeInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_ComplexTypeInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_ComplexType, ...settings });
 
         this._name = name;
         this._fields = {};

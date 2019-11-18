@@ -18,7 +18,7 @@ export class AttributeInstruction extends Instruction implements IAttributeInstr
     readonly args: ILiteralInstruction<number | boolean>[];
 
     constructor({ name, args, ...settings }: IAttributeInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_AttributeInstruction, ...settings });
+        super({ instrType: EInstructionTypes.k_Attribute, ...settings });
 
         this.name = name;
         this.args = args;
