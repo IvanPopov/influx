@@ -160,6 +160,26 @@ export class Instruction implements IInstruction {
     }
 
 
+    static isStatement(instr: IInstruction): boolean {
+        switch (instr.instructionType) {
+            case EInstructionTypes.k_Stmt:
+            case EInstructionTypes.k_DeclStmt:
+            case EInstructionTypes.k_ReturnStmt:
+            case EInstructionTypes.k_IfStmt:
+            case EInstructionTypes.k_StmtBlock:
+            case EInstructionTypes.k_ExprStmt:
+            case EInstructionTypes.k_WhileStmt:
+            case EInstructionTypes.k_ForStmt:
+            case EInstructionTypes.k_BreakStmt:
+            case EInstructionTypes.k_SemicolonStmt:
+                // todo: add other types!!!
+                return true;
+        }
+
+        return false;
+    }
+
+
     static isLiteral(instr: IInstruction): boolean {
         switch (instr.instructionType) {
             case EInstructionTypes.k_IntExpr:

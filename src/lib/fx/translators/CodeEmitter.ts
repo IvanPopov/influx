@@ -484,44 +484,32 @@ export class CodeEmitter extends BaseEmitter {
 
     emit(instr: IInstruction): CodeEmitter {
         if (!instr) {
+            // TODO: emit error.
             return this;
         }
 
+        if (Instruction.isExpression(instr)) {
+            this.emitExpression(instr as IExprInstruction);
+            return this;
+        } 
+
+        if (Instruction.isStatement(instr)) {
+            this.emitStmt(instr);
+            return this;
+        }
+
+        //
+        // Other types
+        //
+
         switch (instr.instructionType) {
-            case EInstructionTypes.k_ConditionalExpr:
-            case EInstructionTypes.k_ConstructorCallExpr:
-            case EInstructionTypes.k_AssignmentExpr:
-            case EInstructionTypes.k_ArithmeticExpr:
-            case EInstructionTypes.k_InitExpr:
-            case EInstructionTypes.k_IdExpr:
-            case EInstructionTypes.k_FunctionCallExpr:
-            case EInstructionTypes.k_FloatExpr:
-            case EInstructionTypes.k_IntExpr:
-            case EInstructionTypes.k_BoolExpr:
-            case EInstructionTypes.k_PostfixArithmeticExpr:
-            case EInstructionTypes.k_PostfixIndexExpr:
-            case EInstructionTypes.k_PostfixPointExpr:
-            case EInstructionTypes.k_ComplexExpr:
-            case EInstructionTypes.k_CastExpr:
-            case EInstructionTypes.k_UnaryExpr:
-                this.emitExpression(instr as IExprInstruction);
-                break
-            case EInstructionTypes.k_DeclStmt:
-            case EInstructionTypes.k_ReturnStmt:
-            case EInstructionTypes.k_IfStmt:
-            case EInstructionTypes.k_StmtBlock:
-            case EInstructionTypes.k_ExprStmt:
-            case EInstructionTypes.k_WhileStmt:
-            case EInstructionTypes.k_ForStmt:
-                this.emitStmt(instr);
-                break;
             case EInstructionTypes.k_FunctionDecl:
                 this.emitFunction(instr as IFunctionDeclInstruction);
                 break;
             default:
                 assert(false, 'unsupported instruction found');
         }
-        
+
         return this;
     }
 }
