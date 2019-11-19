@@ -1,6 +1,6 @@
-﻿import { IMap } from "../idl/IMap";
+﻿import { isDef } from "../common";
+import { IMap } from "../idl/IMap";
 import { EParserType, IRule } from "../idl/parser/IParser";
-import { isDef } from "../common";
 import { Item } from "./Item"
 
 export class State {
@@ -186,14 +186,11 @@ export class State {
 
     public toString(isBase: boolean = true, grammarSymbols: Map<string, string> = null): string {
         let itemList = this._itemList;
-
-        let msg = "State " + this._iIndex + ":\n";
+        let msg = `State ${this._iIndex}:\n`;
         let len = isBase ? this._nBaseItems : itemList.length;
 
         for (let j = 0; j < len; j++) {
-            msg += "\t\t";
-            msg += itemList[j].toString(grammarSymbols);
-            msg += "\n";
+            msg = `${msg}\t\t${itemList[j].toString(grammarSymbols)}\n`
         }
 
         return msg;

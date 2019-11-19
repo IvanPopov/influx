@@ -1,6 +1,6 @@
-import { IMap } from '../IMap';
-import { StringRef } from "./../../util/StringRef";
-import { IDiagnosticReport } from '../../util/Diagnostics';
+import { IMap } from '@lib/idl/IMap';
+import { IDiagnosticReport } from '@lib/util/Diagnostics';
+import { StringRef } from "@lib/util/StringRef";
 
 export enum ENodeCreateMode {
     k_Default,
@@ -115,6 +115,8 @@ export interface IParseTree {
     getRoot(): IParseNode;
     setRoot(pRoot: IParseNode): void;
     toHTMLString(node?: IParseNode, padding?: string): string;
+
+    removeNode(): IParseNode;
 }
 
 

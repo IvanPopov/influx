@@ -117,19 +117,17 @@ ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
 # 
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509668(v=vs.85).aspx
 
-Struct : T_KW_STRUCT StructBegin StructEnd --AN
-Struct : T_KW_STRUCT StructBegin StructDecls StructEnd
-StructDecl : T_KW_STRUCT Id StructBegin StructEnd --AN
-StructDecl : T_KW_STRUCT Id StructBegin UseDecl StructDecls StructEnd
-StructDecl : T_KW_STRUCT Id StructBegin StructDecls StructEnd
+Struct : T_KW_STRUCT '{' '}' --AN
+Struct : T_KW_STRUCT '{' StructDecls '}'
+StructDecl : T_KW_STRUCT Id '{' '}' --AN
+StructDecl : T_KW_STRUCT Id '{' UseDecl StructDecls '}'
+StructDecl : T_KW_STRUCT Id '{' StructDecls '}'
 
 ConstStructDecl : StructDecl
 ConstStructDecl : ConstUsages StructDecl
 
-StructBegin : '{'
 StructDecls : VariableDecl --NN
 StructDecls : VariableDecl StructDecls
-StructEnd : '}'
 
 Semantic : ':' Id --AN
 Semantic : ':' T_KW_REGISTER '(' Register ')'
@@ -188,18 +186,16 @@ FunctionDecl : Attributes FunctionDef AnnotationOpt StmtBlock
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
 FunctionDef : UsageType Id ParamList SemanticsOpt
 
-Attribute : '[' NonTypeId '(' ArgumentsOpt ')' ']'
-Attribute : '[' NonTypeId ']'
+Attribute : '[' Id '(' ArgumentsOpt ')' ']'
+Attribute : '[' Id ']'
 Attributes : Attribute --NN
 Attributes : Attributes Attribute
 AttributesOpt : --NN
 AttributesOpt : Attributes
 
-ParamList : ParamListBegin ParamListEnd
-ParamList : ParamListBegin T_KW_VOID ParamListEnd
-ParamList : ParamListBegin ParameterDecls ParamListEnd
-ParamListBegin : '('
-ParamListEnd : ')'
+ParamList : '(' ')'
+ParamList : '(' T_KW_VOID ')'
+ParamList : '(' ParameterDecls ')'
 
 
 # [InputModifier] Type Name [: Semantic] [InterpolationModifier] [= Initializers]
@@ -223,10 +219,8 @@ ParamUsage : ConstUsage
 
 
 TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --AN
-TechniqueBody : TechniqueBegin TechniqueEnd  --AN
-TechniqueBody : TechniqueBegin PassDecls TechniqueEnd
-TechniqueBegin : '{'
-TechniqueEnd : '}'
+TechniqueBody : '{' '}'  --AN
+TechniqueBody : '{' PassDecls '}'
 
 ComplexNameOpt : ComplexName --AN
 ComplexName : Id --NN
@@ -242,7 +236,7 @@ PassStateBlock : '{' PassStates '}'
 PassStates : PassState --NN
 PassStates : PassStates PassState
 
-PassState : Id StateIndex StateExprBegin PassStateExpr StateExprEnd --AN
+PassState : Id StateIndex '=' PassStateExpr ';' --AN
 # PassState : StateIf
 # PassState : StateSwitch
 
@@ -278,24 +272,18 @@ PartFxProperty : PassDecl
 
 #endif // FX_PART
 
-StateBlock : StateBlockBegin StateBlockEnd --AN
-StateBlock : StateBlockBegin States StateBlockEnd
-StateBlockBegin : '{'
-StateBlockEnd : '}'
+StateBlock : '{' '}' --AN
+StateBlock : '{' States '}'
 
 States : State --NN
 States : States State
-State : Id StateIndex StateExprBegin StateExpr StateExprEnd --AN
+State : Id StateIndex '=' StateExpr ';' --AN
 
 StateIndex :
 StateIndex : '[' Uint ']'
-StateExprBegin : '='
-StateExprEnd : ';'
 
-StmtBlock : StmtBlockBegin StmtBlockEnd --AN
-StmtBlock : StmtBlockBegin Stmts StmtBlockEnd
-StmtBlockBegin : '{'
-StmtBlockEnd : '}'
+StmtBlock : '{' '}' --AN
+StmtBlock : '{' Stmts '}'
 Stmts : Stmt --NN
 Stmts : Stmts Stmt
 SimpleStmt : ';' --AN

@@ -1,4 +1,4 @@
-﻿import { IParseTree, IParseNode, IToken, ENodeCreateMode, IRule, IRange, IPosition } from "../idl/parser/IParser";
+﻿import { ENodeCreateMode, IParseNode, IParseTree, IPosition, IRange, IRule, IToken } from "../idl/parser/IParser";
 import { assert } from "./../common";
 
 function locMin(a: IPosition, b: IPosition): IPosition {
@@ -66,14 +66,17 @@ export class ParseTree implements IParseTree {
         this._nodesCountStack.push(1);
     }
 
+    removeNode(): IParseNode {
+        this._nodesCountStack.pop();
+        return this._nodes.pop();
+    }
+
     reduceByRule(rule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
-        let iReduceCount: number = 0;
-        let nodesCountStack: number[] = this._nodesCountStack;
-        let node: IParseNode;
-        let ruleLength: number = rule.right.length;
-        let nodes: IParseNode[] = this._nodes;
-        let optimize: number = this._isOptimizeMode ? 1 : 0;
-        let temp: IParseNode;
+        let iReduceCount = 0;
+        let nodesCountStack= this._nodesCountStack;
+        let ruleLength = rule.right.length;
+        let nodes = this._nodes;
+        let optimize = this._isOptimizeMode ? 1 : 0;
 
         while (ruleLength) {
             iReduceCount += nodesCountStack.pop();
@@ -81,8 +84,10 @@ export class ParseTree implements IParseTree {
         }
 
         if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || (eCreate === ENodeCreateMode.k_Necessary)) {
+            let node: IParseNode;
+
             if (iReduceCount > 0) {
-                temp = nodes.pop();
+                let temp = nodes.pop();
                 iReduceCount--;
 
                 node = {
@@ -90,10 +95,7 @@ export class ParseTree implements IParseTree {
                     children: null,
                     parent: null,
                     value: '',
-                    loc: {
-                        start: temp.loc.start,
-                        end: temp.loc.end
-                    }
+                    loc: { ...temp.loc }
                 };
 
                 this.addLink(node, temp);
@@ -104,6 +106,7 @@ export class ParseTree implements IParseTree {
                     iReduceCount --;
                 }
             } else {
+                console.warn('something went wrong');
                 node = {
                     name: rule.left,
                     children: [],

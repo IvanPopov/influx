@@ -24,6 +24,8 @@ export enum EParserErrors {
     GeneralCouldNotReadFile = 2200
 };
 
+const isPunctuator = (s: string) => s.match(/^T_PUNCTUATOR_(\d+)$/) !== null;
+const punctuatorValue = (s: string) => isPunctuator(s) ? `'${String.fromCharCode(Number(s.match(/^T_PUNCTUATOR_(\d+)$/)[1]))}'` : s;
 
 export class ParserDiagnostics extends Diagnostics<IMap<any>> {
     constructor() {
@@ -278,6 +280,15 @@ export class Parser implements IParser {
         return true;
     }
 
+    emitSyntaxError(token: IToken) {
+        if (token.value == END_SYMBOL) {
+            this.syntaxError(EParserErrors.SyntaxUnexpectedEOF, token);
+        } else {
+            this.syntaxError(EParserErrors.SyntaxUnknownError, token);
+        }
+    }
+
+
 
     async parse(source: string): Promise<EParserCode> {
         try {
@@ -290,69 +301,98 @@ export class Parser implements IParser {
             let syntaxTable = this._syntaxTable;
 
             let breakProcessing = false;
-            let errorFound = false;
             let token = this.readToken();
-            let stateIndex = 0;
 
-            let operation: IOperation;
-            let ruleLength: number;
-            let additionalOperationCode: EOperationType;
+            const stackTop = () => stack[stack.length - 1];
 
             while (!breakProcessing) {
-                operation = syntaxTable[stack[stack.length - 1]][token.name];
+                // console.log(`token: ${token.value}`);
+                const operation = syntaxTable[stackTop()][token.name];
+                
                 if (isDef(operation)) {
+                    // console.log(`op: ${EOperationType[operation.type]} (stack len: ${stack.length})`);
                     switch (operation.type) {
                         case EOperationType.k_Success:
                             breakProcessing = true;
                             break;
 
                         case EOperationType.k_Shift:
+                            {
+                                const stateIndex = operation.index;
+                                stack.push(stateIndex);
+                                tree.addToken(token);
 
-                            stateIndex = operation.index;
-                            stack.push(stateIndex);
-                            tree.addToken(token);
+                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
 
-                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
-
-                            if (additionalOperationCode === EOperationType.k_Error) {
-                                errorFound = true;
-                                breakProcessing = true;
-                            } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                token = this.readToken();
+                                if (additionalOperationCode === EOperationType.k_Error) {
+                                    this.emitSyntaxError(token);
+                                    breakProcessing = true;
+                                } else if (additionalOperationCode === EOperationType.k_Ok) {
+                                    token = this.readToken();
+                                }
                             }
                             break;
 
                         case EOperationType.k_Reduce:
+                            {
+                                const ruleLength = operation.rule.right.length;
+                                stack.length -= ruleLength;
+                                const stateIndex = syntaxTable[stackTop()][operation.rule.left].index;
+                                
+                                stack.push(stateIndex);
+                                tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
+                                // console.log(`reduced: ${tree.getLastNode().name} | ${operation.rule.left} (stack len: ${stack.length})`);
 
-                            ruleLength = operation.rule.right.length;
-                            stack.length -= ruleLength;
-                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].index;
-                            stack.push(stateIndex);
-                            tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
+                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
-                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
-
-                            if (additionalOperationCode === EOperationType.k_Error) {
-                                errorFound = true;
-                                breakProcessing = true;
+                                if (additionalOperationCode === EOperationType.k_Error) {
+                                    this.emitSyntaxError(token);
+                                    breakProcessing = true;
+                                }
                             }
-
                             break;
                     }
                 } else {
-                    errorFound = true;
+                    console.warn(`op: UNDEF (stack len: ${stack.length})`);
+                    this.emitSyntaxError(token);
                     breakProcessing = true;
+
+ 
+                    // token = this.readToken();
+                    // const node = tree.getLastNode();
+                    // console.warn(`stack.pop(${node.name} : ${punctuatorValue(node.value)}) => '${token.value}'`);
+
+                    // tree.removeNode();
+                    // stack.pop();
+                    
+                    // if (token.value === END_SYMBOL || stack.length === 1 || tree.getNodes().length === 0) {
+                    //     console.warn('break processing!');
+                    //     breakProcessing = true;
+                    // }
+
+
+                    //
+                    // panic mode recovery
+                    //
+
+                    // let lastToken: string;
+                    
+                    // const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']'];
+                    
+                    // do {
+                    //     const node = tree.removeNode();
+                    //     // console.log(node);
+                    //     lastToken = node.value;
+                    //     stack.pop();
+                    //     console.warn(`stack.pop(${lastToken})`);
+                    // } while (synchronizingTokens.indexOf(lastToken) === -1 && tree.getNodes().length);
                 }
             }
 
             tree.finishTree();
 
-            if (errorFound) {
-                if (token.value == END_SYMBOL) {
-                    this.syntaxError(EParserErrors.SyntaxUnexpectedEOF, token);
-                } else {
-                    this.syntaxError(EParserErrors.SyntaxUnknownError, token);
-                }
+            if (this._diag.hasErrors()) {
+                this.printState(stackTop(), true);
                 return EParserCode.k_Error;
             };
 
@@ -389,18 +429,17 @@ export class Parser implements IParser {
 
     printState(stateIndex: number, isBaseOnly: boolean = true): void {
         if (!isDef(this._stateList)) {
-            console.log("It`s impossible to print states. You must init parser in debug-mode");
+            console.log("It`s impossible to print states. You must init parser in debug-mode.");
             return;
         }
 
-        var state: State = this._stateList[stateIndex];
+        var state = this._stateList[stateIndex];
         if (!isDef(state)) {
             console.log("Can not print stete with index: " + stateIndex.toString());
             return;
         }
-
-        var mesg: string = "\n" + state.toString(isBaseOnly);
-        console.log(mesg);
+        
+        console.log(`\n${state.toString(isBaseOnly, this.getGrammarSymbols())}`);
     }
 
 
@@ -468,7 +507,7 @@ export class Parser implements IParser {
 
 
     private syntaxError(code: number, token: IToken) {
-        this.critical(code, { file: this.getParseFileName(), token });
+        this.error(code, { file: this.getParseFileName(), token });
     }
 
 
@@ -554,7 +593,7 @@ export class Parser implements IParser {
      * terminals & non-terminals;
      */
     private symbols(): string[] {
-        return [ ...this._grammarSymbols.keys() ];
+        return [...this._grammarSymbols.keys()];
     }
 
     private isTerminal(symbolVal: string): boolean {
@@ -873,7 +912,7 @@ export class Parser implements IParser {
         this._rulesDMap = <IRuleDMap>{};
         this._additionalFuncInfoList = <IAdditionalFuncInfo[]>[];
         this._ruleCreationModeMap = <IMap<number>>{};
-        this._grammarSymbols = new Map([[ 'END_SYMBOL', END_SYMBOL ]]);
+        this._grammarSymbols = new Map([['END_SYMBOL', END_SYMBOL]]);
 
         let i = 0, j = 0;
 
@@ -1202,7 +1241,7 @@ export class Parser implements IParser {
         if (isDef(state)) {
             return state;
         }
-        
+
         let expected = <IMap<boolean>>{ [UNUSED_SYMBOL]: true };
 
         state = new State();
@@ -1635,6 +1674,10 @@ export class Parser implements IParser {
     }
 
 
+    protected error(code, desc) {
+        this._diag.error(code, desc);
+    }
+
     private static $parser: IParser = null;
     private static $parserParams: IParserParams = null;
 
@@ -1672,12 +1715,11 @@ export class Parser implements IParser {
     }
 
 
-    static async parse(content: string, filename: string = "stdin")
-    {
+    static async parse(content: string, filename: string = "stdin") {
         Parser.$parser.setParseFileName(filename);
         // All diagnostic exceptions should be already handled inside parser.
         let result = await Parser.$parser.parse(content);
-    
+
         let diag = Parser.$parser.getDiagnostics();
         let ast = Parser.$parser.getSyntaxTree();
 

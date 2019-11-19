@@ -2,9 +2,10 @@ import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
 import { GRAMMAR_CONTENT_SPECIFIED, GRAMMAR_FILE_SPECIFIED, PARSER_PARAMS_CHANGED } from '@sandbox/actions/ActionTypeKeys';
 import { IGrammarContentSpecified, IGrammarFileSpecified, IParserParamsActions, IParserParamsChanged } from '@sandbox/actions/ActionTypes';
 import { IParserState, IStoreState } from '@sandbox/store/IStoreState';
-import * as fs from 'fs';
+
 import { handleActions } from './handleActions';
 
+declare const MODE: string;
 
 const initialState: IParserState = {
     filename: null,
@@ -12,6 +13,10 @@ const initialState: IParserState = {
     type: EParserType.k_LALR,
     mode: EParseMode.k_Add | EParseMode.k_Negate | EParseMode.k_Optimize
 };
+
+if (MODE === 'development') {
+    initialState.mode |= EParseMode.k_DebugMode;
+}
 
 
 export default handleActions<IParserState, IParserParamsActions>({

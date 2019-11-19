@@ -1,9 +1,9 @@
-﻿import { IRule, EParserType } from "../idl/parser/IParser";
-import { IMap } from "../idl/IMap";
-import { END_POSITION, T_EMPTY } from "./symbols";
-import { isDef, assert, isDefAndNotNull } from "../common";
-import { State } from "./State";
+﻿import { assert, isDef, isDefAndNotNull } from "@lib/common";
+import { IMap } from "@lib/idl/IMap";
+import { EParserType, IRule } from "@lib/idl/parser/IParser";
 
+import { State } from "./State";
+import { END_POSITION, T_EMPTY } from "./symbols";
 
 export class Item {
     private _rule: IRule;
@@ -157,37 +157,25 @@ export class Item {
     }
 
     toString(grammarSymbols: Map<string, string> = null): string {
-        let msg: string = this._rule.left + " -> ";
-        let expected: string = "";
-        let right: string[] = this._rule.right;
+        let msg = `${this._rule.left} -> `;
+        let right = this._rule.right;
+        let pos = this._pos;
 
-        for (let k = 0; k < right.length; k++) {
-            if (k === this._pos) {
-                msg += ". ";
-            }
-            msg += right[k] + " ";
-        }
+        const decodeSymbol = (s: string) => (grammarSymbols ? ((grammarSymbols.get(s) && s !== grammarSymbols.get(s)) ? `'${grammarSymbols.get(s)}'` : s) : s);
+
+        msg += right.map(s => decodeSymbol(s)).map((s, k) => (k === pos ? `. ${s}`: `${s}`)).join(' ');
 
         if (this._pos === right.length) {
             msg += ". ";
         }
 
         if (isDef(this._expected)) {
-            expected = ", ";
-            let keys = Object.getOwnPropertyNames(this._expected);
-
-            for (let l: number = 0; l < keys.length; ++l) {
-                expected += (isDefAndNotNull(grammarSymbols)? 
-                    (grammarSymbols.get(keys[l]) ? `'${grammarSymbols.get(keys[l])}'` : keys[l]) : 
-                    keys[l]) + "/";
-            }
-
-            if (expected !== ", ") {
-                msg += expected;
+            const expectedTokens = Object.getOwnPropertyNames(this._expected).map(k => decodeSymbol(k));
+            if (expectedTokens.length) {
+                msg += ", " + expectedTokens.join(' ');
             }
         }
 
-        msg = msg.slice(0, msg.length - 1);
         return msg;
     }
 }
