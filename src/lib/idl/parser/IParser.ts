@@ -131,20 +131,16 @@ export interface IParserState {
 
 export interface IParser {
     isTypeId(value: string): boolean;
-    returnCode(node: IParseNode): string;
 
-    init(sGrammar: string, eMode?: EParseMode, eType?: EParserType): boolean;
+    init(grammar: string, mode?: EParseMode, type?: EParserType): boolean;
     parse(source: string): Promise<EParserCode>;
 
-    setParseFileName(sFileName: string): void;
+    setParseFileName(fileName: string): void;
     getParseFileName(): IFile;
 
     getSyntaxTree(): IParseTree;
     getGrammarSymbols(): Map<string, string>;
     getDiagnostics(): IDiagnosticReport;
-
-    printStates(isPrintOnlyBase?: boolean): void;
-    printState(iStateIndex: number, isPrintOnlyBase?: boolean): void;
 }
 
 

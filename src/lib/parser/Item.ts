@@ -22,7 +22,7 @@ export class Item {
     /**
      * Parent state.
      */
-    state: State | null;
+    state: State;
 
     expectedSymbols: ExpectedSymbols;
 
