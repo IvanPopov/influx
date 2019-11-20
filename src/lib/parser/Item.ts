@@ -74,7 +74,7 @@ export class Item {
         return (this.rule === item.rule && this.pos === item.pos - 1);
     }
 
-    mark(): string {
+    symbolName(): string {
         const right = this.rule.right;
         if (this.pos === right.length) {
             return END_POSITION;
@@ -82,14 +82,14 @@ export class Item {
         return right[this.pos];
     }
 
-    end(): string {
-        return this.rule.right[this.rule.right.length - 1] || T_EMPTY;
-    }
+    // lastSymbolName(): string {
+    //     return this.rule.right[this.rule.right.length - 1] || T_EMPTY;
+    // }
 
-    // get next symbol name
-    nextMarked(): string {
-        return this.rule.right[this.pos + 1] || END_POSITION;
-    }
+    // // get next symbol name
+    // nextSymbolName(): string {
+    //     return this.rule.right[this.pos + 1] || END_POSITION;
+    // }
 
     isExpected(symbol: string): boolean {
         return !!(this.expectedSymbols[symbol]);

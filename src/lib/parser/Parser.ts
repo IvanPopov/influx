@@ -27,6 +27,10 @@ export enum EParserErrors {
 const isPunctuator = (s: string) => s.match(/^T_PUNCTUATOR_(\d+)$/) !== null;
 const punctuatorValue = (s: string) => isPunctuator(s) ? `'${String.fromCharCode(Number(s.match(/^T_PUNCTUATOR_(\d+)$/)[1]))}'` : s;
 
+
+type Terminals = Set<string>;
+
+
 export class ParserDiagnostics extends Diagnostics<IMap<any>> {
     constructor() {
         super("Parser Diagnostics", 'P');
@@ -97,12 +101,10 @@ interface IOperationDMap {
 
 interface IRuleMap {
     [ruleIndex: number]: IRule;
-    [ruleName: string]: IRule;
 }
 
-interface IRuleDMap {
-    [ruleIndex: number]: IRuleMap;
-    [ruleName: string]: IRuleMap;
+interface IProductions {
+    [nonTerminal: string]: IRuleMap;
 }
 
 interface IRuleFunctionMap {
@@ -148,14 +150,14 @@ export class Parser implements IParser {
     private _shiftOperationsMap: IOperationMap | null;
     private _successOperation: IOperation | null;
 
-    private _firstTerminalsDMap: IDMap<boolean> | null;
+    private _firstTerminalsDMap: IMap<Terminals> | null;
     private _followTerminalsDMap: IDMap<boolean> | null;
 
     /**
      * General structure:
      *  { [symbol name]: { [rule index]: IRule } }
      */
-    private _rulesDMap: IRuleDMap | null;
+    private _productions: IProductions | null;
     private _stateList: State[] | null;
     private _nRules: number;
 
@@ -208,7 +210,7 @@ export class Parser implements IParser {
 
         this._firstTerminalsDMap = null;
         this._followTerminalsDMap = null;
-        this._rulesDMap = null;
+        this._productions = null;
         this._stateList = null;
         this._nRules = 0;
         this._additionalFuncInfoList = null;
@@ -308,7 +310,7 @@ export class Parser implements IParser {
             while (!breakProcessing) {
                 // console.log(`token: ${token.value}`);
                 const operation = syntaxTable[stackTop()][token.name];
-                
+
                 if (isDef(operation)) {
                     // console.log(`op: ${EOperationType[operation.type]} (stack len: ${stack.length})`);
                     switch (operation.type) {
@@ -338,7 +340,7 @@ export class Parser implements IParser {
                                 const ruleLength = operation.rule.right.length;
                                 stack.length -= ruleLength;
                                 const stateIndex = syntaxTable[stackTop()][operation.rule.left].index;
-                                
+
                                 stack.push(stateIndex);
                                 tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
                                 // console.log(`reduced: ${tree.getLastNode().name} | ${operation.rule.left} (stack len: ${stack.length})`);
@@ -357,14 +359,14 @@ export class Parser implements IParser {
                     this.emitSyntaxError(token);
                     // breakProcessing = true;
 
- 
+
                     // token = this.readToken();
                     // const node = tree.getLastNode();
                     // console.warn(`stack.pop(${node.name} : ${punctuatorValue(node.value)}) => '${token.value}'`);
 
                     // tree.removeNode();
                     // stack.pop();
-                    
+
                     // if (token.value === END_SYMBOL || stack.length === 1 || tree.getNodes().length === 0) {
                     //     console.warn('break processing!');
                     //     breakProcessing = true;
@@ -376,9 +378,9 @@ export class Parser implements IParser {
                     //
 
                     const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']', END_SYMBOL];
-                    
+
                     do {
-                       token = this.readToken();
+                        token = this.readToken();
                     } while (synchronizingTokens.indexOf(token.value) === -1);
 
                     if (token.value === END_SYMBOL) {
@@ -436,7 +438,7 @@ export class Parser implements IParser {
             console.log("Can not print stete with index: " + stateIndex.toString());
             return;
         }
-        
+
         console.log(`\n${state.toString(isBaseOnly, this.getGrammarSymbols())}`);
     }
 
@@ -554,7 +556,7 @@ export class Parser implements IParser {
     private clearMem(): void {
         delete this._firstTerminalsDMap;
         delete this._followTerminalsDMap;
-        delete this._rulesDMap;
+        delete this._productions;
         delete this._stateList;
         delete this._reduceOperationsMap;
         delete this._shiftOperationsMap;
@@ -582,7 +584,12 @@ export class Parser implements IParser {
 
 
     private nonTerminals(): string[] {
-        return Object.keys(this._rulesDMap);
+        return Object.keys(this._productions);
+    }
+
+    private rules(nonTerminal: string): IRule[] {
+        const prods = this._productions[nonTerminal];
+        return prods ? Object.keys(prods).map(ruleIndex => prods[ruleIndex]) : null;
     }
 
     /**
@@ -593,7 +600,7 @@ export class Parser implements IParser {
     }
 
     private isTerminal(symbolVal: string): boolean {
-        return !(this._rulesDMap[symbolVal]);
+        return !(this._productions[symbolVal]);
     }
 
 
@@ -636,19 +643,12 @@ export class Parser implements IParser {
     }
 
 
-    private hasEmptyRule(symbolVal: string): boolean {
-        if (this.isTerminal(symbolVal)) {
+    private hasEmptyRule(symbol: string): boolean {
+        if (this.isTerminal(symbol)) {
             return false;
         }
 
-        var pRulesDMap: IRuleDMap = this._rulesDMap;
-        for (var i in pRulesDMap[symbolVal]) {
-            if (pRulesDMap[symbolVal][i].right.length === 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return !!this.rules(symbol).find(rule => rule.right.length === 0);
     }
 
 
@@ -682,47 +682,35 @@ export class Parser implements IParser {
     }
 
 
-    private firstTerminal(symbolVal: string): IMap<boolean> {
-        if (this.isTerminal(symbolVal)) {
+    private firstTerminal(symbol: string): Terminals {
+        if (this.isTerminal(symbol)) {
             return null;
         }
 
-        if (isDef(this._firstTerminalsDMap[symbolVal])) {
-            return this._firstTerminalsDMap[symbolVal];
+        if (isDef(this._firstTerminalsDMap[symbol])) {
+            return this._firstTerminalsDMap[symbol];
         }
 
-        var ruleVal: string, sName: string;
-        var names: string[];
-        var i: number = 0, j: number = 0, k: number = 0;
-        var rulesMap: IRuleMap = this._rulesDMap[symbolVal];
+        const rules = this.rules(symbol);
+        const res: Terminals = this._firstTerminalsDMap[symbol] = new Set<string>();
 
-        var pTempRes: IMap<boolean> = <IMap<boolean>>{};
-        var res: IMap<boolean>;
-
-        var right: string[];
-        var isFinish: boolean;
-
-        res = this._firstTerminalsDMap[symbolVal] = <IMap<boolean>>{};
-
-        if (this.hasEmptyRule(symbolVal)) {
-            res[T_EMPTY] = true;
+        if (this.hasEmptyRule(symbol)) {
+            res.add(T_EMPTY);
         }
 
-        if (isNull(rulesMap)) {
+        if (isNull(rules)) {
             return res;
         }
 
-        var pRuleNames: string[] = Object.keys(rulesMap);
+        for (let i = 0; i < rules.length; ++i) {
+            const rule = rules[i];
+            const right = rule.right;
 
-        for (i = 0; i < pRuleNames.length; ++i) {
-            ruleVal = pRuleNames[i];
+            let isFinish = false;
 
-            isFinish = false;
-            right = rulesMap[ruleVal].right;
-
-            for (j = 0; j < right.length; j++) {
-                if (right[j] === symbolVal) {
-                    if (res[T_EMPTY]) {
+            for (let j = 0; j < right.length; j++) {
+                if (right[j] === symbol) {
+                    if (res.has(T_EMPTY)) {
                         continue;
                     }
 
@@ -730,15 +718,13 @@ export class Parser implements IParser {
                     break;
                 }
 
-                pTempRes = this.firstTerminal(right[j]);
+                const terminals = this.firstTerminal(right[j]);
 
-                if (isNull(pTempRes)) {
-                    res[right[j]] = true;
-                }
-                else {
-                    for (names = Object.keys(pTempRes), k = 0; k < names.length; ++k) {
-                        sName = names[k];
-                        res[sName] = true;
+                if (isNull(terminals)) {
+                    res.add(right[j]);
+                } else {
+                    for (const terminal of terminals) {
+                        res.add(terminal);
                     }
                 }
 
@@ -749,7 +735,7 @@ export class Parser implements IParser {
             }
 
             if (!isFinish) {
-                res[T_EMPTY] = true;
+                res.add(T_EMPTY);
             }
         }
 
@@ -847,39 +833,24 @@ export class Parser implements IParser {
     //     return res;
     // }
 
-    private firstTerminalForSet(pSet: string[], pExpected: IMap<boolean>): IMap<boolean> {
-        var i: number = 0, j: number = 0;
+    private firstTerminalForSet(symbolList: string[], expectedList: IMap<boolean>): Terminals {
+        const res = new Set<string>();
 
-        var pTempRes: IMap<boolean>;
-        var res: IMap<boolean> = <IMap<boolean>>{};
+        for (let i = 0; i < symbolList.length; i++) {
+            const terminals = this.firstTerminal(symbolList[i]);
 
-        var isEmpty: boolean;
-
-        var pKeys: string[];
-        var sKey: string;
-
-        for (i = 0; i < pSet.length; i++) {
-            pTempRes = this.firstTerminal(pSet[i]);
-
-            if (isNull(pTempRes)) {
-                res[pSet[i]] = true;
+            if (isNull(terminals)) {
+                res.add(symbolList[i]);
                 return res;
             }
 
-            isEmpty = false;
-
-
-            pKeys = Object.keys(pTempRes);
-
-            for (j = 0; j < pKeys.length; j++) {
-                sKey = pKeys[j];
-
-                if (sKey === T_EMPTY) {
+            let isEmpty = false;
+            for (const symbol of terminals) {
+                if (symbol === T_EMPTY) {
                     isEmpty = true;
                     continue;
                 }
-                res[sKey] = true;
-
+                res.add(symbol);
             }
 
             if (!isEmpty) {
@@ -887,12 +858,8 @@ export class Parser implements IParser {
             }
         }
 
-
-        if (!isNull(pExpected)) {
-            pKeys = Object.keys(pExpected);
-            for (j = 0; j < pKeys.length; j++) {
-                res[pKeys[j]] = true;
-            }
+        if (!isNull(expectedList)) {
+            Object.keys(expectedList).forEach(expectedSymbol => res.add(expectedSymbol));
         }
 
         return res;
@@ -905,7 +872,7 @@ export class Parser implements IParser {
         let rule: IRule;
         let isLexerBlock = false;
 
-        this._rulesDMap = <IRuleDMap>{};
+        this._productions = <IProductions>{};
         this._additionalFuncInfoList = <IAdditionalFuncInfo[]>[];
         this._ruleCreationModeMap = <IMap<number>>{};
         this._grammarSymbols = new Map([['END_SYMBOL', END_SYMBOL]]);
@@ -974,8 +941,8 @@ export class Parser implements IParser {
             }
 
             //NON TERMNINAL RULES
-            if (!isDef(this._rulesDMap[tempRule[0]])) {
-                this._rulesDMap[tempRule[0]] = <IRuleMap>{};
+            if (!isDef(this._productions[tempRule[0]])) {
+                this._productions[tempRule[0]] = <IRuleMap>{};
             }
 
             rule = {
@@ -1054,7 +1021,7 @@ export class Parser implements IParser {
             }
 
             rule.index = this._nRules;
-            this._rulesDMap[tempRule[0]][rule.index] = rule;
+            this._productions[tempRule[0]][rule.index] = rule;
             this._nRules += 1;
         }
     }
@@ -1106,7 +1073,7 @@ export class Parser implements IParser {
 
     private generateFirstState_LR0(): void {
         let state = new State();
-        let firstRule = this._rulesDMap[START_SYMBOL][0];
+        let firstRule = this._productions[START_SYMBOL][0];
         let item = new Item(firstRule, 0);
 
         this.pushBaseItem(item);
@@ -1119,7 +1086,7 @@ export class Parser implements IParser {
 
     private generateFirstState_LR(): void {
         let state = new State();
-        let firstRule = this._rulesDMap[START_SYMBOL][0];
+        let firstRule = this._productions[START_SYMBOL][0];
         let pExpected = <IMap<boolean>>{ [END_SYMBOL]: true };
 
         state.push(new Item(firstRule, 0, pExpected));
@@ -1144,11 +1111,11 @@ export class Parser implements IParser {
     private closure_LR0(state: State): State {
         let itemList = state.items;
         for (let i = 0; i < itemList.length; i++) {
-            let symbolVal = itemList[i].mark();
+            let symbolVal = itemList[i].symbolName();
             if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
-                let keys = Object.keys(this._rulesDMap[symbolVal]);
+                let keys = Object.keys(this._productions[symbolVal]);
                 for (let j = 0; j < keys.length; j++) {
-                    state.tryPush_LR0(this._rulesDMap[symbolVal][keys[j]], 0);
+                    state.tryPush_LR0(this._productions[symbolVal][keys[j]], 0);
                 }
             }
         }
@@ -1169,22 +1136,19 @@ export class Parser implements IParser {
                 i = 0;
                 isNewExpected = false;
             }
-            let symbolVal = itemList[i].mark();
+            let symbol = itemList[i].symbolName();
 
-            if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
+            if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
                 let tempSet = itemList[i].rule.right.slice(itemList[i].pos + 1);
-                let symbols = this.firstTerminalForSet(tempSet, itemList[i].expectedSymbols);
+                let terminals = this.firstTerminalForSet(tempSet, itemList[i].expectedSymbols);
 
-                let ruleIndexList = Object.keys(this._rulesDMap[symbolVal]);
-                let symbolsKeys = Object.keys(symbols);
-
-                for (j = 0; j < ruleIndexList.length; j++) {
-                    for (k = 0; k < symbolsKeys.length; k++) {
-                        if (state.tryPush_LR(this._rulesDMap[symbolVal][ruleIndexList[j]], 0, symbolsKeys[k])) {
+                this.rules(symbol).forEach(rule => {
+                    for (let terminal of terminals) {
+                        if (state.tryPush_LR(rule, 0, terminal)) {
                             isNewExpected = true;
                         }
                     }
-                }
+                });
             }
 
             i++;
@@ -1199,7 +1163,7 @@ export class Parser implements IParser {
         const nextState = new State();
 
         for (let i = 0; i < itemList.length; i++) {
-            if (symbolVal === itemList[i].mark()) {
+            if (symbolVal === itemList[i].symbolName()) {
                 nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1));
             }
         }
@@ -1213,7 +1177,7 @@ export class Parser implements IParser {
         const nextState = new State();
 
         for (let i = 0; i < itemList.length; i++) {
-            if (symbolVal === itemList[i].mark()) {
+            if (symbolVal === itemList[i].symbolName()) {
                 nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1, itemList[i].expectedSymbols));
             }
         }
@@ -1310,18 +1274,17 @@ export class Parser implements IParser {
      * Set expected symbols from child to parent items. (????)
      */
     private expandExpected(): void {
-        let baseItems: { item: Item; newExpected: boolean }[] = 
-            this._baseItemList.map(item => ({ item, newExpected: true }));
-        
+        let itemList: Item[] = this._baseItemList;
+        let itemExpected = itemList.map(item => true);
         let table = this._expectedExtensionDMap;
         let i = 0;
         let isNewExpected = false;
 
-        baseItems[0].item.addExpected(END_SYMBOL);
-        baseItems[0].newExpected = (true);
+        itemList[0].addExpected(END_SYMBOL);
+        itemExpected[0] = (true);
 
         while (true) {
-            if (i === baseItems.length) {
+            if (i === itemList.length) {
                 if (!isNewExpected) {
                     break;
                 }
@@ -1329,22 +1292,23 @@ export class Parser implements IParser {
                 i = 0;
             }
 
-            if (baseItems[i].newExpected && isDefAndNotNull(table[i])) {
+            if (itemExpected[i] && isDefAndNotNull(table[i])) {
                 // known expected symbols for item 'i'
-                const expectedSymbols = Object.keys(baseItems[i].item.expectedSymbols);
+                let expectedSymbols = Object.keys(itemList[i].expectedSymbols);
                 // indices of all expected items for item 'i'
-                const keys = Object.keys(table[i]).map(key => Number(key));
+                let keys = Object.keys(table[i]);
 
                 for (let j = 0; j < expectedSymbols.length; j++) {
                     for (let k = 0; k < keys.length; k++) {
-                        if (baseItems[keys[k]].item.addExpected(expectedSymbols[j])) {
+                        if (itemList[Number(keys[k])].addExpected(expectedSymbols[j])) {
+                            itemExpected[Number(keys[k])] = true;
                             isNewExpected = true;
                         }
                     }
                 }
             }
 
-            baseItems[i].newExpected = (false);
+            itemExpected[i] = (false);
             i++;
         }
     }
@@ -1384,7 +1348,7 @@ export class Parser implements IParser {
 
 
     private generateStates_LR(): void {
-        this._firstTerminalsDMap = <IDMap<boolean>>{};
+        this._firstTerminalsDMap = {};
         this.generateFirstState_LR();
 
         const stateList = this._stateList;
@@ -1404,10 +1368,10 @@ export class Parser implements IParser {
     }
 
     private generateStates_LALR(): void {
-        this._statesTempMap = <IMap<State>>{};
-        this._baseItemList = <Item[]>[];
-        this._expectedExtensionDMap = <IDMap<boolean>>{};
-        this._firstTerminalsDMap = <IDMap<boolean>>{};
+        this._statesTempMap = {};
+        this._baseItemList = [];
+        this._expectedExtensionDMap = {};
+        this._firstTerminalsDMap = {};
 
         this.generateStates_LR0();
         this.deleteNotBaseItems();
@@ -1426,7 +1390,7 @@ export class Parser implements IParser {
         let itemList: Item[] = state.items;
 
         for (i = 0; i < itemList.length; i++) {
-            if (itemList[i].mark() === END_POSITION) {
+            if (itemList[i].symbolName() === END_POSITION) {
                 if (itemList[i].rule.left === START_SYMBOL) {
                     this.pushInSyntaxTable(state.index, END_SYMBOL, this._successOperation);
                 }
@@ -1463,7 +1427,7 @@ export class Parser implements IParser {
         this._syntaxTable = <IOperationDMap>{};
         this._reduceOperationsMap = <IOperationMap>{};
         this._shiftOperationsMap = <IOperationMap>{};
- 
+
         this._successOperation = <IOperation>{ type: EOperationType.k_Success };
 
         let i: number = 0, j: number = 0, k: number = 0;
@@ -1475,12 +1439,12 @@ export class Parser implements IParser {
             };
         }
 
-        let rulesDMapKeys: string[] = Object.keys(this._rulesDMap);
+        let rulesDMapKeys: string[] = Object.keys(this._productions);
         for (j = 0; j < rulesDMapKeys.length; j++) {
-            let rulesMapKeys: string[] = Object.keys(this._rulesDMap[rulesDMapKeys[j]]);
+            let rulesMapKeys: string[] = Object.keys(this._productions[rulesDMapKeys[j]]);
             for (k = 0; k < rulesMapKeys.length; k++) {
                 let symbolVal = rulesMapKeys[k];
-                let rule = this._rulesDMap[rulesDMapKeys[j]][symbolVal];
+                let rule = this._productions[rulesDMapKeys[j]][symbolVal];
 
                 this._reduceOperationsMap[symbolVal] = <IOperation>{
                     type: EOperationType.k_Reduce,
