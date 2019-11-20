@@ -153,3 +153,6 @@ export interface IParserParams {
     type: EParserType;
     mode: number;
 }
+
+
+export type ExpectedSymbols = Set<string>;

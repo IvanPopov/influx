@@ -1,7 +1,7 @@
 import bf from "@lib/bf";
 import { deepEqual, isDef, isDefAndNotNull, isNull, verbose } from "@lib/common";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { IFile, IParserParams, IPosition, IRange } from "@lib/idl/parser/IParser";
+import { ExpectedSymbols, IFile, IParserParams, IPosition, IRange } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
 
@@ -622,11 +622,11 @@ export class Parser implements IParser {
     }
 
 
-    private tryAddState(state: State, eType: EParserType): State {
-        let res = this.hasState(state, eType);
+    private tryAddState(state: State, type: EParserType): State {
+        let res = this.hasState(state, type);
 
         if (isNull(res)) {
-            if (eType === EParserType.k_LR0) {
+            if (type === EParserType.k_LR0) {
                 let items = state.items;
                 for (let i = 0; i < items.length; i++) {
                     this.pushBaseItem(items[i]);
@@ -634,7 +634,7 @@ export class Parser implements IParser {
             }
 
             this.pushState(state);
-            this.closure(state, eType);
+            this.closure(state, type);
 
             return state;
         }
@@ -833,7 +833,7 @@ export class Parser implements IParser {
     //     return res;
     // }
 
-    private firstTerminalForSet(symbolList: string[], expectedList: IMap<boolean>): Terminals {
+    private firstTerminalBatch(symbolList: string[], expectedSymbols: ExpectedSymbols): Terminals {
         const res = new Set<string>();
 
         for (let i = 0; i < symbolList.length; i++) {
@@ -858,8 +858,8 @@ export class Parser implements IParser {
             }
         }
 
-        if (!isNull(expectedList)) {
-            Object.keys(expectedList).forEach(expectedSymbol => res.add(expectedSymbol));
+        if (!isNull(expectedSymbols)) {
+            expectedSymbols.forEach(expectedSymbol => res.add(expectedSymbol));
         }
 
         return res;
@@ -1072,9 +1072,9 @@ export class Parser implements IParser {
 
 
     private generateFirstState_LR0(): void {
-        let state = new State();
-        let firstRule = this._productions[START_SYMBOL][0];
-        let item = new Item(firstRule, 0);
+        const state = new State();
+        const firstRule = this._productions[START_SYMBOL][0];
+        const item = new Item(firstRule, 0);
 
         this.pushBaseItem(item);
         state.push(item);
@@ -1085,11 +1085,10 @@ export class Parser implements IParser {
 
 
     private generateFirstState_LR(): void {
-        let state = new State();
-        let firstRule = this._productions[START_SYMBOL][0];
-        let pExpected = <IMap<boolean>>{ [END_SYMBOL]: true };
+        const state = new State();
+        const firstRule = this._productions[START_SYMBOL][0];
 
-        state.push(new Item(firstRule, 0, pExpected));
+        state.push(new Item(firstRule, 0, [END_SYMBOL]));
 
         this.closure_LR(state);
         this.pushState(state);
@@ -1109,14 +1108,12 @@ export class Parser implements IParser {
      * Add all available non terminal rules (as items) to state.
      */
     private closure_LR0(state: State): State {
-        let itemList = state.items;
+        const itemList = state.items;
+        // NOTE: loop grows implicitly inside state.tryPush() function.
         for (let i = 0; i < itemList.length; i++) {
-            let symbolVal = itemList[i].symbolName();
-            if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
-                let keys = Object.keys(this._productions[symbolVal]);
-                for (let j = 0; j < keys.length; j++) {
-                    state.tryPush_LR0(this._productions[symbolVal][keys[j]], 0);
-                }
+            const symbol = itemList[i].symbolName();
+            if (symbol !== END_POSITION && (!this.isTerminal(symbol))) {
+                this.rules(symbol).forEach(rule => state.tryPush_LR0(rule, 0));
             }
         }
         return state;
@@ -1125,7 +1122,7 @@ export class Parser implements IParser {
 
     private closure_LR(state: State): State {
         let itemList = state.items;
-        let i: number = 0, j: number = 0, k: number = 0;
+        let i: number = 0;
         let isNewExpected = false;
 
         while (true) {
@@ -1136,11 +1133,11 @@ export class Parser implements IParser {
                 i = 0;
                 isNewExpected = false;
             }
-            let symbol = itemList[i].symbolName();
 
+            let symbol = itemList[i].symbolName();
             if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
                 let tempSet = itemList[i].rule.right.slice(itemList[i].pos + 1);
-                let terminals = this.firstTerminalForSet(tempSet, itemList[i].expectedSymbols);
+                let terminals = this.firstTerminalBatch(tempSet, itemList[i].expectedSymbols);
 
                 this.rules(symbol).forEach(rule => {
                     for (let terminal of terminals) {
@@ -1178,7 +1175,8 @@ export class Parser implements IParser {
 
         for (let i = 0; i < itemList.length; i++) {
             if (symbolVal === itemList[i].symbolName()) {
-                nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1, itemList[i].expectedSymbols));
+                const expectedSymbols = Array.from(itemList[i].expectedSymbols);
+                nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1, expectedSymbols));
             }
         }
 
@@ -1193,19 +1191,16 @@ export class Parser implements IParser {
     }
 
 
-    private closureForItem(rule: IRule, pos: number): State {
-        let indexVal = "";
-        indexVal += rule.index + "_" + pos;
+    private closureForItem({ rule, pos }: Item): State {
+        const indexVal = rule.index + "_" + pos;
 
         let state = this._statesTempMap[indexVal];
         if (isDef(state)) {
             return state;
         }
 
-        let expected = <IMap<boolean>>{ [UNUSED_SYMBOL]: true };
-
         state = new State();
-        state.push(new Item(rule, pos, expected));
+        state.push(new Item(rule, pos, [UNUSED_SYMBOL]));
 
         this.closure_LR(state);
         this._statesTempMap[indexVal] = state;
@@ -1236,20 +1231,18 @@ export class Parser implements IParser {
         let nBaseItemTest = testState.numBaseItems;
 
         for (let i = 0; i < nBaseItemTest; i++) {
-            let state = this.closureForItem(itemList[i].rule, itemList[i].pos);
+            let state = this.closureForItem(itemList[i]);
 
             for (let j = 0; j < nBaseItemX; j++) {
                 let item = state.hasChildItem(itemListX[j]);
 
                 if (item) {
-                    let expected: IMap<boolean> = item.expectedSymbols;
-
-                    for (let k in expected) {
-                        if (k === UNUSED_SYMBOL) {
+                    for (let symbol of item.expectedSymbols) {
+                        if (symbol === UNUSED_SYMBOL) {
                             this.addLinkExpected(itemList[i], itemListX[j]);
                         }
                         else {
-                            itemListX[j].addExpected(k);
+                            itemListX[j].addExpected(symbol);
                         }
                     }
                 }
@@ -1293,14 +1286,12 @@ export class Parser implements IParser {
             }
 
             if (itemExpected[i] && isDefAndNotNull(table[i])) {
-                // known expected symbols for item 'i'
-                let expectedSymbols = Object.keys(itemList[i].expectedSymbols);
                 // indices of all expected items for item 'i'
                 let keys = Object.keys(table[i]);
 
-                for (let j = 0; j < expectedSymbols.length; j++) {
+                for (const expectedSymbol of itemList[i].expectedSymbols) {
                     for (let k = 0; k < keys.length; k++) {
-                        if (itemList[Number(keys[k])].addExpected(expectedSymbols[j])) {
+                        if (itemList[Number(keys[k])].addExpected(expectedSymbol)) {
                             itemExpected[Number(keys[k])] = true;
                             isNewExpected = true;
                         }
@@ -1395,11 +1386,8 @@ export class Parser implements IParser {
                     this.pushInSyntaxTable(state.index, END_SYMBOL, this._successOperation);
                 }
                 else {
-                    let pExpected = itemList[i].expectedSymbols;
-
-                    let pKeys: string[] = Object.keys(pExpected);
-                    for (j = 0; j < pKeys.length; j++) {
-                        this.pushInSyntaxTable(state.index, pKeys[j], this._reduceOperationsMap[itemList[i].rule.index]);
+                    for (const expectedSymbol of itemList[i].expectedSymbols) {
+                        this.pushInSyntaxTable(state.index, expectedSymbol, this._reduceOperationsMap[itemList[i].rule.index]);
                     }
                 }
             }

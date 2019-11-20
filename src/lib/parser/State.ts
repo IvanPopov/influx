@@ -101,7 +101,7 @@ export class State {
             return sameItem.addExpected(expectedSymbol);
         }
 
-        const item = new Item(rule, pos, { [expectedSymbol]: true });
+        const item = new Item(rule, pos, [expectedSymbol]);
         this.push(item);
         return true;
     }

@@ -1,6 +1,6 @@
 ﻿import { assert, isDef, isDefAndNotNull } from "@lib/common";
 import { IMap } from "@lib/idl/IMap";
-import { EParserType, IRule } from "@lib/idl/parser/IParser";
+import { EParserType, ExpectedSymbols, IRule } from "@lib/idl/parser/IParser";
 
 import { State } from "./State";
 import { END_POSITION, T_EMPTY } from "./symbols";
@@ -24,23 +24,17 @@ export class Item {
      */
     state: State | null;
 
-    expectedSymbols: IMap<boolean>;
+    expectedSymbols: ExpectedSymbols;
 
-    getExpectedSymbolsCount(): number {
-        return Object.keys(this.expectedSymbols).length;
-    }
-
-    constructor(rule: IRule, pos: number, expectedSymbols?: IMap<boolean>) {
+    constructor(rule: IRule, pos: number, expectedSymbols?: string[]) {
         this.rule = rule;
         this.pos = pos;
         this.index = 0;
         this.state = null;
-        this.expectedSymbols = {};
+        this.expectedSymbols = new Set<string>();
 
         if (expectedSymbols) {
-            Object
-                .getOwnPropertyNames(<IMap<boolean>>expectedSymbols)
-                .forEach(name => this.addExpected(name));
+            expectedSymbols.forEach(symbol => this.addExpected(symbol));
         }
     }
 
@@ -50,12 +44,12 @@ export class Item {
         } 
         
         if (type === EParserType.k_LR1) {
-            if (!(this.rule === item.rule && this.pos === item.pos && this.getExpectedSymbolsCount() === item.getExpectedSymbolsCount())) {
+            if (!(this.rule === item.rule && this.pos === item.pos && this.expectedSymbols.size === item.expectedSymbols.size)) {
                 return false;
             }
 
-            for (let i in this.expectedSymbols) {
-                if (!item.isExpected(i)) {
+            for (const symbol of this.expectedSymbols) {
+                if (!item.isExpected(symbol)) {
                     return false;
                 }
             }
@@ -92,14 +86,14 @@ export class Item {
     // }
 
     isExpected(symbol: string): boolean {
-        return !!(this.expectedSymbols[symbol]);
+        return this.expectedSymbols.has(symbol);
     }
 
     addExpected(symbol: string): boolean {
-        if (this.expectedSymbols[symbol]) {
+        if (this.isExpected(symbol)) {
             return false;
         }
-        this.expectedSymbols[symbol] = true;
+        this.expectedSymbols.add(symbol);
         return true;
     }
 
@@ -117,10 +111,8 @@ export class Item {
             msg += " . ";
         }
 
-        if (isDef(this.expectedSymbols)) {
-            const expectedTokens = Object
-                .getOwnPropertyNames(this.expectedSymbols)
-                .map(k => Item.decodeSymbol(k, grammarSymbols));
+        if (this.expectedSymbols) {
+            const expectedTokens = Array.from(this.expectedSymbols).map(k => Item.decodeSymbol(k, grammarSymbols));
 
             if (expectedTokens.length) {
                 msg += ", " + expectedTokens.join(' ');
