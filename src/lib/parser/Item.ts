@@ -26,11 +26,6 @@ export class Item {
 
     expectedSymbols: IMap<boolean>;
 
-    // aux
-    // todo: remove it?
-    $newExpected: boolean;
-
-
     getExpectedSymbolsCount(): number {
         return Object.keys(this.expectedSymbols).length;
     }
@@ -41,8 +36,6 @@ export class Item {
         this.index = 0;
         this.state = null;
         this.expectedSymbols = {};
-
-        this.$newExpected = true;
 
         if (expectedSymbols) {
             Object
@@ -107,7 +100,6 @@ export class Item {
             return false;
         }
         this.expectedSymbols[symbol] = true;
-        this.$newExpected = true;
         return true;
     }
 

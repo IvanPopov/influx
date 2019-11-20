@@ -102,18 +102,17 @@ export interface IParseTree {
     readonly optimized: boolean;
     readonly root: IParseNode;
 
-    finishTree(): void;
-
     addToken(pToken: IToken): void;
-    addNode(node: IParseNode): void;
     reduceByRule(pRule: IRule, eCreate: ENodeCreateMode): void;
-
-    toString(): string;
-
-    clone(): IParseTree;
-
+    finishTree(): void;
+    
     removeLastNode(): IParseNode;
 
+    /** @deprecated */
+    clone(): IParseTree;
+    /** @deprecated */
+    toString(): string;
+    /** @deprecated */
     toHTMLString(node?: IParseNode, padding?: string): string;
 }
 

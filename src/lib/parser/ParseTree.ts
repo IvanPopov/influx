@@ -69,11 +69,6 @@ export class ParseTree implements IParseTree {
         this.addNode({ name, value, loc, children, parent });
     }
 
-    addNode(node: IParseNode): void {
-        this.nodes.push(node);
-        this.nodesCountStack.push(1);
-    }
-
 
     removeLastNode(): IParseNode {
         this.nodesCountStack.pop();
@@ -136,6 +131,10 @@ export class ParseTree implements IParseTree {
         }
     }
 
+    private addNode(node: IParseNode): void {
+        this.nodes.push(node);
+        this.nodesCountStack.push(1);
+    }
  
     private addLink(parent: IParseNode, child: IParseNode): void {
         parent.children = parent.children || [];

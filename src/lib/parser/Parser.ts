@@ -1250,15 +1250,12 @@ export class Parser implements IParser {
     }
 
 
-    private addLinkExpected(item: Item, pItemX: Item): void {
+    private addLinkExpected(item: Item, itemX: Item): void {
         let table = this._expectedExtensionDMap;
         let index = item.index;
 
-        if (!isDef(table[index])) {
-            table[index] = {};
-        }
-
-        table[index][pItemX.index] = true;
+        table[index] = table[index] || {};
+        table[index][itemX.index] = true;
     }
 
 
@@ -1313,16 +1310,18 @@ export class Parser implements IParser {
      * Set expected symbols from child to parent items. (????)
      */
     private expandExpected(): void {
-        let itemList = this._baseItemList;
+        let baseItems: { item: Item; newExpected: boolean }[] = 
+            this._baseItemList.map(item => ({ item, newExpected: true }));
+        
         let table = this._expectedExtensionDMap;
         let i = 0;
         let isNewExpected = false;
 
-        itemList[0].addExpected(END_SYMBOL);
-        itemList[0].$newExpected = (true);
+        baseItems[0].item.addExpected(END_SYMBOL);
+        baseItems[0].newExpected = (true);
 
         while (true) {
-            if (i === itemList.length) {
+            if (i === baseItems.length) {
                 if (!isNewExpected) {
                     break;
                 }
@@ -1330,22 +1329,22 @@ export class Parser implements IParser {
                 i = 0;
             }
 
-            if (itemList[i].$newExpected && isDefAndNotNull(table[i])) {
+            if (baseItems[i].newExpected && isDefAndNotNull(table[i])) {
                 // known expected symbols for item 'i'
-                let expectedSymbols = Object.keys(itemList[i].expectedSymbols);
+                const expectedSymbols = Object.keys(baseItems[i].item.expectedSymbols);
                 // indices of all expected items for item 'i'
-                let keys = Object.keys(table[i]);
+                const keys = Object.keys(table[i]).map(key => Number(key));
 
                 for (let j = 0; j < expectedSymbols.length; j++) {
                     for (let k = 0; k < keys.length; k++) {
-                        if (itemList[keys[k]].addExpected(expectedSymbols[j])) {
+                        if (baseItems[keys[k]].item.addExpected(expectedSymbols[j])) {
                             isNewExpected = true;
                         }
                     }
                 }
             }
 
-            itemList[i].$newExpected = (false);
+            baseItems[i].newExpected = (false);
             i++;
         }
     }
