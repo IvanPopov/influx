@@ -1,8 +1,8 @@
-import { Parser, EParserErrors } from "../parser/Parser";
-import { EParserCode } from "./../idl/parser/IParser";
 import { IMap } from "../idl/IMap";
-import { EOperationType, IParseTree, IParseNode, IParserState } from '../idl/parser/IParser';
+import { EOperationType, IParseNode, IParserState, IParseTree } from '../idl/parser/IParser';
+import { EParserErrors, Parser } from "../parser/Parser";
 import * as uri from "../uri/uri"
+import { EParserCode } from "./../idl/parser/IParser";
 
 const readFile = fname => fetch(fname).then(resp => resp.text());
 
@@ -49,7 +49,7 @@ export class EffectParser extends Parser {
 
     private _addType(): EOperationType {
         let tree = this.getSyntaxTree();
-        let node = tree.getLastNode();
+        let node = tree.lastNode;
         let typeId = node.children[node.children.length - 2].value;
 
         this.addTypeId(typeId);
@@ -58,7 +58,7 @@ export class EffectParser extends Parser {
 
     private async _includeCode(): Promise<EOperationType> {
         let tree = this.getSyntaxTree();
-        let node = tree.getLastNode();
+        let node = tree.lastNode;
         let file = node.value;
 
         //cuttin qoutes

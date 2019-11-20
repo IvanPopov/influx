@@ -97,9 +97,12 @@ export interface IParseNode {
 }
 
 export interface IParseTree {
-    finishTree(): void;
+    readonly nodes: IParseNode[];
+    readonly lastNode: IParseNode;
+    readonly optimized: boolean;
+    readonly root: IParseNode;
 
-    setOptimizeMode(isOptimize: boolean): void;
+    finishTree(): void;
 
     addToken(pToken: IToken): void;
     addNode(node: IParseNode): void;
@@ -109,14 +112,9 @@ export interface IParseTree {
 
     clone(): IParseTree;
 
-    getNodes(): IParseNode[];
-    getLastNode(): IParseNode;
+    removeLastNode(): IParseNode;
 
-    getRoot(): IParseNode;
-    setRoot(pRoot: IParseNode): void;
     toHTMLString(node?: IParseNode, padding?: string): string;
-
-    removeNode(): IParseNode;
 }
 
 

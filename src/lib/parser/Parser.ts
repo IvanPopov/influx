@@ -355,7 +355,7 @@ export class Parser implements IParser {
                 } else {
                     console.warn(`op: UNDEF (stack len: ${stack.length})`);
                     this.emitSyntaxError(token);
-                    breakProcessing = true;
+                    // breakProcessing = true;
 
  
                     // token = this.readToken();
@@ -372,20 +372,18 @@ export class Parser implements IParser {
 
 
                     //
-                    // panic mode recovery
+                    // panic mode recovery (naive implementation)
                     //
 
-                    // let lastToken: string;
+                    const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']', END_SYMBOL];
                     
-                    // const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']'];
-                    
-                    // do {
-                    //     const node = tree.removeNode();
-                    //     // console.log(node);
-                    //     lastToken = node.value;
-                    //     stack.pop();
-                    //     console.warn(`stack.pop(${lastToken})`);
-                    // } while (synchronizingTokens.indexOf(lastToken) === -1 && tree.getNodes().length);
+                    do {
+                       token = this.readToken();
+                    } while (synchronizingTokens.indexOf(token.value) === -1);
+
+                    if (token.value === END_SYMBOL) {
+                        breakProcessing = true;
+                    }
                 }
             }
 
@@ -422,7 +420,7 @@ export class Parser implements IParser {
             console.warn("It`s impossible to print states. You must init parser in debug-mode");
             return;
         }
-        var mesg: string = "\n" + this.statesToString(isBaseOnly);
+        const mesg = "\n" + this.statesToString(isBaseOnly);
         console.log(mesg);
     }
 
@@ -498,10 +496,8 @@ export class Parser implements IParser {
 
     protected defaultInit(): void {
         this._stack = [0];
-        this._syntaxTree = new ParseTree();
+        this._syntaxTree = new ParseTree(bf.testAll(this._parseMode, EParseMode.k_Optimize));
         this._typeIdMap = <IMap<boolean>>{};
-
-        this._syntaxTree.setOptimizeMode(bf.testAll(this._parseMode, EParseMode.k_Optimize));
         this._diag.reset();
     }
 
@@ -605,7 +601,7 @@ export class Parser implements IParser {
      * Add item to 'stateList' and set item's index in it. 
      */
     private pushState(state: State): void {
-        state.setIndex(this._stateList.length);
+        state.index = this._stateList.length;
         this._stateList.push(state);
     }
 
@@ -614,7 +610,7 @@ export class Parser implements IParser {
      * Add item to 'baseItemList' and set item's index in it. 
      */
     private pushBaseItem(item: Item): void {
-        item.setIndex(this._baseItemList.length);
+        item.index = this._baseItemList.length;
         this._baseItemList.push(item);
     }
 
@@ -624,7 +620,7 @@ export class Parser implements IParser {
 
         if (isNull(res)) {
             if (eType === EParserType.k_LR0) {
-                let items = state.getItems();
+                let items = state.items;
                 for (let i = 0; i < items.length; i++) {
                     this.pushBaseItem(items[i]);
                 }
@@ -677,9 +673,9 @@ export class Parser implements IParser {
         let isAddState = state.addNextState(symbolVal, nextState);
         if (!isAddState) {
             this.grammarError(EParserErrors.GrammarAddStateLink, {
-                stateIndex: state.getIndex(),
-                oldNextStateIndex: state.getNextStateBySymbol(symbolVal),
-                newNextStateIndex: nextState.getIndex(),
+                stateIndex: state.index,
+                oldNextStateIndex: state.nextStates[symbolVal] || null,
+                newNextStateIndex: nextState.index,
                 grammarSymbol: this.convertGrammarSymbol(symbolVal)
             });
         }
@@ -1097,11 +1093,11 @@ export class Parser implements IParser {
             for (j = 0; j < stateList.length; j++) {
                 if (stateList[j].hasRule(rule, pos)) {
 
-                    if (!isDef(funcByStateDMap[stateList[j].getIndex()])) {
-                        funcByStateDMap[stateList[j].getIndex()] = <IRuleFunctionMap>{};
+                    if (!isDef(funcByStateDMap[stateList[j].index])) {
+                        funcByStateDMap[stateList[j].index] = <IRuleFunctionMap>{};
                     }
 
-                    funcByStateDMap[stateList[j].getIndex()][grammarSymbol] = func;
+                    funcByStateDMap[stateList[j].index][grammarSymbol] = func;
                 }
             }
         }
@@ -1146,7 +1142,7 @@ export class Parser implements IParser {
      * Add all available non terminal rules (as items) to state.
      */
     private closure_LR0(state: State): State {
-        let itemList = state.getItems();
+        let itemList = state.items;
         for (let i = 0; i < itemList.length; i++) {
             let symbolVal = itemList[i].mark();
             if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
@@ -1161,7 +1157,7 @@ export class Parser implements IParser {
 
 
     private closure_LR(state: State): State {
-        let itemList = state.getItems();
+        let itemList = state.items;
         let i: number = 0, j: number = 0, k: number = 0;
         let isNewExpected = false;
 
@@ -1176,8 +1172,8 @@ export class Parser implements IParser {
             let symbolVal = itemList[i].mark();
 
             if (symbolVal !== END_POSITION && (!this.isTerminal(symbolVal))) {
-                let tempSet = itemList[i].getRule().right.slice(itemList[i].getPosition() + 1);
-                let symbols = this.firstTerminalForSet(tempSet, itemList[i].getExpectedSymbols());
+                let tempSet = itemList[i].rule.right.slice(itemList[i].pos + 1);
+                let symbols = this.firstTerminalForSet(tempSet, itemList[i].expectedSymbols);
 
                 let ruleIndexList = Object.keys(this._rulesDMap[symbolVal]);
                 let symbolsKeys = Object.keys(symbols);
@@ -1199,12 +1195,12 @@ export class Parser implements IParser {
 
 
     private static nextState_LR0(state: State, symbolVal: string): State {
-        const itemList = state.getItems();
+        const itemList = state.items;
         const nextState = new State();
 
         for (let i = 0; i < itemList.length; i++) {
             if (symbolVal === itemList[i].mark()) {
-                nextState.push(new Item(itemList[i].getRule(), itemList[i].getPosition() + 1));
+                nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1));
             }
         }
 
@@ -1213,12 +1209,12 @@ export class Parser implements IParser {
 
 
     private static nextState_LR(state: State, symbolVal: string): State {
-        const itemList = state.getItems();
+        const itemList = state.items;
         const nextState = new State();
 
         for (let i = 0; i < itemList.length; i++) {
             if (symbolVal === itemList[i].mark()) {
-                nextState.push(new Item(itemList[i].getRule(), itemList[i].getPosition() + 1, itemList[i].getExpectedSymbols()));
+                nextState.push(new Item(itemList[i].rule, itemList[i].pos + 1, itemList[i].expectedSymbols));
             }
         }
 
@@ -1256,36 +1252,36 @@ export class Parser implements IParser {
 
     private addLinkExpected(item: Item, pItemX: Item): void {
         let table = this._expectedExtensionDMap;
-        let index = item.getIndex();
+        let index = item.index;
 
         if (!isDef(table[index])) {
             table[index] = {};
         }
 
-        table[index][pItemX.getIndex()] = true;
+        table[index][pItemX.index] = true;
     }
 
 
     private determineExpected(testState: State, symbolVal: string): void {
-        let stateX = testState.getNextStateBySymbol(symbolVal);
+        let stateX = testState.nextStates[symbolVal] || null;
 
         if (isNull(stateX)) {
             return;
         }
 
-        let itemListX = stateX.getItems();
-        let itemList = testState.getItems();
-        let nBaseItemX = stateX.getNumBaseItems();
-        let nBaseItemTest = testState.getNumBaseItems();
+        let itemListX = stateX.items;
+        let itemList = testState.items;
+        let nBaseItemX = stateX.numBaseItems;
+        let nBaseItemTest = testState.numBaseItems;
 
         for (let i = 0; i < nBaseItemTest; i++) {
-            let state = this.closureForItem(itemList[i].getRule(), itemList[i].getPosition());
+            let state = this.closureForItem(itemList[i].rule, itemList[i].pos);
 
             for (let j = 0; j < nBaseItemX; j++) {
-                let item = <Item>state.hasChildItem(itemListX[j]);
+                let item = state.hasChildItem(itemListX[j]);
 
                 if (item) {
-                    let expected: IMap<boolean> = item.getExpectedSymbols();
+                    let expected: IMap<boolean> = item.expectedSymbols;
 
                     for (let k in expected) {
                         if (k === UNUSED_SYMBOL) {
@@ -1323,7 +1319,7 @@ export class Parser implements IParser {
         let isNewExpected = false;
 
         itemList[0].addExpected(END_SYMBOL);
-        itemList[0].setIsNewExpected(true);
+        itemList[0].$newExpected = (true);
 
         while (true) {
             if (i === itemList.length) {
@@ -1334,9 +1330,9 @@ export class Parser implements IParser {
                 i = 0;
             }
 
-            if (itemList[i].getIsNewExpected() && isDefAndNotNull(table[i])) {
+            if (itemList[i].$newExpected && isDefAndNotNull(table[i])) {
                 // known expected symbols for item 'i'
-                let expectedSymbols = Object.keys(itemList[i].getExpectedSymbols());
+                let expectedSymbols = Object.keys(itemList[i].expectedSymbols);
                 // indices of all expected items for item 'i'
                 let keys = Object.keys(table[i]);
 
@@ -1349,7 +1345,7 @@ export class Parser implements IParser {
                 }
             }
 
-            itemList[i].setIsNewExpected(false);
+            itemList[i].$newExpected = (false);
             i++;
         }
     }
@@ -1428,19 +1424,19 @@ export class Parser implements IParser {
 
     private addReducing(state: State): void {
         let i: number = 0, j: number = 0;
-        let itemList: Item[] = state.getItems();
+        let itemList: Item[] = state.items;
 
         for (i = 0; i < itemList.length; i++) {
             if (itemList[i].mark() === END_POSITION) {
-                if (itemList[i].getRule().left === START_SYMBOL) {
-                    this.pushInSyntaxTable(state.getIndex(), END_SYMBOL, this._successOperation);
+                if (itemList[i].rule.left === START_SYMBOL) {
+                    this.pushInSyntaxTable(state.index, END_SYMBOL, this._successOperation);
                 }
                 else {
-                    let pExpected = itemList[i].getExpectedSymbols();
+                    let pExpected = itemList[i].expectedSymbols;
 
                     let pKeys: string[] = Object.keys(pExpected);
                     for (j = 0; j < pKeys.length; j++) {
-                        this.pushInSyntaxTable(state.getIndex(), pKeys[j], this._reduceOperationsMap[itemList[i].getRule().index]);
+                        this.pushInSyntaxTable(state.index, pKeys[j], this._reduceOperationsMap[itemList[i].rule.index]);
                     }
                 }
             }
@@ -1448,14 +1444,10 @@ export class Parser implements IParser {
     }
 
     private addShift(state: State) {
-        let i: number = 0;
-        let pStateMap: IMap<State> = state.getNextStates();
-
-        let pStateKeys: string[] = Object.keys(pStateMap);
-
-        for (i = 0; i < pStateKeys.length; i++) {
-            let symbolVal: string = pStateKeys[i];
-            this.pushInSyntaxTable(state.getIndex(), symbolVal, this._shiftOperationsMap[pStateMap[symbolVal].getIndex()]);
+        const nextStates = state.nextStates;
+        const nextSymbols = Object.keys(nextStates);
+        for (let i = 0; i < nextSymbols.length; i++) {
+            this.pushInSyntaxTable(state.index, nextSymbols[i], this._shiftOperationsMap[nextStates[nextSymbols[i]].index]);
         }
     }
 
@@ -1472,15 +1464,15 @@ export class Parser implements IParser {
         this._syntaxTable = <IOperationDMap>{};
         this._reduceOperationsMap = <IOperationMap>{};
         this._shiftOperationsMap = <IOperationMap>{};
-
+ 
         this._successOperation = <IOperation>{ type: EOperationType.k_Success };
 
         let i: number = 0, j: number = 0, k: number = 0;
 
         for (i = 0; i < stateList.length; i++) {
-            this._shiftOperationsMap[stateList[i].getIndex()] = <IOperation>{
+            this._shiftOperationsMap[stateList[i].index] = <IOperation>{
                 type: EOperationType.k_Shift,
-                index: stateList[i].getIndex()
+                index: stateList[i].index
             };
         }
 
@@ -1610,19 +1602,17 @@ export class Parser implements IParser {
 
 
     private statesToString(isBaseOnly: boolean = true): string {
-        if (!isDef(this._stateList)) {
+        if (!this._stateList) {
             return "";
         }
 
-        let mesg: string = "";
-        let i: number = 0;
-
-        for (i = 0; i < this._stateList.length; i++) {
-            mesg += this._stateList[i].toString(isBaseOnly, this._grammarSymbols);
-            mesg += " ";
+        let msg = "";
+        for (let i = 0; i < this._stateList.length; i++) {
+            msg += this._stateList[i].toString(isBaseOnly, this._grammarSymbols);
+            msg += " ";
         }
 
-        return mesg;
+        return msg;
     }
 
 

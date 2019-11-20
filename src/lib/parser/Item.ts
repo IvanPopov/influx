@@ -6,176 +6,140 @@ import { State } from "./State";
 import { END_POSITION, T_EMPTY } from "./symbols";
 
 export class Item {
-    private _rule: IRule;
+    rule: IRule;
     /**
      * Position in item. 
      * left: right0,   right1, ...., rightN;
      *               ^
      *               position
      */
-    private _pos: number;
+    pos: number;
     /**
      * Index in parser.
      * (Uniq ID)
      */
-    private _index: number;
+    index: number;
     /**
      * Parent state.
      */
-    private _state: State | null;
+    state: State | null;
 
-    private _expected: IMap<boolean>;
+    expectedSymbols: IMap<boolean>;
 
     // aux
     // todo: remove it?
-    private _isNewExpected: boolean;
+    $newExpected: boolean;
 
-    getRule(): IRule {
-        return this._rule;
+
+    getExpectedSymbolsCount(): number {
+        return Object.keys(this.expectedSymbols).length;
     }
 
-    setRule(pRule: IRule): void {
-        this._rule = pRule;
-    }
+    constructor(rule: IRule, pos: number, expectedSymbols?: IMap<boolean>) {
+        this.rule = rule;
+        this.pos = pos;
+        this.index = 0;
+        this.state = null;
+        this.expectedSymbols = {};
 
-    getPosition(): number {
-        return this._pos;
-    }
+        this.$newExpected = true;
 
-    setPosition(iPos: number): void {
-        this._pos = iPos;
-    }
-
-    getState(): State | null {
-        return this._state;
-    }
-
-    setState(pState: State): void {
-        assert(!this._state);
-        this._state = pState;
-    }
-
-    getIndex(): number {
-        return this._index;
-    }
-
-    setIndex(iIndex: number): void {
-        this._index = iIndex;
-    }
-
-    getIsNewExpected(): boolean {
-        return this._isNewExpected;
-    }
-
-    setIsNewExpected(_isNewExpected: boolean) {
-        this._isNewExpected = _isNewExpected;
-    }
-
-    getExpectedSymbols(): IMap<boolean> {
-        return this._expected;
-    }
-
-    getLength(): number {
-        return Object.keys(this._expected).length;
-    }
-
-    constructor(pRule: IRule, iPos: number, pExpected?: IMap<boolean>) {
-        this._rule = pRule;
-        this._pos = iPos;
-        this._index = 0;
-        this._state = null;
-
-        this._isNewExpected = true;
-        this._expected = {};
-
-        if (arguments.length === 3) {
-            var pKeys = Object.getOwnPropertyNames(<IMap<boolean>>arguments[2]);
-
-            for (var i: number = 0; i < pKeys.length; i++) {
-                this.addExpected(pKeys[i]);
-            }
+        if (expectedSymbols) {
+            Object
+                .getOwnPropertyNames(<IMap<boolean>>expectedSymbols)
+                .forEach(name => this.addExpected(name));
         }
     }
 
-    isEqual(pItem: Item, eType: EParserType = EParserType.k_LR0): boolean {
-        if (eType === EParserType.k_LR0) {
-            return (this._rule === pItem.getRule() && this._pos === pItem.getPosition());
-        }
-        else if (eType === EParserType.k_LR1) {
-            if (!(this._rule === pItem.getRule() && this._pos === pItem.getPosition() && this.getLength() === (<Item>pItem).getLength())) {
+    isEqual(item: Item, type: EParserType = EParserType.k_LR0): boolean {
+        if (type === EParserType.k_LR0) {
+            return (this.rule === item.rule && this.pos === item.pos);
+        } 
+        
+        if (type === EParserType.k_LR1) {
+            if (!(this.rule === item.rule && this.pos === item.pos && this.getExpectedSymbolsCount() === item.getExpectedSymbolsCount())) {
                 return false;
             }
-            var i: string = "";
-            for (i in this._expected) {
-                if (!(<Item>pItem).isExpected(i)) {
+
+            for (let i in this.expectedSymbols) {
+                if (!item.isExpected(i)) {
                     return false;
                 }
             }
             return true;
-        }
-        else {
-            //We never must be here, for LALR(1) we work with LR0 items. This 'else'-stmt onlu for closure-compliler.
-            return false;
-        }
+        } 
+
+        //We never must be here, for LALR(1) we work with LR0 items. This 'else'-stmt only for closure-compliler.
+        return false;
     }
 
-    isParentItem(pItem: Item): boolean {
-        return (this._rule === pItem.getRule() && this._pos === pItem.getPosition() + 1);
+    isParentItem(item: Item): boolean {
+        return (this.rule === item.rule && this.pos === item.pos + 1);
     }
 
-    isChildItem(pItem: Item): boolean {
-        return (this._rule === pItem.getRule() && this._pos === pItem.getPosition() - 1);
+    isChildItem(item: Item): boolean {
+        return (this.rule === item.rule && this.pos === item.pos - 1);
     }
 
     mark(): string {
-        var pRight: string[] = this._rule.right;
-        if (this._pos === pRight.length) {
+        const right = this.rule.right;
+        if (this.pos === right.length) {
             return END_POSITION;
         }
-        return pRight[this._pos];
+        return right[this.pos];
     }
 
     end(): string {
-        return this._rule.right[this._rule.right.length - 1] || T_EMPTY;
+        return this.rule.right[this.rule.right.length - 1] || T_EMPTY;
     }
 
+    // get next symbol name
     nextMarked(): string {
-        return this._rule.right[this._pos + 1] || END_POSITION;
+        return this.rule.right[this.pos + 1] || END_POSITION;
     }
 
-    isExpected(sSymbol: string): boolean {
-        return !!(this._expected[sSymbol]);
+    isExpected(symbol: string): boolean {
+        return !!(this.expectedSymbols[symbol]);
     }
 
-    addExpected(sSymbol: string): boolean {
-        if (this._expected[sSymbol]) {
+    addExpected(symbol: string): boolean {
+        if (this.expectedSymbols[symbol]) {
             return false;
         }
-        this._expected[sSymbol] = true;
-        this._isNewExpected = true;
+        this.expectedSymbols[symbol] = true;
+        this.$newExpected = true;
         return true;
     }
 
     toString(grammarSymbols: Map<string, string> = null): string {
-        let msg = `${this._rule.left} -> `;
-        let right = this._rule.right;
-        let pos = this._pos;
+        const { left, right } = this.rule;
 
-        const decodeSymbol = (s: string) => (grammarSymbols ? ((grammarSymbols.get(s) && s !== grammarSymbols.get(s)) ? `'${grammarSymbols.get(s)}'` : s) : s);
+        let msg = `${left} -> `;
 
-        msg += right.map(s => decodeSymbol(s)).map((s, k) => (k === pos ? `. ${s}`: `${s}`)).join(' ');
+        msg += right
+            .map(s => Item.decodeSymbol(s, grammarSymbols))
+            .map((s, k) => (k === this.pos ? `. ${s}` : `${s}`))
+            .join(' ');
 
-        if (this._pos === right.length) {
-            msg += ". ";
+        if (this.pos === right.length) {
+            msg += " . ";
         }
 
-        if (isDef(this._expected)) {
-            const expectedTokens = Object.getOwnPropertyNames(this._expected).map(k => decodeSymbol(k));
+        if (isDef(this.expectedSymbols)) {
+            const expectedTokens = Object
+                .getOwnPropertyNames(this.expectedSymbols)
+                .map(k => Item.decodeSymbol(k, grammarSymbols));
+
             if (expectedTokens.length) {
                 msg += ", " + expectedTokens.join(' ');
             }
         }
 
         return msg;
+    }
+
+
+    static decodeSymbol(s: string, grammarSymbols: Map<string, string>) {
+        return (grammarSymbols ? ((grammarSymbols.get(s) && s !== grammarSymbols.get(s)) ? `'${grammarSymbols.get(s)}'` : s) : s);
     }
 }

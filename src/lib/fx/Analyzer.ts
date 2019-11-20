@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction, IAttributeInstruction, ILiteralInstruction } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
 import { IDiagnosticReport } from '@lib/util/Diagnostics';
@@ -11,6 +11,7 @@ import { IDiagnosticReport } from '@lib/util/Diagnostics';
 import { AnalyzerDiagnostics } from './AnalyzerDiagnostics';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
+import { AttributeInstruction } from './instructions/AttributeInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
 import { BreakOperator, BreakStmtInstruction } from './instructions/BreakStmtInstruction';
 import { CastExprInstruction } from './instructions/CastExprInstruction';
@@ -58,7 +59,6 @@ import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
 import { visitor } from './Visitors';
-import { AttributeInstruction } from './instructions/AttributeInstruction';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -3040,7 +3040,7 @@ export class Analyzer {
 
 
     protected analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
-        const children = ast.getRoot().children;
+        const children = ast.root.children;
         let globals: IInstruction[] = [];
 
         if (isNull(children)) {

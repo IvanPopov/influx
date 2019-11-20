@@ -1,5 +1,5 @@
-﻿import { ENodeCreateMode, IParseNode, IParseTree, IPosition, IRange, IRule, IToken } from "../idl/parser/IParser";
-import { assert } from "./../common";
+﻿import { assert } from "@lib/common";
+import { ENodeCreateMode, IParseNode, IParseTree, IPosition, IRange, IRule, IToken } from "@lib/idl/parser/IParser";
 
 function locMin(a: IPosition, b: IPosition): IPosition {
     assert(a.file == b.file);
@@ -20,104 +20,113 @@ function locMax(a: IPosition, b: IPosition): IPosition {
 }
 
 
+function extendLocation(parent: IRange, child: IRange) {
+    if (child.start.line < parent.start.line) {
+        parent.start = { ...child.start };
+    } else if (child.start.line === parent.start.line) {
+        parent.start = locMin(child.start, parent.start);
+    }
+
+    if (child.end.line > parent.end.line) {
+        parent.end = { ...child.end };
+    } else if (child.end.line === parent.end.line) {
+        parent.end = locMax(child.end, parent.end);
+    }
+}
+
+
 export class ParseTree implements IParseTree {
-    private _root: IParseNode;
-    private _nodes: IParseNode[];
-    private _nodesCountStack: number[];
-    private _isOptimizeMode: boolean;
+    root: IParseNode;
+    nodes: IParseNode[];
+    
+    readonly optimized: boolean;
+    
+    private nodesCountStack: number[];
 
-    getRoot(): IParseNode {
-        return this._root;
+
+    constructor(optimized: boolean, root: IParseNode = null) {
+        this.root = root;
+        this.nodes = [];
+        this.optimized = optimized;
+
+        this.nodesCountStack = [];
     }
 
-    setRoot(root: IParseNode): void {
-        this._root = root;
+
+    get lastNode(): IParseNode {
+        return this.nodes[this.nodes.length - 1];
     }
 
-    constructor() {
-        this._root = null;
-        this._nodes = <IParseNode[]>[];
-        this._nodesCountStack = <number[]>[];
-        this._isOptimizeMode = false;
-    }
 
     finishTree(): void {
-        this._root = this._nodes.pop();
+        this.root = this.nodes.pop();
     }
 
-    setOptimizeMode(isOptimize: boolean): void {
-        this._isOptimizeMode = isOptimize;
-    }
 
-    addToken(token: IToken): void {
-        let node: IParseNode = {
-            name: token.name,
-            value: token.value,
-            children: null,
-            parent: null,
-            loc: token.loc,
-        };
-
-        this.addNode(node);
+    addToken({ name, value, loc }: IToken): void {
+        const children = null;
+        const parent = null;
+        this.addNode({ name, value, loc, children, parent });
     }
 
     addNode(node: IParseNode): void {
-        this._nodes.push(node);
-        this._nodesCountStack.push(1);
+        this.nodes.push(node);
+        this.nodesCountStack.push(1);
     }
 
-    removeNode(): IParseNode {
-        this._nodesCountStack.pop();
-        return this._nodes.pop();
+
+    removeLastNode(): IParseNode {
+        this.nodesCountStack.pop();
+        return this.nodes.pop();
     }
 
     reduceByRule(rule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
         let iReduceCount = 0;
-        let nodesCountStack= this._nodesCountStack;
+        let nodesCountStack = this.nodesCountStack;
         let ruleLength = rule.right.length;
-        let nodes = this._nodes;
-        let optimize = this._isOptimizeMode ? 1 : 0;
+        let nodes = this.nodes;
+        let optimize = this.optimized ? 1 : 0;
 
         while (ruleLength) {
             iReduceCount += nodesCountStack.pop();
             ruleLength--;
         }
 
-        if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || (eCreate === ENodeCreateMode.k_Necessary)) {
-            let node: IParseNode;
+        if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || 
+            (eCreate === ENodeCreateMode.k_Necessary)) {
 
-            if (iReduceCount > 0) {
-                let temp = nodes.pop();
+            assert(iReduceCount > 0);
+
+            let temp = nodes.pop();
+            iReduceCount--;
+
+            const name = rule.left;
+            const loc = { ...temp.loc };
+
+            const node: IParseNode = { name, children: null, parent: null, value: '', loc };
+
+            this.addLink(node, temp);
+
+            while (iReduceCount) {
+                assert(nodes.length > 0);
+                this.addLink(node, nodes.pop());
                 iReduceCount--;
-
-                node = {
-                    name: rule.left,
-                    children: null,
-                    parent: null,
-                    value: '',
-                    loc: { ...temp.loc }
-                };
-
-                this.addLink(node, temp);
-
-                while (iReduceCount) {
-                    assert(nodes.length > 0);
-                    this.addLink(node, nodes.pop());
-                    iReduceCount --;
-                }
-            } else {
-                console.warn('something went wrong');
-                node = {
-                    name: rule.left,
-                    children: [],
-                    parent: null,
-                    value: '',
-                    loc: {
-                        start: { file: null, line: 0, column: 0 },
-                        end: { file: null, line: 0, column: 0 }
-                    }
-                };
             }
+            
+            // else {
+            //     assert(false);
+            //     console.warn('something went wrong');
+            //     node = {
+            //         name: rule.left,
+            //         children: [],
+            //         parent: null,
+            //         value: '',
+            //         loc: {
+            //             start: { file: null, line: 0, column: 0 },
+            //             end: { file: null, line: 0, column: 0 }
+            //         }
+            //     };
+            // }
 
             nodes.push(node);
             nodesCountStack.push(1);
@@ -127,75 +136,42 @@ export class ParseTree implements IParseTree {
         }
     }
 
-    toString(): string {
-        if (this._root) {
-            return this.toStringNode(this._root);
-        }
-        else {
-            return "";
-        }
+ 
+    private addLink(parent: IParseNode, child: IParseNode): void {
+        parent.children = parent.children || [];
+        
+        extendLocation(parent.loc, child.loc);
+        
+        parent.children.push(child);
+        child.parent = parent;
     }
 
+
+    /** @deprecated */
     clone(): IParseTree {
-        let pTree = new ParseTree();
-        pTree.setRoot(this.cloneNode(this._root));
-        return pTree;
+        return new ParseTree(this.optimized, this.cloneNode(this.root));
     }
 
-    getNodes(): IParseNode[] {
-        return this._nodes;
-    }
 
-    getLastNode(): IParseNode {
-        return this._nodes[this._nodes.length - 1];
-    }
-
-    private addLink(parent: IParseNode, node: IParseNode): void {
-        if (!parent.children) {
-            parent.children = <IParseNode[]>[];
+    /** @deprecated */
+    private cloneNode({ name, value, children }: IParseNode): IParseNode {
+        const clone: IParseNode = { name, value, children: null, parent: null };
+        if (children) { 
+            children.forEach(child => this.addLink(clone, this.cloneNode(child)))
         }
-        
-       
-        
-        // if (!node) {
-        //     console.warn('node is undefined!');
-        // } 
-        // else 
-        {
-            if (node.loc.start.line < parent.loc.start.line) {
-                parent.loc.start = { ...node.loc.start };
-            } else if (node.loc.start.line === parent.loc.start.line) {
-                parent.loc.start = locMin(node.loc.start, parent.loc.start);
-            }
-    
-            if (node.loc.end.line > parent.loc.end.line) {
-                parent.loc.end = { ...node.loc.end };
-            } else if (node.loc.end.line === parent.loc.end.line) {
-                parent.loc.end = locMax(node.loc.end, parent.loc.end);
-            }
-
-            parent.children.push(node);
-            node.parent = parent;
-        }
+        return clone;
     }
 
-    private cloneNode(node: IParseNode): IParseNode {
-        let newNode: IParseNode;
-        newNode = <IParseNode>{
-            name: node.name,
-            value: node.value,
-            children: null,
-            parent: null
-        };
-
-        let children: IParseNode[] = node.children;
-        for (let i = 0; children && i < children.length; i++) {
-            this.addLink(newNode, this.cloneNode(children[i]));
+    /** @deprecated */
+    toString(): string {
+        if (this.root) {
+            return this.toStringNode(this.root);
         }
 
-        return newNode;
+        return '';
     }
 
+    /** @deprecated */
     private toStringNode(node: IParseNode, padding: string = ""): string {
         let res: string = padding + "{\n";
         let oldPadding: string = padding;
@@ -234,8 +210,9 @@ export class ParseTree implements IParseTree {
         return res;
     }
 
+    /** @deprecated */
     toHTMLString(node: IParseNode, padding: string = "") {
-        node = node || this.getRoot();
+        node = node || this.root;
         let res = padding + "{\n";
         let oldPadding = padding;
         let defaultPadding = "  ";
@@ -243,15 +220,15 @@ export class ParseTree implements IParseTree {
         if (node.value) {
             res += padding + "<b style=\"color: #458383;\">name</b>: \"" + node.name + "\"" + ",\n";
             res += padding + "<b style=\"color: #458383;\">value</b>: \"" + node.value + "\"" + ",\n";
-            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \""  + node.loc.end.line + "\"" + "\n";
-            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \""  + node.loc.end.column + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \"" + node.loc.end.line + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \"" + node.loc.end.column + "\"" + "\n";
             // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
         }
         else {
             let i;
             res += padding + "<i style=\"color: #8A2BE2;\">name</i>: \"" + node.name + "\"" + "\n";
-            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \""  + node.loc.end.line + "\"" + "\n";
-            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \""  + node.loc.end.column + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">line</b>: \"" + node.loc.start.line + "\" - \"" + node.loc.end.line + "\"" + "\n";
+            res += padding + "<b style=\"color: #458383;\">column</b>: \"" + node.loc.start.column + "\" - \"" + node.loc.end.column + "\"" + "\n";
             // sRes += sPadding + "<b style=\"color: #458383;\">position</b>: \"" + pNode.position + "\"" + "\n";
             res += padding + "<i style=\"color: #8A2BE2;\">children</i>: [";
             if (node.children) {

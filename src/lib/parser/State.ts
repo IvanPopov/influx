@@ -1,117 +1,66 @@
-﻿import { isDef } from "../common";
-import { IMap } from "../idl/IMap";
-import { EParserType, IRule } from "../idl/parser/IParser";
+﻿import { assert, isDef } from "@lib/common";
+import { IMap } from "@lib/idl/IMap";
+import { EParserType, IRule } from "@lib/idl/parser/IParser";
+
 import { Item } from "./Item"
 
 export class State {
-    private _itemList: Item[];
-    /**
-     * 'symbol name => state' map
-     */
-    private _nextStates: IMap<State>;
     /**
      * Uniq id/index.
-     * see: Parser._stateList
      */
-    private _iIndex: number;
+    index: number;
+    items: Item[];
+    /**
+     * 'symbol name => state' map
+     * Aux.
+     */
+    nextStates: IMap<State>;
     /**
      * Number of items where symbol for which it state was build is placed as right part of rule.
      */
-    private _nBaseItems: number;
+    numBaseItems: number;
 
-    getIndex(): number {
-        return this._iIndex;
-    }
-
-    setIndex(iIndex: number): void {
-        this._iIndex = iIndex;
-    }
-
-    getItems(): Item[] {
-        return this._itemList;
-    }
-
-    getNumBaseItems(): number {
-        return this._nBaseItems;
-    }
-
-    getNextStates(): IMap<State> {
-        return this._nextStates;
-    }
 
     constructor() {
-        this._itemList = <Item[]>[];
-        this._nextStates = <IMap<State>>{};
-        this._iIndex = 0;
-        this._nBaseItems = 0;
+        this.items = <Item[]>[];
+        this.nextStates = <IMap<State>>{};
+        this.index = 0;
+        this.numBaseItems = 0;
     }
 
-    hasItem(pItem: Item, eType: EParserType): Item | null {
-        var i;
-        var pItems: Item[] = this._itemList;
-        for (i = 0; i < pItems.length; i++) {
-            if (pItems[i].isEqual(pItem, eType)) {
-                return pItems[i];
-            }
-        }
-        return null;
+    get baseItems(): Item[] {
+        return this.items.slice(0, this.numBaseItems);
     }
 
-    hasParentItem(pItem: Item): Item | null {
-        var i;
-        var pItems = this._itemList;
-        for (i = 0; i < pItems.length; i++) {
-            if (pItems[i].isParentItem(pItem)) {
-                return pItems[i];
-            }
-        }
-        return null;
+    hasItem(value: Item, type: EParserType): Item {
+        return this.items.find(item => item.isEqual(value, type)) || null;
     }
 
-    hasChildItem(pItem: Item): Item | null {
-        var i;
-        var pItems = this._itemList;
-        for (i = 0; i < pItems.length; i++) {
-            if (pItems[i].isChildItem(pItem)) {
-                return pItems[i];
-            }
-        }
-        return null;
+    hasParentItem(value: Item): Item {
+        return this.items.find(item => item.isParentItem(value)) || null;
     }
 
-    hasRule(pRule: IRule, iPos: number): boolean {
-        var i: number = 0;
-        var pItemList: Item[] = this._itemList;
-        var pItem: Item;
+    hasChildItem(value: Item): Item {
+        return this.items.find(item => item.isChildItem(value)) || null;
+    }
 
-        for (i = 0; i < this._nBaseItems; i++) {
-            pItem = pItemList[i];
-            if (pItem.getRule() === pRule && pItem.getPosition() === iPos) {
-                return true;
-            }
-        }
-
-        return false;
+    hasRule(pRule: IRule, pos: number): boolean {
+        return this.baseItems.findIndex(item => (item.rule === pRule && item.pos === pos)) !== -1;
     }
 
     isEmpty(): boolean {
-        return !(this._itemList.length);
+        return !(this.items.length);
     }
 
-    isEqual(pState: State, eType: EParserType): boolean {
-        var pItemsA: Item[] = this._itemList;
-        var pItemsB: Item[] = pState.getItems();
-
-        if (this._nBaseItems !== pState.getNumBaseItems()) {
+    isEqual(state: State, type: EParserType): boolean {
+        if (this.numBaseItems !== state.numBaseItems) {
             return false;
         }
-        let nItems = this._nBaseItems;
-        var i, j;
-        var isEqual;
-        for (i = 0; i < nItems; i++) {
-            isEqual = false;
-            for (j = 0; j < nItems; j++) {
-                if (pItemsA[i].isEqual(pItemsB[j], eType)) {
+        
+        for (const baseItemA of this.baseItems) {
+            let isEqual = false;
+            for (const baseItemB of state.baseItems) {
+                if (baseItemA.isEqual(baseItemB, type)) {
                     isEqual = true;
                     break;
                 }
@@ -120,79 +69,58 @@ export class State {
                 return false;
             }
         }
+        
         return true;
     }
 
-    public push(pItem: Item): void {
-        if (this._itemList.length === 0 || pItem.getPosition() > 0) {
-            this._nBaseItems += 1;
+    push(item: Item): void {
+        if (this.items.length === 0 || item.pos > 0) {
+            this.numBaseItems += 1;
         }
-        pItem.setState(this);
-        this._itemList.push(pItem);
+        assert(!item.state);
+        item.state = this;
+        this.items.push(item);
     }
 
 
-    public tryPush_LR0(pRule: IRule, iPos: number): boolean {
-        let items = this._itemList;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].getRule() === pRule && items[i].getPosition() === iPos) {
-                return false;
-            }
-        }
-        let item = new Item(pRule, iPos);
-        this.push(item);
-        return true;
-    }
-
-
-    public tryPush_LR(pRule: IRule, iPos: number, expectedSymbol: string): boolean {
-        let items = this._itemList;
-
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].getRule() === pRule && items[i].getPosition() === iPos) {
-                return items[i].addExpected(expectedSymbol);
-            }
-        }
-
-        let expected = { [expectedSymbol]: true };
-        let item = new Item(pRule, iPos, expected);
-        this.push(item);
-        return true;
-    }
-
-    public getNextStateBySymbol(sSymbol: string): State | null {
-        if (isDef(this._nextStates[sSymbol])) {
-            return this._nextStates[sSymbol];
-        }
-
-        return null;
-    }
-
-    /**
-     * 
-     */
-    public addNextState(symbol: string, state: State): boolean {
-        if (isDef(this._nextStates[symbol])) {
+    tryPush_LR0(rule: IRule, pos: number): boolean {
+        const sameItem = this.items.find(item => (item.rule === rule && item.pos === pos));
+        if (sameItem) {
             return false;
-        } else {
-            this._nextStates[symbol] = state;
-            return true;
-        }
-    }
-
-    public deleteNotBase(): void {
-        this._itemList.length = this._nBaseItems;
-    }
-
-    public toString(isBase: boolean = true, grammarSymbols: Map<string, string> = null): string {
-        let itemList = this._itemList;
-        let msg = `State ${this._iIndex}:\n`;
-        let len = isBase ? this._nBaseItems : itemList.length;
-
-        for (let j = 0; j < len; j++) {
-            msg = `${msg}\t\t${itemList[j].toString(grammarSymbols)}\n`
         }
 
-        return msg;
+        const item = new Item(rule, pos);
+        this.push(item);
+        return true;
+    }
+
+
+    tryPush_LR(rule: IRule, pos: number, expectedSymbol: string): boolean {
+        const sameItem = this.items.find(item => (item.rule === rule && item.pos === pos));
+        if (sameItem) {
+            return sameItem.addExpected(expectedSymbol);
+        }
+
+        const item = new Item(rule, pos, { [expectedSymbol]: true });
+        this.push(item);
+        return true;
+    }
+
+    addNextState(symbol: string, state: State): boolean {
+        if (this.nextStates[symbol]) {
+            return false;
+        } 
+        
+        this.nextStates[symbol] = state;
+        return true;
+    }
+
+    deleteNotBase(): void {
+        this.items.length = this.numBaseItems;
+    }
+
+    toString(isBase: boolean = true, grammarSymbols: Map<string, string> = null): string {
+        return `State ${this.index}:\n` + 
+            (isBase ? this.baseItems : this.items).map(item => `\t\t${item.toString(grammarSymbols)}\n`).join();
     }
 }
