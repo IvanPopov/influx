@@ -88,7 +88,7 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
 interface IOperation {
     type: EOperationType;
     rule?: IRule;
-    index?: number;
+    stateIndex?: number;
 }
 
 interface IOperationMap {
@@ -145,9 +145,6 @@ export class Parser implements IParser {
     //
 
     private _syntaxTable: IOperationDMap;
-    private _reduceOperationsMap: IOperationMap;
-    private _shiftOperationsMap: IOperationMap;
-    private _successOperation: IOperation;
 
 
     // LR0/LR1/LALR 
@@ -189,6 +186,8 @@ export class Parser implements IParser {
      * Auxiliary map: [item index] => { [item index]: true }
      * Expectation correspondence map.
      */
+    // NOTE: default JS object significantly faster than Map<number, Set<number>>
+    //       for this case :/
     private _expectedExtensionDMap: IDMap<boolean>;
 
 
@@ -203,9 +202,6 @@ export class Parser implements IParser {
         this._token = null;
 
         this._syntaxTable = null;
-        this._reduceOperationsMap = null;
-        this._shiftOperationsMap = null;
-        this._successOperation = null;
 
         this._productions = null;
         this._baseItems = null;
@@ -247,7 +243,9 @@ export class Parser implements IParser {
 
             this._parseMode = mode;
             this.generateRules(grammar);
+            
             this.buildSyntaxTable();
+
             this.generateFunctionByStateMap();
             if (!bf.testAll(mode, EParseMode.k_DebugMode)) {
                 this.clearMem();
@@ -302,7 +300,7 @@ export class Parser implements IParser {
 
                         case EOperationType.k_Shift:
                             {
-                                const stateIndex = operation.index;
+                                const stateIndex = operation.stateIndex;
                                 stack.push(stateIndex);
                                 tree.addToken(token);
 
@@ -321,7 +319,7 @@ export class Parser implements IParser {
                             {
                                 const ruleLength = operation.rule.right.length;
                                 stack.length -= ruleLength;
-                                const stateIndex = syntaxTable[stackTop()][operation.rule.left].index;
+                                const stateIndex = syntaxTable[stackTop()][operation.rule.left].stateIndex;
 
                                 stack.push(stateIndex);
                                 tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
@@ -481,7 +479,7 @@ export class Parser implements IParser {
     protected defaultInit(): void {
         this._stack = [0];
         this._syntaxTree = new ParseTree(bf.testAll(this._parseMode, EParseMode.k_Optimize));
-        this._typeIdMap = <IMap<boolean>>{};
+        this._typeIdMap = {};
         this._diag.reset();
     }
 
@@ -536,15 +534,12 @@ export class Parser implements IParser {
 
 
     private clearMem(): void {
-        delete this._firstTerminalsCache;
         // delete this._followTerminalsCache;
         delete this._productions;
         delete this._states;
-        delete this._reduceOperationsMap;
-        delete this._shiftOperationsMap;
-        delete this._successOperation;
-        delete this._closureForItemsCache;
         delete this._baseItems;
+        delete this._firstTerminalsCache;
+        delete this._closureForItemsCache;
         delete this._expectedExtensionDMap;
     }
 
@@ -552,16 +547,8 @@ export class Parser implements IParser {
     /**
      * Check for the state's dublicate.
      */
-    private hasState(state: State, eType: EParserType): State {
-        let stateList = this._states;
-
-        for (let i = 0; i < stateList.length; i++) {
-            if (stateList[i].isEqual(state, eType)) {
-                return stateList[i];
-            }
-        }
-
-        return null;
+    private hasState(state: State, type: EParserType): State {
+        return this._states.find(stateIth => stateIth.isEqual(state, type)) || null;
     }
 
 
@@ -585,8 +572,8 @@ export class Parser implements IParser {
         return [...this._grammarSymbols.keys()];
     }
 
-    private isTerminal(symbolVal: string): boolean {
-        return !(this._productions[symbolVal]);
+    private isTerminal(symbol: string): boolean {
+        return !(this._productions[symbol]);
     }
 
 
@@ -613,9 +600,6 @@ export class Parser implements IParser {
 
         if (isNull(res)) {
             if (type === EParserType.k_LR0) {
-                // for (const item of state) {
-                //     this.pushBaseItem(item);
-                // }
                 state.eachItem(item => this.pushBaseItem(item));
             }
 
@@ -638,31 +622,30 @@ export class Parser implements IParser {
     }
 
 
-    private pushInSyntaxTable(idx: number, symbolVal: string, operation: IOperation): void {
-        var syntaxTable: IOperationDMap = this._syntaxTable;
-        if (!syntaxTable[idx]) {
-            syntaxTable[idx] = <IOperationMap>{};
-        }
-        if (isDef(syntaxTable[idx][symbolVal])) {
+    private pushInSyntaxTable(syntaxTable: IOperationDMap, stateIndex: number, symbol: string, operation: IOperation): void {
+        syntaxTable[stateIndex] = syntaxTable[stateIndex] || {};
+        
+        if (isDef(syntaxTable[stateIndex][symbol])) {
             this.grammarError(EParserErrors.GrammarAddOperation, {
-                stateIndex: idx,
-                grammarSymbol: this.convertGrammarSymbol(symbolVal),
-                oldOperation: this._syntaxTable[idx][symbolVal],
+                stateIndex: stateIndex,
+                grammarSymbol: this.convertGrammarSymbol(symbol),
+                oldOperation: this._syntaxTable[stateIndex][symbol],
                 newOperation: operation
             });
         }
-        syntaxTable[idx][symbolVal] = operation;
+
+        syntaxTable[stateIndex][symbol] = operation;
     }
 
 
-    private addStateLink(state: State, nextState: State, symbolVal: string): void {
-        let isAddState = state.addNextState(symbolVal, nextState);
+    private addStateLink(state: State, nextState: State, symbol: string): void {
+        let isAddState = state.addNextState(symbol, nextState);
         if (!isAddState) {
             this.grammarError(EParserErrors.GrammarAddStateLink, {
                 stateIndex: state.index,
-                oldNextStateIndex: state.nextStates[symbolVal] || null,
+                oldNextStateIndex: state.nextStates[symbol] || null,
                 newNextStateIndex: nextState.index,
-                grammarSymbol: this.convertGrammarSymbol(symbolVal)
+                grammarSymbol: this.convertGrammarSymbol(symbol)
             });
         }
     }
@@ -1087,8 +1070,8 @@ export class Parser implements IParser {
     }
 
 
-    private closure(state: State, eType: EParserType): State {
-        if (eType === EParserType.k_LR0) {
+    private closure(state: State, type: EParserType): State {
+        if (type === EParserType.k_LR0) {
             return this.closure_LR0(state);
         } else {
             return this.closure_LR(state);
@@ -1125,17 +1108,18 @@ export class Parser implements IParser {
                 isNewExpected = false;
             }
 
-            let symbol = state.getItem(i).symbolName();
+            const item = state.getItem(i);
+            const symbol = item.symbolName();
             if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
-                let tempSet = state.getItem(i).rule.right.slice(state.getItem(i).pos + 1);
-                let terminals = this.firstTerminalBatch(tempSet, state.getItem(i).expectedSymbols);
+                const nextSymbols = item.rule.right.slice(item.pos + 1);
+                const expectedTerminals = this.firstTerminalBatch(nextSymbols, item.expectedSymbols);
 
                 this.rules(symbol).forEach(rule => {
-                    for (let terminal of terminals) {
-                        if (state.tryPush_LR(rule, 0, terminal)) {
+                    expectedTerminals.forEach(expectedTerminal => {
+                        if (state.tryPush_LR(rule, 0, expectedTerminal)) {
                             isNewExpected = true;
                         }
-                    }
+                    });
                 });
             }
 
@@ -1146,11 +1130,11 @@ export class Parser implements IParser {
     }
 
 
-    private static nextState_LR0(state: State, symbolVal: string): State {
+    private static nextState_LR0(state: State, symbol: string): State {
         const nextState = new State();
 
         state.eachItem(item => {
-            if (item.symbolName() === symbolVal) {
+            if (item.symbolName() === symbol) {
                 nextState.push(new Item(item.rule, item.pos + 1));
             }
         });
@@ -1159,11 +1143,11 @@ export class Parser implements IParser {
     }
 
 
-    private static nextState_LR(state: State, symbolVal: string): State {
+    private static nextState_LR(state: State, symbol: string): State {
         const nextState = new State();
 
         state.eachItem(item => {
-            if (symbolVal === item.symbolName()) {
+            if (item.symbolName() === symbol) {
                 const expectedSymbols = Array.from(item.expectedSymbols);
                 nextState.push(new Item(item.rule, item.pos + 1, expectedSymbols));
             }
@@ -1174,9 +1158,7 @@ export class Parser implements IParser {
 
 
     private deleteNotBaseItems(): void {
-        for (let i = 0; i < this._states.length; i++) {
-            this._states[i].deleteNotBase();
-        }
+        this._states.forEach(state => state.deleteNotBase());
     }
 
 
@@ -1207,62 +1189,36 @@ export class Parser implements IParser {
     }
 
 
-    private determineExpected(testState: State, symbolVal: string): void {
-        let stateX = testState.nextStates[symbolVal] || null;
+    private determineExpected(testState: State, symbol: string): void {
+        const stateNext = testState.nextStates[symbol] || null;
 
-        if (isNull(stateX)) {
+        if (isNull(stateNext)) {
             return;
         }
 
+        // at this moment all items already 'base' because of 
+        // deleteNotBase() call before.
         testState.eachBaseItem(baseItem => {
-            let state = this.closureForItem(baseItem);
-            stateX.eachBaseItem(baseItemX => {
-                let item = state.hasChildItem(baseItemX);
-
+            const state = this.closureForItem(baseItem);
+            stateNext.eachBaseItem(baseItemNext => {
+                const item = state.hasChildItem(baseItemNext);
                 if (item) {
-                    for (let symbol of item.expectedSymbols) {
+                    item.expectedSymbols.forEach(symbol => {
                         if (symbol === UNUSED_SYMBOL) {
-                            this.addLinkExpected(baseItem, baseItemX);
+                            this.addLinkExpected(baseItem, baseItemNext);
+                        } else {
+                            baseItemNext.addExpected(symbol);
                         }
-                        else {
-                            baseItemX.addExpected(symbol);
-                        }
-                    }
+                    })
                 }
             });
-        })
-
-        // for (let baseItem of testState.baseItems) {
-        //     let state = this.closureForItem(baseItem);
-
-        //     for (let baseItemX of stateX.baseItems) {
-        //         let item = state.hasChildItem(baseItemX);
-
-        //         if (item) {
-        //             for (let symbol of item.expectedSymbols) {
-        //                 if (symbol === UNUSED_SYMBOL) {
-        //                     this.addLinkExpected(baseItem, baseItemX);
-        //                 }
-        //                 else {
-        //                     baseItemX.addExpected(symbol);
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+        });
     }
 
 
     private generateLinksExpected(): void {
         const states = this._states;
         const symbols = this.symbols();
-
-        // for (let i = 0; i < states.length; i++) {
-        //     for (let j = 0; j < symbols.length; j++) {
-        //         this.determineExpected(states[i], symbols[j]);
-        //     }
-
-        // }
 
         states.forEach(state =>
             symbols.forEach(symbol =>
@@ -1274,52 +1230,54 @@ export class Parser implements IParser {
      * Set expected symbols from child to parent items. (????)
      */
     private expandExpected(): void {
-        let itemList: Item[] = this._baseItems;
-        let itemExpected = itemList.map(item => true);
-        let table = this._expectedExtensionDMap;
-        let i = 0;
+        const baseItems = this._baseItems;
+        const itemExpected = baseItems.map(item => true);
+        const table = this._expectedExtensionDMap;
+        
+        let baseItemIndex = 0;
         let isNewExpected = false;
 
-        itemList[0].addExpected(END_SYMBOL);
+        baseItems[0].addExpected(END_SYMBOL);
         itemExpected[0] = (true);
 
         while (true) {
-            if (i === itemList.length) {
+            if (baseItemIndex === baseItems.length) {
                 if (!isNewExpected) {
                     break;
                 }
                 isNewExpected = false;
-                i = 0;
+                baseItemIndex = 0;
             }
 
-            if (itemExpected[i] && isDefAndNotNull(table[i])) {
-                // indices of all expected items for item 'i'
-                let keys = Object.keys(table[i]);
+            if (itemExpected[baseItemIndex] && isDefAndNotNull(table[baseItemIndex])) {
+                const baseItem = baseItems[baseItemIndex];
+                let indexesOfExpectedItems = Object.keys(table[baseItemIndex]).map(idx => Number(idx));
 
-                for (const expectedSymbol of itemList[i].expectedSymbols) {
-                    for (let k = 0; k < keys.length; k++) {
-                        if (itemList[Number(keys[k])].addExpected(expectedSymbol)) {
-                            itemExpected[Number(keys[k])] = true;
+                baseItem.expectedSymbols.forEach(expectedSymbol => {
+                    indexesOfExpectedItems.forEach(expectedIndex => {
+                        const baseItemExpected = baseItems[expectedIndex];
+                        if (baseItemExpected.addExpected(expectedSymbol)) {
+                            itemExpected[expectedIndex] = true;
                             isNewExpected = true;
                         }
-                    }
-                }
+                    })
+                });
             }
 
-            itemExpected[i] = (false);
-            i++;
+            itemExpected[baseItemIndex] = (false);
+            baseItemIndex++;
         }
     }
 
 
-    private generateStates(eType: EParserType): void {
-        if (eType === EParserType.k_LR0) {
+    private generateStates(type: EParserType): void {
+        if (type === EParserType.k_LR0) {
             this.generateStates_LR0();
         }
-        else if (eType === EParserType.k_LR1) {
+        else if (type === EParserType.k_LR1) {
             this.generateStates_LR();
         }
-        else if (eType === EParserType.k_LALR) {
+        else if (type === EParserType.k_LALR) {
             this.generateStates_LALR();
         }
     }
@@ -1333,12 +1291,14 @@ export class Parser implements IParser {
 
         // NOTE: do not change this loop!
         for (let i = 0; i < stateList.length; i++) {
+            const state = stateList[i];
             for (let j = 0; j < symbols.length; j++) {
-                let state = Parser.nextState_LR0(stateList[i], symbols[j]);
+                const symbol = symbols[j];
+                let stateNext = Parser.nextState_LR0(state, symbol);
 
-                if (!state.isEmpty()) {
-                    state = this.tryAddState(state, EParserType.k_LR0);
-                    this.addStateLink(stateList[i], state, symbols[j]);
+                if (!stateNext.isEmpty()) {
+                    stateNext = this.tryAddState(stateNext, EParserType.k_LR0);
+                    this.addStateLink(state, stateNext, symbol);
                 }
             }
         }
@@ -1352,14 +1312,16 @@ export class Parser implements IParser {
         const stateList = this._states;
         const symbols = this.symbols();
 
+        // NOTE: do not change this loop!
         for (let i = 0; i < stateList.length; i++) {
+            const state = stateList[i];
             for (let j = 0; j < symbols.length; j++) {
-                let symbolVal = symbols[j];
-                let state = Parser.nextState_LR(stateList[i], symbolVal);
+                let symbol = symbols[j];
+                let stateNext = Parser.nextState_LR(state, symbol);
 
-                if (!state.isEmpty()) {
-                    state = this.tryAddState(state, EParserType.k_LR1);
-                    this.addStateLink(stateList[i], state, symbolVal);
+                if (!stateNext.isEmpty()) {
+                    stateNext = this.tryAddState(stateNext, EParserType.k_LR1);
+                    this.addStateLink(state, stateNext, symbol);
                 }
             }
         }
@@ -1376,80 +1338,70 @@ export class Parser implements IParser {
         this.generateLinksExpected();
         this.expandExpected();
 
-        const stateList = this._states;
-        for (let i = 0; i < stateList.length; i++) {
-            this.closure_LR(stateList[i]);
-        }
+        this._states.forEach(state => this.closure_LR(state));
     }
 
 
-    private addReducing(state: State): void {
+    private addReducing(syntaxTable: IOperationDMap, state: State, reduceOperationsMap: IOperationMap): void {
         state.eachItem(item => {
             if (item.symbolName() === END_POSITION) {
                 if (item.rule.left === START_SYMBOL) {
-                    this.pushInSyntaxTable(state.index, END_SYMBOL, this._successOperation);
+                    this.pushInSyntaxTable(syntaxTable, state.index, END_SYMBOL, { type: EOperationType.k_Success });
                 } else {
                     for (const expectedSymbol of item.expectedSymbols) {
-                        this.pushInSyntaxTable(state.index, expectedSymbol, this._reduceOperationsMap[item.rule.index]);
+                        this.pushInSyntaxTable(syntaxTable, state.index, expectedSymbol, reduceOperationsMap[item.rule.index]);
                     }
                 }
             }
         });
     }
 
-    private addShift(state: State) {
+    
+    private addShift(syntaxTable: IOperationDMap,state: State, shiftOperationsMap: IOperationMap) {
         const nextStates = state.nextStates;
         const nextSymbols = Object.keys(nextStates);
         for (let i = 0; i < nextSymbols.length; i++) {
-            this.pushInSyntaxTable(state.index, nextSymbols[i], this._shiftOperationsMap[nextStates[nextSymbols[i]].index]);
+            const nextState = nextStates[nextSymbols[i]];
+            this.pushInSyntaxTable(syntaxTable, state.index, nextSymbols[i], shiftOperationsMap[nextState.index]);
         }
     }
 
     private buildSyntaxTable(): void {
-        this._states = <State[]>[];
+        this._states = [];
+        this._syntaxTable = {};
 
-        let stateList: State[] = this._states;
-        let state: State;
+        const stateList = this._states;
+        const syntaxTable = this._syntaxTable;
 
-        // Generate states
         this.generateStates(this._type);
 
-        // Init necessary properties
-        this._syntaxTable = <IOperationDMap>{};
-        this._reduceOperationsMap = <IOperationMap>{};
-        this._shiftOperationsMap = <IOperationMap>{};
 
-        this._successOperation = <IOperation>{ type: EOperationType.k_Success };
+        const reduceOperationsMap: IOperationMap = {};
+        const shiftOperationsMap: IOperationMap = {};
 
-        let i: number = 0, j: number = 0, k: number = 0;
-
-        for (i = 0; i < stateList.length; i++) {
-            this._shiftOperationsMap[stateList[i].index] = <IOperation>{
+        stateList.forEach(state => {
+            shiftOperationsMap[state.index] = <IOperation>{
                 type: EOperationType.k_Shift,
-                index: stateList[i].index
+                stateIndex: state.index
             };
-        }
+        })
 
-        let rulesDMapKeys: string[] = Object.keys(this._productions);
-        for (j = 0; j < rulesDMapKeys.length; j++) {
-            let rulesMapKeys: string[] = Object.keys(this._productions[rulesDMapKeys[j]]);
-            for (k = 0; k < rulesMapKeys.length; k++) {
-                let symbolVal = rulesMapKeys[k];
-                let rule = this._productions[rulesDMapKeys[j]][symbolVal];
+        let nonTerminals = this.nonTerminals();
 
-                this._reduceOperationsMap[symbolVal] = <IOperation>{
+        nonTerminals.forEach(nonTerminal => {
+            this.rules(nonTerminal).forEach(rule => {
+                reduceOperationsMap[rule.index] = {
                     type: EOperationType.k_Reduce,
                     rule: rule
                 };
-            }
-        }
+            });
+        });
 
         //Build syntax table
-        for (i = 0; i < stateList.length; i++) {
-            state = stateList[i];
-            this.addReducing(state);
-            this.addShift(state);
-        }
+        stateList.forEach(state => {
+            this.addReducing(syntaxTable, state, reduceOperationsMap);
+            this.addShift(syntaxTable, state, shiftOperationsMap);
+        });
     }
 
     private readToken(): IToken {
@@ -1495,7 +1447,7 @@ export class Parser implements IParser {
 
                         case EOperationType.k_Shift:
 
-                            stateIndex = operation.index;
+                            stateIndex = operation.stateIndex;
                             stack.push(stateIndex);
                             tree.addToken(token);
 
@@ -1515,7 +1467,7 @@ export class Parser implements IParser {
 
                             ruleLength = operation.rule.right.length;
                             stack.length -= ruleLength;
-                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].index;
+                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].stateIndex;
                             stack.push(stateIndex);
                             tree.reduceByRule(operation.rule, this.ruleCreationMode(operation.rule.left));
 
@@ -1575,7 +1527,7 @@ export class Parser implements IParser {
 
         switch (operation.type) {
             case EOperationType.k_Shift:
-                opVal = "SHIFT to state " + operation.index.toString();
+                opVal = "SHIFT to state " + operation.stateIndex.toString();
                 break;
             case EOperationType.k_Reduce:
                 opVal = "REDUCE by rule { " + Parser.ruleToString(operation.rule) + " }";
@@ -1598,11 +1550,11 @@ export class Parser implements IParser {
     }
 
 
-    private convertGrammarSymbol(symbolVal: string): string {
-        if (!this.isTerminal(symbolVal)) {
-            return symbolVal;
+    private convertGrammarSymbol(symbol: string): string {
+        if (!this.isTerminal(symbol)) {
+            return symbol;
         } else {
-            return this._lexer.getTerminalValueByName(symbolVal);
+            return this._lexer.getTerminalValueByName(symbol);
         }
     }
 

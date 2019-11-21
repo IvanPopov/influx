@@ -22,12 +22,14 @@ export class State {
         this.numOtherItems = 0;
     }
 
+
     eachItem(cb: (item: Item, i?: number) => void) {
         // NOTE: do not try to change this for loop
         for (let i = 0; i < this.items.length; ++i) {
             cb(this.items[i], i);
         }
     }
+
 
     eachBaseItem(cb: (item: Item, i?: number) => void) {
         // NOTE: do not try to change this for loop
@@ -37,35 +39,31 @@ export class State {
     }
 
 
-    findItem(symbol: string) {
-        for (let i = 0; i < this.items.length; ++i) {
-            if (this.items[i].symbolName() === symbol) {
-                return this.items[i];
-            }
-        }
-        return null;
-    }
-
     getItem(i: number) {
         return this.items[i];
     }
+
 
     get size() {
         return this.items.length;
     }
 
+
     hasItem(value: Item, type: EParserType): Item {
         return this.items.find(item => item.isEqual(value, type)) || null;
     }
 
+    
     hasParentItem(value: Item): Item {
         return this.items.find(item => item.isParentItem(value)) || null;
     }
 
+    
     hasChildItem(value: Item): Item {
         return this.items.find(item => item.isChildItem(value)) || null;
     }
 
+    
     hasRule(rule: IRule, pos: number): boolean {
         for (let i = 0; i < this.numBaseItems; ++i) {
             const item = this.items[i];
@@ -76,10 +74,12 @@ export class State {
         return false;
     }
 
+    
     isEmpty(): boolean {
         return !(this.items.length);
     }
 
+    
     isEqual(state: State, type: EParserType): boolean {
         if (this.numBaseItems !== state.numBaseItems) {
             return false;
@@ -104,6 +104,7 @@ export class State {
         return true;
     }
 
+    
     push(item: Item): void {
         if (this.items.length === 0 || item.pos > 0) {
             assert(this.numOtherItems === 0);
@@ -140,6 +141,7 @@ export class State {
         return true;
     }
 
+    
     addNextState(symbol: string, state: State): boolean {
         if (this.nextStates[symbol]) {
             return false;
@@ -149,10 +151,12 @@ export class State {
         return true;
     }
 
+    
     deleteNotBase(): void {
         this.items.length = this.numBaseItems;
     }
 
+    
     toString(isBase: boolean = true, grammarSymbols: Map<string, string> = null): string {
         const items = isBase? this.items.slice(0, this.numBaseItems) : this.items;
         return `State ${this.index}:\n` +
