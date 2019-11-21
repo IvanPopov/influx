@@ -243,7 +243,7 @@ export class Parser implements IParser {
 
             this._parseMode = mode;
             this.generateRules(grammar);
-            
+
             this.buildSyntaxTable();
 
             this.generateFunctionByStateMap();
@@ -624,7 +624,7 @@ export class Parser implements IParser {
 
     private pushInSyntaxTable(syntaxTable: IOperationDMap, stateIndex: number, symbol: string, operation: IOperation): void {
         syntaxTable[stateIndex] = syntaxTable[stateIndex] || {};
-        
+
         if (isDef(syntaxTable[stateIndex][symbol])) {
             this.grammarError(EParserErrors.GrammarAddOperation, {
                 stateIndex: stateIndex,
@@ -1070,19 +1070,16 @@ export class Parser implements IParser {
     }
 
 
-    private closure(state: State, type: EParserType): State {
+    private closure(state: State, type: EParserType) {
         if (type === EParserType.k_LR0) {
-            return this.closure_LR0(state);
+            this.closure_LR0(state);
         } else {
-            return this.closure_LR(state);
+            this.closure_LR(state);
         }
     }
 
 
-    /**
-     * Add all available non terminal rules (as items) to state.
-     */
-    private closure_LR0(state: State): State {
+    private closure_LR0(state: State) {
         // NOTE: loop grows implicitly inside state.tryPush() function.
         //       do not change this loop.
         state.eachItem(item => {
@@ -1091,42 +1088,29 @@ export class Parser implements IParser {
                 this.rules(symbol).forEach(rule => state.tryPush_LR0(rule, 0));
             }
         });
-        return state;
     }
 
 
-    private closure_LR(state: State): State {
-        let i: number = 0;
-        let isNewExpected = false;
+    private closure_LR(state: State) {
+        let isNewExpected: boolean;
+        do {
+            isNewExpected = false;
+            state.eachItem(item => {
+                const symbol = item.symbolName();
+                if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
+                    const nextSymbols = item.rule.right.slice(item.pos + 1);
+                    const expectedTerminals = this.firstTerminalBatch(nextSymbols, item.expectedSymbols);
 
-        while (true) {
-            if (i === state.size) {
-                if (!isNewExpected) {
-                    break;
-                }
-                i = 0;
-                isNewExpected = false;
-            }
-
-            const item = state.getItem(i);
-            const symbol = item.symbolName();
-            if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
-                const nextSymbols = item.rule.right.slice(item.pos + 1);
-                const expectedTerminals = this.firstTerminalBatch(nextSymbols, item.expectedSymbols);
-
-                this.rules(symbol).forEach(rule => {
-                    expectedTerminals.forEach(expectedTerminal => {
-                        if (state.tryPush_LR(rule, 0, expectedTerminal)) {
-                            isNewExpected = true;
-                        }
+                    this.rules(symbol).forEach(rule => {
+                        expectedTerminals.forEach(expectedTerminal => {
+                            if (state.tryPush_LR(rule, 0, expectedTerminal)) {
+                                isNewExpected = true;
+                            }
+                        });
                     });
-                });
-            }
-
-            i++;
-        }
-
-        return state;
+                }
+            });
+        } while (isNewExpected);
     }
 
 
@@ -1226,47 +1210,34 @@ export class Parser implements IParser {
     }
 
 
-    /**
-     * Set expected symbols from child to parent items. (????)
-     */
     private expandExpected(): void {
         const baseItems = this._baseItems;
         const itemExpected = baseItems.map(item => true);
         const table = this._expectedExtensionDMap;
-        
-        let baseItemIndex = 0;
-        let isNewExpected = false;
 
         baseItems[0].addExpected(END_SYMBOL);
         itemExpected[0] = (true);
+        
+        let isNewExpected: boolean;
+        do {
+            isNewExpected = false;
+            baseItems.forEach((baseItem) => {
+                if (itemExpected[baseItem.index] && isDefAndNotNull(table[baseItem.index])) {
+                    let indexesOfExpectedItems = Object.keys(table[baseItem.index]).map(idx => Number(idx));
 
-        while (true) {
-            if (baseItemIndex === baseItems.length) {
-                if (!isNewExpected) {
-                    break;
+                    baseItem.expectedSymbols.forEach(expectedSymbol => {
+                        indexesOfExpectedItems.forEach(expectedIndex => {
+                            const baseItemExpected = baseItems[expectedIndex];
+                            if (baseItemExpected.addExpected(expectedSymbol)) {
+                                itemExpected[expectedIndex] = true;
+                                isNewExpected = true;
+                            }
+                        });
+                    });
                 }
-                isNewExpected = false;
-                baseItemIndex = 0;
-            }
-
-            if (itemExpected[baseItemIndex] && isDefAndNotNull(table[baseItemIndex])) {
-                const baseItem = baseItems[baseItemIndex];
-                let indexesOfExpectedItems = Object.keys(table[baseItemIndex]).map(idx => Number(idx));
-
-                baseItem.expectedSymbols.forEach(expectedSymbol => {
-                    indexesOfExpectedItems.forEach(expectedIndex => {
-                        const baseItemExpected = baseItems[expectedIndex];
-                        if (baseItemExpected.addExpected(expectedSymbol)) {
-                            itemExpected[expectedIndex] = true;
-                            isNewExpected = true;
-                        }
-                    })
-                });
-            }
-
-            itemExpected[baseItemIndex] = (false);
-            baseItemIndex++;
-        }
+                itemExpected[baseItem.index] = false;
+            });
+        } while (isNewExpected);
     }
 
 
@@ -1356,8 +1327,8 @@ export class Parser implements IParser {
         });
     }
 
-    
-    private addShift(syntaxTable: IOperationDMap,state: State, shiftOperationsMap: IOperationMap) {
+
+    private addShift(syntaxTable: IOperationDMap, state: State, shiftOperationsMap: IOperationMap) {
         const nextStates = state.nextStates;
         const nextSymbols = Object.keys(nextStates);
         for (let i = 0; i < nextSymbols.length; i++) {
@@ -1375,7 +1346,6 @@ export class Parser implements IParser {
 
         this.generateStates(this._type);
 
-
         const reduceOperationsMap: IOperationMap = {};
         const shiftOperationsMap: IOperationMap = {};
 
@@ -1386,8 +1356,7 @@ export class Parser implements IParser {
             };
         })
 
-        let nonTerminals = this.nonTerminals();
-
+        const nonTerminals = this.nonTerminals();
         nonTerminals.forEach(nonTerminal => {
             this.rules(nonTerminal).forEach(rule => {
                 reduceOperationsMap[rule.index] = {

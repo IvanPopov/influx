@@ -39,16 +39,6 @@ export class State {
     }
 
 
-    getItem(i: number) {
-        return this.items[i];
-    }
-
-
-    get size() {
-        return this.items.length;
-    }
-
-
     hasItem(value: Item, type: EParserType): Item {
         return this.items.find(item => item.isEqual(value, type)) || null;
     }
