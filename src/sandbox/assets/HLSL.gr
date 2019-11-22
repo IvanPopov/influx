@@ -17,7 +17,7 @@ Decl : UseDecl
 Decl : ImportDecl
 Decl : ProvideDecl
 Decl : IncludeDecl
-Decl : ERROR ';'
+Decl : ERROR
 
 IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
 
@@ -170,13 +170,14 @@ VarStructDecl : UsageStructDecl Variables ';' --AN
 Variables : Variable --NN
 Variables : Variables ',' Variable
 Variables : Variables ERROR Variable
+Variables : Variables ',' ERROR
 Variable : VariableDim SemanticsOpt AnnotationOpt InitializerOpt --AN
-VariableDim : Id --AN
+VariableDim : NonTypeId --AN
 VariableDim : VariableDim '[' ConstantExpr ']'
 
 
 # [StorageClass] [clipplanes()] [precise] Return_Value Name ( [ArgumentList] ) [: Semantic]
-# {
+# {ок
 #   [StatementBlock]
 # };
 # 
@@ -186,7 +187,7 @@ FunctionDecl : Attributes FunctionDef ';' --AN
 FunctionDecl : FunctionDef ';' --AN
 FunctionDecl : Attributes FunctionDef AnnotationOpt StmtBlock
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
-FunctionDef : UsageType Id ParamList SemanticsOpt
+FunctionDef : UsageType NonTypeId ParamList SemanticsOpt
 
 Attribute : '[' Id '(' ArgumentsOpt ')' ']'
 Attribute : '[' Id ']'
@@ -206,6 +207,9 @@ ParamList : '(' ParameterDecls ')'
 
 ParameterDecls : ParameterDecl --NN
 ParameterDecls : ParameterDecls ',' ParameterDecl
+ParameterDecls : ParameterDecls ERROR ParameterDecl
+ParameterDecls : ParameterDecls ',' ERROR
+ParameterDecls : ERROR
 ParameterDecl : ParamUsageType Variable
 
 ParamUsageType : Type --AN
@@ -316,10 +320,12 @@ Stmt : WhileStmt Stmt
 Stmt : ForStmt Stmt
 Stmt : IfStmt Stmt
 Stmt : IfStmt NonIfStmt T_KW_ELSE Stmt
+# Stmt : ERROR ';'
 
 IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --NN
 WhileStmt : T_KW_WHILE '(' Expr ')' --NN
 ForStmt : For '(' ForInit ForCond ForStep ')' --NN
+# ForStmt : For '(' ERROR ')' --NN
 
 For : T_KW_FOR
 ForInit : ';' --AN
@@ -327,6 +333,7 @@ ForInit : Expr ';'
 ForInit : VariableDecl
 ForCond : ';' --AN
 ForCond : Expr ';'
+# ForCond : ERROR ';'
 ForStep : --AN
 ForStep : Expr
 
@@ -418,9 +425,12 @@ AssignmentExpr : CastExpr T_OP_DE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_RE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
+# AssignmentExpr : ERROR
 
 Arguments : AssignmentExpr --NN
 Arguments : Arguments ',' AssignmentExpr
+Arguments : Arguments ERROR AssignmentExpr
+Arguments : Arguments ',' ERROR
 ArgumentsOpt : --NN
 ArgumentsOpt : Arguments
 
@@ -433,6 +443,7 @@ InitExprs : InitExprs ',' InitExpr
 ConstantExpr : AssignmentExpr
 Expr : AssignmentExpr
 Expr : Expr ',' AssignmentExpr
+# Expr : ERROR
 
 Dword : Uint
 Dword : '-' Uint

@@ -20,7 +20,7 @@ function locMax(a: IPosition, b: IPosition): IPosition {
 }
 
 
-function extendLocation(parent: IRange, child: IRange) {
+export function extendLocation(parent: IRange, child: IRange) {
     if (child.start.line < parent.start.line) {
         parent.start = { ...child.start };
     } else if (child.start.line === parent.start.line) {
@@ -134,6 +134,17 @@ export class ParseTree implements IParseTree {
     private addNode(node: IParseNode): void {
         this.nodes.push(node);
         this.nodesCountStack.push(1);
+    }
+
+    $pop(loc: IRange = null) {
+        let count = this.nodesCountStack.pop();
+        while (count) {
+            let node = this.nodes.pop();
+            if (loc) {
+                extendLocation(loc, node.loc);
+            }
+            count--;
+        }
     }
  
     private addLink(parent: IParseNode, child: IParseNode): void {

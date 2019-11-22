@@ -9,7 +9,7 @@ import { stat } from "fs";
 import { ENodeCreateMode, EOperationType, EParseMode, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "../idl/parser/IParser";
 import { Item } from "./Item";
 import { Lexer } from "./Lexer";
-import { ParseTree } from "./ParseTree";
+import { ParseTree, extendLocation } from "./ParseTree";
 import { State } from "./State";
 import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "./symbols";
 
@@ -65,7 +65,8 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
                 "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
                 "Old operation: {oldOperation}\n" +
                 "New operation: {newOperation}\n" +
-                "For more info init parser in debug-mode and see syntax table and list of states.",
+                "For more info init parser in debug-mode and see syntax table and list of states." + 
+                `\n\n{stateDesc}`,
             [EParserErrors.GrammarAddStateLink]: "Grammar not LALR(1)! Cannot to generate syntax table. Add state link error.\n" +
                 "Conflict in state with index: {stateIndex}. With grammar symbol: \"{grammarSymbol}\"\n" +
                 "Old next state: {oldNextStateIndex}\n" +
@@ -277,68 +278,123 @@ export class Parser implements IParser {
         const states = this._states;
 
         let breakProcessing = false;
-        let errorFound = false;
         
         // const stackTop = () => stack[stack.length - 1];
+    
+
+        const ERROR = 'ERROR';
+
+        let causingErrorToken: IToken = null;
+        const readToken = () => {
+            let token: IToken;
+            if (causingErrorToken) {
+                token = causingErrorToken;
+                causingErrorToken = null;
+            }
+            return token || this.readToken();
+        }
 
         try {
+            let nAttemptsG = 0;
             while (!breakProcessing) {
                 let currStateIndex = stack[stack.length - 1];
-                let operation: IOperation = syntaxTable[currStateIndex][errorFound ? 'ERROR' : token.name];
+                
+                if (nAttemptsG > 1400) {
+                    console.error('parsing limit is reached!');
+                    break;
+                }
+                nAttemptsG ++;
 
-                if (!isDef(operation) && !errorFound) {
-                    errorFound = true;
-                    console.warn(`error found! (token: '${token.value}', state: ${currStateIndex})`);
-                    this.emitSyntaxError(token);
-                    this.printState(currStateIndex);
-                    operation = syntaxTable[currStateIndex]['ERROR'];
+                if (!syntaxTable[currStateIndex][token.name]) {
+                    causingErrorToken = token;
+                    console.warn(`error found! (token: '${causingErrorToken.value}', state: ${currStateIndex})`);
+                    this.printState(stack[stack.length - 1]);
+                    this.emitSyntaxError(causingErrorToken);
+
+                    token = { ...token, name: ERROR };
                 }
 
-                const errorReductionEnded = errorFound && (!operation || (operation.type === EOperationType.k_Shift));
+                let operation: IOperation = syntaxTable[currStateIndex][token.name];
+
+                const errorRecoverty = token.name === ERROR;
+                const errorReductionEnded = !operation || (errorRecoverty && (operation.type === EOperationType.k_Shift));
                 const stateRecovertyRequired = errorReductionEnded;
+                
 
                 if (stateRecovertyRequired) {
-                    console.log('attempt to recover state...');
+                    console.log(`attempt to recover state... (expected token: ${ causingErrorToken.value })`);
+                    let nAttempts = 0;
                     while (true) {
-                        if (token.value === END_SYMBOL) {
+                        if (nAttempts === 100) {
+                            console.error('recovering limit is reached!');
+                            breakProcessing = true;
+                            break;
+                        }
+                        nAttempts++;
+
+                        currStateIndex = stack.slice().reverse().find(stateIndex => {
+                            const errorOp = syntaxTable[stateIndex][ERROR];
+                            const isSuitable = (isDef(errorOp) && 
+                                errorOp.type === EOperationType.k_Shift &&
+                                syntaxTable[errorOp.stateIndex][causingErrorToken.name]);
+                            
+                                if (!isSuitable) return false;
+                                // (syntaxTable[stack[stack.length - 1]] as IOperation).
+                            const nextOp = syntaxTable[errorOp.stateIndex][causingErrorToken.name];
+
+                            // if (nextOp.type == EOperationType.k_Reduce &&
+                            //     stack[stack.length - 1] === syntaxTable[stack[stack.length - nextOp.rule.right.length]][nextOp.rule.left].stateIndex) {
+                            //     return false;
+                            // }
+
+                            // const op = syntaxTable[errorOp.stateIndex][causingErrorToken.name];
+                            return isSuitable;
+                        });
+
+                        
+                        if (isDef(currStateIndex)) {
+                            console.log(`recoverable state was found (token: '${causingErrorToken.value}', state: ${currStateIndex} => ${syntaxTable[currStateIndex][ERROR].stateIndex})`);
+                            console.log('-------------');
+                            this.printState(currStateIndex);
+                            operation = syntaxTable[currStateIndex][ERROR];
+                            this.printState(operation.stateIndex);
+
+                            if (stack.length - 1 !== stack.findIndex(i => i == currStateIndex)) {
+                                console.warn(`restore from the middle of the stack! { ${ stack.findIndex(i => i == currStateIndex) } / ${stack.length}, [${ stack.join(', ') }] }`);
+                                let stackDiff = stack.length - 1 - stack.findIndex(i => i == currStateIndex);
+                                while (stackDiff != 0) {
+                                    (tree as ParseTree).$pop(token.loc);
+                                    stack.pop();
+                                    stackDiff--;
+                                }
+                            }
+                            // stack.length = stack.indexOf(currStateIndex) + 1;
+                            break;
+                        }
+
+                        extendLocation(token.loc, causingErrorToken.loc);
+
+                        if (causingErrorToken.value === END_SYMBOL) {
                             console.warn('recoverable state was non found (EOF is reached) :/');
                             breakProcessing = true;
                             break;
                         }
 
-                        currStateIndex = stack.slice().reverse().find(stateIndex => {
-                            const errorOp = syntaxTable[stateIndex]['ERROR'];
-                            return (isDef(errorOp) && 
-                                errorOp.type === EOperationType.k_Shift &&
-                                syntaxTable[errorOp.stateIndex][token.name]);
-                        });
-
-                        
-                        if (isDef(currStateIndex)) {
-                            console.log(`recoverable state was found (token: '${token.value}', state: ${currStateIndex} => ${syntaxTable[currStateIndex]['ERROR'].stateIndex})`);
-                            operation = syntaxTable[currStateIndex]['ERROR'];
-                            
-                            // stack.length = stack.indexOf(currStateIndex) + 1;
-
-                            tree.addToken({ ...token, name: 'ERROR', value: 'ERROR' });
-                            stack.push(operation.stateIndex);
-
-                            errorFound = false;
-                            break;
-                        }
-
                         console.warn(`recoverable state was not found`);
-                        token = this.readToken();
+                        causingErrorToken = this.readToken();
                     }
+
+                    // token = { ERROR } // <= still error token!
+                    console.log(`restore from token: '${token.value}'`);
                 }
 
                 if (breakProcessing) {
                     break;
                 }
 
-                if (errorReductionEnded) {
-                    continue;
-                }
+                // if (errorReductionEnded) {
+                //     continue;
+                // }
 
                 if (isDef(operation)) {
                     // console.log(`op: ${EOperationType[operation.type]} (stack len: ${stack.length})`);
@@ -355,12 +411,11 @@ export class Parser implements IParser {
                                 tree.addToken(token);
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
-
                                 if (additionalOperationCode === EOperationType.k_Error) {
                                     this.emitSyntaxError(token);
                                     breakProcessing = true;
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                    token = this.readToken();
+                                    token = readToken();
                                 }
                             }
                             break;
@@ -376,12 +431,11 @@ export class Parser implements IParser {
                                 tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
                                 // console.log(`reduced: ${tree.getLastNode().name} | ${operation.rule.left} (stack len: ${stack.length})`);
 
-                                if (errorFound) {
+                                if (errorRecoverty) {
                                     console.log(`reduction has performed (state ${currStateIndex})`);
                                 }
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
-
                                 if (additionalOperationCode === EOperationType.k_Error) {
                                     this.emitSyntaxError(token);
                                     breakProcessing = true;
@@ -565,7 +619,8 @@ export class Parser implements IParser {
                     this.critical(code, {
                         file, line: 0, stateIndex, grammarSymbol,
                         oldOperation: Parser.operationToString(oldOperation),
-                        newOperation: Parser.operationToString(newOperation)
+                        newOperation: Parser.operationToString(newOperation),
+                        stateDesc: this._states[stateIndex].toString()
                     });
                 }
                 break;
