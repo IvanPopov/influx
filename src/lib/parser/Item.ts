@@ -19,10 +19,6 @@ export class Item {
      * (Uniq ID)
      */
     index: number;
-    /**
-     * Parent state.
-     */
-    state: State;
 
     expectedSymbols: ExpectedSymbols;
 
@@ -30,7 +26,6 @@ export class Item {
         this.rule = rule;
         this.pos = pos;
         this.index = 0;
-        this.state = null;
         this.expectedSymbols = new Set<string>();
 
         if (expectedSymbols) {

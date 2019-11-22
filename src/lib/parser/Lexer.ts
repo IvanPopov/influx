@@ -115,7 +115,7 @@ export class Lexer {
     }
 
 
-    getNextToken(): IToken | null {
+    getNextToken(): IToken {
         var ch: string = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -129,7 +129,7 @@ export class Lexer {
             };
         }
         var tokenType = this.identityTokenType();
-        var token: IToken | null = null;
+        var token: IToken = null;
         switch (tokenType) {
             case ETokenType.k_NumericLiteral:
                 token = this.scanNumber();
@@ -321,7 +321,7 @@ export class Lexer {
     }
 
 
-    private scanString(): IToken | null {
+    private scanString(): IToken {
         let chFirst: string = this.currentChar();
         let value: string = chFirst;
         let ch: string = "";
@@ -403,7 +403,7 @@ export class Lexer {
     }
 
 
-    private scanNumber(): IToken | null {
+    private scanNumber(): IToken {
         let ch: string = this.currentChar();
         let value: string = "";
         let isFloat: boolean = false;
@@ -495,7 +495,7 @@ export class Lexer {
     }
 
 
-    private scanIdentifier(): IToken | null {
+    private scanIdentifier(): IToken {
         let ch: string = this.currentChar();
         let value: string = ch;
         let start = this.pos();

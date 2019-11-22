@@ -17,6 +17,7 @@ Decl : UseDecl
 Decl : ImportDecl
 Decl : ProvideDecl
 Decl : IncludeDecl
+Decl : ERROR ';'
 
 IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
 
@@ -168,6 +169,7 @@ VariableDecl : UsageType Variables ';' --AN
 VarStructDecl : UsageStructDecl Variables ';' --AN
 Variables : Variable --NN
 Variables : Variables ',' Variable
+Variables : Variables ERROR Variable
 Variable : VariableDim SemanticsOpt AnnotationOpt InitializerOpt --AN
 VariableDim : Id --AN
 VariableDim : VariableDim '[' ConstantExpr ']'

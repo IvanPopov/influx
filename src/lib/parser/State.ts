@@ -38,6 +38,11 @@ export class State {
         }
     }
 
+    
+    isExpected(symbol: string): boolean {
+        return !!this.items.find(item => item.isExpected(symbol));
+    }
+
 
     hasItem(value: Item, type: EParserType): Item {
         return this.items.find(item => item.isEqual(value, type)) || null;
@@ -102,8 +107,6 @@ export class State {
         } else {
             this.numOtherItems++;
         }
-        assert(!item.state);
-        item.state = this;
         this.items.push(item);
     }
 

@@ -270,26 +270,75 @@ export class Parser implements IParser {
         }
     }
 
+    private async run(token: IToken): Promise<EParserCode> {
+        const tree = this._syntaxTree;
+        const stack = this._stack;
+        const syntaxTable = this._syntaxTable;
+        const states = this._states;
 
+        let breakProcessing = false;
+        let errorFound = false;
+        
+        // const stackTop = () => stack[stack.length - 1];
 
-    async parse(source: string): Promise<EParserCode> {
         try {
-            this.defaultInit();
-            this._source = source;
-            this._lexer.init(source);
-
-            let tree = this._syntaxTree;
-            let stack = this._stack;
-            let syntaxTable = this._syntaxTable;
-
-            let breakProcessing = false;
-            let token = this.readToken();
-
-            const stackTop = () => stack[stack.length - 1];
-
             while (!breakProcessing) {
-                // console.log(`token: ${token.value}`);
-                const operation = syntaxTable[stackTop()][token.name];
+                let currStateIndex = stack[stack.length - 1];
+                let operation: IOperation = syntaxTable[currStateIndex][errorFound ? 'ERROR' : token.name];
+
+                if (!isDef(operation) && !errorFound) {
+                    errorFound = true;
+                    console.warn(`error found! (token: '${token.value}', state: ${currStateIndex})`);
+                    this.emitSyntaxError(token);
+                    this.printState(currStateIndex);
+                    operation = syntaxTable[currStateIndex]['ERROR'];
+                }
+
+                const errorReductionEnded = errorFound && (!operation || (operation.type === EOperationType.k_Shift));
+                const stateRecovertyRequired = errorReductionEnded;
+
+                if (stateRecovertyRequired) {
+                    console.log('attempt to recover state...');
+                    while (true) {
+                        if (token.value === END_SYMBOL) {
+                            console.warn('recoverable state was non found (EOF is reached) :/');
+                            breakProcessing = true;
+                            break;
+                        }
+
+                        currStateIndex = stack.slice().reverse().find(stateIndex => {
+                            const errorOp = syntaxTable[stateIndex]['ERROR'];
+                            return (isDef(errorOp) && 
+                                errorOp.type === EOperationType.k_Shift &&
+                                syntaxTable[errorOp.stateIndex][token.name]);
+                        });
+
+                        
+                        if (isDef(currStateIndex)) {
+                            console.log(`recoverable state was found (token: '${token.value}', state: ${currStateIndex} => ${syntaxTable[currStateIndex]['ERROR'].stateIndex})`);
+                            operation = syntaxTable[currStateIndex]['ERROR'];
+                            
+                            // stack.length = stack.indexOf(currStateIndex) + 1;
+
+                            tree.addToken({ ...token, name: 'ERROR', value: 'ERROR' });
+                            stack.push(operation.stateIndex);
+
+                            errorFound = false;
+                            break;
+                        }
+
+                        console.warn(`recoverable state was not found`);
+                        token = this.readToken();
+                    }
+                }
+
+                if (breakProcessing) {
+                    break;
+                }
+
+                if (errorReductionEnded) {
+                    continue;
+                }
 
                 if (isDef(operation)) {
                     // console.log(`op: ${EOperationType[operation.type]} (stack len: ${stack.length})`);
@@ -300,6 +349,7 @@ export class Parser implements IParser {
 
                         case EOperationType.k_Shift:
                             {
+                                
                                 const stateIndex = operation.stateIndex;
                                 stack.push(stateIndex);
                                 tree.addToken(token);
@@ -319,11 +369,16 @@ export class Parser implements IParser {
                             {
                                 const ruleLength = operation.rule.right.length;
                                 stack.length -= ruleLength;
-                                const stateIndex = syntaxTable[stackTop()][operation.rule.left].stateIndex;
 
+                                const stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].stateIndex;
+                                
                                 stack.push(stateIndex);
                                 tree.reduceByRule(operation.rule, this._ruleCreationModeMap[operation.rule.left]);
                                 // console.log(`reduced: ${tree.getLastNode().name} | ${operation.rule.left} (stack len: ${stack.length})`);
+
+                                if (errorFound) {
+                                    console.log(`reduction has performed (state ${currStateIndex})`);
+                                }
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
 
@@ -337,7 +392,7 @@ export class Parser implements IParser {
                 } else {
                     console.warn(`op: UNDEF (stack len: ${stack.length})`);
                     this.emitSyntaxError(token);
-                    // breakProcessing = true;
+                    breakProcessing = true;
 
 
                     // token = this.readToken();
@@ -357,22 +412,23 @@ export class Parser implements IParser {
                     // panic mode recovery (naive implementation)
                     //
 
-                    const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']', END_SYMBOL];
+                    // const synchronizingTokens = [';', '{', '}', '(', ')', '[', ']', END_SYMBOL];
 
-                    do {
-                        token = this.readToken();
-                    } while (synchronizingTokens.indexOf(token.value) === -1);
+                    // do {
+                    //     token = this.readToken();
+                    // } while (synchronizingTokens.indexOf(token.value) === -1);
 
-                    if (token.value === END_SYMBOL) {
-                        breakProcessing = true;
-                    }
+                    // if (token.value === END_SYMBOL) {
+                    //     breakProcessing = true;
+                    // }
                 }
             }
 
             tree.finishTree();
 
             if (this._diag.hasErrors()) {
-                this.printState(stackTop(), true);
+                // this.printState(stack[stack.length - 1], true);
+                console.error('parsing was finished with errors.');
                 return EParserCode.k_Error;
             };
 
@@ -383,7 +439,17 @@ export class Parser implements IParser {
             throw e;
         }
 
-        return EParserCode.k_Ok
+        return EParserCode.k_Ok;
+    }
+
+
+    async parse(source: string): Promise<EParserCode> {
+        this.defaultInit();
+        
+        this._source = source;
+        this._lexer.init(source);
+
+        return this.run(this.readToken());          
     }
 
 
@@ -1217,7 +1283,7 @@ export class Parser implements IParser {
 
         baseItems[0].addExpected(END_SYMBOL);
         itemExpected[0] = (true);
-        
+
         let isNewExpected: boolean;
         do {
             isNewExpected = false;
@@ -1392,87 +1458,8 @@ export class Parser implements IParser {
 
 
     protected async resumeParse(): Promise<EParserCode> {
-        let breakProcessing = false;
-        let errorFound = false;
         let token = isNull(this._token) ? this.readToken() : this._token;
-        let tree = this._syntaxTree;
-        let stack = this._stack;
-        let syntaxTable = this._syntaxTable;
-
-        try {
-            let operation: IOperation;
-            let ruleLength: number;
-
-            let additionalOperationCode: EOperationType;
-            let stateIndex: number = 0;
-
-            while (!breakProcessing) {
-                operation = syntaxTable[stack[stack.length - 1]][token.name];
-                if (isDef(operation)) {
-                    switch (operation.type) {
-                        case EOperationType.k_Success:
-                            breakProcessing = true;
-                            break;
-
-                        case EOperationType.k_Shift:
-
-                            stateIndex = operation.stateIndex;
-                            stack.push(stateIndex);
-                            tree.addToken(token);
-
-                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
-
-                            if (additionalOperationCode === EOperationType.k_Error) {
-                                errorFound = true;
-                                breakProcessing = true;
-                            }
-                            else if (additionalOperationCode === EOperationType.k_Ok) {
-                                token = this.readToken();
-                            }
-
-                            break;
-
-                        case EOperationType.k_Reduce:
-
-                            ruleLength = operation.rule.right.length;
-                            stack.length -= ruleLength;
-                            stateIndex = syntaxTable[stack[stack.length - 1]][operation.rule.left].stateIndex;
-                            stack.push(stateIndex);
-                            tree.reduceByRule(operation.rule, this.ruleCreationMode(operation.rule.left));
-
-                            additionalOperationCode = await this.operationAdditionalAction(stateIndex, operation.rule.left);
-
-                            if (additionalOperationCode === EOperationType.k_Error) {
-                                errorFound = true;
-                                breakProcessing = true;
-                            }
-                            break;
-                        default:
-                    }
-                }
-                else {
-                    errorFound = true;
-                    breakProcessing = true;
-                }
-            }
-
-            tree.finishTree();
-
-            if (errorFound) {
-                this.syntaxError(EParserErrors.SyntaxUnknownError, token);
-                return EParserCode.k_Error;
-            }
-
-        }
-        catch (e) {
-            if (e instanceof DiagnosticException) {
-                return EParserCode.k_Error;
-            }
-
-            throw e;
-        }
-
-        return EParserCode.k_Ok;
+        return this.run(token);
     }
 
 
