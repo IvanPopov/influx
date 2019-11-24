@@ -320,7 +320,7 @@ Stmt : WhileStmt Stmt
 Stmt : ForStmt Stmt
 Stmt : IfStmt Stmt
 Stmt : IfStmt NonIfStmt T_KW_ELSE Stmt
-# Stmt : ERROR ';'
+# Stmt : ERROR Stmt
 
 IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --NN
 WhileStmt : T_KW_WHILE '(' Expr ')' --NN
@@ -401,22 +401,50 @@ AddExpr : MulExpr
 AddExpr : AddExpr '+' MulExpr
 AddExpr : AddExpr '-' MulExpr
 
+AddExpr : ERROR '+' MulExpr
+AddExpr : AddExpr '+' ERROR
+AddExpr : AddExpr '-' ERROR
+AddExpr : ERROR '-' MulExpr
+AddExpr : ERROR '+' ERROR
+AddExpr : ERROR '-' ERROR
+
 RelationalExpr : AddExpr
 RelationalExpr : RelationalExpr '<' AddExpr
 RelationalExpr : RelationalExpr '>' AddExpr
 RelationalExpr : RelationalExpr T_OP_LE AddExpr
 RelationalExpr : RelationalExpr T_OP_GE AddExpr
+RelationalExpr : ERROR '<' AddExpr
+RelationalExpr : RelationalExpr '>' ERROR
+RelationalExpr : ERROR '>' ERROR
+RelationalExpr : ERROR T_OP_LE AddExpr
+RelationalExpr : RelationalExpr T_OP_GE ERROR
+RelationalExpr : ERROR T_OP_GE ERROR
 
 EqualityExpr : RelationalExpr
 EqualityExpr : EqualityExpr T_OP_EQ RelationalExpr
 EqualityExpr : EqualityExpr T_OP_NE RelationalExpr
+EqualityExpr : ERROR T_OP_EQ RelationalExpr
+EqualityExpr : EqualityExpr T_OP_NE ERROR
+EqualityExpr : ERROR T_OP_NE ERROR
 
 AndExpr : EqualityExpr
 AndExpr : AndExpr T_OP_AND EqualityExpr
+AndExpr : ERROR T_OP_AND EqualityExpr
+AndExpr : AndExpr T_OP_AND ERROR
+
 OrExpr : AndExpr
 OrExpr : OrExpr T_OP_OR AndExpr
+OrExpr : OrExpr T_OP_OR ERROR
+OrExpr : ERROR T_OP_OR AndExpr
+
 ConditionalExpr : OrExpr
 ConditionalExpr : OrExpr '?' AssignmentExpr ':' ConditionalExpr
+ConditionalExpr : ERROR '?' AssignmentExpr ':' ConditionalExpr
+ConditionalExpr : OrExpr '?' ERROR ':' ConditionalExpr
+ConditionalExpr : OrExpr '?' AssignmentExpr ':' ERROR
+ConditionalExpr : OrExpr '?' ERROR ':' ERROR
+ConditionalExpr : ERROR '?' ERROR ':' ERROR
+ConditionalExpr : ERROR '?' ERROR ':' ConditionalExpr
 
 AssignmentExpr : ConditionalExpr
 AssignmentExpr : CastExpr '=' AssignmentExpr
@@ -443,7 +471,7 @@ InitExprs : InitExprs ',' InitExpr
 ConstantExpr : AssignmentExpr
 Expr : AssignmentExpr
 Expr : Expr ',' AssignmentExpr
-# Expr : ERROR
+Expr : ERROR
 
 Dword : Uint
 Dword : '-' Uint

@@ -68,14 +68,14 @@ export class EffectParser extends Parser {
 
         if (this._includedFilesMap[file]) {
             return EOperationType.k_Ok;
-        }
+        } 
         
         let parserState = this._saveState();
 
         try {
             let content = await readFile(file);
-            parserState.source = parserState.source.substr(0, parserState.index) +
-            content + parserState.source.substr(parserState.index);
+            parserState.source = parserState.source.substr(0, parserState.token.index) +
+            content + parserState.source.substr(parserState.token.index);
 
             this.loadState(parserState);
             this.addIncludedFile(file);

@@ -70,10 +70,6 @@ export class ParseTree implements IParseTree {
     }
 
 
-    removeLastNode(): IParseNode {
-        this.nodesCountStack.pop();
-        return this.nodes.pop();
-    }
 
     reduceByRule(rule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
         let iReduceCount = 0;
@@ -136,7 +132,7 @@ export class ParseTree implements IParseTree {
         this.nodesCountStack.push(1);
     }
 
-    $pop(loc: IRange = null) {
+    $pop(loc: IRange = null): void {
         let count = this.nodesCountStack.pop();
         while (count) {
             let node = this.nodes.pop();
@@ -164,6 +160,7 @@ export class ParseTree implements IParseTree {
 
 
     /** @deprecated */
+    // FIXME: location should be clonned too
     private cloneNode({ name, value, children }: IParseNode): IParseNode {
         const clone: IParseNode = { name, value, children: null, parent: null };
         if (children) { 

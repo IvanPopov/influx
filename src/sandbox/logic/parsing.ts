@@ -71,7 +71,7 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
 
-    console.log(Diagnostics.stringify(diag));
+    // console.log(Diagnostics.stringify(diag));
     dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
 }
 

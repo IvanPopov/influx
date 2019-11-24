@@ -56,6 +56,7 @@ export interface IRange {
 }
 
 export interface IToken {
+    index: number;
     value: string;
     name?: string;
     type?: ETokenType;
@@ -106,7 +107,8 @@ export interface IParseTree {
     reduceByRule(pRule: IRule, eCreate: ENodeCreateMode): void;
     finishTree(): void;
     
-    removeLastNode(): IParseNode;
+    $pop(loc?: IRange): void;
+
 
     /** @deprecated */
     clone(): IParseTree;
@@ -119,7 +121,6 @@ export interface IParseTree {
 
 export interface IParserState {
     source: string;
-    index: number;
     fileName: IFile;
     tree: IParseTree;
     types: IMap<boolean>;
