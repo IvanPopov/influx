@@ -10,7 +10,7 @@ import { Item } from "./Item";
 import { Lexer } from "./Lexer";
 import { extendLocation, ParseTree } from "./ParseTree";
 import { State } from "./State";
-import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "./symbols";
+import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL, UNKNOWN_TOKEN } from "./symbols";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -310,15 +310,16 @@ export class Parser implements IParser {
             // try to restore from the next token
             // FIXME: 
             const nextToken = this.readToken();
+            console.log(nextToken);
             Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
         }
         return -1;
     }
 
-    static makeErrorToken(token: IToken): IToken {
+
+    static cloneToken(token: IToken): IToken {
         return {
             ...token,
-            name: ERROR,
             loc: {
                 start: { ...token.loc.start },
                 end: { ...token.loc.end }
@@ -333,7 +334,8 @@ export class Parser implements IParser {
         parseTree: IParseTree,
         { debugMode = false, allowErrorRecoverty = true }): Promise<void> {
 
-        let causingErrorToken: IToken = { index: -1, name: null, value: null };
+        const undefinedToken: IToken =  { index: -1, name: null, value: null };
+        let causingErrorToken: IToken = undefinedToken;
 
         // debug mode
         const opLimit = 10000;
@@ -365,12 +367,14 @@ export class Parser implements IParser {
                         } else {
                             // one more attempt to recover but from the next token
                             token = this.readToken();
+                            // NOTE: in order to prevent recusrion on END_SYMBOL
+                            causingErrorToken = undefinedToken;
                             continue;
                         }
 
-                        causingErrorToken = token;
+                        causingErrorToken = Parser.cloneToken(token);
                         // token = { ...token, name: ERROR };
-                        token = Parser.makeErrorToken(token);
+                        token = { ...Parser.cloneToken(token), name: ERROR };
                     }
 
                     op = syntaxTable[currStateIndex][token.name];
@@ -380,8 +384,12 @@ export class Parser implements IParser {
 
                     // state must be recovered if operation is undefined or error reduction was ended. 
                     if (errorReductionEnded) {
-                        // NOTE: causingErrorToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
-                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>parseTree, stack, causingErrorToken, token /* error token */);
+                        // NOTE: recoveryToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
+                        let recoveryToken = Parser.cloneToken(causingErrorToken);
+                        while (recoveryToken.name === UNKNOWN_TOKEN) {
+                            recoveryToken = this.readToken();
+                        }
+                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>parseTree, stack, recoveryToken, token /* error token */);
                         if (currStateIndex === -1) {
                             this.emitCritical(EParserErrors.SyntaxRecoverableStateNotFound);
                         }
@@ -390,7 +398,12 @@ export class Parser implements IParser {
                         op = syntaxTable[currStateIndex][token.name]; // token.name === 'ERROR'
                         stack.push(op.stateIndex);
                         parseTree.addToken(token/* error token */);
-                        token = causingErrorToken;
+                        token = recoveryToken;
+
+                        // const nextOp = syntaxTable[op.stateIndex][token.name];
+                        // if (nextOp.type === EOperationType.k_Reduce) {
+                        //     tokenBuffer.push(rec);
+                        // }
 
                         // return to normal precesing loop
                         continue;
@@ -567,11 +580,11 @@ export class Parser implements IParser {
 
 
     private emitError(code: number, token: IToken) {
-        this.error(code, { file: this.getParseFileName(), token });
+        this.error(code, { ...this._lexer.getLocation(), token });
     }
 
     private emitCritical(code: number, token: IToken = null) {
-        this.critical(code, { file: this.getParseFileName(), line: 0, token });
+        this.critical(code, { ...this._lexer.getLocation(), token });
     }
 
 

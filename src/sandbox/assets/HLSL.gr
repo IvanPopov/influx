@@ -150,10 +150,12 @@ AnnotationDecls : VariableDecl AnnotationDecls
 AnnotationEnd : '>'
 
 Initializer : '=' AssignmentExpr --AN
+Initializer : '=' ERROR --AN
 Initializer : '=' '{' InitExprs '}'
 Initializer : '=' '{' InitExprs ',' '}'
-InitializerOpt :
-InitializerOpt : Initializer
+
+# InitializerOpt :
+# InitializerOpt : Initializer
 
 
 # [Storage_Class] [Type_Modifier] Type Name[Index]
@@ -166,12 +168,14 @@ InitializerOpt : Initializer
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509706(v=vs.85).aspx
 
 VariableDecl : UsageType Variables ';' --AN
+VariableDecl : UsageType Variables ERROR --AN
 VarStructDecl : UsageStructDecl Variables ';' --AN
 Variables : Variable --NN
 Variables : Variables ',' Variable
-Variables : Variables ERROR Variable
+# Variables : Variables ERROR Variable
 Variables : Variables ',' ERROR
-Variable : VariableDim SemanticsOpt AnnotationOpt InitializerOpt --AN
+Variable : VariableDim SemanticsOpt AnnotationOpt Initializer --AN
+Variable : VariableDim SemanticsOpt AnnotationOpt --AN
 VariableDim : NonTypeId --AN
 VariableDim : VariableDim '[' ConstantExpr ']'
 
@@ -187,6 +191,11 @@ FunctionDecl : Attributes FunctionDef ';' --AN
 FunctionDecl : FunctionDef ';' --AN
 FunctionDecl : Attributes FunctionDef AnnotationOpt StmtBlock
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
+
+# TODO: remove it;
+FunctionDecl : Attributes FunctionDef AnnotationOpt ERROR
+FunctionDecl : FunctionDef AnnotationOpt ERROR
+
 FunctionDef : UsageType NonTypeId ParamList SemanticsOpt
 
 Attribute : '[' Id '(' ArgumentsOpt ')' ']'
@@ -243,24 +252,6 @@ PassStates : PassState --NN
 PassStates : PassStates PassState
 
 PassState : Id StateIndex '=' PassStateExpr ';' --AN
-# PassState : StateIf
-# PassState : StateSwitch
-
-# StateIf : T_KW_IF '(' Expr ')' PassStateBlock
-# StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE PassStateBlock
-# StateIf : T_KW_IF '(' Expr ')' PassStateBlock T_KW_ELSE StateIf
-# StateSwitch : T_KW_SWITCH '(' Expr ')' CaseBlock
-
-# CaseBlock : '{' CaseStates DefaultState '}'
-# CaseStates : CaseState --NN
-# CaseStates : CaseStates CaseState
-
-# CaseState : T_KW_CASE AssignmentExpr ':' PassStates BreakOpt
-# DefaultState : T_KW_DEFAULT ':' PassStates BreakOpt
-
-# BreakOpt :  --NN
-# BreakOpt : ';'
-# BreakOpt : T_KW_BREAK ';'
 
 # todo: move all particles declarations to separate grammar!
 #if FX_PART
@@ -281,6 +272,7 @@ PartFxProperty : PassDecl
 StateBlock : '{' '}' --AN
 StateBlock : '{' States '}'
 
+
 States : State --NN
 States : States State
 State : Id StateIndex '=' StateExpr ';' --AN
@@ -290,20 +282,29 @@ StateIndex : '[' Uint ']'
 
 StmtBlock : '{' '}' --AN
 StmtBlock : '{' Stmts '}'
+
 Stmts : Stmt --NN
 Stmts : Stmts Stmt
-SimpleStmt : ';' --AN
+
+# SimpleStmt : ERROR ';'
+# SimpleStmt : ';' --AN
+
 SimpleStmt : Expr ';'
+SimpleStmt : Expr ERROR
 SimpleStmt : T_KW_RETURN ';'
 SimpleStmt : T_KW_RETURN Expr ';'
+SimpleStmt : T_KW_RETURN ERROR ';'
 SimpleStmt : T_KW_DO Stmt T_KW_WHILE '(' Expr ')' ';'
+SimpleStmt : T_KW_DO Stmt T_KW_WHILE '(' ERROR ')' ';'
 SimpleStmt : StmtBlock
 SimpleStmt : T_KW_DISCARD ';'
 SimpleStmt : TypeDecl
 SimpleStmt : VariableDecl
 SimpleStmt : VarStructDecl
 SimpleStmt : T_KW_BREAK ';'
+SimpleStmt : T_KW_BREAK ERROR
 SimpleStmt : T_KW_CONTINUE ';'
+SimpleStmt : T_KW_CONTINUE ERROR
 
 #if FX_PART
 SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
@@ -320,22 +321,32 @@ Stmt : WhileStmt Stmt
 Stmt : ForStmt Stmt
 Stmt : IfStmt Stmt
 Stmt : IfStmt NonIfStmt T_KW_ELSE Stmt
-# Stmt : ERROR Stmt
+Stmt : ERROR
+Stmt : ';'
 
 IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --NN
+IfStmt : AttributesOpt T_KW_IF '(' ERROR ')' --NN
+
 WhileStmt : T_KW_WHILE '(' Expr ')' --NN
+WhileStmt : T_KW_WHILE '(' ERROR ')' --NN
+
 ForStmt : For '(' ForInit ForCond ForStep ')' --NN
-# ForStmt : For '(' ERROR ')' --NN
+ForStmt : For ERROR --NN
 
 For : T_KW_FOR
+
 ForInit : ';' --AN
 ForInit : Expr ';'
 ForInit : VariableDecl
+ForInit : ERROR ';'
+
 ForCond : ';' --AN
 ForCond : Expr ';'
-# ForCond : ERROR ';'
+ForCond : ERROR ';'
+
 ForStep : --AN
 ForStep : Expr
+ForStep : ERROR
 
 DwordExpr : Dword
 DwordExpr : Dword '|' DwordExpr
@@ -376,6 +387,7 @@ PrimaryExpr : ComplexExpr
 PrimaryExpr : SimpleExpr
 PostfixExpr : PrimaryExpr
 PostfixExpr : PostfixExpr '[' Expr ']'
+PostfixExpr : PostfixExpr '[' ERROR ']'
 PostfixExpr : PostfixExpr '.' Id
 PostfixExpr : PostfixExpr T_OP_INC
 PostfixExpr : PostfixExpr T_OP_DEC
@@ -385,39 +397,59 @@ PostfixPointExpr : PostfixExpr '.' Id
 UnaryExpr : PostfixExpr
 UnaryExpr : T_OP_INC UnaryExpr
 UnaryExpr : T_OP_DEC UnaryExpr
+# UnaryExpr : T_OP_INC ERROR
+# UnaryExpr : T_OP_DEC ERROR
 UnaryExpr : '!' CastExpr
+# UnaryExpr : '!' ERROR
 UnaryExpr : '-' CastExpr
 UnaryExpr : '+' CastExpr
 
 CastExpr : UnaryExpr
 CastExpr : '(' ConstTypeDim ')' CastExpr
+CastExpr : '(' ERROR ')' CastExpr
 
 MulExpr : CastExpr
 MulExpr : MulExpr '*' CastExpr
 MulExpr : MulExpr '/' CastExpr
 MulExpr : MulExpr '%' CastExpr
 
+MulExpr : ERROR '*' CastExpr
+MulExpr : ERROR '/' CastExpr
+MulExpr : ERROR '%' CastExpr
+MulExpr : MulExpr '*' ERROR
+MulExpr : MulExpr '/' ERROR
+MulExpr : MulExpr '%' ERROR
+# MulExpr : ERROR '*' ERROR
+# MulExpr : ERROR '/' ERROR
+# MulExpr : ERROR '%' ERROR
+
 AddExpr : MulExpr
 AddExpr : AddExpr '+' MulExpr
 AddExpr : AddExpr '-' MulExpr
 
-AddExpr : ERROR '+' MulExpr
 AddExpr : AddExpr '+' ERROR
 AddExpr : AddExpr '-' ERROR
-AddExpr : ERROR '-' MulExpr
-AddExpr : ERROR '+' ERROR
-AddExpr : ERROR '-' ERROR
 
 RelationalExpr : AddExpr
 RelationalExpr : RelationalExpr '<' AddExpr
 RelationalExpr : RelationalExpr '>' AddExpr
 RelationalExpr : RelationalExpr T_OP_LE AddExpr
 RelationalExpr : RelationalExpr T_OP_GE AddExpr
+
 RelationalExpr : ERROR '<' AddExpr
+RelationalExpr : RelationalExpr '<' ERROR
+RelationalExpr : ERROR '<' ERROR
+
 RelationalExpr : RelationalExpr '>' ERROR
+RelationalExpr : ERROR '>' AddExpr
 RelationalExpr : ERROR '>' ERROR
+
+RelationalExpr : RelationalExpr T_OP_LE ERROR
 RelationalExpr : ERROR T_OP_LE AddExpr
+RelationalExpr : ERROR T_OP_LE ERROR
+
 RelationalExpr : RelationalExpr T_OP_GE ERROR
+RelationalExpr : ERROR T_OP_GE AddExpr
 RelationalExpr : ERROR T_OP_GE ERROR
 
 EqualityExpr : RelationalExpr
@@ -453,7 +485,6 @@ AssignmentExpr : CastExpr T_OP_DE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_RE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
-# AssignmentExpr : ERROR
 
 Arguments : AssignmentExpr --NN
 Arguments : Arguments ',' AssignmentExpr
@@ -471,7 +502,9 @@ InitExprs : InitExprs ',' InitExpr
 ConstantExpr : AssignmentExpr
 Expr : AssignmentExpr
 Expr : Expr ',' AssignmentExpr
-Expr : ERROR
+Expr : Expr ',' ERROR
+Expr : ERROR ',' ERROR
+Expr : ERROR ',' AssignmentExpr
 
 Dword : Uint
 Dword : '-' Uint
@@ -500,6 +533,7 @@ String : T_STRING
 
 TypeId : T_TYPE_ID
 NonTypeId : T_NON_TYPE_ID
+LineTerminator : T_LINE_TERMINATOR
 
 AsmDecl : T_KW_DECL '{'
 Asm : T_KW_ASM '{'

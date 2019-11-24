@@ -1,42 +1,11 @@
+int x
+int y
+int z = 
+int w = , b = , t b
 
-int foo r, ;
-int bar;
-int a = {}
-
-void main(void);
-void main(int a, );
-
-void foo(1, 2);
-
-float bar() {
-
-    int a b c;
-
-    if ()
-    call(1 2 3);
-
-    for (int i = 0; i < ; ++ i) {
-        // todo
-    }
-
-    a = = b+c; 
-
-    1 < ? a+ : b-;
-
-    return 0.f;
-}
-
-
-void main() {
-    for (int i = 0; i < ) ++ i) {
-        // todo
-    }
-}
-
-
-
-void main() {
-    for (int i = 0; i < ); ++ i) {
-        // todo
-    }
+void foo() {
+    call()
+    some()
+    int x = 
+    (foo.bar);
 }

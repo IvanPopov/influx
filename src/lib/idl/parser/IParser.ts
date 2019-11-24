@@ -34,6 +34,7 @@ export enum ETokenType {
     k_StringLiteral,
     k_PunctuatorLiteral,
     k_WhitespaceLiteral,
+    k_NewlineLiteral,
     k_IdentifierLiteral,
     k_KeywordLiteral,
     k_Unknown,

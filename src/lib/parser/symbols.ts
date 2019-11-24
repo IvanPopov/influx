@@ -1,6 +1,6 @@
 ﻿export const END_POSITION               = 'END';                 // item, parser
 export const T_EMPTY                    = 'EMPTY';               // item, parser
-export const UNKNOWN_TOKEN              = 'UNNOWN';              // lexer
+export const UNKNOWN_TOKEN              = 'UNKNOWN';             // lexer
 export const START_SYMBOL               = 'S';                   // parser
 export const UNUSED_SYMBOL              = '##';                  // parser
 export const INLINE_COMMENT_SYMBOL      = '#';                   // parser
@@ -17,3 +17,4 @@ export const T_FLOAT                    = 'T_FLOAT';             // lexer
 export const T_UINT                     = 'T_UINT';              // lexer
 export const T_TYPE_ID                  = 'T_TYPE_ID';           // lexer
 export const T_NON_TYPE_ID              = 'T_NON_TYPE_ID';       // lexer
+export const T_LINE_TERMINATOR          = 'T_LINE_TERMINATOR';   // lexer

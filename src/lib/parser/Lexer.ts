@@ -2,7 +2,7 @@ import { IMap } from '@lib/idl/IMap';
 import { ETokenType, IFile, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
 import { Diagnostics, IDiagnosticReport } from '@lib/util/Diagnostics';
 
-import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
+import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN, ERROR, T_LINE_TERMINATOR } from './symbols';
 
 interface ILexerDiagDesc {
     file: string;
@@ -115,7 +115,7 @@ export class Lexer {
     }
 
 
-    getNextToken(): IToken {
+    getNextToken(allowLineTerminators?: boolean): IToken {
         let ch = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -148,29 +148,41 @@ export class Lexer {
             case ETokenType.k_IdentifierLiteral:
                 token = this.scanIdentifier();
                 break;
+            case ETokenType.k_NewlineLiteral:
+                token = this.scanLineTerminators();
+                if (!allowLineTerminators) {
+                    token = this.getNextToken();
+                }
+                break;
             case ETokenType.k_WhitespaceLiteral:
                 this.scanWhiteSpace();
                 token = this.getNextToken();
                 break;
             default:
-                this.critical(ELexerErrors.UnknownToken, {
-                    file: `${this._onResolveFilename()}`,
-                    token: {
+                {
+                    // TODO: move this code to scanInvalid()
+                    const start = this.pos();
+                    let value = '';
+                    while (this.identityTokenType() === ETokenType.k_Unknown) {
+                        value += this.currentChar();
+                        this.readNextChar();
+                    }
+                    token = {
                         index: this._index,
                         name: UNKNOWN_TOKEN,
-                        value: ch + this._source[this._index + 1],
-                        loc: {
-                            start: this.pos(),
-                            end: this.pos(1)
-                        }
-                    }
-                });
+                        value,
+                        loc: { start, end: this.pos() }
+                    };
+                    console.warn(value);
+                    this.emitError(ELexerErrors.UnknownToken, token);
+                    return token;
+                }
         }
         return token;
     }
 
 
-    private loc() {
+    getLocation() {
         return { line: this._lineNumber, file: this._onResolveFilename() };
     }
 
@@ -194,8 +206,8 @@ export class Lexer {
     }
 
 
-    private critical(code: number, desc: ILexerDiagDesc): void {
-        this._diag.critical(code, desc);
+    private emitError(code: number, token: IToken): void {
+        this._diag.error(code, { file: `${this._onResolveFilename()}`, token });
     }
 
 
@@ -205,6 +217,9 @@ export class Lexer {
         }
         if (this.isWhiteSpaceStart()) {
             return ETokenType.k_WhitespaceLiteral;
+        }
+        if (this.isNewlineStart()) {
+            return ETokenType.k_NewlineLiteral;
         }
         if (this.isStringStart()) {
             return ETokenType.k_StringLiteral;
@@ -270,7 +285,16 @@ export class Lexer {
 
     private isWhiteSpaceStart(): boolean {
         let ch: string = this.currentChar();
-        if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") {
+        if (ch === " " || ch === "\t") {
+            return true;
+        }
+        return false;
+    }
+
+
+    private isNewlineStart(): boolean {
+        let ch: string = this.currentChar();
+        if (ch === "\n" || ch === "\r" ) {
             return true;
         }
         return false;
@@ -357,20 +381,32 @@ export class Lexer {
             }
             value += ch;
 
-            this.critical(ELexerErrors.InvalidToken, {
-                file: `${this._onResolveFilename()}`,
-                token: {
-                    index: this._index,
-                    type: ETokenType.k_StringLiteral,
-                    value,
-                    loc: {
-                        start,
-                        end: this.pos()
-                    }
+            const token = {
+                index: this._index,
+                type: ETokenType.k_StringLiteral,
+                value,
+                loc: {
+                    start,
+                    end: this.pos()
                 }
-            });
-            return null;
+            };
+
+            this.emitError(ELexerErrors.InvalidToken, token);
+
+            return Lexer.makeUnknownToken(token);
         }
+    }
+
+    static makeUnknownToken(token: IToken): IToken {
+        return {
+            ...token,
+            type: undefined,
+            name: UNKNOWN_TOKEN,
+            loc: {
+                start: { ...token.loc.start },
+                end: { ...token.loc.end }
+            }
+        };
     }
 
 
@@ -480,19 +516,19 @@ export class Lexer {
                 ch = EOF;
             }
             value += ch;
-            this.critical(ELexerErrors.InvalidToken, {
-                file: `${this._onResolveFilename()}`,
-                token: {
-                    index: this._index,
-                    type: ETokenType.k_NumericLiteral,
-                    value,
-                    loc: {
-                        start,
-                        end: this.pos()
-                    }
+
+            const token = {
+                index: this._index,
+                type: ETokenType.k_NumericLiteral,
+                value,
+                loc: {
+                    start,
+                    end: this.pos()
                 }
-            });
-            return null;
+            };
+
+            this.emitError(ELexerErrors.InvalidToken, token);
+            return Lexer.makeUnknownToken(token);
         }
     }
 
@@ -546,31 +582,33 @@ export class Lexer {
                 ch = EOF;
             }
             value += ch;
-            this.critical(ELexerErrors.InvalidToken, {
-                file: `${this._onResolveFilename()}`,
-                token: {
-                    index: this._index,
-                    type: ETokenType.k_IdentifierLiteral,
-                    value,
-                    loc: {
-                        start,
-                        end: this.pos()
-                    }
+
+            const token = {
+                index: this._index,
+                type: ETokenType.k_IdentifierLiteral,
+                value,
+                loc: {
+                    start,
+                    end: this.pos()
                 }
-            });
-            return null;
+            };
+            this.emitError(ELexerErrors.InvalidToken, token);
+            return Lexer.makeUnknownToken(token);
         }
     }
 
 
-    private scanWhiteSpace(): boolean {
+    private scanLineTerminators(): IToken {
         let ch = this.currentChar();
+        let value = '';
+        let start = this.pos();
 
         while (true) {
             if (!ch) {
                 break;
             }
             if (this.isLineTerminator(ch)) {
+                value += ch;
                 if (ch === "\r" && this.nextChar() === "\n") {
                     this._lineNumber--;
                 }
@@ -578,6 +616,27 @@ export class Lexer {
                 ch = this.readNextChar();
                 this._columnNumber = 0;
                 continue;
+            }
+            break;
+        }
+
+        let name = T_LINE_TERMINATOR;
+        return <IToken>{
+            index: this._index,
+            name,
+            value,
+            loc: {
+                start,
+                end: this.pos()
+            }
+        };
+    }
+    private scanWhiteSpace(): boolean {
+        let ch = this.currentChar();
+
+        while (true) {
+            if (!ch) {
+                break;
             }
             else if (ch === "\t") {
                 // possible way to convert tab to multiple spaces
@@ -654,18 +713,18 @@ export class Lexer {
                     ch = EOF;
                 }
                 value += ch;
-                this.critical(ELexerErrors.InvalidToken, {
-                    file: `${this._onResolveFilename()}`,
-                    token: {
-                        index: this._index,
-                        type: ETokenType.k_CommentLiteral,
-                        value,
-                        loc: {
-                            start,
-                            end: this.pos()
-                        }
+
+                const token = {
+                    index: this._index,
+                    type: ETokenType.k_CommentLiteral,
+                    value,
+                    loc: {
+                        start,
+                        end: this.pos()
                     }
-                });
+                };
+
+                this.emitError(ELexerErrors.InvalidToken, token);
                 return false;
             }
         }

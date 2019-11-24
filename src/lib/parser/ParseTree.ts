@@ -69,8 +69,6 @@ export class ParseTree implements IParseTree {
         this.addNode({ name, value, loc, children, parent });
     }
 
-
-
     reduceByRule(rule: IRule, eCreate: ENodeCreateMode = ENodeCreateMode.k_Default): void {
         let iReduceCount = 0;
         let nodesCountStack = this.nodesCountStack;
