@@ -272,8 +272,7 @@ export class Parser implements IParser {
         while (true) {
             let recoverableState = -1;
             for (let i = stack.length - 1; i >= 0; --i) {
-                const stateIndex = stack[i];
-                const errorOp = syntaxTable[stateIndex][ERROR];
+                const errorOp = syntaxTable[stack[i]][ERROR];
                 const isRecoverableState = (isDef(errorOp) &&
                     errorOp.type === EOperationType.k_Shift &&
                     syntaxTable[errorOp.stateIndex][causingErrorToken.name]);
@@ -310,7 +309,6 @@ export class Parser implements IParser {
             // try to restore from the next token
             // FIXME: 
             const nextToken = this.readToken();
-            console.log(nextToken);
             Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
         }
         return -1;

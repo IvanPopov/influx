@@ -282,7 +282,8 @@ export class Scope implements IScope {
             assert(variable.scope === this);
         }
         else {
-            console.error(`letiable '${varName}' already exists in scope:`, this);
+            // console.error(`letiable '${varName}' already exists in scope:`, this);
+            return false;
         }
     
         return true;

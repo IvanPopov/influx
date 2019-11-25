@@ -173,7 +173,7 @@ export class Lexer {
                         value,
                         loc: { start, end: this.pos() }
                     };
-                    console.warn(value);
+                    // console.warn(value);
                     this.emitError(ELexerErrors.UnknownToken, token);
                     return token;
                 }

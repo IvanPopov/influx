@@ -23,14 +23,20 @@ void main(int a, );
 
 void foo(1, 2);
 
-void foo() {
-    part.x = normalize(float3(1));
+struct Part {
+    float x;
+};
+
+
+void foo2() {
+    Part part;
+    part.x = normalize(float3(1)).x;
     ($, $, 10) + (1, 2);
     %++
     ++%
 }
 
-float bar() {
+float bar4() {
 
     int a b c;
 
@@ -51,17 +57,17 @@ float bar() {
 }
 
 
-void main() {
+void main5() {
     for (int i = 0; i < ) ++ i) {
         // todo
     }
 }
 
-void main() {
+void main10() {
     ^^
 }
 
-void main() {
+void main11() {
     1f < ^^^^2
     int a
 }

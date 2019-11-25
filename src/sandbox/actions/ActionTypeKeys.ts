@@ -11,7 +11,9 @@ export const SOURCE_CODE_MODIFED                    = 'source-code-modified';
 export const SOURCE_CODE_PARSING_COMPLETE           = 'source-code-parsing-complete';
 export const SOURCE_CODE_ANALYSIS_COMPLETE          = 'source-code-analysis-complete';
 export const SOURCE_CODE_ADD_MARKER                 = 'source-code-add-marker';
+export const SOURCE_CODE_ADD_MARKER_BATCH           = 'source-code-add-marker-batch';
 export const SOURCE_CODE_REMOVE_MARKER              = 'source-code-remove-marker';
+export const SOURCE_CODE_REMOVE_MARKER_BATCH        = 'source-code-remove-marker-batch';
 export const SOURCE_CODE_ADD_BREAKPOINT             = 'source-code-add-breakpoint';
 export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakpoint';
 

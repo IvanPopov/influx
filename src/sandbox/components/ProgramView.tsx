@@ -25,7 +25,7 @@ import {
 } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
-import { getFileState } from '@sandbox/reducers/sourceFile';
+import { getFileStateNoMarkers } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
@@ -804,8 +804,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         this.invertInstructionProperty(instr, 'selected');
 
-        if (instr.sourceNode)
+        if (instr.sourceNode) {
             this.props.onNodeOver(instr);
+        }
     }
 
 
@@ -814,8 +815,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         this.invertInstructionProperty(instr, 'selected');
 
-        if (instr.sourceNode)
+        if (instr.sourceNode) {
             this.props.onNodeOut(instr);
+        }
     }
 
 
@@ -824,8 +826,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         this.invertInstructionProperty(instr, 'opened');
 
-        if (instr.sourceNode)
+        if (instr.sourceNode) {
             this.props.onNodeClick(instr);
+        }
     }
 
 
@@ -839,4 +842,4 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 }
 
-export default connect<{}, {}, IProgramViewProps>(mapProps(getFileState), {})(ProgramView) as any;
+export default connect<{}, {}, IProgramViewProps>(mapProps(getFileStateNoMarkers), {})(ProgramView) as any;

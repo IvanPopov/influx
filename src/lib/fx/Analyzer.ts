@@ -728,6 +728,7 @@ export class Analyzer {
         const isAdded = scope.addVariable(varDecl);
         if (!isAdded) {
             switch (scope.type) {
+                case EScopeType.k_Global:
                 case EScopeType.k_Default:
                     context.error(sourceNode, EErrors.VariableRedefinition, { varName: varDecl.name });
                     break;
@@ -842,7 +843,7 @@ export class Analyzer {
             case 'T_KW_FALSE':
                 return this.analyzeSimpleExpr(context, program, sourceNode);
             default:
-                context.critical(sourceNode, EErrors.UnsupportedExpr, { exprName: name });
+                context.error(sourceNode, EErrors.UnsupportedExpr, { exprName: name });
                 break;
         }
 
@@ -1135,7 +1136,7 @@ export class Analyzer {
             }
         }
 
-        let func = globalScope.findFunction(funcName, args ? args.map(arg => arg.type) : null);
+        let func = globalScope.findFunction(funcName, args ? args.map(arg => arg ? arg.type : null) : null);
 
         if (isNull(func)) {
             context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName: funcName });
@@ -1283,7 +1284,10 @@ export class Analyzer {
         const scope = program.currentScope;
 
         let expr = this.analyzeExpr(context, program, children[1]);
-        let type = <IVariableTypeInstruction>expr.type;
+        if (isNull(expr)) {
+            return null
+        }
+        // let type = <IVariableTypeInstruction>expr.type;
 
         let complexExpr = new ComplexExprInstruction({ scope, sourceNode, expr });
         return checkInstruction(context, complexExpr, ECheckStage.CODE_TARGET_SUPPORT);
@@ -1552,6 +1556,11 @@ export class Analyzer {
         const leftExpr = this.analyzeExpr(context, program, children[children.length - 3]);
         const rightExpr = this.analyzeExpr(context, program, children[0]);
 
+        if (isNull(conditionExpr) || isNull(leftExpr) || isNull(rightExpr)) {
+            context.error(conditionExpr ? conditionExpr.sourceNode : sourceNode, EErrors.InvalidConditionType, { typeName: '[unknown]' });
+            return null;
+        }
+
         const conditionType = <IVariableTypeInstruction>conditionExpr.type;
         const leftExprType = <IVariableTypeInstruction>leftExpr.type;
         const rightExprType = <IVariableTypeInstruction>rightExpr.type;
@@ -1607,6 +1616,15 @@ export class Analyzer {
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
         const right = this.analyzeExpr(context, program, children[0]);
 
+        if (!left || !right) {
+            context.error(sourceNode, EErrors.InvalidArithmeticOperation, {
+                operator: operator,
+                leftTypeName: '[unknown]',
+                rightTypeName: '[unknown]'
+            });
+            return null;
+        }
+
         const leftType = <IVariableTypeInstruction>left.type;
         const rightType = <IVariableTypeInstruction>right.type;
 
@@ -1641,17 +1659,24 @@ export class Analyzer {
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
         const right = this.analyzeExpr(context, program, children[0]);
 
-        const leftType = <IVariableTypeInstruction>left.type;
-        const rightType = <IVariableTypeInstruction>right.type;
+        const leftType = left ? left.type : null;
+        const rightType = right ? right.type : null;
 
-        const exprType = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
+        const exprType = Analyzer.checkTwoOperandExprTypes(context, operator,
+            leftType, rightType,
+            left ? left.sourceNode : null,
+            right ? right.sourceNode : null);
 
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidRelationalOperation, {
                 operator: operator,
-                leftTypeName: leftType.hash,
-                rightTypeName: rightType.hash
+                leftTypeName: leftType ? leftType.hash : '[unknown]',
+                rightTypeName: rightType ? rightType.hash : '[unknown]'
             });
+            return null;
+        }
+
+        if (!left || !right) {
             return null;
         }
 
@@ -2445,11 +2470,11 @@ export class Analyzer {
             for (let i = children.length - 4; i > 1; i--) {
                 if (children[i].value !== ',') {
                     argumentExpr = <ILiteralInstruction<number | boolean>>this.analyzeSimpleExpr(context, program, children[i]);
-                    
+
                     // TODO: emit diagnostics error
                     assert(
                         argumentExpr.instructionType === EInstructionTypes.k_BoolExpr ||
-                        argumentExpr.instructionType === EInstructionTypes.k_FloatExpr || 
+                        argumentExpr.instructionType === EInstructionTypes.k_FloatExpr ||
                         argumentExpr.instructionType === EInstructionTypes.k_IntExpr);
 
                     args.push(argumentExpr);
@@ -2485,16 +2510,13 @@ export class Analyzer {
         const isIfElse = (children.length - attributes.length === 7);
 
         const cond = this.analyzeExpr(context, program, children[children.length - 3 - attributes.length]);
-        const conditionType = <IVariableTypeInstruction>cond.type;
-        const boolType = T_BOOL;
+
+        if (!cond || !cond.type.isEqual(T_BOOL)) {
+            context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: cond ? String(cond.type) : '[unknown]' });
+        }
 
         let conseq: IStmtInstruction = null;
         let contrary: IStmtInstruction = null;
-
-        if (!conditionType.isEqual(boolType)) {
-            context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: String(conditionType) });
-            return null;
-        }
 
         if (isIfElse) {
             conseq = this.analyzeNonIfStmt(context, program, children[2]);
@@ -2502,6 +2524,10 @@ export class Analyzer {
         }
         else {
             conseq = this.analyzeNonIfStmt(context, program, children[0]);
+        }
+
+        if (!cond) {
+            return null;
         }
 
         const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attributes });
@@ -2539,12 +2565,20 @@ export class Analyzer {
         const isNonIfStmt = (sourceNode.name === 'NonIfStmt');
 
         let body: IStmtInstruction = null;
+        let init: ITypedInstruction = null;
+        let cond: IExprInstruction = null;
+        let step: IExprInstruction = null;
+
+        
+        if (children[1].name === 'ERROR') {
+            return null;
+        }
 
         program.push();
 
-        let init: ITypedInstruction = this.analyzeForInit(context, program, children[children.length - 3]);
-        let cond: IExprInstruction = this.analyzeForCond(context, program, children[children.length - 4]);
-        let step: IExprInstruction = null;
+        init = this.analyzeForInit(context, program, children[children.length - 3]);
+        cond = this.analyzeForCond(context, program, children[children.length - 4]);
+        step = null;
 
         if (children.length === 7) {
             step = this.analyzeForStep(context, program, children[2]);
@@ -3040,6 +3074,10 @@ export class Analyzer {
 
 
     protected analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
+        if (isNull(ast) || isNull(ast.root)) {
+            return null;
+        }
+
         const children = ast.root.children;
         let globals: IInstruction[] = [];
 
@@ -3058,7 +3096,7 @@ export class Analyzer {
     protected createContext(filename: string): Context {
         return new Context(filename);
     }
-g
+    g
 
     protected createProgram(): ProgramScope {
         return new ProgramScope(SystemScope.SCOPE);
@@ -3136,6 +3174,10 @@ g
         rightType: IVariableTypeInstruction,
         leftSourceNode: IParseNode = leftType.sourceNode,
         rightSourceNode: IParseNode = rightType.sourceNode): IVariableTypeInstruction {
+
+        if (!leftType || !rightType) {
+            return null;
+        }
 
         const isComplex = leftType.isComplex() || rightType.isComplex();
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();

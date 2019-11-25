@@ -45,7 +45,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
 } as any);
 
 // todo: add support for retail configuration
-const middleware: Middleware[] = !PRODUCTION && false ?
+const middleware: Middleware[] = !PRODUCTION ?
     [/*thunk, */logic, logger, reduxImmutableState] :
     [logic];
 

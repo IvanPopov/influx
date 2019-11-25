@@ -150,6 +150,8 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
         case EInstructionTypes.k_SystemType:
             // nothing todo
             break;
+        case EInstructionTypes.k_BreakStmt:
+            break;
 
         default:
             console.error('unsupported instruction type found');

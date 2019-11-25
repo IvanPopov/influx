@@ -281,12 +281,12 @@ StateIndex :
 StateIndex : '[' Uint ']'
 
 StmtBlock : '{' '}' --AN
-StmtBlock : '{' Stmts '}'
+StmtBlock : '{' Stmts '}'  
 
 Stmts : Stmt --NN
 Stmts : Stmts Stmt
 
-# SimpleStmt : ERROR ';'
+# SimpleStmt : ERROR ';' 
 # SimpleStmt : ';' --AN
 
 SimpleStmt : Expr ';'
@@ -299,7 +299,7 @@ SimpleStmt : T_KW_DO Stmt T_KW_WHILE '(' ERROR ')' ';'
 SimpleStmt : StmtBlock
 SimpleStmt : T_KW_DISCARD ';'
 SimpleStmt : TypeDecl
-SimpleStmt : VariableDecl
+SimpleStmt : VariableDecl --AN
 SimpleStmt : VarStructDecl
 SimpleStmt : T_KW_BREAK ';'
 SimpleStmt : T_KW_BREAK ERROR

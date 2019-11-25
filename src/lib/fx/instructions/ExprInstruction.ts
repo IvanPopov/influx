@@ -1,4 +1,4 @@
-import { assert } from "@lib/common";
+import { assert, isNull } from "@lib/common";
 import { EInstructionTypes, IAssignmentExprInstruction, IExprInstruction, IIdExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IComplexExprInstruction } from "@lib/idl/IInstruction";
 import { ITypedInstructionSettings, TypedInstruction } from "@lib/fx/instructions/TypedInstruction";
 
@@ -41,6 +41,10 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
      * unwind operation returns declaration in case of correct l-value expression;
      */
     static UnwindExpr(expr: IExprInstruction): IVariableDeclInstruction {
+        if (isNull(expr)) {
+            return null;
+        }
+        
         switch(expr.instructionType) {
             case EInstructionTypes.k_PostfixPointExpr:
                 return ExprInstruction.UnwindExpr((<IPostfixPointInstruction>expr).element);

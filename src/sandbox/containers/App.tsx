@@ -457,7 +457,7 @@ class App extends React.Component<IAppProps> {
                             <ProgramView
                                 onNodeOver={inst => this.highlightInstruction(inst, true)}
                                 onNodeOut={inst => this.highlightInstruction(inst, false)}
-                            // onNodeClick={ inst => { } }
+                                onNodeClick={ inst => { } }
                             />
                         </Tab.Pane>
                     </Route>
