@@ -17,6 +17,9 @@ export const SOURCE_CODE_REMOVE_MARKER_BATCH        = 'source-code-remove-marker
 export const SOURCE_CODE_ADD_BREAKPOINT             = 'source-code-add-breakpoint';
 export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakpoint';
 
+// aux event for internal needs
+export const SOURCE_CODE_UPDATE_AST                 = 'source-code-update-ast';
+
 export const DEBUGGER_COMPILE                       = 'debugger-compile';
 export const DEBUGGER_START_DEBUG                   = 'debugger-start-debug';
 // cancel compilation or jut clean up all previous results from store

@@ -3,8 +3,8 @@ import { IMap } from "../idl/IMap";
 
 
 export enum EDiagnosticCategory {
-    WARNING,
-    ERROR
+    k_Warning,
+    k_Error
 }
 
 
@@ -18,7 +18,7 @@ interface IDiagnosticEntry<DESC_T> {
 type IDiagnosticDescription = string;
 
 export interface IDiagnosticMessage {
-    code: number;
+    code: string;
     category: EDiagnosticCategory;
     start?: IPosition;
     end?: IPosition;
@@ -99,10 +99,10 @@ export class Diagnostics <DESC_T>{
             let message = this.resolveEntry(entry);
 
             switch(message.category) {
-                case EDiagnosticCategory.WARNING:
+                case EDiagnosticCategory.k_Warning:
                     report.warnings ++;
                     break;
-                case EDiagnosticCategory.ERROR:
+                case EDiagnosticCategory.k_Error:
                     report.errors ++;
                     break;
             }
@@ -113,26 +113,27 @@ export class Diagnostics <DESC_T>{
     }
 
     private resolveEntry(entry: IDiagnosticEntry<DESC_T>): IDiagnosticMessage {
-        let { code, category, desc } = entry;
+        // let { category, desc } = entry;
 
-        let categoryName = (EDiagnosticCategory[category]).toLowerCase();
+        // let categoryName = (EDiagnosticCategory[category]).toLowerCase();
         let loc: string = null;
         let range: IRange;
         let start: IPosition;
         let end: IPosition;
-        let file = this.resolveFilename(code, desc);
+        let file = this.resolveFilename(entry.code, entry.desc);
 
-        if (range = this.resolveRange(code, desc)) {
+        if (range = this.resolveRange(entry.code, entry.desc)) {
             ({ start, end } = range);
             loc = rangeToString(range);
         } 
         else {
-            start = this.resolvePosition(code, desc);
+            start = this.resolvePosition(entry.code, entry.desc);
             loc = locToString(start);
         }
 
-        let content = `${file}(${loc}): ${categoryName} ${this._codePrefix}${code}: ${this.resolveDescription(code, category, desc)}`;
-
+        let content = `${this.resolveDescription(entry.code, entry.category, entry.desc)}`;
+        let code = `${this._codePrefix}${entry.code}`;
+        let category = entry.category;
         return { code, category, content, file, start, end };
     }
 
@@ -167,11 +168,11 @@ export class Diagnostics <DESC_T>{
     }
 
     error(code: number, desc: DESC_T) { 
-        this._entries.push({ category: EDiagnosticCategory.ERROR, code, desc });
+        this._entries.push({ category: EDiagnosticCategory.k_Error, code, desc });
     }
 
     warning(code: number, desc: DESC_T) { 
-        this._entries.push({ category: EDiagnosticCategory.WARNING, code, desc });
+        this._entries.push({ category: EDiagnosticCategory.k_Warning, code, desc });
     }
 
     // add error and emit an exception in order to interrupt processing
@@ -185,12 +186,12 @@ export class Diagnostics <DESC_T>{
     }
 
     hasErrors(): boolean {
-        return this._entries.filter(entry => entry.category === EDiagnosticCategory.ERROR).length > 0;
+        return this._entries.filter(entry => entry.category === EDiagnosticCategory.k_Error).length > 0;
     }
 
     getLastError(): IDiagnosticMessage {
         for (let i = this._entries.length - 1; i >= 0; --i) {
-            if (this._entries[i].category === EDiagnosticCategory.ERROR) {
+            if (this._entries[i].category === EDiagnosticCategory.k_Error) {
                 return this.resolveEntry(this._entries[i]);
             }
         }

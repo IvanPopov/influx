@@ -14,9 +14,7 @@ import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFil
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
-const PARSING_ERROR_PREFIX = 'parsing-error';
-const ANALYSIS_ERROR_PREFIX = 'analysis-error';
-const ANALYSIS_WARNING_PREFIX = 'analysis-warning';
+
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
 declare const PRODUCTION: boolean;
@@ -28,7 +26,9 @@ function cleanupMarkersBatch(state: IStoreState, prefix: string): string[] {
 }
 
 function cleanupMarkers(dispatch: IDispatch, batch: string[]) {
-    dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER_BATCH, payload: { batch } });
+    if (batch.length > 0){
+        dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER_BATCH, payload: { batch } });
+    }
 }
 
 type IMarkerType = IMarker['type'];
@@ -51,13 +51,6 @@ function emitMarkers(dispatch: IDispatch, batch: IMarkerDesc[]) {
 }
 
 
-
-const emitErrors = (list, dispatch, prefix) => emitMarkersBatch(list, 'error', prefix);
-// tslint:disable-next-line:no-unnecessary-callback-wrapper
-const cleanupErrors = (state, prefix) => cleanupMarkersBatch(state, prefix);
-const emitWarnings = (list, prefix) => emitMarkersBatch(list, 'warning', prefix);
-// tslint:disable-next-line:no-unnecessary-callback-wrapper
-const cleanupWarnings = (state, prefix) => cleanupMarkersBatch(state, prefix);
 const emitDebuggerColorization = (list) => emitMarkersBatch(list, 'line', DEBUGGER_COLORIZATION_PREFIX);
 const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGGER_COLORIZATION_PREFIX);
 
@@ -65,60 +58,33 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
     const { content, filename } = state.sourceFile;
 
-    const markersCleanupRequests = cleanupErrors(state, PARSING_ERROR_PREFIX);
-    cleanupMarkers(dispatch, markersCleanupRequests);
-
     if (!content) {
         return;
     }
 
-    let { ast, diag, result } = await Parser.parse(content, filename);
+    const { ast, diag } = await Parser.parse(content, filename);
 
-    const errors = diag.messages
-        .filter(msg => msg.category === EDiagnosticCategory.ERROR)
-        .map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
-
-    const markersCreationRequests = emitErrors(errors, dispatch, PARSING_ERROR_PREFIX);
-    emitMarkers(dispatch, markersCreationRequests);
-
-    if (PRODUCTION) {
-        // verbose(Diagnostics.stringify(diag));
+    // if (!diag.errors)
+    {
+        dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
     }
-
-    dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
 }
 
 
 async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<void> {
     const { parseTree, filename } = state.sourceFile;
 
-    const markersCleanupRequests = cleanupErrors(state, ANALYSIS_ERROR_PREFIX)
-        .concat(cleanupWarnings(state, ANALYSIS_WARNING_PREFIX));
-    cleanupMarkers(dispatch, markersCleanupRequests);
-
-
     if (!parseTree) {
         return;
     }
 
     const result = FxAnalyzer.analyze(parseTree, filename);
-    const { diag, root, scope } = result;
+    const { diag } = result;
 
-    const errors = diag.messages.map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
-
-    const warnings = diag.messages
-        .filter(msg => msg.category === EDiagnosticCategory.WARNING)
-        .map(msg => ({ loc: Diagnostics.asRange(msg), message: msg.content }));
-
-    const markersCreationRequests = emitWarnings(warnings, ANALYSIS_ERROR_PREFIX)
-        .concat(emitErrors(errors, dispatch, ANALYSIS_ERROR_PREFIX));
-    emitMarkers(dispatch, markersCreationRequests);
-
-    if (PRODUCTION) {
-        // verbose(Diagnostics.stringify(diag));
+    // if (!diag.errors) 
+    {
+        dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result } });
     }
-
-    dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result } });
 }
 
 
@@ -144,24 +110,11 @@ const updateSourceContentLogic = createLogic<IStoreState>({
     debounce: 500,
 
     async process({ getState, action, action$ }, dispatch, done) {
-        if (!getDebugger(getState()).options.autocompile) {
+        const $debugger = getDebugger(getState());
+        if (!$debugger.options.autocompile) {
             dispatch({ type: evt.DEBUGGER_RESET });
         }
-
-        await processParsing(getState(), dispatch);
-
-        // let begin = Date.now();
-
-        // action$.pipe(
-        //     filter(a => a.type === evt.SOURCE_CODE_ANALYSIS_COMPLETE),
-        //     take(1) // we only wait for one and then finish
-        // ).subscribe({ complete: () => {
-        //     console.log('await SOURCE_CODE_PARSING_COMPLETE', Date.now() - begin);
-        //     done()
-        //  } })
-
-        // console.log('await SOURCE_CODE_PARSING_COMPLETE', Date.now() - begin);
-
+        // await processParsing(getState(), dispatch);
         done();
     }
 });
@@ -171,18 +124,7 @@ const updateSourceContentLogic = createLogic<IStoreState>({
 const parsingCompleteLogic = createLogic<IStoreState>({
     type: [evt.SOURCE_CODE_PARSING_COMPLETE],
     async process({ getState, action, action$ }, dispatch, done) {
-        await processAnalyze(getState(), dispatch as any);
-
-        // let begin = Date.now();
-
-        // action$.pipe(
-        //     filter(a => a.type === evt.SOURCE_CODE_ANALYSIS_COMPLETE),
-        //     take(1) // we only wait for one and then finish
-        // ).subscribe({ complete: () => {
-        //     console.log('await SOURCE_CODE_ANALYSIS_COMPLETE', Date.now() - begin);
-        //     done()
-        //  } })
-
+        await processAnalyze(getState(), <any>dispatch);
         done();
     }
 });

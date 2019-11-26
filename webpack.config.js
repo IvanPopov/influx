@@ -24,6 +24,7 @@ const version = `${require("./package.json").version}.${gitRevisionPlugin.versio
 const commithash = gitRevisionPlugin.commithash();
 const branch = gitRevisionPlugin.branch();
 const mode = process.env.NODE_ENV || 'development';
+const timestamp = String(new Date());
 
 const DEVELOPMENT = mode == 'development';
 const PRODUCTION = mode == 'production';
@@ -188,6 +189,7 @@ let options = {
             'COMMITHASH': JSON.stringify(commithash),
             'BRANCH': JSON.stringify(branch),
             'MODE': JSON.stringify(mode),
+            'TIMESTAMP': JSON.stringify(timestamp),
             'PRODUCTION': PRODUCTION,
             'global': {}
         }),

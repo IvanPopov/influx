@@ -28,7 +28,7 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
     }
 
     isConst(): boolean {
-        console.error("@pure_virtual");
+        // console.error("@pure_virtual");
         return false;
     }
 

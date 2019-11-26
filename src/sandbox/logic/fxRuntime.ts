@@ -22,6 +22,11 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             return;
         }
 
+        if (file.analysis.diag.errors > 0) {
+            done();
+            return;
+        }
+
         verbose('playground has been updated.');
 
         const scope = getScope(file);

@@ -23,6 +23,8 @@ export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
 export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { parseTree: IParseTree }>;
 export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: IAnalyzeResult }>;
+// aux event
+export type ISourceCodeUpdateAst = IAction<typeof evt.SOURCE_CODE_UPDATE_AST, { parseTree: IParseTree; ast: IAnalyzeResult }>;
 
 export interface IMarkerDesc extends IMarker {
     name: string;
@@ -40,7 +42,9 @@ export type ISourceFileActions =
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
-    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch;
+    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch | 
+    // aux event
+    ISourceCodeUpdateAst;
 
 //
 // debugger api

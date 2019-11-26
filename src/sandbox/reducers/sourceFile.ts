@@ -2,13 +2,14 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAddMarkerBatch, ISourceCodeRemoveMarkerBatch } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAddMarkerBatch, ISourceCodeRemoveMarkerBatch, ISourceCodeUpdateAst } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
 const initialState: IFileState = {
     filename: null,
     content: null,
+    contentModified: null,
     error: null,
     markers: {},
     breakpoints: [],
@@ -74,6 +75,11 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.SOURCE_CODE_ANALYSIS_COMPLETE]: (state, action: ISourceCodeAnalysisComplete) =>
         ({ ...state, analysis: action.payload.result }),
+
+    [evt.SOURCE_CODE_UPDATE_AST]: (state, action: ISourceCodeUpdateAst) => {
+        const { parseTree, ast: analysis } = action.payload;
+        return ({ ...state, analysis, parseTree });
+    }
 
     //
     // markers

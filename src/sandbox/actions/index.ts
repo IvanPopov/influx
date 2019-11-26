@@ -33,6 +33,10 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
     },
 
+    shadowRealodAST({ parseTree, ast }) {
+        return { type: evt.SOURCE_CODE_UPDATE_AST, payload: { parseTree, ast } };
+    }
+
     // setContent (content): IActionCreator {
     //     return async (dispatch: IDispatch, getState) => {
     //         await dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
@@ -90,18 +94,27 @@ export const sourceCode = {
 
     selectEffect(name: string) {
         return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
+    },
+
+
+    //
+    //
+    //
+
+    resetDebugger() {
+        return { type: evt.DEBUGGER_RESET };
     }
 };
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };
 export function mapActions(actions): mapDispatchToProps<typeof actions> {
     return (dispatch: IDispatch) => {
-        return { 
-            actions: bindActionCreators(actions, dispatch), 
+        return {
+            actions: bindActionCreators(actions, dispatch),
 
             // debug functionality
-            $dispatch: dispatch, 
-            $rowActions: actions 
-        }
+            $dispatch: dispatch,
+            $rowActions: actions
+        };
     };
-}   
+}

@@ -1613,10 +1613,10 @@ export class Parser implements IParser {
         Parser.$parser.setParseFileName(filename);
 
         const timeLabel = `parse ${filename}`;
-        console.time(timeLabel);
+        // console.time(timeLabel);
         // All diagnostic exceptions should be already handled inside parser.
         let result = await Parser.$parser.parse(content);
-        console.timeEnd(timeLabel);
+        // console.timeEnd(timeLabel);
 
         let diag = Parser.$parser.getDiagnostics();
         let ast = Parser.$parser.getSyntaxTree();

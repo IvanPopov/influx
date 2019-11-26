@@ -45,7 +45,7 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
         }
 
         let { file, loc, ...data } = desc;
-        if (category == EDiagnosticCategory.WARNING) {
+        if (category == EDiagnosticCategory.k_Warning) {
             return `${EWarnings[code]}: ${JSON.stringify(data)}`;
         }
         return `${EErrors[code]}: ${JSON.stringify(data)}`;

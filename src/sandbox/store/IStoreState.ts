@@ -32,6 +32,7 @@ export interface IDebuggerState {
 export interface IFileState {
     filename: string;               // source file's path
     content: string;                // source file's content
+    contentModified: string;
     error: Error;                   // source file loading's error
 
     parseTree: IParseTree;              // syntax analysis' results

@@ -25,6 +25,7 @@ declare const VERSION: string;
 declare const COMMITHASH: string;
 declare const BRANCH: string;
 declare const MODE: string;
+declare const TIMESTAMP: string;
 
 // const DEFAULT_FX_NAME = `./assets/fx/tests/new`;
 
@@ -138,7 +139,7 @@ const Version = (props) => {
             }
             // position='left center'
             size='small'
-            content={String(new Date())}
+            content={TIMESTAMP}
             inverted
         />
     );
