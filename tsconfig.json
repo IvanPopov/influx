@@ -1,12 +1,14 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2020",
+    "module": "esnext",
+    "target": "esnext",
     "lib": [
       "esnext",
       "dom",
-      "dom.iterable"
+      "dom.iterable",
+      // "webworker",
+      // "webworker.importscripts"
     ],
     "allowJs": false,
     "allowSyntheticDefaultImports": false,

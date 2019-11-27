@@ -64,6 +64,10 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     const { ast, diag } = await Parser.parse(content, filename);
 
+    if (!PRODUCTION) {
+        // verbose(Diagnostics.stringify(diag));
+    }
+
     // if (!diag.errors)
     {
         dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
@@ -81,7 +85,11 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
     const result = FxAnalyzer.analyze(parseTree, filename);
     const { diag } = result;
 
-    // if (!diag.errors) 
+    if (!PRODUCTION) {
+        // verbose(Diagnostics.stringify(diag));
+    }
+
+    // if (!diag.errors)
     {
         dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result } });
     }
@@ -107,14 +115,14 @@ const updateParserLogic = createLogic<IStoreState>({
 const updateSourceContentLogic = createLogic<IStoreState>({
     type: [evt.SOURCE_CODE_MODIFED, evt.SOURCE_FILE_LOADED],
     latest: true,
-    debounce: 500,
+    debounce: 1500,
 
     async process({ getState, action, action$ }, dispatch, done) {
         const $debugger = getDebugger(getState());
         if (!$debugger.options.autocompile) {
             dispatch({ type: evt.DEBUGGER_RESET });
         }
-        // await processParsing(getState(), dispatch);
+        await processParsing(getState(), dispatch);
         done();
     }
 });

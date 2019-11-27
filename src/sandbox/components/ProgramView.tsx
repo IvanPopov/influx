@@ -25,13 +25,14 @@ import {
 } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { mapProps } from '@sandbox/reducers';
-import { getFileStateNoMarkers } from '@sandbox/reducers/sourceFile';
+import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Icon, List, Message } from 'semantic-ui-react';
 import { IWithStyles } from '.';
+import { IAnalyzeResult } from '@lib/fx/Analyzer';
 
 
 const styles = {
@@ -181,6 +182,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
     };
 
+    analysisCache: IAnalyzeResult = null;
+
     constructor(props) {
         super(props);
         this.state = {
@@ -189,20 +192,14 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    // shouldComponentUpdate(nextProps, nextState): boolean {
-    //     const { props, state } = this;
-    //     if (nextProps.ast != props.parseTree) {
-    //         return true;
-    //     }
+    shouldComponentUpdate(nextProps: IFileState): boolean {
+        // return this.analysisCache !== nextProps.analysis;
+        return true;
+    }
 
-    //     // is it ok?
-    //     if (!deepEqual(state.instrList, nextState.instrList)) {
-    //         return true;
-    //     }
-
-    //     console.warn("skip ProgramView's update");
-    //     return false;
-    // }
+    componentDidUpdate() {
+        this.analysisCache = this.props.analysis;
+    }
 
 
     render() {
@@ -842,4 +839,4 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 }
 
-export default connect<{}, {}, IProgramViewProps>(mapProps(getFileStateNoMarkers), {})(ProgramView) as any;
+export default connect<{}, {}, IProgramViewProps>(mapProps(getFileState), {})(ProgramView) as any;

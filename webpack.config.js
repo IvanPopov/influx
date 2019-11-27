@@ -154,10 +154,14 @@ let options = {
             {
                 test: /\.css$/,
                 use: [
-                    { loader: 'style-loader' }, 
+                    { loader: 'style-loader' },
                     { loader: 'css-loader' }
                 ]
-            }
+            },
+            // {
+            //     loader: 'worker-loader',
+            //     // options: { inline: true }
+            // }
         ]
     },
     devServer: {

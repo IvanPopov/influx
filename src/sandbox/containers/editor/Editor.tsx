@@ -6,14 +6,16 @@
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
+import { IParserParams } from '@lib/idl/parser/IParser';
 import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, EDiagnosticCategory, IDiagnosticReport, IDiagnosticMessage } from '@lib/util/Diagnostics';
+import { Diagnostics, EDiagnosticCategory, IDiagnosticMessage, IDiagnosticReport } from '@lib/util/Diagnostics';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
-import { mapProps } from '@sandbox/reducers';
+import { getCommon, mapProps } from '@sandbox/reducers';
+import { getParser } from '@sandbox/reducers/parserParams';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import { IFileState } from '@sandbox/store/IStoreState';
+import IStoreState, { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
 import * as React from 'react';
@@ -21,9 +23,45 @@ import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+// tslint:disable-next-line:no-submodule-imports
+import Worker from 'worker-loader!./LanguageService';
 
 import { MyCodeLensProvider } from './CodeLensProvider';
 import styles from './styles.jss';
+
+namespace LanguageService {
+    const worker = new Worker();
+
+    let pendingValidationRequests: {
+        resolve: (value: IDiagnosticMessage[]) => void;
+        reject: () => void;
+    }[] = [];
+
+    worker.onmessage = (event) => {
+        const data = event.data;
+        switch (data.type) {
+            case 'validation':
+                {
+                    const promise = pendingValidationRequests.pop();
+                    promise.resolve(data.payload as IDiagnosticMessage[]);
+                }
+                break;
+            default:
+        }
+    };
+
+    export function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
+        worker.postMessage({ type: 'validation', payload: { text: document.getText(), uri: document.uri } });
+        // tslint:disable-next-line:promise-must-complete
+        return new Promise<IDiagnosticMessage[]>((resolve, reject) => {
+            pendingValidationRequests = [{ resolve, reject }, ...pendingValidationRequests];
+        });
+    }
+
+    export function install(params: IParserParams) {
+        worker.postMessage({ type: 'install', payload: params });
+    }
+}
 
 const LANGUAGE_ID = 'hlsl';
 
@@ -76,7 +114,7 @@ const options: monaco.editor.IEditorConstructionOptions = {
 
 
 
-export interface ISourceEditorProps extends IFileState, IWithStyles<typeof styles> {
+export interface ISourceEditorProps extends IStoreState, IWithStyles<typeof styles> {
     name?: string;
     actions: typeof sourceActions;
 }
@@ -95,7 +133,9 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     pendingValidationRequests = new Map<string, number>();
 
-    validateCounter = 0;
+    
+    // cache for params
+    parserParamsCache: IParserParams = null;
 
     setupDecorations(): monaco.editor.IModelDeltaDecoration[] {
         const { props } = this;
@@ -108,8 +148,10 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             warning: classes.warningMarker
         };
 
-        for (const key in props.markers) {
-            const { range, type, tooltip, range: { start, end }, payload } = props.markers[key];
+
+        const file = this.getFile();
+        for (const key in file.markers) {
+            const { range, type, tooltip, range: { start, end }, payload } = file.markers[key];
             if (!tooltip && type === 'marker') {
                 decorations.push({
                     range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
@@ -138,8 +180,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         }
 
         // fixme: clumsy code :/
-        for (const key in props.breakpoints) {
-            const lineNumber = props.breakpoints[key] + 1;
+        for (const key in file.breakpoints) {
+            const lineNumber = file.breakpoints[key] + 1;
             decorations.push({
                 range: new monaco.Range(lineNumber, 1, lineNumber, 1),
                 options: { glyphMarginClassName: classes.breakpoint },
@@ -149,15 +191,29 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         return decorations;
     }
 
+    // handle content's update from outside of the editor
+    UNSAFE_componentWillUpdate(nextProps) {
+        const file = getFileState(nextProps);
+        if (isNull(file.content)) {
+            return;
+        }
+
+        if (file.content !== this.getContent()) {
+            this.getEditor().setValue(file.content);
+            this.validate();
+            console.log('%c force reload content from outside', 'background: #ffd1c9; color: #ff3714');
+        }
+    }
+
     componentDidUpdate() {
-        if (this.props.content !== this.getContent()) {
-            this.getModel().setValue(this.props.content);
-            this.validate();
-        }
-        if (this.validateCounter === 0) {
-            this.validate();
-        }
         this.updateDecorations();
+
+        // TEMP: temp solution for parser param sync
+        const parserParamsNext = getParser(this.props);
+        if (this.parserParamsCache !== parserParamsNext) {
+            this.parserParamsCache = parserParamsNext;
+            LanguageService.install(parserParamsNext);
+        }
     }
 
     @autobind
@@ -178,12 +234,13 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 return;
             }
 
+            const file = this.getFile();
             const { props } = this;
-            const { breakpoints } = props;
+            const { breakpoints } = file;
 
             let { lineNumber } = e.target.position;
 
-            lineNumber = cdlview(props.debugger.runtime.cdl)
+            lineNumber = cdlview(file.debugger.runtime.cdl)
                 .resolveBreakpointLocation(lineNumber - 1);
 
             if (lineNumber === -1) {
@@ -200,7 +257,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
         this.codeLensProvider = monaco.languages.registerCodeLensProvider(
             LANGUAGE_ID,
-            new MyCodeLensProvider(() => getScope(this.props))
+            new MyCodeLensProvider(() => getScope(this.getFile()))
         );
 
 
@@ -209,13 +266,10 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             provideHover(model, position, token): monaco.languages.Hover | monaco.Thenable<monaco.languages.Hover> {
                 // const document = self.createDocument(model);
                 // const jsonDocument = jsonService.parseJSONDocument(document);
-                console.log(model, position, token);
+                // console.log(model, position, token);
                 return null;
             }
         });
-
-        // // FIXME: dirty hack!
-        // setTimeout(() => this.validate(), 2000);
     }
 
 
@@ -235,7 +289,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             this.pendingValidationRequests.delete(document.uri);
             this.doValidate(document);
         }, 250) as any);
-        this.validateCounter ++;
     }
 
     // tslint:disable-next-line:member-ordering
@@ -258,29 +311,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         };
     }
 
-
-
     async doValidate(document: TextDocument) {
         if (document.getText().length === 0) {
             this.cleanDiagnostics();
             return;
         }
 
-        // // TODO: temp solution
-        // this.props.actions.resetDebugger();
-
-        const parsingResults = await Parser.parse(document.getText(), document.uri);
-        const semanticResults = FxAnalyzer.analyze(parsingResults.ast, document.uri);
-
-        const diag = Diagnostics.mergeReports([parsingResults.diag, semanticResults.diag]);
-
-        monaco.editor.setModelMarkers(this.getModel(), 'default', diag.messages.map(msg => SourceEditor.asMarker(msg)));
-
-        this.props.actions.shadowRealodAST({ ast: semanticResults, parseTree: parsingResults.ast });
-
-        if (!diag.errors) {
-            this.props.actions.selectEffect(null);
-        }
+        LanguageService.validate(document).then((messages: IDiagnosticMessage[]) => {
+            monaco.editor.setModelMarkers(this.getModel(), 'default', messages.map(msg => SourceEditor.asMarker(msg)));
+        });
     }
 
 
@@ -313,7 +352,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     createDocument(model: monaco.editor.IReadOnlyModel) {
-        return TextDocument.create(this.props.filename, model.getModeId(), model.getVersionId(), model.getValue());
+        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), model.getValue());
     }
 
 
@@ -324,9 +363,11 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     shouldComponentUpdate(nextProps: ISourceEditorProps) {
-        return this.props.content !== nextProps.content ||
-            !deepEqual(this.props.markers, nextProps.markers) ||
-            !deepEqual(this.props.breakpoints, nextProps.breakpoints);
+        const src = getFileState(this.props);
+        const dst = getFileState(nextProps);
+        return this.getContent() !== dst.content ||
+            !deepEqual(src.markers, dst.markers) ||
+            !deepEqual(src.breakpoints, dst.breakpoints);
     }
 
 
@@ -342,11 +383,11 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     render() {
-        const { props } = this;
+        const file = this.getFile();
         return (
             <MonacoEditor
                 ref='monaco'
-                value={ (props.content) }
+                value={ (file.content) }
 
                 width='100%'
                 height='calc(100vh - 67px)' // todo: fixme
@@ -358,8 +399,13 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             />
         );
     }
+
+
+    getFile(): IFileState {
+        return getFileState(this.props);
+    }
 }
 
-export default connect<{}, {}, ISourceEditorProps>(mapProps(getFileState), mapActions(sourceActions))(SourceEditor) as any;
+export default connect<{}, {}, ISourceEditorProps>(mapProps(getCommon), mapActions(sourceActions))(SourceEditor) as any;
 
 

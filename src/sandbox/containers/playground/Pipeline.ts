@@ -10,8 +10,7 @@ import * as Code from '@lib/fx/translators/CodeEmitter';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
-
-import THREE = require('three');
+import * as THREE from 'three';
 
 type PartFx = IPartFxInstruction;
 

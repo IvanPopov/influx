@@ -8,7 +8,7 @@ import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { filterPartFx, getFileStateNoMarkers, getPipelineName, getScope } from '@sandbox/reducers/sourceFile';
+import { filterPartFx, getFileState, getPipelineName, getScope } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
@@ -145,4 +145,4 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 }
 
-export default connect<{}, {}, IPlaygroundProps>(mapProps(getFileStateNoMarkers), mapActions(sourceActions))(Playground) as any;
+export default connect<{}, {}, IPlaygroundProps>(mapProps(getFileState), mapActions(sourceActions))(Playground) as any;

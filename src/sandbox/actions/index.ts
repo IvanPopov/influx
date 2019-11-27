@@ -1,10 +1,10 @@
+import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
 import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
 import { bindActionCreators, Dispatch } from 'redux';
+
 import * as evt from './ActionTypeKeys';
 import { IMarkerDesc } from './ActionTypes';
-import { MakeOptional } from '@lib/common';
-
 
 export type IDispatch = Dispatch<any>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
@@ -35,7 +35,7 @@ export const sourceCode = {
 
     shadowRealodAST({ parseTree, ast }) {
         return { type: evt.SOURCE_CODE_UPDATE_AST, payload: { parseTree, ast } };
-    }
+    },
 
     // setContent (content): IActionCreator {
     //     return async (dispatch: IDispatch, getState) => {

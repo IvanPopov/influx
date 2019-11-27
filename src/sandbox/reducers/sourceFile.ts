@@ -2,7 +2,7 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodeAddMarkerBatch, ISourceCodeRemoveMarkerBatch, ISourceCodeUpdateAst } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeUpdateAst, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -79,7 +79,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
     [evt.SOURCE_CODE_UPDATE_AST]: (state, action: ISourceCodeUpdateAst) => {
         const { parseTree, ast: analysis } = action.payload;
         return ({ ...state, analysis, parseTree });
-    }
+    },
 
     //
     // markers
@@ -155,8 +155,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
 //- Selectors
 
+// export const getFileStateNoMarkers = (state: IStoreState): IFileState => ({ ...state.sourceFile, markers: null });
 export const getFileState = (state: IStoreState): IFileState => state.sourceFile;
-export const getFileStateNoMarkers = (state: IStoreState): IFileState => ({ ...state.sourceFile, markers: null });
 export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(state).debugger;
 export const getScope = (file: IFileState): IScope => file.analysis ? file.analysis.scope : null;
 export const getPipelineName = (file: IFileState) => file.pipeline ? file.pipeline.name() : null;

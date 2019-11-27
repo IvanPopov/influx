@@ -1,9 +1,7 @@
-
-import { isDef } from "@lib/common";
+import { assert, isDef } from "@lib/common";
 import { IFunctionDeclInstruction, IInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { isNull } from "util";
-import assert = require("assert");
 import DistinctColor from "@lib/util/DistinctColor";
+import { isNull } from "util";
 
 enum EDebugLineFlags {
     k_NewStatement = 0x01

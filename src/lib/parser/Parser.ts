@@ -10,7 +10,7 @@ import { Item } from "./Item";
 import { Lexer } from "./Lexer";
 import { extendLocation, ParseTree } from "./ParseTree";
 import { State } from "./State";
-import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL, UNKNOWN_TOKEN } from "./symbols";
+import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNKNOWN_TOKEN, UNUSED_SYMBOL } from "./symbols";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -749,7 +749,7 @@ export class Parser implements IParser {
     }
 
 
-    private firstTerminal(symbol: string): Terminals {
+    private firstTerminals(symbol: string): Terminals {
         if (this.isTerminal(symbol)) {
             return null;
         }
@@ -785,7 +785,7 @@ export class Parser implements IParser {
                     break;
                 }
 
-                const terminals = this.firstTerminal(right[j]);
+                const terminals = this.firstTerminals(right[j]);
 
                 if (isNull(terminals)) {
                     res.add(right[j]);
@@ -900,11 +900,11 @@ export class Parser implements IParser {
     //     return res;
     // }
 
-    private firstTerminalBatch(symbolList: string[], expectedSymbols: ExpectedSymbols): Terminals {
+    private firstTerminalsForSet(symbolList: string[], expectedSymbols: ExpectedSymbols): Terminals {
         const res = new Set<string>();
 
         for (let i = 0; i < symbolList.length; i++) {
-            const terminals = this.firstTerminal(symbolList[i]);
+            const terminals = this.firstTerminals(symbolList[i]);
 
             if (isNull(terminals)) {
                 res.add(symbolList[i]);
@@ -1197,7 +1197,7 @@ export class Parser implements IParser {
                 const symbol = item.symbolName();
                 if (symbol !== END_POSITION && !this.isTerminal(symbol)) {
                     const nextSymbols = item.rule.right.slice(item.pos + 1);
-                    const expectedTerminals = this.firstTerminalBatch(nextSymbols, item.expectedSymbols);
+                    const expectedTerminals = this.firstTerminalsForSet(nextSymbols, item.expectedSymbols);
 
                     this.rules(symbol).forEach(rule => {
                         expectedTerminals.forEach(expectedTerminal => {
@@ -1593,7 +1593,7 @@ export class Parser implements IParser {
             ParserConstructor = Parser;
         }
         console.time();
-        verbose('%c Creating parser....', 'background: #222; color: #bada55');
+        console.log('%c Creating parser....', 'background: #222; color: #bada55');
         Parser.$parserParams = parserParams;
         Parser.$parser = new ParserConstructor();
 
@@ -1601,7 +1601,7 @@ export class Parser implements IParser {
             console.error('Could not initialize parser!');
             Parser.$parser = null;
         } else {
-            verbose('%c [ DONE ]', 'background: #222; color: #bada55');
+            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
         }
         console.timeEnd();
 
@@ -1613,10 +1613,10 @@ export class Parser implements IParser {
         Parser.$parser.setParseFileName(filename);
 
         const timeLabel = `parse ${filename}`;
-        // console.time(timeLabel);
+        console.time(timeLabel);
         // All diagnostic exceptions should be already handled inside parser.
         let result = await Parser.$parser.parse(content);
-        // console.timeEnd(timeLabel);
+        console.timeEnd(timeLabel);
 
         let diag = Parser.$parser.getDiagnostics();
         let ast = Parser.$parser.getSyntaxTree();

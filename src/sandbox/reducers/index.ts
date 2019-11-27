@@ -13,7 +13,8 @@ import sourceFile from './sourceFile';
 
 // most common selector;
 // markers are very expensive for react update :/
-export const getCommon = (state: IStoreState): IStoreState => ({ ...state, sourceFile: { ...state.sourceFile, markers: null } });
+export const getCommon = (state: IStoreState): IStoreState => state;
+// ({ ...state, sourceFile: { ...state.sourceFile, markers: null } });
 
 export const getLocation = (state: IStoreState): string => state.router.location.pathname;
 export const matchLocation = (state: IStoreState) =>
