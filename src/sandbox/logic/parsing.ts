@@ -115,7 +115,7 @@ const updateParserLogic = createLogic<IStoreState>({
 const updateSourceContentLogic = createLogic<IStoreState>({
     type: [evt.SOURCE_CODE_MODIFED, evt.SOURCE_FILE_LOADED],
     latest: true,
-    debounce: 1500,
+    debounce: 500,
 
     async process({ getState, action, action$ }, dispatch, done) {
         const $debugger = getDebugger(getState());

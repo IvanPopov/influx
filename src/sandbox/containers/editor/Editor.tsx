@@ -5,36 +5,46 @@
 
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { IParserParams } from '@lib/idl/parser/IParser';
-import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, EDiagnosticCategory, IDiagnosticMessage, IDiagnosticReport } from '@lib/util/Diagnostics';
+import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/util/Diagnostics';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
-import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
+import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient/lib/monaco-converter';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { ParameterInformation, SignatureInformation } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import Worker from 'worker-loader!./LanguageService';
 
-import { MyCodeLensProvider } from './CodeLensProvider';
 import styles from './styles.jss';
+
+const m2p = new MonacoToProtocolConverter();
+const p2m = new ProtocolToMonacoConverter();
 
 namespace LanguageService {
     const worker = new Worker();
 
+    // TODO: split all requests by documents
     let pendingValidationRequests: {
         resolve: (value: IDiagnosticMessage[]) => void;
         reject: () => void;
+    }[] = [];
+
+    // TODO: split all requests by documents
+    let pendingCodeLensesRequests: {
+        resolve: (value: monaco.languages.CodeLensList) => void;
+        reject: () => void;
+        document: TextDocument;
     }[] = [];
 
     worker.onmessage = (event) => {
@@ -44,13 +54,23 @@ namespace LanguageService {
                 {
                     const promise = pendingValidationRequests.pop();
                     promise.resolve(data.payload as IDiagnosticMessage[]);
+
+                    // kick off all requests that depends on parsing only after validation
+                    pendingCodeLensesRequests.forEach(req =>
+                        worker.postMessage({ type: 'provide-code-lenses', payload: { uri: req.document.uri } }));
+                }
+                break;
+            case 'provide-code-lenses':
+                {
+                    const promise = pendingCodeLensesRequests.pop();
+                    promise.resolve({ lenses: p2m.asCodeLenses(data.payload), dispose() { } });
                 }
                 break;
             default:
         }
     };
 
-    export function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
+    export async function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
         worker.postMessage({ type: 'validation', payload: { text: document.getText(), uri: document.uri } });
         // tslint:disable-next-line:promise-must-complete
         return new Promise<IDiagnosticMessage[]>((resolve, reject) => {
@@ -58,8 +78,15 @@ namespace LanguageService {
         });
     }
 
-    export function install(params: IParserParams) {
+    export async function install(params: IParserParams) {
         worker.postMessage({ type: 'install', payload: params });
+    }
+
+    export async function provideCodeLenses(document: TextDocument, token: monaco.CancellationToken) {
+        // tslint:disable-next-line:promise-must-complete
+        return new Promise<monaco.languages.CodeLensList>((resolve, reject) => {
+            pendingCodeLensesRequests = [{ resolve, reject, document }, ...pendingCodeLensesRequests];
+        });
     }
 }
 
@@ -126,6 +153,10 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     codeLensProvider: monaco.IDisposable = null;
     hoverProvider: monaco.IDisposable = null;
+    completionProvider: monaco.IDisposable = null;
+    documentSymbolProvider: monaco.IDisposable = null;
+    signatureHelpProvider: monaco.IDisposable = null;
+
     mouseDownEvent: monaco.IDisposable = null;
 
     // cache for previously set decorations/breakpoints
@@ -133,7 +164,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     pendingValidationRequests = new Map<string, number>();
 
-    
+
     // cache for params
     parserParamsCache: IParserParams = null;
 
@@ -199,8 +230,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         }
 
         if (file.content !== this.getContent()) {
+            this.validate(file.content);
             this.getEditor().setValue(file.content);
-            this.validate();
             console.log('%c force reload content from outside', 'background: #ffd1c9; color: #ff3714');
         }
     }
@@ -220,6 +251,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     editorWillMount(editor) { }
 
 
+    // tslint:disable-next-line:max-func-body-length
     @autobind
     editorDidMount(editor: monaco.editor.IStandaloneCodeEditor) {
         editor.getModel()
@@ -254,22 +286,95 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             }
         });
 
-
+        const self = this;
         this.codeLensProvider = monaco.languages.registerCodeLensProvider(
             LANGUAGE_ID,
-            new MyCodeLensProvider(() => getScope(this.getFile()))
+            {
+                provideCodeLenses(model: monaco.editor.ITextModel, token: monaco.CancellationToken)
+                    : monaco.languages.CodeLensList | monaco.Thenable<monaco.languages.CodeLensList> {
+                    const document = self.createDocument(model);
+                    return LanguageService.provideCodeLenses(document, token);
+                }
+            });
+
+
+        this.completionProvider = monaco.languages.registerCompletionItemProvider(
+            LANGUAGE_ID,
+            {
+                triggerCharacters: ['(', ',', '=', '+'],
+                provideCompletionItems(model, position, context, token)
+                    : monaco.Thenable<monaco.languages.CompletionList> {
+                    const document = self.createDocument(model);
+                    const wordUntil = model.getWordUntilPosition(position);
+                    const defaultRange = new monaco.Range(
+                        position.lineNumber, wordUntil.startColumn,
+                        position.lineNumber, wordUntil.endColumn
+                    );
+
+                    // return jsonService.doComplete(document, 
+                    // m2p.asPosition(position.lineNumber, position.column), jsonDocument).then((list) => {
+                    //     return p2m.asCompletionResult(list, defaultRange);
+                    // });
+
+                    console.log('provideCompletionItems', defaultRange, wordUntil);
+
+                    return null;
+                },
+
+                resolveCompletionItem(model, position, item, token)
+                    : monaco.languages.CompletionItem | monaco.Thenable<monaco.languages.CompletionItem> {
+                    // return jsonService.doResolve(m2p.asCompletionItem(item)).then(result => p2m.asCompletionItem(result, item.range));
+                    console.log('resolveCompletionItem', m2p.asCompletionItem(item));
+                    return null;
+                }
+            });
+
+        this.signatureHelpProvider = monaco.languages.registerSignatureHelpProvider(
+            LANGUAGE_ID,
+            {
+                signatureHelpTriggerCharacters: ['('],
+                signatureHelpRetriggerCharacters: [','],
+                provideSignatureHelp(model, position, token, context: monaco.languages.SignatureHelpContext)
+                    : monaco.languages.ProviderResult<monaco.languages.SignatureHelpResult> {
+                    console.log('provideSignatureHelp', arguments);
+
+                    // const sh = SignatureHelp
+                    const value = p2m.asSignatureHelp({
+                        signatures: [
+                            SignatureInformation.create('int foo(int FOO, int BAR)', 'bla bla bla', ParameterInformation.create('FOO'), ParameterInformation.create('BAR')),
+                        ],
+                        activeParameter: 1,
+                        activeSignature: 0
+                    });
+
+                    return { value, dispose() { } };
+                }
+            }
         );
 
+        // this.documentSymbolProvider = monaco.languages.registerDocumentSymbolProvider(
+        //     LANGUAGE_ID, 
+        //     {
+        //     provideDocumentSymbols(model, token): monaco.languages.DocumentSymbol[] | monaco.Thenable<monaco.languages.DocumentSymbol[]> {
+        //         const document = self.createDocument(model);
+        //         // const jsonDocument = jsonService.parseJSONDocument(document);
+        //         // return p2m.asSymbolInformations(jsonService.findDocumentSymbols(document, jsonDocument));
 
-        // const self = this;
-        this.hoverProvider = monaco.languages.registerHoverProvider(LANGUAGE_ID, {
-            provideHover(model, position, token): monaco.languages.Hover | monaco.Thenable<monaco.languages.Hover> {
-                // const document = self.createDocument(model);
-                // const jsonDocument = jsonService.parseJSONDocument(document);
-                // console.log(model, position, token);
-                return null;
-            }
-        });
+        //         // return p2m.asSymbolInformations();
+        //     }
+        // });
+
+        // // const self = this;
+        // this.hoverProvider = monaco.languages.registerHoverProvider(
+        //     LANGUAGE_ID,
+        //     {
+        //         provideHover(model, position, token): monaco.languages.Hover | monaco.Thenable<monaco.languages.Hover> {
+        //             // const document = self.createDocument(model);
+        //             // const jsonDocument = jsonService.parseJSONDocument(document);
+        //             // console.log(model, position, token);
+        //             return null;
+        //         }
+        //     });
     }
 
 
@@ -282,13 +387,13 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    validate(): void {
-        const document = this.createDocument(this.getModel());
+    validate(newContent?: string): void {
+        const document = this.createDocument(this.getModel(), newContent);
         this.cleanPendingValidation(document);
         this.pendingValidationRequests.set(document.uri, setTimeout(() => {
             this.pendingValidationRequests.delete(document.uri);
             this.doValidate(document);
-        }, 250) as any);
+        }));
     }
 
     // tslint:disable-next-line:member-ordering
@@ -317,9 +422,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             return;
         }
 
-        LanguageService.validate(document).then((messages: IDiagnosticMessage[]) => {
-            monaco.editor.setModelMarkers(this.getModel(), 'default', messages.map(msg => SourceEditor.asMarker(msg)));
-        });
+        const messages = await LanguageService.validate(document);
+        monaco.editor.setModelMarkers(this.getModel(), 'default', messages.map(msg => SourceEditor.asMarker(msg)));
     }
 
 
@@ -330,8 +434,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     @autobind
     async onChange(content, e) {
+        this.validate(content);
         this.props.actions.setContent(content);
-        this.validate();
     }
 
     getEditor(): monaco.editor.ICodeEditor {
@@ -351,8 +455,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    createDocument(model: monaco.editor.IReadOnlyModel) {
-        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), model.getValue());
+    createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string) {
+        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), newContent || model.getValue());
     }
 
 

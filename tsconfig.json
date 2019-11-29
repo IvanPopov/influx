@@ -42,7 +42,9 @@
     // "inlineSourceMap": true,
     // "inlineSources": true,
     "moduleResolution": "node",
-    "strict": false
+    "strict": false,
+    // IP: currently this option is needed for correct work with 'monaco-languageclient'
+    "skipLibCheck": true
   },
   // "files": [
   //   "src/shell.ts",
