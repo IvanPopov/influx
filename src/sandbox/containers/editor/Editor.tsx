@@ -21,8 +21,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { ParameterInformation, SignatureInformation } from 'vscode-languageserver-types';
+import { ParameterInformation, Position, SignatureInformation, TextDocument } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import Worker from 'worker-loader!./LanguageService';
 
@@ -47,8 +46,15 @@ namespace LanguageService {
         document: TextDocument;
     }[] = [];
 
+    let pendingSignatureHelpRequests: {
+        resolve: (value: monaco.languages.SignatureHelpResult) => void;
+        reject: () => void;
+    }[] = [];
+
     worker.onmessage = (event) => {
         const data = event.data;
+        // tslint:disable-next-line:no-empty
+        const disposeDummy = { dispose() { } };
         switch (data.type) {
             case 'validation':
                 {
@@ -63,7 +69,18 @@ namespace LanguageService {
             case 'provide-code-lenses':
                 {
                     const promise = pendingCodeLensesRequests.pop();
-                    promise.resolve({ lenses: p2m.asCodeLenses(data.payload), dispose() { } });
+                    promise && promise.resolve({ lenses: p2m.asCodeLenses(data.payload), ...disposeDummy });
+                }
+                break;
+            case 'provide-signature-help':
+                {
+                    const promise = pendingSignatureHelpRequests.pop();
+                    if (promise) {
+                        promise.resolve(
+                            data.payload ?
+                                { value: p2m.asSignatureHelp(data.payload), ...disposeDummy } :
+                                null);
+                    }
                 }
                 break;
             default:
@@ -86,6 +103,14 @@ namespace LanguageService {
         // tslint:disable-next-line:promise-must-complete
         return new Promise<monaco.languages.CodeLensList>((resolve, reject) => {
             pendingCodeLensesRequests = [{ resolve, reject, document }, ...pendingCodeLensesRequests];
+        });
+    }
+
+    export async function provideSignatureHelp(document: TextDocument, position: Position) {
+        worker.postMessage({ type: 'provide-signature-help', payload: { offset: document.offsetAt(position), uri: document.uri } });
+        // tslint:disable-next-line:promise-must-complete
+        return new Promise<monaco.languages.SignatureHelpResult>((resolve, reject) => {
+            pendingSignatureHelpRequests = [{ resolve, reject }, ...pendingSignatureHelpRequests];
         });
     }
 }
@@ -334,20 +359,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             {
                 signatureHelpTriggerCharacters: ['('],
                 signatureHelpRetriggerCharacters: [','],
-                provideSignatureHelp(model, position, token, context: monaco.languages.SignatureHelpContext)
+                provideSignatureHelp(
+                    model: monaco.editor.ITextModel,
+                    position: monaco.Position,
+                    token,
+                    context: monaco.languages.SignatureHelpContext)
                     : monaco.languages.ProviderResult<monaco.languages.SignatureHelpResult> {
-                    console.log('provideSignatureHelp', arguments);
 
-                    // const sh = SignatureHelp
-                    const value = p2m.asSignatureHelp({
-                        signatures: [
-                            SignatureInformation.create('int foo(int FOO, int BAR)', 'bla bla bla', ParameterInformation.create('FOO'), ParameterInformation.create('BAR')),
-                        ],
-                        activeParameter: 1,
-                        activeSignature: 0
-                    });
-
-                    return { value, dispose() { } };
+                    const document = self.createDocument(model);
+                    return LanguageService.provideSignatureHelp(document, m2p.asPosition(position.lineNumber, position.column));
                 }
             }
         );

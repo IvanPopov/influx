@@ -2,7 +2,7 @@ import { IMap } from '@lib/idl/IMap';
 import { ETokenType, IFile, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
 import { Diagnostics, IDiagnosticReport } from '@lib/util/Diagnostics';
 
-import { END_SYMBOL, EOF, T_FLOAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN, ERROR, T_LINE_TERMINATOR } from './symbols';
+import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
 interface ILexerDiagDesc {
     file: string;
@@ -39,10 +39,10 @@ class LexerDiagnostics extends Diagnostics<ILexerDiagDesc> {
 
 
 export class Lexer {
+    private _index: number;
     private _lineNumber: number;
     private _columnNumber: number;
     private _source: string;
-    private _index: number;
     private _punctuatorsMap: IMap<string>;
     private _keywordsMap: IMap<string>;
     private _punctuatorsFirstSymbols: IMap<boolean>;
@@ -201,7 +201,8 @@ export class Lexer {
         return {
             file: this._onResolveFilename(),
             line: this._lineNumber,
-            column: this._columnNumber + n
+            column: this._columnNumber + n,
+            offset: this._index + n
         };
     }
 

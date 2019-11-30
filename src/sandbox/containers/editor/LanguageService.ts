@@ -1,12 +1,14 @@
 import { isNull } from '@lib/common';
 import { EffectParser } from '@lib/fx/EffectParser';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
-import { EInstructionTypes, ETechniqueType, IInstructionCollector, IScope } from '@lib/idl/IInstruction';
-import { EParseMode, EParserType, IParseNode, IParserParams, IRange } from '@lib/idl/parser/IParser';
+import { Visitor } from '@lib/fx/Visitors';
+import { EInstructionTypes, ETechniqueType, IFunctionCallInstruction, IFunctionDeclInstruction, IInstruction, IInstructionCollector, IScope } from '@lib/idl/IInstruction';
+import { EParseMode, EParserType, IParseNode, IParserParams, IPosition, IRange } from '@lib/idl/parser/IParser';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import { Parser } from '@lib/parser/Parser';
+import { checkRange, commonRange } from '@lib/parser/util';
 import { Diagnostics } from '@lib/util/Diagnostics';
-import { CodeLens, Command, Position, Range } from 'vscode-languageserver-types';
+import { CodeLens, Command, ParameterInformation, Position, Range, SignatureInformation } from 'vscode-languageserver-types';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -26,7 +28,7 @@ import { CodeLens, Command, Position, Range } from 'vscode-languageserver-types'
 const ctx: Worker = self as any;
 
 
-const documents: { [uri: string]: { root: IInstructionCollector, scope: IScope } } = {};
+const documents: { [uri: string]: IInstructionCollector } = {};
 
 async function validate(text: string, uri: string): Promise<void> {
     const parsingResults = await Parser.parse(text, uri);
@@ -35,7 +37,7 @@ async function validate(text: string, uri: string): Promise<void> {
     const diag = Diagnostics.mergeReports([parsingResults.diag, semanticResults.diag]);
 
     // set document cache
-    documents[uri] = { root: semanticResults.root, scope: semanticResults.scope };
+    documents[uri] = semanticResults.root;
 
     ctx.postMessage({ type: 'validation', payload: diag.messages });
 }
@@ -49,20 +51,19 @@ async function provideCodeLenses(uri: string): Promise<void> {
         return;
     }
 
-    const root = documents[uri].root;
-    const scope = documents[uri].scope;
-
+    const root = documents[uri];
     if (!root) {
         ctx.postMessage({ type: 'provide-code-lenses', payload: lenses });
         return;
     }
 
+    const scope = root.scope;
 
     /**
      * Just a draft code :)
      */
 
-    const createCodeLens = (name: string, loc: IRange): CodeLens  => {
+    const createCodeLens = (name: string, loc: IRange): CodeLens => {
         const pos = Position.create(loc.start.line, loc.start.column);
         const range = Range.create(pos, pos);
         const lens = CodeLens.create(range);
@@ -117,6 +118,74 @@ async function provideCodeLenses(uri: string): Promise<void> {
     ctx.postMessage({ type: 'provide-code-lenses', payload: lenses });
 }
 
+const asRange = (instr: IInstruction) => instr.sourceNode.loc;
+
+
+async function provideSignatureHelp(uri, offset) {
+
+    if (!documents[uri]) {
+        ctx.postMessage({ type: 'provide-signature-help', payload: null });
+        return;
+    }
+
+    const root = documents[uri];
+    if (!root) {
+        ctx.postMessage({ type: 'provide-signature-help', payload: null });
+        return;
+    }
+
+    const scope = root.scope;
+
+
+
+    const decl = root.instructions.find(instr => checkRange(asRange(instr), offset));
+    if (decl) {
+        // console.log(decl);
+        if (decl.instructionType === EInstructionTypes.k_FunctionDecl) {
+
+            let fcall: IFunctionCallInstruction = null;
+            Visitor.each(decl, instr => {
+                if (instr.instructionType === EInstructionTypes.k_FunctionCallExpr) {
+                    if (checkRange(asRange(instr), offset)) {
+                        fcall = <IFunctionCallInstruction>instr;
+                    }
+                }
+            });
+
+            if (!fcall) {
+                ctx.postMessage({ type: 'provide-signature-help', payload: null });
+                return;
+            }
+
+            const fdecl = <IFunctionDeclInstruction>fcall.decl;
+            const fnList = fdecl.scope.functionMap[fdecl.name];
+            const signatures = fnList.map(fn =>
+                SignatureInformation.create(
+                    fn.def.toCode(),
+                    null, // no documentation provided
+                    ...fn.def.params.map(param => ParameterInformation.create(param.name))
+                ));
+
+            let activeSignature = fnList.indexOf(fdecl);
+            let activeParameter = 0;
+
+            if (activeSignature !== -1) {
+                activeParameter = fcall.args.findIndex(arg =>
+                    checkRange(asRange(arg), offset));
+            } else {
+                activeSignature = 0;
+                console.error(`could not find active signature for: '${fdecl.def.toCode()}'`);
+            }
+
+            ctx.postMessage({ type: 'provide-signature-help', payload: { signatures, activeParameter, activeSignature } });
+
+        }
+    }
+
+    ctx.postMessage({ type: 'provide-signature-help', payload: null });
+}
+
+
 ctx.onmessage = (event) => {
     const data = event.data;
     const { type, payload } = data;
@@ -129,6 +198,9 @@ ctx.onmessage = (event) => {
             break;
         case 'provide-code-lenses':
             provideCodeLenses(payload.uri);
+            break;
+        case 'provide-signature-help':
+            provideSignatureHelp(payload.uri, payload.offset);
             break;
         default:
     }

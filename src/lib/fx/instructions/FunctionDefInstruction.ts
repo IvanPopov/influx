@@ -4,7 +4,6 @@ import { Instruction } from "@lib/fx/instructions/Instruction";
 import * as SystemScope from "@lib/fx/SystemScope";
 import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-
 export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
     returnType: IVariableTypeInstruction;
     id: IIdInstruction;
@@ -69,29 +68,11 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     toCode(): string {
-        let code = "";
-
-        {
-
-            code += this._returnType.toCode();
-            code += " " + this._id.toCode();
-            code += "(";
-
-            for (let i: number = 0; i < this._parameterList.length; i++) {
-                code += this._parameterList[i].toCode();
-
-                if (i !== this._parameterList.length - 1) {
-                    code += ",";
-                }
-            }
-
-            code += ")";
-        }
+        const { id, returnType, params } = this;
+        return `${returnType.toCode()} ${id.toCode()}(${this.params.map(param => param.toCode()).join(', ')})`
         // else {
         //     code = "void " + this._id.toCode() + "()";
         // }
-
-        return code;
     }
 
 

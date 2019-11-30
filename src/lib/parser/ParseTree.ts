@@ -1,39 +1,7 @@
 ﻿import { assert } from "@lib/common";
 import { ENodeCreateMode, IParseNode, IParseTree, IPosition, IRange, IRule, IToken } from "@lib/idl/parser/IParser";
 
-function locMin(a: IPosition, b: IPosition): IPosition {
-    assert(a.file == b.file);
-    return {
-        line: Math.min(a.line, b.line),
-        column: Math.min(a.column, b.column),
-        file: a.file
-    };
-}
-
-function locMax(a: IPosition, b: IPosition): IPosition {
-    assert(a.file == b.file);
-    return {
-        line: Math.max(a.line, b.line),
-        column: Math.max(a.column, b.column),
-        file: a.file
-    };
-}
-
-
-export function extendLocation(parent: IRange, child: IRange) {
-    if (child.start.line < parent.start.line) {
-        parent.start = { ...child.start };
-    } else if (child.start.line === parent.start.line) {
-        parent.start = locMin(child.start, parent.start);
-    }
-
-    if (child.end.line > parent.end.line) {
-        parent.end = { ...child.end };
-    } else if (child.end.line === parent.end.line) {
-        parent.end = locMax(child.end, parent.end);
-    }
-}
-
+import { extendRange } from "./util";
 
 export class ParseTree implements IParseTree {
     root: IParseNode;
@@ -135,7 +103,7 @@ export class ParseTree implements IParseTree {
         while (count) {
             let node = this.nodes.pop();
             if (loc) {
-                extendLocation(loc, node.loc);
+                extendRange(loc, node.loc);
             }
             count--;
         }
@@ -144,7 +112,7 @@ export class ParseTree implements IParseTree {
     private addLink(parent: IParseNode, child: IParseNode): void {
         parent.children = parent.children || [];
         
-        extendLocation(parent.loc, child.loc);
+        extendRange(parent.loc, child.loc);
         
         parent.children.push(child);
         child.parent = parent;

@@ -48,6 +48,7 @@ export interface IPosition {
     file: IFile;
     line: number; 
     column: number;
+    offset?: number;
 }
 
 // todo: add support for range over multiple files;

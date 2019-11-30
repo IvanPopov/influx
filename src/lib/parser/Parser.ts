@@ -8,9 +8,10 @@ import { StringRef } from "@lib/util/StringRef";
 
 import { Item } from "./Item";
 import { Lexer } from "./Lexer";
-import { extendLocation, ParseTree } from "./ParseTree";
+import { ParseTree } from "./ParseTree";
 import { State } from "./State";
 import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNKNOWN_TOKEN, UNUSED_SYMBOL } from "./symbols";
+import { extendRange } from "./util";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -299,7 +300,7 @@ export class Parser implements IParser {
                 return recoveredStateIndex;
             }
 
-            extendLocation(errorToken.loc, causingErrorToken.loc);
+            extendRange(errorToken.loc, causingErrorToken.loc);
 
             if (causingErrorToken.value === END_SYMBOL) {
                 // state cant be recovered

@@ -17,7 +17,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
     };
 
-    constructor(props) {
+    constructor(props: IASTViewProps) {
         super(props);
         this.state = {
             nodeStats: {}
@@ -36,13 +36,13 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         };
 
         return (
-            <List style={ style } selection size="small" className="astlist">
+            <List style={ style } selection size='small' className='astlist'>
                 { this.renderASTNode(parseTree ? parseTree.root : null) }
             </List>
         );
     }
 
-    private renderASTNode(node: IParseNode, idx = '0') {
+    private renderASTNode(node: IParseNode, idx: string = '0'): JSX.Element {
         if (!node) {
             return null;
         }
@@ -57,33 +57,37 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                     onClick={ this.handleNodeClick.bind(this, idx, node) }
                     onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                     onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
-                    className="astnode"
+                    className='astnode'
                 >
-                    <List.Icon />
+                    {/* FIXME: remove inline style hotfix */ }
+                    <List.Icon style={ { minWidth: '12px' } } />
                     <List.Content>
                         <List.Header>{ node.name }</List.Header>
                         <List.Description>{ node.value }</List.Description>
                     </List.Content>
                 </List.Item>
             );
-        }
-        else {
+        } else {
             let children = null;
             if (show) {
-                children = (<List.List className="astlist"> { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() } </List.List>);
+                children = (
+                    <List.List className='astlist'>
+                        { node.children.map((node, i) => this.renderASTNode(node, `${idx}.${i}`)).reverse() }
+                    </List.List>
+                );
             }
             return (
                 <List.Item key={ idx }
                     onClick={ this.handleNodeClick.bind(this, idx, node) }
                     onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                     onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
-                    className="astnode"
+                    className='astnode'
                 >
-                    <List.Icon name={ show ? `chevron down` : `chevron right` } />
+                    <List.Icon name={ (show ? `chevron down` : `chevron right`) } />
                     <List.Content>
                         <List.Header>
                             { node.name }&nbsp;
-                            <a style={ { display: selected ? 'inline' : 'none' } }
+                            <a href='javascript:void(0);' style={ ({ display: (selected ? 'inline' : 'none') }) }
                                 onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a>
                         </List.Header>
                         { children }
@@ -94,21 +98,23 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private async handleCopyClick(idx: string, node: IParseNode, e: MouseEvent) {
+    private async handleCopyClick(idx: string, node: IParseNode, e: MouseEvent): Promise<void> {
         e.stopPropagation();
 
         let out = [];
         out.push(`/**`);
         out.push(` * AST example:`)
         out.push(` *    ${node.name}`)
-        out = out.concat(node.children.slice().map(node => ` *       ${node.children ? '+' : ' '} ${node.name} ${node.value ? '= ' + '\'' + node.value + '\'' : ''}`));
+        out = out
+            .concat(node.children.slice()
+            .map(node => ` *       ${node.children ? '+' : ' '} ${node.name} ${node.value ? `= \'${node.value}\'` : ''}`));
         out.push(` */`);
 
         copy(out.join('\n'), { debug: true });
     }
 
 
-    private async handleNodeOver(idx: string, node: IParseNode, e: MouseEvent) {
+    private async handleNodeOver(idx: string, node: IParseNode, e: MouseEvent): Promise<void> {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
@@ -122,12 +128,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private async handleNodeOut(idx: string, node: IParseNode, e: MouseEvent) {
+    private async handleNodeOut(idx: string, node: IParseNode, e: MouseEvent): Promise<void> {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
 
-        let val = { opened: false, selected: false, ...nodeStats[idx] };
+        const val = { opened: false, selected: false, ...nodeStats[idx] };
         val.selected = !val.selected;
         nodeStats = { ...nodeStats, [idx]: val };
 
@@ -136,12 +142,12 @@ class ASTView extends React.Component<IASTViewProps, {}> {
     }
 
 
-    private handleNodeClick(idx: string, node: IParseNode, e: MouseEvent) {
+    private handleNodeClick(idx: string, node: IParseNode, e: MouseEvent): void {
         e.stopPropagation();
 
         let { nodeStats } = this.state;
 
-        let val = { opened: false, selected: false, ...nodeStats[idx] };
+        const val = { opened: false, selected: false, ...nodeStats[idx] };
         val.opened = !val.opened;
         nodeStats = { ...nodeStats, [idx]: val };
 

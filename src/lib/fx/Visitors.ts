@@ -63,7 +63,7 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             break;
         case EInstructionTypes.k_CompileExpr:
             (owner as ICompileExprInstruction).args.forEach(arg => visit(arg));
-            visit((owner as ICompileExprInstruction).function);
+            // visit((owner as ICompileExprInstruction).function);
             break;
         case EInstructionTypes.k_ComplexExpr:
             visit((owner as IComplexExprInstruction).expr);
@@ -75,11 +75,11 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             break;
         case EInstructionTypes.k_ConstructorCallExpr:
             (owner as IConstructorCallInstruction).args.forEach(arg => visit(arg));
-            visit((owner as IConstructorCallInstruction).ctor);
+            // visit((owner as IConstructorCallInstruction).ctor);
             break;
         case EInstructionTypes.k_FunctionCallExpr:
             (owner as IFunctionCallInstruction).args.forEach(arg => visit(arg));
-            visit((owner as IFunctionCallInstruction).decl);
+            // visit((owner as IFunctionCallInstruction).decl);
             break;
         case EInstructionTypes.k_IdExpr:
             visit((owner as IIdExprInstruction).id);
@@ -157,3 +157,8 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             console.error('unsupported instruction type found');
     }
 }
+
+export const Visitor = {
+    each: visitor
+};
+

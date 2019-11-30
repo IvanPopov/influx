@@ -305,28 +305,32 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
     let recursionFound = false;
 
     stack = [...stack, func.instructionID];
-    visitor(func.impl, instr => {
+    const recursionChecker = (instr: IInstruction) => {
         if (instr.instructionType === EInstructionTypes.k_FunctionCallExpr) {
-            let decl = (instr as IFunctionCallInstruction).decl;
-            if (decl.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
+            let fcall = (instr as IFunctionCallInstruction);
+            let fdecl = fcall.decl;
+            if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
                 return;
             }
 
             // NOTE: it is possible that the declaration was not complete 
             //       at the time of the call, so you need to look for a 
             //       version with implementation
-            decl = decl.scope.findFunctionInScope(decl);
-            if (isNull(decl.impl)) {
+            fdecl = fdecl.scope.findFunctionInScope(fdecl);
+            if (isNull(fdecl.impl)) {
                 context.error(instr.sourceNode,
                     EErrors.InvalidFunctionImplementationNotFound,
-                    { funcName: decl.name });
+                    { funcName: fdecl.name });
                 return;
             }
 
+            // visitor(fdecl.impl, recursionChecker);
             recursionFound = recursionFound ||
-                checkFunctionForRecursion(context, decl, stack);
+                checkFunctionForRecursion(context, fdecl, stack);
         }
-    });
+    };
+
+    visitor(func.impl, recursionChecker);
 
     return !recursionFound;
 }
