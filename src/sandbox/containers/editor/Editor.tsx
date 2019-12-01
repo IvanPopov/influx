@@ -21,7 +21,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { ParameterInformation, Position, SignatureInformation, TextDocument } from 'vscode-languageserver-types';
+import { Position, TextDocument } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import Worker from 'worker-loader!./LanguageService';
 
