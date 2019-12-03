@@ -15,105 +15,127 @@ import { getParser } from '@sandbox/reducers/parserParams';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
+import * as Comlink from 'comlink';
 import * as monaco from 'monaco-editor';
 import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient/lib/monaco-converter';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { Position, TextDocument } from 'vscode-languageserver-types';
+import { Diagnostic, DiagnosticSeverity, Position, TextDocument } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
-import Worker from 'worker-loader!./LanguageService';
+import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
 
+import { ILanguageServiceProvider } from './LanguageServiceProvider';
 import styles from './styles.jss';
 
 const m2p = new MonacoToProtocolConverter();
 const p2m = new ProtocolToMonacoConverter();
 
-namespace LanguageService {
-    const worker = new Worker();
+const provider = Comlink.wrap<ILanguageServiceProvider>(new LanguageServiceWorker());
 
-    // TODO: split all requests by documents
-    let pendingValidationRequests: {
-        resolve: (value: IDiagnosticMessage[]) => void;
-        reject: () => void;
-    }[] = [];
+// namespace LanguageService {
+//     const worker = new Worker();
 
-    // TODO: split all requests by documents
-    let pendingCodeLensesRequests: {
-        resolve: (value: monaco.languages.CodeLensList) => void;
-        reject: () => void;
-        document: TextDocument;
-    }[] = [];
+//     // TODO: split all requests by documents
+//     let pendingValidationRequests: {
+//         resolve: (value: IDiagnosticMessage[]) => void;
+//         reject: () => void;
+//     }[] = [];
 
-    let pendingSignatureHelpRequests: {
-        resolve: (value: monaco.languages.SignatureHelpResult) => void;
-        reject: () => void;
-    }[] = [];
+//     // TODO: split all requests by documents
+//     let pendingCodeLensesRequests: {
+//         resolve: (value: monaco.languages.CodeLensList) => void;
+//         reject: () => void;
+//         document: TextDocument;
+//     }[] = [];
 
-    worker.onmessage = (event) => {
-        const data = event.data;
-        // tslint:disable-next-line:no-empty
-        const disposeDummy = { dispose() { } };
-        switch (data.type) {
-            case 'validation':
-                {
-                    const promise = pendingValidationRequests.pop();
-                    promise.resolve(data.payload as IDiagnosticMessage[]);
+//     let pendingSignatureHelpRequests: {
+//         resolve: (value: monaco.languages.SignatureHelpResult) => void;
+//         reject: () => void;
+//     }[] = [];
 
-                    // kick off all requests that depends on parsing only after validation
-                    pendingCodeLensesRequests.forEach(req =>
-                        worker.postMessage({ type: 'provide-code-lenses', payload: { uri: req.document.uri } }));
-                }
-                break;
-            case 'provide-code-lenses':
-                {
-                    const promise = pendingCodeLensesRequests.pop();
-                    promise && promise.resolve({ lenses: p2m.asCodeLenses(data.payload), ...disposeDummy });
-                }
-                break;
-            case 'provide-signature-help':
-                {
-                    const promise = pendingSignatureHelpRequests.pop();
-                    if (promise) {
-                        promise.resolve(
-                            data.payload ?
-                                { value: p2m.asSignatureHelp(data.payload), ...disposeDummy } :
-                                null);
-                    }
-                }
-                break;
-            default:
-        }
+//     worker.onmessage = (event) => {
+//         const data = event.data;
+//         // tslint:disable-next-line:no-empty
+//         const disposeDummy = { dispose() { } };
+//         switch (data.type) {
+//             case 'validation':
+//                 {
+//                     const promise = pendingValidationRequests.pop();
+//                     promise.resolve(data.payload as IDiagnosticMessage[]);
+
+//                     // kick off all requests that depends on parsing only after validation
+//                     pendingCodeLensesRequests.forEach(req =>
+//                         worker.postMessage({ type: 'provide-code-lenses', payload: { uri: req.document.uri } }));
+//                 }
+//                 break;
+//             case 'provide-code-lenses':
+//                 {
+//                     const promise = pendingCodeLensesRequests.pop();
+//                     promise && promise.resolve({ lenses: p2m.asCodeLenses(data.payload), ...disposeDummy });
+//                 }
+//                 break;
+//             case 'provide-signature-help':
+//                 {
+//                     const promise = pendingSignatureHelpRequests.pop();
+//                     if (promise) {
+//                         promise.resolve(
+//                             data.payload ?
+//                                 { value: p2m.asSignatureHelp(data.payload), ...disposeDummy } :
+//                                 null);
+//                     }
+//                 }
+//                 break;
+//             default:
+//         }
+//     };
+
+//     export async function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
+//         worker.postMessage({ type: 'validation', payload: { text: document.getText(), uri: document.uri } });
+//         // tslint:disable-next-line:promise-must-complete
+//         return new Promise<IDiagnosticMessage[]>((resolve, reject) => {
+//             pendingValidationRequests = [{ resolve, reject }, ...pendingValidationRequests];
+//         });
+//     }
+
+//     export async function install(params: IParserParams) {
+//         worker.postMessage({ type: 'install', payload: params });
+//     }
+
+//     export async function provideCodeLenses(document: TextDocument, token: monaco.CancellationToken) {
+//         // tslint:disable-next-line:promise-must-complete
+//         return new Promise<monaco.languages.CodeLensList>((resolve, reject) => {
+//             pendingCodeLensesRequests = [{ resolve, reject, document }, ...pendingCodeLensesRequests];
+//         });
+//     }
+
+//     export async function provideSignatureHelp(document: TextDocument, position: Position) {
+//         worker.postMessage({ type: 'provide-signature-help', payload: { offset: document.offsetAt(position), uri: document.uri } });
+//         // tslint:disable-next-line:promise-must-complete
+//         return new Promise<monaco.languages.SignatureHelpResult>((resolve, reject) => {
+//             pendingSignatureHelpRequests = [{ resolve, reject }, ...pendingSignatureHelpRequests];
+//         });
+//     }
+// }
+
+function defer() {
+    const deferred = {
+        promise: null,
+        resolve: null,
+        reject: null
     };
 
-    export async function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
-        worker.postMessage({ type: 'validation', payload: { text: document.getText(), uri: document.uri } });
-        // tslint:disable-next-line:promise-must-complete
-        return new Promise<IDiagnosticMessage[]>((resolve, reject) => {
-            pendingValidationRequests = [{ resolve, reject }, ...pendingValidationRequests];
-        });
-    }
+    // tslint:disable-next-line:promise-must-complete
+    deferred.promise = new Promise((resolve, reject) => {
+        deferred.resolve = resolve;
+        deferred.reject = reject;
+    });
 
-    export async function install(params: IParserParams) {
-        worker.postMessage({ type: 'install', payload: params });
-    }
-
-    export async function provideCodeLenses(document: TextDocument, token: monaco.CancellationToken) {
-        // tslint:disable-next-line:promise-must-complete
-        return new Promise<monaco.languages.CodeLensList>((resolve, reject) => {
-            pendingCodeLensesRequests = [{ resolve, reject, document }, ...pendingCodeLensesRequests];
-        });
-    }
-
-    export async function provideSignatureHelp(document: TextDocument, position: Position) {
-        worker.postMessage({ type: 'provide-signature-help', payload: { offset: document.offsetAt(position), uri: document.uri } });
-        // tslint:disable-next-line:promise-must-complete
-        return new Promise<monaco.languages.SignatureHelpResult>((resolve, reject) => {
-            pendingSignatureHelpRequests = [{ resolve, reject }, ...pendingSignatureHelpRequests];
-        });
-    }
+    return deferred;
 }
+
+type IDefer = ReturnType<typeof defer>;
 
 const LANGUAGE_ID = 'hlsl';
 
@@ -188,7 +210,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     decorations: string[] = [];
 
     pendingValidationRequests = new Map<string, number>();
-
+    deferredRequests: IDefer[] = [];
 
     // cache for params
     parserParamsCache: IParserParams = null;
@@ -268,13 +290,26 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         const parserParamsNext = getParser(this.props);
         if (this.parserParamsCache !== parserParamsNext) {
             this.parserParamsCache = parserParamsNext;
-            LanguageService.install(parserParamsNext);
+            if (parserParamsNext.grammar) {
+                provider.init(parserParamsNext);
+            }
         }
     }
 
     @autobind
     editorWillMount(editor) { }
 
+
+    pendingValidations() {
+        const def = defer();
+        if (this.pendingValidationRequests.size > 0) {
+            this.deferredRequests.push(def);
+            return def.promise;
+        }
+
+        def.resolve();
+        return def.promise;
+    }
 
     // tslint:disable-next-line:max-func-body-length
     @autobind
@@ -315,10 +350,16 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         this.codeLensProvider = monaco.languages.registerCodeLensProvider(
             LANGUAGE_ID,
             {
-                provideCodeLenses(model: monaco.editor.ITextModel, token: monaco.CancellationToken)
-                    : monaco.languages.CodeLensList | monaco.Thenable<monaco.languages.CodeLensList> {
-                    const document = self.createDocument(model);
-                    return LanguageService.provideCodeLenses(document, token);
+                async provideCodeLenses(model: monaco.editor.ITextModel, token: monaco.CancellationToken)
+                    : Promise<monaco.languages.CodeLensList> {
+
+                    // validation should always be done before any other requests
+                    await self.pendingValidations();
+
+                    const lenses = p2m.asCodeLenses(await provider.provideFxCodeLenses(m2p.asTextDocumentIdentifier(model)));
+                    console.log(lenses);
+
+                    return { lenses, dispose() { console.log(this, 'codeLens.dispose()'); } };
                 }
             });
 
@@ -336,7 +377,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                         position.lineNumber, wordUntil.endColumn
                     );
 
-                    // return jsonService.doComplete(document, 
+                    // return jsonService.doComplete(document,
                     // m2p.asPosition(position.lineNumber, position.column), jsonDocument).then((list) => {
                     //     return p2m.asCompletionResult(list, defaultRange);
                     // });
@@ -354,20 +395,25 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 }
             });
 
+        // TODO: do not pass whole document
         this.signatureHelpProvider = monaco.languages.registerSignatureHelpProvider(
             LANGUAGE_ID,
             {
                 signatureHelpTriggerCharacters: ['('],
                 signatureHelpRetriggerCharacters: [','],
-                provideSignatureHelp(
+                async provideSignatureHelp(
                     model: monaco.editor.ITextModel,
                     position: monaco.Position,
                     token,
                     context: monaco.languages.SignatureHelpContext)
-                    : monaco.languages.ProviderResult<monaco.languages.SignatureHelpResult> {
+                    : Promise<monaco.languages.SignatureHelpResult> {
 
-                    const document = self.createDocument(model);
-                    return LanguageService.provideSignatureHelp(document, m2p.asPosition(position.lineNumber, position.column));
+                    // validation should always be done before any other requests
+                    await self.pendingValidations();
+
+                    const signatureHelp = await provider.provideSignatureHelp(
+                        m2p.asTextDocumentIdentifier(model), m2p.asPosition(position.lineNumber, position.column));
+                    return signatureHelp && { value: p2m.asSignatureHelp(signatureHelp), dispose() { } };
                 }
             }
         );
@@ -410,29 +456,29 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     validate(newContent?: string): void {
         const document = this.createDocument(this.getModel(), newContent);
         this.cleanPendingValidation(document);
-        this.pendingValidationRequests.set(document.uri, setTimeout(() => {
+        this.pendingValidationRequests.set(document.uri, setTimeout(async () => {
+            await this.doValidate(document);
             this.pendingValidationRequests.delete(document.uri);
-            this.doValidate(document);
         }));
     }
 
     // tslint:disable-next-line:member-ordering
-    static asMarker(diagEntry: IDiagnosticMessage): monaco.editor.IMarkerData {
-        const { code, content, start, end, category } = diagEntry;
+    static asMarker(diag: Diagnostic): monaco.editor.IMarkerData {
+        const { code, message, range: { start, end }, severity } = diag;
 
         const severities = {
-            [EDiagnosticCategory.k_Error]: monaco.MarkerSeverity.Error,
-            [EDiagnosticCategory.k_Warning]: monaco.MarkerSeverity.Warning
+            [DiagnosticSeverity.Error]: monaco.MarkerSeverity.Error,
+            [DiagnosticSeverity.Warning]: monaco.MarkerSeverity.Warning
         };
 
         return {
-            severity: severities[category],
-            code,
-            message: content,
+            severity: severities[severity],
+            code: code as string,
+            message,
             startLineNumber: start.line + 1,
-            startColumn: start.column + 1,
+            startColumn: start.character + 1,
             endLineNumber: end.line + 1,
-            endColumn: end.column + 1
+            endColumn: end.character + 1
         };
     }
 
@@ -442,8 +488,11 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             return;
         }
 
-        const messages = await LanguageService.validate(document);
-        monaco.editor.setModelMarkers(this.getModel(), 'default', messages.map(msg => SourceEditor.asMarker(msg)));
+        // const messages = await LanguageService.validate(document);
+        const diagnostics = await provider.validate(document);
+        monaco.editor.setModelMarkers(this.getModel(), 'default', diagnostics.map(diag => SourceEditor.asMarker(diag)));
+        this.deferredRequests.forEach(def => def.resolve());
+        this.deferredRequests = [];
     }
 
 
@@ -464,7 +513,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    getModel() {
+    getModel(): monaco.editor.ITextModel {
         // tslint:disable-next-line:newline-per-chained-call
         return this.getEditor().getModel();
     }
@@ -476,7 +525,9 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string) {
-        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), newContent || model.getValue());
+        /* this.getFile().filename */
+        // TODO: use correct uri?
+        return TextDocument.create(model.uri.toString(), model.getModeId(), model.getVersionId(), newContent || model.getValue());
     }
 
 

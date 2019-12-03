@@ -1,36 +1,79 @@
+import { EffectParser } from '@lib/fx/EffectParser';
+import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { IInstructionCollector } from '@lib/idl/IInstruction';
-import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionItemKind, CompletionList, Diagnostic, DiagnosticSeverity, DocumentSymbol, FoldingRange, FoldingRangeKind, FormattingOptions, Hover, InsertTextFormat, Location, MarkedString, MarkupContent, MarkupKind, Position, Range, SymbolInformation, SymbolKind, TextDocument, TextEdit } from 'vscode-languageserver-types';
+import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
+import { IParser, IParserParams } from '@lib/idl/parser/IParser';
+import { Parser } from '@lib/parser/Parser';
+import { Diagnostics, EDiagnosticCategory, IDiagnosticMessage } from '@lib/util/Diagnostics';
+import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionItemKind, CompletionList, Diagnostic, DiagnosticSeverity, DocumentSymbol, FoldingRange, FoldingRangeKind, FormattingOptions, Hover, InsertTextFormat, Location, MarkedString, MarkupContent, MarkupKind, Position, Range, SignatureHelp, SymbolInformation, SymbolKind, TextDocument, TextEdit } from 'vscode-languageserver-types';
 
-export type HLSLDocument = IInstructionCollector;
+import { FXCodeLenses } from './services/fx/codeLenses';
+import { SLSignatureHelp } from './services/signatureHelp';
 
+// import { SLValidation } from './services/validation';
+
+// FIXME: use correct type
 type SelectionRange = Range;
 
-export interface LanguageService {
-    doValidation(document: TextDocument, hlslDocument: HLSLDocument): Thenable<Diagnostic[]>;
-    parseDocument(document: TextDocument): HLSLDocument;
-    doResolve(item: CompletionItem): Thenable<CompletionItem>;
-    doComplete(document: TextDocument, position: Position, doc: HLSLDocument): Thenable<CompletionList | null>;
-    findDocumentSymbols(document: TextDocument, doc: HLSLDocument): SymbolInformation[];
-    findDocumentColors(document: TextDocument, doc: HLSLDocument): Thenable<ColorInformation[]>;
-    getColorPresentations(document: TextDocument, doc: HLSLDocument, color: Color, range: Range): ColorPresentation[];
-    doHover(document: TextDocument, position: Position, doc: HLSLDocument): Thenable<Hover | null>;
-    format(document: TextDocument, range: Range, options: FormattingOptions): TextEdit[];
-    getFoldingRanges(document: TextDocument): FoldingRange[];
-    getSelectionRanges(document: TextDocument, positions: Position[], doc: HLSLDocument): SelectionRange[];
+function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
+    const { code, content, start, end, category } = diagEntry;
+
+    const severities = {
+        [EDiagnosticCategory.k_Error]: DiagnosticSeverity.Error,
+        [EDiagnosticCategory.k_Warning]: DiagnosticSeverity.Warning
+    };
+
+    return {
+        range: Range.create(start.line, start.column, end.line, end.column),
+        severity: severities[category],
+        code,
+        message: content
+    };
 }
 
-export function getLanguageService(): LanguageService {
+async function parse(parser: IParser, textDocument: TextDocument) {
+
+    parser.setParseFileName(textDocument.uri);
+
+    const parsingResults = await parser.parse(textDocument.getText());
+    const semanticResults = FxAnalyzer.analyze(parser.getSyntaxTree(), textDocument.uri);
+    const diag = Diagnostics.mergeReports([parser.getDiagnostics(), semanticResults.diag]);
+
+    return { ...semanticResults, diag };
+}
+
+
+export function getLanguageService(parser: IParser): ILanguageService {
+    const signatureHelp = new SLSignatureHelp();
+
+    //
+    // FX
+    //
+    
+    const fxCodeLenses = new FXCodeLenses();
+
     return {
-        doValidation(document: TextDocument, hlslDocument: HLSLDocument) { console.log('LanguageService::doValidation()'); return null; },
-        parseDocument(document: TextDocument): HLSLDocument { return null; },
+        async parseDocument(textDocument: TextDocument): Promise<{ document: SLDocument, diagnostics: Diagnostic[] }> { 
+            const result = await parse(parser, textDocument);
+            return { document: result.root, diagnostics: result.diag.messages.map(asDiagnostic) };
+        },
+
         doResolve(item: CompletionItem): Thenable<CompletionItem> { return null; },
-        doComplete(document: TextDocument, position: Position, doc: HLSLDocument): Thenable<CompletionList | null> { return null; },
-        findDocumentSymbols(document: TextDocument, doc: HLSLDocument): SymbolInformation[] { return []; },
-        findDocumentColors(document: TextDocument, doc: HLSLDocument): Thenable<ColorInformation[]> { return null; },
-        getColorPresentations(document: TextDocument, doc: HLSLDocument, color: Color, range: Range): ColorPresentation[] { return []; },
-        doHover(document: TextDocument, position: Position, doc: HLSLDocument): Thenable<Hover | null> { return null; },
-        format(document: TextDocument, range: Range, options: FormattingOptions): TextEdit[] { return []; },
-        getFoldingRanges(document: TextDocument): FoldingRange[] { return []; },
-        getSelectionRanges(document: TextDocument, positions: Position[], doc: HLSLDocument): SelectionRange[] { return []; }
+        doComplete(textDocument: TextDocument, position: Position, slDocument: SLDocument): Thenable<CompletionList | null> { return null; },
+        findDocumentSymbols(textDocument: TextDocument, slDocument: SLDocument): SymbolInformation[] { return []; },
+        findDocumentColors(textDocument: TextDocument, slDocument: SLDocument): Thenable<ColorInformation[]> { return null; },
+        getColorPresentations(textDocument: TextDocument, slDocument: SLDocument, color: Color, range: Range): ColorPresentation[] { return []; },
+        doHover(textDocument: TextDocument, position: Position, slDocument: SLDocument): Thenable<Hover | null> { return null; },
+        format(textDocument: TextDocument, range: Range, options: FormattingOptions): TextEdit[] { return []; },
+        getFoldingRanges(textDocument: TextDocument): FoldingRange[] { return []; },
+        getSelectionRanges(textDocument: TextDocument, positions: Position[], slDocument: SLDocument): SelectionRange[] { return []; },
+        
+        doSignatureHelp: signatureHelp.doSignatureHelp.bind(signatureHelp),
+
+        //
+        // FX
+        //
+
+        doFxCodeLenses: fxCodeLenses.doProvide.bind(fxCodeLenses)
     }
 }
