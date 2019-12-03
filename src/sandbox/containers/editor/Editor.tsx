@@ -357,9 +357,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     await self.pendingValidations();
 
                     const lenses = p2m.asCodeLenses(await provider.provideFxCodeLenses(m2p.asTextDocumentIdentifier(model)));
-                    console.log(lenses);
-
-                    return { lenses, dispose() { console.log(this, 'codeLens.dispose()'); } };
+                    return { lenses, dispose() { } };
                 }
             });
 
