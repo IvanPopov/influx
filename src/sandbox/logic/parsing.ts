@@ -6,14 +6,12 @@ import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { EffectParser } from '@lib/fx/EffectParser';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, EDiagnosticCategory } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox/actions/ActionTypes';
 import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -57,12 +55,13 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
     const { content, filename } = state.sourceFile;
+    const { parsingFlags } = state.parserParams;
 
     if (!content) {
         return;
     }
 
-    const { ast, diag } = await Parser.parse(content, filename);
+    const { ast, diag } = await Parser.parse(content, { filename, flags: parsingFlags });
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
@@ -101,10 +100,11 @@ const updateParserLogic = createLogic<IStoreState>({
 
     async process({ getState, action }, dispatch, done) {
         const parserParams = getState().parserParams;
+        const { grammar, type, flags } = parserParams;
         /**
          * !!! note: all inline functionality inside analyze.ts depends on this setup
          */
-        const isOk = Parser.init(parserParams, EffectParser);
+        const isOk = Parser.init({ grammar, type, flags }, EffectParser);
         assert(isOk);
         // todo: add support for failed setup
         done();

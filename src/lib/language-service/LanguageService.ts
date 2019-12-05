@@ -1,10 +1,11 @@
 import { EffectParser } from '@lib/fx/EffectParser';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
+import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { IInstructionCollector } from '@lib/idl/IInstruction';
 import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
-import { IParser, IParserParams } from '@lib/idl/parser/IParser';
+import { EParsingFlags, IParser, IParserParams } from '@lib/idl/parser/IParser';
 import { Parser } from '@lib/parser/Parser';
-import { Diagnostics, EDiagnosticCategory, IDiagnosticMessage } from '@lib/util/Diagnostics';
+import { Diagnostics } from '@lib/util/Diagnostics';
 import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionItemKind, CompletionList, Diagnostic, DiagnosticSeverity, DocumentSymbol, FoldingRange, FoldingRangeKind, FormattingOptions, Hover, InsertTextFormat, Location, MarkedString, MarkupContent, MarkupKind, Position, Range, SignatureHelp, SymbolInformation, SymbolKind, TextDocument, TextEdit } from 'vscode-languageserver-types';
 
 import { FXCodeLenses } from './services/fx/codeLenses';
@@ -31,11 +32,8 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     };
 }
 
-async function parse(parser: IParser, textDocument: TextDocument) {
-
-    parser.setParseFileName(textDocument.uri);
-
-    const parsingResults = await parser.parse(textDocument.getText());
+async function parse(parser: IParser, flags: EParsingFlags, textDocument: TextDocument) {
+    const parsingResults = await parser.parse(textDocument.getText(), textDocument.uri, flags);
     const semanticResults = FxAnalyzer.analyze(parser.getSyntaxTree(), textDocument.uri);
     const diag = Diagnostics.mergeReports([parser.getDiagnostics(), semanticResults.diag]);
 
@@ -43,7 +41,7 @@ async function parse(parser: IParser, textDocument: TextDocument) {
 }
 
 
-export function getLanguageService(parser: IParser): ILanguageService {
+export function getLanguageService(parser: IParser, flags: EParsingFlags): ILanguageService {
     const signatureHelp = new SLSignatureHelp();
 
     //
@@ -54,7 +52,7 @@ export function getLanguageService(parser: IParser): ILanguageService {
 
     return {
         async parseDocument(textDocument: TextDocument): Promise<{ document: SLDocument, diagnostics: Diagnostic[] }> { 
-            const result = await parse(parser, textDocument);
+            const result = await parse(parser, flags, textDocument);
             return { document: result.root, diagnostics: result.diag.messages.map(asDiagnostic) };
         },
 

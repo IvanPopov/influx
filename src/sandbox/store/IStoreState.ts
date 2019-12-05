@@ -50,7 +50,8 @@ export interface IParserState extends IParserParams {
     filename: string;
     grammar: string;
     type: EParserType;
-    mode: number;
+    // TODO: rename option (or move it out of this scope)
+    parsingFlags: number;
 }
 
 export interface IStoreState {

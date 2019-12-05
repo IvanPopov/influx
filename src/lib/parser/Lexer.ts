@@ -1,6 +1,9 @@
+import { isString } from '@lib/common';
+import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ETokenType, IFile, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
-import { Diagnostics, IDiagnosticReport } from '@lib/util/Diagnostics';
+import { Diagnostics } from '@lib/util/Diagnostics';
+import { StringRef } from '@lib/util/StringRef';
 
 import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
@@ -39,30 +42,37 @@ class LexerDiagnostics extends Diagnostics<ILexerDiagDesc> {
 
 
 export class Lexer {
+    //
+    // State
+    //
     private _index: number;
     private _lineNumber: number;
     private _columnNumber: number;
+    private _filename: IFile;
     private _source: string;
+    private _typeIdMap: IMap<boolean>;
+    private _diag: LexerDiagnostics;
+
+    //
+    // Setup
+    //
     private _punctuatorsMap: IMap<string>;
     private _keywordsMap: IMap<string>;
     private _punctuatorsFirstSymbols: IMap<boolean>;
-    private _diag: LexerDiagnostics;
-    private _onResolveTypeID: (value: string) => boolean;
-    // todo: remove this callback in favor of string member; 
-    private _onResolveFilename: () => IFile; // optional, only for debug diagnostics
 
 
-    constructor({ onResolveFilename, onResolveTypeId }: { onResolveFilename?: () => IFile; onResolveTypeId: (value: string) => boolean; }) {
+    constructor() {
         this._lineNumber = 0;
         this._columnNumber = 0;
         this._source = '';
+        this._filename = null;
         this._index = 0;
+        this._diag = new LexerDiagnostics;
+        this._typeIdMap = null;
+
         this._punctuatorsMap = <IMap<string>>{};
         this._keywordsMap = <IMap<string>>{};
         this._punctuatorsFirstSymbols = <IMap<boolean>>{};
-        this._diag = new LexerDiagnostics;
-        this._onResolveTypeID = onResolveTypeId;
-        this._onResolveFilename = onResolveFilename;
     }
 
 
@@ -106,12 +116,14 @@ export class Lexer {
     }
 
 
-    init(source: string): void {
+    init(source: string, filename: IFile | string, types: IMap<boolean>): void {
+        this._filename = <IFile>(isString(filename) ? StringRef.make(filename) : filename);
         this._source = source;
         this._lineNumber = 0;
         this._columnNumber = 0;
         this._index = 0;
         this._diag.reset();
+        this._typeIdMap = types;
     }
 
 
@@ -183,7 +195,7 @@ export class Lexer {
 
 
     getLocation() {
-        return { line: this._lineNumber, file: this._onResolveFilename() };
+        return { line: this._lineNumber, file: this._filename };
     }
 
 
@@ -199,7 +211,7 @@ export class Lexer {
 
     private pos(n: number = 0): IPosition {
         return {
-            file: this._onResolveFilename(),
+            file: this._filename,
             line: this._lineNumber,
             column: this._columnNumber + n,
             offset: this._index + n
@@ -208,7 +220,7 @@ export class Lexer {
 
 
     private emitError(code: number, token: IToken): void {
-        this._diag.error(code, { file: `${this._onResolveFilename()}`, token });
+        this._diag.error(code, { file: `${this._filename}`, token });
     }
 
 
@@ -566,7 +578,7 @@ export class Lexer {
                 };
             }
             else {
-                let name = this._onResolveTypeID(value) ? T_TYPE_ID : T_NON_TYPE_ID;
+                let name = this._typeIdMap[value] ? T_TYPE_ID : T_NON_TYPE_ID;
                 return <IToken>{
                     index: this._index,
                     name,

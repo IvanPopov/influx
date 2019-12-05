@@ -1,9 +1,10 @@
 import { isDefAndNotNull } from "@lib/common";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
+import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { IRange } from "@lib/idl/parser/IParser";
-import { Diagnostics, EDiagnosticCategory } from "@lib/util/Diagnostics";
+import { Diagnostics } from "@lib/util/Diagnostics";
 
 interface IAnalyzerDiagDesc {
     file: string;

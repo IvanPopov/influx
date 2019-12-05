@@ -1,5 +1,5 @@
 import { IMap } from "../idl/IMap";
-import { EOperationType, IParseNode, IParserState, IParseTree } from '../idl/parser/IParser';
+import { EOperationType, EParsingFlags, IParseNode, IParserState, IParseTree } from '../idl/parser/IParser';
 import { EParserErrors, Parser } from "../parser/Parser";
 import * as uri from "../uri/uri"
 import { EParserCode } from "./../idl/parser/IParser";
@@ -16,8 +16,8 @@ export class EffectParser extends Parser {
         this.addAdditionalFunction("includeCode", this._includeCode.bind(this));
     }
 
-    defaultInit(): void {
-        super.defaultInit();
+    defaultInit(flags: EParsingFlags): void {
+        super.defaultInit(flags);
 
         this.addTypeId("float2");
         this.addTypeId("float3");
@@ -90,9 +90,9 @@ export class EffectParser extends Parser {
     }
 
     _saveState(): IParserState {
-        let pState: IParserState = super.saveState();
-        pState.includeFiles = this._includedFilesMap;
-        return pState;
+        const state = super.saveState();
+        state.includeFiles = this._includedFilesMap;
+        return state;
     }
 
     public _loadState(pState: IParserState): void {

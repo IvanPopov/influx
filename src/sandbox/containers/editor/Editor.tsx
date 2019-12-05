@@ -6,14 +6,13 @@
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { IParserParams } from '@lib/idl/parser/IParser';
-import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/util/Diagnostics';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
 import { getFileState } from '@sandbox/reducers/sourceFile';
-import IStoreState, { IFileState } from '@sandbox/store/IStoreState';
+import IStoreState, { IFileState, IParserState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as Comlink from 'comlink';
 import * as monaco from 'monaco-editor';
@@ -213,7 +212,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     deferredRequests: IDefer[] = [];
 
     // cache for params
-    parserParamsCache: IParserParams = null;
+    parserParamsCache: Object = {};
 
     setupDecorations(): monaco.editor.IModelDeltaDecoration[] {
         const { props } = this;
@@ -287,11 +286,27 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         this.updateDecorations();
 
         // TEMP: temp solution for parser param sync
-        const parserParamsNext = getParser(this.props);
-        if (this.parserParamsCache !== parserParamsNext) {
-            this.parserParamsCache = parserParamsNext;
-            if (parserParamsNext.grammar) {
-                provider.init(parserParamsNext);
+        const parserStateNext = getParser(this.props);
+        this.validateParser(parserStateNext);
+    }
+
+    componentDidMount() {
+         // TEMP: temp solution for parser param sync
+         const parserStateNext = getParser(this.props);
+         this.validateParser(parserStateNext);
+    }
+
+    validateParser(parserStateNext: IParserState) {
+        const parserProps = [ 'flags', 'type', 'grammar', 'parsingFlags' ];
+        const paramsChanges = !parserProps.every(propName => this.parserParamsCache[propName] === parserStateNext[propName]);
+
+        if (paramsChanges) {
+            parserProps.forEach(propName => this.parserParamsCache[propName] = parserStateNext[propName]);
+
+            const { grammar, flags, type, parsingFlags } = parserStateNext;
+
+            if (grammar) {
+                provider.init({ grammar, flags, type }, parsingFlags);
             }
         }
     }

@@ -1,5 +1,5 @@
+import { IDiagnosticReport, IDiagnostics } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
-import { IDiagnosticReport } from '@lib/util/Diagnostics';
 import { StringRef } from "@lib/util/StringRef";
 
 export enum ENodeCreateMode {
@@ -20,13 +20,35 @@ export enum EParserType {
     k_LALR
 }
 
-export enum EParseMode {
+export enum EParsingFlags {
+    k_Optimize = 0x0008,
+    k_DeveloperMode = 0x0010
+}
+
+
+export enum EParserFlags {
     k_AllNode = 0x0001,
     k_Negate = 0x0002,
     k_Add = 0x0004,
-    k_Optimize = 0x0008,
-    k_DebugMode = 0x0010
+    k_Debug = 0x0010
 }
+
+
+export interface IParsingOptions {
+    filename?: string;
+    flags?: EParsingFlags;
+}
+
+
+// export enum EParseMode {
+//     k_AllNode = 0x0001,
+//     k_Negate = 0x0002,
+//     k_Add = 0x0004,
+
+    
+//     k_Optimize = 0x0008,
+//     k_DebugMode = 0x0010
+// }
 
 export enum ETokenType {
     k_NumericLiteral = 1,
@@ -123,22 +145,23 @@ export interface IParseTree {
 
 export interface IParserState {
     source: string;
-    fileName: IFile;
+    filename: IFile;
     tree: IParseTree;
     types: IMap<boolean>;
     stack: number[];
     token: IToken;
-    caller: any;
+    // caller: any;
     includeFiles?: IMap<boolean>;
+    diag: IDiagnostics<IMap<any>>;
 }
 
 export interface IParser {
     isTypeId(value: string): boolean;
 
-    init(grammar: string, mode?: EParseMode, type?: EParserType): boolean;
-    parse(source: string): Promise<EParserCode>;
+    init(grammar: string, flags: number, type?: EParserType): boolean;
+    parse(source: string, filename?: string, flags?: number): Promise<EParserCode>;
 
-    setParseFileName(fileName: string): void;
+    // setParseFileName(fileName: string): void;
     getParseFileName(): IFile;
 
     getSyntaxTree(): IParseTree;
@@ -150,7 +173,7 @@ export interface IParser {
 export interface IParserParams {
     grammar: string;
     type: EParserType;
-    mode: number;
+    flags: number; // EParserFlags
 }
 
 

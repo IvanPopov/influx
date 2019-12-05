@@ -42,7 +42,7 @@ export type ISourceFileActions =
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
-    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch | 
+    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch |
     // aux event
     ISourceCodeUpdateAst;
 
@@ -71,10 +71,12 @@ export type IPlaygroundActions = IPlaygroundPipelineUpdate | IPlaygroundSelectEf
 
 export type IGrammarFileSpecified = IAction<typeof evt.GRAMMAR_FILE_SPECIFIED, { filename: string }>;
 export type IGrammarContentSpecified = IAction<typeof evt.GRAMMAR_CONTENT_SPECIFIED, { content: string }>;
-export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { mode: number; type: EParserType }>;
+export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { flags: number; type: EParserType }>;
+export type IParsingParamsChanged = IAction<typeof evt.PARSING_PARAMS_CHANGED, { flags: number }>;
 
 
-export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged;
+export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged |
+    IParsingParamsChanged;
 
 export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions;
 

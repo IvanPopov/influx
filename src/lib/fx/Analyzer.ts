@@ -3,10 +3,10 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
+import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, ICompileExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IDoWhileOperator, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, IReturnStmtInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtDerived, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IWhileStmtInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { IParseNode, IParseTree, IRange } from "@lib/idl/parser/IParser";
-import { IDiagnosticReport } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from './AnalyzerDiagnostics';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';

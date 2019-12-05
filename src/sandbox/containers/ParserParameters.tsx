@@ -1,5 +1,5 @@
 import * as bf from '@lib/bf/bf';
-import { EParseMode, EParserType } from '@lib/idl/parser/IParser';
+import { EParserFlags, EParserType, EParsingFlags } from '@lib/idl/parser/IParser';
 import { mapActions, parser as parserActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
@@ -9,7 +9,6 @@ import * as React from 'react';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { Form, Grid, Segment } from 'semantic-ui-react';
-
 
 const setFlags = (dest: number, src: number, value: boolean) => {
     return value ? bf.setFlags(dest, src) : bf.clearFlags(dest, src);
@@ -32,8 +31,9 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
         this.setState(nextProps);
     }
 
+    // tslint:disable-next-line:max-func-body-length
     render() {
-        const { type, mode, grammar } = this.state;
+        const { type, flags, grammar, parsingFlags } = this.state;
         return (
             <Grid>
                 <Grid.Row columns={ 2 }>
@@ -90,29 +90,35 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
                                         <Form.Group grouped>
                                             <label>Parser flags:</label>
                                             <Form.Checkbox
-                                                checked={ !!(mode & EParseMode.k_Add) }
-                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_Add) }
+                                                checked={ !!(flags & EParserFlags.k_Add) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_Add) }
                                                 label='Only marked with `--AN` created'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(mode & EParseMode.k_Negate) }
-                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_Negate) }
+                                                checked={ !!(flags & EParserFlags.k_Negate) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_Negate) }
                                                 label='Not marked with `--NN` created'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(mode & EParseMode.k_AllNode) }
-                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_AllNode) }
+                                                checked={ !!(flags & EParserFlags.k_AllNode) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_AllNode) }
                                                 label='All created'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(mode & EParseMode.k_Optimize) }
-                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_Optimize) }
+                                                checked={ !!(flags & EParserFlags.k_Debug) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_Debug) }
+                                                label='Debug mode'
+                                            />
+                                            <label>Parsing flags:</label>
+                                            <Form.Checkbox
+                                                checked={ !!(parsingFlags & EParsingFlags.k_Optimize) }
+                                                onChange={ this.handleParsingFlags.bind(this, EParsingFlags.k_Optimize) }
                                                 label='Created nodes if it has more than one child'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(mode & EParseMode.k_DebugMode) }
-                                                onChange={ this.handleChangeMode.bind(this, EParseMode.k_DebugMode) }
-                                                label='Debug mode'
+                                                checked={ !!(parsingFlags & EParsingFlags.k_DeveloperMode) }
+                                                onChange={ this.handleParsingFlags.bind(this, EParsingFlags.k_DeveloperMode) }
+                                                label='Developer mode'
                                             />
                                         </Form.Group>
                                     </Grid.Column>
@@ -131,31 +137,40 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
 
     @autobind
     private reinit() {
-        const { type, mode, grammar } = this.state;
-        this.props.actions.setParams(type, mode);
+        const { type, flags, grammar, parsingFlags } = this.state;
+        this.props.actions.setParams(type, flags);
         this.props.actions.setGrammar(grammar);
+        this.props.actions.setParsingParams(parsingFlags);
     }
 
     @autobind
-    private handleChangeMode(flag: EParseMode, event, { checked: value }): void {
-        let { mode } = this.state;
+    private handleParserFlags(flag: EParserFlags, event, { checked: value }): void {
+        let { flags } = this.state;
         switch (flag) {
-            case EParseMode.k_Add:
-            case EParseMode.k_Negate:
+            case EParserFlags.k_Add:
+            case EParserFlags.k_Negate:
                 if (value) {
-                    mode = bf.clearFlags(mode, EParseMode.k_AllNode);
+                    flags = bf.clearFlags(flags, EParserFlags.k_AllNode);
                 }
                 break;
-            case EParseMode.k_AllNode:
+            case EParserFlags.k_AllNode:
                 if (value) {
-                    mode = bf.clearFlags(mode, EParseMode.k_Negate | EParseMode.k_Add);
+                    flags = bf.clearFlags(flags, EParserFlags.k_Negate | EParserFlags.k_Add);
                 }
                 break;
             default:
         }
 
-        mode = setFlags(mode, flag, value);
-        this.setState({ mode });
+        flags = setFlags(flags, flag, value);
+        this.setState({ flags });
+    }
+
+    @autobind
+    private handleParsingFlags(flag: EParsingFlags, event, { checked: value }): void {
+        let { parsingFlags } = this.state;
+
+        parsingFlags = setFlags(parsingFlags, flag, value);
+        this.setState({ parsingFlags });
     }
 }
 

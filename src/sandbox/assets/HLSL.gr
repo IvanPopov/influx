@@ -21,7 +21,7 @@ Decl : ERROR
 
 IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
 
-ImportDecl : T_KW_IMPORT ComplexNameOpt ';'
+ImportDecl : T_KW_IMPORT String ';'
 
 ProvideDecl : T_KW_PROVIDE ComplexNameOpt ';'
 ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'

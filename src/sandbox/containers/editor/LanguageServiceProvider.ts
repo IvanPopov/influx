@@ -1,17 +1,10 @@
-import { assert, isNull } from '@lib/common';
 import { EffectParser } from '@lib/fx/EffectParser';
-import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
-import { Visitor } from '@lib/fx/Visitors';
 // import { ILanguageService, SLDocument } from '@lib/idl/IInstruction';
 import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
-import { EParseMode, EParserType, IParseNode, IParserParams, IPosition, IRange } from '@lib/idl/parser/IParser';
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import { IParserParams } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
-import { Parser } from '@lib/parser/Parser';
-import { checkRange, commonRange } from '@lib/parser/util';
-import { Diagnostics } from '@lib/util/Diagnostics';
 import * as Comlink from 'comlink';
-import { CodeLens, Command, Diagnostic, ParameterInformation, Position, Range, SignatureHelp, SignatureInformation, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
+import { CodeLens, Diagnostic, Position, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -32,7 +25,7 @@ class LanguageServiceProvider {
     private service: ILanguageService;
     private documents: Map<string, { textDocument: TextDocument; slDocument: SLDocument }> = new Map();
 
-    init(parserParams: IParserParams) {
+    init(parserParams: IParserParams, parsingFlags: number) {
         //
         // Setup parser
         // TODO: simplify api
@@ -46,14 +39,14 @@ class LanguageServiceProvider {
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
         const parser = new EffectParser();
 
-        if (!parser.init(parserParams.grammar, parserParams.mode, parserParams.type)) {
+        if (!parser.init(parserParams.grammar, parserParams.flags, parserParams.type)) {
             console.error('could not initialize parser.');
             return null;
         } else {
             console.log('%c [ DONE ]', 'background: #222; color: #bada55');
         }
 
-        this.service = getLanguageService(parser);
+        this.service = getLanguageService(parser, parsingFlags);
     }
 
     async validate(rawDocument): Promise<Diagnostic[]> {

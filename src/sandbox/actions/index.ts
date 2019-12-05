@@ -18,8 +18,12 @@ export const parser = {
         return { type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } };
     },
 
-    setParams(type: EParserType, mode: number) {
-        return { type: evt.PARSER_PARAMS_CHANGED, payload: { type, mode } };
+    setParams(type: EParserType, flags: number) {
+        return { type: evt.PARSER_PARAMS_CHANGED, payload: { type, flags } };
+    },
+
+    setParsingParams(flags: number) {
+        return { type: evt.PARSING_PARAMS_CHANGED, payload: { flags } };
     }
 };
 

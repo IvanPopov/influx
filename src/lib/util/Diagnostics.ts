@@ -1,43 +1,7 @@
-import { IPosition, IRange } from "../idl/parser/IParser";
+import { EDiagnosticCategory, IDiagnosticEntry, IDiagnosticMessage, IDiagnosticReport } from "@lib/idl/IDiagnostics";
+
 import { IMap } from "../idl/IMap";
-
-
-export enum EDiagnosticCategory {
-    k_Warning,
-    k_Error
-}
-
-
-interface IDiagnosticEntry<DESC_T> {
-    category: EDiagnosticCategory;
-    code: number;
-    desc: DESC_T;
-}
-
-
-type IDiagnosticDescription = string;
-
-export interface IDiagnosticMessage {
-    code: string;
-    category: EDiagnosticCategory;
-    start?: IPosition;
-    end?: IPosition;
-    file?: string;
-    content: string;
-}
-
-export interface IDiagnosticReport {
-    errors: number;
-    warnings: number;
-
-    messages: IDiagnosticMessage[];
-}
-
-export interface IFileLine {
-    file: string;
-    line: number;
-}
-
+import { IPosition, IRange } from "../idl/parser/IParser";
 
 function locToString(loc: IPosition) {
     return `${loc.line},${loc.column}`;
@@ -72,6 +36,8 @@ export class DiagnosticException<DESC_T> extends Error {
         Error.captureStackTrace(this, DiagnosticException);
     }
 }
+
+
 
 export class Diagnostics <DESC_T>{
     protected _name: string;

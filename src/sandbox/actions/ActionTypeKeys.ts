@@ -6,6 +6,7 @@ export const SOURCE_FILE_DROP_STATE                 = 'source-file-drop-state';
 export const GRAMMAR_FILE_SPECIFIED                 = 'grammar-file-specified';
 export const GRAMMAR_CONTENT_SPECIFIED              = 'grammar-content-specified';
 export const PARSER_PARAMS_CHANGED                  = 'parser-params-changed';
+export const PARSING_PARAMS_CHANGED                 = 'parsing-params-changed';
 
 export const SOURCE_CODE_MODIFED                    = 'source-code-modified';
 export const SOURCE_CODE_PARSING_COMPLETE           = 'source-code-parsing-complete';

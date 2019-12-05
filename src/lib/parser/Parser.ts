@@ -1,9 +1,10 @@
 import bf from "@lib/bf";
 import { assert, deepEqual, isDef, isDefAndNotNull, isNull, verbose } from "@lib/common";
+import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { ExpectedSymbols, IFile, IParserParams, IPosition, IRange } from "@lib/idl/parser/IParser";
-import { ENodeCreateMode, EOperationType, EParseMode, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "@lib/idl/parser/IParser";
-import { DiagnosticException, Diagnostics, IDiagnosticReport } from "@lib/util/Diagnostics";
+import { EParserFlags, EParsingFlags, ExpectedSymbols, IFile, IParserParams, IParsingOptions, IPosition, IRange } from "@lib/idl/parser/IParser";
+import { ENodeCreateMode, EOperationType, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "@lib/idl/parser/IParser";
+import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
 
 import { Item } from "./Item";
@@ -130,22 +131,11 @@ interface IAdditionalFuncInfo {
 }
 
 export class Parser implements IParser {
-    //Input
-
-    private _source: string;
-    private _filename: IFile;
-
-    //Output
-
-    private _diag: ParserDiagnostics;
-    private _syntaxTree: IParseTree;
-    private _typeIdMap: IMap<boolean>;
+    private _state: IParserState;
 
     //Process params
 
     private _lexer: Lexer;
-    private _stack: number[];
-    private _token: IToken;
 
     //
     // Grammar based Info
@@ -154,18 +144,13 @@ export class Parser implements IParser {
     private _syntaxTable: ISyntaxTable;
 
 
-    // LR0/LR1/LALR
-    private _type: EParserType;
-    // global flag
-    private _parseMode: EParseMode;
-
     /**
      * General structure:
      *  { [symbol name]: { [rule index]: IRule } }
      */
     private _productions: IProductions;
     private _states: State[];
-    private _baseItems: Item[];
+    
     /**
  * Auxiliary map for all symbols from grammar: symbolName => symbolName.
  * For ex.: T_PUNCTUATOR_61 => '='
@@ -184,10 +169,14 @@ export class Parser implements IParser {
 
     // Temp
 
-    private _closureForItemsCache: IMap<State>;
     // aux. cache for first terminals
     private _firstTerminalsCache: IMap<Terminals>;
     // private _followTerminalsCache: IDMap<boolean>;
+
+
+    //
+    // LALR specific
+    //
 
     /**
      * Auxiliary map: [item index] => { [item index]: true }
@@ -196,18 +185,11 @@ export class Parser implements IParser {
     // NOTE: default JS object significantly faster than Map<number, Set<number>>
     //       for this case :/
     private _expectedExtensionDMap: IDMap<boolean>;
+    private _baseItems: Item[];
+    private _closureForItemsCache: IMap<State>;
 
 
     constructor() {
-        this._source = "";
-
-        this._syntaxTree = null;
-        this._typeIdMap = null;
-
-        this._lexer = null;
-        this._stack = <number[]>[];
-        this._token = null;
-
         this._syntaxTable = null;
 
         this._productions = null;
@@ -218,43 +200,32 @@ export class Parser implements IParser {
         this._additionalFunctionsMap = null;
         this._adidtionalFunctByStateDMap = null;
 
-        this._type = EParserType.k_LR0;
-
         this._ruleCreationModeMap = null;
-        this._parseMode = EParseMode.k_AllNode;
 
         this._firstTerminalsCache = null;
         // this._followTerminalsCache = null;
         this._closureForItemsCache = null;
 
         this._expectedExtensionDMap = null;
-
-        this._filename = StringRef.make("stdin");
-        this._diag = new ParserDiagnostics;
     }
 
 
     isTypeId(sValue: string): boolean {
-        return !!(this._typeIdMap[sValue]);
+        return !!(this._state.types[sValue]);
     }
 
 
-    init(grammar: string, mode: EParseMode = EParseMode.k_AllNode, type: EParserType = EParserType.k_LALR): boolean {
+    init(grammar: string, flags: number = EParserFlags.k_AllNode, type: EParserType = EParserType.k_LALR): boolean {
         try {
-            this._type = type;
             // todo: remove this callbacks in favor of direct parameters
-            this._lexer = new Lexer({
-                onResolveFilename: () => this.getParseFileName(),
-                onResolveTypeId: (val: string) => this.isTypeId(val)
-            });
+            this._lexer = new Lexer();
 
-            this._parseMode = mode;
-            this.generateRules(grammar);
-
-            this.buildSyntaxTable();
-
+            // this._parseMode = mode;
+            this.generateRules(grammar, flags);
+            this.buildSyntaxTable(type);
             this.generateFunctionByStateMap();
-            if (!bf.testAll(mode, EParseMode.k_DebugMode)) {
+            
+            if (!bf.testAll(flags, EParserFlags.k_Debug)) {
                 this.clearMem();
             }
         } catch (e) {
@@ -331,7 +302,7 @@ export class Parser implements IParser {
         stack: number[],
         token: IToken,
         parseTree: IParseTree,
-        { debugMode = false, allowErrorRecoverty = true }): Promise<void> {
+        { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
 
         const undefinedToken: IToken =  { index: -1, name: null, value: null };
         let causingErrorToken: IToken = undefinedToken;
@@ -344,7 +315,7 @@ export class Parser implements IParser {
             breakProcessing:
             while (true) {
                 // global recursion prevention in debug mode
-                if (debugMode) {
+                if (developerMode) {
                     if (opCounter > opLimit) {
                         this.emitCritical(EParserErrors.GeneralParsingLimitIsReached);
                     }
@@ -461,20 +432,33 @@ export class Parser implements IParser {
     }
 
 
-    async parse(source: string): Promise<EParserCode> {
-        this.defaultInit();
+    async parse(source: string, filename: string = 'stdin', flags: number = EParsingFlags.k_Optimize): Promise<EParserCode> {
+        const state: IParserState = {
+            filename: StringRef.make(filename),
+            source,
+            stack: [0],
+            tree: new ParseTree(bf.testAll(flags, EParsingFlags.k_Optimize)),
+            types: {},
+            // TODO: remove from state
+            token: null,
+            // TODO: remove 'includes' field?
+            includeFiles: null,
+            diag: new ParserDiagnostics
+        };
 
-        this._source = source;
-        this._lexer.init(source);
+        this._state = state;
+
+        this.defaultInit(flags);
+        
+        // this._source = source;
+        this._lexer.init(state.source, state.filename, state.types);
 
         const syntaxTable = this._syntaxTable;
-        const stack = this._stack;
-        const syntaxTree = this._syntaxTree;
-        const debugMode = bf.testAll(this._parseMode, EParseMode.k_DebugMode);
+        const developerMode = bf.testAll(flags, EParsingFlags.k_DeveloperMode);
 
-        await this.run(syntaxTable, stack, this.readToken(), syntaxTree, { debugMode });
+        await this.run(syntaxTable, state.stack, this.readToken(), state.tree, { developerMode });
 
-        if (this._diag.hasErrors()) {
+        if (state.diag.hasErrors()) {
             console.error('parsing was ended with errors.');
             return EParserCode.k_Error;
         }
@@ -483,13 +467,13 @@ export class Parser implements IParser {
     }
 
 
-    setParseFileName(filename: string): void {
-        this._filename = StringRef.make(filename);
-    }
+    // setParseFileName(filename: string): void {
+    //     this._filename = StringRef.make(filename);
+    // }
 
 
     getParseFileName(): IFile {
-        return this._filename;
+        return this._state.filename;
     }
 
 
@@ -524,31 +508,22 @@ export class Parser implements IParser {
     }
 
 
+    // TODO: remove this method
     getSyntaxTree(): IParseTree | null {
-        return this._syntaxTree;
+        return this._state.tree;
     }
 
 
     protected saveState(): IParserState {
-        return <IParserState>{
-            source: this._source,
-            fileName: this._filename,
-            tree: this._syntaxTree,
-            types: this._typeIdMap,
-            stack: this._stack,
-            token: this._token
-        };
+        return this._state;
     }
 
 
     protected loadState(state: IParserState): void {
-        this._source = state.source;
-        this._filename = state.fileName;
-        this._syntaxTree = state.tree;
-        this._typeIdMap = state.types;
-        this._stack = state.stack;
-        this._token = state.token;
+        this._state = state;
 
+        // FIXME: functionality is broken
+        // TODO: resеore full lexer state: filename, line, column etc..
         this._lexer.setSource(state.source);
         this._lexer.setIndex(state.token.index);
     }
@@ -563,18 +538,13 @@ export class Parser implements IParser {
 
 
     addTypeId(identifier: string): void {
-        if (isNull(this._typeIdMap)) {
-            this._typeIdMap = <IMap<boolean>>{};
-        }
-        this._typeIdMap[identifier] = true;
+        const types = this._state.types;
+        types[identifier] = true;
     }
 
 
-    protected defaultInit(): void {
-        this._stack = [0];
-        this._syntaxTree = new ParseTree(bf.testAll(this._parseMode, EParseMode.k_Optimize));
-        this._typeIdMap = {};
-        this._diag.reset();
+    protected defaultInit(flags: EParsingFlags): void {
+        
     }
 
 
@@ -633,10 +603,11 @@ export class Parser implements IParser {
 
 
     private clearMem(): void {
-        // delete this._followTerminalsCache;
-        delete this._productions;
         delete this._states;
+        
+        delete this._productions;
         delete this._baseItems;
+        // delete this._followTerminalsCache;
         delete this._firstTerminalsCache;
         delete this._closureForItemsCache;
         delete this._expectedExtensionDMap;
@@ -934,7 +905,7 @@ export class Parser implements IParser {
     }
 
 
-    private generateRules(grammarSource: string): void {
+    private generateRules(grammarSource: string, flags: EParserFlags): void {
         let allRuleList: string[] = grammarSource.split(/\r?\n/);
         let tempRule: string[];
         let rule: IRule;
@@ -948,15 +919,15 @@ export class Parser implements IParser {
         let i = 0, j = 0;
 
         // append all nodes ignoring any flags
-        const isAllNodeMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_AllNode);
+        const isAllNodeMode = bf.testAll(<number>flags, <number>EParserFlags.k_AllNode);
         // force unwind node if it is marked as '--NN'
-        const isNegateMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Negate);
+        const isNegateMode = bf.testAll(<number>flags, <number>EParserFlags.k_Negate);
         // force add node if it is marked as '--AN'
-        const isAddMode = bf.testAll(<number>this._parseMode, <number>EParseMode.k_Add);
+        const isAddMode = bf.testAll(<number>flags, <number>EParserFlags.k_Add);
 
         let symbolsWithNodeMap: IMap<number> = this._ruleCreationModeMap;
 
-        let sName: string;
+        let name: string;
 
         let nRules = 0;
 
@@ -992,13 +963,13 @@ export class Parser implements IParser {
 
 
                     if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
-                        sName = this._lexer.addKeyword(tempRule[2], tempRule[0]);
+                        name = this._lexer.addKeyword(tempRule[2], tempRule[0]);
                     }
                     else {
-                        sName = this._lexer.addPunctuator(tempRule[2], tempRule[0]);
+                        name = this._lexer.addPunctuator(tempRule[2], tempRule[0]);
                     }
 
-                    this._grammarSymbols.set(sName, tempRule[2]);
+                    this._grammarSymbols.set(name, tempRule[2]);
                 }
 
                 continue;
@@ -1080,9 +1051,9 @@ export class Parser implements IParser {
                         });
                     }
 
-                    sName = this._lexer.addPunctuator(tempRule[j][1]);
-                    rule.right.push(sName);
-                    this._grammarSymbols.set(sName, tempRule[j][1]);
+                    name = this._lexer.addPunctuator(tempRule[j][1]);
+                    rule.right.push(name);
+                    this._grammarSymbols.set(name, tempRule[j][1]);
                 }
                 else {
                     rule.right.push(tempRule[j]);
@@ -1436,14 +1407,14 @@ export class Parser implements IParser {
         }
     }
 
-    private buildSyntaxTable(): void {
+    private buildSyntaxTable(type: EParserType): void {
         this._states = [];
         this._syntaxTable = {};
 
         const stateList = this._states;
         const syntaxTable = this._syntaxTable;
 
-        this.generateStates(this._type);
+        this.generateStates(type);
 
         const reduceOperationsMap: IOperationMap = {};
         const shiftOperationsMap: IOperationMap = {};
@@ -1492,12 +1463,12 @@ export class Parser implements IParser {
 
     protected async resumeParse(): Promise<EParserCode> {
         const syntaxTable = this._syntaxTable;
-        const stack = this._stack;
-        const token = isNull(this._token) ? this.readToken() : this._token;
-        const syntaxTree = this._syntaxTree;
+        const stack = this._state.stack;
+        const token = isNull(this._state.token) ? this.readToken() : this._state.token;
+        const syntaxTree = this._state.tree;
         await this.run(syntaxTable, stack, token, syntaxTree, {});
 
-        if (this._diag.hasErrors()) {
+        if (this._state.diag.hasErrors()) {
             console.error('parsing was ended with errors.');
             return EParserCode.k_Error;
         }
@@ -1559,18 +1530,18 @@ export class Parser implements IParser {
 
 
     getDiagnostics(): IDiagnosticReport {
-        let parserReport = this._diag.resolve();
+        let parserReport = this._state.diag.resolve();
         let lexerReport = this._lexer.getDiagnostics();
         return Diagnostics.mergeReports([lexerReport, parserReport]);
     }
 
     protected critical(code, desc) {
-        this._diag.critical(code, desc);
+        this._state.diag.critical(code, desc);
     }
 
 
     protected error(code, desc) {
-        this._diag.error(code, desc);
+        this._state.diag.error(code, desc);
     }
 
     private static $parser: IParser = null;
@@ -1580,7 +1551,7 @@ export class Parser implements IParser {
      * Create a singleton instance of parser for internal use.
      */
     static init(parserParams: IParserParams, ParserConstructor: new () => IParser = null): IParser {
-        const { grammar, mode, type } = parserParams;
+        const { grammar, flags, type } = parserParams;
 
         if (!grammar) {
             return Parser.$parser;
@@ -1589,7 +1560,7 @@ export class Parser implements IParser {
         if (deepEqual(parserParams, Parser.$parserParams)) {
             return Parser.$parser;
         }
-
+        
         if (isNull(ParserConstructor)) {
             ParserConstructor = Parser;
         }
@@ -1598,7 +1569,7 @@ export class Parser implements IParser {
         Parser.$parserParams = parserParams;
         Parser.$parser = new ParserConstructor();
 
-        if (!Parser.$parser.init(grammar, mode, type)) {
+        if (!Parser.$parser.init(grammar, flags, type)) {
             console.error('Could not initialize parser!');
             Parser.$parser = null;
         } else {
@@ -1610,21 +1581,16 @@ export class Parser implements IParser {
     }
 
 
-    static async parse(content: string, filename: string = "stdin") {
-        Parser.$parser.setParseFileName(filename);
-
+    static async parse(content: string, { filename = "stdin", flags = EParsingFlags.k_Optimize }: IParsingOptions) {
         const timeLabel = `parse ${filename}`;
         console.time(timeLabel);
         // All diagnostic exceptions should be already handled inside parser.
-        let result = await Parser.$parser.parse(content);
+        let result = await Parser.$parser.parse(content, filename, flags);
         console.timeEnd(timeLabel);
 
         let diag = Parser.$parser.getDiagnostics();
         let ast = Parser.$parser.getSyntaxTree();
-
-        // todo: fix this hack
-        Parser.$parser.setParseFileName("stdin");
-
+        
         return { result, diag, ast };
     }
 }
