@@ -1,7 +1,7 @@
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { SLDocument } from "@lib/idl/ILanguageService";
-import { Parser } from "@lib/parser/Parser";
+import { ParserEngine } from "@lib/parser/Parser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { Diagnostic, DiagnosticSeverity, Range, TextDocument } from "vscode-languageserver-types";
 
@@ -27,7 +27,7 @@ export class SLValidation {
             return null;
         }
         
-        const parsingResults = await Parser.parse(textDocument.getText(), { filename: textDocument.uri });
+        const parsingResults = await ParserEngine.parse(textDocument.getText(), { filename: textDocument.uri });
         const semanticResults = FxAnalyzer.analyze(parsingResults.ast, textDocument.uri);
 
         const diag = Diagnostics.mergeReports([parsingResults.diag, semanticResults.diag]);

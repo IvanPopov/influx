@@ -1,14 +1,14 @@
 import bf from "@lib/bf";
 import { assert, deepEqual, isDef, isDefAndNotNull, isNull, verbose } from "@lib/common";
-import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
+import { IDiagnosticReport, IDiagnostics } from "@lib/idl/IDiagnostics";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { EParserFlags, EParsingFlags, ExpectedSymbols, IFile, IParserParams, IParsingOptions, IPosition, IRange } from "@lib/idl/parser/IParser";
-import { ENodeCreateMode, EOperationType, EParserCode, EParserType, IParseNode, IParser, IParserState, IParseTree, IRule, IRuleFunction, IToken } from "@lib/idl/parser/IParser";
+import { EParserFlags, EParsingFlags, ExpectedSymbols, IAdditionalFuncInfo, IFile, ILexerEngine, IOperation, IOperationMap, IParserConfig, IParserParams, IParsingOptions, IPosition, IProductions, IRange, IRuleFunctionDMap, IRuleFunctionMap, IRuleMap } from "@lib/idl/parser/IParser";
+import { ENodeCreateMode, EOperationType, EParserCode, EParserType, IParseNode, IParser, IParserEngine, IParseTree, IRule, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
 
 import { Item } from "./Item";
-import { Lexer } from "./Lexer";
+import { Lexer, LexerEngine } from "./Lexer";
 import { ParseTree } from "./ParseTree";
 import { State } from "./State";
 import { END_POSITION, END_SYMBOL, ERROR, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNKNOWN_TOKEN, UNUSED_SYMBOL } from "./symbols";
@@ -91,51 +91,23 @@ export class ParserDiagnostics extends Diagnostics<IMap<any>> {
     }
 }
 
-interface IOperation {
-    type: EOperationType;
-    rule?: IRule;
-    stateIndex?: number;
+
+function cloneToken(token: IToken): IToken {
+    return {
+        ...token,
+        loc: {
+            start: { ...token.loc.start },
+            end: { ...token.loc.end }
+        }
+    };
 }
 
-interface IOperationMap {
-    [grammarSymbol: string]: IOperation;
-    [stateIndex: number]: IOperation;
-}
 
-interface ISyntaxTable {
-    [stateIndex: number]: {
-        [terminal: string]: IOperation;
-    }
-}
-
-interface IRuleMap {
-    [ruleIndex: number]: IRule;
-}
-
-interface IProductions {
-    [nonTerminal: string]: IRuleMap;
-}
-
-interface IRuleFunctionMap {
-    [grammarSymbolOrFuncName: string]: IRuleFunction;
-}
-
-interface IRuleFunctionDMap {
-    [stateIndex: number]: IRuleFunctionMap;
-}
-
-interface IAdditionalFuncInfo {
-    name: string;
-    position: number;
-    rule: IRule;
-}
-
-export class Parser implements IParser {
-    private _state: IParserState;
-
+export class ParserEngine implements IParserEngine {
     //Process params
 
-    private _lexer: Lexer;
+    // TODO: make readonly
+    lexerEngine: LexerEngine;
 
     //
     // Grammar based Info
@@ -188,8 +160,11 @@ export class Parser implements IParser {
     private _baseItems: Item[];
     private _closureForItemsCache: IMap<State>;
 
+    // TODO: use dedicated type for parser engine
+    private _diag: ParserDiagnostics;
 
-    constructor() {
+
+    constructor(grammar: string, flags: number = EParserFlags.k_AllNode, type: EParserType = EParserType.k_LALR) {
         this._syntaxTable = null;
 
         this._productions = null;
@@ -207,274 +182,50 @@ export class Parser implements IParser {
         this._closureForItemsCache = null;
 
         this._expectedExtensionDMap = null;
+        this._diag = new ParserDiagnostics;
+
+        this.init(grammar, flags, type);
+    }
+
+    get syntaxTable(): ISyntaxTable {
+        return this._syntaxTable;
     }
 
 
-    isTypeId(sValue: string): boolean {
-        return !!(this._state.types[sValue]);
-    }
+    findFunctionByState(stateIndex: number, grammarSymbol: string): string {
+        const funcDMap = this._adidtionalFunctByStateDMap;
 
-
-    init(grammar: string, flags: number = EParserFlags.k_AllNode, type: EParserType = EParserType.k_LALR): boolean {
-        try {
-            // todo: remove this callbacks in favor of direct parameters
-            this._lexer = new Lexer();
-
-            // this._parseMode = mode;
-            this.generateRules(grammar, flags);
-            this.buildSyntaxTable(type);
-            this.generateFunctionByStateMap();
-            
-            if (!bf.testAll(flags, EParserFlags.k_Debug)) {
-                this.clearMem();
-            }
-        } catch (e) {
-            if (e instanceof DiagnosticException) {
-                // verbose(e.message);
-                verbose(e.stack);
-                return false;
-            }
-            throw e;
+        if (!isNull(funcDMap) &&
+            isDef(funcDMap[stateIndex]) &&
+            isDef(funcDMap[stateIndex][grammarSymbol])) {
+            return funcDMap[stateIndex][grammarSymbol];
         }
 
-        return true;
-    }
-
-    private restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken) {
-        while (true) {
-            let recoverableState = -1;
-            for (let i = stack.length - 1; i >= 0; --i) {
-                const errorOp = syntaxTable[stack[i]][ERROR];
-                const isRecoverableState = (isDef(errorOp) &&
-                    errorOp.type === EOperationType.k_Shift &&
-                    syntaxTable[errorOp.stateIndex][causingErrorToken.name]);
-                if (isRecoverableState) {
-                    recoverableState = i;
-                    break;
-                }
-            }
-
-
-            if (recoverableState !== -1) {
-                const recoveredStateIndex = stack[recoverableState];
-                // current op will be: syntaxTable[recoveredStateIndex][ERROR];
-
-                let stackDiff = stack.length - 1 - recoverableState;
-                while (stackDiff != 0) {
-                    // extend error token location with the already processed tokens
-                    parseTree.$pop(errorToken.loc);
-                    stack.pop();
-                    stackDiff--;
-                }
-
-                // recoverable state found so continue normal processing as it would be before the error
-                return recoveredStateIndex;
-            }
-
-            extendRange(errorToken.loc, causingErrorToken.loc);
-
-            if (causingErrorToken.value === END_SYMBOL) {
-                // state cant be recovered
-                break;
-            }
-
-            // try to restore from the next token
-            // FIXME: 
-            const nextToken = this.readToken();
-            Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
-        }
-        return -1;
+        return null;
     }
 
 
-    static cloneToken(token: IToken): IToken {
-        return {
-            ...token,
-            loc: {
-                start: { ...token.loc.start },
-                end: { ...token.loc.end }
-            }
-        };
+    getRuleCreationMode(nonTerminal: string): ENodeCreateMode {
+        return this._ruleCreationModeMap[nonTerminal];
     }
 
-    private async run(
-        syntaxTable: ISyntaxTable,
-        stack: number[],
-        token: IToken,
-        parseTree: IParseTree,
-        { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
-
-        const undefinedToken: IToken =  { index: -1, name: null, value: null };
-        let causingErrorToken: IToken = undefinedToken;
-
-        // debug mode
-        const opLimit = 10000;
-        let opCounter = 0;
-
-        try {
-            breakProcessing:
-            while (true) {
-                // global recursion prevention in debug mode
-                if (developerMode) {
-                    if (opCounter > opLimit) {
-                        this.emitCritical(EParserErrors.GeneralParsingLimitIsReached);
-                    }
-                    opCounter++;
-                }
-
-                let currStateIndex = stack[stack.length - 1];
-                let op = syntaxTable[currStateIndex][token.name];
-
-                if (allowErrorRecoverty) {
-                    if (!op) {
-                        // recursion prevention
-                        if (causingErrorToken.index !== token.index) {
-                            if (token.value === END_SYMBOL) {
-                                this.emitError(EParserErrors.SyntaxUnexpectedEOF, token);
-                            } else {
-                                this.emitError(EParserErrors.SyntaxUnknownError, token);
-                            }
-                        } else {
-                            // one more attempt to recover but from the next token
-                            token = this.readToken();
-                            // NOTE: in order to prevent recusrion on END_SYMBOL
-                            causingErrorToken = undefinedToken;
-                            continue;
-                        }
-
-                        causingErrorToken = Parser.cloneToken(token);
-                        // token = { ...token, name: ERROR };
-                        token = { ...Parser.cloneToken(token), name: ERROR };
-                    }
-
-                    op = syntaxTable[currStateIndex][token.name];
-
-                    const errorProcessing = token.name === ERROR;
-                    const errorReductionEnded = !op || (errorProcessing && (op.type === EOperationType.k_Shift));
-
-                    // state must be recovered if operation is undefined or error reduction was ended. 
-                    if (errorReductionEnded) {
-                        // NOTE: recoveryToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
-                        let recoveryToken = Parser.cloneToken(causingErrorToken);
-                        while (recoveryToken.name === UNKNOWN_TOKEN) {
-                            recoveryToken = this.readToken();
-                        }
-                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>parseTree, stack, recoveryToken, token /* error token */);
-                        if (currStateIndex === -1) {
-                            this.emitCritical(EParserErrors.SyntaxRecoverableStateNotFound);
-                        }
-
-                        // perform error shift op.
-                        op = syntaxTable[currStateIndex][token.name]; // token.name === 'ERROR'
-                        stack.push(op.stateIndex);
-                        parseTree.addToken(token/* error token */);
-                        token = recoveryToken;
-
-                        // const nextOp = syntaxTable[op.stateIndex][token.name];
-                        // if (nextOp.type === EOperationType.k_Reduce) {
-                        //     tokenBuffer.push(rec);
-                        // }
-
-                        // return to normal precesing loop
-                        continue;
-                    }
-                }
-
-                if (isDef(op)) {
-                    switch (op.type) {
-                        case EOperationType.k_Success:
-                            break breakProcessing;
-
-                        case EOperationType.k_Shift:
-                            {
-                                const stateIndex = op.stateIndex;
-                                stack.push(stateIndex);
-                                parseTree.addToken(token);
-
-                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
-                                if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
-                                } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                    token = this.readToken();
-                                }
-                            }
-                            break;
-
-                        case EOperationType.k_Reduce:
-                            {
-                                const ruleLength = op.rule.right.length;
-                                stack.length -= ruleLength;
-
-                                const stateIndex = syntaxTable[stack[stack.length - 1]][op.rule.left].stateIndex;
-
-                                stack.push(stateIndex);
-                                parseTree.reduceByRule(op.rule, this._ruleCreationModeMap[op.rule.left]);
-
-                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, op.rule.left);
-                                if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
-                                }
-                            }
-                            break;
-                    }
-                } else {
-                    assert(!allowErrorRecoverty, `unexpected end, something went wrong :/`);
-                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
-                }
-            }
-
-            parseTree.finishTree();
-        } catch (e) {
-            if (!(e instanceof DiagnosticException)) {
-                throw e;
-            }
-        }
+    
+    getGrammarSymbols(): Map<string, string> {
+        return this._grammarSymbols;
     }
 
+    protected init(grammar: string, flags: number = EParserFlags.k_AllNode, type: EParserType = EParserType.k_LALR) {
+        this.lexerEngine = new LexerEngine();
 
-    async parse(source: string, filename: string = 'stdin', flags: number = EParsingFlags.k_Optimize): Promise<EParserCode> {
-        const state: IParserState = {
-            filename: StringRef.make(filename),
-            source,
-            stack: [0],
-            tree: new ParseTree(bf.testAll(flags, EParsingFlags.k_Optimize)),
-            types: {},
-            // TODO: remove from state
-            token: null,
-            // TODO: remove 'includes' field?
-            includeFiles: null,
-            diag: new ParserDiagnostics
-        };
-
-        this._state = state;
-
-        this.defaultInit(flags);
+        this.generateRules(grammar, flags);
+        this.buildSyntaxTable(type);
+        this.generateFunctionByStateMap();
         
-        // this._source = source;
-        this._lexer.init(state.source, state.filename, state.types);
-
-        const syntaxTable = this._syntaxTable;
-        const developerMode = bf.testAll(flags, EParsingFlags.k_DeveloperMode);
-
-        await this.run(syntaxTable, state.stack, this.readToken(), state.tree, { developerMode });
-
-        if (state.diag.hasErrors()) {
-            console.error('parsing was ended with errors.');
-            return EParserCode.k_Error;
+        if (!bf.testAll(flags, EParserFlags.k_Debug)) {
+            this.clearMem();
         }
-
-        return EParserCode.k_Ok;
     }
 
-
-    // setParseFileName(filename: string): void {
-    //     this._filename = StringRef.make(filename);
-    // }
-
-
-    getParseFileName(): IFile {
-        return this._state.filename;
-    }
 
 
     printStates(isBaseOnly: boolean = true): void {
@@ -503,59 +254,15 @@ export class Parser implements IParser {
     }
 
 
-    getGrammarSymbols(): Map<string, string> {
-        return this._grammarSymbols;
+
+    protected addAdditionalFunction(funcName: string): void {
+        this._additionalFunctionsMap = this._additionalFunctionsMap || {};
+        this._additionalFunctionsMap[funcName] = funcName;
     }
 
-
-    // TODO: remove this method
-    getSyntaxTree(): IParseTree | null {
-        return this._state.tree;
+    protected critical(code, desc) {
+        this._diag.critical(code, desc);
     }
-
-
-    protected saveState(): IParserState {
-        return this._state;
-    }
-
-
-    protected loadState(state: IParserState): void {
-        this._state = state;
-
-        // FIXME: functionality is broken
-        // TODO: resеore full lexer state: filename, line, column etc..
-        this._lexer.setSource(state.source);
-        this._lexer.setIndex(state.token.index);
-    }
-
-
-    addAdditionalFunction(funcName: string, fnRuleFunction: IRuleFunction): void {
-        if (isNull(this._additionalFunctionsMap)) {
-            this._additionalFunctionsMap = <IRuleFunctionMap>{};
-        }
-        this._additionalFunctionsMap[funcName] = fnRuleFunction;
-    }
-
-
-    addTypeId(identifier: string): void {
-        const types = this._state.types;
-        types[identifier] = true;
-    }
-
-
-    protected defaultInit(flags: EParsingFlags): void {
-        
-    }
-
-
-    private emitError(code: number, token: IToken) {
-        this.error(code, { ...this._lexer.getLocation(), token });
-    }
-
-    private emitCritical(code: number, token: IToken = null) {
-        this.critical(code, { ...this._lexer.getLocation(), token });
-    }
-
 
     private grammarError(code: number, desc) {
         let file = "grammar";
@@ -566,8 +273,8 @@ export class Parser implements IParser {
                     const { stateIndex, grammarSymbol, oldOperation, newOperation } = desc;
                     this.critical(code, {
                         file, line: 0, stateIndex, grammarSymbol,
-                        oldOperation: Parser.operationToString(oldOperation),
-                        newOperation: Parser.operationToString(newOperation),
+                        oldOperation: ParserEngine.operationToString(oldOperation),
+                        newOperation: ParserEngine.operationToString(newOperation),
                         stateDesc: this._states[stateIndex].toString()
                     });
                 }
@@ -963,10 +670,10 @@ export class Parser implements IParser {
 
 
                     if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
-                        name = this._lexer.addKeyword(tempRule[2], tempRule[0]);
+                        name = this.lexerEngine.addKeyword(tempRule[2], tempRule[0]);
                     }
                     else {
-                        name = this._lexer.addPunctuator(tempRule[2], tempRule[0]);
+                        name = this.lexerEngine.addPunctuator(tempRule[2], tempRule[0]);
                     }
 
                     this._grammarSymbols.set(name, tempRule[2]);
@@ -1051,7 +758,7 @@ export class Parser implements IParser {
                         });
                     }
 
-                    name = this._lexer.addPunctuator(tempRule[j][1]);
+                    name = this.lexerEngine.addPunctuator(tempRule[j][1]);
                     rule.right.push(name);
                     this._grammarSymbols.set(name, tempRule[j][1]);
                 }
@@ -1076,39 +783,26 @@ export class Parser implements IParser {
             return;
         }
 
-        var stateList = this._states;
-        var funcInfoList = this._additionalFuncInfoList;
-        var funcInfo: IAdditionalFuncInfo;
-        var rule: IRule;
-        var pos = 0;
-        var func: IRuleFunction;
-        var grammarSymbol: string;
+        const stateList = this._states;
+        const funcInfoList = this._additionalFuncInfoList;
+        const funcByStateDMap = this._adidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
 
-        var i: number = 0, j: number = 0;
+        for (let i = 0; i < funcInfoList.length; i++) {
+            const funcInfo = funcInfoList[i];
 
-        var funcByStateDMap = <IRuleFunctionDMap>{};
-        funcByStateDMap = this._adidtionalFunctByStateDMap = <IRuleFunctionDMap>{};
-
-        for (i = 0; i < funcInfoList.length; i++) {
-            funcInfo = funcInfoList[i];
-
-            func = this._additionalFunctionsMap[funcInfo.name];
-            if (!isDef(func)) {
+            if (!isDef(this._additionalFunctionsMap[funcInfo.name])) {
                 continue;
             }
 
-            rule = funcInfo.rule;
-            pos = funcInfo.position;
-            grammarSymbol = rule.right[pos - 1];
+            const rule = funcInfo.rule;
+            const pos = funcInfo.position;
+            const grammarSymbol = rule.right[pos - 1];
 
-            for (j = 0; j < stateList.length; j++) {
+            for (let j = 0; j < stateList.length; j++) {
                 if (stateList[j].hasRule(rule, pos)) {
 
-                    if (!isDef(funcByStateDMap[stateList[j].index])) {
-                        funcByStateDMap[stateList[j].index] = <IRuleFunctionMap>{};
-                    }
-
-                    funcByStateDMap[stateList[j].index][grammarSymbol] = func;
+                    funcByStateDMap[stateList[j].index] = funcByStateDMap[stateList[j].index] || {};
+                    funcByStateDMap[stateList[j].index][grammarSymbol] = funcInfo.name;
                 }
             }
         }
@@ -1335,7 +1029,7 @@ export class Parser implements IParser {
             const state = stateList[i];
             for (let j = 0; j < symbols.length; j++) {
                 const symbol = symbols[j];
-                let stateNext = Parser.nextState_LR0(state, symbol);
+                let stateNext = ParserEngine.nextState_LR0(state, symbol);
 
                 if (!stateNext.isEmpty()) {
                     stateNext = this.tryAddState(stateNext, EParserType.k_LR0);
@@ -1358,7 +1052,7 @@ export class Parser implements IParser {
             const state = stateList[i];
             for (let j = 0; j < symbols.length; j++) {
                 let symbol = symbols[j];
-                let stateNext = Parser.nextState_LR(state, symbol);
+                let stateNext = ParserEngine.nextState_LR(state, symbol);
 
                 if (!stateNext.isEmpty()) {
                     stateNext = this.tryAddState(stateNext, EParserType.k_LR1);
@@ -1443,39 +1137,6 @@ export class Parser implements IParser {
         });
     }
 
-    private readToken(): IToken {
-        return this._lexer.getNextToken();
-    }
-
-
-    private async operationAdditionalAction(stateIndex: number, grammarSymbol: string): Promise<EOperationType> {
-        let funcDMap: IRuleFunctionDMap = this._adidtionalFunctByStateDMap;
-
-        if (!isNull(this._adidtionalFunctByStateDMap) &&
-            isDef(funcDMap[stateIndex]) &&
-            isDef(funcDMap[stateIndex][grammarSymbol])) {
-            return await funcDMap[stateIndex][grammarSymbol]();
-        }
-
-        return EOperationType.k_Ok;
-    }
-
-
-    protected async resumeParse(): Promise<EParserCode> {
-        const syntaxTable = this._syntaxTable;
-        const stack = this._state.stack;
-        const token = isNull(this._state.token) ? this.readToken() : this._state.token;
-        const syntaxTree = this._state.tree;
-        await this.run(syntaxTable, stack, token, syntaxTree, {});
-
-        if (this._state.diag.hasErrors()) {
-            console.error('parsing was ended with errors.');
-            return EParserCode.k_Error;
-        }
-
-        return EParserCode.k_Ok;
-    }
-
 
     private statesToString(isBaseOnly: boolean = true): string {
         if (!this._states) {
@@ -1500,7 +1161,7 @@ export class Parser implements IParser {
                 opVal = "SHIFT to state " + operation.stateIndex.toString();
                 break;
             case EOperationType.k_Reduce:
-                opVal = "REDUCE by rule { " + Parser.ruleToString(operation.rule) + " }";
+                opVal = "REDUCE by rule { " + ParserEngine.ruleToString(operation.rule) + " }";
                 break;
             case EOperationType.k_Success:
                 opVal = "SUCCESS";
@@ -1523,74 +1184,379 @@ export class Parser implements IParser {
     private convertGrammarSymbol(symbol: string): string {
         if (!this.isTerminal(symbol)) {
             return symbol;
-        } else {
-            return this._lexer.getTerminalValueByName(symbol);
-        }
+        } 
+        return this.lexerEngine.getTerminalValueByName(symbol);
     }
 
+    
 
-    getDiagnostics(): IDiagnosticReport {
-        let parserReport = this._state.diag.resolve();
-        let lexerReport = this._lexer.getDiagnostics();
-        return Diagnostics.mergeReports([lexerReport, parserReport]);
-    }
-
-    protected critical(code, desc) {
-        this._state.diag.critical(code, desc);
-    }
-
-
-    protected error(code, desc) {
-        this._state.diag.error(code, desc);
-    }
-
-    private static $parser: IParser = null;
+    private static $parserEngine: IParserEngine = null;
     private static $parserParams: IParserParams = null;
 
     /**
      * Create a singleton instance of parser for internal use.
      */
-    static init(parserParams: IParserParams, ParserConstructor: new () => IParser = null): IParser {
+    static init(
+        parserParams: IParserParams, 
+        ParserEngineConstructor: new (grammar, flags, type) => IParserEngine = null
+        ): IParserEngine {
         const { grammar, flags, type } = parserParams;
 
         if (!grammar) {
-            return Parser.$parser;
+            return ParserEngine.$parserEngine;
         }
 
-        if (deepEqual(parserParams, Parser.$parserParams)) {
-            return Parser.$parser;
+        if (deepEqual(parserParams, ParserEngine.$parserParams)) {
+            return ParserEngine.$parserEngine;
         }
         
-        if (isNull(ParserConstructor)) {
-            ParserConstructor = Parser;
+        if (isNull(ParserEngineConstructor)) {
+            ParserEngineConstructor = ParserEngine;
         }
-        console.time();
-        console.log('%c Creating parser....', 'background: #222; color: #bada55');
-        Parser.$parserParams = parserParams;
-        Parser.$parser = new ParserConstructor();
 
-        if (!Parser.$parser.init(grammar, flags, type)) {
-            console.error('Could not initialize parser!');
-            Parser.$parser = null;
-        } else {
+        console.time();
+        console.log('%c Creating parser engine....', 'background: #222; color: #bada55');
+        ParserEngine.$parserParams = parserParams;
+    
+        try {
+            ParserEngine.$parserEngine = new ParserEngineConstructor(grammar, flags, type);
             console.log('%c [ DONE ]', 'background: #222; color: #bada55');
+        } catch (e) {
+            ParserEngine.$parserEngine = null;
+            console.error('%c [ FAILED ]', 'background: #ffdcd6; color: #ff0000');
+            
+            if (e instanceof DiagnosticException) {
+                verbose(e.stack);
+            }
+            throw e;
         }
+
         console.timeEnd();
 
-        return Parser.$parser;
+        return ParserEngine.$parserEngine;
     }
 
 
-    static async parse(content: string, { filename = "stdin", flags = EParsingFlags.k_Optimize }: IParsingOptions) {
-        const timeLabel = `parse ${filename}`;
-        console.time(timeLabel);
-        // All diagnostic exceptions should be already handled inside parser.
-        let result = await Parser.$parser.parse(content, filename, flags);
-        console.timeEnd(timeLabel);
-
-        let diag = Parser.$parser.getDiagnostics();
-        let ast = Parser.$parser.getSyntaxTree();
+    // static async parse(source: string, uri = "stdin", flags = EParsingFlags.k_Optimize) {
         
-        return { result, diag, ast };
+    //     const engine = ParserEngine.$parserEngine;
+        
+    //     const timeLabel = `parse ${uri}`;
+    //     console.time(timeLabel);
+    //     // All diagnostic exceptions should be already handled inside parser.
+    //     const parser = new ParserEngine.$parserEngine.parse(source, filename, flags)
+    //     let result = await ;
+    //     console.timeEnd(timeLabel);
+
+    //     let diag = ParserEngine.$parserEngine.getDiagnostics();
+    //     let ast = ParserEngine.$parserEngine.getSyntaxTree();
+        
+    //     return { result, diag, ast };
+    // }
+}
+
+
+export class Parser implements IParser {
+    protected engine: IParserEngine;
+    protected flags: number;
+
+    protected diag: ParserDiagnostics;
+    protected tree: IParseTree;
+    protected stack: number[];
+    protected types: IMap<boolean>;
+    protected lexer: Lexer;
+
+    // TODO: remove 
+    protected includeFiles: IMap<boolean> = null;
+    protected token: IToken = null;
+
+    protected additionalFunctions: IMap<IRuleFunction> = {};
+
+    constructor({ engine, uri, source, flags }: IParserConfig) {
+        const lexerEngine = engine.lexerEngine;
+        const knownTypes = {};
+
+        this.engine = engine;
+        this.flags = flags;
+        this.diag = new ParserDiagnostics;
+        this.tree = new ParseTree(bf.testAll(flags, EParsingFlags.k_Optimize)); 
+        this.stack = [0];
+        this.types = knownTypes;
+        this.lexer = new Lexer({ 
+            engine: lexerEngine, 
+            types: knownTypes, 
+            uri: StringRef.make(uri), 
+            source 
+        });   
     }
+
+    isTypeId(value: string): boolean {
+        return !!(this.types[value]);
+    }
+
+    
+    addTypeId(identifier: string): void {
+        this.types[identifier] = true;
+    }
+
+
+    getUri(): IFile {
+        return <IFile>this.lexer.uri;
+    }
+
+
+    getDiagnosticReport(): IDiagnosticReport {
+        let lexerReport = this.lexer.getDiagnosticReport();
+        let parserReport = this.diag.resolve();
+        return Diagnostics.mergeReports([lexerReport, parserReport]);
+    }
+
+    getSyntaxTree(): IParseTree {
+        return this.tree;
+    }
+
+    // protected saveState(): IParserState {
+    //     return this._state;
+    // }
+
+
+    // protected loadState(state: IParserState): void {
+    //     this._state = state;
+
+    //     // FIXME: functionality is broken
+    //     // TODO: resеore full lexer state: filename, line, column etc..
+    //     this._lexer.setSource(state.source);
+    //     this._lexer.setIndex(state.token.index);
+    // }
+
+
+    private readToken(): IToken {
+        return this.lexer.getNextToken();
+    }
+
+    private emitError(code: number, token: IToken) {
+        this.diag.error(code, { ...this.lexer.getLocation(), token });
+    }
+
+    private emitCritical(code: number, token: IToken = null) {
+        this.diag.critical(code, { ...this.lexer.getLocation(), token });
+    }
+
+    async parse(): Promise<EParserCode> {
+        const developerMode = bf.testAll(this.flags, EParsingFlags.k_DeveloperMode);
+        const allowErrorRecoverty = true;
+
+        await this.run(this.readToken(), { developerMode, allowErrorRecoverty });
+
+        if (this.diag.hasErrors()) {
+            console.error('parsing was ended with errors.');
+            return EParserCode.k_Error;
+        }
+
+        return EParserCode.k_Ok;
+    }
+
+
+    private restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken) {
+        while (true) {
+            let recoverableState = -1;
+            for (let i = stack.length - 1; i >= 0; --i) {
+                const errorOp = syntaxTable[stack[i]][ERROR];
+                const isRecoverableState = (isDef(errorOp) &&
+                    errorOp.type === EOperationType.k_Shift &&
+                    syntaxTable[errorOp.stateIndex][causingErrorToken.name]);
+                if (isRecoverableState) {
+                    recoverableState = i;
+                    break;
+                }
+            }
+
+
+            if (recoverableState !== -1) {
+                const recoveredStateIndex = stack[recoverableState];
+                // current op will be: syntaxTable[recoveredStateIndex][ERROR];
+
+                let stackDiff = stack.length - 1 - recoverableState;
+                while (stackDiff != 0) {
+                    // extend error token location with the already processed tokens
+                    parseTree.$pop(errorToken.loc);
+                    stack.pop();
+                    stackDiff--;
+                }
+
+                // recoverable state found so continue normal processing as it would be before the error
+                return recoveredStateIndex;
+            }
+
+            extendRange(errorToken.loc, causingErrorToken.loc);
+
+            if (causingErrorToken.value === END_SYMBOL) {
+                // state cant be recovered
+                break;
+            }
+
+            // try to restore from the next token
+            // FIXME: 
+            const nextToken = this.readToken();
+            Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
+        }
+        return -1;
+    }
+
+    private async operationAdditionalAction(stateIndex: number, grammarSymbol: string): Promise<EOperationType> {
+        const funcName = this.engine.findFunctionByState(stateIndex, grammarSymbol);
+        if (!isNull(funcName)) {
+            assert(!!this.additionalFunctions[funcName]);
+            return await this.additionalFunctions[funcName]();
+        }
+        return EOperationType.k_Ok;
+    }
+
+    async run(token: IToken,
+        { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
+
+        const { syntaxTable } = this.engine;
+        const { stack, tree } = this;
+
+        const undefinedToken: IToken =  { index: -1, name: null, value: null };
+        let causingErrorToken: IToken = undefinedToken;
+
+        // debug mode
+        const opLimit = 10000;
+        let opCounter = 0;
+
+        try {
+            breakProcessing:
+            while (true) {
+                // global recursion prevention in debug mode
+                if (developerMode) {
+                    if (opCounter > opLimit) {
+                        this.emitCritical(EParserErrors.GeneralParsingLimitIsReached);
+                    }
+                    opCounter++;
+                }
+
+                let currStateIndex = stack[stack.length - 1];
+                let op = syntaxTable[currStateIndex][token.name];
+
+                if (allowErrorRecoverty) {
+                    if (!op) {
+                        // recursion prevention
+                        if (causingErrorToken.index !== token.index) {
+                            if (token.value === END_SYMBOL) {
+                                this.emitError(EParserErrors.SyntaxUnexpectedEOF, token);
+                            } else {
+                                this.emitError(EParserErrors.SyntaxUnknownError, token);
+                            }
+                        } else {
+                            // one more attempt to recover but from the next token
+                            token = this.readToken();
+                            // NOTE: in order to prevent recusrion on END_SYMBOL
+                            causingErrorToken = undefinedToken;
+                            continue;
+                        }
+
+                        causingErrorToken = cloneToken(token);
+                        // token = { ...token, name: ERROR };
+                        token = { ...cloneToken(token), name: ERROR };
+                    }
+
+                    op = syntaxTable[currStateIndex][token.name];
+
+                    const errorProcessing = token.name === ERROR;
+                    const errorReductionEnded = !op || (errorProcessing && (op.type === EOperationType.k_Shift));
+
+                    // state must be recovered if operation is undefined or error reduction was ended. 
+                    if (errorReductionEnded) {
+                        // NOTE: recoveryToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
+                        let recoveryToken = cloneToken(causingErrorToken);
+                        while (recoveryToken.name === UNKNOWN_TOKEN) {
+                            recoveryToken = this.readToken();
+                        }
+                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, token /* error token */);
+                        if (currStateIndex === -1) {
+                            this.emitCritical(EParserErrors.SyntaxRecoverableStateNotFound);
+                        }
+
+                        // perform error shift op.
+                        op = syntaxTable[currStateIndex][token.name]; // token.name === 'ERROR'
+                        stack.push(op.stateIndex);
+                        tree.addToken(token/* error token */);
+                        token = recoveryToken;
+
+                        // const nextOp = syntaxTable[op.stateIndex][token.name];
+                        // if (nextOp.type === EOperationType.k_Reduce) {
+                        //     tokenBuffer.push(rec);
+                        // }
+
+                        // return to normal precesing loop
+                        continue;
+                    }
+                }
+
+                if (isDef(op)) {
+                    switch (op.type) {
+                        case EOperationType.k_Success:
+                            break breakProcessing;
+
+                        case EOperationType.k_Shift:
+                            {
+                                const stateIndex = op.stateIndex;
+                                stack.push(stateIndex);
+                                tree.addToken(token);
+
+                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
+                                if (additionalOperationCode === EOperationType.k_Error) {
+                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                                } else if (additionalOperationCode === EOperationType.k_Ok) {
+                                    token = this.readToken();
+                                }
+                            }
+                            break;
+
+                        case EOperationType.k_Reduce:
+                            {
+                                const ruleLength = op.rule.right.length;
+                                stack.length -= ruleLength;
+
+                                const stateIndex = syntaxTable[stack[stack.length - 1]][op.rule.left].stateIndex;
+
+                                stack.push(stateIndex);
+                                tree.reduceByRule(op.rule, this.engine.getRuleCreationMode(op.rule.left));
+
+                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, op.rule.left);
+                                if (additionalOperationCode === EOperationType.k_Error) {
+                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                                }
+                            }
+                            break;
+                    }
+                } else {
+                    assert(!allowErrorRecoverty, `unexpected end, something went wrong :/`);
+                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                }
+            }
+
+            tree.finishTree();
+        } catch (e) {
+            if (!(e instanceof DiagnosticException)) {
+                throw e;
+            }
+        }
+    }
+
+    // protected async resumeParse(): Promise<EParserCode> {
+    //     const syntaxTable = this.engine.syntaxTable;
+    //     const stack = this.stack;
+    //     const token = isNull(this._state.token) ? this.readToken() : this._state.token;
+    //     const syntaxTree = this._state.tree;
+    //     await this.run(syntaxTable, stack, token, syntaxTree, {});
+
+    //     if (this._state.diag.hasErrors()) {
+    //         console.error('parsing was ended with errors.');
+    //         return EParserCode.k_Error;
+    //     }
+
+    //     return EParserCode.k_Ok;
+    // }
 }

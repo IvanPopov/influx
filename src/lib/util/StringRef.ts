@@ -1,3 +1,5 @@
+import { isString } from "@lib/common";
+
 // helper class to always pass strings by pointer and not by value;
 export class StringRef {
     constructor(readonly content: string) {
@@ -16,7 +18,10 @@ export class StringRef {
         return this.content;
     }
 
-    static make(val: any): StringRef {
+    static make(val: string | StringRef): StringRef {
+        if (!isString(val)) {
+            return <StringRef>val;
+        }
         return new StringRef(`${val}`);
     }
 }

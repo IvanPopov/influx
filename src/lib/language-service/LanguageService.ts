@@ -3,8 +3,8 @@ import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
 import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { IInstructionCollector } from '@lib/idl/IInstruction';
 import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
-import { EParsingFlags, IParser, IParserParams } from '@lib/idl/parser/IParser';
-import { Parser } from '@lib/parser/Parser';
+import { EParsingFlags, IParserEngine, IParserParams } from '@lib/idl/parser/IParser';
+import { ParserEngine } from '@lib/parser/Parser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionItemKind, CompletionList, Diagnostic, DiagnosticSeverity, DocumentSymbol, FoldingRange, FoldingRangeKind, FormattingOptions, Hover, InsertTextFormat, Location, MarkedString, MarkupContent, MarkupKind, Position, Range, SignatureHelp, SymbolInformation, SymbolKind, TextDocument, TextEdit } from 'vscode-languageserver-types';
 
@@ -32,7 +32,7 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     };
 }
 
-async function parse(parser: IParser, flags: EParsingFlags, textDocument: TextDocument) {
+async function parse(parser: IParserEngine, flags: EParsingFlags, textDocument: TextDocument) {
     const parsingResults = await parser.parse(textDocument.getText(), textDocument.uri, flags);
     const semanticResults = FxAnalyzer.analyze(parser.getSyntaxTree(), textDocument.uri);
     const diag = Diagnostics.mergeReports([parser.getDiagnostics(), semanticResults.diag]);
@@ -41,7 +41,7 @@ async function parse(parser: IParser, flags: EParsingFlags, textDocument: TextDo
 }
 
 
-export function getLanguageService(parser: IParser, flags: EParsingFlags): ILanguageService {
+export function getLanguageService(parser: IParserEngine, flags: EParsingFlags): ILanguageService {
     const signatureHelp = new SLSignatureHelp();
 
     //

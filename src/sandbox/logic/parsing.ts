@@ -3,9 +3,9 @@
 import { assert, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import { EffectParser } from '@lib/fx/EffectParser';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
-import { Parser } from '@lib/parser/Parser';
+import { EffectParser } from '@lib/fx/SLParser';
+import { ParserEngine } from '@lib/parser/Parser';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox/actions/ActionTypes';
@@ -61,7 +61,7 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-    const { ast, diag } = await Parser.parse(content, { filename, flags: parsingFlags });
+    const { ast, diag } = await ParserEngine.parse(content, { filename, flags: parsingFlags });
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
@@ -104,7 +104,7 @@ const updateParserLogic = createLogic<IStoreState>({
         /**
          * !!! note: all inline functionality inside analyze.ts depends on this setup
          */
-        const isOk = Parser.init({ grammar, type, flags }, EffectParser);
+        const isOk = ParserEngine.init({ grammar, type, flags }, EffectParser);
         assert(isOk);
         // todo: add support for failed setup
         done();

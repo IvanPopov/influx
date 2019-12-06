@@ -34,12 +34,6 @@ export enum EParserFlags {
 }
 
 
-export interface IParsingOptions {
-    filename?: string;
-    flags?: EParsingFlags;
-}
-
-
 // export enum EParseMode {
 //     k_AllNode = 0x0001,
 //     k_Negate = 0x0002,
@@ -143,37 +137,101 @@ export interface IParseTree {
 }
 
 
-export interface IParserState {
-    source: string;
-    filename: IFile;
-    tree: IParseTree;
-    types: IMap<boolean>;
-    stack: number[];
-    token: IToken;
-    // caller: any;
-    includeFiles?: IMap<boolean>;
-    diag: IDiagnostics<IMap<any>>;
+export interface ILexerEngine {
+    readonly keywords: IMap<string>;
+    readonly punctuators: IMap<string>;
+    readonly punctuatorsFirstSymbols: IMap<boolean>;
+
+
+    addPunctuator(value: string, name?: string): string;
+    addKeyword(value: string, name: string): string;
+
+    getTerminalValueByName(name: string): string;
+
+    isLineTerminator(symbol: string): boolean;
+    isKeyword(value: string): boolean;
+    isPunctuator(value: string): boolean;
+    isNumberStart(ch: string, ch1: string): boolean;
+    isCommentStart(ch: string, ch1: string): boolean;
+    isStringStart(ch: string): boolean;
+    isPunctuatorStart(ch: string): boolean;
+    isWhiteSpaceStart(ch: string): boolean;
+    isNewlineStart(ch: string): boolean;
+    isIdentifierStart(ch: string): boolean;
 }
 
+
+export interface IParserConfig {
+    engine: IParserEngine;
+    uri: string | IFile;
+    source: string;
+    flags: number; // EParsingFlags bitset
+}
+
+
 export interface IParser {
-    isTypeId(value: string): boolean;
-
-    init(grammar: string, flags: number, type?: EParserType): boolean;
-    parse(source: string, filename?: string, flags?: number): Promise<EParserCode>;
-
-    // setParseFileName(fileName: string): void;
-    getParseFileName(): IFile;
-
+    getUri(): IFile;
+    getDiagnosticReport(): IDiagnosticReport;
     getSyntaxTree(): IParseTree;
-    getGrammarSymbols(): Map<string, string>;
-    getDiagnostics(): IDiagnosticReport;
+    isTypeId(value: string): boolean;
+}
+
+
+export interface IOperation {
+    type: EOperationType;
+    rule?: IRule;
+    stateIndex?: number;
+}
+
+export interface IOperationMap {
+    [grammarSymbol: string]: IOperation;
+    [stateIndex: number]: IOperation;
+}
+
+export interface ISyntaxTable {
+    [stateIndex: number]: {
+        [terminal: string]: IOperation;
+    }
+}
+
+
+export interface IRuleMap {
+    [ruleIndex: number]: IRule;
+}
+
+export interface IProductions {
+    [nonTerminal: string]: IRuleMap;
+}
+
+// TODO: remove type
+export interface IRuleFunctionMap {
+    [grammarSymbolOrFuncName: string]: string;
+}
+
+export interface IRuleFunctionDMap {
+    [stateIndex: number]: IRuleFunctionMap;
+}
+
+export interface IAdditionalFuncInfo {
+    name: string;
+    position: number;
+    rule: IRule;
+}
+
+export interface IParserEngine {
+    readonly lexerEngine: ILexerEngine;
+    readonly syntaxTable: ISyntaxTable;
+
+    findFunctionByState(stateIndex: number, grammarSymbol: string): string
+    getRuleCreationMode(nonTerminal: string): ENodeCreateMode;
+    getGrammarSymbols(): Map<string, string>;    
 }
 
 
 export interface IParserParams {
     grammar: string;
-    type: EParserType;
     flags: number; // EParserFlags
+    type: EParserType;
 }
 
 
