@@ -2,7 +2,7 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeUpdateAst, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -13,7 +13,7 @@ const initialState: IFileState = {
     error: null,
     markers: {},
     breakpoints: [],
-    parseTree: null,
+    slastDocument: null,
     analysis: null,
     debugger: {
         entryPoint: null,
@@ -45,7 +45,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             content: null,
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
-            parseTree: null,
+            slASTDocument: null,
             analysis: null,
             pipeline: null,
             $pipeline: 0
@@ -58,7 +58,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             content: null,
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
-            parseTree: null,
+            slASTDocument: null,
             analysis: null,
             pipeline: null,
             $pipeline: 0
@@ -71,15 +71,10 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
         }),
 
     [evt.SOURCE_CODE_PARSING_COMPLETE]: (state, action: ISourceCodeParsingComplete) =>
-        ({ ...state, parseTree: action.payload.parseTree }),
+        ({ ...state, slastDocument: action.payload.slastDocument }),
 
     [evt.SOURCE_CODE_ANALYSIS_COMPLETE]: (state, action: ISourceCodeAnalysisComplete) =>
         ({ ...state, analysis: action.payload.result }),
-
-    [evt.SOURCE_CODE_UPDATE_AST]: (state, action: ISourceCodeUpdateAst) => {
-        const { parseTree, ast: analysis } = action.payload;
-        return ({ ...state, analysis, parseTree });
-    },
 
     //
     // markers

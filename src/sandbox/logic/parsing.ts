@@ -4,8 +4,8 @@ import { assert, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
-import { EffectParser } from '@lib/fx/SLParser';
-import { ParserEngine } from '@lib/parser/Parser';
+import { createSLASTDocument } from '@lib/fx/SLASTDocument';
+import { createDefaultSLParser } from '@lib/fx/SLParser';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox/actions/ActionTypes';
@@ -24,7 +24,7 @@ function cleanupMarkersBatch(state: IStoreState, prefix: string): string[] {
 }
 
 function cleanupMarkers(dispatch: IDispatch, batch: string[]) {
-    if (batch.length > 0){
+    if (batch.length > 0) {
         dispatch({ type: evt.SOURCE_CODE_REMOVE_MARKER_BATCH, payload: { batch } });
     }
 }
@@ -54,14 +54,14 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
-    const { content, filename } = state.sourceFile;
-    const { parsingFlags } = state.parserParams;
+    const { content: source, filename: uri } = state.sourceFile;
+    const { parsingFlags: flags } = state.parserParams;
 
-    if (!content) {
+    if (!source) {
         return;
     }
 
-    const { ast, diag } = await ParserEngine.parse(content, { filename, flags: parsingFlags });
+    const slastDocument = await createSLASTDocument({ source, uri, flags });
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
@@ -69,19 +69,19 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     // if (!diag.errors)
     {
-        dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { parseTree: ast } });
+        dispatch({ type: evt.SOURCE_CODE_PARSING_COMPLETE, payload: { slastDocument } });
     }
 }
 
 
 async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<void> {
-    const { parseTree, filename } = state.sourceFile;
+    const { slastDocument } = state.sourceFile;
 
-    if (!parseTree) {
+    if (!slastDocument) {
         return;
     }
 
-    const result = FxAnalyzer.analyze(parseTree, filename);
+    const result = FxAnalyzer.analyze(slastDocument);
     const { diag } = result;
 
     if (!PRODUCTION) {
@@ -104,8 +104,15 @@ const updateParserLogic = createLogic<IStoreState>({
         /**
          * !!! note: all inline functionality inside analyze.ts depends on this setup
          */
-        const isOk = ParserEngine.init({ grammar, type, flags }, EffectParser);
-        assert(isOk);
+        console.log('%c Creating parser...', 'background: #222; color: #bada55');
+        try {
+            createDefaultSLParser({ grammar, type, flags });
+            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
+        } catch (e) {
+            console.error('could not initialize parser.');
+            return null;
+        }
+
         // todo: add support for failed setup
         done();
     }

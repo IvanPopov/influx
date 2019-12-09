@@ -1,15 +1,13 @@
-import { EffectParser } from '@lib/fx/EffectParser';
 import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
+import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
-import { IInstructionCollector } from '@lib/idl/IInstruction';
 import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
-import { EParsingFlags, IParserEngine, IParserParams } from '@lib/idl/parser/IParser';
-import { ParserEngine } from '@lib/parser/Parser';
+import { IASTDocumentFlags } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
-import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionItemKind, CompletionList, Diagnostic, DiagnosticSeverity, DocumentSymbol, FoldingRange, FoldingRangeKind, FormattingOptions, Hover, InsertTextFormat, Location, MarkedString, MarkupContent, MarkupKind, Position, Range, SignatureHelp, SymbolInformation, SymbolKind, TextDocument, TextEdit } from 'vscode-languageserver-types';
-
+import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionList, Diagnostic, DiagnosticSeverity, FoldingRange, FormattingOptions, Hover, Position, Range, SymbolInformation, TextDocument, TextEdit } from 'vscode-languageserver-types';
 import { FXCodeLenses } from './services/fx/codeLenses';
 import { SLSignatureHelp } from './services/signatureHelp';
+
 
 // import { SLValidation } from './services/validation';
 
@@ -32,16 +30,19 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     };
 }
 
-async function parse(parser: IParserEngine, flags: EParsingFlags, textDocument: TextDocument) {
-    const parsingResults = await parser.parse(textDocument.getText(), textDocument.uri, flags);
-    const semanticResults = FxAnalyzer.analyze(parser.getSyntaxTree(), textDocument.uri);
-    const diag = Diagnostics.mergeReports([parser.getDiagnostics(), semanticResults.diag]);
+async function parse(flags: IASTDocumentFlags, textDocument: TextDocument) {
+    const uri = textDocument.uri;
+    const source = textDocument.getText();
+
+    const slastDocument = await createSLASTDocument({ uri, source, flags });
+    const semanticResults = FxAnalyzer.analyze(slastDocument);
+    const diag = Diagnostics.mergeReports([slastDocument.diagnosticReport, semanticResults.diag]);
 
     return { ...semanticResults, diag };
 }
 
 
-export function getLanguageService(parser: IParserEngine, flags: EParsingFlags): ILanguageService {
+export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
     const signatureHelp = new SLSignatureHelp();
 
     //
@@ -52,7 +53,7 @@ export function getLanguageService(parser: IParserEngine, flags: EParsingFlags):
 
     return {
         async parseDocument(textDocument: TextDocument): Promise<{ document: SLDocument, diagnostics: Diagnostic[] }> { 
-            const result = await parse(parser, flags, textDocument);
+            const result = await parse(flags, textDocument);
             return { document: result.root, diagnostics: result.diag.messages.map(asDiagnostic) };
         },
 

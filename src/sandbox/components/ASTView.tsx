@@ -27,8 +27,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
     // tslint:disable-next-line:typedef
     render() {
-        // const { state: { parseTree } } = this;
-        const parseTree = this.props.sourceFile.parseTree;
+        const slastDocument = this.props.sourceFile.slastDocument;
 
         const style = {
             height: 'calc(100vh - 205px)',
@@ -37,7 +36,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
         return (
             <List style={ style } selection size='small' className='astlist'>
-                { this.renderASTNode(parseTree ? parseTree.root : null) }
+                { this.renderASTNode(slastDocument ? slastDocument.root : null) }
             </List>
         );
     }

@@ -56,6 +56,7 @@ import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/Var
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
+import { SLASTDocument } from './SLASTDocument';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_VOID } from './SystemScope';
 import { visitor } from './Visitors';
@@ -1375,7 +1376,7 @@ export class Analyzer {
      * @param elementType Type of the element. (**element.postfix**)
      * @param fieldName 
      */
-    createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
+    protected createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
         if (!elementType.hasField(fieldName)) {
             return null;
         }
@@ -3077,12 +3078,12 @@ export class Analyzer {
     }
 
 
-    protected analyzeGlobals(context: Context, program: ProgramScope, ast: IParseTree): IInstruction[] {
-        if (isNull(ast) || isNull(ast.root)) {
+    protected analyzeGlobals(context: Context, program: ProgramScope, slastDocument: SLASTDocument): IInstruction[] {
+        if (isNull(slastDocument) || isNull(slastDocument.root)) {
             return null;
         }
 
-        const children = ast.root.children;
+        const children = slastDocument.root.children;
         let globals: IInstruction[] = [];
 
         if (isNull(children)) {
@@ -3097,25 +3098,25 @@ export class Analyzer {
     }
 
 
-    protected createContext(filename: string): Context {
-        return new Context(filename);
+    protected createContext(uri: string): Context {
+        return new Context(uri);
     }
-    g
 
     protected createProgram(): ProgramScope {
         return new ProgramScope(SystemScope.SCOPE);
     }
 
 
-    analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
-        console.time(`analyze(${filename})`);
+    analyze(slastDocument: SLASTDocument): IAnalyzeResult {
+        const uri = slastDocument.uri;
+        console.time(`analyze(${uri})`);
 
         const program = this.createProgram();
-        const context = this.createContext(filename);
+        const context = this.createContext(uri);
 
         let instructions: IInstruction[] = null;
         try {
-            instructions = this.analyzeGlobals(context, program, ast);
+            instructions = this.analyzeGlobals(context, program, slastDocument);
             checkFunctionsForRecursion(context, program);
             program.validate();
         } catch (e) {
@@ -3124,7 +3125,7 @@ export class Analyzer {
             console.error(e);
         }
 
-        console.timeEnd(`analyze(${filename})`);
+        console.timeEnd(`analyze(${uri})`);
 
         assert(program.currentScope == program.globalScope);
 
@@ -3396,9 +3397,9 @@ export class Analyzer {
 
 
 
-export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
+export function analyze(slastDocument: SLASTDocument): IAnalyzeResult {
     const analyzer = new Analyzer;
-    return analyzer.analyze(ast, filename);
+    return analyzer.analyze(slastDocument);
 }
 
 

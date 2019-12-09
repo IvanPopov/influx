@@ -20,7 +20,7 @@ export enum EParserType {
     k_LALR
 }
 
-export enum EParsingFlags {
+export enum IASTDocumentFlags {
     k_Optimize = 0x0008,
     k_DeveloperMode = 0x0010
 }
@@ -33,16 +33,6 @@ export enum EParserFlags {
     k_Debug = 0x0010
 }
 
-
-// export enum EParseMode {
-//     k_AllNode = 0x0001,
-//     k_Negate = 0x0002,
-//     k_Add = 0x0004,
-
-    
-//     k_Optimize = 0x0008,
-//     k_DebugMode = 0x0010
-// }
 
 export enum ETokenType {
     k_NumericLiteral = 1,
@@ -105,7 +95,7 @@ export enum EOperationType {
     k_Ok
 }
 
-export type IRuleFunction = () => EOperationType;
+export type IRuleFunction = () => EOperationType | Promise<EOperationType>;
 
 export interface IParseNode {
     children: IParseNode[];
@@ -161,19 +151,20 @@ export interface ILexerEngine {
 }
 
 
-export interface IParserConfig {
-    engine: IParserEngine;
+export interface IASTConfig {
     uri: string | IFile;
     source: string;
-    flags: number; // EParsingFlags bitset
+    parser?: IParser;
+    flags?: number; // EParsingFlags bitset
+    knownTypes?: Set<string>;
+    ruleFunctions?: Map<string, IRuleFunction>;
 }
 
 
-export interface IParser {
-    getUri(): IFile;
-    getDiagnosticReport(): IDiagnosticReport;
-    getSyntaxTree(): IParseTree;
-    isTypeId(value: string): boolean;
+export interface IASTDocument {
+    readonly uri: string;
+    readonly diagnosticReport: IDiagnosticReport;
+    readonly root: IParseNode;
 }
 
 
@@ -218,7 +209,7 @@ export interface IAdditionalFuncInfo {
     rule: IRule;
 }
 
-export interface IParserEngine {
+export interface IParser {
     readonly lexerEngine: ILexerEngine;
     readonly syntaxTable: ISyntaxTable;
 
@@ -230,8 +221,8 @@ export interface IParserEngine {
 
 export interface IParserParams {
     grammar: string;
-    flags: number; // EParserFlags
-    type: EParserType;
+    flags?: number; // EParserFlags
+    type?: EParserType;
 }
 
 

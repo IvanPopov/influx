@@ -2,14 +2,15 @@ import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IIdInstruction, IInstruction, IPassInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 import { IParseNode, IParseTree } from "@lib/idl/parser/IParser";
+import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { Analyzer, Context, IAnalyzeResult, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
 import { ProgramScope } from "./ProgramScope";
+import { SLASTDocument } from "./SLASTDocument";
 import { T_BOOL, T_INT, T_VOID } from "./SystemScope";
 import * as SystemScope from './SystemScope';
 
@@ -579,13 +580,13 @@ class FxAnalyzer extends Analyzer {
     }
 
 
-    protected createContext(filename: string): FxContext {
-        return new FxContext(filename);
+    protected createContext(uri: string): FxContext {
+        return new FxContext(uri);
     }
 }
 
 
-export function analyze(ast: IParseTree, filename: string = "stdin"): IAnalyzeResult {
+export function analyze(slastDocument: SLASTDocument): IAnalyzeResult {
     const analyzer = new FxAnalyzer;
-    return analyzer.analyze(ast, filename);
+    return analyzer.analyze(slastDocument);
 }

@@ -15,6 +15,7 @@ import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
 import { Header, Modal } from 'semantic-ui-react';
+import { defaultSLGrammar } from '@lib/fx/SLParser';
 
 require('semantic-ui-less/semantic.less');
 
@@ -37,7 +38,7 @@ const logger = createLogger({
 
 const reduxImmutableState = reduxImmutableStateInvariant({
     ignore: [
-        'sourceFile.parseTree',
+        'sourceFile.slastDocument',
         'sourceFile.analysis',
         'sourceFile.debugger.runtime',
         'sourceFile.pipeline'
@@ -75,10 +76,8 @@ render(
     document.getElementById('app')
 );
 
-
-// store.dispatch(sourceCode.openFile(`./assets/fx/tests/part.fx`));
-// store.dispatch(sourceCode.openFile(`./assets/fx/tests/${DEFAULT_FX_NAME}`));
-store.dispatch(parser.openGrammar(`./assets/HLSL.gr`));
+// make grammar available for editing
+store.dispatch(parser.setGrammar(defaultSLGrammar()));
 
 console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
 console.log(`%c This is ${isElectron ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');

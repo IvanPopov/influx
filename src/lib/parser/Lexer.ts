@@ -165,7 +165,7 @@ interface ILexerConfig {
     engine: LexerEngine;
     source: string;
     uri: IFile | string;
-    types: IMap<boolean>;
+    knownTypes?: Set<string>;
 }
 
 export class Lexer {
@@ -177,9 +177,9 @@ export class Lexer {
 
     engine: LexerEngine;
     diagnostics: LexerDiagnostics;
-    knownTypes: IMap<boolean>;
+    knownTypes: Set<string>;
 
-    constructor({ engine, source, uri, types }: ILexerConfig) {
+    constructor({ engine, source, uri, knownTypes = new Set() }: ILexerConfig) {
         this.uri = StringRef.make(uri);
         this.source = source;
         this.lineNumber = 0;
@@ -187,7 +187,7 @@ export class Lexer {
         this.index = 0;
 
         this.diagnostics = new LexerDiagnostics;
-        this.knownTypes = types;
+        this.knownTypes = knownTypes;
         this.engine = engine;
     }
 
@@ -588,7 +588,7 @@ export class Lexer {
                 };
             }
             else {
-                let name = this.knownTypes[value] ? T_TYPE_ID : T_NON_TYPE_ID;
+                let name = this.knownTypes.has(value) ? T_TYPE_ID : T_NON_TYPE_ID;
                 return <IToken>{
                     index: this.index,
                     name,

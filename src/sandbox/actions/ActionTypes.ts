@@ -1,6 +1,7 @@
 import { MakeOptional } from '@lib/common';
 import { IAnalyzeResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { SLASTDocument } from '@lib/fx/SLASTDocument';
 import { EParserType, IParseTree } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
@@ -21,10 +22,8 @@ export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { content
 export type ISourceFileLoadingFailed = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
 export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}>;
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
-export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { parseTree: IParseTree }>;
+export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { slastDocument: SLASTDocument }>;
 export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: IAnalyzeResult }>;
-// aux event
-export type ISourceCodeUpdateAst = IAction<typeof evt.SOURCE_CODE_UPDATE_AST, { parseTree: IParseTree; ast: IAnalyzeResult }>;
 
 export interface IMarkerDesc extends IMarker {
     name: string;
@@ -42,9 +41,7 @@ export type ISourceFileActions =
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
-    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch |
-    // aux event
-    ISourceCodeUpdateAst;
+    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch;
 
 //
 // debugger api
@@ -69,13 +66,12 @@ export type IPlaygroundActions = IPlaygroundPipelineUpdate | IPlaygroundSelectEf
 // grammar api (simplified)
 //
 
-export type IGrammarFileSpecified = IAction<typeof evt.GRAMMAR_FILE_SPECIFIED, { filename: string }>;
 export type IGrammarContentSpecified = IAction<typeof evt.GRAMMAR_CONTENT_SPECIFIED, { content: string }>;
 export type IParserParamsChanged = IAction<typeof evt.PARSER_PARAMS_CHANGED, { flags: number; type: EParserType }>;
 export type IParsingParamsChanged = IAction<typeof evt.PARSING_PARAMS_CHANGED, { flags: number }>;
 
 
-export type IParserParamsActions = IGrammarFileSpecified | IGrammarContentSpecified | IParserParamsChanged |
+export type IParserParamsActions = IGrammarContentSpecified | IParserParamsChanged |
     IParsingParamsChanged;
 
 export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions;

@@ -1,6 +1,6 @@
 import { sourceCode as sourceActions } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IGrammarFileSpecified, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import fxRuntime from '@sandbox/logic/fxRuntime';
 import parsing from '@sandbox/logic/parsing';
 import { history } from '@sandbox/reducers/router';
@@ -32,21 +32,6 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
 });
 
 
-
-const fetchGrammarFileLogic = createLogic<IStoreState, IGrammarFileSpecified['payload']>({
-    type: evt.GRAMMAR_FILE_SPECIFIED,
-    latest: true,
-    async process({ getState, action }, dispatch, done) {
-        try {
-            const content = await readFile(action.payload.filename);
-            dispatch({ type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } });
-        } catch (error) {
-            // todo: add event;
-        } finally {
-            done();
-        }
-    }
-});
 
 export const LOCATION_NOT_FOUND = '/NotFound';
 export const LOCATION_PATTERN = '/:view/:fx?/:name?/:pass?/:property?';
@@ -130,7 +115,6 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
 
 export default createLogicMiddleware([
     fetchSourceFileLogic,
-    fetchGrammarFileLogic,
     navigationLogic,
     sourceFileNotFoundLogic,
     ...parsing,

@@ -1,5 +1,5 @@
 import * as bf from '@lib/bf/bf';
-import { EParserFlags, EParserType, EParsingFlags } from '@lib/idl/parser/IParser';
+import { EParserFlags, EParserType, IASTDocumentFlags } from '@lib/idl/parser/IParser';
 import { mapActions, parser as parserActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
@@ -111,13 +111,13 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
                                             />
                                             <label>Parsing flags:</label>
                                             <Form.Checkbox
-                                                checked={ !!(parsingFlags & EParsingFlags.k_Optimize) }
-                                                onChange={ this.handleParsingFlags.bind(this, EParsingFlags.k_Optimize) }
+                                                checked={ !!(parsingFlags & IASTDocumentFlags.k_Optimize) }
+                                                onChange={ this.handleParsingFlags.bind(this, IASTDocumentFlags.k_Optimize) }
                                                 label='Created nodes if it has more than one child'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(parsingFlags & EParsingFlags.k_DeveloperMode) }
-                                                onChange={ this.handleParsingFlags.bind(this, EParsingFlags.k_DeveloperMode) }
+                                                checked={ !!(parsingFlags & IASTDocumentFlags.k_DeveloperMode) }
+                                                onChange={ this.handleParsingFlags.bind(this, IASTDocumentFlags.k_DeveloperMode) }
                                                 label='Developer mode'
                                             />
                                         </Form.Group>
@@ -166,7 +166,7 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
     }
 
     @autobind
-    private handleParsingFlags(flag: EParsingFlags, event, { checked: value }): void {
+    private handleParsingFlags(flag: IASTDocumentFlags, event, { checked: value }): void {
         let { parsingFlags } = this.state;
 
         parsingFlags = setFlags(parsingFlags, flag, value);

@@ -10,10 +10,6 @@ export type IDispatch = Dispatch<any>;
 export type IActionCreator = (dispatch: IDispatch, getState?: () => IStoreState) => Promise<any>;
 
 export const parser = {
-    openGrammar(filename: string) {
-        return { type: evt.GRAMMAR_FILE_SPECIFIED, payload: { filename } };
-    },
-
     setGrammar(content: string) {
         return { type: evt.GRAMMAR_CONTENT_SPECIFIED, payload: { content } };
     },
@@ -37,9 +33,6 @@ export const sourceCode = {
         return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
     },
 
-    shadowRealodAST({ parseTree, ast }) {
-        return { type: evt.SOURCE_CODE_UPDATE_AST, payload: { parseTree, ast } };
-    },
 
     // setContent (content): IActionCreator {
     //     return async (dispatch: IDispatch, getState) => {

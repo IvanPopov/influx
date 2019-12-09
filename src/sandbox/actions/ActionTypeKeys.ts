@@ -3,7 +3,6 @@ export const SOURCE_FILE_LOADED                     = 'source-file-loaded';
 export const SOURCE_FILE_LOADING_FAILED             = 'source-file-loading-failed';
 export const SOURCE_FILE_DROP_STATE                 = 'source-file-drop-state';
 
-export const GRAMMAR_FILE_SPECIFIED                 = 'grammar-file-specified';
 export const GRAMMAR_CONTENT_SPECIFIED              = 'grammar-content-specified';
 export const PARSER_PARAMS_CHANGED                  = 'parser-params-changed';
 export const PARSING_PARAMS_CHANGED                 = 'parsing-params-changed';
@@ -17,9 +16,6 @@ export const SOURCE_CODE_REMOVE_MARKER              = 'source-code-remove-marker
 export const SOURCE_CODE_REMOVE_MARKER_BATCH        = 'source-code-remove-marker-batch';
 export const SOURCE_CODE_ADD_BREAKPOINT             = 'source-code-add-breakpoint';
 export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakpoint';
-
-// aux event for internal needs
-export const SOURCE_CODE_UPDATE_AST                 = 'source-code-update-ast';
 
 export const DEBUGGER_COMPILE                       = 'debugger-compile';
 export const DEBUGGER_START_DEBUG                   = 'debugger-start-debug';

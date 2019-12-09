@@ -1,7 +1,8 @@
 import { IAnalyzeResult as ISemanticAnalysisResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { SLASTDocument } from '@lib/fx/SLASTDocument';
 import { IMap } from '@lib/idl/IMap';
-import { EParserType, IParserParams, IParseTree, IRange } from '@lib/idl/parser/IParser';
+import { EParserType, IParseNode, IParserParams, IParseTree, IRange } from '@lib/idl/parser/IParser';
 import { IPipeline } from '@sandbox/containers/playground/Pipeline';
 import { RouterState } from 'connected-react-router';
 
@@ -35,7 +36,7 @@ export interface IFileState {
     contentModified: string;
     error: Error;                   // source file loading's error
 
-    parseTree: IParseTree;              // syntax analysis' results
+    slastDocument: SLASTDocument;  // syntax analysis' results
     analysis: ISemanticAnalysisResult;
 
     markers: IMap<IMarker>;

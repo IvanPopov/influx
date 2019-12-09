@@ -1,10 +1,9 @@
-import { EffectParser } from '@lib/fx/EffectParser';
-// import { ILanguageService, SLDocument } from '@lib/idl/IInstruction';
 import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
 import { IParserParams } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
 import * as Comlink from 'comlink';
 import { CodeLens, Diagnostic, Position, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
+import { createDefaultSLParser } from '@lib/fx/SLParser';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -26,27 +25,16 @@ class LanguageServiceProvider {
     private documents: Map<string, { textDocument: TextDocument; slDocument: SLDocument }> = new Map();
 
     init(parserParams: IParserParams, parsingFlags: number) {
-        //
-        // Setup parser
-        // TODO: simplify api
-        //
-
-        if (!parserParams.grammar) {
-            console.warn('parser parameters are invalid.');
-            return null;
-        }
-
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
-        const parser = new EffectParser();
-
-        if (!parser.init(parserParams.grammar, parserParams.flags, parserParams.type)) {
+        try {
+            createDefaultSLParser(parserParams);
+            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
+        } catch (e) {
             console.error('could not initialize parser.');
             return null;
-        } else {
-            console.log('%c [ DONE ]', 'background: #222; color: #bada55');
         }
 
-        this.service = getLanguageService(parser, parsingFlags);
+        this.service = getLanguageService(parsingFlags);
     }
 
     async validate(rawDocument): Promise<Diagnostic[]> {
