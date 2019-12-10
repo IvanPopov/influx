@@ -101,7 +101,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         this.state = { root: { path: null, shown: true, totalFiles: 0 } };
     }
 
-    componentWillUpdate(nextProps: IFileListViewProps, nextState) {
+    UNSAFE_componentWillUpdate(nextProps: IFileListViewProps, nextState) {
         const { state } = this;
 
         if (state.root.path === nextProps.path) {

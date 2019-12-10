@@ -14,7 +14,7 @@ import { ParseTree } from "./ParseTree";
 import { END_SYMBOL, ERROR, UNKNOWN_TOKEN } from "./symbols";
 import { extendRange } from "./util";
 
-export enum EParserErrors {
+export enum EParsingErrors {
     SyntaxUnknownError = 2051,
     SyntaxUnexpectedEOF,
     SyntaxRecoverableStateNotFound,
@@ -38,28 +38,30 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
 
     protected resolveRange(code: number, desc: IMap<any>): IRange {
         switch (code) {
-            case EParserErrors.SyntaxUnknownError:
-            case EParserErrors.SyntaxUnexpectedEOF:
+            case EParsingErrors.SyntaxUnknownError:
+            case EParsingErrors.SyntaxUnexpectedEOF:
                 return desc.token.loc;
+            case EParsingErrors.GeneralCouldNotReadFile:
+                return desc.loc;
         }
         return null;
     }
 
 
     protected resolvePosition(code: number, desc: IMap<any>): IPosition {
-        console.assert(code != EParserErrors.SyntaxUnknownError);
+        console.assert(code != EParsingErrors.SyntaxUnknownError);
         return { line: desc.line, column: 0, file: null };
     }
 
 
     protected diagnosticMessages() {
         return {
-            [EParserErrors.SyntaxUnknownError]: "Syntax error during parsing. Token: '{token.value}'\n" +
+            [EParsingErrors.SyntaxUnknownError]: "Syntax error during parsing. Token: '{token.value}'\n" +
                 "Line: {token.loc.start.line}. Column: {token.loc.start.column}.",
-            [EParserErrors.SyntaxUnexpectedEOF]: "Syntax error. Unexpected EOF.",
-            [EParserErrors.GeneralCouldNotReadFile]: "Could not read file '{target}'.",
-            [EParserErrors.GeneralParsingLimitIsReached]: "Parsing limit is reached.",
-            [EParserErrors.SyntaxRecoverableStateNotFound]: "Recoverable state not found."
+            [EParsingErrors.SyntaxUnexpectedEOF]: "Syntax error. Unexpected EOF.",
+            [EParsingErrors.GeneralCouldNotReadFile]: "Could not read file '{target}'.",
+            [EParsingErrors.GeneralParsingLimitIsReached]: "Parsing limit is reached.",
+            [EParsingErrors.SyntaxRecoverableStateNotFound]: "Recoverable state not found."
         };
     }
 }
@@ -173,17 +175,17 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    private readToken(): IToken {
+    protected readToken(): IToken {
         return this.lexer.getNextToken();
     }
 
     
-    private emitError(code: number, token: IToken) {
+    protected emitError(code: number, token: IToken) {
         this.diag.error(code, { ...this.lexer.getLocation(), token });
     }
 
     
-    private emitCritical(code: number, token: IToken = null) {
+    protected emitCritical(code: number, token: IToken = null) {
         this.diag.critical(code, { ...this.lexer.getLocation(), token });
     }
 
@@ -263,7 +265,7 @@ export class ASTDocument implements IASTDocument {
                 // global recursion prevention in debug mode
                 if (developerMode) {
                     if (opCounter > opLimit) {
-                        this.emitCritical(EParserErrors.GeneralParsingLimitIsReached);
+                        this.emitCritical(EParsingErrors.GeneralParsingLimitIsReached);
                     }
                     opCounter++;
                 }
@@ -276,9 +278,9 @@ export class ASTDocument implements IASTDocument {
                         // recursion prevention
                         if (causingErrorToken.index !== token.index) {
                             if (token.value === END_SYMBOL) {
-                                this.emitError(EParserErrors.SyntaxUnexpectedEOF, token);
+                                this.emitError(EParsingErrors.SyntaxUnexpectedEOF, token);
                             } else {
-                                this.emitError(EParserErrors.SyntaxUnknownError, token);
+                                this.emitError(EParsingErrors.SyntaxUnknownError, token);
                             }
                         } else {
                             // one more attempt to recover but from the next token
@@ -307,7 +309,7 @@ export class ASTDocument implements IASTDocument {
                         }
                         currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, token /* error token */);
                         if (currStateIndex === -1) {
-                            this.emitCritical(EParserErrors.SyntaxRecoverableStateNotFound);
+                            this.emitCritical(EParsingErrors.SyntaxRecoverableStateNotFound);
                         }
 
                         // perform error shift op.
@@ -339,7 +341,7 @@ export class ASTDocument implements IASTDocument {
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
                                 if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
                                     token = this.readToken();
                                 }
@@ -358,14 +360,14 @@ export class ASTDocument implements IASTDocument {
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, op.rule.left);
                                 if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
                                 }
                             }
                             break;
                     }
                 } else {
                     assert(!allowErrorRecoverty, `unexpected end, something went wrong :/`);
-                    this.emitCritical(EParserErrors.SyntaxUnknownError, token);
+                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
                 }
             }
 

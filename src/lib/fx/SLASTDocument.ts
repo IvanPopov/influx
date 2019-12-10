@@ -1,10 +1,12 @@
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags } from '@lib/idl/parser/IParser';
-import { ASTDocument } from "@lib/parser/ASTDocument";
+import { ASTDocument, EParsingErrors } from "@lib/parser/ASTDocument";
+import { Lexer } from '@lib/parser/Lexer';
+import * as uri from "@lib/uri/uri"
 
 import { defaultSLParser } from './SLParser';
 
-// const readFile = fname => fetch(fname).then(resp => resp.text());
+const readFile = fname => fetch(fname).then(resp => resp.text());
 
 
 const PREDEFINED_TYPES = [
@@ -16,7 +18,8 @@ const PREDEFINED_TYPES = [
 ];
 
 export class SLASTDocument extends ASTDocument {
-    protected includeList: Set<string>;;
+    protected includeList: Set<string>;
+    protected lexers: Lexer[];
 
     constructor({ parser = defaultSLParser() }: IASTConfig = {}) {
         super({ parser, knownTypes: new Set(PREDEFINED_TYPES) });
@@ -33,6 +36,7 @@ export class SLASTDocument extends ASTDocument {
         super.init(config);
 
         this.includeList = new Set();
+        this.lexers = [];
         this.ruleFunctions.set('addType', this._addType.bind(this));
         this.ruleFunctions.set('includeCode', this._includeCode.bind(this));
     }
@@ -46,48 +50,39 @@ export class SLASTDocument extends ASTDocument {
     }
 
     private async _includeCode(): Promise<EOperationType> {
-        // let tree = this.getSyntaxTree();
-        // let node = tree.lastNode;
-        // let file = node.value;
+        let tree = this.tree;
+        let node = tree.lastNode;
+        let file = node.value;
 
-        // //cuttin qoutes
-        // let includeURL = file.substr(1, file.length - 2);
+        //cuttin qoutes
+        let includeURL = file.substr(1, file.length - 2);
 
-        // file = uri.resolve(includeURL, `${this.getUri()}`);
+        file = uri.resolve(includeURL, `${this.uri}`);
 
-        // if (this.includeList[file]) {
-        //     return EOperationType.k_Ok;
-        // } 
+        if (this.includeList[file]) {
+            return EOperationType.k_Ok;
+        } 
         
         // let parserState = this._saveState();
 
-        // try {
-        //     let content = await readFile(file);
-        //     parserState.source = parserState.source.substr(0, parserState.token.index) +
-        //     content + parserState.source.substr(parserState.token.index);
+        try {
+            let content = await readFile(file);
+            console.log(content);
+            
+            // parserState.source = parserState.source.substr(0, parserState.token.index) +
+            // content + parserState.source.substr(parserState.token.index);
 
-        //     this.loadState(parserState);
-        //     this.addIncludedFile(file);
-        //     let result = await this.resumeParse();
+            // this.loadState(parserState);
+            // this.addIncludedFile(file);
+            // let result = await this.resumeParse();
 
-        //     return result == EParserCode.k_Ok? EOperationType.k_Ok : EOperationType.k_Error;
-        // } catch (e) {
-        //     this.critical(EParserErrors.GeneralCouldNotReadFile, { target: file });
-        // }
+            // return result == EParserCode.k_Ok? EOperationType.k_Ok : EOperationType.k_Error;
+            return EOperationType.k_Ok;
+        } catch (e) {
+            this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.lexer.getLocation(), loc: node.loc, target: file });
+        }
 
         return EOperationType.k_Error;
-    }
-
-    _saveState(): IASTDocument {
-        // const state = super.saveState();
-        // state.includeFiles = this.includeList;
-        // return state;
-        return this;
-    }
-
-    public _loadState(pState: IASTDocument): void {
-        // super.loadState(pState);
-        // this.includeList = <IMap<boolean>>pState["includeFiles"];
     }
 }
 

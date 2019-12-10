@@ -23,16 +23,16 @@ export interface IParserProps extends IParserState {
 class ParserParameters extends React.Component<IParserProps, IParserState> {
     state: IParserState;
 
-    componentWillMount() {
+    UNSAFE_componentWillMount(): void {
         this.setState(this.props);
     }
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps: IParserProps): void {
         this.setState(nextProps);
     }
 
     // tslint:disable-next-line:max-func-body-length
-    render() {
+    render(): JSX.Element {
         const { type, flags, grammar, parsingFlags } = this.state;
         return (
             <Grid>

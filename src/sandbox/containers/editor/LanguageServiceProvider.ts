@@ -31,7 +31,7 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     };
 
     return {
-        range: Range.create(start.line, start.column, end.line, end.column),
+        range: Range.create(start.line, start.column, (end || start).line, (end || start).column),
         severity: severities[category],
         code,
         message: content

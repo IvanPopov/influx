@@ -21,7 +21,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { Diagnostic, DiagnosticSeverity, Position, TextDocument } from 'vscode-languageserver-types';
+import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
 
@@ -214,6 +214,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     // cache for params
     parserParamsCache: Object = {};
 
+    model: monaco.editor.ITextModel;
+
     setupDecorations(): monaco.editor.IModelDeltaDecoration[] {
         const { props } = this;
         const { classes } = props;
@@ -371,7 +373,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     // validation should always be done before any other requests
                     await self.pendingValidations();
 
-                    const lenses = p2m.asCodeLenses(await provider.provideFxCodeLenses(m2p.asTextDocumentIdentifier(model)));
+                    const lenses = p2m.asCodeLenses(await provider.provideFxCodeLenses(self.asTextDocumentIdentifier()));
                     return { lenses, dispose() { } };
                 }
             });
@@ -425,7 +427,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     await self.pendingValidations();
 
                     const signatureHelp = await provider.provideSignatureHelp(
-                        m2p.asTextDocumentIdentifier(model), m2p.asPosition(position.lineNumber, position.column));
+                        self.asTextDocumentIdentifier(), m2p.asPosition(position.lineNumber, position.column));
                     return signatureHelp && { value: p2m.asSignatureHelp(signatureHelp), dispose() { } };
                 }
             }
@@ -454,6 +456,12 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         //             return null;
         //         }
         //     });
+    }
+
+    asTextDocumentIdentifier(): TextDocumentIdentifier {
+        return {
+            uri: this.getFile().filename
+        };
     }
 
 
@@ -538,9 +546,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string) {
-        /* this.getFile().filename */
-        // TODO: use correct uri?
-        return TextDocument.create(model.uri.toString(), model.getModeId(), model.getVersionId(), newContent || model.getValue());
+        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), newContent || model.getValue());
     }
 
 
@@ -569,14 +575,21 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         }
     }
 
+    // componentWillMount() {
+    //     const file = this.getFile();
+    //     const uri = monaco.Uri.parse(`inmemory://${file.filename}`);
+    //     this.model = monaco.editor.createModel(file.content, LANGUAGE_ID, uri);
+    // }
 
     render() {
         const file = this.getFile();
+        // const uri = monaco.Uri.parse(`inmemory://${file.filename}`);
+        const content = file.content;
+
         return (
             <MonacoEditor
                 ref='monaco'
-                value={ (file.content) }
-
+                value={ content }
                 width='100%'
                 height='calc(100vh - 67px)' // todo: fixme
 
