@@ -1,8 +1,7 @@
 import { MakeOptional } from '@lib/common';
-import { IAnalyzeResult } from '@lib/fx/Analyzer';
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
-import { SLASTDocument } from '@lib/fx/SLASTDocument';
-import { EParserType, IParseTree } from '@lib/idl/parser/IParser';
+import { ISLDocument } from '@lib/idl/ISLDocument';
+import { EParserType, IASTDocument } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
 
@@ -22,8 +21,8 @@ export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { content
 export type ISourceFileLoadingFailed = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
 export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}>;
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string }>;
-export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { slastDocument: SLASTDocument }>;
-export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: IAnalyzeResult }>;
+export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { slastDocument: IASTDocument }>;
+export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: ISLDocument }>;
 
 export interface IMarkerDesc extends IMarker {
     name: string;

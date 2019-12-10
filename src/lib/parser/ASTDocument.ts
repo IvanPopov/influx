@@ -1,11 +1,12 @@
 import bf from "@lib/bf";
 import { isDef } from "@lib/common";
+import { assert } from "@lib/common";
 import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
-import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { ITextDocument } from "@lib/idl/ITextDocument";
+import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 import { StringRef } from "@lib/util/StringRef";
-import { assert } from "@lib/common";
 import { isNull } from "util";
 
 import { Lexer } from "./Lexer";
@@ -75,15 +76,45 @@ function cloneToken(token: IToken): IToken {
 }
 
 
+// class Context {
+//     allowErrorRecoverty: boolean = true;
+//     developerMode: boolean = false;
+
+//     lexer: Lexer;
+//     diagnostics: ParsingDiagnostics;
+//     knownTypes: Set<string>;
+//     ruleFunctions: Map<string, IRuleFunction>;
+    
+//     stack: number[] = [0];
+
+
+//     constructor() {
+//         this.diagnostics = new ParsingDiagnostics;
+//     }
+
+//     readToken() {
+//         return this.lexer.getNextToken();
+//     }
+
+
+//     private error(code: number, token: IToken) {
+//         this.diagnostics.error(code, { ...this.lexer.getLocation(), token });
+//     }
+
+//     private critical(code: number, token: IToken = null) {
+//         this.diagnostics.critical(code, { ...this.lexer.getLocation(), token });
+//     }
+// }
+
+
 export class ASTDocument implements IASTDocument {
     protected parser: IParser;
-    protected flags: number;
+    protected knownTypes: Set<string>;
+    protected ruleFunctions: Map<string, IRuleFunction>;
 
     protected diag: ParsingDiagnostics;
     protected tree: IParseTree;
     protected stack: number[];
-    protected knownTypes: Set<string>;
-    protected ruleFunctions: Map<string, IRuleFunction>;
     protected lexer: Lexer;
 
     constructor(config: IASTConfig) {
@@ -91,21 +122,15 @@ export class ASTDocument implements IASTDocument {
         this.init(config);
     }
 
-    protected init({ parser, uri, source, flags = IASTDocumentFlags.k_Optimize, knownTypes = new Set(), ruleFunctions = new Map }: IASTConfig) {
+    protected init({ parser, knownTypes = new Set(), ruleFunctions = new Map }: IASTConfig) {
         const lexerEngine = parser.lexerEngine;
 
         this.parser = parser;
-        this.flags = flags;
-        this.diag = new ParsingDiagnostics;
-        this.tree = new ParseTree(bf.testAll(flags, IASTDocumentFlags.k_Optimize));
-        this.stack = [0];
         this.knownTypes = knownTypes;
         this.ruleFunctions = ruleFunctions;
         this.lexer = new Lexer({
             engine: lexerEngine,
-            uri: StringRef.make(uri),
-            knownTypes,
-            source
+            knownTypes
         });
     }
 
@@ -126,21 +151,16 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    private readToken(): IToken {
-        return this.lexer.getNextToken();
-    }
-
-    private emitError(code: number, token: IToken) {
-        this.diag.error(code, { ...this.lexer.getLocation(), token });
-    }
-
-    private emitCritical(code: number, token: IToken = null) {
-        this.diag.critical(code, { ...this.lexer.getLocation(), token });
-    }
-
-    async parse(): Promise<EParserCode> {
-        const developerMode = bf.testAll(this.flags, IASTDocumentFlags.k_DeveloperMode);
+    async parse(textDocument: ITextDocument, flags: number = EASTParsingFlags.k_Optimize): Promise<EParserCode> {
+                
+        const developerMode = bf.testAll(flags, EASTParsingFlags.k_DeveloperMode);
         const allowErrorRecoverty = true;
+        const optimizeTree = bf.testAll(flags, EASTParsingFlags.k_Optimize);
+
+        this.diag = new ParsingDiagnostics;
+        this.tree = new ParseTree(optimizeTree);
+        this.stack = [0];
+        this.lexer.setup(textDocument);
 
         await this.run(this.readToken(), { developerMode, allowErrorRecoverty });
 
@@ -150,6 +170,21 @@ export class ASTDocument implements IASTDocument {
         }
 
         return EParserCode.k_Ok;
+    }
+
+
+    private readToken(): IToken {
+        return this.lexer.getNextToken();
+    }
+
+    
+    private emitError(code: number, token: IToken) {
+        this.diag.error(code, { ...this.lexer.getLocation(), token });
+    }
+
+    
+    private emitCritical(code: number, token: IToken = null) {
+        this.diag.critical(code, { ...this.lexer.getLocation(), token });
     }
 
 
@@ -199,6 +234,7 @@ export class ASTDocument implements IASTDocument {
         return -1;
     }
 
+    
     private async operationAdditionalAction(stateIndex: number, grammarSymbol: string): Promise<EOperationType> {
         const funcName = this.parser.findFunctionByState(stateIndex, grammarSymbol);
         if (!isNull(funcName)) {
@@ -208,8 +244,8 @@ export class ASTDocument implements IASTDocument {
         return EOperationType.k_Ok;
     }
 
-    async run(token: IToken,
-        { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
+
+    private async run(token: IToken, { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
 
         const { syntaxTable } = this.parser;
         const { stack, tree } = this;

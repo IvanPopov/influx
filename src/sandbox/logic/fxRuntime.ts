@@ -17,12 +17,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
 
-        if (!file.analysis) {
+        if (!file.slDocument) {
             done();
             return;
         }
 
-        if (file.analysis.diag.errors > 0) {
+        if (file.slDocument.diagnosticReport.errors > 0) {
             done();
             return;
         }

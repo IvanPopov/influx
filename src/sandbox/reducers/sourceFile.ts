@@ -14,7 +14,7 @@ const initialState: IFileState = {
     markers: {},
     breakpoints: [],
     slastDocument: null,
-    analysis: null,
+    slDocument: null,
     debugger: {
         entryPoint: null,
         runtime: null,
@@ -46,7 +46,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
             slASTDocument: null,
-            analysis: null,
+            slDocument: null,
             pipeline: null,
             $pipeline: 0
         }),
@@ -59,7 +59,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
             slASTDocument: null,
-            analysis: null,
+            slDocument: null,
             pipeline: null,
             $pipeline: 0
         }),
@@ -74,7 +74,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
         ({ ...state, slastDocument: action.payload.slastDocument }),
 
     [evt.SOURCE_CODE_ANALYSIS_COMPLETE]: (state, action: ISourceCodeAnalysisComplete) =>
-        ({ ...state, analysis: action.payload.result }),
+        ({ ...state, slDocument: action.payload.result }),
 
     //
     // markers
@@ -153,7 +153,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 // export const getFileStateNoMarkers = (state: IStoreState): IFileState => ({ ...state.sourceFile, markers: null });
 export const getFileState = (state: IStoreState): IFileState => state.sourceFile;
 export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(state).debugger;
-export const getScope = (file: IFileState): IScope => file.analysis ? file.analysis.scope : null;
+export const getScope = (file: IFileState): IScope => file.slDocument ? file.slDocument.root.scope : null;
 export const getPipelineName = (file: IFileState) => file.pipeline ? file.pipeline.name() : null;
 export function filterPartFx(scope: IScope): IPartFxInstruction[] {
     if (!scope) {

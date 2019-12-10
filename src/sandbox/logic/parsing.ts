@@ -3,7 +3,7 @@
 import { assert, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
+import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { createDefaultSLParser } from '@lib/fx/SLParser';
 import { IDispatch } from '@sandbox/actions';
@@ -61,7 +61,7 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-    const slastDocument = await createSLASTDocument({ source, uri, flags });
+    const slastDocument = await createSLASTDocument({ source, uri }, flags);
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
@@ -81,8 +81,7 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
         return;
     }
 
-    const result = FxAnalyzer.analyze(slastDocument);
-    const { diag } = result;
+    const slDocument = await createFXSLDocument(slastDocument);
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
@@ -90,7 +89,7 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
 
     // if (!diag.errors)
     {
-        dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result } });
+        dispatch({ type: evt.SOURCE_CODE_ANALYSIS_COMPLETE, payload: { result: slDocument } });
     }
 }
 
@@ -146,7 +145,7 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 
 
 function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
-    const fn = fileState.analysis.root.scope.findFunction(debuggerState.entryPoint, null);
+    const fn = fileState.slDocument.root.scope.findFunction(debuggerState.entryPoint, null);
     const locList = [];
 
     if (fn && debuggerState.runtime) {
@@ -182,7 +181,7 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 
         let runtime = null;
 
-        if (!isNull(file.analysis.scope)) {
+        if (!isNull(file.slDocument.root)) {
             const scope = getScope(file);
             const func = scope.findFunction(entryPoint, null);
             runtime = Bytecode.translate(func);

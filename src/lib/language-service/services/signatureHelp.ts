@@ -1,20 +1,19 @@
 import { Visitor } from "@lib/fx/Visitors";
 import { EInstructionTypes, IFunctionCallInstruction, IFunctionDeclInstruction, IInstruction } from "@lib/idl/IInstruction";
-import { SLDocument } from "@lib/idl/ILanguageService";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 import { checkRange } from "@lib/parser/util";
 import { ParameterInformation, Position, SignatureHelp, SignatureInformation, TextDocument } from "vscode-languageserver-types";
 
 const asRange = (instr: IInstruction) => instr.sourceNode.loc;
 
 export class SLSignatureHelp {
-    doSignatureHelp(textDocument: TextDocument, position: Position, slDocument: SLDocument): SignatureHelp {
+    doSignatureHelp(textDocument: TextDocument, position: Position, slDocument: ISLDocument): SignatureHelp {
         if (!slDocument) {
             return null;
         }
         
-        const root = slDocument;
         const offset = textDocument.offsetAt(position);
-        const decl = root.instructions.find(instr => checkRange(asRange(instr), offset));
+        const decl = slDocument.root.instructions.find(instr => checkRange(asRange(instr), offset));
         
         if (decl) {
             // console.log(decl);

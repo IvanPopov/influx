@@ -1,10 +1,8 @@
-import * as FxAnalyzer from '@lib/fx/FxAnalyzer';
+import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
-import { SLDocument } from "@lib/idl/ILanguageService";
-import { AbstractParser } from "@lib/parser/AbstractParser";
+import { ISLDocument } from '@lib/idl/ISLDocument';
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { Diagnostic, DiagnosticSeverity, Range, TextDocument } from "vscode-languageserver-types";
-import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 
 function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     const { code, content, start, end, category } = diagEntry;
@@ -23,7 +21,7 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
 }
 
 export class SLValidation {
-    async doValidation(textDocument: TextDocument, slDocument: SLDocument): Promise<Diagnostic[]> {
+    async doValidation(textDocument: TextDocument, slDocument: ISLDocument): Promise<Diagnostic[]> {
         if (!textDocument) {
             return null;
         }
@@ -31,11 +29,7 @@ export class SLValidation {
         const uri = textDocument.uri;
         const source = textDocument.getText();
 
-        const slastDocument = await createSLASTDocument({ uri, source });
-        const semanticResults = FxAnalyzer.analyze(slastDocument);
-
-        const diag = Diagnostics.mergeReports([slastDocument.diagnosticReport, semanticResults.diag]);
-
-        return diag.messages.map(asDiagnostic);
+        const fxslDocument = await createFXSLDocument({ uri, source });
+        return fxslDocument.diagnosticReport.messages.map(asDiagnostic);
     }
 }

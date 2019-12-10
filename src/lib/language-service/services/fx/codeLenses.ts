@@ -1,19 +1,18 @@
 import { isNull } from "@lib/common";
 import { EInstructionTypes, ETechniqueType } from "@lib/idl/IInstruction";
-import { SLDocument } from "@lib/idl/ILanguageService";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IRange } from "@lib/idl/parser/IParser";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { CodeLens, Command, Position, Range, TextDocument } from "vscode-languageserver-types";
 
 export class FXCodeLenses {
-    doProvide(textDocument: TextDocument, slDocument: SLDocument): CodeLens[] {
+    doProvide(textDocument: TextDocument, slDocument: ISLDocument): CodeLens[] {
         if (!slDocument) {
             return [];
         }
 
         const lenses: CodeLens[] = [];
-        const root = slDocument;
-        const scope = root.scope;
+        const scope = slDocument.root.scope;
 
         /**
          * Just a draft code :)

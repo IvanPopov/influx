@@ -1,5 +1,5 @@
-import { EOperation } from "../../idl/bytecode/EOperations";
-import { assert } from "./../../common";
+import { assert } from "@lib/common";
+import { EOperation } from "@lib/idl/bytecode/EOperations";
 
 // todo: use more compact format than 4 x int32
 

@@ -1,5 +1,5 @@
 import { assert, isDef } from "@lib/common";
-import { IdExprInstruction } from "@lib/fx/instructions/IdExprInstruction";
+import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
 import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";

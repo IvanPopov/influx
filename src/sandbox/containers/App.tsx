@@ -221,7 +221,7 @@ class App extends React.Component<IAppProps> {
 
 
     static getDerivedStateFromProps(props: IAppProps, state) {
-        const nextAnalysis = props.sourceFile.analysis;
+        const nextAnalysis = props.sourceFile.slDocument;
         const contentChanged = !(state.prevAnalysis === nextAnalysis);
         let stateDiff = null;
 
@@ -285,7 +285,7 @@ class App extends React.Component<IAppProps> {
 
     canCompile(): boolean {
         const { sourceFile } = this.props;
-        return sourceFile.analysis && sourceFile.analysis.diag.errors === 0;
+        return sourceFile.slDocument && sourceFile.slDocument.diagnosticReport.errors === 0;
     }
 
 

@@ -1,4 +1,5 @@
-import { EOperationType, IASTConfig, IASTDocument, IASTDocumentFlags } from '@lib/idl/parser/IParser';
+import { ITextDocument } from '@lib/idl/ITextDocument';
+import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags } from '@lib/idl/parser/IParser';
 import { ASTDocument } from "@lib/parser/ASTDocument";
 
 import { defaultSLParser } from './SLParser';
@@ -17,14 +18,21 @@ const PREDEFINED_TYPES = [
 export class SLASTDocument extends ASTDocument {
     protected includeList: Set<string>;;
 
-    constructor({ uri, source, flags = IASTDocumentFlags.k_Optimize, parser = defaultSLParser() }: IASTConfig) {
-        super({ uri, source, flags, parser, knownTypes: new Set(PREDEFINED_TYPES) });
+    constructor({ parser = defaultSLParser() }: IASTConfig = {}) {
+        super({ parser, knownTypes: new Set(PREDEFINED_TYPES) });
     }
+
+    
+    async parse(textDocument: ITextDocument, flags?: number): Promise<EParserCode> {
+        this.includeList.add(textDocument.uri);
+        return await super.parse(textDocument, flags);
+    }
+
 
     protected init(config: IASTConfig) {
         super.init(config);
 
-        this.includeList = new Set([ this.uri ]);
+        this.includeList = new Set();
         this.ruleFunctions.set('addType', this._addType.bind(this));
         this.ruleFunctions.set('includeCode', this._includeCode.bind(this));
     }
@@ -84,8 +92,8 @@ export class SLASTDocument extends ASTDocument {
 }
 
 
-export async function createSLASTDocument(config: IASTConfig): Promise<SLASTDocument> {
-    const document = new SLASTDocument(config);
-    await document.parse();
+export async function createSLASTDocument(textDocument: ITextDocument, flags?: number): Promise<IASTDocument> {
+    const document = new SLASTDocument();
+    await document.parse(textDocument, flags);
     return document;
 }

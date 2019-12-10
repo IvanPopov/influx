@@ -1,9 +1,11 @@
-import { ILanguageService, SLDocument } from '@lib/idl/ILanguageService';
+import { createDefaultSLParser } from '@lib/fx/SLParser';
+import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
+import { ILanguageService } from '@lib/idl/ILanguageService';
+import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IParserParams } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
 import * as Comlink from 'comlink';
-import { CodeLens, Diagnostic, Position, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
-import { createDefaultSLParser } from '@lib/fx/SLParser';
+import { CodeLens, Diagnostic, DiagnosticSeverity, Position, Range, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -20,9 +22,27 @@ function asTextDocument({ _content, _languageId, _lineOffsets, _uri, _version })
 }
 
 
+function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
+    const { code, content, start, end, category } = diagEntry;
+
+    const severities = {
+        [EDiagnosticCategory.k_Error]: DiagnosticSeverity.Error,
+        [EDiagnosticCategory.k_Warning]: DiagnosticSeverity.Warning
+    };
+
+    return {
+        range: Range.create(start.line, start.column, end.line, end.column),
+        severity: severities[category],
+        code,
+        message: content
+    };
+}
+
+
+
 class LanguageServiceProvider {
     private service: ILanguageService;
-    private documents: Map<string, { textDocument: TextDocument; slDocument: SLDocument }> = new Map();
+    private documents: Map<string, { textDocument: TextDocument; slDocument: ISLDocument }> = new Map();
 
     init(parserParams: IParserParams, parsingFlags: number) {
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
@@ -40,10 +60,10 @@ class LanguageServiceProvider {
     async validate(rawDocument): Promise<Diagnostic[]> {
         const textDocument = asTextDocument(rawDocument);
 
-        const { document: slDocument, diagnostics } = await this.service.parseDocument(textDocument);
+        const slDocument = await this.service.parseDocument(textDocument);
         this.documents.set(textDocument.uri, { textDocument, slDocument });
 
-        return diagnostics;
+        return slDocument.diagnosticReport.messages.map(asDiagnostic);
     }
 
     async provideFxCodeLenses(textDocumentIdentifier: TextDocumentIdentifier): Promise<CodeLens[]> {
@@ -64,7 +84,7 @@ class LanguageServiceProvider {
         return this.service.doSignatureHelp(textDocument, position, slDocument);
     }
 
-    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): { textDocument: TextDocument; slDocument: SLDocument } {
+    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): { textDocument: TextDocument; slDocument: ISLDocument } {
         if (!this.documents.has(textDocumentIdentifier.uri)) {
             console.warn('could not find document', textDocumentIdentifier.uri);
             return { textDocument: null, slDocument: null };

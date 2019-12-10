@@ -1,6 +1,7 @@
 import { isString } from '@lib/common';
 import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
+import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { StringRef } from '@lib/util/StringRef';
@@ -163,8 +164,6 @@ export class LexerEngine implements ILexerEngine {
 
 interface ILexerConfig {
     engine: LexerEngine;
-    source: string;
-    uri: IFile | string;
     knownTypes?: Set<string>;
 }
 
@@ -179,9 +178,7 @@ export class Lexer {
     diagnostics: LexerDiagnostics;
     knownTypes: Set<string>;
 
-    constructor({ engine, source, uri, knownTypes = new Set() }: ILexerConfig) {
-        this.uri = StringRef.make(uri);
-        this.source = source;
+    constructor({ engine, knownTypes = new Set() }: ILexerConfig) {
         this.lineNumber = 0;
         this.columnNumber = 0;
         this.index = 0;
@@ -189,6 +186,11 @@ export class Lexer {
         this.diagnostics = new LexerDiagnostics;
         this.knownTypes = knownTypes;
         this.engine = engine;
+    }
+
+    setup(textDocument: ITextDocument) {
+        this.uri = StringRef.make(textDocument.uri);
+        this.source = textDocument.source;
     }
 
 

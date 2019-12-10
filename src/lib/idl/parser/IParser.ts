@@ -152,10 +152,7 @@ export interface ILexerEngine {
 
 
 export interface IASTConfig {
-    uri: string | IFile;
-    source: string;
     parser?: IParser;
-    flags?: number; // EParsingFlags bitset
     knownTypes?: Set<string>;
     ruleFunctions?: Map<string, IRuleFunction>;
 }

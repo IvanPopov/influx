@@ -1,3 +1,4 @@
+import { defaultSLGrammar } from '@lib/fx/SLParser';
 import { parser } from '@sandbox/actions';
 import ActionTypes from '@sandbox/actions/ActionTypes';
 import { App } from '@sandbox/containers';
@@ -15,7 +16,6 @@ import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
 import { Header, Modal } from 'semantic-ui-react';
-import { defaultSLGrammar } from '@lib/fx/SLParser';
 
 require('semantic-ui-less/semantic.less');
 
@@ -39,7 +39,7 @@ const logger = createLogger({
 const reduxImmutableState = reduxImmutableStateInvariant({
     ignore: [
         'sourceFile.slastDocument',
-        'sourceFile.analysis',
+        'sourceFile.slDocument',
         'sourceFile.debugger.runtime',
         'sourceFile.pipeline'
     ]

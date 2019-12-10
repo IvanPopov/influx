@@ -1,24 +1,22 @@
-
 import { assert, isDef, isDefAndNotNull } from "@lib/common";
-import { DeclStmtInstruction } from "@lib/fx/instructions/DeclStmtInstruction";
-import { ExprInstruction } from "@lib/fx/instructions/ExprInstruction";
-import { Instruction } from "@lib/fx/instructions/Instruction";
-import { ReturnStmtInstruction } from "@lib/fx/instructions/ReturnStmtInstruction";
-import { VariableDeclInstruction } from "@lib/fx/instructions/VariableDeclInstruction";
-import * as SystemScope from "@lib/fx/SystemScope";
-import { T_FLOAT, T_INT } from "@lib/fx/SystemScope";
+import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
+import { ExprInstruction } from "@lib/fx/analisys/instructions/ExprInstruction";
+import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
+import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
+import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
+import * as SystemScope from "@lib/fx/analisys/SystemScope";
+import { T_FLOAT, T_INT } from "@lib/fx/analisys/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IVariableDeclInstruction, IUnaryExprInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { isNull, isString } from "util";
+
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-
-
 
 export interface ISubProgram {
     code: Uint8Array;

@@ -1,4 +1,3 @@
-
 /* tslint:disable:typedef */
 /* tslint:disable:use-simple-attributes */
 /* tslint:disable:react-a11y-event-has-role */
@@ -6,24 +5,16 @@
 /* tslint:disable:cyclomatic-complexity */
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
-import { ComplexTypeInstruction } from '@lib/fx/instructions/ComplexTypeInstruction';
-import { DeclStmtInstruction } from '@lib/fx/instructions/DeclStmtInstruction';
-import { ExprStmtInstruction } from '@lib/fx/instructions/ExprStmtInstruction';
-import { ForStmtInstruction } from '@lib/fx/instructions/ForStmtInstruction';
-import { Instruction } from '@lib/fx/instructions/Instruction';
-import { ReturnStmtInstruction } from '@lib/fx/instructions/ReturnStmtInstruction';
-import { SystemTypeInstruction } from '@lib/fx/instructions/SystemTypeInstruction';
-import {
-    EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction,
-    ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction,
-    IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction,
-    IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction,
-    IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction,
-    IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction,
-    IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction,
-    IVariableDeclInstruction, IVariableTypeInstruction
-} from '@lib/idl/IInstruction';
+import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
+import { DeclStmtInstruction } from '@lib/fx/analisys/instructions/DeclStmtInstruction';
+import { ExprStmtInstruction } from '@lib/fx/analisys/instructions/ExprStmtInstruction';
+import { ForStmtInstruction } from '@lib/fx/analisys/instructions/ForStmtInstruction';
+import { Instruction } from '@lib/fx/analisys/instructions/Instruction';
+import { ReturnStmtInstruction } from '@lib/fx/analisys/instructions/ReturnStmtInstruction';
+import { SystemTypeInstruction } from '@lib/fx/analisys/instructions/SystemTypeInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
+import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
@@ -31,9 +22,8 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { Icon, List, Message } from 'semantic-ui-react';
-import { IWithStyles } from '.';
-import { IAnalyzeResult } from '@lib/fx/Analyzer';
 
+import { IWithStyles } from '.';
 
 const styles = {
     parentIcon: {
@@ -182,7 +172,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
     };
 
-    analysisCache: IAnalyzeResult = null;
+    documentCache: ISLDocument = null;
 
     constructor(props) {
         super(props);
@@ -198,12 +188,12 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
     componentDidUpdate() {
-        this.analysisCache = this.props.analysis;
+        this.documentCache = this.props.slDocument;
     }
 
 
     render() {
-        const { analysis } = this.props;
+        const { slDocument: analysis } = this.props;
 
         if (isNull(analysis)) {
             return null;
