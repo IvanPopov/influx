@@ -30,7 +30,7 @@ float random(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
 }
 
-float3 randUnitCircle(int partId)
+float3 randUnitCircle(uint partId)
 {
 	float2 seed = float2(elapsedTimeLevel,(float)partId * elapsedTime);
 	float alpha = random(seed) * 3.14f * 2.f;
@@ -55,7 +55,7 @@ float3 sizeFromPos(float3 pos)
 	return float3(1.f, noise(pos.xz * 1.3f + float2(elapsedTimeLevel * 1.f, 0.f)) / 0.06f, 1.f) * 0.03f;
 }
 
-void Init(out Part part, int partId)
+void Init(out Part part, uint partId)
 {
 	part.pos = randUnitCircle(partId);
 	part.size = sizeFromPos(part.pos);

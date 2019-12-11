@@ -5,13 +5,13 @@ import { IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IIdI
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
-import { ProgramScope } from "./ProgramScope";
-import * as SystemScope from './SystemScope';
-import { T_BOOL, T_INT, T_VOID } from "./SystemScope";
 import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
+import { ProgramScope } from "./ProgramScope";
+import * as SystemScope from './SystemScope';
+import { T_BOOL, T_INT, T_UINT, T_VOID } from "./SystemScope";
 
 type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruction>;
 // type is internal property which is always ETechniqueType.k_PartFx for particle fx's,
@@ -375,8 +375,9 @@ export class FxAnalyzer extends Analyzer {
                                 {
                                     /** Init routine expected as 'void init(in Part part)'. */
                                     let validators: ICompileValidator[] = [
-                                        { ret: T_VOID, args: [null, T_INT] },  /* init(PART part, int partId) */
-                                        { ret: T_VOID, args: [null] },         /* init(PART part) */
+                                        { ret: T_VOID, args: [null, T_INT] },   /* init(PART part, int partId) */
+                                        { ret: T_VOID, args: [null, T_UINT] },  /* init(PART part, int partId) */
+                                        { ret: T_VOID, args: [null] },          /* init(PART part) */
                                     ];
 
                                     // TODO: show error in case of both functions are found

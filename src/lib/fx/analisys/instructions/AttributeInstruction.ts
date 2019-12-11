@@ -1,4 +1,5 @@
 import { EInstructionTypes, IAttributeInstruction, IInstruction, ILiteralInstruction } from "@lib/idl/IInstruction";
+
 import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IAttributeInstructionSettings extends IInstructionSettings {
@@ -25,7 +26,6 @@ export class AttributeInstruction extends Instruction implements IAttributeInstr
     }    
 
     toCode(): string {
-        // TODO: print args.
-        return `[${this.name}]`;
+        return `[${this.name}${ this.args.length > 0 ? `(${this.args.map(arg => arg.toCode()).join(', ')})`: `` }]`;
     }
 }

@@ -530,8 +530,12 @@ export class Analyzer {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
-        let generalType = this.analyzeUsageType(context, program, children[children.length - 1]);
-        let vars: IVariableDeclInstruction[] = [];
+        const generalType = this.analyzeUsageType(context, program, children[children.length - 1]);
+        const vars: IVariableDeclInstruction[] = [];
+
+        if (isNull(generalType)) {
+            return null;
+        }
 
         for (let i = children.length - 2; i >= 1; i--) {
             if (children[i].name === 'Variable') {
@@ -559,6 +563,9 @@ export class Analyzer {
         for (let i = children.length - 1; i >= 0; i--) {
             if (children[i].name === 'Type') {
                 type = this.analyzeType(context, program, children[i]);
+                if (isNull(type)) {
+                    return null
+                }
             }
             else if (children[i].name === 'Usage') {
                 usages.push(this.analyzeUsage(children[i]));
@@ -599,6 +606,7 @@ export class Analyzer {
 
             case 'ScalarType':
             case 'ObjectType':
+                // TODO: add support for RWBuffer<type>
                 type = scope.findType(children[children.length - 1].value);
 
                 if (isNull(type)) {
@@ -1161,6 +1169,9 @@ export class Analyzer {
                 const funcArguments = func.def.params;
 
                 for (let i = 0; i < args.length; i++) {
+                    if (isNull(args[i])) {
+                        continue;
+                    }
                     if (funcArguments[i].type.hasUsage('out')) {
                         const decl = ExprInstruction.UnwindExpr(args[i]);
                         if (isNull(decl)) {
@@ -1521,6 +1532,10 @@ export class Analyzer {
 
         const type = this.analyzeConstTypeDim(context, program, children[2]);
         const sourceExpr = this.analyzeExpr(context, program, children[0]);
+
+        if (isNull(sourceExpr)) {
+            return null;
+        }
 
         if (!(<IVariableTypeInstruction>sourceExpr.type).readable) {
             context.error(sourceNode, EErrors.InvalidTypeForReading);
@@ -1977,8 +1992,16 @@ export class Analyzer {
 
         program.push(EScopeType.k_Default);
 
-        let definition = this.analyzeFunctionDef(context, program, children[children.length - 1]);
-        let func = globalScope.findFunction(definition.name, definition.params.map(param => param.type));
+        const attributes = [];
+        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
+            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        }
+
+        const definition = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
+
+
+
+        let func = globalScope.findFunction(definition.name, definition.params.map(param => param ? param.type : null));
 
         if (!isDef(func)) {
             context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
@@ -2034,7 +2057,7 @@ export class Analyzer {
         }
 
         assert(scope == globalScope);
-        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation });
+        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation, attributes });
 
         // NOTE: possible implicit replacement of function 
         //       without implementaion inside addFunction() call.
@@ -2123,8 +2146,13 @@ export class Analyzer {
     protected analyzeParameterDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
         const children = sourceNode.children;
 
-        let type = this.analyzeParamUsageType(context, program, children[1]);
-        let param = this.analyzeVariable(context, program, children[0], type);
+        const type = this.analyzeParamUsageType(context, program, children[1]);
+
+        if (isNull(type)) {
+            return null;
+        }
+
+        const param = this.analyzeVariable(context, program, children[0], type);
 
         return param;
     }
@@ -2145,6 +2173,9 @@ export class Analyzer {
         for (let i = children.length - 1; i >= 0; i--) {
             if (children[i].name === 'Type') {
                 type = this.analyzeType(context, program, children[i]);
+                if (isNull(type)) {
+                    return null;
+                }
             }
             else if (children[i].name === 'ParamUsage') {
                 usages.push(this.analyzeUsage(children[i]));
@@ -2564,7 +2595,7 @@ export class Analyzer {
         let cond: IExprInstruction = null;
         let step: IExprInstruction = null;
 
-        
+
         if (children[1].name === 'ERROR') {
             return null;
         }
@@ -3337,7 +3368,7 @@ export class Analyzer {
 
         if (operator === '!') {
             const boolType = <IVariableTypeInstruction>T_BOOL;
-            validate(boolType, EInstructionTypes.k_VariableDecl);
+            // validate(boolType, EInstructionTypes.k_VariableDecl);
 
             if (type.isEqual(boolType)) {
                 return boolType;

@@ -15,21 +15,16 @@ export interface IFunctionDefInstructionSettings extends IDeclInstructionSetting
  * EMPTY_OPERTOR VariableTypeInstruction IdInstruction VarDeclInstruction ... VarDeclInstruction
  */
 export class FunctionDefInstruction extends DeclInstruction implements IFunctionDefInstruction {
-    protected _parameterList: IVariableDeclInstruction[];
-    protected _returnType: IVariableTypeInstruction;
-    protected _id: IIdInstruction;
+    readonly params: IVariableDeclInstruction[];
+    readonly returnType: IVariableTypeInstruction;
+    readonly _id: IIdInstruction;
 
     constructor({ returnType, id, paramList = [], ...settings }: IFunctionDefInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDef, ...settings });
 
-        this._parameterList = paramList.map(param => Instruction.$withParent(param, this));
-        this._returnType = Instruction.$withParent(returnType, this);
+        this.params = paramList.map(param => Instruction.$withParent(param, this));
+        this.returnType = Instruction.$withParent(returnType, this);
         this._id = Instruction.$withParent(id, this);
-    }
-
-
-    get returnType(): IVariableTypeInstruction {
-        return this._returnType;
     }
 
 
@@ -38,27 +33,17 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
-    get params(): IVariableDeclInstruction[] {
-        return this._parameterList;
-    }
-
-
     get numArgsRequired(): number {
         // todo: check order!!
-        return this._parameterList.filter((param) => !param.initExpr).length;
-    }
-
-
-    get id(): IIdInstruction {
-        return this._id;
+        return this.params.filter((param) => !param || !param.initExpr).length;
     }
 
 
     toString(): string {
-        let def = this._returnType.hash + " " + this.name + "(";
+        let def = this.returnType.hash + " " + this.name + "(";
 
-        for (let i: number = 0; i < this._parameterList.length; i++) {
-            def += this._parameterList[i].type.hash + ",";
+        for (let i: number = 0; i < this.params.length; i++) {
+            def += this.params[i].type.hash + ",";
         }
 
         def += ")";
@@ -69,10 +54,7 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
     toCode(): string {
         const { id, returnType, params } = this;
-        return `${returnType.toCode()} ${id.toCode()}(${this.params.map(param => param.toCode()).join(', ')})`
-        // else {
-        //     code = "void " + this._id.toCode() + "()";
-        // }
+        return `${returnType.toCode()} ${id.toCode()}(${params.map(param => param.toCode()).join(', ')})`;
     }
 
 

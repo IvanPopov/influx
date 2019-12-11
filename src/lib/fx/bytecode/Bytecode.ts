@@ -5,7 +5,7 @@ import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { T_FLOAT, T_INT } from "@lib/fx/analisys/SystemScope";
+import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
@@ -667,9 +667,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const dstType = castExpr.type;
 
                     let op: EOperation;
-                    if (srcType.isEqual(T_FLOAT) && dstType.isEqual(T_INT)) {
+                    // FIXME: add support for dedicated FLOAT => UINT conversion
+                    if (srcType.isEqual(T_FLOAT) && (dstType.isEqual(T_INT) || dstType.isEqual(T_UINT))) {
                         op = EOperation.k_F32ToI32;
-                    } else if (srcType.isEqual(T_INT) && dstType.isEqual(T_FLOAT)) {
+                    // FIXME: add support for dedicated UINT => FLOAT conversion
+                    } else if ((srcType.isEqual(T_INT) || srcType.isEqual(T_UINT)) && dstType.isEqual(T_FLOAT)) {
                         op = EOperation.k_I32ToF32;
                     } else {
                         // todo: add type descriptions

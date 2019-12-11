@@ -4,7 +4,7 @@
 uniform float elapsedTime;
 uniform float elapsedTimeLevel;
 
-float3 randUnitCircle(int partId) 
+float3 randUnitCircle(uint partId) 
 {
     float2 seed = float2(elapsedTimeLevel, (float)partId * elapsedTime);
     float alpha = random(seed) * 3.14f * 2.f;
@@ -60,7 +60,7 @@ float3 sizeFromPos(float3 pos) {
 /////////////////////////////////////////////////////////////////////
 // Init Routine
 /////////////////////////////////////////////////////////////////////
-void Init(out Part part, int partId)
+void Init(out Part part, uint partId)
 {
     
     part.pos = randUnitCircle(partId);

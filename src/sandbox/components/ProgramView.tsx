@@ -12,7 +12,7 @@ import { ForStmtInstruction } from '@lib/fx/analisys/instructions/ForStmtInstruc
 import { Instruction } from '@lib/fx/analisys/instructions/Instruction';
 import { ReturnStmtInstruction } from '@lib/fx/analisys/instructions/ReturnStmtInstruction';
 import { SystemTypeInstruction } from '@lib/fx/analisys/instructions/SystemTypeInstruction';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -182,9 +182,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    shouldComponentUpdate(nextProps: IFileState): boolean {
-        // return this.analysisCache !== nextProps.analysis;
-        return true;
+    shouldComponentUpdate(nextProps: IFileState, nextState): boolean {
+        return this.documentCache !== nextProps.slDocument;
+        // return true;
     }
 
     componentDidUpdate() {
@@ -377,6 +377,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     VariableDecl(instr: IVariableDeclInstruction) {
+        if (isNull(instr)) {
+            return null;
+        }
+
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='id' value={ instr.id.toString() } />
@@ -394,6 +398,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     FunctionDecl(instr: IFunctionDeclInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) } >
+                <PropertyOpt name='attributes'>
+                    { instr.attributes.map((attr) => this.Attribute(attr)) }
+                </PropertyOpt>
                 <Property name='definition' >
                     { this.FunctionDefinition(instr.def) }
                 </Property>
@@ -575,6 +582,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    Attribute(instr: IAttributeInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } name={ instr.name } >
+                { instr.args.map((arg) => this.Unknown(arg)) }
+            </Property>
+        );
+    }
+
+
     FunctionDefinition(instr: IFunctionDefInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
@@ -586,7 +602,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                     { instr.params.map((param) => this.VariableDecl(param)) }
                 </PropertyOpt>
             </Property>
-        )
+        );
     }
 
 
@@ -811,6 +827,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     handleMouseClick(instr: IInstruction, e: MouseEvent) {
         e.stopPropagation();
 
+        this.documentCache = null;
         this.invertInstructionProperty(instr, 'opened');
 
         if (instr.sourceNode) {

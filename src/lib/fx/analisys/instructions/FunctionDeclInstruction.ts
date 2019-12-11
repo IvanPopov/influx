@@ -1,4 +1,4 @@
-import { EInstructionTypes, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IStmtBlockInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAttributeInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IStmtBlockInstruction } from "@lib/idl/IInstruction";
 
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
@@ -6,6 +6,7 @@ import { Instruction } from "./Instruction";
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {
     definition: IFunctionDefInstruction;
     implementation?: IStmtBlockInstruction;
+    attributes?: IAttributeInstruction[];
 }
 
 
@@ -14,25 +15,21 @@ export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettin
  * EMPTY_OPERTOR FunctionDefInstruction StmtBlockInstruction
  */
 export class FunctionDeclInstruction extends DeclInstruction implements IFunctionDeclInstruction {
-    protected _definition: IFunctionDefInstruction;
-    protected _implementation: IStmtBlockInstruction;
+    readonly def: IFunctionDefInstruction;
+    readonly impl: IStmtBlockInstruction;
+    readonly attributes: IAttributeInstruction[];
+    
 
-    constructor({ definition, implementation = null, ...settings }: IFunctionDeclInstructionSettings) {
+    constructor({ definition, implementation = null, attributes = null, ...settings }: IFunctionDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDecl, ...settings });
 
-        this._definition = Instruction.$withParent(definition, this);
-        this._implementation = Instruction.$withParent(implementation, this);
+        this.def = Instruction.$withParent(definition, this);
+        this.impl = Instruction.$withParent(implementation, this);
+        this.attributes = (attributes || []).map(attr => Instruction.$withParent(attr, this));
     }
 
 
-    get impl(): IStmtBlockInstruction {
-        return this._implementation;
-    }
 
-
-    get def(): IFunctionDefInstruction {
-        return this._definition;
-    }
 
 
     get name(): string {

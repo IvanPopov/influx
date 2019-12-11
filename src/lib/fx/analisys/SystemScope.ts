@@ -60,6 +60,7 @@ function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], s
 function addSystemTypeScalar(): void {
     generateSystemType("void", 0);
     generateSystemType("int", 4);
+    generateSystemType("uint", 4);
     generateSystemType("bool", 4);
     generateSystemType("float", 4);
     generateSystemType("string");
@@ -98,6 +99,7 @@ function addSystemTypeVector(): void {
 
     let float = getSystemType("float");
     let int = getSystemType("int");
+    let uint = getSystemType("uint");
     let bool = getSystemType("bool");
 
     let float2 = generateSystemType("float2", -1, float, 2);
@@ -107,6 +109,10 @@ function addSystemTypeVector(): void {
     let int2 = generateSystemType("int2", -1, int, 2);
     let int3 = generateSystemType("int3", -1, int, 3);
     let int4 = generateSystemType("int4", -1, int, 4);
+
+    let uint2 = generateSystemType("uint2", -1, uint, 2);
+    let uint3 = generateSystemType("uint3", -1, uint, 3);
+    let uint4 = generateSystemType("uint4", -1, uint, 4);
 
     let bool2 = generateSystemType("bool2", -1, bool, 2);
     let bool3 = generateSystemType("bool3", -1, bool, 3);
@@ -161,6 +167,30 @@ function addSystemTypeVector(): void {
     }
 
     {
+        let suf2ui: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf2ui, XYSuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf2ui, RGSuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf2ui, STSuffix, "uint");
+        suf2ui.forEach(field => uint2.addField(field));
+    }
+
+    {
+        let suf3ui: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf3ui, XYZSuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf3ui, RGBSuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf3ui, STPSuffix, "uint");
+        suf3ui.forEach(field => uint3.addField(field));
+    }
+
+    {
+        let suf4ui: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf4ui, XYZWSuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf4ui, RGBASuffix, "uint");
+        addFieldsToVectorFromSuffixObject(suf4ui, STPQSuffix, "uint");
+        suf4ui.forEach(field => uint4.addField(field));
+    }
+
+    {
         let suf2b: IVariableDeclInstruction[] = [];
         addFieldsToVectorFromSuffixObject(suf2b, XYSuffix, "bool");
         addFieldsToVectorFromSuffixObject(suf2b, RGSuffix, "bool");
@@ -194,6 +224,10 @@ function addSystemTypeMatrix(): void {
     let int2 = getSystemType("int2");
     let int3 = getSystemType("int3");
     let int4 = getSystemType("int4");
+
+    let uint2 = getSystemType("uint2");
+    let uint3 = getSystemType("uint3");
+    let uint4 = getSystemType("uint4");
 
     let bool2 = getSystemType("bool2");
     let bool3 = getSystemType("bool3");
@@ -471,31 +505,31 @@ function addSystemFunctions(): void {
 
     generateSystemFunction("distance", "float", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
 
-    generateSystemFunction("lessThan", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("lessThan", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("lessThan", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("lessThan", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("lessThan", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("lessThan", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
 
-    generateSystemFunction("lessThanEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("lessThanEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("lessThanEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("lessThanEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("lessThanEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("lessThanEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
 
-    generateSystemFunction("equal", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("equal", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("equal", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("equal", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("equal", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("equal", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
     generateSystemFunction("equal", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
 
-    generateSystemFunction("notEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("notEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("notEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("notEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("notEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("notEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
     generateSystemFunction("notEqual", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
 
-    generateSystemFunction("greaterThan", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("greaterThan", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("greaterThan", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("greaterThan", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("greaterThan", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("greaterThan", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
 
-    generateSystemFunction("greaterThanEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("greaterThanEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("greaterThanEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("greaterThanEqual", "bool2", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "int2", "uint2"]);
+    generateSystemFunction("greaterThanEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
+    generateSystemFunction("greaterThanEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
 
 
     generateSystemFunction("radians", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
@@ -642,6 +676,11 @@ export const T_INT2 = scope.findType("int2");
 export const T_INT3 = scope.findType("int3");
 export const T_INT4 = scope.findType("int4");
 
+export const T_UINT = scope.findType("uint");
+export const T_UINT2 = scope.findType("uint2");
+export const T_UINT3 = scope.findType("uint3");
+export const T_UINT4 = scope.findType("uint4");
+
 export const T_INT2X2 = scope.findType("int2x2");
 export const T_INT3X3 = scope.findType("int3x3");
 export const T_INT4X4 = scope.findType("int4x4");
@@ -681,13 +720,17 @@ export function isVectorType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType("bool4")) ||
         type.isEqual(getSystemType("int2")) ||
         type.isEqual(getSystemType("int3")) ||
-        type.isEqual(getSystemType("int4"));
+        type.isEqual(getSystemType("int4")) || 
+        type.isEqual(getSystemType("uint2")) ||
+        type.isEqual(getSystemType("uint3")) ||
+        type.isEqual(getSystemType("uint4"));
 }
 
 
 export function isScalarType(type: ITypeInstruction): boolean {
     return type.isEqual(T_BOOL) ||
         type.isEqual(T_INT) ||
+        type.isEqual(T_UINT) ||
         type.isEqual(T_FLOAT);
 }
 
@@ -714,6 +757,14 @@ export function isIntBasedType(type: ITypeInstruction): boolean {
 }
 
 
+export function isUIntBasedType(type: ITypeInstruction): boolean {
+    return type.isEqual(T_UINT) ||
+        type.isEqual(T_UINT2) ||
+        type.isEqual(T_UINT3) ||
+        type.isEqual(T_UINT4);
+}
+
+
 export function isBoolBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(T_BOOL) ||
         type.isEqual(T_BOOL2) ||
@@ -735,6 +786,7 @@ export function isSamplerType(type: ITypeInstruction): boolean {
 
 export function getExternalType(type: ITypeInstruction): any {
     if (type.isEqual(T_INT) ||
+        type.isEqual(T_UINT) ||
         type.isEqual(T_FLOAT)) {
         return Number;
     }
@@ -743,17 +795,20 @@ export function getExternalType(type: ITypeInstruction): any {
     }
     else if (type.isEqual(T_FLOAT2) ||
         type.isEqual(T_BOOL2) ||
-        type.isEqual(T_INT2)) {
+        type.isEqual(T_INT2) ||
+        type.isEqual(T_UINT2)) {
         return "Vec2";
     }
     else if (type.isEqual(T_FLOAT3) ||
         type.isEqual(T_BOOL3) ||
-        type.isEqual(T_INT3)) {
+        type.isEqual(T_INT3) ||
+        type.isEqual(T_UINT3)) {
         return "Vec3";
     }
     else if (type.isEqual(T_FLOAT4) ||
         type.isEqual(T_BOOL4) ||
-        type.isEqual(T_INT4)) {
+        type.isEqual(T_INT4) ||
+        type.isEqual(T_UINT4)) {
         return "Vec4";
     }
     else if (type.isEqual(T_FLOAT2X2) ||
