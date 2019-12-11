@@ -1,9 +1,10 @@
 S : Program
-Program : --AN
+Program : --add
 Program : Decls
 
-Decls : Decl --NN
+Decls : Decl --expose
 Decls : Decls Decl
+
 Decl : ';'
 Decl : TypeDecl
 Decl : VariableDecl
@@ -19,7 +20,7 @@ Decl : ProvideDecl
 Decl : IncludeDecl
 Decl : ERROR
 
-IncludeDecl : T_KW_INCLUDE String --AN --F includeCode
+IncludeDecl : '#' T_KW_INCLUDE String --skip --F includeCode
 
 ImportDecl : T_KW_IMPORT String ';'
 
@@ -29,67 +30,67 @@ ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'
 UseDecl : T_KW_USE Mode
 Mode : T_KW_STRICT
 
-Usages : Usage --NN
+Usages : Usage --expose
 Usages : Usages Usage
-Usage : T_KW_STATIC --AN
+Usage : T_KW_STATIC --add
 Usage : T_KW_UNIFORM
 Usage : T_KW_EXTERN
 Usage : T_KW_VOLATILE
 Usage : T_KW_INLINE
 Usage : ConstUsage
 
-ConstUsages : ConstUsage --NN
+ConstUsages : ConstUsage --expose
 ConstUsages : ConstUsages ConstUsage
 ConstUsage : T_KW_CONST
 ConstUsage : T_KW_ROW_MAJOR
 ConstUsage : T_KW_COLUMN_MAJOR
 
-UsageType : Type --AN
+UsageType : Type --add
 UsageType : Usages Type
 
-UsageStructDecl : StructDecl --AN
+UsageStructDecl : StructDecl --add
 UsageStructDecl : Usages StructDecl
 
-TypeDecl : T_KW_TYPEDEF ConstType TypeDefs ';' --AN
+TypeDecl : T_KW_TYPEDEF ConstType TypeDefs ';' --add
 TypeDecl : T_KW_TYPEDEF ConstStructDecl TypeDefs ';'
 TypeDecl : StructDecl --F addType ';'
 TypeDefs : VariableDim
 TypeDefs : VariableDim ',' TypeDefs
 
 # GenericParams : '<' Arguments '>'
-# GenericParamsOpt: --NN
+# GenericParamsOpt: --expose
 # GenericParamsOpt: GenericParams
 
-Type : BaseType --AN
+Type : BaseType --add
 Type : Struct
 Type : TypeId
 Type : T_KW_STRUCT TypeId
 
-ConstType : Type --AN
+ConstType : Type --add
 ConstType : ConstUsages Type
-ConstTypeDim : ConstType --NN
+ConstTypeDim : ConstType --expose
 ConstTypeDim : ConstTypeDim '[' ConstantExpr ']'
 
-BaseType : T_KW_VOID --AN
+BaseType : T_KW_VOID --add
 BaseType : ScalarType
 BaseType : VectorType
 BaseType : MatrixType
 BaseType : ObjectType
 
-ScalarType : T_KW_BOOL --AN
+ScalarType : T_KW_BOOL --add
 ScalarType : T_KW_INT
 ScalarType : T_KW_UINT
 ScalarType : T_KW_HALF
 ScalarType : T_KW_FLOAT
 ScalarType : T_KW_DOUBLE
 
-VectorType : T_KW_VECTOR --AN
+VectorType : T_KW_VECTOR --add
 VectorType : T_KW_VECTOR '<' ScalarType ',' AddExpr '>'
 
-MatrixType : T_KW_MATRIX --AN
+MatrixType : T_KW_MATRIX --add
 MatrixType : T_KW_MATRIX '<' ScalarType ',' ConstantExpr ',' AddExpr '>'
 
-ObjectType : T_KW_STRING --AN
+ObjectType : T_KW_STRING --add
 ObjectType : T_KW_TEXTURE
 ObjectType : T_KW_TEXTURE1D
 ObjectType : T_KW_TEXTURE2D
@@ -118,19 +119,19 @@ ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
 # 
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509668(v=vs.85).aspx
 
-Struct : T_KW_STRUCT '{' '}' --AN
+Struct : T_KW_STRUCT '{' '}' --add
 Struct : T_KW_STRUCT '{' StructDecls '}'
-StructDecl : T_KW_STRUCT Id '{' '}' --AN
+StructDecl : T_KW_STRUCT Id '{' '}' --add
 StructDecl : T_KW_STRUCT Id '{' UseDecl StructDecls '}'
 StructDecl : T_KW_STRUCT Id '{' StructDecls '}'
 
 ConstStructDecl : StructDecl
 ConstStructDecl : ConstUsages StructDecl
 
-StructDecls : VariableDecl --NN
+StructDecls : VariableDecl --expose
 StructDecls : VariableDecl StructDecls
 
-Semantic : ':' Id --AN
+Semantic : ':' Id --add
 Semantic : ':' T_KW_REGISTER '(' Register ')'
 Semantics : Semantic
 Semantics : Semantics Semantic
@@ -140,7 +141,7 @@ SemanticsOpt : Semantics
 Register : Id
 Register : Target ',' Id
 
-Annotation : AnnotationBegin AnnotationEnd  --AN
+Annotation : AnnotationBegin AnnotationEnd  --add
 Annotation : AnnotationBegin AnnotationDecls AnnotationEnd
 AnnotationOpt :
 AnnotationOpt : Annotation
@@ -149,8 +150,8 @@ AnnotationDecls : VariableDecl
 AnnotationDecls : VariableDecl AnnotationDecls
 AnnotationEnd : '>'
 
-Initializer : '=' AssignmentExpr --AN
-Initializer : '=' ERROR --AN
+Initializer : '=' AssignmentExpr --add
+Initializer : '=' ERROR --add
 Initializer : '=' '{' InitExprs '}'
 Initializer : '=' '{' InitExprs ',' '}'
 
@@ -167,16 +168,16 @@ Initializer : '=' '{' InitExprs ',' '}'
 #
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509706(v=vs.85).aspx
 
-VariableDecl : UsageType Variables ';' --AN
-VariableDecl : UsageType Variables ERROR --AN
-VarStructDecl : UsageStructDecl Variables ';' --AN
-Variables : Variable --NN
+VariableDecl : UsageType Variables ';' --add
+VariableDecl : UsageType Variables ERROR --add
+VarStructDecl : UsageStructDecl Variables ';' --add
+Variables : Variable --expose
 Variables : Variables ',' Variable
 # Variables : Variables ERROR Variable
 Variables : Variables ',' ERROR
-Variable : VariableDim SemanticsOpt AnnotationOpt Initializer --AN
-Variable : VariableDim SemanticsOpt AnnotationOpt --AN
-VariableDim : NonTypeId --AN
+Variable : VariableDim SemanticsOpt AnnotationOpt Initializer --add
+Variable : VariableDim SemanticsOpt AnnotationOpt --add
+VariableDim : NonTypeId --add
 VariableDim : VariableDim '[' ConstantExpr ']'
 
 
@@ -187,8 +188,8 @@ VariableDim : VariableDim '[' ConstantExpr ']'
 # 
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509607(v=vs.85).aspx
 
-FunctionDecl : Attributes FunctionDef ';' --AN
-FunctionDecl : FunctionDef ';' --AN
+FunctionDecl : Attributes FunctionDef ';' --add
+FunctionDecl : FunctionDef ';' --add
 FunctionDecl : Attributes FunctionDef AnnotationOpt StmtBlock
 FunctionDecl : FunctionDef AnnotationOpt StmtBlock
 
@@ -200,9 +201,9 @@ FunctionDef : UsageType NonTypeId ParamList SemanticsOpt
 
 Attribute : '[' Id '(' ArgumentsOpt ')' ']'
 Attribute : '[' Id ']'
-Attributes : Attribute --NN
+Attributes : Attribute --expose
 Attributes : Attributes Attribute
-AttributesOpt : --NN
+AttributesOpt : --expose
 AttributesOpt : Attributes
 
 ParamList : '(' ')'
@@ -214,54 +215,54 @@ ParamList : '(' ParameterDecls ')'
 # 
 # https://msdn.microsoft.com/ru-ru/library/windows/desktop/bb509606(v=vs.85).aspx
 
-ParameterDecls : ParameterDecl --NN
+ParameterDecls : ParameterDecl --expose
 ParameterDecls : ParameterDecls ',' ParameterDecl
 ParameterDecls : ParameterDecls ERROR ParameterDecl
 ParameterDecls : ParameterDecls ',' ERROR
 ParameterDecls : ERROR
 ParameterDecl : ParamUsageType Variable
 
-ParamUsageType : Type --AN
+ParamUsageType : Type --add
 ParamUsageType : ParamUsages Type
 
-ParamUsages : ParamUsage --NN
+ParamUsages : ParamUsage --expose
 ParamUsages : ParamUsages ParamUsage
-ParamUsage : T_KW_IN --AN
+ParamUsage : T_KW_IN --add
 ParamUsage : T_KW_OUT
 ParamUsage : T_KW_INOUT
 ParamUsage : T_KW_UNIFORM
 ParamUsage : ConstUsage
 
 
-TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --AN
-TechniqueBody : '{' '}'  --AN
+TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --add
+TechniqueBody : '{' '}'  --add
 TechniqueBody : '{' PassDecls '}'
 
-ComplexNameOpt : ComplexName --AN
-ComplexName : Id --NN
+ComplexNameOpt : ComplexName --add
+ComplexName : Id --expose
 ComplexName : ComplexName '.' Id
 
-PassDecls : PassDecl --NN
+PassDecls : PassDecl --expose
 PassDecls : PassDecls PassDecl
-PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --AN
+PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --add
 PassDecl : ';'
 
-PassStateBlock : '{' '}' --AN
+PassStateBlock : '{' '}' --add
 PassStateBlock : '{' PassStates '}'
-PassStates : PassState --NN
+PassStates : PassState --expose
 PassStates : PassStates PassState
 
-PassState : Id StateIndex '=' PassStateExpr ';' --AN
+PassState : Id StateIndex '=' PassStateExpr ';' --add
 
 # todo: move all particles declarations to separate grammar!
 #if FX_PART
 
-PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --AN
+PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --add
 
 PartFxBody : '{' '}' 
 PartFxBody : '{' PartFxProperties '}'
 
-PartFxProperties : PartFxProperty --NN
+PartFxProperties : PartFxProperty --expose
 PartFxProperties : PartFxProperties PartFxProperty
 
 PartFxProperty : PassState
@@ -269,25 +270,25 @@ PartFxProperty : PassDecl
 
 #endif // FX_PART
 
-StateBlock : '{' '}' --AN
+StateBlock : '{' '}' --add
 StateBlock : '{' States '}'
 
 
-States : State --NN
+States : State --expose
 States : States State
-State : Id StateIndex '=' StateExpr ';' --AN
+State : Id StateIndex '=' StateExpr ';' --add
 
 StateIndex :
 StateIndex : '[' Uint ']'
 
-StmtBlock : '{' '}' --AN
+StmtBlock : '{' '}' --add
 StmtBlock : '{' Stmts '}'  
 
-Stmts : Stmt --NN
+Stmts : Stmt --expose
 Stmts : Stmts Stmt
 
 # SimpleStmt : ERROR ';' 
-# SimpleStmt : ';' --AN
+# SimpleStmt : ';' --add
 
 SimpleStmt : Expr ';'
 SimpleStmt : Expr ERROR
@@ -299,7 +300,7 @@ SimpleStmt : T_KW_DO Stmt T_KW_WHILE '(' ERROR ')' ';'
 SimpleStmt : StmtBlock
 SimpleStmt : T_KW_DISCARD ';'
 SimpleStmt : TypeDecl
-SimpleStmt : VariableDecl --AN
+SimpleStmt : VariableDecl --add
 SimpleStmt : VarStructDecl
 SimpleStmt : T_KW_BREAK ';'
 SimpleStmt : T_KW_BREAK ERROR
@@ -311,11 +312,11 @@ SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
 #endif
 
 
-NonIfStmt : SimpleStmt --AN
+NonIfStmt : SimpleStmt --add
 NonIfStmt : WhileStmt NonIfStmt
 NonIfStmt : ForStmt NonIfStmt
 
-Stmt : SimpleStmt --AN
+Stmt : SimpleStmt --add
 Stmt : UseDecl
 Stmt : WhileStmt Stmt
 Stmt : ForStmt Stmt
@@ -324,41 +325,41 @@ Stmt : IfStmt NonIfStmt T_KW_ELSE Stmt
 Stmt : ERROR
 Stmt : ';'
 
-IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --NN
-IfStmt : AttributesOpt T_KW_IF '(' ERROR ')' --NN
+IfStmt : AttributesOpt T_KW_IF '(' Expr ')' --expose
+IfStmt : AttributesOpt T_KW_IF '(' ERROR ')' --expose
 
-WhileStmt : T_KW_WHILE '(' Expr ')' --NN
-WhileStmt : T_KW_WHILE '(' ERROR ')' --NN
+WhileStmt : T_KW_WHILE '(' Expr ')' --expose
+WhileStmt : T_KW_WHILE '(' ERROR ')' --expose
 
-ForStmt : For '(' ForInit ForCond ForStep ')' --NN
-ForStmt : For ERROR --NN
+ForStmt : For '(' ForInit ForCond ForStep ')' --expose
+ForStmt : For ERROR --expose
 
 For : T_KW_FOR
 
-ForInit : ';' --AN
+ForInit : ';' --add
 ForInit : Expr ';'
 ForInit : VariableDecl
 ForInit : ERROR ';'
 
-ForCond : ';' --AN
+ForCond : ';' --add
 ForCond : Expr ';'
 ForCond : ERROR ';'
 
-ForStep : --AN
+ForStep : --add
 ForStep : Expr
 ForStep : ERROR
 
 DwordExpr : Dword
 DwordExpr : Dword '|' DwordExpr
 
-DwordExprSeq : DwordExpr --NN
+DwordExprSeq : DwordExpr --expose
 DwordExprSeq : DwordExpr ',' DwordExprSeq
 
-PassStateExpr : DwordExpr --AN
+PassStateExpr : DwordExpr --add
 PassStateExpr : ComplexExpr
 PassStateExpr : '{' DwordExprSeq '}'
 
-StateExpr : DwordExpr --AN
+StateExpr : DwordExpr --add
 StateExpr : ComplexExpr
 StateExpr : '{' InitExprs '}'
 StateExpr : '{' InitExprs ',' '}'
@@ -486,17 +487,17 @@ AssignmentExpr : CastExpr T_OP_RE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
 
-Arguments : AssignmentExpr --NN
+Arguments : AssignmentExpr --expose
 Arguments : Arguments ',' AssignmentExpr
 Arguments : Arguments ERROR AssignmentExpr
 Arguments : Arguments ',' ERROR
-ArgumentsOpt : --NN
+ArgumentsOpt : --expose
 ArgumentsOpt : Arguments
 
-InitExpr : AssignmentExpr --AN
+InitExpr : AssignmentExpr --add
 InitExpr : '{' InitExprs '}'
 InitExpr : '{' InitExprs ',' '}'
-InitExprs : InitExpr --NN
+InitExprs : InitExpr --expose
 InitExprs : InitExprs ',' InitExpr
 
 ConstantExpr : AssignmentExpr

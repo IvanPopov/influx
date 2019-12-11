@@ -7,7 +7,7 @@ import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
 const initialState: IFileState = {
-    filename: null,
+    uri: null,
     content: null,
     contentModified: null,
     error: null,
@@ -32,7 +32,7 @@ const initialState: IFileState = {
 
 export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IPlaygroundActions>({
     [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
-        ({ ...state, filename: action.payload.filename }),
+        ({ ...state, uri: action.payload.filename }),
 
     [evt.SOURCE_FILE_LOADED]: (state, action: ISourceFileLoaded) =>
         ({ ...state, content: action.payload.content }),

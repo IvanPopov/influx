@@ -1,7 +1,8 @@
 import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { EParserType, IASTDocument, IParserParams, IRange } from '@lib/idl/parser/IParser';
+import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { IPipeline } from '@sandbox/containers/playground/Pipeline';
 import { RouterState } from 'connected-react-router';
 
@@ -30,12 +31,12 @@ export interface IDebuggerState {
 
 
 export interface IFileState {
-    filename: string;               // source file's path
+    uri: string;                    // source file's path
     content: string;                // source file's content
     contentModified: string;
     error: Error;                   // source file loading's error
 
-    slastDocument: IASTDocument;
+    slastDocument: ISLASTDocument;
     slDocument: ISLDocument;
 
     markers: IMap<IMarker>;

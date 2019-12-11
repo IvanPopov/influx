@@ -1,13 +1,14 @@
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags } from '@lib/idl/parser/IParser';
+import { EOperationType, EParserCode, IASTConfig, IRange, IToken } from '@lib/idl/parser/IParser';
 import { ASTDocument, EParsingErrors } from "@lib/parser/ASTDocument";
 import { Lexer } from '@lib/parser/Lexer';
-import * as uri from "@lib/uri/uri"
+import { END_SYMBOL } from '@lib/parser/symbols';
+import * as URI from "@lib/uri/uri"
 
 import { defaultSLParser } from './SLParser';
 
-const readFile = fname => fetch(fname).then(resp => resp.text());
-
+// const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
 const PREDEFINED_TYPES = [
     'float2', 'float3', 'float4',
@@ -17,17 +18,21 @@ const PREDEFINED_TYPES = [
     'bool2', 'bool3', 'bool4'
 ];
 
-export class SLASTDocument extends ASTDocument {
-    protected includeList: Set<string>;
+export class SLASTDocument extends ASTDocument implements ISLASTDocument {
+    protected includeList: Map<string, IRange>;
     protected lexers: Lexer[];
+    protected tokens: IToken[];
 
     constructor({ parser = defaultSLParser() }: IASTConfig = {}) {
         super({ parser, knownTypes: new Set(PREDEFINED_TYPES) });
     }
 
+    get includes(): Map<string, IRange> {
+        return this.includeList;
+    }
     
     async parse(textDocument: ITextDocument, flags?: number): Promise<EParserCode> {
-        this.includeList.add(textDocument.uri);
+        this.includeList.set(textDocument.uri, null);
         return await super.parse(textDocument, flags);
     }
 
@@ -35,8 +40,9 @@ export class SLASTDocument extends ASTDocument {
     protected init(config: IASTConfig) {
         super.init(config);
 
-        this.includeList = new Set();
+        this.includeList = new Map();
         this.lexers = [];
+        this.tokens = [];
         this.ruleFunctions.set('addType', this._addType.bind(this));
         this.ruleFunctions.set('includeCode', this._includeCode.bind(this));
     }
@@ -49,37 +55,67 @@ export class SLASTDocument extends ASTDocument {
         return EOperationType.k_Ok;
     }
 
+
+    private emitFileNotFound(file: string, range: IRange) {
+        this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.lexer.getLocation(), loc: range, target: file });
+    }
+
+
+    protected readToken(): IToken {
+        const token = super.readToken();
+        if (token.value === END_SYMBOL) {
+            if (this.lexers.length > 0) {
+                this.lexer = this.lexers.pop();
+                return this.tokens.pop();
+            }
+        }
+        return token;
+    }
+
+
     private async _includeCode(): Promise<EOperationType> {
         let tree = this.tree;
         let node = tree.lastNode;
         let file = node.value;
 
         //cuttin qoutes
-        let includeURL = file.substr(1, file.length - 2);
+        const includeURL = file.substr(1, file.length - 2);
+        const uri = URI.resolve(includeURL, `${this.uri}`);
 
-        file = uri.resolve(includeURL, `${this.uri}`);
-
-        if (this.includeList[file]) {
+        if (this.includeList.has(uri)) {
+            console.warn(`'${uri}' file has already been included previously.`);
             return EOperationType.k_Ok;
         } 
-        
-        // let parserState = this._saveState();
+
+        this.includeList.set(uri, node.loc);
 
         try {
-            let content = await readFile(file);
-            console.log(content);
+            const response = await fetch(uri);
             
-            // parserState.source = parserState.source.substr(0, parserState.token.index) +
-            // content + parserState.source.substr(parserState.token.index);
+            if (!response.ok) {
+                this.emitFileNotFound(uri, node.loc);
+                return EOperationType.k_Error;
+            }
 
-            // this.loadState(parserState);
-            // this.addIncludedFile(file);
-            // let result = await this.resumeParse();
+        const source = await response.text();
+            
+            //
+            // Replace lexer with new one 
+            //
 
-            // return result == EParserCode.k_Ok? EOperationType.k_Ok : EOperationType.k_Error;
+            this.lexers.push(this.lexer);
+            this.tokens.push(this.token);
+            this.lexer = new Lexer({
+                engine: this.parser.lexerEngine,
+                knownTypes: this.knownTypes
+            });
+            this.lexer.setup({ source, uri });
+            this.token = this.readToken();
+
             return EOperationType.k_Ok;
         } catch (e) {
-            this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.lexer.getLocation(), loc: node.loc, target: file });
+            console.error(e);
+            this.emitFileNotFound(file, node.loc);
         }
 
         return EOperationType.k_Error;
@@ -87,7 +123,7 @@ export class SLASTDocument extends ASTDocument {
 }
 
 
-export async function createSLASTDocument(textDocument: ITextDocument, flags?: number): Promise<IASTDocument> {
+export async function createSLASTDocument(textDocument: ITextDocument, flags?: number): Promise<ISLASTDocument> {
     const document = new SLASTDocument();
     await document.parse(textDocument, flags);
     return document;

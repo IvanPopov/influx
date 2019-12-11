@@ -460,7 +460,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     asTextDocumentIdentifier(): TextDocumentIdentifier {
         return {
-            uri: this.getFile().filename
+            uri: this.getFile().uri
         };
     }
 
@@ -546,7 +546,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string) {
-        return TextDocument.create(this.getFile().filename, model.getModeId(), model.getVersionId(), newContent || model.getValue());
+        return TextDocument.create(this.getFile().uri, model.getModeId(), model.getVersionId(), newContent || model.getValue());
     }
 
 

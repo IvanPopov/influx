@@ -4,7 +4,7 @@
 
 import * as Bytecode from '@lib/fx/bytecode';
 import { IInstruction } from '@lib/idl/IInstruction';
-import { IParseNode } from '@lib/idl/parser/IParser';
+import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, ProgramView } from '@sandbox/components';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
@@ -254,14 +254,32 @@ class App extends React.Component<IAppProps> {
         this.props.actions.specifyOptions({ colorize });
     }
 
+    resolveLocation(src: IRange): IRange {
+        const file = getFileState(this.props);
+        const uri = file.uri;
+        const slastDocument = file.slastDocument;
+
+        if (!slastDocument) {
+            return null;
+        }
+
+        const includes = slastDocument.includes;
+
+        let dst = src;
+        while (dst && String(uri) !== String(dst.start.file)) {
+            dst = includes.get(String(dst.start.file));
+        }
+        return dst;
+    }
 
     /** @deprecated */
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         const markerName = `ast-range-${inst.instructionID}`;
         if (show) {
+            const range = this.resolveLocation(inst.sourceNode.loc);
             this.props.actions.addMarker({
                 name: markerName,
-                range: inst.sourceNode.loc,
+                range,
                 type: `marker`
             });
         } else {
@@ -273,9 +291,10 @@ class App extends React.Component<IAppProps> {
     /** @deprecated */
     highlightPNode(id: string, pnode: IParseNode = null, show: boolean = true) {
         if (show) {
+            const range = this.resolveLocation(pnode.loc);
             this.props.actions.addMarker({
                 name: `ast-range-${id}`,
-                range: pnode.loc,
+                range,
                 type: 'marker'
             })
         } else {
@@ -295,7 +314,7 @@ class App extends React.Component<IAppProps> {
         const list = filterPartFx(getScope(file));
 
         const links: string[] = [];
-        const basepath = `/playground/${path.basename(file.filename)}`;
+        const basepath = `/playground/${path.basename(file.uri)}`;
         for (const fx of list) {
             links.push(`${fx.name}`);
             links.push(...fx.passList
@@ -508,7 +527,7 @@ class App extends React.Component<IAppProps> {
                     <Menu.Item>
                         Source File
                         <span style={{ fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' }}>
-                            &nbsp;|&nbsp;{path.basename(props.sourceFile.filename || '')}
+                            &nbsp;|&nbsp;{path.basename(props.sourceFile.uri || '')}
                         </span>
                     </Menu.Item>
                 ),

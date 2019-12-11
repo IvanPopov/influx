@@ -49,15 +49,19 @@ export class ParseTree implements IParseTree {
             ruleLength--;
         }
 
-        if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || 
+        if (eCreate === ENodeCreateMode.k_Skip && iReduceCount > optimize) {
+            nodes.length -= iReduceCount;
+            nodesCountStack.push(0);
+        }  else if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || 
             (eCreate === ENodeCreateMode.k_Necessary)) {
 
             assert(iReduceCount > 0);
 
             let temp = nodes.pop();
             iReduceCount--;
-
+            
             const name = rule.left;
+            // TODO: use correct location in case of include macro. 
             const loc = { ...temp.loc };
 
             const node: IParseNode = { name, children: null, parent: null, value: '', loc };
@@ -70,23 +74,8 @@ export class ParseTree implements IParseTree {
                 iReduceCount--;
             }
             
-            // else {
-            //     assert(false);
-            //     console.warn('something went wrong');
-            //     node = {
-            //         name: rule.left,
-            //         children: [],
-            //         parent: null,
-            //         value: '',
-            //         loc: {
-            //             start: { file: null, line: 0, column: 0 },
-            //             end: { file: null, line: 0, column: 0 }
-            //         }
-            //     };
-            // }
-
             nodes.push(node);
-            nodesCountStack.push(1);
+            nodesCountStack.push(1);      
         }
         else {
             nodesCountStack.push(iReduceCount);

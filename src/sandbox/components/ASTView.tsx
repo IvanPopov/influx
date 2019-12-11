@@ -86,7 +86,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
                     <List.Content>
                         <List.Header>
                             { node.name }&nbsp;
-                            <a href='javascript:void(0);' style={ ({ display: (selected ? 'inline' : 'none') }) }
+                            <a href='/' style={ ({ display: (selected ? 'inline' : 'none') }) }
                                 onClick={ this.handleCopyClick.bind(this, idx, node) }>Copy</a>
                         </List.Header>
                         { children }
@@ -98,6 +98,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
 
 
     private async handleCopyClick(idx: string, node: IParseNode, e: MouseEvent): Promise<void> {
+        e.preventDefault();
         e.stopPropagation();
 
         let out = [];

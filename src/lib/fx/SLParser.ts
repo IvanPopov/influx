@@ -5,7 +5,7 @@ import { AbstractParser } from "@lib/parser/AbstractParser";
 import slGrammar from 'raw-loader!./HLSL.gr';
 
 export class SLParser extends AbstractParser {
-    protected init({ grammar = slGrammar, type = EParserType.k_LALR, flags = EParserFlags.k_Add | EParserFlags.k_Negate }: IParserParams) {
+    protected init({ grammar = slGrammar, type = EParserType.k_LALR, flags = EParserFlags.k_Default }: IParserParams) {
         super.init({ grammar, type, flags });
     }
 }

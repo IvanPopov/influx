@@ -2,7 +2,7 @@ import { assert } from "@lib/common";
 import { IPosition, IRange } from "@lib/idl/parser/IParser";
 
 export function positionMin(a: IPosition, b: IPosition): IPosition {
-    assert(a.file == b.file);
+    assert(String(a.file) === String(b.file));
     return {
         offset: Math.min(a.offset, b.offset),
         line: Math.min(a.line, b.line),
@@ -12,7 +12,7 @@ export function positionMin(a: IPosition, b: IPosition): IPosition {
 }
 
 export function positionMax(a: IPosition, b: IPosition): IPosition {
-    assert(a.file == b.file);
+    assert(String(a.file) === String(b.file));
     return {
         offset: Math.max(a.offset, b.offset),
         line: Math.max(a.line, b.line),
@@ -23,6 +23,10 @@ export function positionMax(a: IPosition, b: IPosition): IPosition {
 
 
 export function extendRange(parent: IRange, child: IRange): IRange {
+    if (child.start.file !== parent.start.file) {
+        return parent;
+    }
+    
     if (child.start.line < parent.start.line) {
         parent.start = { ...child.start };
     } else if (child.start.line === parent.start.line) {

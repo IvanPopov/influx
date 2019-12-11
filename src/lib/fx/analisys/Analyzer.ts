@@ -4,8 +4,9 @@ import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IASTDocument, IParseNode, IRange } from "@lib/idl/parser/IParser";
+import { IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
@@ -3067,7 +3068,7 @@ export class Analyzer {
     }
 
 
-    protected analyzeGlobals(context: Context, program: ProgramScope, slastDocument: IASTDocument): IInstruction[] {
+    protected analyzeGlobals(context: Context, program: ProgramScope, slastDocument: ISLASTDocument): IInstruction[] {
         if (isNull(slastDocument) || isNull(slastDocument.root)) {
             return null;
         }
@@ -3096,7 +3097,7 @@ export class Analyzer {
     }
 
 
-    async parse(slastDocument: IASTDocument): Promise<ISLDocument> {
+    async parse(slastDocument: ISLASTDocument): Promise<ISLDocument> {
         const uri = slastDocument.uri;
         console.time(`analyze(${uri})`);
 

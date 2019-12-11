@@ -72,7 +72,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
                 const fxRequest = `./assets/fx/tests/${fx}`;
 
-                if (sourceFile.filename !== fxRequest) {
+                if (sourceFile.uri !== fxRequest) {
                     dispatch(sourceActions.openFile(fxRequest));
                 }
             }

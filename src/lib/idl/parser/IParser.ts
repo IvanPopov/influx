@@ -5,7 +5,8 @@ import { StringRef } from "@lib/util/StringRef";
 export enum ENodeCreateMode {
     k_Default,
     k_Necessary,
-    k_Not
+    k_Expose,
+    k_Skip
 }
 
 export enum EParserCode {
@@ -27,9 +28,11 @@ export enum IASTDocumentFlags {
 
 
 export enum EParserFlags {
-    k_AllNode = 0x0001,
-    k_Negate = 0x0002,
-    k_Add = 0x0004,
+    k_ForceAppendAll = 0x0001,
+    k_AllowExposeMode = 0x0002,
+    k_AllowAddMode = 0x0004,
+    k_AllowSkipMode = 0x008,
+    k_Default = k_AllowAddMode | k_AllowExposeMode | k_AllowSkipMode,
     k_Debug = 0x0010
 }
 
@@ -163,6 +166,8 @@ export interface IASTDocument {
     readonly diagnosticReport: IDiagnosticReport;
     readonly root: IParseNode;
 }
+
+
 
 
 export interface IOperation {

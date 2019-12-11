@@ -54,7 +54,7 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
-    const { content: source, filename: uri } = state.sourceFile;
+    const { content: source, uri } = state.sourceFile;
     const { parsingFlags: flags } = state.parserParams;
 
     if (!source) {

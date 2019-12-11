@@ -118,6 +118,7 @@ export class ASTDocument implements IASTDocument {
     protected tree: IParseTree;
     protected stack: number[];
     protected lexer: Lexer;
+    protected token: IToken;
 
     constructor(config: IASTConfig) {
         assert(config.parser, 'parser engine is not defined');
@@ -154,7 +155,6 @@ export class ASTDocument implements IASTDocument {
 
 
     async parse(textDocument: ITextDocument, flags: number = EASTParsingFlags.k_Optimize): Promise<EParserCode> {
-                
         const developerMode = bf.testAll(flags, EASTParsingFlags.k_DeveloperMode);
         const allowErrorRecoverty = true;
         const optimizeTree = bf.testAll(flags, EASTParsingFlags.k_Optimize);
@@ -163,8 +163,19 @@ export class ASTDocument implements IASTDocument {
         this.tree = new ParseTree(optimizeTree);
         this.stack = [0];
         this.lexer.setup(textDocument);
+        this.token = this.readToken();
 
-        await this.run(this.readToken(), { developerMode, allowErrorRecoverty });
+        await this.run({ developerMode, allowErrorRecoverty });
+
+        // clear context
+
+        // this.stack = null;
+        // this.lexer = null;
+        // this.token = null;
+        // diag
+        // tree
+
+        // end of clear
 
         if (this.diag.hasErrors()) {
             console.error('parsing was ended with errors.');
@@ -247,7 +258,7 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    private async run(token: IToken, { developerMode = false, allowErrorRecoverty = true }): Promise<void> {
+    private async run({ developerMode = false, allowErrorRecoverty = true }): Promise<void> {
 
         const { syntaxTable } = this.parser;
         const { stack, tree } = this;
@@ -271,33 +282,33 @@ export class ASTDocument implements IASTDocument {
                 }
 
                 let currStateIndex = stack[stack.length - 1];
-                let op = syntaxTable[currStateIndex][token.name];
+                let op = syntaxTable[currStateIndex][this.token.name];
 
                 if (allowErrorRecoverty) {
                     if (!op) {
                         // recursion prevention
-                        if (causingErrorToken.index !== token.index) {
-                            if (token.value === END_SYMBOL) {
-                                this.emitError(EParsingErrors.SyntaxUnexpectedEOF, token);
+                        if (causingErrorToken.index !== this.token.index) {
+                            if (this.token.value === END_SYMBOL) {
+                                this.emitError(EParsingErrors.SyntaxUnexpectedEOF, this.token);
                             } else {
-                                this.emitError(EParsingErrors.SyntaxUnknownError, token);
+                                this.emitError(EParsingErrors.SyntaxUnknownError, this.token);
                             }
                         } else {
                             // one more attempt to recover but from the next token
-                            token = this.readToken();
+                            this.token = this.readToken();
                             // NOTE: in order to prevent recusrion on END_SYMBOL
                             causingErrorToken = undefinedToken;
                             continue;
                         }
 
-                        causingErrorToken = cloneToken(token);
+                        causingErrorToken = cloneToken(this.token);
                         // token = { ...token, name: ERROR };
-                        token = { ...cloneToken(token), name: ERROR };
+                        this.token = { ...cloneToken(this.token), name: ERROR };
                     }
 
-                    op = syntaxTable[currStateIndex][token.name];
+                    op = syntaxTable[currStateIndex][this.token.name];
 
-                    const errorProcessing = token.name === ERROR;
+                    const errorProcessing = this.token.name === ERROR;
                     const errorReductionEnded = !op || (errorProcessing && (op.type === EOperationType.k_Shift));
 
                     // state must be recovered if operation is undefined or error reduction was ended. 
@@ -307,16 +318,16 @@ export class ASTDocument implements IASTDocument {
                         while (recoveryToken.name === UNKNOWN_TOKEN) {
                             recoveryToken = this.readToken();
                         }
-                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, token /* error token */);
+                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
                         if (currStateIndex === -1) {
                             this.emitCritical(EParsingErrors.SyntaxRecoverableStateNotFound);
                         }
 
                         // perform error shift op.
-                        op = syntaxTable[currStateIndex][token.name]; // token.name === 'ERROR'
+                        op = syntaxTable[currStateIndex][this.token.name]; // token.name === 'ERROR'
                         stack.push(op.stateIndex);
-                        tree.addToken(token/* error token */);
-                        token = recoveryToken;
+                        tree.addToken(this.token/* error token */);
+                        this.token = recoveryToken;
 
                         // const nextOp = syntaxTable[op.stateIndex][token.name];
                         // if (nextOp.type === EOperationType.k_Reduce) {
@@ -337,13 +348,13 @@ export class ASTDocument implements IASTDocument {
                             {
                                 const stateIndex = op.stateIndex;
                                 stack.push(stateIndex);
-                                tree.addToken(token);
+                                tree.addToken(this.token);
 
-                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, token.name);
+                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, this.token.name);
                                 if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
+                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                    token = this.readToken();
+                                    this.token = this.readToken();
                                 }
                             }
                             break;
@@ -360,14 +371,14 @@ export class ASTDocument implements IASTDocument {
 
                                 const additionalOperationCode = await this.operationAdditionalAction(stateIndex, op.rule.left);
                                 if (additionalOperationCode === EOperationType.k_Error) {
-                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
+                                    this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 }
                             }
                             break;
                     }
                 } else {
                     assert(!allowErrorRecoverty, `unexpected end, something went wrong :/`);
-                    this.emitCritical(EParsingErrors.SyntaxUnknownError, token);
+                    this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                 }
             }
 
@@ -378,19 +389,4 @@ export class ASTDocument implements IASTDocument {
             }
         }
     }
-
-    // protected async resumeParse(): Promise<EParserCode> {
-    //     const syntaxTable = this.engine.syntaxTable;
-    //     const stack = this.stack;
-    //     const token = isNull(this._state.token) ? this.readToken() : this._state.token;
-    //     const syntaxTree = this._state.tree;
-    //     await this.run(syntaxTable, stack, token, syntaxTree, {});
-
-    //     if (this._state.diag.hasErrors()) {
-    //         console.error('parsing was ended with errors.');
-    //         return EParserCode.k_Error;
-    //     }
-
-    //     return EParserCode.k_Ok;
-    // }
 }

@@ -1,13 +1,13 @@
 import bf from "@lib/bf";
 import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { ENodeCreateMode, EOperationType, EParserFlags, EParserType, ExpectedSymbols, IAdditionalFuncInfo, IOperation, IOperationMap, IParser, IParserParams, IPosition, IProductions, IRange, IRule, IRuleFunctionDMap, IRuleMap, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { ENodeCreateMode as ENodeCreationMode, EOperationType, EParserFlags, EParserType, ExpectedSymbols, IAdditionalFuncInfo, IOperation, IOperationMap, IParser, IParserParams, IPosition, IProductions, IRange, IRule, IRuleFunctionDMap, IRuleMap, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
 import { Item } from "./Item";
 import { LexerEngine } from "./Lexer";
 import { State } from "./State";
-import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_NOT_CREATE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "./symbols";
+import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_EXPOSE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL, FLAG_RULE_SKIP_NODE } from "./symbols";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -127,7 +127,7 @@ export class AbstractParser implements IParser {
     private _diag: GrammarDiagnostics;
 
     // grammar: string, flags: number = EParserFlags.k_AllNode, type: EParserType = EParserType.k_LALR
-    constructor({ grammar, flags = EParserFlags.k_AllNode, type = EParserType.k_LALR }: IParserParams) {
+    constructor({ grammar, flags = EParserFlags.k_Default, type = EParserType.k_LALR }: IParserParams) {
         this._syntaxTable = null;
 
         this._productions = null;
@@ -167,7 +167,7 @@ export class AbstractParser implements IParser {
     }
 
 
-    getRuleCreationMode(nonTerminal: string): ENodeCreateMode {
+    getRuleCreationMode(nonTerminal: string): ENodeCreationMode {
         return this._ruleCreationModeMap[nonTerminal];
     }
 
@@ -176,7 +176,7 @@ export class AbstractParser implements IParser {
         return this._grammarSymbols;
     }
 
-    protected init({ grammar, flags = EParserFlags.k_AllNode, type = EParserType.k_LALR }: IParserParams) {
+    protected init({ grammar, flags = EParserFlags.k_Default, type = EParserType.k_LALR }: IParserParams) {
         this.lexerEngine = new LexerEngine();
 
         this.generateRules(grammar, flags);
@@ -582,11 +582,13 @@ export class AbstractParser implements IParser {
         let i = 0, j = 0;
 
         // append all nodes ignoring any flags
-        const isAllNodeMode = bf.testAll(<number>flags, <number>EParserFlags.k_AllNode);
-        // force unwind node if it is marked as '--NN'
-        const isNegateMode = bf.testAll(<number>flags, <number>EParserFlags.k_Negate);
-        // force add node if it is marked as '--AN'
-        const isAddMode = bf.testAll(<number>flags, <number>EParserFlags.k_Add);
+        const forceAppendAllMode = bf.testAll(flags, EParserFlags.k_ForceAppendAll);
+        // force unwind node if it is marked as '--expose'
+        const allowExposeMode = bf.testAll(flags, EParserFlags.k_AllowExposeMode);
+        // force add node if it is marked as '--add'
+        const allowAddMode = bf.testAll(flags, EParserFlags.k_AllowAddMode);
+        // remove node from parsing tree if it is marked as '--skip'
+        const allowSkipMode = bf.testAll(flags, EParserFlags.k_AllowSkipMode);
 
         let symbolsWithNodeMap: IMap<number> = this._ruleCreationModeMap;
 
@@ -657,29 +659,37 @@ export class AbstractParser implements IParser {
 
             this._grammarSymbols.set(tempRule[0], tempRule[0]);
 
-            if (isAllNodeMode) {
-                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Default;
-            } else if (isNegateMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
-                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Default;
-            } else if (isAddMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
-                symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Not;
+            if (forceAppendAllMode) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Default;
+            } else if (allowExposeMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Default;
+            } else if (allowAddMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Expose;
+            } else if (allowSkipMode && !isDef(symbolsWithNodeMap[tempRule[0]])) {
+                symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Skip;
             }
 
             for (j = 2; j < tempRule.length; j++) {
                 if (tempRule[j] === "") {
                     continue;
                 }
-                // handle flag '--AN'
+                // handle flag '--add'
                 if (tempRule[j] === FLAG_RULE_CREATE_NODE) {
-                    if (isAddMode) {
-                        symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Necessary;
+                    if (allowAddMode) {
+                        symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Necessary;
                     }
                     continue;
                 }
-                // handle flag '--N'
-                if (tempRule[j] === FLAG_RULE_NOT_CREATE_NODE) {
-                    if (isNegateMode && !isAllNodeMode) {
-                        symbolsWithNodeMap[tempRule[0]] = ENodeCreateMode.k_Not;
+                if (tempRule[j] === FLAG_RULE_SKIP_NODE) {
+                    if (allowSkipMode && !forceAppendAllMode) {
+                        symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Skip;
+                    }
+                    continue;
+                }
+                // handle flag '--expose'
+                if (tempRule[j] === FLAG_RULE_EXPOSE_NODE) {
+                    if (allowExposeMode && !forceAppendAllMode) {
+                        symbolsWithNodeMap[tempRule[0]] = ENodeCreationMode.k_Expose;
                     }
                     continue;
                 }

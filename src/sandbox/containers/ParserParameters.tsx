@@ -90,19 +90,24 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
                                         <Form.Group grouped>
                                             <label>Parser flags:</label>
                                             <Form.Checkbox
-                                                checked={ !!(flags & EParserFlags.k_Add) }
-                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_Add) }
-                                                label='Only marked with `--AN` created'
+                                                checked={ !!(flags & EParserFlags.k_AllowAddMode) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_AllowAddMode) }
+                                                label='Allow `--add` mode'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(flags & EParserFlags.k_Negate) }
-                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_Negate) }
-                                                label='Not marked with `--NN` created'
+                                                checked={ !!(flags & EParserFlags.k_AllowExposeMode) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_AllowExposeMode) }
+                                                label='Allow `--expose` mode'
                                             />
                                             <Form.Checkbox
-                                                checked={ !!(flags & EParserFlags.k_AllNode) }
-                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_AllNode) }
-                                                label='All created'
+                                                checked={ !!(flags & EParserFlags.k_AllowSkipMode) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_AllowSkipMode) }
+                                                label='Allow `--skip` mode'
+                                            />
+                                            <Form.Checkbox
+                                                checked={ !!(flags & EParserFlags.k_ForceAppendAll) }
+                                                onChange={ this.handleParserFlags.bind(this, EParserFlags.k_ForceAppendAll) }
+                                                label='Force create all nodes'
                                             />
                                             <Form.Checkbox
                                                 checked={ !!(flags & EParserFlags.k_Debug) }
@@ -147,15 +152,17 @@ class ParserParameters extends React.Component<IParserProps, IParserState> {
     private handleParserFlags(flag: EParserFlags, event, { checked: value }): void {
         let { flags } = this.state;
         switch (flag) {
-            case EParserFlags.k_Add:
-            case EParserFlags.k_Negate:
+            case EParserFlags.k_AllowAddMode:
+            case EParserFlags.k_AllowExposeMode:
+            case EParserFlags.k_AllowSkipMode:
                 if (value) {
-                    flags = bf.clearFlags(flags, EParserFlags.k_AllNode);
+                    flags = bf.clearFlags(flags, EParserFlags.k_ForceAppendAll);
                 }
                 break;
-            case EParserFlags.k_AllNode:
+            case EParserFlags.k_ForceAppendAll:
                 if (value) {
-                    flags = bf.clearFlags(flags, EParserFlags.k_Negate | EParserFlags.k_Add);
+                    flags = bf.clearFlags(flags, EParserFlags.k_AllowExposeMode |
+                        EParserFlags.k_AllowAddMode | EParserFlags.k_AllowSkipMode);
                 }
                 break;
             default:

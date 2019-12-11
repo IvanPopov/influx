@@ -11,7 +11,7 @@ const initialState: IParserState = {
     filename: null,
     grammar: null,
     type: EParserType.k_LALR,
-    flags: EParserFlags.k_Add | EParserFlags.k_Negate,
+    flags: EParserFlags.k_Default,
     // TODO: rename option (or move it out of this scope)
     parsingFlags: IASTDocumentFlags.k_Optimize
 };
