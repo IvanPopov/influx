@@ -59,7 +59,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { T_BOOL, T_INT, T_VOID } from './SystemScope';
+import { T_BOOL, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -340,7 +340,7 @@ function checkFunctionsForRecursion(context: Context, program: ProgramScope) {
     const gs = program.globalScope;
 
     let recusrionFound = false;
-    mwalk(gs.functionMap, funcOverloads => {
+    mwalk(gs.functions, funcOverloads => {
         funcOverloads.forEach(func => {
             recusrionFound = recusrionFound ||
                 !checkFunctionForRecursion(context, func, []);
@@ -606,13 +606,56 @@ export class Analyzer {
 
             case 'ScalarType':
             case 'ObjectType':
-                // TODO: add support for RWBuffer<type>
-                type = scope.findType(children[children.length - 1].value);
+                {
+                    let typeName = children[children.length - 1].value;
+                    
+                    if (children.length !== 1) {
+                        assert(children[children.length - 2].value === '<' && children[0].value === '>');
+                        const tplName = typeName;
+                        const args = children
+                            .slice(1, -2)
+                            .reverse()
+                            .filter((v, i) => i % 2 == 0)
+                            .map(sourceNode => this.analyzeType(context, program, sourceNode));
+                        
+                        const template = scope.findTypeTemplate(typeName);
 
-                if (isNull(type)) {
-                    context.error(sourceNode, EErrors.InvalidTypeNameNotType, { typeName: children[children.length - 1].value });
+                        if (isNull(template)) {
+                            context.error(sourceNode, EErrors.InvalidTypeNameTemplateNotFound, 
+                                { tplName, args: args.map(arg => arg.toCode()) });
+                            return null;
+                        }
+
+                        // TODO: validate register
+                        // TODO: use ESystemTypes enumeration
+                        const SYSTEM_TYPES = ['RWBuffer', 'RWStructuredBuffer', 'AppendStructuredBuffer'];
+                        if (SYSTEM_TYPES.indexOf(template.name) !== -1) {
+                            if (scope.type != EScopeType.k_Global) {
+                                context.error(sourceNode, EErrors.InvalidTypeScope, 
+                                    { typeName: template.name, tooltip: 'only global scope allowed' });
+                                return null;
+                            }
+                        }
+                        
+                        typeName = template.typeName(args);
+                        type = scope.findType(typeName);
+                        
+                        if (isNull(type)) {
+                            type = template.produceType(args);
+                            if (isNull(type)) {
+                                context.error(sourceNode, EErrors.CannotProduceType, { typeName });
+                                return null;
+                            }
+                        }
+                    } else {
+                        type = scope.findType(typeName);
+                    }
+
+                    if (isNull(type)) {
+                        context.error(sourceNode, EErrors.InvalidTypeNameNotType, { typeName });
+                        return null;
+                    }
                 }
-
                 break;
 
             case 'VectorType':
@@ -1362,7 +1405,7 @@ export class Analyzer {
         const indexExpr = this.analyzeExpr(context, program, children[children.length - 3]);
         const indexExprType = indexExpr.type;
 
-        if (!indexExprType.isEqual(T_INT)) {
+        if (!(indexExprType.isEqual(T_INT) || indexExprType.isEqual(T_UINT))) {
             context.error(sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: String(indexExprType) });
             return null;
         }
@@ -3175,7 +3218,7 @@ export class Analyzer {
     protected static addTechnique(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
         let name: string = technique.name;
 
-        if (program.globalScope.hasTechnique(name)) {
+        if (!isNull(program.globalScope.findTechnique(name))) {
             context.error(technique.sourceNode, EErrors.TechniqueNameRedefinition, { techName: name });
             return;
         }
@@ -3327,6 +3370,14 @@ export class Analyzer {
                     return null;
                 }
             }
+        }
+
+        if (operator === '=') {
+            // TODO: move conversion logic inside TypeInstruction.
+            if ((leftType.isEqual(T_INT) && rightType.isEqual(T_UINT)) || 
+                (leftType.isEqual(T_UINT) && rightType.isEqual(T_INT))) {
+                    return leftType;
+                }
         }
 
         return null;

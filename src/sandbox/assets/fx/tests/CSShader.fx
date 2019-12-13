@@ -231,9 +231,12 @@ void CSParticlesPrerenderShader1(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, 
 	if(!Alive) return;
 
 	Part Particle = uavParticles[PartId];
-	PointInstance Prerendered;
-	PrerenderLines(Particle, Prerendered);
-	uavPrerendered1.Append(Prerendered);
+	for(int InstanceId = 0; InstanceId < 2; InstanceId++)
+	{
+		PointInstance Prerendered;
+		PrerenderLines(Particle, Prerendered, InstanceId);
+		uavPrerendered1.Append(Prerendered);
+	}
 }
 
 uniform float4x4 modelViewMatrix;

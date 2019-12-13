@@ -221,11 +221,34 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${partType} Particle = ${uavParticles}[PartId];`);
 
                 const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
-                this.emitLine(`${prerenderedType} Prerendered;`);
-                this.emitLine(`${prerenderFn.name}(Particle, Prerendered);`);
-
+                
                 uavs.push(this.emitUav(`AppendStructuredBuffer<${prerenderedType}>`, `${uavPrerendered}${i}`));
-                this.emitLine(`${uavPrerendered}${i}.Append(Prerendered);`);
+                
+                if (pass.instanceCount > 1) {
+                    this.emitLine(`for(int InstanceId = 0; InstanceId < ${pass.instanceCount}; InstanceId++)`);
+                    this.emitChar('{');
+                    this.push();
+                }
+                
+                {
+                    this.emitLine(`${prerenderedType} Prerendered;`);
+                    if (prerenderFn.def.params.length == 3) {
+                        if (pass.instanceCount === 1) {
+                            this.emitLine(`int InstanceId = 0;`);
+                        }
+                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered, InstanceId);`);
+                    } else {
+                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered);`);
+                    }
+                    this.emitLine(`${uavPrerendered}${i}.Append(Prerendered);`);
+                }
+
+                if (pass.instanceCount > 1) {
+                    this.pop();
+                    this.emitChar('}');
+                    this.emitNewline();
+                }
+
             }
             this.pop();
             this.emitChar('}');
@@ -236,7 +259,7 @@ export class FxTranslator extends FxEmitter {
     }
 
     emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
-        const  IFxReflection = {};
+        const IFxReflection = {};
 
         const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
         const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(fx);
@@ -262,12 +285,12 @@ export class FxTranslator extends FxEmitter {
             }
         });
 
-        return { 
-            CSParticlesInitRoutine, 
-            CSParticlesUpdateRoutine, 
-            CSParticlesPrerenderRoutines, 
-            VSParticleShaders, 
-            PSParticleShaders 
+        return {
+            CSParticlesInitRoutine,
+            CSParticlesUpdateRoutine,
+            CSParticlesPrerenderRoutines,
+            VSParticleShaders,
+            PSParticleShaders
         };
     }
 }

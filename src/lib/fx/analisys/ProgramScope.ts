@@ -1,5 +1,5 @@
 ﻿import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
-import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
 export interface IScopeSettings {
@@ -8,26 +8,30 @@ export interface IScopeSettings {
     strictMode?: boolean;
 }
 
+
+
 export class Scope implements IScope {
     strictMode: boolean;
 
     readonly parent: IScope;
     readonly type: EScopeType;
 
-    readonly variableMap: IMap<IVariableDeclInstruction>;
-    readonly typeMap: IMap<ITypeInstruction>;
-    readonly functionMap: IMap<IFunctionDeclInstruction[]>;
-    readonly techniqueMap: IMap<ITechniqueInstruction>;
+    readonly variables: IMap<IVariableDeclInstruction>;
+    readonly types: IMap<ITypeInstruction>;
+    readonly functions: IMap<IFunctionDeclInstruction[]>;
+    readonly techniques: IMap<ITechniqueInstruction>;
+    readonly typeTemplates: IMap<ITypeTemplate>;
 
     constructor({ type = EScopeType.k_Default, parent = null, strictMode = false }: IScopeSettings) {
         this.type = type;
         this.parent = parent;
         this.strictMode = strictMode;
 
-        this.variableMap = {};
-        this.typeMap = {};
-        this.functionMap = {};
-        this.techniqueMap = {};
+        this.variables = {};
+        this.types = {};
+        this.functions = {};
+        this.techniques = {};
+        this.typeTemplates = {};
     }
 
 
@@ -46,7 +50,7 @@ export class Scope implements IScope {
     findVariable(varName: string): IVariableDeclInstruction {
         let scope: Scope = this;
         while (!isNull(scope)) {
-            let variable = scope.variableMap[varName];
+            let variable = scope.variables[varName];
             if (isDef(variable)) {
                 return variable;
             }
@@ -57,10 +61,23 @@ export class Scope implements IScope {
     }
 
 
+    findTypeTemplate(typeName: string): ITypeTemplate {
+        let scope: Scope = this;
+        while (!isNull(scope)) {
+            let template = scope.typeTemplates[typeName];
+            if (isDef(template)) {
+                return template;
+            }
+            scope = scope.parent;
+        }
+        return null;
+    }
+
+
     findType(typeName: string): ITypeInstruction {
         let scope: Scope = this;
         while (!isNull(scope)) {
-            let type = scope.typeMap[typeName];
+            let type = scope.types[typeName];
             if (isDef(type)) {
                 return type;
             }
@@ -74,8 +91,8 @@ export class Scope implements IScope {
     /**
      * Find function by name and list of types.
      * returns:
-     *   'null' if there is not function; 
-     *   'undefined'if there more then one function; 
+     *   'null' if there is no requested function; 
+     *   'undefined' if there more then one function; 
      *    function if all is ok;
      */
     findFunction(funcName: string, args: ITypeInstruction[] = null): IFunctionDeclInstruction | null | undefined {
@@ -83,7 +100,7 @@ export class Scope implements IScope {
         let func: IFunctionDeclInstruction = null;
 
         while (!isNull(scope)) {
-            let funcList = scope.functionMap[funcName];
+            let funcList = scope.functions[funcName];
 
             if (isDef(funcList)) {
                 for (let i = 0; i < funcList.length; i++) {
@@ -110,7 +127,7 @@ export class Scope implements IScope {
 
                     let isParamsEqual: boolean = true;
 
-                    for (let j: number = 0; j < args.length; j++) {
+                    for (let j = 0; j < args.length; j++) {
                         isParamsEqual = false;
 
                         if (args[j] && !args[j].isEqual(testedArguments[j].type)) {
@@ -138,7 +155,7 @@ export class Scope implements IScope {
     findTechnique(techName: string): ITechniqueInstruction | null | undefined {
         let scope: Scope = this;
         while (!isNull(scope)) {
-            let technique = scope.techniqueMap[techName];
+            let technique = scope.techniques[techName];
             if (isDef(technique)) {
                 return technique;
             }
@@ -148,83 +165,9 @@ export class Scope implements IScope {
     }
 
 
-    hasVariable(varName: string): boolean {
-        return !isNull(this.findVariable(varName));
-    }
-
-
-    hasType(typeName: string): boolean {
-        return !isNull(this.findType(typeName));
-    }
-
-
-    hasFunction(funcName: string, argTypes: ITypedInstruction[] = []): boolean {
-        let scope: Scope = this;
-
-        while (!isNull(scope)) {
-            let funcListMap = scope.functionMap;
-
-
-            let funcList = funcListMap[funcName];
-
-            if (isDef(funcList)) {
-                for (let i: number = 0; i < funcList.length; i++) {
-                    let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.def.params;
-
-                    if (argTypes.length > testedArguments.length ||
-                        argTypes.length < testedFunction.def.numArgsRequired) {
-                        continue;
-                    }
-
-                    let isParamsEqual: boolean = true;
-
-                    for (let j: number = 0; j < argTypes.length; j++) {
-                        isParamsEqual = false;
-
-                        if (!argTypes[j].type.isEqual(testedArguments[j].type)) {
-                            break;
-                        }
-
-                        isParamsEqual = true;
-                    }
-
-                    if (isParamsEqual) {
-                        return true;
-                    }
-                }
-            }
-
-            scope = scope.parent;
-        }
-
-        return false;
-    }
-
-
-    hasTechnique(techName: string): boolean {
-        return !isNull(this.findTechnique(techName));
-    }
-
-
-    hasVariableInScope(varName: string): boolean {
-        return isDefAndNotNull(this.variableMap[varName]);
-    }
-
-
-    hasTypeInScope(typeName: string): boolean {
-        return isDefAndNotNull(this.typeMap[typeName]);
-    }
-
-    hasTechniqueInScope(technique: ITechniqueInstruction): boolean {
-        return isDefAndNotNull(this.techniqueMap[technique.name]);
-    }
-
-
-
     findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction {
         const scope: Scope = this;
-        const funcListMap = scope.functionMap;
+        const funcListMap = scope.functions;
         const funcOverloads = funcListMap[func.name];
 
         if (!isDef(funcOverloads)) {
@@ -261,16 +204,12 @@ export class Scope implements IScope {
         return targetFunc;
     }
 
-    hasFunctionInScope(func: IFunctionDeclInstruction): boolean {
-        return !isNull(this.findFunctionInScope(func));
-    }
-
-
+    
     addVariable(variable: IVariableDeclInstruction): boolean {
-        let variableMap = this.variableMap;
+        let variableMap = this.variables;
         let varName = variable.name;
 
-        if (!this.hasVariableInScope(varName)) {
+        if (!this.variables[varName]) {
             variableMap[varName] = variable;
             assert(variable.scope === this);
         }
@@ -283,18 +222,23 @@ export class Scope implements IScope {
     }
 
 
-    // todo: remove scopeId from argumts, use type.scope instead.
-    addType(type: ITypeInstruction): boolean {
-        let typeMap = this.typeMap;
-        let typeName = type.name;
-
-        if (this.hasTypeInScope(typeName)) {
+    addTypeTemplate(template: ITypeTemplate): boolean {
+        if (isDefAndNotNull(this.typeTemplates[template.name])) {
             return false;
         }
 
-        typeMap[typeName] = type;
-        console.assert(type.scope === this);
+        this.typeTemplates[template.name] = template;
+        return true;
+    }
 
+    // todo: remove scopeId from argumts, use type.scope instead.
+    addType(type: ITypeInstruction): boolean {
+        if (this.types[type.name]) {
+            return false;
+        }
+
+        this.types[type.name] = type;
+        console.assert(type.scope === this);
         return true;
     }
 
@@ -303,7 +247,7 @@ export class Scope implements IScope {
         assert(this.type <= EScopeType.k_Global);
         assert(func.scope === this);
 
-        let funcMap = this.functionMap;
+        let funcMap = this.functions;
         let funcName = func.name;
 
         funcMap[funcName] = funcMap[funcName] || [];
@@ -327,10 +271,10 @@ export class Scope implements IScope {
     addTechnique(technique: ITechniqueInstruction): boolean {
         assert(this.type <= EScopeType.k_Global);
 
-        let techMap = this.techniqueMap;
+        let techMap = this.techniques;
         let techName = technique.name;
 
-        if (this.hasTechniqueInScope(technique)) {
+        if (this.techniques[technique.name]) {
             return false;
         }
 

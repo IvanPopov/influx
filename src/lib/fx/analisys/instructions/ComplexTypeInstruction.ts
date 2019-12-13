@@ -1,4 +1,4 @@
-import { isDef, isDefAndNotNull } from "@lib/common";
+import { isDef, isDefAndNotNull, isNull } from "@lib/common";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
@@ -30,7 +30,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this._isContainSampler = false;
         this._isContainComplexType = false;
 
-        this.addFields(fields.map(field => Instruction.$withParent(field, this)));
+        this.addFields(fields.filter(field => !isNull(field)).map(field => Instruction.$withParent(field, this)));
     }
 
     
@@ -152,31 +152,18 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
     
-    isSampler(): boolean {
-        return false;
-    }
-
-    
-    isSamplerCube(): boolean {
-        return false;
-    }
-
-    
-    isSampler2D(): boolean {
-        return false;
-    }
-
-    
+    /** @deprecated */
     isContainArray(): boolean {
         return this._isContainArray;
     }
 
     
+    /** @deprecated */
     isContainSampler(): boolean {
         return this._isContainSampler;
     }
 
-    
+    /** @deprecated */
     isContainComplexType(): boolean {
         return this._isContainComplexType;
     }

@@ -5,6 +5,8 @@ import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
 import { Instruction } from './Instruction';
 import { VariableTypeInstruction } from './VariableTypeInstruction';
 
+// import * as SystemScope from '@lib/fx/analisys/SystemScope';
+
 export interface IVariableDeclInstructionSettings extends IDeclInstructionSettings {
     id: IIdInstruction;
     type: IVariableTypeInstruction;
@@ -129,12 +131,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return false;
     }
 
-
-    isSampler(): boolean {
-        return this.type.isSampler();
-    }
-
-
+    
     toCode(): string {
         var code = '';        
         code = this.type.toCode();
@@ -146,7 +143,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         }
 
         if (!isNull(this.initExpr) &&
-            !this.isSampler() &&
+            // !SystemScope.isSamplerType(this.type) && // TODO: is it correct check?
             !this.isUniform()) {
             code += '=' + this.initExpr.toCode();
         }

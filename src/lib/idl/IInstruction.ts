@@ -131,38 +131,41 @@ export enum EScopeType {
     k_Annotation
 }
 
+
+export interface ITypeTemplate {
+    readonly scope: IScope;
+    readonly name: string;
+    produceType(args?: ITypeInstruction[]): ITypeInstruction;
+    typeName(args?: ITypeInstruction[]): string;
+}
+
+
 export interface IScope {
     strictMode: boolean;
 
     readonly parent: IScope;
     readonly type: EScopeType;
 
-    readonly variableMap: IMap<IVariableDeclInstruction>;
-    readonly typeMap: IMap<ITypeInstruction>;
-    readonly functionMap: IMap<IFunctionDeclInstruction[]>;
-    readonly techniqueMap: IMap<ITechniqueInstruction>;
+    readonly variables: IMap<IVariableDeclInstruction>;
+    readonly types: IMap<ITypeInstruction>;
+    readonly functions: IMap<IFunctionDeclInstruction[]>;
+    readonly techniques: IMap<ITechniqueInstruction>;
+    readonly typeTemplates: IMap<ITypeTemplate>;
 
     isStrict(): boolean;
 
     findVariable(variableName: string): IVariableDeclInstruction;
     findType(typeName: string): ITypeInstruction;
+    findTypeTemplate(typeName: string): ITypeTemplate;
     findFunction(funcName: string, args: ITypeInstruction[]): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
 
-    hasVariable(variableName: string): boolean;
-    hasType(typeName: string): boolean;
-    hasFunction(funcName: string, argTypes: ITypedInstruction[]): boolean;
-    hasTechnique(techniqueName: string): boolean;
-
-    hasVariableInScope(variableName: string): boolean;
-    hasTypeInScope(typeName: string): boolean;
-    hasFunctionInScope(func: IFunctionDeclInstruction): boolean;
-    hasTechniqueInScope(tech: ITechniqueInstruction): boolean;
-
+    /** @deprecated */
     findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction;
 
     addVariable(variable: IVariableDeclInstruction): boolean;
     addType(type: ITypeInstruction): boolean;
+    addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
 }
@@ -243,12 +246,11 @@ export interface ITypeInstruction extends IInstruction {
     isComplex(): boolean;
     isConst(): boolean;
 
-    isSampler(): boolean;
-    isSamplerCube(): boolean;
-    isSampler2D(): boolean;
-
+    /** @deprecated */
     isContainArray(): boolean;
+    /** @deprecated */
     isContainSampler(): boolean;
+    /** @deprecated */
     isContainComplexType(): boolean;
 
     isEqual(type: ITypeInstruction): boolean;
@@ -345,7 +347,6 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     isGlobal(): boolean;
 
     isField(): boolean;
-    isSampler(): boolean;
 
     /** Alias for type.isUniform() */
     isUniform(): boolean;

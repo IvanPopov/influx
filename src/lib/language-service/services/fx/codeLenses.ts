@@ -27,8 +27,8 @@ export class FXCodeLenses {
         };
 
         if (!isNull(scope)) {
-            for (const techniqueName in scope.techniqueMap) {
-                const technique = scope.techniqueMap[techniqueName];
+            for (const techniqueName in scope.techniques) {
+                const technique = scope.techniques[techniqueName];
                 if (technique.type === ETechniqueType.k_PartFx) {
                     const partFx = <IPartFxInstruction>technique;
 

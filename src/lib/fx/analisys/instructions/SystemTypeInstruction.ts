@@ -12,6 +12,7 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     writable?: boolean;
     readable?: boolean;
     declaration?: string;
+    complex?: boolean;
 }
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
@@ -22,6 +23,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _fields: IVariableDeclInstruction[];
     protected _bIsWritable: boolean;
     protected _bIsReadable: boolean;
+    protected _bIsComplex: boolean;
     protected _declaration: string;
 
     constructor({
@@ -32,6 +34,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         fields = [],
         writable = true, 
         readable = true, 
+        complex = false,
         declaration = null, 
         ...settings
     }: ISystemTypeInstructionSettings) {
@@ -44,6 +47,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._fields = [];
         this._bIsWritable = writable;
         this._bIsReadable = readable;
+        this._bIsComplex = complex;
         this._declaration = declaration;
 
         fields.forEach(field => this.addField(field));
@@ -134,7 +138,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     isComplex(): boolean {
-        return false;
+        return this._bIsComplex;
     }
 
 
@@ -150,24 +154,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     isConst(): boolean {
         return false;
-    }
-
-
-    isSampler(): boolean {
-        return this.name === "sampler" ||
-            this.name === "sampler2D" ||
-            this.name === "samplerCUBE";
-    }
-
-
-    isSamplerCube(): boolean {
-        return this.name === "samplerCUBE";
-    }
-
-
-    isSampler2D(): boolean {
-        return this.name === "sampler" ||
-            this.name === "sampler2D";
     }
 
 

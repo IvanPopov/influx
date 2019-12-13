@@ -160,7 +160,7 @@ export function filterPartFx(scope: IScope): IPartFxInstruction[] {
         return [];
     }
 
-    const map = scope.techniqueMap;
+    const map = scope.techniques;
     return Object.keys(map)
         .filter(name => map[name].type === ETechniqueType.k_PartFx)
         .map(name => <IPartFxInstruction>map[name]);

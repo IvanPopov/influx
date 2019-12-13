@@ -7,8 +7,19 @@ import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableD
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
-import { EInstructionTypes, EScopeType, ITypedInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, EScopeType, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+
+// TODO: use it
+export enum ESystemTypes {
+    k_Sampler,
+    k_Sampler2D,
+    k_Sampler3D,
+    k_SamplerCube,
+    k_RWBuffer,
+    k_RWStructuredBuffer,
+    k_AppendStructuredBuffer
+};
 
 const scope = new Scope({ type: EScopeType.k_System });
 
@@ -38,6 +49,78 @@ function generateSystemType(name: string, size: number = 0, elementType: ITypeIn
     scope.addType(type);
 
     return type;
+}
+
+
+class TypeTemplate implements ITypeTemplate {
+    readonly name: string;
+    readonly scope: IScope;
+    
+    constructor(name: string, scope: IScope) {
+        this.name = name;
+        this.scope = scope;
+    }
+
+    produceType(): ITypeInstruction {
+        return null;
+    }
+
+    typeName(args?: ITypeInstruction[]): string {
+        if (args) {
+            return `${this.name}<${args.map(arg => arg.name).join(', ')}>`;
+        }
+        return this.name;
+    }
+}
+
+
+class RWBufferTemplate extends TypeTemplate {
+    constructor() {
+        super('RWBuffer', scope);
+    }
+    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+
+        if (!args[0].isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+    }
+}
+
+
+class RWStructuredBufferTemplate extends TypeTemplate {
+    constructor() {
+        super('RWStructuredBuffer', scope);
+    }
+    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+        
+        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+    }
+}
+
+
+class AppendStructuredBufferTemplate extends TypeTemplate {
+    constructor() {
+        super('AppendStructuredBuffer', scope);
+    }
+    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+        
+        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+    }
 }
 
 
@@ -627,6 +710,10 @@ function initSystemTypes(): void {
     addSystemTypeScalar();
     addSystemTypeVector();
     addSystemTypeMatrix();
+    
+    scope.addTypeTemplate(new RWBufferTemplate);
+    scope.addTypeTemplate(new RWStructuredBufferTemplate);
+    scope.addTypeTemplate(new AppendStructuredBufferTemplate);
 }
 
 
@@ -694,9 +781,9 @@ export const findVariable = (varName: string) => scope.findVariable(varName);
 export const findTechnique = (techName: string) => scope.findTechnique(techName);
 export const findFunction = (funcName: string, args?: ITypeInstruction[]) => scope.findFunction(funcName, args);
 
-export const hasType = (typeName: string) => scope.hasType(typeName);
-export const hasVariable = (varName: string) => scope.hasVariable(varName);
-export const hasTechnique = (techName: string) => scope.hasTechnique(techName);
+export const hasType = (typeName: string) => !isNull(scope.findType(typeName));
+export const hasVariable = (varName: string) => !isNull(scope.findVariable(varName));
+export const hasTechnique = (techName: string) => !isNull(scope.findTechnique(techName));
 
 export function isMatrixType(type: ITypeInstruction): boolean { 
     return type.isEqual(getSystemType("float2x2")) ||

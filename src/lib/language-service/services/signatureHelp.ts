@@ -33,7 +33,7 @@ export class SLSignatureHelp {
                 }
 
                 const fdecl = <IFunctionDeclInstruction>fcall.decl;
-                const fnList = fdecl.scope.functionMap[fdecl.name];
+                const fnList = fdecl.scope.functions[fdecl.name];
                 const signatures = fnList.map(fn =>
                     SignatureInformation.create(
                         fn.def.toCode(),

@@ -1,9 +1,9 @@
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
 import { EInstructionTypes, IExprInstruction, IScope, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+
 import { IdInstruction } from "./IdInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 import { VariableDeclInstruction } from "./VariableDeclInstruction";
-
 
 export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     type: ITypeInstruction;
@@ -305,31 +305,19 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    isSampler(): boolean {
-        return this.subType.isSampler();
-    }
-
-
-    isSamplerCube(): boolean {
-        return this.subType.isSamplerCube();
-    }
-
-
-    isSampler2D(): boolean {
-        return this.subType.isSampler2D();
-    }
-
-
+    /** @deprecated */
     isContainArray(): boolean {
         return this.subType.isContainArray();
     }
 
 
+    /** @deprecated */
     isContainSampler(): boolean {
         return this.subType.isContainSampler();
     }
 
 
+    /** @deprecated */
     isContainComplexType(): boolean {
         return this.subType.isContainComplexType();
     }
