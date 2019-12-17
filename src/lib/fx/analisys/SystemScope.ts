@@ -2,13 +2,14 @@ import { assert, isNull } from "@lib/common";
 import { FunctionDefInstruction } from "@lib/fx/analisys/instructions/FunctionDefInstruction";
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { SystemFunctionInstruction } from "@lib/fx/analisys/instructions/SystemFunctionInstruction";
-import { SystemTypeInstruction } from "@lib/fx/analisys/instructions/SystemTypeInstruction";
+import { ISystemTypeInstructionSettings, SystemTypeInstruction } from "@lib/fx/analisys/instructions/SystemTypeInstruction";
 import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
-import { EInstructionTypes, EScopeType, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+import { isObject } from "util";
 
 // TODO: use it
 export enum ESystemTypes {
@@ -36,16 +37,31 @@ function _error(code: number, info = {}): void {
     _emitException(EAnalyzerErrors[code]);
 }
 
+type ITypeInfo = Pick<ISystemTypeInstructionSettings, Exclude<keyof ISystemTypeInstructionSettings, 'scope'>>;
 
-function generateSystemType(name: string, size: number = 0, elementType: ITypeInstruction = null,
-    length: number = 1, fields: IVariableDeclInstruction[] = []): SystemTypeInstruction {
+function generateSystemType(name: string, size?: number, elementType?: ITypeInstruction, 
+    length?: number, fields?: IVariableDeclInstruction[], methods?: IFunctionDeclInstruction[]): SystemTypeInstruction;
+function generateSystemType({ name, length, elementType, fields, size, methods }: ITypeInfo): SystemTypeInstruction;
+function generateSystemType(...args: any[]): SystemTypeInstruction {
+    let name: string;
+    let size: number;
+    let elementType: ITypeInstruction;
+    let length: number;
+    let fields: IVariableDeclInstruction[];
+    let methods: IFunctionDeclInstruction[];
+
+    if (isObject(args[0])) {
+        ({ name, size, elementType, length, fields, methods } = args[0]);
+    } else{
+        [ name, size, elementType, length, fields, methods ] = args;
+    }
 
     if (getSystemType(name)) {
         console.error(`type already exists: ${name}`);
         return null;
     }
 
-    const type = new SystemTypeInstruction({ scope, name, elementType, length, fields, size });
+    const type = new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods });
     scope.addType(type);
 
     return type;
@@ -104,7 +120,19 @@ class RWStructuredBufferTemplate extends TypeTemplate {
             return null;
         }
         
-        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        
+        {
+            let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
+            let id = new IdInstruction({ scope, name: 'IncrementCounter' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+
+        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */, fields, methods);
     }
 }
 

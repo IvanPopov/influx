@@ -558,7 +558,7 @@ export class Analyzer {
         const scope = program.currentScope;
 
         let type: ITypeInstruction = null;
-        let usages: IVariableUsage[] = [];
+        let usagesRaw: IVariableUsage[] = [];
 
         for (let i = children.length - 1; i >= 0; i--) {
             if (children[i].name === 'Type') {
@@ -568,7 +568,40 @@ export class Analyzer {
                 }
             }
             else if (children[i].name === 'Usage') {
-                usages.push(this.analyzeUsage(children[i]));
+                usagesRaw.push(this.analyzeUsage(children[i]));
+            }
+        }
+
+        const usageIn = usagesRaw.indexOf('in') !== -1;
+        const usageOut = usagesRaw.indexOf('out') !== -1;
+        const usageInout = usagesRaw.indexOf('inout') !== -1;
+        const usageConst = usagesRaw.indexOf('const') !== -1;
+        const usageUniform = usagesRaw.indexOf('uniform') !== -1;
+
+        // TODO: emit errors in case of inconsistent usages
+        // TODO: remplace with bitflags
+        let usages: IVariableUsage[] = [];
+        if (usageInout) {
+            usages.push('inout');
+            // emit error in case of uniform
+            // emit error in case of const
+        } else {
+            if (usageIn && usageOut) {
+                usages.push('inout');
+                // emit error in case of uniform
+                // emit error in case of const
+            } else {
+                if (usageIn) {
+                    usages.push('in');
+                }
+                if (usageOut) {
+                    usages.push('out');
+                    // emit error in case of const
+                    // emit error in case of uniform
+                } else {
+                    if (usageConst) usages.push('const');
+                    if (usageUniform) usages.push('uniform');
+                }
             }
         }
 

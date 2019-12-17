@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
@@ -9,6 +9,7 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     elementType?: ITypeInstruction;
     length?: number;
     fields?: IVariableDeclInstruction[];
+    methods?: IFunctionDeclInstruction[];
     writable?: boolean;
     readable?: boolean;
     declaration?: string;
@@ -21,6 +22,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _elementType: ITypeInstruction;
     protected _length: number;
     protected _fields: IVariableDeclInstruction[];
+    protected _methods: IFunctionDeclInstruction[];
     protected _bIsWritable: boolean;
     protected _bIsReadable: boolean;
     protected _bIsComplex: boolean;
@@ -32,6 +34,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         elementType = null, 
         length = 1, 
         fields = [],
+        methods = [],
         writable = true, 
         readable = true, 
         complex = false,
@@ -45,12 +48,14 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._elementType = Instruction.$withNoParent(elementType);
         this._length = length;
         this._fields = [];
+        this._methods = [];
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._bIsComplex = complex;
         this._declaration = declaration;
 
         fields.forEach(field => this.addField(field));
+        methods.forEach(method => this.addMethod(method));
     }
 
 
@@ -114,6 +119,11 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     get fields(): IVariableDeclInstruction[] {
         return this._fields;
+    }
+
+
+    get methods(): IFunctionDeclInstruction[] {
+        return this._methods;
     }
 
 
@@ -213,11 +223,16 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     getField(fieldName: string): IVariableDeclInstruction {
-        return this._fields.find(field => field.name == fieldName) || null;
+        return this._fields.find(field => field.name === fieldName) || null;
     }
 
 
-    getFieldBySemantics(sSemantic: string): IVariableDeclInstruction {
+    getMethod(methodName: string): IFunctionDeclInstruction[] {
+        return this._methods.filter(method => method.name === methodName) || null;
+    }
+
+
+    getFieldBySemantics(semantic: string): IVariableDeclInstruction {
         console.error("@undefined_behavior");
         return null;
     }
@@ -226,6 +241,11 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     addField(field: IVariableDeclInstruction): void {
         console.assert(this.getField(field.name) === null);
         this._fields.push(Instruction.$withParent(field, this));
+    }
+
+    addMethod(method: IFunctionDeclInstruction): void {
+        console.assert(this.getMethod(method.name).find(knownMethod => knownMethod.def.signature === method.def.signature) === null);
+        this._methods.push(Instruction.$withParent(method, this));
     }
 }
 

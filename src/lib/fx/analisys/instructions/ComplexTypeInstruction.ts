@@ -1,7 +1,7 @@
 import { isDef, isDefAndNotNull, isNull } from "@lib/common";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
-import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -91,6 +91,11 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     
     get fields(): IVariableDeclInstruction[] {
         return this.fieldNames.map( name => this._fields[name] );
+    }
+
+
+    get methods(): IFunctionDeclInstruction[] {
+        return [];
     }
 
     

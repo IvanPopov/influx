@@ -1,5 +1,5 @@
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
-import { EInstructionTypes, IExprInstruction, IScope, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, IScope, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IdInstruction } from "./IdInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -135,6 +135,13 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this.subType.readable;
     }
 
+
+
+    get methods(): IFunctionDeclInstruction[] {
+        return [];
+    }
+
+    
 
     get size(): number {
         if (!isNull(this._arrayElementType)) {

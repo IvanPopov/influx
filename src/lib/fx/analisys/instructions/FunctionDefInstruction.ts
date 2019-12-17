@@ -39,6 +39,19 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
     }
 
 
+    get signature(): string {
+        const { name, returnType, params } = this;
+        return `${returnType.name} ${name}(${params.map(param => {
+            if (param) {
+                const type = param.type;
+                const usages = type.usages.length > 0 ? `${type.usages.join(' ')} ` : '';
+                return `${usages}${type.name}${param.initExpr? '?':''}`;
+            }
+            return  '*';
+        }).join(', ')})`;
+    }
+
+
     toString(): string {
         let def = this.returnType.hash + " " + this.name + "(";
 

@@ -237,6 +237,8 @@ export interface ITypeInstruction extends IInstruction {
     readonly fieldNames: string[];
     readonly fields: IVariableDeclInstruction[];
 
+    readonly methods: IFunctionDeclInstruction[];
+
     isBase(): boolean;
     isArray(): boolean;
     // Returns true is type is user defined array.
@@ -308,9 +310,11 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly returnType: ITypeInstruction;
     readonly name: string;
     readonly params: IVariableDeclInstruction[];
+    readonly signature: string;
     
     // todo: remove it.
     readonly numArgsRequired: number;
+
 
     toString(): string;              // << declaration with uniq name
 }

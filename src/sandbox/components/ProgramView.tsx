@@ -21,7 +21,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Icon, List, Message } from 'semantic-ui-react';
+import { Icon, List, Message, Popup } from 'semantic-ui-react';
 
 import { IWithStyles } from '.';
 
@@ -335,12 +335,12 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    typeInfo(instr) {
+    typeInfo(instr: ITypeInstruction) {
         return (
             <SystemProperty { ...this.bindProps(instr, false) } name={ instr.strongHash }>
                 <SystemProperty name='writable' value={ `${instr.writable}` } />
                 <SystemProperty name='readable' value={ `${instr.readable}` } />
-                {/* <SystemProperty name='builtIn' value={ `${instr.builtIn}` } /> */}
+                {/* <SystemProperty name='builtIn' value={ `${instr.builtIn}` } /> */ }
                 <SystemProperty name='hash' value={ `${instr.hash}` } />
                 <SystemProperty name='strongHash' value={ `${instr.strongHash}` } />
                 <SystemProperty name='size' value={ `${instr.size} bytes` } />
@@ -349,6 +349,11 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <SystemProperty name='array' value={ `${instr.isArray()}` } />
                 <SystemProperty name='complex' value={ `${instr.isComplex()}` } />
                 <SystemProperty name='const' value={ `${instr.isConst()}` } />
+                <PropertyOpt name='methods' >
+                    { instr.methods.map(method => method.def.signature).map(signature =>
+                        <SystemProperty name={<span>&nbsp;&nbsp;</span>} value={ signature } />
+                    ) }
+                </PropertyOpt>
             </SystemProperty>
         );
     }
@@ -595,6 +600,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <Property name='name' value={ instr.name } />
+                <Property name='signature' value={ instr.signature } />
                 <Property name='type' value={ instr.returnType.name } />
                 <Property name='numArgsRequired' value={ String(instr.numArgsRequired) } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
