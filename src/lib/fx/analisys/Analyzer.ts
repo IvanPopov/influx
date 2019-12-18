@@ -30,6 +30,7 @@ import { ForStmtInstruction } from './instructions/ForStmtInstruction';
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
 import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
+import { expression } from './instructions/helpers';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
 import { IdInstruction } from './instructions/IdInstruction';
 import { IfStmtInstruction } from './instructions/IfStmtInstruction';
@@ -81,6 +82,7 @@ function _errorFromInstruction(context: Context, sourceNode: IParseNode, pError:
 
 
 function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: INSTR_T, stage: ECheckStage): INSTR_T {
+    // TODO: rework this api
     if (!inst._check(stage)) {
         _errorFromInstruction(context, inst.sourceNode, inst._getLastError());
         return null;
@@ -88,7 +90,7 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
     return inst;
 }
 
-
+const asType = (instr: ITypedInstruction) => instr ? instr.type : null;
 
 function getRenderStateValue(state: ERenderStates, value: string): ERenderStateValues {
     let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
@@ -348,6 +350,221 @@ function checkFunctionsForRecursion(context: Context, program: ProgramScope) {
     });
 
     return !recusrionFound;
+}
+
+
+
+function checkForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+    if (!checkReturnTypeForVertexUsage(funcDef)) {
+        return false;
+    }
+
+    if (!checkArgumentsForVertexUsage(funcDef)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+function checkForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+    if (!checkReturnTypeForPixelUsage(funcDef)) {
+        return false;
+    }
+
+    if (!checkArgumentsForPixelUsage(funcDef)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+
+function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+    const returnType = <IVariableTypeInstruction>funcDef.returnType;
+
+    if (returnType.isEqual(SystemScope.T_VOID)) {
+        return true;
+    }
+
+    if (returnType.isComplex()) {
+        if (returnType.hasFieldWithoutSemantics()) {
+            return false;
+        }
+
+        if (!returnType.hasAllUniqueSemantics()) {
+            return false;
+        }
+
+        // isGood = returnType._hasFieldWithSematic("POSITION");
+        // if(!isGood){
+        // 	return false;
+        // }
+
+        // samplers cant be interpolators
+        if (returnType.isContainSampler()) {
+            return false;
+        }
+
+        // Forbid fileds with user-defined types
+        // or any other complex types.
+        if (returnType.isContainComplexType()) {
+            return false;
+        }
+    } else {
+        if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
+            return false;
+        }
+
+        if (funcDef.semantic !== "POSITION") {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// todo: add support for dual source blending
+// todo: add support for MRT
+function checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+    let returnType = <IVariableTypeInstruction>funcDef.returnType;
+
+    if (returnType.isEqual(SystemScope.T_VOID)) {
+        return true;
+    }
+
+    // TODO: add MRT support
+    if (!returnType.isBase()) {
+        return false;
+    }
+
+    if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
+        return false;
+    }
+
+    if (funcDef.semantic !== "COLOR") {
+        return false;
+    }
+
+    return true;
+}
+
+
+function checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
+    let params = funcDef.params;
+    let isAttributeByStruct = false;
+    let isAttributeByParams = false;
+    let isStartAnalyze = false;
+
+    for (let i: number = 0; i < params.length; i++) {
+        let param = params[i];
+
+        if (param.isUniform()) {
+            continue;
+        }
+
+        if (!isStartAnalyze) {
+            if (isNull(param.semantic)) {
+                if (param.type.isBase() ||
+                    param.type.hasFieldWithoutSemantics() ||
+                    !param.type.hasAllUniqueSemantics()) {
+                    return false;
+                }
+
+                isAttributeByStruct = true;
+            } else if (!isNull(param.semantic)) {
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
+                    return false;
+                }
+
+                isAttributeByParams = true;
+            }
+
+            isStartAnalyze = true;
+        } else if (isAttributeByStruct) {
+            return false;
+        } else if (isAttributeByParams) {
+            if (isNull(param.semantic)) {
+                return false;
+            }
+
+            if (param.type.isComplex() &&
+                (param.type.hasFieldWithoutSemantics() ||
+                    !param.type.hasAllUniqueSemantics())) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
+    let params = funcDef.params;
+    let isVaryingsByStruct = false;
+    let isVaryingsByParams = false;
+    let isStartAnalyze = false;
+
+    for (let i: number = 0; i < params.length; i++) {
+        let param: IVariableDeclInstruction = params[i];
+
+        if (param.isUniform()) {
+            continue;
+        }
+
+        if (!isStartAnalyze) {
+            if (param.semantic === "") {
+                if (param.type.isBase() ||
+                    param.type.hasFieldWithoutSemantics() ||
+                    !param.type.hasAllUniqueSemantics() ||
+                    param.type.isContainSampler()) {
+                    return false;
+                }
+
+                isVaryingsByStruct = true;
+            } else if (param.semantic !== "") {
+                if (param.type.isContainSampler() ||
+                    SystemScope.isSamplerType(param.type)) {
+                    return false;
+                }
+
+                if (param.type.isComplex() &&
+                    (param.type.hasFieldWithoutSemantics() ||
+                        !param.type.hasAllUniqueSemantics())) {
+                    return false;
+                }
+
+                isVaryingsByParams = true;
+            }
+
+            isStartAnalyze = true;
+        }
+        else if (isVaryingsByStruct) {
+            return false;
+        }
+        else if (isVaryingsByParams) {
+            if (param.semantic === "") {
+                return false;
+            }
+
+            if (param.type.isContainSampler() ||
+                SystemScope.isSamplerType(param.type)) {
+                return false;
+            }
+
+            if (param.type.isComplex() &&
+                (param.type.hasFieldWithoutSemantics() ||
+                    !param.type.hasAllUniqueSemantics())) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 
@@ -641,7 +858,7 @@ export class Analyzer {
             case 'ObjectType':
                 {
                     let typeName = children[children.length - 1].value;
-                    
+
                     if (children.length !== 1) {
                         assert(children[children.length - 2].value === '<' && children[0].value === '>');
                         const tplName = typeName;
@@ -650,11 +867,11 @@ export class Analyzer {
                             .reverse()
                             .filter((v, i) => i % 2 == 0)
                             .map(sourceNode => this.analyzeType(context, program, sourceNode));
-                        
+
                         const template = scope.findTypeTemplate(typeName);
 
                         if (isNull(template)) {
-                            context.error(sourceNode, EErrors.InvalidTypeNameTemplateNotFound, 
+                            context.error(sourceNode, EErrors.InvalidTypeNameTemplateNotFound,
                                 { tplName, args: args.map(arg => arg.toCode()) });
                             return null;
                         }
@@ -664,15 +881,15 @@ export class Analyzer {
                         const SYSTEM_TYPES = ['RWBuffer', 'RWStructuredBuffer', 'AppendStructuredBuffer'];
                         if (SYSTEM_TYPES.indexOf(template.name) !== -1) {
                             if (scope.type != EScopeType.k_Global) {
-                                context.error(sourceNode, EErrors.InvalidTypeScope, 
+                                context.error(sourceNode, EErrors.InvalidTypeScope,
                                     { typeName: template.name, tooltip: 'only global scope allowed' });
                                 return null;
                             }
                         }
-                        
+
                         typeName = template.typeName(args);
                         type = scope.findType(typeName);
-                        
+
                         if (isNull(type)) {
                             type = template.produceType(args);
                             if (isNull(type)) {
@@ -1171,17 +1388,26 @@ export class Analyzer {
      * AST example:
      *    ComplexExpr
      *         T_PUNCTUATOR_41 = ')'
-     *         T_UINT = '1'
+     *         T_FLOAT = '2.'
      *         T_PUNCTUATOR_44 = ','
-     *         T_UINT = '1'
+     *         T_FLOAT = '1.'
      *         T_PUNCTUATOR_40 = '('
      *         T_TYPE_ID = 'float4'
+     */
+    /**
+     * AST example:
+     *    ComplexExpr
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_PUNCTUATOR_40 = '('
+     *       + PostfixPointExpr 
      */
     protected analyzeComplexExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const children = sourceNode.children;
         const firstNodeName = children[children.length - 1].name;
 
         switch (firstNodeName) {
+            case 'PostfixPointExpr':
+                return null;
             case 'T_NON_TYPE_ID':
                 return this.analyzeFunctionCallExpr(context, program, sourceNode);
             case 'BaseType':
@@ -1193,113 +1419,134 @@ export class Analyzer {
     }
 
 
+
+    protected analyzeCallee(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+        const children = sourceNode.children;
+        return this.analyzeExpr(context, program, children[children.length - 1]);
+    }
+
+
+    /**
+     * AST example:
+     *    ComplexExpr
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_NON_TYPE_ID = 'b'
+     *         T_PUNCTUATOR_44 = ','
+     *         T_NON_TYPE_ID = 'a'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_NON_TYPE_ID = 'foo'
+     */
+    /**
+     * AST example:
+     *    PostfixPointExpr
+     *         T_NON_TYPE_ID = 'IncrementCounter'
+     *         T_PUNCTUATOR_46 = '.'
+     *       + PostfixExpr 
+     */
     protected analyzeFunctionCallExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionCallInstruction {
         const children = sourceNode.children;
-        const funcName = children[children.length - 1].value;
         const scope = program.currentScope;
         const globalScope = program.globalScope;
+        
+        const firstNodeName = children[children.length - 1].name;
 
-        let expr: IFunctionCallInstruction = null;
-
-        // let currentAnalyzedFunction = context.currentFunction;
-
-        let args: IExprInstruction[] = null;
+       
+        
+        const args: IExprInstruction[] = [];
         if (children.length > 3) {
-            let argumentExpr: IExprInstruction;
-            args = [];
             for (let i = children.length - 3; i > 0; i--) {
                 if (children[i].value !== ',') {
-                    argumentExpr = this.analyzeExpr(context, program, children[i]);
-                    args.push(argumentExpr);
+                    const arg = this.analyzeExpr(context, program, children[i]);
+                    args.push(arg);
                 }
             }
         }
 
-        let func = globalScope.findFunction(funcName, args ? args.map(arg => arg ? arg.type : null) : null);
+        let funcName: string = null;
+        let func: IFunctionDeclInstruction = null;
+        let callee: IExprInstruction = null;
+
+        switch (firstNodeName) {
+            // call as function
+            case 'T_NON_TYPE_ID':
+                {
+                    funcName = children[children.length - 1].value;
+                    func = globalScope.findFunction(funcName, args.map(asType));
+                }
+                break;
+            // call as method
+            case 'PostfixExpr':
+                {
+                    callee = this.analyzeCallee(context, program, children[children.length - 1]);
+                    funcName = children[children.length - 3].value; // method name
+                    callee.type.getMethod(funcName, args.map(asType))
+                }
+                break;
+        }
+        
 
         if (isNull(func)) {
-            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName: funcName });
+            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName });
             return null;
         }
+
 
         if (!isDef(func)) {
-            context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: funcName });
+            context.error(sourceNode, EErrors.CannotChooseFunction, { funcName });
             return null;
         }
 
 
-        // if (!isNull(currentAnalyzedFunction)) {
-        //     if (func.functionType != EFunctionType.k_Pixel) {
-        //         assert(currentAnalyzedFunction.functionType != EFunctionType.k_Vertex);
-        //         currentAnalyzedFunction.$overwriteType(EFunctionType.k_Function);
-        //     }
+        if (func.instructionType !== EInstructionTypes.k_FunctionDecl &&
+            func.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
+            console.error("@undefined_behavior");
+            return null;
+        }
 
-        //     if (func.functionType != EFunctionType.k_Vertex) {
-        //         currentAnalyzedFunction.$overwriteType(EFunctionType.k_Vertex);
-        //     }
-        // }
 
-        if (func.instructionType === EInstructionTypes.k_FunctionDecl ||
-            func.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
-            if (!isNull(args)) {
-                const funcArguments = func.def.params;
 
-                for (let i = 0; i < args.length; i++) {
-                    if (isNull(args[i])) {
-                        continue;
-                    }
-                    if (funcArguments[i].type.hasUsage('out')) {
-                        const decl = ExprInstruction.UnwindExpr(args[i]);
-                        if (isNull(decl)) {
-                            context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
-                            return null;
-                        }
-                        if (!args[i].type.writable) {
-                            context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
-                            return null;
-                        }
-                    } else if (funcArguments[i].type.hasUsage('inout')) {
-                        const decl = ExprInstruction.UnwindExpr(args[i]);
-                        if (isNull(decl)) {
-                            context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
-                            return null;
-                        }
-                        if (!args[i].type.writable) {
-                            context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
-                            return null;
-                        }
+        const params = func.def.params;
 
-                        if (!args[i].type.readable) {
-                            context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
-                            return null;
-                        }
-                    } else {
-                        if (!args[i].type.readable) {
-                            context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
-                            return null;
-                        }
-                    }
+        for (let i = 0; i < args.length; i++) {
+            if (isNull(args[i])) {
+                continue;
+            }
+            if (params[i].type.hasUsage('out')) {
+                const decl = expression.Unwind(args[i]);
+                if (isNull(decl)) {
+                    context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
+                    return null;
+                }
+                if (!args[i].type.writable) {
+                    context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
+                    return null;
+                }
+            } else if (params[i].type.hasUsage('inout')) {
+                const decl = expression.Unwind(args[i]);
+                if (isNull(decl)) {
+                    context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
+                    return null;
+                }
+                if (!args[i].type.writable) {
+                    context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
+                    return null;
                 }
 
-                // for (let i = args.length; i < funcArguments.length; i++) {
-                //     funcCallExpr.push(funcArguments[i].initializeExpr, false);
-                // }
-
+                if (!args[i].type.readable) {
+                    context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
+                    return null;
+                }
+            } else {
+                if (!args[i].type.readable) {
+                    context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
+                    return null;
+                }
             }
-
-
-            const type = VariableTypeInstruction.wrap(func.def.returnType, scope);
-            let funcCallExpr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode });
-
-            // if (!isNull(currentAnalyzedFunction)) {
-            //     currentAnalyzedFunction.addUsedFunction(func);
-            // }
-
-            expr = funcCallExpr;
         }
-        else {
-            console.error("@undefined_behavior");
-        }
+
+
+        const type = VariableTypeInstruction.wrap(func.def.returnType, scope); // TODO: remove wrap?
+        const expr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode });
 
         return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
     }
@@ -1469,7 +1716,8 @@ export class Analyzer {
             // FIXME: remove 'logical OR' operation, always use subType
             (elementType.subType || elementType).getField(fieldName); // arrayIndex
 
-        //// note: here is no sourceNode for field.
+
+
         // note: sourceNode for field is being used from the original complex structure.
 
         // let arrayIndex: IExprInstruction = null;
@@ -1489,24 +1737,26 @@ export class Analyzer {
 
     /**
      * 
-     * @param type Type of the element. (**element.postfix**)
+     * @param elementType Type of the element. (**element.postfix**)
      */
-    protected analyzePosifixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, type: IVariableTypeInstruction): IIdExprInstruction {
-        if (isNull(type)) {
+    protected analyzePostfixPointField(context: Context, program: ProgramScope, sourceNode: IParseNode, elementType: IVariableTypeInstruction): IIdExprInstruction {
+        if (isNull(elementType)) {
             return null;
         }
 
         const scope = program.currentScope;
-        const name = sourceNode.value;              // fiedl name
-        const decl = this.createFieldDecl(type, name);   // field decl
+        const name = sourceNode.value;                             // fiedl name
+        // const decl = this.createFieldDecl(elementType, name);   // field decl
+        const decl = elementType.getField(name);
 
         if (isNull(decl)) {
             return null;
         }
 
         const id = new IdInstruction({ scope, sourceNode, name });
-        const expr = new IdExprInstruction({ sourceNode, scope, id, decl });
-        return expr;
+        const expr = new IdExprInstruction({ scope, sourceNode, id, decl });
+
+        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);;
     }
 
     /**
@@ -1516,35 +1766,44 @@ export class Analyzer {
      *         T_PUNCTUATOR_46 = '.'
      *         T_NON_TYPE_ID = 'some'
      */
+    /** 
+     * Expressions like: 
+     *      **(element.postfix)** 
+     */
     protected analyzePostfixPoint(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
-        const postfixExpr = this.analyzeExpr(context, program, children[children.length - 1]);
-        if (isNull(postfixExpr)) {
+        const element = this.analyzeExpr(context, program, children[children.length - 1]);
+        if (isNull(element)) {
             // TODO: emit error?
             return null;
         }
 
-        const postfixExprType = postfixExpr.type;
-        const fieldName = children[children.length - 3].value;
+        const postfix = this.analyzePostfixPointField(context, program, children[children.length - 3], element.type);
 
-        const fieldNameExpr = this.analyzePosifixPointField(context, program, children[children.length - 3], postfixExprType);
-
-        if (isNull(fieldNameExpr)) {
-            context.error(sourceNode, EErrors.InvalidPostfixNotField, { typeName: String(postfixExprType), fieldName });
+        if (isNull(postfix)) {
+            const fieldName = children[children.length - 3].value;
+            context.error(sourceNode, EErrors.InvalidPostfixNotField, { typeName: String(element.type), fieldName });
             return null;
         }
 
-        const expr = new PostfixPointInstruction({ sourceNode, scope, element: postfixExpr, postfix: fieldNameExpr });
+        const expr = new PostfixPointInstruction({ sourceNode, scope, element, postfix });
         return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
     }
 
 
+
+    /**
+     * AST example:
+     *    PostfixExpr
+     *         T_OP_INC = '++'
+     *         T_NON_TYPE_ID = 'b'
+     */
     protected analyzePostfixArithmetic(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const children = sourceNode.children;
         const scope = program.currentScope;
-        const operator: PostfixOperator = <PostfixOperator>children[0].value;
+        const operator = <PostfixOperator>children[0].value;
 
         const postfixExpr = this.analyzeExpr(context, program, children[1]);
         const postfixExprType = <IVariableTypeInstruction>postfixExpr.type;
@@ -1559,7 +1818,7 @@ export class Analyzer {
             return null;
         }
 
-        let expr: PostfixArithmeticInstruction = new PostfixArithmeticInstruction({ scope, sourceNode, operator, expr: postfixExpr });
+        const expr = new PostfixArithmeticInstruction({ scope, sourceNode, operator, expr: postfixExpr });
         return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
     }
 
@@ -1835,7 +2094,7 @@ export class Analyzer {
 
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
 
-        if (!ExprInstruction.UnwindExpr(left)) {
+        if (!expression.Unwind(left)) {
             // Invalid left-hand side in assignment
             context.error(sourceNode, EErrors.InvalidLeftHandSideInAssignment, {
                 operator: operator
@@ -1887,18 +2146,17 @@ export class Analyzer {
      */
     protected analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const scope = program.currentScope;
-
-        let name = sourceNode.value;
-        let decl = scope.findVariable(name);
+        const name = sourceNode.value;
+        const decl = scope.findVariable(name);
 
         if (isNull(decl)) {
             context.error(sourceNode, EErrors.UnknownVarName, { varName: name });
             return null;
         }
 
-        let id = new IdInstruction({ scope, sourceNode, name });
-        let varId = new IdExprInstruction({ scope, sourceNode, id, decl });
-        return checkInstruction(context, varId, ECheckStage.CODE_TARGET_SUPPORT);
+        const id = new IdInstruction({ scope, sourceNode, name });
+        const expr = new IdExprInstruction({ scope, sourceNode, id, decl });
+        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
     }
 
 
@@ -2077,7 +2335,7 @@ export class Analyzer {
 
 
 
-        let func = globalScope.findFunction(definition.name, definition.params.map(param => param ? param.type : null));
+        let func = globalScope.findFunction(definition.name, definition.params.map(asType));
 
         if (!isDef(func)) {
             context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
@@ -2914,12 +3172,12 @@ export class Analyzer {
         const shaderFunc = compileExpr.function;
 
         if (shaderType === 'vertexshader') {
-            if (!FunctionDefInstruction.checkForVertexUsage(shaderFunc.def)) {
+            if (!checkForVertexUsage(shaderFunc.def)) {
                 context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithVertexShader, { funcDef: String(shaderFunc) });
             }
         }
         else {
-            if (!FunctionDefInstruction.checkForPixelUsage(shaderFunc.def)) {
+            if (!checkForPixelUsage(shaderFunc.def)) {
                 context.error(sourceNode, EErrors.FunctionIsNotCompatibleWithPixelShader, { funcDef: String(shaderFunc) });
             }
         }
@@ -3407,10 +3665,10 @@ export class Analyzer {
 
         if (operator === '=') {
             // TODO: move conversion logic inside TypeInstruction.
-            if ((leftType.isEqual(T_INT) && rightType.isEqual(T_UINT)) || 
+            if ((leftType.isEqual(T_INT) && rightType.isEqual(T_UINT)) ||
                 (leftType.isEqual(T_UINT) && rightType.isEqual(T_INT))) {
-                    return leftType;
-                }
+                return leftType;
+            }
         }
 
         return null;

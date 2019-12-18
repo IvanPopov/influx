@@ -2,11 +2,10 @@ import { assert, isDef, isNull } from "@lib/common";
 import { EMemoryLocation, IMemoryRecord } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
-
-
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;

@@ -12,7 +12,6 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     methods?: IFunctionDeclInstruction[];
     writable?: boolean;
     readable?: boolean;
-    declaration?: string;
     complex?: boolean;
 }
 
@@ -38,7 +37,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         writable = true, 
         readable = true, 
         complex = false,
-        declaration = null, 
         ...settings
     }: ISystemTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemType, ...settings });
@@ -52,7 +50,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._bIsComplex = complex;
-        this._declaration = declaration;
 
         fields.forEach(field => this.addField(field));
         methods.forEach(method => this.addMethod(method));
@@ -132,6 +129,12 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
+    toDeclString(): string {
+        console.warn('@pure_virtual');
+        return '';
+    }
+
+
     isBase(): boolean {
         return true;
     }
@@ -192,11 +195,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    toDeclString(): string {
-        return this._declaration;
-    }
-
-
     toCode(): string {
         return this._name;
     }
@@ -207,7 +205,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    hasFieldWithSematics(sSemantic: string): boolean {
+    hasFieldWithSematics(semantic: string): boolean {
         return false;
     }
 
@@ -227,8 +225,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    getMethod(methodName: string): IFunctionDeclInstruction[] {
-        return this._methods.filter(method => method.name === methodName) || null;
+    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction {
+        return null;//this._methods.filter(method => method.name === methodName) || null;
     }
 
 
@@ -244,7 +242,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
     addMethod(method: IFunctionDeclInstruction): void {
-        console.assert(this.getMethod(method.name).find(knownMethod => knownMethod.def.signature === method.def.signature) === null);
+        // console.assert(this.getMethod(method.name).find(knownMethod => knownMethod.def.signature === method.def.signature) === null);
         this._methods.push(Instruction.$withParent(method, this));
     }
 }

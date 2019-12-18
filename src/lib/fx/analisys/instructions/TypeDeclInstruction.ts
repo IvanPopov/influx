@@ -9,28 +9,16 @@ export interface ITypeDeclInstructionSettings extends IDeclInstructionSettings {
 }
 
 
-// todo: add description comment.
+// TODO: add description comment.
 export class TypeDeclInstruction extends DeclInstruction implements ITypeDeclInstruction {
-    protected _type: ITypeInstruction;
+    readonly type: ITypeInstruction;
 
     constructor({ type, ...settings }: ITypeDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_TypeDecl, ...settings });
-        
-        this._type =  Instruction.$withParent(type, this);
-
+        this.type =  Instruction.$withParent(type, this);
         assert(isDef(this.type));
-
-        // todo: remove this check
-        if (isNull(this._type)) {
-            console.warn("Something goes wrong! Type is not specified!", this);
-        }
     }
 
-
-    get type(): ITypeInstruction {
-        return this._type;
-    }
-    
 
     get name(): string {
         return this.type.name;

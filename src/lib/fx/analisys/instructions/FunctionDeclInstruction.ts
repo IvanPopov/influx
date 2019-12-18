@@ -29,9 +29,6 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     }
 
 
-
-
-
     get name(): string {
         return this.def.name;
     }

@@ -14,42 +14,20 @@ export interface IPostfixPointInstructionSettings extends IInstructionSettings {
  * EMPTY_OPERATOR Instruction IdInstruction
  */
 export class PostfixPointInstruction extends ExprInstruction implements IPostfixPointInstruction {
-    protected _element: IExprInstruction;
-    protected _postfix: IIdExprInstruction;
+    readonly element: IExprInstruction;
+    readonly postfix: IIdExprInstruction;
 
 
     constructor({ element, postfix, ...settings }: IPostfixPointInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PostfixPointExpr, type: postfix.type, ...settings });
         
-        this._element = Instruction.$withParent(element, this);
-        this._postfix = Instruction.$withParent(postfix, this);
-
-        // console.log('[PostfixPointInstruction]');
-        // console.log('element:', element.toCode(), element.type.hash);
-        // console.log('postfix:', postfix.toCode(), postfix.type && postfix.type.hash, postfix.type && postfix.type.length, postfix.type && postfix.type.name);
-        // console.log('postfix.type.arrayElementType', postfix.type && postfix.type.isArray() && postfix.type.arrayElementType.hash);
-        // console.log(postfix.type.arrayElementType)
-    }
-
-
-    get element(): IExprInstruction { 
-        return this._element;
-    }
-
-
-    get postfix(): IIdExprInstruction {
-        return this._postfix;
+        this.element = Instruction.$withParent(element, this);
+        this.postfix = Instruction.$withParent(postfix, this);
     }
 
     
     toCode(): string {
-        var code: string = '';
-
-        code += this.element.toCode();
-        code += '.';
-        code += this.postfix.toCode();
-
-        return code;
+        return `${this.element.toCode()}.${this.postfix.toCode()}`;
     }
 
 

@@ -83,6 +83,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
      * 
      * @param type The type of the variable for which the initializer was created.
      */
+    // TODO: move it to Analysis.ts
     optimizeForVariableType(type: IVariableTypeInstruction): boolean {
         // It's a global user defined array or just not unit array;
         // Trying to exclude types like float1.

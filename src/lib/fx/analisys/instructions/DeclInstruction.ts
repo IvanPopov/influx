@@ -1,4 +1,5 @@
 import { EInstructionTypes, IAnnotationInstruction, IDeclInstruction, IIdInstruction } from "@lib/idl/IInstruction";
+
 import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IDeclInstructionSettings extends IInstructionSettings {
@@ -17,7 +18,7 @@ export class DeclInstruction extends Instruction implements IDeclInstruction {
         this._semantic = semantic;
         this._annotation = Instruction.$withParent(annotation, this);
     }
-    
+
 
     get semantic(): string {
         return this._semantic;

@@ -1,4 +1,5 @@
 import { assert, isDef, mwalk } from "@lib/common";
+import { instruction } from "@lib/fx/analisys/instructions/helpers";
 import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
@@ -317,7 +318,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(asgm.left);
         this.emitKeyword('=');
         this.emitSpace();
-        assert(Instruction.isExpression(asgm.right));
+        assert(instruction.isExpression(asgm.right));
         this.emitExpression(asgm.right as IExprInstruction);
     }
 
@@ -488,12 +489,12 @@ export class CodeEmitter extends BaseEmitter {
             return this;
         }
 
-        if (Instruction.isExpression(instr)) {
+        if (instruction.isExpression(instr)) {
             this.emitExpression(instr as IExprInstruction);
             return this;
         } 
 
-        if (Instruction.isStatement(instr)) {
+        if (instruction.isStatement(instr)) {
             this.emitStmt(instr);
             return this;
         }

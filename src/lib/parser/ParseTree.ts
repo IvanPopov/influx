@@ -56,7 +56,7 @@ export class ParseTree implements IParseTree {
             (eCreate === ENodeCreateMode.k_Necessary)) {
 
             assert(iReduceCount > 0);
-
+            
             let temp = nodes.pop();
             iReduceCount--;
             

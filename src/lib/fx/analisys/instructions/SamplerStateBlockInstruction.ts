@@ -98,6 +98,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
     }
 
 
+    // TODO: move it to helpers
     static convertWrapMode(sState: string): ETextureWrapModes {
         switch (sState) {
             case "WRAP":
@@ -112,6 +113,7 @@ export class SamplerStateBlockInstruction extends ExprInstruction implements ISa
     }
     
 
+    // TODO: move it to helpers
     static convertFilters(sState: string): ETextureFilters {
         switch (sState) {
             case "NEAREST":

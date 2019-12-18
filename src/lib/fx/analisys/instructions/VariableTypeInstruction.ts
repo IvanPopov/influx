@@ -9,9 +9,10 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     type: ITypeInstruction;
     usages?: IVariableUsage[];
     arrayIndex?: IExprInstruction;
-    writable?: boolean;
-    readable?: boolean;
     padding?: number;
+
+    readable?: boolean;
+    writable?: boolean;
 }
 
 
@@ -19,7 +20,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _subType: ITypeInstruction;
     protected _usageList: IVariableUsage[];
 
-    /** overrites for defautl read/write tests */
+    /** overrites for defautl read/write tests (for internal usage) */
     protected _isWritable: boolean;
     protected _isReadable: boolean;
 
@@ -27,7 +28,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor({ type, usages = null, arrayIndex = null, writable = true, readable = true, padding = Instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
+    constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, padding = Instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableType, ...settings });
 
         type = type.$withNoParent();
@@ -40,10 +41,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
         else {
             let varType = <IVariableTypeInstruction>type;
-            // todo: review this code
+            // TODO: review this code
             if (!varType.isNotBaseArray()) {
                 this._subType = varType.subType;
-                varType.usages.forEach( usage => this.addUsage(usage) )
+                varType.usages.forEach(usage => this.addUsage(usage))
             }
             else {
                 this._subType = type;
@@ -66,7 +67,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             this._arrayIndexExpr = Instruction.$withParent(arrayIndex, this);
         }
 
-        (usages || []).forEach( usage => this.addUsage(usage) );
+        usages.forEach(usage => this.addUsage(usage));
 
         // todo: construct arrayElementType here! with proper usages!
         // if (this.isArray()) {
@@ -74,20 +75,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         //         this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ scope: this.scope, type: this.subType.arrayElementType, usages: this.usageList }), this);
         //     }
         // }
-    }
-
-
-    // get fields(): IVariableDeclInstruction[] {
-    //     let list = [];
-    //     for (let key in this._fields) {
-    //         list.push(this._fields[key]);
-    //     }
-    //     return list;
-    // }
-
-
-    set readable(isReadable: boolean) {
-        this._isReadable = isReadable;
     }
 
 
@@ -119,6 +106,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return false;
         }
 
+        // check for hasUsage('in') ?
+
         return this.subType.writable;
     }
 
@@ -136,24 +125,20 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-
     get methods(): IFunctionDeclInstruction[] {
-        return [];
+        return this.subType.methods;
     }
 
-    
 
     get size(): number {
         if (!isNull(this._arrayElementType)) {
-            let size: number = this._arrayElementType.size;
-            let length: number = this.length;
+            const size = this._arrayElementType.size;
+            const length = this.length;
             if (length === Instruction.UNDEFINE_LENGTH || size === Instruction.UNDEFINE_SIZE) {
                 return Instruction.UNDEFINE_SIZE;
             }
-
             return size * length;
         }
-
         return this.subType.size;
     }
 
@@ -171,12 +156,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         if (this.isNotBaseArray() && isNull(this._arrayElementType)) {
             return this.subType.length;
         }
-        
-        // if (isNull(this._arrayIndexExpr)) {
-        //     return this.subType.length;
-        // }
 
-        let isEval: boolean = this._arrayIndexExpr.evaluate();
+        // TODO: rework evaluation api!
+
+        let isEval = this._arrayIndexExpr.evaluate();
 
         if (isEval) {
             let iValue: number = <number>this._arrayIndexExpr.getEvalValue();
@@ -192,12 +175,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     get padding(): number {
         return this._padding;
     }
-
-
-    // for overloading from structers decls
-    // set padding(val: number) {
-    //     this._padding = val;
-    // }
 
 
     get arrayElementType(): IVariableTypeInstruction {
@@ -227,20 +204,12 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get fields(): IVariableDeclInstruction[] {
-        // if (!this.canHaveSubDecls()) {
-        //     return null;
-        // }
-        // return this.generateSubDeclList();
-
-        if (!this.isComplex()) {
-            return null;
-        }
-
         return this.subType.fields;
     }
 
 
     toString(): string {
+        // TODO: fix this condition
         return this.name || this.subType.toString() || this.hash;
     }
 
@@ -259,6 +228,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    /** @deprecated */
     toDeclString(): string {
         return this.subType.toDeclString();
     }
@@ -353,90 +323,49 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     hasField(fieldName: string): boolean {
-        return !this.isNotBaseArray() && this.subType.hasField(fieldName);
+        return this.subType.hasField(fieldName);
     }
 
 
     hasFieldWithSematics(semantic: string): boolean {
-        if (!this.isComplex()) {
-            return false;
-        }
-
         return this.subType.hasFieldWithSematics(semantic);
     }
 
 
     hasAllUniqueSemantics(): boolean {
-        if (!this.isComplex()) {
-            return false;
-        }
-
         return this.subType.hasAllUniqueSemantics();
     }
 
 
     hasFieldWithoutSemantics(): boolean {
-        if (!this.isComplex()) {
-            return false;
-        }
-
         return this.subType.hasFieldWithoutSemantics();
     }
 
 
     getField(fieldName: string): IVariableDeclInstruction {
-        if (!this.hasField(fieldName)) {
-            return null;
-        }
+        // TODO: propogate usages?
+        return this.subType.getField(fieldName);
+    }
 
-        const scope = this.scope;
 
-        // let subField  = this.subType.getField(fieldName);
-        // let id        = subField.id;
-        // let type      = subField.type;
-        // let padding   = subField.type.padding;
-        // let semantic = subField.semantic;
-
-        let { id, type, type: { padding }, semantic } = this.subType.getField(fieldName);
-        
-
-        let fieldType = VariableTypeInstruction.wrap(type, scope);
-        fieldType.$overwritePadding(padding);
-
-        let fieldId = new IdInstruction({ scope, name: id.name });
-        let field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantic });
-        return Instruction.$withParent(field, this);
+    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction {
+        return this.subType.getMethod(methodName, args);
     }
 
 
     getFieldBySemantics(semantic: string): IVariableDeclInstruction {
-        if (this.hasFieldWithSematics(semantic)) {
-            return null;
-        }
-
-        let subField: IVariableDeclInstruction = this.subType.getFieldBySemantics(semantic);
-
-        // todo: review this code!
-
-        const scope = this.scope;
-
-        let padding = subField.type.padding;
-        let id = subField.id;
-        let fieldType: IVariableTypeInstruction = new VariableTypeInstruction({ scope, type: subField.type });
-        let field: IVariableDeclInstruction = new VariableDeclInstruction({ scope, id, type: fieldType });
-        return Instruction.$withParent(field, this);
+        // TODO: propogate usages?
+        return this.subType.getFieldBySemantics(semantic);
     }
 
 
-    hasUsage(usageName: IVariableUsage): boolean {
-        for (let i = 0; i < this._usageList.length; i++) {
-            if (this._usageList[i] === usageName) {
-                return true;
-            }
+    hasUsage(usage: IVariableUsage): boolean {
+        if (this._usageList.find(knownUsage => knownUsage === usage)) {
+            return true;
         }
 
         if (!isNull(this.subType) && this.subType.instructionType === EInstructionTypes.k_VariableType) {
-            return (<IVariableTypeInstruction>this.subType).hasUsage(usageName);
+            return (<IVariableTypeInstruction>this.subType).hasUsage(usage);
         }
 
         return false;
@@ -480,149 +409,9 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return strongHash;
     }
 
-
-    // private generateSubDeclList(): IVariableDeclInstruction[] {
-    //     if (!this.canHaveSubDecls()) {
-    //         return [];
-    //     }
-
-    //     let declList: IVariableDeclInstruction[] = [];
-    //     let i: number = 0;
-
-    //     if (this.isComplex()) {
-    //         let fieldNameList = this.fieldNames;
-
-    //         for (i = 0; i < fieldNameList.length; i++) {
-    //             const field: IVariableDeclInstruction = this.getField(fieldNameList[i]);
-    //             const fieldSubDeclList = field.type.fields;
-
-    //             if (!isNull(fieldSubDeclList)) {
-    //                 for (let j = 0; j < fieldSubDeclList.length; j++) {
-    //                     declList.push(fieldSubDeclList[j]);
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return declList;
-    // }
-
-
-    // private canHaveSubDecls(): boolean {
-    //     return this.isComplex();
-    // }
-
-    
     /**
      * Helpers
      */
-
-    // todo: rename it
-    static isInheritedFromVariableDecl(type: ITypeInstruction): boolean {
-        if (isNull(type.parent)) {
-            return false;
-        }
-        let parentType: EInstructionTypes = type.parent.instructionType;
-        if (parentType === EInstructionTypes.k_VariableDecl) {
-            return true;
-        }
-        else if (parentType === EInstructionTypes.k_VariableType) {
-            return VariableTypeInstruction.isInheritedFromVariableDecl(<IVariableTypeInstruction>type.parent);
-        }
-        return false;
-    }
-
-
-    static isTypeOfField(type: ITypeInstruction): boolean {
-        if (isNull(type.parent)) {
-            return false;
-        }
-
-        if (type.parent.instructionType === EInstructionTypes.k_VariableDecl) {
-            let pParentDecl: IVariableDeclInstruction = <IVariableDeclInstruction>type.parent;
-            return pParentDecl.isField();
-        }
-
-        return false;
-    }
-
-
-    static findParentContainer(type: IVariableTypeInstruction): IVariableDeclInstruction {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type) || !VariableTypeInstruction.isTypeOfField(type)) {
-            return null;
-        }
-
-        let containerType: IVariableTypeInstruction = <IVariableTypeInstruction>VariableTypeInstruction.findParentVariableDecl(type).parent;
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(containerType)) {
-            return null;
-        }
-
-        return VariableTypeInstruction.findParentVariableDecl(containerType);
-    }
-
-
-    static findParentVariableDecl(type: ITypeInstruction): IVariableDeclInstruction {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
-            return null;
-        }
-
-        let parentType: EInstructionTypes = type.parent.instructionType;
-        if (parentType === EInstructionTypes.k_VariableDecl) {
-            return <IVariableDeclInstruction>type.parent;
-        }
-
-        return VariableTypeInstruction.findParentVariableDecl(<IVariableTypeInstruction>type.parent);
-    }
-
-
-    static findParentVariableDeclName(type: ITypeInstruction): string {
-        let varDecl = VariableTypeInstruction.findParentVariableDecl(type)
-        return isNull(varDecl) ? null : varDecl.name;
-    }
-
-
-
-    static finParentTypeDecl(type: ITypeInstruction): ITypeDeclInstruction {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
-            return null;
-        }
-
-        let parentType: EInstructionTypes = type.parent.instructionType;
-        if (parentType === EInstructionTypes.k_TypeDecl) {
-            return <ITypeDeclInstruction>type.parent;
-        }
-        return VariableTypeInstruction.finParentTypeDecl(<ITypeInstruction>type.parent);
-    }
-
-
-    static finParentTypeDeclName(type: IVariableTypeInstruction): string {
-        let typeDecl = VariableTypeInstruction.finParentTypeDecl(type);
-        return isNull(typeDecl) ? null : typeDecl.name;
-    }
-
-
-    static resolveVariableDeclFullName(type: ITypeInstruction): string {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
-            console.error("Not from variable decl");
-            return null;
-        }
-
-        return VariableTypeInstruction.findParentVariableDecl(type).fullName;
-    }
-
-
-    // todo: add comment
-    // todo: review this code
-    static findMainVariable(type: ITypeInstruction): IVariableDeclInstruction {
-        if (!VariableTypeInstruction.isInheritedFromVariableDecl(type)) {
-            return null;
-        }
-
-        if (VariableTypeInstruction.isTypeOfField(type)) {
-            return VariableTypeInstruction.findMainVariable(<IVariableTypeInstruction>type.parent.parent);
-        }
-        return VariableTypeInstruction.findParentVariableDecl(type);
-    }
 
 
     static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
@@ -630,6 +419,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
     static wrapAsConst(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
-        return new VariableTypeInstruction({ type, scope, writable: false, usages: [ 'const' ] });
+        return new VariableTypeInstruction({ type, scope, writable: false, usages: ['const'] });
     }
 }

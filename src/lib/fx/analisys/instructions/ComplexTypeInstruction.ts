@@ -103,7 +103,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return this.name || this.hash;
     }
 
-    
+    /** @deprecated */
     toDeclString(): string {
         var code: string = "struct " + this._name + "{";
 
@@ -214,6 +214,11 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     getField(fieldName: string): IVariableDeclInstruction {
         return this._fields[fieldName] || null;
+    }
+
+
+    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction {
+        return null;
     }
 
 

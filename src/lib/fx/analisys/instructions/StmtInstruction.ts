@@ -9,8 +9,5 @@ export class StmtInstruction extends Instruction implements IStmtInstruction {
     
     constructor({ ...settings }: IInstructionSettings) {
         super({ instrType: EInstructionTypes.k_Stmt, ...settings });
-    }
-
-
-    
+    }    
 }

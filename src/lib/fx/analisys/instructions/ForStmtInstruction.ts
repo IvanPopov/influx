@@ -63,6 +63,7 @@ export class ForStmtInstruction extends StmtInstruction implements IForStmtInstr
         return code;
     }
 
+    // TODO: move it to Analysis.ts
     check(stage: ECheckStage, info: any = null): boolean {
         if (isNull(this._step)) {
             this._setError(EAnalyzerErrors.InvalidForStepEmpty);

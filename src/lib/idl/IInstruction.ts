@@ -149,9 +149,11 @@ export interface IScope {
     readonly variables: IMap<IVariableDeclInstruction>;
     readonly types: IMap<ITypeInstruction>;
     readonly functions: IMap<IFunctionDeclInstruction[]>;
-    readonly techniques: IMap<ITechniqueInstruction>;
     readonly typeTemplates: IMap<ITypeTemplate>;
+    
+    readonly techniques: IMap<ITechniqueInstruction>;
 
+    /** Recursive check for all parents for strict mode */
     isStrict(): boolean;
 
     findVariable(variableName: string): IVariableDeclInstruction;
@@ -236,7 +238,6 @@ export interface ITypeInstruction extends IInstruction {
 
     readonly fieldNames: string[];
     readonly fields: IVariableDeclInstruction[];
-
     readonly methods: IFunctionDeclInstruction[];
 
     isBase(): boolean;
@@ -266,6 +267,9 @@ export interface ITypeInstruction extends IInstruction {
     getField(fieldName: string): IVariableDeclInstruction;
     getFieldBySemantics(semantic: string): IVariableDeclInstruction;
 
+    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction;
+
+    /** @deprecated */
     toDeclString(): string;
 }
 
@@ -310,13 +314,6 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
     readonly returnType: ITypeInstruction;
     readonly name: string;
     readonly params: IVariableDeclInstruction[];
-    readonly signature: string;
-    
-    // todo: remove it.
-    readonly numArgsRequired: number;
-
-
-    toString(): string;              // << declaration with uniq name
 }
 
 
@@ -495,8 +492,11 @@ export interface IIdExprInstruction extends IExprInstruction {
 
 
 export interface IFunctionCallInstruction extends IExprInstruction {
+    // readonly callee: IExprInstruction;
     readonly args: IExprInstruction[];
-    readonly decl: IFunctionDeclInstruction;
+
+    // move it to method?
+    readonly decl: IFunctionDeclInstruction;   
 }
 
 

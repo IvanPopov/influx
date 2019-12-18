@@ -165,6 +165,10 @@ export class ASTDocument implements IASTDocument {
         this.lexer.setup(textDocument);
         this.token = this.readToken();
 
+        if (this.token.value === END_SYMBOL) {
+            return EParserCode.k_Ok;
+        }
+
         await this.run({ developerMode, allowErrorRecoverty });
 
         // clear context

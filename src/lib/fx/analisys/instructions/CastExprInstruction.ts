@@ -16,32 +16,24 @@ export interface ICastExprInstructionSettings extends IExprInstructionSettings {
  * EMPTY_OPERATOR VariableTypeInstruction Instruction
  */
 export class CastExprInstruction extends ExprInstruction implements ICastExprInstruction {
-    private _srcExpr: IExprInstruction;
+    readonly expr: IExprInstruction;
 
     constructor({ sourceExpr, ...settings }: ICastExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CastExpr, ...settings });
-
-        this._srcExpr = Instruction.$withParent(sourceExpr, this);
-    }
-
-    get expr(): IExprInstruction {
-        return this._srcExpr;
+        this.expr = Instruction.$withParent(sourceExpr, this);
     }
 
     toCode(): string {
-        var code: string = "";
-        code += "(";
-        code += this.type.toCode();
-        code += ")";
-        code += this._srcExpr.toCode();
-        return code;
+        return `(${this.type.toCode()})${this.expr.toCode}`;
     }
 
+    
     isUseless() {
         return this.type.isEqual(this.expr.type);
     }
+    
 
     isConst(): boolean {
-        return (<IExprInstruction>this._srcExpr).isConst();
+        return (<IExprInstruction>this.expr).isConst();
     }
 }

@@ -9,6 +9,7 @@ import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTyp
 import { DeclStmtInstruction } from '@lib/fx/analisys/instructions/DeclStmtInstruction';
 import { ExprStmtInstruction } from '@lib/fx/analisys/instructions/ExprStmtInstruction';
 import { ForStmtInstruction } from '@lib/fx/analisys/instructions/ForStmtInstruction';
+import { fn } from '@lib/fx/analisys/instructions/helpers';
 import { Instruction } from '@lib/fx/analisys/instructions/Instruction';
 import { ReturnStmtInstruction } from '@lib/fx/analisys/instructions/ReturnStmtInstruction';
 import { SystemTypeInstruction } from '@lib/fx/analisys/instructions/SystemTypeInstruction';
@@ -21,7 +22,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Icon, List, Message, Popup } from 'semantic-ui-react';
+import { Icon, List, Message } from 'semantic-ui-react';
 
 import { IWithStyles } from '.';
 
@@ -350,9 +351,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <SystemProperty name='complex' value={ `${instr.isComplex()}` } />
                 <SystemProperty name='const' value={ `${instr.isConst()}` } />
                 <PropertyOpt name='methods' >
-                    { instr.methods.map(method => method.def.signature).map(signature =>
-                        <SystemProperty name={<span>&nbsp;&nbsp;</span>} value={ signature } />
-                    ) }
+                    { instr.methods.map(method => fn.toSignature(method.def))
+                        .map(signature =>
+                            <SystemProperty name={ <span>&nbsp;&nbsp;</span> } value={ signature } />
+                        ) }
                 </PropertyOpt>
             </SystemProperty>
         );
@@ -600,9 +602,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <Property name='name' value={ instr.name } />
-                <Property name='signature' value={ instr.signature } />
+                <Property name='signature' value={ fn.toSignature(instr) } />
                 <Property name='type' value={ instr.returnType.name } />
-                <Property name='numArgsRequired' value={ String(instr.numArgsRequired) } />
+                <Property name='numArgsRequired' value={ String(fn.numArgsRequired(instr)) } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='arguments'>
                     { instr.params.map((param) => this.VariableDecl(param)) }

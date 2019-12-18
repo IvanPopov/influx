@@ -1,15 +1,13 @@
-import { assert, isDef, isDefAndNotNull } from "@lib/common";
+import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
-import { ExprInstruction } from "@lib/fx/analisys/instructions/ExprInstruction";
+import { expression, instruction, variable } from "@lib/fx/analisys/instructions/helpers";
 import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
-import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { isNull, isString } from "util";
 
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
@@ -42,7 +40,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
             continue;
         }
 
-        const inputIndex = VariableDeclInstruction.getParameterIndex(param);
+        const inputIndex = variable.getParameterIndex(param);
         const size = param.type.size;
         const src = loc({ location: EMemoryLocation.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
@@ -511,10 +509,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IdExpr:
                 {
                     let id = (expr as IIdExprInstruction);
-                    assert(id.decl === ExprInstruction.UnwindExpr(id));
+                    assert(id.decl === expression.Unwind(id));
 
                     const size = id.decl.type.size;
-                    const decl = ExprInstruction.UnwindExpr(id);
+                    const decl = expression.Unwind(id);
                     const location = resolveMemoryLocation(decl);
 
                     switch (location) {
@@ -526,11 +524,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             {
                                 // implies that each parameter is loaded from its stream, so 
                                 // the offset is always zero. 
-                                // Otherwise use 'VariableDeclInstruction.getParameterOffset(decl);'
+                                // Otherwise use 'variable.getParameterOffset(decl);'
                                 // in order to determ correct offset between parameters
                                 const offset = 0;
                                 const src = offset;
-                                const inputIndex = VariableDeclInstruction.getParameterIndex(decl);
+                                const inputIndex = variable.getParameterIndex(decl);
                                 return loc({ inputIndex, addr: src, size, location });
                             }
                         case EMemoryLocation.k_Constants:
@@ -803,7 +801,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 case 1:
                                     // TODO: convert float to int if necessary
                                     // handling for the case single same type argument and multiple floats
-                                    assert(Instruction.isExpression(args[0]), EInstructionTypes[args[0].instructionType]);
+                                    assert(instruction.isExpression(args[0]), EInstructionTypes[args[0].instructionType]);
                                     let src = raddr(args[0]);
 
                                     if (src.location !== EMemoryLocation.k_Registers) {
@@ -828,7 +826,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 default:
                                     let offset = 0;
                                     for (let i = 0; i < args.length; ++i) {
-                                        assert(Instruction.isExpression(args[i]), EInstructionTypes[args[i].instructionType]);
+                                        assert(instruction.isExpression(args[i]), EInstructionTypes[args[i].instructionType]);
                                         let src = raddr(args[i]);
 
                                         if (src.location !== EMemoryLocation.k_Registers) {
@@ -976,7 +974,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     // left address can be both from the registers and in the external memory
                     const leftAddr = raddr(assigment.left);
 
-                    assert(Instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
+                    assert(instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
                     // right address always from the registers
                     let rightAddr = raddr(<IExprInstruction>assigment.right);
                     if (rightAddr.location !== EMemoryLocation.k_Registers) {

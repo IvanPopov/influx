@@ -2,6 +2,8 @@
 import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
+import { fn } from "./instructions/helpers";
+
 export interface IScopeSettings {
     type?: EScopeType;
     parent?: IScope;
@@ -121,7 +123,7 @@ export class Scope implements IScope {
                     }
 
                     if (args.length > testedArguments.length ||
-                        args.length < testedFunction.def.numArgsRequired) {
+                        args.length < fn.numArgsRequired(testedFunction.def)) {
                         continue;
                     }
 

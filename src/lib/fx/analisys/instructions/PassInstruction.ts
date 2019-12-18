@@ -19,11 +19,10 @@ export interface IPassInstructionSettings extends IDeclInstructionSettings {
 
 
 export class PassInstruction extends DeclInstruction implements IPassInstruction {
+    protected _id: IIdInstruction;
     protected _vertexShader: IFunctionDeclInstruction;
     protected _pixelShader: IFunctionDeclInstruction;
     protected _passStateMap: IMap<ERenderStateValues>;
-    protected _id: IIdInstruction;
-    protected _annotation: IAnnotationInstruction;
 
     constructor({ id = null, vertexShader = null, pixelShader = null, renderStates = {}, ...settings }: IPassInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PassDecl, ...settings });
@@ -69,14 +68,16 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         return this._passStateMap;
     }
 
-    static createRenderStateMap(): IMap<ERenderStateValues> {
+    // TODO: move it to helpers
+    private static createRenderStateMap(): IMap<ERenderStateValues> {
         let map: IMap<ERenderStateValues> = <IMap<ERenderStateValues>>{};
         PassInstruction.clearRenderStateMap(map);
 
         return map;
     }
 
-    static copyRenderStateMap(from: IMap<ERenderStateValues>, to: IMap<ERenderStateValues>): void {
+    // TODO: move it to helpers
+    private static copyRenderStateMap(from: IMap<ERenderStateValues>, to: IMap<ERenderStateValues>): void {
         if (isNull(from)) {
             return;
         }
@@ -89,7 +90,8 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     }
 
 
-    static clearRenderStateMap(map: IMap<ERenderStateValues>): void {
+    // TODO: move it to helpers
+    private static clearRenderStateMap(map: IMap<ERenderStateValues>): void {
         Object
             .keys(ERenderStates)
             .filter(k => isNumber(ERenderStates[k]))
@@ -98,7 +100,9 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
     }
 
 
-    static createSamplerState(): ISamplerState {
+    /** @deprecated */
+    // TODO: move it to helpers
+    private static createSamplerState(): ISamplerState {
         return <ISamplerState>{
             textureName: "",
             texture: null,

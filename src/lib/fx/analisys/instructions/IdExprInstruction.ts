@@ -1,7 +1,7 @@
 import { EInstructionTypes, IIdExprInstruction, IIdInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+
 import { ExprInstruction } from "./ExprInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
-
 
 export interface IIdExprInstructionSettings extends IInstructionSettings {
     id: IIdInstruction;
@@ -10,25 +10,15 @@ export interface IIdExprInstructionSettings extends IInstructionSettings {
 
 
 export class IdExprInstruction extends ExprInstruction implements IIdExprInstruction {
-    protected _id: IIdInstruction;
+    readonly id: IIdInstruction;
     // helpers
-    protected _decl: IVariableDeclInstruction; // << move to resolveDecl() method.
+    readonly decl: IVariableDeclInstruction; // << move to resolveDecl() method.
 
     constructor({ id, decl, ...settings }: IIdExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IdExpr, type: decl.type, ...settings });
 
-        this._id = Instruction.$withParent(id, this);
-        this._decl = decl;
-    }
-
-    
-    get decl(): IVariableDeclInstruction {
-        return this._decl;
-    }
-    
-
-    get id(): IIdInstruction {
-        return this._id;
+        this.id = Instruction.$withParent(id, this);
+        this.decl = decl;
     }
 
 
@@ -42,13 +32,14 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     }
 
 
+    /** @deprecated */
     evaluate(): boolean {
         return false;
     }
 
 
     toCode(): string {
-        return this._decl.id.toCode();
+        return this.decl.id.toCode();
     }
 }
 

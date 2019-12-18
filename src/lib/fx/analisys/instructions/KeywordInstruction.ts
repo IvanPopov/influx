@@ -8,26 +8,21 @@ interface IKeywordInstructionSettings extends IInstructionSettings {
 
 // TODO: remove it? (no one use it)
 export class KeywordInstruction extends Instruction implements IKeywordInstruction {
-    protected _value: string;
+    readonly value: string;
 
     constructor({ keyword, ...settings }: IKeywordInstructionSettings) {
         super({ instrType: EInstructionTypes.k_Keyword, ...settings });
 
-        this._value = keyword;
-    }
-
-
-    get value(): string {
-        return this._value;
+        this.value = keyword;
     }
 
 
     toString(): string {
-        return this._value;
+        return this.value;
     }
 
     
     toCode(): string {
-        return this._value;
+        return this.value;
     }
 }
