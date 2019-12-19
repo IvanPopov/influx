@@ -1,10 +1,10 @@
 import { isNull } from "@lib/common";
+import { instruction, type } from "@lib/fx/analisys/helpers";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, EScopeType, IExprInstruction, IInitExprInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
-import { instruction, type } from "../helpers";
 
 /**
  * Represents:

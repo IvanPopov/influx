@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { type, fn } from '@lib/fx/analisys/helpers';
+import { fn, type } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -130,6 +130,12 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
+    /** @deprecated */
+    isEqual(value: ITypeInstruction): boolean {
+        return type.equals(this, value);
+    }
+
+
     toDeclString(): string {
         console.warn('@pure_virtual');
         return '';
@@ -228,12 +234,14 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    private addField(field: IVariableDeclInstruction): void {
+    /** internal api */
+    addField(field: IVariableDeclInstruction): void {
         console.assert(this.getField(field.name) === null);
         this._fields.push(Instruction.$withParent(field, this));
     }
 
-    private addMethod(method: IFunctionDeclInstruction): void {
+    /** internal api */
+    addMethod(method: IFunctionDeclInstruction): void {
         console.assert(isNull(this.getMethod(method.name, method.def.params.map(param => param.type))));
         this._methods.push(Instruction.$withParent(method, this));
     }

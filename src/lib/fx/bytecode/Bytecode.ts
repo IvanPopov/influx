@@ -1,6 +1,6 @@
 import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { expression, instruction, type, variable } from "@lib/fx/analisys/helpers";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
-import { expression, instruction, variable, type } from "@lib/fx/analisys/helpers";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";

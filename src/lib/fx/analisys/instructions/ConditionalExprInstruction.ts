@@ -24,7 +24,7 @@ export class ConditionalExprInstruction extends ExprInstruction implements ICond
         // todo: do not use {left.type} here
         super({ instrType: EInstructionTypes.k_ConditionalExpr, type: left.type, ...settings});
 
-        console.assert(left.type.isStrongEqual(right.type));
+        console.assert(type.equals(left.type, right.type, true));
         
         this._cond = Instruction.$withParent(cond, this);
         this._leftValue = Instruction.$withParent(left, this);

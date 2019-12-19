@@ -1,4 +1,4 @@
-import { assert, isDef, isDefAndNotNull, isNull, mwalk } from '@lib/common';
+﻿import { assert, isDef, isDefAndNotNull, isNull, mwalk } from '@lib/common';
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
@@ -11,6 +11,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
+import { expression, type } from './helpers';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
@@ -30,7 +31,6 @@ import { ForStmtInstruction } from './instructions/ForStmtInstruction';
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
 import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
-import { expression, type } from './helpers';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
 import { IdInstruction } from './instructions/IdInstruction';
 import { IfStmtInstruction } from './instructions/IfStmtInstruction';
@@ -2050,14 +2050,14 @@ export class Analyzer {
 
         const boolType = T_BOOL;
 
-        if (!typeEquals(leftType, boolType)) {
+        if (!leftType.isEqual(boolType)) {
             context.error(leftType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(leftType)
             });
             return null;
         }
-        if (!typeEquals(rightType, boolType)) {
+        if (!rightType.isEqual(boolType)) {
             context.error(rightType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(rightType)

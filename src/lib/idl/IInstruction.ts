@@ -237,6 +237,12 @@ export interface ITypeInstruction extends IInstruction {
     readonly fields: IVariableDeclInstruction[];
     readonly methods: IFunctionDeclInstruction[];
 
+    /** 
+     * @deprecated
+     * Use type.equals() instead.
+     */
+    isEqual(type: ITypeInstruction): boolean;
+
     isBase(): boolean;
     isArray(): boolean;
     // Returns true is type is user defined array.

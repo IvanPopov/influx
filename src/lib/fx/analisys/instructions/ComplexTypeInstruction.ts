@@ -4,8 +4,8 @@ import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
-import { IInstructionSettings, Instruction } from "./Instruction";
 import { instruction, type } from "../helpers";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name?: string;
@@ -105,6 +105,12 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         code += "}";
 
         return code;
+    }
+
+
+    /** @deprecated */
+    isEqual(value: ITypeInstruction): boolean {
+        return type.equals(this, value);
     }
 
     

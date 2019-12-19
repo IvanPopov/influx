@@ -1,5 +1,5 @@
-import { instruction, type } from "@lib/fx/analisys/helpers";
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
+import { instruction, type } from "@lib/fx/analisys/helpers";
 import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -217,6 +217,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return code;
     }
 
+    /** @deprecated */
+    isEqual(value: ITypeInstruction): boolean {
+        return type.equals(this, value);
+    }
 
     /** @deprecated */
     toDeclString(): string {

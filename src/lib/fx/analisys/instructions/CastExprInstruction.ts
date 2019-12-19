@@ -1,5 +1,5 @@
-import { EInstructionTypes, ICastExprInstruction, IExprInstruction } from "@lib/idl/IInstruction";
 import { type } from '@lib/fx/analisys/helpers';
+import { EInstructionTypes, ICastExprInstruction, IExprInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
