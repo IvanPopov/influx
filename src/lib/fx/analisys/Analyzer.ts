@@ -1407,7 +1407,6 @@ export class Analyzer {
 
         switch (firstNodeName) {
             case 'PostfixPointExpr':
-                return null;
             case 'T_NON_TYPE_ID':
                 return this.analyzeFunctionCallExpr(context, program, sourceNode);
             case 'BaseType':
@@ -1449,9 +1448,7 @@ export class Analyzer {
         const globalScope = program.globalScope;
         
         const firstNodeName = children[children.length - 1].name;
-
-       
-        
+ 
         const args: IExprInstruction[] = [];
         if (children.length > 3) {
             for (let i = children.length - 3; i > 0; i--) {
@@ -1475,10 +1472,10 @@ export class Analyzer {
                 }
                 break;
             // call as method
-            case 'PostfixExpr':
+            case 'PostfixPointExpr':
                 {
                     callee = this.analyzeCallee(context, program, children[children.length - 1]);
-                    funcName = children[children.length - 3].value; // method name
+                    funcName = children[children.length - 1].children[0].value; // method name
                     func = callee.type.getMethod(funcName, args.map(asType));
                 }
                 break;
@@ -1546,7 +1543,7 @@ export class Analyzer {
 
 
         const type = VariableTypeInstruction.wrap(func.def.returnType, scope); // TODO: remove wrap?
-        const expr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode });
+        const expr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode, callee });
 
         return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
     }

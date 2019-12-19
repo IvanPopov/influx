@@ -6,7 +6,7 @@
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IReturnStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IDeclStmtInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -535,9 +535,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     FunctionCall(instr: IFunctionCallInstruction) {
         return (
             <Property { ...this.bindProps(instr) } >
+                {/* <Property name='type' value={ (instr.callee ? 'method' : 'function') } /> */}
                 <Property name='declaration' >
                     { this.FunctionDecl(instr.decl as IFunctionDeclInstruction) }
                 </Property>
+                <PropertyOpt name='callee'>
+                    { this.Unknown(instr.callee) }
+                </PropertyOpt>
                 <PropertyOpt name='arguments'>
                     { instr.args.map((arg) => this.Unknown(arg)) }
                 </PropertyOpt>

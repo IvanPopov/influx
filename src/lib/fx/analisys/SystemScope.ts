@@ -4,7 +4,7 @@ import { FunctionDefInstruction } from "@lib/fx/analisys/instructions/FunctionDe
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { SystemFunctionInstruction } from "@lib/fx/analisys/instructions/SystemFunctionInstruction";
 import { ISystemTypeInstructionSettings, SystemTypeInstruction } from "@lib/fx/analisys/instructions/SystemTypeInstruction";
-import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
+import { EVariableUsageFlags, VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
@@ -155,8 +155,28 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
             // TODO: print error
             return null;
         }
+
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        {
+            const paramList = [];
+
+            {
+                const type = new VariableTypeInstruction({ type: args[0], scope });
+                const id = new IdInstruction({ scope, name: 'Append' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            const returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            const id = new IdInstruction({ scope, name: 'Append' });
+            const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            const func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
         
-        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH);
+        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH, fields, methods);
     }
 }
 

@@ -486,7 +486,7 @@ export interface IIdExprInstruction extends IExprInstruction {
 
 
 export interface IFunctionCallInstruction extends IExprInstruction {
-    // readonly callee: IExprInstruction;
+    readonly callee: IExprInstruction;
     readonly args: IExprInstruction[];
 
     // move it to method?
