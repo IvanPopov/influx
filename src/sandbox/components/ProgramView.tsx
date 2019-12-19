@@ -5,15 +5,8 @@
 /* tslint:disable:cyclomatic-complexity */
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
-import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { DeclStmtInstruction } from '@lib/fx/analisys/instructions/DeclStmtInstruction';
-import { ExprStmtInstruction } from '@lib/fx/analisys/instructions/ExprStmtInstruction';
-import { ForStmtInstruction } from '@lib/fx/analisys/instructions/ForStmtInstruction';
-import { fn } from '@lib/fx/analisys/instructions/helpers';
-import { Instruction } from '@lib/fx/analisys/instructions/Instruction';
-import { ReturnStmtInstruction } from '@lib/fx/analisys/instructions/ReturnStmtInstruction';
-import { SystemTypeInstruction } from '@lib/fx/analisys/instructions/SystemTypeInstruction';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { fn, instruction, type } from '@lib/fx/analisys/helpers';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IReturnStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IDeclStmtInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -313,7 +306,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    ComplexType(instr: ComplexTypeInstruction) {
+    ComplexType(instr: ITypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='name' value={ instr.name } />
@@ -327,7 +320,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     // todo: implement it properly
-    SystemType(instr: SystemTypeInstruction) {
+    SystemType(instr: ITypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
                 { this.typeInfo(instr) }
@@ -338,12 +331,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     typeInfo(instr: ITypeInstruction) {
         return (
-            <SystemProperty { ...this.bindProps(instr, false) } name={ instr.strongHash }>
+            <SystemProperty { ...this.bindProps(instr, false) } name={ type.signature(instr, true) }>
                 <SystemProperty name='writable' value={ `${instr.writable}` } />
                 <SystemProperty name='readable' value={ `${instr.readable}` } />
-                {/* <SystemProperty name='builtIn' value={ `${instr.builtIn}` } /> */ }
-                <SystemProperty name='hash' value={ `${instr.hash}` } />
-                <SystemProperty name='strongHash' value={ `${instr.strongHash}` } />
                 <SystemProperty name='size' value={ `${instr.size} bytes` } />
                 <SystemProperty name='length' value={ `${instr.length}` } />
                 <SystemProperty name='base' value={ `${instr.isBase()}` } />
@@ -351,7 +341,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <SystemProperty name='complex' value={ `${instr.isComplex()}` } />
                 <SystemProperty name='const' value={ `${instr.isConst()}` } />
                 <PropertyOpt name='methods' >
-                    { instr.methods.map(method => fn.toSignature(method.def))
+                    { instr.methods.map(method => fn.signatureEx(method.def, true))
                         .map(signature =>
                             <SystemProperty name={ <span>&nbsp;&nbsp;</span> } value={ signature } />
                         ) }
@@ -602,7 +592,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <Property name='name' value={ instr.name } />
-                <Property name='signature' value={ fn.toSignature(instr) } />
+                <Property name='signature' value={ fn.signatureEx(instr, true) } />
                 <Property name='type' value={ instr.returnType.name } />
                 <Property name='numArgsRequired' value={ String(fn.numArgsRequired(instr)) } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
@@ -628,15 +618,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     Stmt(instr: IStmtInstruction) {
         switch (instr.instructionType) {
             case EInstructionTypes.k_DeclStmt:
-                return this.DeclStmt(instr as DeclStmtInstruction);
+                return this.DeclStmt(instr as IDeclStmtInstruction);
             case EInstructionTypes.k_ReturnStmt:
-                return this.ReturnStmt(instr as ReturnStmtInstruction);
+                return this.ReturnStmt(instr as IReturnStmtInstruction);
             case EInstructionTypes.k_StmtBlock:
                 return this.StmtBlock(instr as IStmtBlockInstruction);
             case EInstructionTypes.k_ExprStmt:
-                return this.ExprStmt(instr as ExprStmtInstruction);
+                return this.ExprStmt(instr as IExprStmtInstruction);
             case EInstructionTypes.k_ForStmt:
-                return this.ForStmt(instr as ForStmtInstruction);
+                return this.ForStmt(instr as IForStmtInstruction);
             case EInstructionTypes.k_SemicolonStmt:
                 return this.SemicolonStmt(instr as IStmtInstruction);
             default:
@@ -649,7 +639,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             case EInstructionTypes.k_VariableType:
                 return this.VariableType(instr as IVariableTypeInstruction);
             case EInstructionTypes.k_SystemType:
-                return this.SystemType(instr as SystemTypeInstruction);
+                return this.SystemType(instr as ITypeInstruction);
             default:
                 return this.NotImplemented(instr); // TODO: remove it
         }
@@ -657,7 +647,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    DeclStmt(instr: DeclStmtInstruction) {
+    DeclStmt(instr: IDeclStmtInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <Property name='declarations'>
@@ -668,7 +658,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    ReturnStmt(instr: ReturnStmtInstruction) {
+    ReturnStmt(instr: IReturnStmtInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <PropertyOpt name='value'>
@@ -679,7 +669,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    ExprStmt(instr: ExprStmtInstruction) {
+    ExprStmt(instr: IExprStmtInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 { this.Unknown(instr.expr) }
@@ -695,7 +685,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
-    ForStmt(instr: ForStmtInstruction) {
+    ForStmt(instr: IForStmtInstruction) {
         return (
             <Property { ...this.bindProps(instr, true) }>
                 <PropertyOpt name='init'>
@@ -719,7 +709,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <PropertyOpt name='usages' value={ (instr.usages.join(' ') || null) } />
-                <Property name='padding' value={ instr.padding === Instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
+                <Property name='padding' value={ instr.padding === instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
                 <PropertyOpt name='subType' opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>

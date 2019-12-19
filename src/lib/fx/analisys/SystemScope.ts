@@ -10,6 +10,7 @@ import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { isObject } from "util";
+import { instruction, type } from "@lib/fx/analisys/helpers";
 
 // TODO: use it
 export enum ESystemTypes {
@@ -105,7 +106,7 @@ class RWBufferTemplate extends TypeTemplate {
             return null;
         }
 
-        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH);
     }
 }
 
@@ -131,8 +132,16 @@ class RWStructuredBufferTemplate extends TypeTemplate {
             methods.push(func);
         }
 
+        {
+            let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
+            let id = new IdInstruction({ scope, name: 'DecrementCounter' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
 
-        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */, fields, methods);
+
+        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH, fields, methods);
     }
 }
 
@@ -147,7 +156,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
             return null;
         }
         
-        return generateSystemType(this.typeName(args), -1, args[0], 0/* ?? */);
+        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH);
     }
 }
 
@@ -231,9 +240,11 @@ function addSystemTypeVector(): void {
 
     {
         let suf2f: IVariableDeclInstruction[] = [];
+        // program.push(EScopeType.k_Struct);
         addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, "float");
         addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, "float");
         addFieldsToVectorFromSuffixObject(suf2f, STSuffix, "float");
+        // program.pop();
         suf2f.forEach(field => float2.addField(field));
     }
 

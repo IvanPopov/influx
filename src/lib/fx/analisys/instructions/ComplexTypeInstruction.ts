@@ -5,6 +5,7 @@ import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITyp
 import { IMap } from "@lib/idl/IMap";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
+import { instruction, type } from "../helpers";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name?: string;
@@ -46,16 +47,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     
     get name(): string {
         return this._name;
-    }
-
-
-    get hash(): string {
-        return this.calcHash();
-    }
-
-    
-    get strongHash(): string {
-        return this.calcStrongHash();
     }
 
     
@@ -100,7 +91,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     
     toString(): string {
-        return this.name || this.hash;
+        return this.name || type.hash(this);
     }
 
     /** @deprecated */
@@ -139,16 +130,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     
     isComplex(): boolean {
         return true;
-    }
-
-    
-    isEqual(type: ITypeInstruction): boolean {
-        return this.hash === type.hash;
-    }
-
-    
-    isStrongEqual(type: ITypeInstruction): boolean {
-        return this.strongHash === type.strongHash;
     }
 
     
@@ -239,8 +220,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         for (let i: number = 0; i < this.fields.length; i++) {
             let iFieldSize: number = this.fields[i].type.size;
 
-            if (iFieldSize === Instruction.UNDEFINE_SIZE) {
-                size = Instruction.UNDEFINE_SIZE;
+            if (iFieldSize === instruction.UNDEFINE_SIZE) {
+                size = instruction.UNDEFINE_SIZE;
                 break;
             }
             else {
@@ -251,25 +232,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return size;
     }
 
-
-    private calcHash(): string {
-        let hash = "{";
-        for (let i = 0; i < this.fields.length; i++) {
-            hash += this.fields[i].type.hash + ";";
-        }
-        hash += "}";
-        return hash;
-    }
-
-
-    private calcStrongHash(): string {
-        let hash = "{";
-        for (let i = 0; i < this.fields.length; i++) {
-            hash += this.fields[i].type.strongHash + ";";
-        }
-        hash += "}";
-        return hash;
-    }
 
 
     hasFieldWithoutSemantics(): boolean {
@@ -317,7 +279,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
             let varType: IVariableTypeInstruction = this.fields[i].type;
             let varSize: number = varType.size;
 
-            if (varSize === Instruction.UNDEFINE_SIZE) {
+            if (varSize === instruction.UNDEFINE_SIZE) {
                 this._setError(EAnalyzerErrors.CannotCalcPadding, { typeName: this.name });
                 return;
             }

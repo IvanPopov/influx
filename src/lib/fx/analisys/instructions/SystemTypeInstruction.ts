@@ -1,4 +1,5 @@
 import { isNull } from "@lib/common";
+import { type, fn } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -155,16 +156,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    isEqual(pType: ITypeInstruction): boolean {
-        return this.hash === pType.hash;
-    }
-
-
-    isStrongEqual(pType: ITypeInstruction): boolean {
-        return this.strongHash === pType.strongHash;
-    }
-
-
     isConst(): boolean {
         return false;
     }
@@ -191,7 +182,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     toString(): string {
-        return this.name || this.hash;
+        return this.name || type.hash(this);
     }
 
 
@@ -225,8 +216,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction {
-        return null;//this._methods.filter(method => method.name === methodName) || null;
+    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction | undefined | null {
+        const list = this._methods.filter(method => method.name === methodName);
+        return fn.matchList(list, args);
     }
 
 
@@ -236,13 +228,13 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    addField(field: IVariableDeclInstruction): void {
+    private addField(field: IVariableDeclInstruction): void {
         console.assert(this.getField(field.name) === null);
         this._fields.push(Instruction.$withParent(field, this));
     }
 
-    addMethod(method: IFunctionDeclInstruction): void {
-        // console.assert(this.getMethod(method.name).find(knownMethod => knownMethod.def.signature === method.def.signature) === null);
+    private addMethod(method: IFunctionDeclInstruction): void {
+        console.assert(isNull(this.getMethod(method.name, method.def.params.map(param => param.type))));
         this._methods.push(Instruction.$withParent(method, this));
     }
 }

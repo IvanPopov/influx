@@ -1,7 +1,6 @@
 import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
-import { expression, instruction, variable } from "@lib/fx/analisys/instructions/helpers";
-import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
+import { expression, instruction, variable, type } from "@lib/fx/analisys/helpers";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
@@ -40,7 +39,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
             continue;
         }
 
-        const inputIndex = variable.getParameterIndex(param);
+        const inputIndex = variable.parameterIndex(param);
         const size = param.type.size;
         const src = loc({ location: EMemoryLocation.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
@@ -509,10 +508,10 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             case EInstructionTypes.k_IdExpr:
                 {
                     let id = (expr as IIdExprInstruction);
-                    assert(id.decl === expression.Unwind(id));
+                    assert(id.decl === expression.unwind(id));
 
                     const size = id.decl.type.size;
-                    const decl = expression.Unwind(id);
+                    const decl = expression.unwind(id);
                     const location = resolveMemoryLocation(decl);
 
                     switch (location) {
@@ -528,7 +527,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 // in order to determ correct offset between parameters
                                 const offset = 0;
                                 const src = offset;
-                                const inputIndex = variable.getParameterIndex(decl);
+                                const inputIndex = variable.parameterIndex(decl);
                                 return loc({ inputIndex, addr: src, size, location });
                             }
                         case EMemoryLocation.k_Constants:
@@ -706,7 +705,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             assert(checkPostfixNameForSwizzling(postfix.name));
                             swizzle = swizzlePatternFromName(postfix.name);
 
-                            assert(padding === Instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
+                            assert(padding === instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
                             padding = 0;
                         }
 

@@ -146,13 +146,6 @@ export class Instruction implements IInstruction {
         }
         return child.$withNoParent();
     }
-
-
-    static UNDEFINE_LENGTH: number = 0xffffff;
-    static UNDEFINE_SIZE: number = 0xffffff;
-    // static UNDEFINE_SCOPE: number = 0xffffff;
-    static UNDEFINE_PADDING: number = 0xffffff;
-    static UNDEFINE_NAME: string = "undef";
 }
 
 

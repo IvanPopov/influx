@@ -4,6 +4,7 @@ import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IIdInstruction, IInstruction, IPassInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { expression, instruction, variable, type } from "@lib/fx/analisys/helpers";
 
 import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";

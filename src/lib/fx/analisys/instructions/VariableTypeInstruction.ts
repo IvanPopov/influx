@@ -1,9 +1,8 @@
+import { instruction, type } from "@lib/fx/analisys/helpers";
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
-import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, IScope, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
-import { IdInstruction } from "./IdInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
-import { VariableDeclInstruction } from "./VariableDeclInstruction";
 
 export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     type: ITypeInstruction;
@@ -28,7 +27,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
 
-    constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, padding = Instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
+    constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, padding = instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableType, ...settings });
 
         type = type.$withNoParent();
@@ -83,16 +82,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    get hash(): string {
-        return this.calcHash();
-    }
-
-
-    get strongHash(): string {
-        return this.calcStrongHash();
-    }
-
-
     get writable(): boolean {
         if (!this._isWritable) {
             return false;
@@ -130,12 +119,13 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    // TODO: move to helpers
     get size(): number {
         if (!isNull(this._arrayElementType)) {
             const size = this._arrayElementType.size;
             const length = this.length;
-            if (length === Instruction.UNDEFINE_LENGTH || size === Instruction.UNDEFINE_SIZE) {
-                return Instruction.UNDEFINE_SIZE;
+            if (length === instruction.UNDEFINE_LENGTH || size === instruction.UNDEFINE_SIZE) {
+                return instruction.UNDEFINE_SIZE;
             }
             return size * length;
         }
@@ -168,7 +158,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             }
         }
 
-        return Instruction.UNDEFINE_LENGTH;
+        return instruction.UNDEFINE_LENGTH;
     }
 
 
@@ -210,7 +200,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     toString(): string {
         // TODO: fix this condition
-        return this.name || this.subType.toString() || this.hash;
+        return this.name || this.subType.toString() || type.hash(this);
     }
 
 
@@ -256,30 +246,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this.subType.isComplex();
     }
 
-
-    isEqual(type: ITypeInstruction): boolean {
-        if (this.isNotBaseArray() && type.isNotBaseArray() &&
-            (this.length !== type.length ||
-                this.length === Instruction.UNDEFINE_LENGTH ||
-                type.length === Instruction.UNDEFINE_LENGTH)) {
-            return false;
-        }
-
-        if (this.hash !== type.hash) {
-            return false;
-        }
-
-        return true;
-    }
-
-
-    isStrongEqual(type: ITypeInstruction): boolean {
-        if (!this.isEqual(type) || this.strongHash !== type.strongHash) {
-            return false;
-        }
-
-        return true;
-    }
 
 
     /** @deprecated */
@@ -371,43 +337,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return false;
     }
 
-
-    private calcHash(): string {
-        let hash: string = this.subType.hash;
-        if (!isNull(this._arrayElementType)) {
-            hash += "[";
-
-            const iLength: number = this.length;
-
-            if (iLength === Instruction.UNDEFINE_LENGTH) {
-                hash += "undef";
-            }
-            else {
-                hash += iLength.toString();
-            }
-            hash += "]";
-        }
-        return hash;
-    }
-
-
-    private calcStrongHash(): string {
-        let strongHash: string = this.subType.strongHash;
-
-        if (this.isArray()) {
-            strongHash += "[";
-            const iLength: number = this.length;
-
-            if (iLength === Instruction.UNDEFINE_LENGTH) {
-                strongHash += "undef";
-            }
-            else {
-                strongHash += iLength.toString();
-            }
-            strongHash += "]";
-        }
-        return strongHash;
-    }
 
     /**
      * Helpers

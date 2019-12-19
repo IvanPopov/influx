@@ -1,4 +1,4 @@
-﻿import { assert, isDef, isDefAndNotNull, isNull, mwalk } from '@lib/common';
+import { assert, isDef, isDefAndNotNull, isNull, mwalk } from '@lib/common';
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
@@ -30,7 +30,7 @@ import { ForStmtInstruction } from './instructions/ForStmtInstruction';
 import { FunctionCallInstruction } from './instructions/FunctionCallInstruction';
 import { FunctionDeclInstruction } from './instructions/FunctionDeclInstruction';
 import { FunctionDefInstruction } from './instructions/FunctionDefInstruction';
-import { expression } from './instructions/helpers';
+import { expression, type } from './helpers';
 import { IdExprInstruction } from './instructions/IdExprInstruction';
 import { IdInstruction } from './instructions/IdInstruction';
 import { IfStmtInstruction } from './instructions/IfStmtInstruction';
@@ -1479,7 +1479,7 @@ export class Analyzer {
                 {
                     callee = this.analyzeCallee(context, program, children[children.length - 1]);
                     funcName = children[children.length - 3].value; // method name
-                    callee.type.getMethod(funcName, args.map(asType))
+                    func = callee.type.getMethod(funcName, args.map(asType));
                 }
                 break;
         }
@@ -1512,7 +1512,7 @@ export class Analyzer {
                 continue;
             }
             if (params[i].type.hasUsage('out')) {
-                const decl = expression.Unwind(args[i]);
+                const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
                     return null;
@@ -1522,7 +1522,7 @@ export class Analyzer {
                     return null;
                 }
             } else if (params[i].type.hasUsage('inout')) {
-                const decl = expression.Unwind(args[i]);
+                const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
                     return null;
@@ -2015,8 +2015,8 @@ export class Analyzer {
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidRelationalOperation, {
                 operator: operator,
-                leftTypeName: leftType ? leftType.hash : '[unknown]',
-                rightTypeName: rightType ? rightType.hash : '[unknown]'
+                leftTypeName: leftType ? type.signature(leftType) : '[unknown]',
+                rightTypeName: rightType ? type.signature(rightType) : '[unknown]'
             });
             return null;
         }
@@ -2050,14 +2050,14 @@ export class Analyzer {
 
         const boolType = T_BOOL;
 
-        if (!leftType.isEqual(boolType)) {
+        if (!typeEquals(leftType, boolType)) {
             context.error(leftType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(leftType)
             });
             return null;
         }
-        if (!rightType.isEqual(boolType)) {
+        if (!typeEquals(rightType, boolType)) {
             context.error(rightType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(rightType)
@@ -2094,7 +2094,7 @@ export class Analyzer {
 
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
 
-        if (!expression.Unwind(left)) {
+        if (!expression.unwind(left)) {
             // Invalid left-hand side in assignment
             context.error(sourceNode, EErrors.InvalidLeftHandSideInAssignment, {
                 operator: operator
@@ -2117,8 +2117,8 @@ export class Analyzer {
             if (isNull(exprType)) {
                 context.error(sourceNode, EErrors.InvalidArithmeticAssigmentOperation, {
                     operator: operator,
-                    leftTypeName: leftType.hash,
-                    rightTypeName: rightType.hash
+                    leftTypeName: type.signature(leftType),
+                    rightTypeName: type.signature(rightType)
                 });
             }
         } else {
@@ -2130,8 +2130,8 @@ export class Analyzer {
 
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidAssigmentOperation, {
-                leftTypeName: leftType.hash,
-                rightTypeName: rightType.hash
+                leftTypeName: type.signature(leftType),
+                rightTypeName: type.signature(rightType)
             });
         }
 
@@ -2282,8 +2282,7 @@ export class Analyzer {
 
         program.push(EScopeType.k_Struct);
 
-        let i: number = 0;
-        for (i = children.length - 4; i >= 1; i--) {
+        for (let i = children.length - 4; i >= 1; i--) {
             if (children[i].name === 'VariableDecl') {
                 fields = fields.concat(this.analyzeVariableDecl(context, program, children[i]));
             }

@@ -3,10 +3,10 @@
 /* tslint:disable:member-ordering */
 
 import { assert, isDef, isNull, verbose } from '@lib/common';
+import { type } from '@lib/fx/analisys/helpers';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { i32ToU8Array } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
-import * as Code from '@lib/fx/translators/CodeEmitter';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
@@ -480,10 +480,10 @@ function Pipeline(fx: PartFx) {
     function fxHash(fx: PartFx) {
 
         const hashPart = fx.passList
-            .map(pass => `${pass.particleInstance.hash}:${pass.geometry}:${pass.sorting}:`) // +
+            .map(pass => `${type.signature(pass.particleInstance)}:${pass.geometry}:${pass.sorting}:`) // +
             // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
             .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
-        return `${fx.particle.hash}:${fx.capacity}:${hashPart}`;
+        return `${type.signature(fx.particle)}:${fx.capacity}:${hashPart}`;
     }
 
     const isReplaceable = (fxNext: PartFx) => {

@@ -2,7 +2,7 @@ import { assert, isNull } from '@lib/common';
 import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
-import { type } from './helpers';
+import { type } from '../helpers';
 import { Instruction } from './Instruction';
 
 // import * as SystemScope from '@lib/fx/analisys/SystemScope';
@@ -75,25 +75,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     get id(): IIdInstruction {
         return this._id;
-    }
-
-
-    get fullName(): string {
-        if (this.isField() &&
-            type.findParentVariableDecl(<IVariableTypeInstruction>this.parent)) {
-
-            var name = '';
-            var parentType = this.parent.instructionType;
-
-            if (parentType === EInstructionTypes.k_VariableType) {
-                name = type.resolveVariableDeclFullName(<IVariableTypeInstruction>this.parent);
-            }
-
-            name += '.' + this.name;
-            return name;
-        }
-
-        return this.name;
     }
 
 

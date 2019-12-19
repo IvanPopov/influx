@@ -1,8 +1,8 @@
 ﻿import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
-import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
-import { fn } from "./instructions/helpers";
+import { fn, type } from "./helpers";
 
 export interface IScopeSettings {
     type?: EScopeType;
@@ -38,56 +38,23 @@ export class Scope implements IScope {
 
 
     isStrict(): boolean {
-        let scope: Scope = this;
-        while (!isNull(scope)) {
-            if (scope.strictMode) {
-                return true;
-            }
-            scope = scope.parent;
-        }
-        return false;
+        return this.filter(scope => scope.strictMode);
     }
 
 
     findVariable(varName: string): IVariableDeclInstruction {
-        let scope: Scope = this;
-        while (!isNull(scope)) {
-            let variable = scope.variables[varName];
-            if (isDef(variable)) {
-                return variable;
-            }
-            scope = scope.parent;
-        }
-
-        return null;
+        return this.filter(scope => scope.variables[varName] || null);
     }
 
 
     findTypeTemplate(typeName: string): ITypeTemplate {
-        let scope: Scope = this;
-        while (!isNull(scope)) {
-            let template = scope.typeTemplates[typeName];
-            if (isDef(template)) {
-                return template;
-            }
-            scope = scope.parent;
-        }
-        return null;
+        return this.filter(scope => scope.typeTemplates[typeName] || null);
     }
 
 
     findType(typeName: string): ITypeInstruction {
-        let scope: Scope = this;
-        while (!isNull(scope)) {
-            let type = scope.types[typeName];
-            if (isDef(type)) {
-                return type;
-            }
-            scope = scope.parent;
-        }
-        return null;
+        return this.filter(scope => scope.types[typeName] || null);
     }
-
 
 
     /**
@@ -98,112 +65,19 @@ export class Scope implements IScope {
      *    function if all is ok;
      */
     findFunction(funcName: string, args: ITypeInstruction[] = null): IFunctionDeclInstruction | null | undefined {
-        let scope: Scope = this;
-        let func: IFunctionDeclInstruction = null;
-
-        while (!isNull(scope)) {
-            let funcList = scope.functions[funcName];
-
-            if (isDef(funcList)) {
-                for (let i = 0; i < funcList.length; i++) {
-                    let testedFunction = funcList[i];
-                    let testedArguments = testedFunction.def.params;
-
-                    if (isNull(args)) {
-                        // if (testedFunction.definition.numArgsRequired === 0) 
-                        // return any function with given name in case of (args === null)
-                        {
-                            if (!isNull(func)) {
-                                return undefined;
-                            }
-
-                            func = testedFunction;
-                        }
-                        continue;
-                    }
-
-                    if (args.length > testedArguments.length ||
-                        args.length < fn.numArgsRequired(testedFunction.def)) {
-                        continue;
-                    }
-
-                    let isParamsEqual: boolean = true;
-
-                    for (let j = 0; j < args.length; j++) {
-                        isParamsEqual = false;
-
-                        if (args[j] && !args[j].isEqual(testedArguments[j].type)) {
-                            break;
-                        }
-
-                        isParamsEqual = true;
-                    }
-
-                    if (isParamsEqual) {
-                        if (!isNull(func)) {
-                            return undefined;
-                        }
-                        func = testedFunction;
-                    }
-                }
-            }
-
-            scope = scope.parent;
-        }
-        return func;
+        return this.filter(scope => fn.matchList(scope.functions[funcName], args))
     }
 
 
-    findTechnique(techName: string): ITechniqueInstruction | null | undefined {
-        let scope: Scope = this;
-        while (!isNull(scope)) {
-            let technique = scope.techniques[techName];
-            if (isDef(technique)) {
-                return technique;
-            }
-            scope = scope.parent;
-        }
-        return null;
+    findTechnique(techName: string): ITechniqueInstruction {
+        return this.filter(scope => scope.techniques[techName] || null);
     }
 
 
     findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction {
-        const scope: Scope = this;
-        const funcListMap = scope.functions;
-        const funcOverloads = funcListMap[func.name];
-
-        if (!isDef(funcOverloads)) {
-            return null;
-        }
-
-        const funcArgs = func.def.params;
-        let targetFunc = null;
-
-        for (let i = 0; i < funcOverloads.length; i++) {
-            let testedArguments = funcOverloads[i].def.params;
-
-            if (testedArguments.length !== funcArgs.length) {
-                continue;
-            }
-
-            let isParamsEqual = true;
-            for (let j = 0; j < funcArgs.length; j++) {
-                isParamsEqual = false;
-
-                if (!testedArguments[j].type.isEqual(funcArgs[j].type)) {
-                    break;
-                }
-
-                isParamsEqual = true;
-            }
-
-            if (isParamsEqual) {
-                targetFunc = funcOverloads[i];
-                break;
-            }
-        }
-
-        return targetFunc;
+        let res = fn.matchList(this.functions[func.name], func.def.params.map(param => param? param.type : null));
+        assert(res !== undefined);
+        return res;
     }
 
     
@@ -273,17 +147,26 @@ export class Scope implements IScope {
     addTechnique(technique: ITechniqueInstruction): boolean {
         assert(this.type <= EScopeType.k_Global);
 
-        let techMap = this.techniques;
-        let techName = technique.name;
-
         if (this.techniques[technique.name]) {
             return false;
         }
 
-        techMap[techName] = technique;
+        this.techniques[technique.name] = technique;
         assert(technique.scope === this);
-
         return false;
+    }
+
+    private filter<T>(cb: (scope: IScope) => T | null): T 
+    {
+        let scope: IScope = this;
+        while (!isNull(scope)) {
+            let res = cb(scope);
+            if (!isNull(res)) {
+                return res;
+            }
+            scope = scope.parent;
+        }
+        return null;
     }
 }
 

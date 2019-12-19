@@ -1,9 +1,7 @@
-import { EInstructionTypes, EVarUsedMode, ICastExprInstruction, IExprInstruction, IInstruction, ITypeInstruction, ITypeUseInfoContainer } from "@lib/idl/IInstruction";
-import { IMap } from "@lib/idl/IMap";
-import { IParseNode } from "@lib/idl/parser/IParser";
+import { EInstructionTypes, ICastExprInstruction, IExprInstruction } from "@lib/idl/IInstruction";
+import { type } from '@lib/fx/analisys/helpers';
 
-import { IExprInstructionSettings } from "./ExprInstruction";
-import { ExprInstruction } from "./ExprInstruction";
+import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
 
 export interface ICastExprInstructionSettings extends IExprInstructionSettings {

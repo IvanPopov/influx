@@ -230,9 +230,6 @@ export interface ITypeInstruction extends IInstruction {
     readonly length: number;
     readonly arrayElementType: ITypeInstruction;
 
-    readonly hash: string;
-    readonly strongHash: string;
-
     readonly writable: boolean;
     readonly readable: boolean;
 
@@ -255,9 +252,6 @@ export interface ITypeInstruction extends IInstruction {
     isContainSampler(): boolean;
     /** @deprecated */
     isContainComplexType(): boolean;
-
-    isEqual(type: ITypeInstruction): boolean;
-    isStrongEqual(type: ITypeInstruction): boolean;
 
     hasField(fieldName: string): boolean;
     hasFieldWithSematics(semantic: string);
@@ -336,12 +330,6 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
 
     readonly defaultValue: any;
 
-    /**
-     * Helper:
-     *  Returns 'structName.fieldName' for structs;
-     *  Returns 'varName' for variables;
-     */
-    readonly fullName: string;
 
     isParameter(): boolean;
     isLocal(): boolean;

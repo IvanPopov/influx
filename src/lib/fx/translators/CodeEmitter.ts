@@ -1,5 +1,5 @@
 import { assert, isDef, mwalk } from "@lib/common";
-import { instruction } from "@lib/fx/analisys/instructions/helpers";
+import { instruction } from "@lib/fx/analisys/helpers";
 import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";

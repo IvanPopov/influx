@@ -4,6 +4,7 @@ import { EInstructionTypes, EScopeType, IExprInstruction, IInitExprInstruction, 
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
+import { instruction, type } from "../helpers";
 
 /**
  * Represents:
@@ -90,7 +91,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         if ((type.isNotBaseArray() && type.scope.type <= EScopeType.k_Global) ||
             (type.isArray() && this.args.length > 1)) {
 
-            if (type.length === Instruction.UNDEFINE_LENGTH ||
+            if (type.length === instruction.UNDEFINE_LENGTH ||
                 (type.isNotBaseArray() && this.args.length !== type.length) ||
                 (!type.isNotBaseArray() && this.args.length !== type.baseType.length)) {
                 return false;
