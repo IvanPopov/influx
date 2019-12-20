@@ -17,10 +17,6 @@ struct Part
 RWStructuredBuffer<Part> uavParticles: register(u2);
 
 
-// The buffer contains the state of the particles, Alive or dead.
-RWBuffer<uint> uavStates: register(u3);
-
-
 uniform float elapsedTimeLevel;
 
 uniform float elapsedTime;
@@ -63,6 +59,10 @@ void Init(out Part part, uint partId)
 	part.speed = float3(0.f);
 }
 
+// The buffer contains the state of the particles, Alive or dead.
+RWBuffer<uint> uavStates: register(u3);
+
+
 [numthreads(1, 1, 1)]
 void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3 GTid: SV_GroupThreadID, uint3 DTid: SV_DispatchThreadID)
 {
@@ -84,10 +84,11 @@ void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3
 	}
 
 	uint PartId = uavDeadIndices[n];
-	Part Particle = uavParticles[PartId];
+	Part Particle;
+	Init(Particle, PartId);
+	uavParticles[PartId] = Particle;
 	// set particles's state as 'Alive'
 	uavStates[PartId] = 1;
-	Init(Particle, PartId);
 }
 
 bool Update(inout Part part)

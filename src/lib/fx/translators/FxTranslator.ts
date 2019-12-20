@@ -116,12 +116,13 @@ export class FxTranslator extends FxEmitter {
 
                 const { typeName: partType } = this.resolveType(fx.particle);
                 uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
-                this.emitLine(`${partType} Particle = ${uavParticles}[PartId];`);
+                this.emitLine(`${partType} Particle;`);
+                this.emitFunction(initFn);
+                this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+                this.emitLine(`${uavParticles}[PartId] = Particle;`);
                 this.emitComment('set particles\'s state as \'Alive\'');
                 uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
                 this.emitLine(`${uavStates}[PartId] = 1;`);
-                this.emitFunction(initFn);
-                this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
             }
             this.pop();
             this.emitChar('}');

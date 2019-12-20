@@ -4,9 +4,9 @@ import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstr
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
-import { EChunkType, EMemoryLocation } from "@lib/idl/bytecode";
+import { EChunkType, EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
@@ -41,7 +41,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 
         const inputIndex = variable.parameterIndex(param);
         const size = param.type.size;
-        const src = loc({ location: EMemoryLocation.k_Input, inputIndex, addr: 0, size });
+        const src = loc({ type: EAddrType.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
         imove(dest, src, size);
         debug.map(fdef); // FIXME: is it ok?
@@ -130,6 +130,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         ref,
         icode,
         imove,
+        iop4,
         iop3,
         iop2,
         iload,
@@ -225,45 +226,15 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             return dest;
         },
 
-        arith(opName: ArithmeticOp, dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction): PromisedAddress {
-            assert(SystemScope.isScalarType(left.type) || SystemScope.isVectorType(left.type));
-            assert(SystemScope.isScalarType(right.type) || SystemScope.isVectorType(right.type));
-
-            let leftAddr = raddr(left);
-            if (leftAddr.location !== EMemoryLocation.k_Registers) {
-                leftAddr = iload(leftAddr);
-                debug.map(left);
-            }
-
-            let rightAddr = raddr(right);
-            if (rightAddr.location !== EMemoryLocation.k_Registers) {
-                rightAddr = iload(rightAddr);
-                debug.map(right);
-            }
-
-            if (SystemScope.isFloatBasedType(left.type)) {
-                assert(SystemScope.isFloatBasedType(right.type));
-                return intrinsics.arithf(opName, dest, leftAddr, rightAddr);
-            }
-
-            if (SystemScope.isIntBasedType(left.type)) {
-                assert(SystemScope.isIntBasedType(right.type));
-                return intrinsics.arithi(opName, dest, leftAddr, rightAddr);
-            }
-
-            assert(false);
-            return PromisedAddress.INVALID;
-        },
-
         mulf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('*', dest, left, right),
         divf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('/', dest, left, right),
         addf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('+', dest, left, right),
         subf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('-', dest, left, right),
 
-        mul: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('*', dest, left, right),
-        div: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('/', dest, left, right),
-        add: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('+', dest, left, right),
-        sub: (dest: PromisedAddress, left: IExprInstruction, right: IExprInstruction) => intrinsics.arith('-', dest, left, right),
+        muli: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('*', dest, left, right),
+        divi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('/', dest, left, right),
+        addi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('+', dest, left, right),
+        subi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('-', dest, left, right),
 
         dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
             let temp = alloca(Math.max(left.size, right.size));
@@ -280,8 +251,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             return dest;
         },
 
-        // fraction (f32 only)
-        frac(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+        // dest = a + b * c
+        madi(dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress): PromisedAddress {
+            iop4(EOperation.k_I32Mad, dest, a, b, c);
+            return dest;
+        },
+
+        fracf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             iop2(EOperation.k_F32Frac, dest, src);
             return dest;
         },
@@ -320,7 +296,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             iop3(EOperation.k_F32Max, dest, left, right);
             return dest;
         },
-
 
         lengthf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             intrinsics.dotf(dest, src, src);
@@ -365,23 +340,23 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     }
 
 
-    function resolveMemoryLocation(decl: IVariableDeclInstruction): EMemoryLocation {
+    function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {
         if (decl.isParameter()) {
             if (decl.type.hasUsage('out') || decl.type.hasUsage('inout')) {
                 // entry point function can refer to input memory, for ex. vertex shader
-                return isEntryPoint() ? EMemoryLocation.k_Input : EMemoryLocation.k_Registers;
+                return isEntryPoint() ? EAddrType.k_Input : EAddrType.k_Registers;
             }
         }
 
         if (decl.isGlobal()) {
             if (decl.isUniform()) {
-                return EMemoryLocation.k_Constants;
+                return EAddrType.k_Constants;
             }
             assert(false, 'unsupported');
         }
 
         assert(decl.isLocal());
-        return EMemoryLocation.k_Registers;
+        return EAddrType.k_Registers;
     }
 
     const POSTFIX_COMPONENT_MAP = {
@@ -417,7 +392,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
             for (let i = 0; i < fdef.params.length; ++i) {
                 const arg = call.args[i];
                 let argAddr = raddr(arg);
-                if (argAddr.location !== EMemoryLocation.k_Registers) {
+                if (argAddr.type !== EAddrType.k_Registers) {
                     argAddr = iload(argAddr);
                 }
                 args.push(argAddr);
@@ -434,7 +409,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 return intrinsics.dotf(dest, args[0], args[1]);
             case 'frac':
                 assert(fdef.params.length === 1);
-                return intrinsics.frac(dest, args[0]);
+                return intrinsics.fracf(dest, args[0]);
             case 'sin':
                 assert(fdef.params.length === 1);
                 return intrinsics.sinf(dest, args[0]);
@@ -512,14 +487,14 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     const size = id.decl.type.size;
                     const decl = expression.unwind(id);
-                    const location = resolveMemoryLocation(decl);
+                    const addrType = resolveAddressType(decl);
 
-                    switch (location) {
-                        case EMemoryLocation.k_Registers:
+                    switch (addrType) {
+                        case EAddrType.k_Registers:
                             {
                                 return deref(id.decl);
                             }
-                        case EMemoryLocation.k_Input:
+                        case EAddrType.k_Input:
                             {
                                 // implies that each parameter is loaded from its stream, so 
                                 // the offset is always zero. 
@@ -528,9 +503,9 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                 const offset = 0;
                                 const src = offset;
                                 const inputIndex = variable.parameterIndex(decl);
-                                return loc({ inputIndex, addr: src, size, location });
+                                return loc({ inputIndex, addr: src, size, type: addrType });
                             }
-                        case EMemoryLocation.k_Constants:
+                        case EAddrType.k_Constants:
                             {
                                 return constants.deref(id.decl);
                             }
@@ -545,7 +520,37 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                 {
                     const arithExpr = expr as IArithmeticExprInstruction;
                     const dest = alloca(arithExpr.type.size);
-                    intrinsics.arith(arithExpr.operator, dest, arithExpr.left, arithExpr.right);
+
+                    const opName = arithExpr.operator;
+                    const left = arithExpr.left;
+                    const right = arithExpr.right;
+
+                    assert(SystemScope.isScalarType(left.type) || SystemScope.isVectorType(left.type));
+                    assert(SystemScope.isScalarType(right.type) || SystemScope.isVectorType(right.type));
+        
+                    let leftAddr = raddr(left);
+                    if (leftAddr.type !== EAddrType.k_Registers) {
+                        leftAddr = iload(leftAddr);
+                        debug.map(left);
+                    }
+        
+                    let rightAddr = raddr(right);
+                    if (rightAddr.type !== EAddrType.k_Registers) {
+                        rightAddr = iload(rightAddr);
+                        debug.map(right);
+                    }
+        
+                    if (SystemScope.isFloatBasedType(left.type)) {
+                        assert(SystemScope.isFloatBasedType(right.type));
+                        intrinsics.arithf(opName, dest, leftAddr, rightAddr);
+                    } else if (SystemScope.isIntBasedType(left.type)) {
+                        assert(SystemScope.isIntBasedType(right.type));
+                        intrinsics.arithi(opName, dest, leftAddr, rightAddr);
+                    } else {    
+                        assert(false);
+                        return PromisedAddress.INVALID;
+                    }
+                
                     debug.map(arithExpr);
                     return dest;
                 }
@@ -557,7 +562,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     const dest = alloca(unary.type.size);
 
                     let src = raddr(unary.expr);
-                    if (src.location !== EMemoryLocation.k_Registers) {
+                    if (src.type !== EAddrType.k_Registers) {
                         src = iload(src);
                     }
 
@@ -567,7 +572,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             case '-':
 
                                 let constant = constants.i32(-1);
-                                if (constant.location !== EMemoryLocation.k_Registers) {
+                                if (constant.type !== EAddrType.k_Registers) {
                                     constant = iload(constant);
                                 }
 
@@ -582,7 +587,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                             case '-':
 
                                 let constant = constants.f32(-1.0);
-                                if (constant.location !== EMemoryLocation.k_Registers) {
+                                if (constant.type !== EAddrType.k_Registers) {
                                     constant = iload(constant);
                                 }
 
@@ -632,13 +637,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     }
 
                     let leftAddr = raddr(left);
-                    if (leftAddr.location !== EMemoryLocation.k_Registers) {
+                    if (leftAddr.type !== EAddrType.k_Registers) {
                         leftAddr = iload(leftAddr);
                         debug.map(left);
                     }
 
                     let rightAddr = raddr(right);
-                    if (rightAddr.location !== EMemoryLocation.k_Registers) {
+                    if (rightAddr.type !== EAddrType.k_Registers) {
                         rightAddr = iload(rightAddr);
                         debug.map(right);
                     }
@@ -681,6 +686,49 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     icode(op, dest, raddr(castExpr.expr));
                     debug.map(castExpr);
                     return loc({ addr: dest, size });
+                }
+                break;
+            case EInstructionTypes.k_PostfixIndexExpr:
+                {
+                    const postfixIndex = expr as IPostfixIndexInstruction;
+                    // element[index]
+                    const { element, index } = postfixIndex;
+
+                    assert(type.equals(index.type, T_INT) || type.equals(index.type, T_UINT));
+                    assert(element.type.isNotBaseArray());
+                    assert(!isNull(element.type.arrayElementType));
+
+                    if (/*index.isConstExpr()*/false) {
+                        // TODO: implement constexpr branch
+                    } else {
+                        let elementAddr = raddr(element);
+                        // NOTE: element can be not loaded yet
+                        //       we don't want to load all the array (all 'element' object)
+
+                        // sizeof(element[i])
+                        let arrayElementSize = element.type.arrayElementType.size;
+                        let sizeAddr = constants.i32(arrayElementSize);
+                        // NOTE: size can be unresolved yet
+
+                        // index => index of element in the array (element)
+                        let indexAddr = raddr(index);
+                        // NOTE: index can be unresolved yet
+
+                        let baseAddr = constants.addr(elementAddr.addr);
+
+                        let pointerAddr = alloca(sizeof.addr()); // addr <=> i32
+
+                        // load all to registers
+                        if (baseAddr.type !== EAddrType.k_Registers) baseAddr = iload(baseAddr);
+                        if (indexAddr.type !== EAddrType.k_Registers) indexAddr = iload(indexAddr);
+                        if (sizeAddr.type !== EAddrType.k_Registers) sizeAddr = iload(sizeAddr);
+
+                        intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
+
+                        return pointerAddr.asPointer(elementAddr.type, arrayElementSize);
+                    }
+
+                    return PromisedAddress.INVALID; // << FIXME
                 }
                 break;
             case EInstructionTypes.k_PostfixPointExpr:
@@ -752,7 +800,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         .map((param, i) => i < call.args.length ? call.args[i] : param.initExpr);
                     const paramSources = args
                         .map(arg => raddr(arg))
-                        .map(arg => arg.location === EMemoryLocation.k_Registers ? arg : iload(arg));
+                        .map(arg => arg.type === EAddrType.k_Registers ? arg : iload(arg));
 
                     push(fdecl, ret);
 
@@ -803,7 +851,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                     assert(instruction.isExpression(args[0]), EInstructionTypes[args[0].instructionType]);
                                     let src = raddr(args[0]);
 
-                                    if (src.location !== EMemoryLocation.k_Registers) {
+                                    if (src.type !== EAddrType.k_Registers) {
                                         src = iload(src);
                                         debug.map(args[0]);
                                     }
@@ -828,7 +876,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                                         assert(instruction.isExpression(args[i]), EInstructionTypes[args[i].instructionType]);
                                         let src = raddr(args[i]);
 
-                                        if (src.location !== EMemoryLocation.k_Registers) {
+                                        if (src.type !== EAddrType.k_Registers) {
                                             src = iload(src);
                                             debug.map(args[i]);
                                         }
@@ -889,7 +937,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     */
 
                     let dest = raddr(decl.initExpr);
-                    if (dest.location !== EMemoryLocation.k_Registers) {
+                    if (dest.type !== EAddrType.k_Registers) {
                         //breakpoint before variable initialization
                         debug.ns();
                         dest = iload(dest);
@@ -916,7 +964,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     if (!isNull(expr)) {
                         let src = raddr(expr);
 
-                        if (src.location !== EMemoryLocation.k_Registers) {
+                        if (src.type !== EAddrType.k_Registers) {
                             src = iload(src);
                             debug.map(expr);
                         }
@@ -976,7 +1024,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     assert(instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
                     // right address always from the registers
                     let rightAddr = raddr(<IExprInstruction>assigment.right);
-                    if (rightAddr.location !== EMemoryLocation.k_Registers) {
+                    if (rightAddr.type !== EAddrType.k_Registers) {
                         rightAddr = iload(rightAddr);
                         debug.map(assigment.right);
                     }

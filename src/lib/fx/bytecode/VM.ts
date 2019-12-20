@@ -108,15 +108,20 @@ class VM {
                         iregs[b4] = iinput[a][c4];
                     }
                     break;
+                case EOperation.k_I32MoveRegToReg:
+                    iregs[a4] = iregs[b4];
+                    break;
                 case EOperation.k_I32StoreInput:
                     {
                         iinput[a][b4] = iregs[c4];
                     }
                     break;
-                case EOperation.k_I32MoveRegToReg:
-                    iregs[a4] = iregs[b4];
-                    break;
 
+                case EOperation.k_I32LoadRegistersPointer:
+                case EOperation.k_I32LoadInputPointer:
+                case EOperation.k_I32LoadConstPointer:
+                    assert(false, 'not implemented');
+                    break;
                 //
                 // Arithmetic operations
                 //

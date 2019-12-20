@@ -1,9 +1,13 @@
 export { EOperation } from "./EOperations"
 
-export enum EMemoryLocation {
+export enum EAddrType {
     k_Registers,
     k_Input,
-    k_Constants
+    k_Constants,
+    
+    k_PointerRegisters,
+    k_PointerInput,
+    k_PointerConstants
 };
 
 export enum EChunkType {

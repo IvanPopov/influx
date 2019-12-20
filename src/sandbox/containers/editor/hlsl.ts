@@ -110,6 +110,7 @@ export const language = <ILanguage>{
         'typedef',
         'union',
         'unsigned',
+        'uint',
         'uint2',
         'uint3',
         'uint4',

@@ -1,9 +1,9 @@
-import { EMemoryLocation, EOperation } from "@lib/idl/bytecode";
+import { EAddrType, EOperation } from "@lib/idl/bytecode";
 import { assert, isNumber, isDefAndNotNull } from "@lib/common";
 import { REG_INVALID } from "./common";
 
 export interface IAddrDesc {
-    location?: EMemoryLocation;
+    type?: EAddrType;
     addr: number | PromisedAddress;
     size: number;
     // required for input locatons
@@ -20,14 +20,14 @@ export interface IAddrOverride {
 
 
 class PromisedAddress implements IAddrDesc {
-    location: EMemoryLocation;
+    type: EAddrType;
     addr: number;
     size: number | undefined;
     inputIndex?: number;
     swizzle?: number[];
 
     constructor( desc: IAddrDesc) {
-        this.location = desc.location || EMemoryLocation.k_Registers;
+        this.type = desc.type || EAddrType.k_Registers;
         this.addr = Number(desc.addr);
         this.size = desc.size;           // todo: validate size
         this.inputIndex = desc.inputIndex;
@@ -42,7 +42,7 @@ class PromisedAddress implements IAddrDesc {
         assert(size + offset <= Math.max(swizzle ? swizzle.length * 4 : 0, this.size),
             `current allocation (size ${this.size}) cannot accommodate size ${size} with offset ${offset}`);
 
-        let { location, addr, inputIndex } = this;
+        let { type: location, addr, inputIndex } = this;
 
         if (swizzle && this.swizzle) {
             swizzle = swizzle.map(i => this.swizzle[i]);
@@ -53,13 +53,13 @@ class PromisedAddress implements IAddrDesc {
         swizzle = swizzle || this.swizzle;
         assert(size > 0);
         
-        return new PromisedAddress({ location, addr, size, inputIndex, swizzle });
+        return new PromisedAddress({ type: location, addr, size, inputIndex, swizzle });
     }
 
 
     valueOf(): number {
-        if (this.location != EMemoryLocation.k_Registers) {
-            assert(false, `address has implicitly moved to ${EMemoryLocation[EMemoryLocation.k_Registers]} from ${EMemoryLocation[this.location]}`); // implicit loading is not allowed
+        if (this.type != EAddrType.k_Registers) {
+            assert(false, `address has implicitly moved to ${EAddrType[EAddrType.k_Registers]} from ${EAddrType[this.type]}`); // implicit loading is not allowed
             return REG_INVALID;
         }
 
@@ -72,7 +72,21 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
+    asPointer(destType: EAddrType, size: number): PromisedAddress {
+        assert(this.type === EAddrType.k_Registers);
+        const type = PromisedAddress.asPointer(destType);
+        const addr = this.addr;
+        return new PromisedAddress({ type, addr, size });
+    }
+
+
     static INVALID = new PromisedAddress({ addr: REG_INVALID, size: undefined });
+
+    // non-pointer address type => pointer
+    static asPointer(type: EAddrType): EAddrType {
+        assert(type < EAddrType.k_PointerRegisters);
+        return (type + EAddrType.k_PointerRegisters);
+    }
 }
 
 export default PromisedAddress;
