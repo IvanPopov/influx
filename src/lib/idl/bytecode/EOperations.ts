@@ -1,5 +1,6 @@
 export enum EOperation {
     // note: assuming that Load is 32bit and Move is 32bit too
+    k_I32LoadRegister,          // registers => registers
     k_I32LoadInput,             // input memory => registers
     k_I32LoadConst,             // constant memory => registers
     
@@ -8,8 +9,8 @@ export enum EOperation {
     k_I32LoadConstPointer,
     
     k_I32StoreInput,            // registers => input memory
+    // k_I32StoreInputPointer   // 
 
-    k_I32MoveRegToReg,          // registers => registers
 
     //
     // Arithemtic operations
@@ -66,6 +67,7 @@ export enum EOperation {
     //
 
     k_Jump,
+    k_JumpIf,
 
     // the operation is only necessary to maintain the purity of the code, 
     // when generating the code will be replaced by a jump for all 

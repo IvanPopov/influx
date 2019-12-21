@@ -4,9 +4,9 @@ import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstr
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
-import { EChunkType, EAddrType } from "@lib/idl/bytecode";
+import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
@@ -119,6 +119,7 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
 
 function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     const {
+        pc,
         diag,
         constants,
         alloca,
@@ -133,9 +134,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         iop4,
         iop3,
         iop2,
+        iop1,
         iload,
         ret,
-        depth
+        depth,
+        instructions
     } = ctx;
 
     // NOTE: pc - number of written instructions
@@ -683,7 +686,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
 
                     const size = castExpr.type.size;
                     const dest = alloca(size);
-                    icode(op, dest, raddr(castExpr.expr));
+                    let exprAddr = raddr(castExpr.expr);
+                    if (exprAddr.type !== EAddrType.k_Registers) {
+                        exprAddr = iload(exprAddr);
+                    }
+                    icode(op, dest, exprAddr);
                     debug.map(castExpr);
                     return loc({ addr: dest, size });
                 }
@@ -714,6 +721,13 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         let indexAddr = raddr(index);
                         // NOTE: index can be unresolved yet
 
+                        if (elementAddr.swizzle) {
+                            // swizzles must be removed in order to be able to handle expressions like:
+                            // vec2.xxyy[3]
+                            // TODO: is it possible to not load it here and do it late as possible?
+                            elementAddr = iload(elementAddr);
+                        }
+
                         let baseAddr = constants.addr(elementAddr.addr);
 
                         let pointerAddr = alloca(sizeof.addr()); // addr <=> i32
@@ -724,8 +738,11 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         if (sizeAddr.type !== EAddrType.k_Registers) sizeAddr = iload(sizeAddr);
 
                         intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
+                        debug.map(postfixIndex);
 
-                        return pointerAddr.asPointer(elementAddr.type, arrayElementSize);
+                        return PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize);
+                        //                                 ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+                        //                           [reg. based addr] [destination type] [destination size]
                     }
 
                     return PromisedAddress.INVALID; // << FIXME
@@ -955,6 +972,59 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                     for (let decl of stmt.declList) {
                         translate(decl);
                     }
+                    return;
+                }
+            case EInstructionTypes.k_IfStmt:
+                {
+                    // [out of if code]
+                    //  jif:
+                    // jump: 'jump to end of if'    ---+
+                    // ....                            |
+                    // ....                            |
+                    // ....                            |
+                    // [out of if code]             <--+
+
+                    // [out of if code]
+                    //  jif:
+                    // jump: 'jump to contrary'     ---+
+                    // ....                            |
+                    // ....                            |
+                    // jump:  'jump to skip contraty'  |  ---+
+                    // ....                         <--+     |
+                    // ....                                  |
+                    // [out of if code]                   <--+ 
+
+
+                    const UNRESOLVED_JUMP_LOCATION = -1;
+
+                    let ifStmt = instr as IIfStmtInstruction;
+                    let { cond, conseq, contrary } = ifStmt;
+
+                    let condAddr = raddr(cond);
+                    assert(condAddr.size === sizeof.bool());
+
+                    if (condAddr.type !== EAddrType.k_Registers) {
+                        condAddr = iload(condAddr);
+                    }
+
+                    icode(EOperation.k_JumpIf, condAddr);
+
+                    let unresolvedJump = pc();
+                    icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
+                    translate(conseq);
+                    // jump co contrary or out of if
+                    let jumpTo = pc() + (contrary ? 1 : 0);
+                    instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]); 
+                    
+                    if (contrary) {
+                        unresolvedJump = pc();
+                        icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION); 
+                        translate(contrary);
+                        // jump to skip contrary
+                        jumpTo = pc();
+                        instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]);
+                    } 
+
                     return;
                 }
             case EInstructionTypes.k_ReturnStmt:

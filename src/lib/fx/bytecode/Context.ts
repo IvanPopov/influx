@@ -1,17 +1,17 @@
-import { assert, isDef } from "@lib/common";
+import { assert, isDef, isNull } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
+
+import { sname } from "./common";
 import ConstanPool from "./ConstantPool";
 import debugLayout from './DebugLayout';
 import InstructionList from "./InstructionList";
 import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
-import { sname } from "./common";
-
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -115,20 +115,36 @@ export function ContextBuilder() {
 
     /**
      * Apply per component operation between two register-based adresses
-     * dest[i] = op src[i]
+     * op(a[i])
      */
-    function iop2(op: EOperation, dest: PromisedAddress, src: PromisedAddress, size: number = 0): void {
+    function iop1(op: EOperation, a: PromisedAddress, size: number = 0): void {
         if (size === 0) {
-            size = src.size;
+            size = a.size;
         }
 
-        assert(dest.type === EAddrType.k_Registers);
-        assert(src.type === EAddrType.k_Registers);
+        assert(a.type === EAddrType.k_Registers);
+
+        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+            icode(op, a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32());
+        }
+    }
+
+    /**
+     * Apply per component operation between two register-based adresses
+     * a[i] = op(b[i])
+     */
+    function iop2(op: EOperation, a: PromisedAddress, b: PromisedAddress, size: number = 0): void {
+        if (size === 0) {
+            size = b.size;
+        }
+
+        assert(a.type === EAddrType.k_Registers);
+        assert(b.type === EAddrType.k_Registers);
 
         for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
             icode(op,
-                dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
-                src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
+                a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32(),
+                b.addr + (b.swizzle ? b.swizzle[i] : i) * sizeof.i32());
         }
     }
 
@@ -201,9 +217,8 @@ export function ContextBuilder() {
                         case EAddrType.k_Registers:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            assert(src.type === EAddrType.k_Registers);
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                                icode(EOperation.k_I32MoveRegToReg,
+                                icode(EOperation.k_I32LoadRegister,
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                                     src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
@@ -227,9 +242,38 @@ export function ContextBuilder() {
                             }
                             break;
                         case EAddrType.k_PointerRegisters:
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.type === EAddrType.k_Registers);
+                            assert(!(src.swizzle));
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                icode(EOperation.k_I32LoadRegistersPointer,
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
+                                    // NOTE: pointer can't be swizzled
+                                    src.addr + i * sizeof.i32());
+                            }
+                            break;
                         case EAddrType.k_PointerInput:
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.type === EAddrType.k_Registers);
+                            assert(!(src.swizzle));
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                icode(EOperation.k_I32LoadInputPointer, src.inputIndex,
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
+                                    // NOTE: pointer can't be swizzled
+                                    src.addr + i * sizeof.i32());
+                            }
+                            break;
                         case EAddrType.k_PointerConstants:
-                            assert(false, 'not implemented');
+                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
+                            assert(dest.type === EAddrType.k_Registers);
+                            assert(!(src.swizzle));
+                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                                icode(EOperation.k_I32LoadConstPointer,
+                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
+                                    // NOTE: pointer can't be swizzled
+                                    src.addr + i * sizeof.i32());
+                            }
+                            break;
                             break;
                         default:
                             assert(false, 'unsupported memory type found.');
@@ -368,6 +412,7 @@ export function ContextBuilder() {
         iop4,
         iop3,
         iop2,
+        iop1,
         push,
         pop,
         ret,

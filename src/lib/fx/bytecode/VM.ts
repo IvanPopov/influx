@@ -1,6 +1,7 @@
 import { assert, isDefAndNotNull } from "@lib/common";
 import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
+
 import { i32ToU8Array, u8ArrayToI32 } from "./common";
 
 // // import { remote } from 'electron';
@@ -91,37 +92,38 @@ class VM {
             let a = ilist[i4 + 1];
             let b = ilist[i4 + 2];
             let c = ilist[i4 + 3];
+            let d = ilist[i4 + 4];
 
             // TODO: use already aligned adresses
             let a4 = a >> 2;
             let b4 = b >> 2;
             let c4 = c >> 2;
+            let d4 = d >> 2;
 
             switch (op) {
                 case EOperation.k_I32LoadConst:
-                    {
-                        iregs[a4] = icb[b4];
-                    }
+                    iregs[a4] = icb[b4];
                     break;
                 case EOperation.k_I32LoadInput:
-                    {
-                        iregs[b4] = iinput[a][c4];
-                    }
+                    iregs[b4] = iinput[a][c4];
                     break;
-                case EOperation.k_I32MoveRegToReg:
+                case EOperation.k_I32LoadRegister:
                     iregs[a4] = iregs[b4];
                     break;
                 case EOperation.k_I32StoreInput:
-                    {
-                        iinput[a][b4] = iregs[c4];
-                    }
+                    iinput[a][b4] = iregs[c4];
                     break;
 
                 case EOperation.k_I32LoadRegistersPointer:
-                case EOperation.k_I32LoadInputPointer:
-                case EOperation.k_I32LoadConstPointer:
-                    assert(false, 'not implemented');
+                    iregs[a4] = iregs[iregs[b4] >> 2];
                     break;
+                case EOperation.k_I32LoadInputPointer:
+                    iregs[b4] = iinput[a][iregs[c4] >> 2];
+                    break;
+                case EOperation.k_I32LoadConstPointer:
+                    iregs[a4] = icb[iregs[b4] >> 2];
+                    break;
+
                 //
                 // Arithmetic operations
                 //
@@ -139,6 +141,10 @@ class VM {
                     iregs[a4] = iregs[b4] / iregs[c4];
                     break;
 
+                case EOperation.k_I32Mad:
+                    iregs[a4] = iregs[b4] + iregs[c4] * iregs[d4];
+                    break;
+
                 case EOperation.k_F32Add:
                     fregs[a4] = fregs[b4] + fregs[c4];
                     break;
@@ -151,6 +157,7 @@ class VM {
                 case EOperation.k_F32Div:
                     fregs[a4] = fregs[b4] / fregs[c4];
                     break;
+
 
                 //
                 // Relational operations
@@ -233,8 +240,13 @@ class VM {
 
                 case EOperation.k_Jump:
                     // TODO: don't use multiplication here
-                    i4 = a * 4;
+                    i4 = a * 5;
                     continue;
+                    break;
+                case EOperation.k_JumpIf:
+                    i4 = iregs[a4] !== 0
+                        ? i4 + 5 /* skip one instruction */
+                        : i4;    /* do nothing (cause next instruction must always be Jump) */
                     break;
                 case EOperation.k_Ret:
                     {
@@ -244,7 +256,7 @@ class VM {
                 default:
                     console.error(`unknown operation found: ${op}`);
             }
-            i4 += 4;
+            i4 += 5;
         }
 
         return iregs[0];

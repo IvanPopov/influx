@@ -15,7 +15,6 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
 
-
 export interface IBytecodeViewProps extends IDebuggerState {
     actions: typeof sourceActions;
 }
@@ -44,7 +43,7 @@ const hex2 = (v: number) => `0x${minWidth(v.toString(16), 2, '0')}`;
 const hex4 = (v: number) => `0x${minWidth(v.toString(16), 4, '0')}`;
 const reg = (v: number) => REG_NAMES[v] || `[${hex2(v >>> 0)}]`;    // register address;
 const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
-const any3 = (v: number) => `${minWidth(String(v), 3, ' ')}`;
+const any4 = (v: number | string) => `${minWidth(String(v), 4, ' ')}`;
 const scode = (c: EOperation) => {
     let s = String(EOperation[c]);
     s = s.substr(2);
@@ -59,10 +58,16 @@ const scode = (c: EOperation) => {
     }
 
     switch (c) {
-        case EOperation.k_I32MoveRegToReg:
+        case EOperation.k_I32LoadRegister:
             return 'i32_move';
-        // case EOperation.k_I32LoadConst:
-        //     return 'i32_load';
+        case EOperation.k_I32LoadRegistersPointer:
+            return 'i32_move*';
+        case EOperation.k_I32LoadConstPointer:
+            return 'i32_load_const*';
+        case EOperation.k_I32LoadInputPointer:
+            return 'i32_load_input*';
+        // case EOperation.k_I32StoreInputPointer:
+        //     return 'i32_store_input*';
         default:
             return v;
     }
@@ -108,7 +113,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     { props.options.disableOptimizations &&
                         <Table.Footer>
                             <Table.Row >
-                                <Table.Cell colSpan={ 4 } inverted warning textAlign='center'
+                                <Table.Cell colSpan={ 5 } inverted warning textAlign='center'
                                     style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
                                 >
                                     optimizations are disabled
@@ -130,8 +135,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     renderOpList(ilist: Uint32Array) {
         const list = [];
-        for (let i = 0; i < ilist.length; i += 4) {
-            list.push(this.renderOp(ilist.subarray(i, i + 4)));
+        for (let i = 0; i < ilist.length; i += 5) {
+            list.push(this.renderOp(ilist.subarray(i, i + 5)));
         }
         return list;
     }
@@ -139,10 +144,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     renderOp(op: Uint32Array) {
         const code: EOperation = op[0];
-        const args = [op[1], op[2], op[3]];
+        const args = [op[1], op[2], op[3], op[4]];
         switch (op[3]) {
             default:
-                return this.renderOpInternal(code, args.map(any3));
+                return this.renderOpInternal(code, args.map(String));
         }
     }
 
@@ -161,15 +166,19 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         switch (code) {
             case EOperation.k_I32LoadInput:
+            case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32StoreInput:
                 args.length = 3;
                 break;
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
             case EOperation.k_I32LoadConst:
-            case EOperation.k_I32MoveRegToReg:
+            case EOperation.k_I32LoadConstPointer:
+            case EOperation.k_I32LoadRegister:
+            case EOperation.k_I32LoadRegistersPointer:
                 args.length = 2;
                 break;
+            case EOperation.k_JumpIf:
             case EOperation.k_Jump:
                 args.length = 1;
                 break;
@@ -178,6 +187,22 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 break;
             default:
         }
+
+        const pointer = (x) => `%${x}`;
+
+        // tslint:disable-next-line:switch-default
+        switch (code) {
+            case EOperation.k_I32LoadInputPointer:
+                args[2] = pointer(args[2]);
+                break;
+            case EOperation.k_I32LoadConstPointer:
+            case EOperation.k_I32LoadRegistersPointer:
+                args[1] = pointer(args[1]);
+                break;
+        }
+
+        // tslint:disable-next-line:no-parameter-reassignment
+        args = args.map(any4);
 
         let specColor = null;
 
@@ -195,9 +220,11 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 style={ { width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' } }
                 onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
                 <Table.Cell style={ specColor }></Table.Cell>
-                <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ hex4(i) }</Table.Cell>
+                <Table.Cell style={ { padding: '0.2em 0.7em', width: '50px' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
-                <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ args.join(' ') }</Table.Cell>
+                <Table.Cell colSpan={ 2 } style={ { padding: '0.2em 0.7em' } }>
+                    { args.join(' ') }
+                </Table.Cell>
             </Table.Row>
         );
     }

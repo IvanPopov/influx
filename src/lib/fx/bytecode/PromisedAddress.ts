@@ -1,5 +1,6 @@
-import { EAddrType, EOperation } from "@lib/idl/bytecode";
-import { assert, isNumber, isDefAndNotNull } from "@lib/common";
+import { assert, isNull } from "@lib/common";
+import { EAddrType } from "@lib/idl/bytecode";
+
 import { REG_INVALID } from "./common";
 
 export interface IAddrDesc {
@@ -29,7 +30,7 @@ class PromisedAddress implements IAddrDesc {
     constructor( desc: IAddrDesc) {
         this.type = desc.type || EAddrType.k_Registers;
         this.addr = Number(desc.addr);
-        this.size = desc.size;           // todo: validate size
+        this.size = desc.size;                          // todo: validate size
         this.inputIndex = desc.inputIndex;
         this.swizzle = desc.swizzle;
     }
@@ -42,7 +43,7 @@ class PromisedAddress implements IAddrDesc {
         assert(size + offset <= Math.max(swizzle ? swizzle.length * 4 : 0, this.size),
             `current allocation (size ${this.size}) cannot accommodate size ${size} with offset ${offset}`);
 
-        let { type: location, addr, inputIndex } = this;
+        let { type, addr, inputIndex } = this;
 
         if (swizzle && this.swizzle) {
             swizzle = swizzle.map(i => this.swizzle[i]);
@@ -53,7 +54,7 @@ class PromisedAddress implements IAddrDesc {
         swizzle = swizzle || this.swizzle;
         assert(size > 0);
         
-        return new PromisedAddress({ type: location, addr, size, inputIndex, swizzle });
+        return new PromisedAddress({ type, addr, size, inputIndex, swizzle });
     }
 
 
@@ -72,18 +73,20 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
-    asPointer(destType: EAddrType, size: number): PromisedAddress {
-        assert(this.type === EAddrType.k_Registers);
-        const type = PromisedAddress.asPointer(destType);
-        const addr = this.addr;
-        return new PromisedAddress({ type, addr, size });
+    static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number): PromisedAddress {
+        assert(regAddr.type === EAddrType.k_Registers);
+        assert(!regAddr.swizzle, 'something went wrong :/');
+        const type = PromisedAddress.castToPointer(destType);
+        const addr = regAddr.addr;
+        const inputIndex = regAddr.inputIndex;
+        return new PromisedAddress({ type, addr, size, inputIndex });
     }
 
 
     static INVALID = new PromisedAddress({ addr: REG_INVALID, size: undefined });
 
     // non-pointer address type => pointer
-    static asPointer(type: EAddrType): EAddrType {
+    static castToPointer(type: EAddrType): EAddrType {
         assert(type < EAddrType.k_PointerRegisters);
         return (type + EAddrType.k_PointerRegisters);
     }

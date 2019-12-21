@@ -29,16 +29,16 @@ class InstructionList {
 
 
     get pc(): number {
-        return this.length >> 2;
+        return this.length / 5;
     }
 
     
     add(op: EOperation, args: number[]) {
-        assert(args.length <= 3);
-        this.check(4);
+        assert(args.length <= 4);
+        this.check(5);
         this.push(op);
         args.forEach((v) => this.push(v));
-        this._length += 3 - args.length;
+        this._length += 4 - args.length;
     }
 
 
@@ -48,20 +48,26 @@ class InstructionList {
     //     this._length += list.length;
     // }
 
+    /**
+     * Replace specified instruction with new one;
+     * @param pc number of instruction to be replaced
+     * @param op new operation
+     * @param args new arguments
+     */
     replace(pc: number, op: EOperation, args: number[]) {
         assert(pc < this.pc);
         assert(args.length <= 3);
 
-        const pc4 = pc << 2;
+        const pc5 = pc * 5;
         
         // FIXME: remove this assert
-        assert(this.data[pc4] === EOperation.k_Ret, 
-            `expected ${EOperation.k_Ret}, but given is ${this.data[pc4]} for pc = ${pc}`); 
+        assert(this.data[pc5] === EOperation.k_Ret || this.data[pc5] === EOperation.k_Jump, 
+            `expected ${EOperation.k_Ret}/${EOperation.k_Jump}, but given is ${this.data[pc5]} for pc = ${pc}`); 
         
-        this.data[pc4] = op;
+        this.data[pc5] = op;
 
         args.forEach((v, i) => { 
-            this.data[pc4 + 1 + i] = v; 
+            this.data[pc5 + 1 + i] = v; 
         });
     }
 

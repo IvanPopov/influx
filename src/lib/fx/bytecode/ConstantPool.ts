@@ -88,6 +88,7 @@ export class ConstanPool {
             this._data.addInt32(i32, type);
             return this._int32Map[i32];
         }
+        // TODO: update layout tooltip
         return addr;
     }
 
