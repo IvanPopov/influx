@@ -17,13 +17,27 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
     };
 
+    rootRef: React.RefObject<HTMLDivElement>;
+
     constructor(props: IASTViewProps) {
         super(props);
         this.state = {
             nodeStats: {}
         };
+
+        this.rootRef = React.createRef();
     }
 
+    componentDidUpdate() {
+        // const rect = this.rootRef.current.getBoundingClientRect();
+        // just a rude hack
+        // this.rootRef.current.style.height = `calc(100vh - ${Math.floor(rect.top) + 50}px)`;
+    }
+
+    shouldComponentUpdate(nextProps, nextState) {
+        // TODO: implement it
+        return true;
+    }
 
     // tslint:disable-next-line:typedef
     render() {
@@ -35,9 +49,11 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         };
 
         return (
-            <List style={ style } selection size='small' className='astlist'>
-                { this.renderASTNode(slastDocument ? slastDocument.root : null) }
-            </List>
+            <div ref={this.rootRef}>
+                <List style={ style } selection size='small' className='astlist' >
+                    { this.renderASTNode(slastDocument ? slastDocument.root : null) }
+                </List>
+            </div>
         );
     }
 

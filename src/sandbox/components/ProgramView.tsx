@@ -167,12 +167,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     };
 
     documentCache: ISLDocument = null;
+    rootRef: React.RefObject<HTMLDivElement>;
 
     constructor(props) {
         super(props);
         this.state = {
             instrList: {}
         };
+
+        this.rootRef = React.createRef();
     }
 
 
@@ -183,6 +186,10 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     componentDidUpdate() {
         this.documentCache = this.props.slDocument;
+
+        // const rect = this.rootRef.current.getBoundingClientRect();
+        // just a rude hack
+        // this.rootRef.current.style.height = `calc(100vh - ${Math.floor(rect.top) + 50}px)`;
     }
 
 
@@ -201,7 +208,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         };
 
         return (
-            <div>
+            <div ref={ this.rootRef }>
                 <List style={ style } selection size='small' className='astlist'>
                     { this.InstructionCollector(root) }
                 </List>
@@ -535,7 +542,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     FunctionCall(instr: IFunctionCallInstruction) {
         return (
             <Property { ...this.bindProps(instr) } >
-                {/* <Property name='type' value={ (instr.callee ? 'method' : 'function') } /> */}
+                {/* <Property name='type' value={ (instr.callee ? 'method' : 'function') } /> */ }
                 <Property name='declaration' >
                     { this.FunctionDecl(instr.decl as IFunctionDeclInstruction) }
                 </Property>

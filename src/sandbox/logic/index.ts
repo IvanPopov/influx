@@ -10,6 +10,7 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
 
+
 const readFile = fname => fetch(fname).then(resp => resp.text());
 
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
@@ -36,6 +37,7 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
 export const LOCATION_NOT_FOUND = '/NotFound';
 export const LOCATION_PATTERN = '/:view/:fx?/:name?/:pass?/:property?';
 export const DEFAULT_FILENAME = '@new';
+
 export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
 
 

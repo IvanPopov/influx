@@ -66,7 +66,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.SOURCE_CODE_MODIFED]: (state, action: ISourceCodeModified) =>
         ({
-            ...state, content: action.payload.content
+            ...state, content: action.payload.content, uri: action.payload.filename || state.uri
             // , debugger: { entryPoint: null, runtime: null, ...state.debugger } =
         }),
 

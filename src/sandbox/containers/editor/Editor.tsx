@@ -33,91 +33,6 @@ const p2m = new ProtocolToMonacoConverter();
 
 const provider = Comlink.wrap<ILanguageServiceProvider>(new LanguageServiceWorker());
 
-// namespace LanguageService {
-//     const worker = new Worker();
-
-//     // TODO: split all requests by documents
-//     let pendingValidationRequests: {
-//         resolve: (value: IDiagnosticMessage[]) => void;
-//         reject: () => void;
-//     }[] = [];
-
-//     // TODO: split all requests by documents
-//     let pendingCodeLensesRequests: {
-//         resolve: (value: monaco.languages.CodeLensList) => void;
-//         reject: () => void;
-//         document: TextDocument;
-//     }[] = [];
-
-//     let pendingSignatureHelpRequests: {
-//         resolve: (value: monaco.languages.SignatureHelpResult) => void;
-//         reject: () => void;
-//     }[] = [];
-
-//     worker.onmessage = (event) => {
-//         const data = event.data;
-//         // tslint:disable-next-line:no-empty
-//         const disposeDummy = { dispose() { } };
-//         switch (data.type) {
-//             case 'validation':
-//                 {
-//                     const promise = pendingValidationRequests.pop();
-//                     promise.resolve(data.payload as IDiagnosticMessage[]);
-
-//                     // kick off all requests that depends on parsing only after validation
-//                     pendingCodeLensesRequests.forEach(req =>
-//                         worker.postMessage({ type: 'provide-code-lenses', payload: { uri: req.document.uri } }));
-//                 }
-//                 break;
-//             case 'provide-code-lenses':
-//                 {
-//                     const promise = pendingCodeLensesRequests.pop();
-//                     promise && promise.resolve({ lenses: p2m.asCodeLenses(data.payload), ...disposeDummy });
-//                 }
-//                 break;
-//             case 'provide-signature-help':
-//                 {
-//                     const promise = pendingSignatureHelpRequests.pop();
-//                     if (promise) {
-//                         promise.resolve(
-//                             data.payload ?
-//                                 { value: p2m.asSignatureHelp(data.payload), ...disposeDummy } :
-//                                 null);
-//                     }
-//                 }
-//                 break;
-//             default:
-//         }
-//     };
-
-//     export async function validate(document: TextDocument): Promise<IDiagnosticMessage[]> {
-//         worker.postMessage({ type: 'validation', payload: { text: document.getText(), uri: document.uri } });
-//         // tslint:disable-next-line:promise-must-complete
-//         return new Promise<IDiagnosticMessage[]>((resolve, reject) => {
-//             pendingValidationRequests = [{ resolve, reject }, ...pendingValidationRequests];
-//         });
-//     }
-
-//     export async function install(params: IParserParams) {
-//         worker.postMessage({ type: 'install', payload: params });
-//     }
-
-//     export async function provideCodeLenses(document: TextDocument, token: monaco.CancellationToken) {
-//         // tslint:disable-next-line:promise-must-complete
-//         return new Promise<monaco.languages.CodeLensList>((resolve, reject) => {
-//             pendingCodeLensesRequests = [{ resolve, reject, document }, ...pendingCodeLensesRequests];
-//         });
-//     }
-
-//     export async function provideSignatureHelp(document: TextDocument, position: Position) {
-//         worker.postMessage({ type: 'provide-signature-help', payload: { offset: document.offsetAt(position), uri: document.uri } });
-//         // tslint:disable-next-line:promise-must-complete
-//         return new Promise<monaco.languages.SignatureHelpResult>((resolve, reject) => {
-//             pendingSignatureHelpRequests = [{ resolve, reject }, ...pendingSignatureHelpRequests];
-//         });
-//     }
-// }
-
 function defer() {
     const deferred = {
         promise: null,
@@ -278,7 +193,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         }
 
         if (file.content !== this.getContent()) {
-            this.validate(file.content);
+            this.validate(file.content, file.uri);
             this.getEditor().setValue(file.content);
             console.log('%c force reload content from outside', 'background: #ffd1c9; color: #ff3714');
         }
@@ -385,7 +300,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 triggerCharacters: ['(', ',', '=', '+'],
                 provideCompletionItems(model, position, context, token)
                     : monaco.Thenable<monaco.languages.CompletionList> {
-                    const document = self.createDocument(model);
+                    // const document = self.createDocument(model);
                     const wordUntil = model.getWordUntilPosition(position);
                     const defaultRange = new monaco.Range(
                         position.lineNumber, wordUntil.startColumn,
@@ -474,8 +389,13 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    validate(newContent?: string): void {
-        const document = this.createDocument(this.getModel(), newContent);
+    validate(newContent?: string, newUri?: string): void {
+        const document = this.createDocument(this.getModel(), newContent, newUri);
+
+        if (isNull(document.uri)) {
+            return;
+        }
+
         this.cleanPendingValidation(document);
         this.pendingValidationRequests.set(document.uri, setTimeout(async () => {
             await this.doValidate(document);
@@ -545,8 +465,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 
 
-    createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string) {
-        return TextDocument.create(this.getFile().uri, model.getModeId(), model.getVersionId(), newContent || model.getValue());
+    createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string, newUri?: string) {
+        return TextDocument.create(newUri || this.getFile().uri, model.getModeId(), model.getVersionId(), newContent || model.getValue());
     }
 
 

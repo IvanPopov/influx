@@ -42,12 +42,6 @@ class InstructionList {
     }
 
 
-    // merge(list: InstructionList): void {
-    //     this.check(list.length);
-    //     this._data.set(list.data, this._length);
-    //     this._length += list.length;
-    // }
-
     /**
      * Replace specified instruction with new one;
      * @param pc number of instruction to be replaced

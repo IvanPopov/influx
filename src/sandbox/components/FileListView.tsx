@@ -48,8 +48,9 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
             'holographicTable.fx',
             'messy.fx',
             'speed.fx',
-            'errorHandling.fx'
-        ].map(file => `./assets/fx/tests/${file}`);
+            'errorHandling.fx',
+            'autotests.fx'
+        ].map(file => `./assets/fx/tests/${file}`).sort();
         node.path = 'tests';
         node.totalFiles = 5;
         return;

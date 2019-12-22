@@ -29,8 +29,8 @@ export const sourceCode = {
         return { type: evt.SOURCE_FILE_REQUEST, payload: { filename } };
     },
 
-    setContent(content: string) {
-        return { type: evt.SOURCE_CODE_MODIFED, payload: { content } };
+    setContent(content: string, filename?: string) {
+        return { type: evt.SOURCE_CODE_MODIFED, payload: { content, filename } };
     },
 
 
