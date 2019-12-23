@@ -200,7 +200,7 @@ export function cdlview(cdlRaw: CdlRaw) {
         return line.layout[pc] ? line.layout[pc].color : 0xffffff;
     }
 
-    function resolveLineColor(ln: number) {
+    function resolveLineColor(ln: number): number {
         let rec = line.layout.find(r => r.line === ln);
         return rec ? rec.color : -1;
     }

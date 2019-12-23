@@ -22,6 +22,11 @@ export function positionMax(a: IPosition, b: IPosition): IPosition {
 }
 
 
+export function cloneRange(range: IRange): IRange {
+    return { start: { ...range.start }, end: { ...range.end } };
+}
+
+
 export function extendRange(parent: IRange, child: IRange): IRange {
     if (child.start.file !== parent.start.file) {
         return parent;

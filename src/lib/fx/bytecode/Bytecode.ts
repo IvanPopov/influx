@@ -21,8 +21,92 @@ export interface ISubProgram {
     cdl: CdlRaw;
 }
 
-function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
-    const { constants, instructions, debug, alloca, push, pop, loc, imove, ref } = ctx;
+ // TODO: rewrite with cleaner code
+ function constLayoutChunk(ctx: IContext): ArrayBuffer {
+    const { constants } = ctx;
+    const layout = constants.layout;
+    const byteLength = 4/* names.length */ + layout.names.map(entry => entry.name.length + 8/* sizeof(name.length) + sizeof(addr)*/).reduce((prev, curr) => prev + curr, 0);
+    const size = (byteLength + 4) >> 2;
+    const chunkHeader = [EChunkType.k_Layout, size];
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+
+    const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+    let written = 0;
+    u8data.set(i32ToU8Array(layout.names.length), written);
+    written += 4;
+    for (let i = 0; i < layout.names.length; ++i) {
+        let { name, offset } = layout.names[i];
+        u8data.set(i32ToU8Array(name.length), written);
+        written += 4;
+        u8data.set(name.split('').map(c => c.charCodeAt(0)), written);
+        written += name.length;
+        u8data.set(i32ToU8Array(offset), written);
+        written += 4;
+    }
+    // console.log('after write', u8data.length, 'bytes', written);
+    return data.buffer;
+}
+
+function constChunk(ctx: IContext): ArrayBuffer {
+    const { constants } = ctx;
+    const mem = constants.data;
+    const size = mem.byteLength >> 2;
+    const chunkHeader = [EChunkType.k_Constants, size];
+    assert((size << 2) == mem.byteLength);
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+    data.set(new Uint32Array(mem.byteArray.buffer, 0, mem.byteLength >> 2), chunkHeader.length);
+    return data.buffer;
+}
+
+
+function codeChunk(ctx: IContext): ArrayBuffer {
+    const { instructions } = ctx;
+    const chunkHeader = [EChunkType.k_Code, instructions.length];
+    const data = new Uint32Array(chunkHeader.length + instructions.length);
+    data.set(chunkHeader);
+    data.set(instructions.data, chunkHeader.length);
+
+    return data.buffer;
+}
+
+function binary(ctx: IContext): Uint8Array {
+    const chunks = [constLayoutChunk(ctx), constChunk(ctx), codeChunk(ctx)].map(ch => new Uint8Array(ch));
+    const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
+    let data = new Uint8Array(byteLength);
+    let offset = 0;
+    chunks.forEach(ch => {
+        data.set(ch, offset);
+        offset += ch.byteLength;
+    });
+    return data;
+}
+
+
+function translateAsExpression(ctx: IContext, expr: IExprInstruction): ISubProgram {
+    const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
+
+    // NOTE: it does nothing at the momemt :/
+    debug.beginCompilationUnit('[todo]');
+    // simulate function call()
+    let ret = alloca(expr.type.size);
+    push(null, ret);
+    // translate Unknown has a specific implementation for expression
+    // which will write expression's value to the ret address allocated above
+    translateUnknown(ctx, expr);
+    pop();
+    debug.endCompilationUnit();
+
+    let code = binary(ctx);      // todo: stay only binary view
+    let cdl = debug.dump();      // code debug layout;
+
+    return { code, constants, cdl };
+}
+
+
+function translateAsProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
+    const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
     // NOTE: it does nothing at the momemt :/
     debug.beginCompilationUnit('[todo]');
@@ -48,76 +132,17 @@ function translateSubProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubP
         ref(param, dest);
     }
 
-    translateFunction(ctx, fn);
+    translateUnknown(ctx, fn);
     pop();
     debug.endCompilationUnit();
 
-    // TODO: rewrite with cleaner code
-    function constLayoutChunk(): ArrayBuffer {
-        const layout = constants.layout;
-        const byteLength = 4/* names.length */ + layout.names.map(entry => entry.name.length + 8/* sizeof(name.length) + sizeof(addr)*/).reduce((prev, curr) => prev + curr, 0);
-        const size = (byteLength + 4) >> 2;
-        const chunkHeader = [EChunkType.k_Layout, size];
-        const data = new Uint32Array(chunkHeader.length + size);
-        data.set(chunkHeader);
-
-        const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
-        let written = 0;
-        u8data.set(i32ToU8Array(layout.names.length), written);
-        written += 4;
-        for (let i = 0; i < layout.names.length; ++i) {
-            let { name, offset } = layout.names[i];
-            u8data.set(i32ToU8Array(name.length), written);
-            written += 4;
-            u8data.set(name.split('').map(c => c.charCodeAt(0)), written);
-            written += name.length;
-            u8data.set(i32ToU8Array(offset), written);
-            written += 4;
-        }
-        // console.log('after write', u8data.length, 'bytes', written);
-        return data.buffer;
-    }
-
-    function constChunk(): ArrayBuffer {
-        const mem = constants.data;
-        const size = mem.byteLength >> 2;
-        const chunkHeader = [EChunkType.k_Constants, size];
-        assert((size << 2) == mem.byteLength);
-        const data = new Uint32Array(chunkHeader.length + size);
-        data.set(chunkHeader);
-        data.set(new Uint32Array(mem.byteArray.buffer, 0, mem.byteLength >> 2), chunkHeader.length);
-        return data.buffer;
-    }
-
-
-    function codeChunk(): ArrayBuffer {
-        const chunkHeader = [EChunkType.k_Code, instructions.length];
-        const data = new Uint32Array(chunkHeader.length + instructions.length);
-        data.set(chunkHeader);
-        data.set(instructions.data, chunkHeader.length);
-
-        return data.buffer;
-    }
-
-    function binary(): Uint8Array {
-        const chunks = [constLayoutChunk(), constChunk(), codeChunk()].map(ch => new Uint8Array(ch));
-        const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
-        let data = new Uint8Array(byteLength);
-        let offset = 0;
-        chunks.forEach(ch => {
-            data.set(ch, offset);
-            offset += ch.byteLength;
-        });
-        return data;
-    }
-
-    let code = binary();         // todo: stay only binary view
+    let code = binary(ctx);         // todo: stay only binary view
     let cdl = debug.dump();      // code debug layout;
 
     return { code, constants, cdl };
 }
 
-function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
+function translateUnknown(ctx: IContext, instr: IInstruction): void {
     const {
         pc,
         diag,
@@ -145,16 +170,6 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
     // NOTE: rc - number of occupied registers
 
     const isEntryPoint = () => depth() === 1;
-
-    // function rconst_addr(addr: number): number {
-    //     let r = deref(sname.addr(addr));
-    //     if (r == REG_INVALID) {
-    //         r = alloca(sizeof.addr());
-    //         icode(EOperation.k_I32LoadConst, r, constants.checkAddr(addr));
-    //         ref(sname.addr(addr), r);
-    //     }
-    //     return r;
-    // }
 
     type ArithmeticOp = IArithmeticExprInstruction['operator'];
 
@@ -839,7 +854,7 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
                         }
                     }
 
-                    translateFunction(ctx, fdecl);
+                    translateUnknown(ctx, fdecl);
                     pop();
 
                     return ret;
@@ -1116,7 +1131,31 @@ function translateFunction(ctx: IContext, func: IFunctionDeclInstruction) {
         }
     }
 
-    translate(func);
+    // specific workaround for expression tranlsations
+    function translateExpr(expr: IExprInstruction)
+    {
+        if (isNull(expr)) {
+            return null;
+        }
+        
+        let src = raddr(expr);
+        if (src.type !== EAddrType.k_Registers) {
+            src = iload(src);
+            debug.map(expr);
+        }
+
+        const dest = ret();
+        assert(src.size === ret().size);
+        imove(dest, src);
+        debug.map(expr);
+    }
+
+    if (instruction.isExpression(instr)) {
+        translateExpr(instr as IExprInstruction);
+        return;
+    }
+
+    translate(instr);
 }
 
 
@@ -1135,7 +1174,7 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
             console.error(`Entry point '${entryFunc.name}' not found.`);
             return null;
         }
-        res = translateSubProgram(ctx, entryFunc);
+        res = translateAsProgram(ctx, entryFunc);
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
@@ -1143,3 +1182,18 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
 
     return res;
 }
+
+
+export function translateExpression(expr: IExprInstruction): ISubProgram {
+    let ctx = ContextBuilder();
+    let res: ISubProgram = null;
+
+    try {
+        res = translateAsExpression(ctx, expr);
+    } catch (e) {
+        throw e;
+        console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
+    }
+    return res;
+}
+

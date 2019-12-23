@@ -39,7 +39,8 @@ export enum EParserFlags {
 
 export enum ETokenType {
     k_NumericLiteral = 1,
-    k_CommentLiteral,
+    k_SinglelineCommentLiteral,
+    k_MultilineCommentLiteral,
     k_StringLiteral,
     k_PunctuatorLiteral,
     k_WhitespaceLiteral,

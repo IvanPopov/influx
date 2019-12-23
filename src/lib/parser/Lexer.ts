@@ -163,8 +163,9 @@ export class LexerEngine implements ILexerEngine {
 }
 
 interface ILexerConfig {
-    engine: LexerEngine;
+    engine?: LexerEngine;
     knownTypes?: Set<string>;
+    skipComments?: boolean;
 }
 
 export class Lexer {
@@ -177,8 +178,9 @@ export class Lexer {
     engine: LexerEngine;
     diagnostics: LexerDiagnostics;
     knownTypes: Set<string>;
+    skipComments: boolean;
 
-    constructor({ engine, knownTypes = new Set() }: ILexerConfig) {
+    constructor({ engine = new LexerEngine, knownTypes = new Set(), skipComments = true }: ILexerConfig) {
         this.lineNumber = 0;
         this.columnNumber = 0;
         this.index = 0;
@@ -186,6 +188,7 @@ export class Lexer {
         this.diagnostics = new LexerDiagnostics;
         this.knownTypes = knownTypes;
         this.engine = engine;
+        this.skipComments = skipComments;
     }
 
     setup(textDocument: ITextDocument) {
@@ -219,9 +222,12 @@ export class Lexer {
             case ETokenType.k_NumericLiteral:
                 token = this.scanNumber();
                 break;
-            case ETokenType.k_CommentLiteral:
-                this.scanComment();
-                token = this.getNextToken();
+            case ETokenType.k_SinglelineCommentLiteral:
+            case ETokenType.k_MultilineCommentLiteral:
+                token = this.scanComment();
+                if (this.skipComments) {
+                    token = this.getNextToken();
+                }
                 break;
             case ETokenType.k_StringLiteral:
                 token = this.scanString();
@@ -247,7 +253,7 @@ export class Lexer {
                     // TODO: move this code to scanInvalid()
                     const start = this.pos();
                     let value = '';
-                    while (this.identityTokenType() === ETokenType.k_Unknown) {
+                    while (this.identityTokenType() === ETokenType.k_Unknown && this.index < this.source.length) {
                         value += this.currentChar();
                         this.readNextChar();
                     }
@@ -313,7 +319,8 @@ export class Lexer {
             return ETokenType.k_StringLiteral;
         }
         if (this.isCommentStart()) {
-            return ETokenType.k_CommentLiteral;
+            // TODO: return exact type (separate multiline/singleline comment parsings)
+            return ETokenType.k_SinglelineCommentLiteral;
         }
         if (this.isNumberStart()) {
             return ETokenType.k_NumericLiteral;
@@ -429,7 +436,6 @@ export class Lexer {
             };
 
             this.emitError(ELexerErrors.InvalidToken, token);
-
             return Lexer.makeUnknownToken(token);
         }
     }
@@ -677,9 +683,10 @@ export class Lexer {
     }
 
 
-    private scanComment(): boolean {
+    private scanComment(): IToken {
         let value = this.currentChar();
         let ch = this.readNextChar();
+        let start = this.pos();
         value += ch;
 
         if (ch === "/") {
@@ -701,7 +708,15 @@ export class Lexer {
                 value += ch;
             }
 
-            return true;
+            return {
+                index: this.index,
+                type: ETokenType.k_SinglelineCommentLiteral,
+                value,
+                loc: {
+                    start,
+                    end: this.pos()
+                }
+            };
         }
         else {
             //Multiline Comment
@@ -731,7 +746,15 @@ export class Lexer {
             }
 
             if (isGoodFinish) {
-                return true;
+                return {
+                    index: this.index,
+                    type: ETokenType.k_MultilineCommentLiteral,
+                    value,
+                    loc: {
+                        start,
+                        end: this.pos()
+                    }
+                };
             }
             else {
                 if (!ch) {
@@ -741,7 +764,7 @@ export class Lexer {
 
                 const token = {
                     index: this.index,
-                    type: ETokenType.k_CommentLiteral,
+                    type: ETokenType.k_MultilineCommentLiteral,
                     value,
                     loc: {
                         start,
@@ -750,7 +773,7 @@ export class Lexer {
                 };
 
                 this.emitError(ELexerErrors.InvalidToken, token);
-                return false;
+                return Lexer.makeUnknownToken(token);
             }
         }
     }

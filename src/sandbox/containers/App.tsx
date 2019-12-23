@@ -241,7 +241,14 @@ class App extends React.Component<IAppProps> {
     
     @autobind
     runAutotests() {
-        autotests.run(getFileState(this.props).content);
+        const { content: source, uri } = getFileState(this.props);
+        const { description, tests } = autotests.parse({ source, uri });
+
+        console.log(description);
+        tests.forEach(test => {
+            this.highlightTest(test, false);
+            this.highlightTest(test);
+        });
     }
 
     @autobind
@@ -278,6 +285,25 @@ class App extends React.Component<IAppProps> {
             dst = includes.get(String(dst.start.file));
         }
         return dst;
+    }
+
+    /** @deprecated */
+    highlightTest(test: autotests.ITest, show: boolean = true) {
+        const markerName = `ast-range-${test.name}`;
+        if (show) {
+            
+            const range = this.resolveLocation(test.loc);
+            this.props.actions.addMarker({
+                name: markerName,
+                range,
+                type: `line`,
+                payload: {
+                    color: 0xffffff
+                }
+            });
+        } else {
+            this.props.actions.removeMarker(markerName);
+        }
     }
 
     /** @deprecated */
@@ -346,7 +372,7 @@ class App extends React.Component<IAppProps> {
 
         // console.log(JSON.stringify(props.match, null, '\t'));
 
-        const showAutotestMenu = (sourceFile.content || '').substr(0, 20).indexOf('@autotests') !== -1;
+        const showAutotestMenu = (sourceFile.content || '').substr(0, 40).indexOf('@autotests') !== -1;
  
         const analysisResults = [
             {

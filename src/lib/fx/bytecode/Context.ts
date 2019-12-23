@@ -375,8 +375,8 @@ export function ContextBuilder() {
     function push(fn: IFunctionDeclInstruction, ret: PromisedAddress): void {
         const symbols = new SymbolTable<PromisedAddress>();
         const pc = instructions.pc;
-        const jumpList = [];
-        stack.push({ fn, symbols, rc, ret, pc, retRequests: jumpList });
+        const retRequests = [];
+        stack.push({ fn, symbols, rc, ret, pc, retRequests });
     }
 
 

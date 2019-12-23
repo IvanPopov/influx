@@ -21,12 +21,12 @@ int if_statement_test(bool cond1, bool cond2 = false)
     return 30;
 }
 
-// /**
-//  * @test Postfix index calculation (registers)
-//  * @expected {main() == 2}
-//  */
-// int main()
-// {
-//     float4 x = float4(4.4f,3.3f,2.2f,1.1f);
-//     return (int)(x[2]);
-// }
+/**
+ * @test Postfix index calculation (registers)
+ * @expected {postfix_index_calc() == 2}
+ */
+int postfix_index_calc()
+{
+    float4 x = float4(4.4f,3.3f,2.2f,1.1f);
+    return (int)(x[2]);
+}
