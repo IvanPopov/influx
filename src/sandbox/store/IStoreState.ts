@@ -21,7 +21,6 @@ export interface IDebuggerState {
     };
 
     expression: string;
-    layout: 'f32' | 'i32';
 
     // (current debugger runtime)
     // BytecodeView shows instructions

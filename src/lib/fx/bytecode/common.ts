@@ -19,4 +19,4 @@ export const u8ArrayToI32 = (arr: Uint8Array | Array<number>) => (arr as number[
 
 // Uint8Array => Int32Array conversion
 export const u8ArrayAsI32 = (arr: Uint8Array) => ((arr[0]) | (arr[1] << 8) | (arr[2] << 16) | (arr[3] << 24));
-export const u8ArrayAsF32 = (arr: Uint8Array) => new Float32Array(arr.buffer, 0, 4)[0];
+export const u8ArrayAsF32 = (arr: Uint8Array) => new Float32Array(arr.buffer, arr.byteOffset)[0];

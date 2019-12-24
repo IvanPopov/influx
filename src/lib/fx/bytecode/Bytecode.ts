@@ -7,7 +7,7 @@ import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IScope } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IScope, ITypeInstruction } from "@lib/idl/IInstruction";
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
@@ -15,12 +15,16 @@ import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 import { Diagnostics } from "@lib/util/Diagnostics";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 
-
+// TODO: rename as IProgramDocument
 export interface ISubProgram {
     code: Uint8Array;
     constants: ConstanPool;
     cdl: CdlRaw;
+    layout: ITypeInstruction; // << FIXME: move to cdl
+    // diagnosticReport: IDiagnosticReport;
+    // uri: string
 }
 
  // TODO: rewrite with cleaner code
@@ -118,10 +122,11 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     pop();
     debug.endCompilationUnit();
 
-    let code = binary(ctx);         // todo: stay only binary view
-    let cdl = debug.dump();      // code debug layout;
+    let code = binary(ctx);         // TODO: stay only binary view
+    let cdl = debug.dump();         // code debug layout;
+    let layout = fn.def.returnType; // TODO: move layout inside CDL
 
-    return { code, constants, cdl };
+    return { code, constants, cdl, layout };
 }
 
 function translateUnknown(ctx: IContext, instr: IInstruction): void {
@@ -1144,15 +1149,15 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
 }
 
 
-export async function translateExpression(expr: string, scope?: IScope): Promise<ISubProgram> {
-    const uri = '://expression';
+export async function translateExpression(expr: string, document?: ISLDocument): Promise<ISubProgram> {
+    const uri = `://expression`;
     const anonymousFuncName = `anonymous`;
     const source = `auto ${anonymousFuncName}() { return (${expr}); }`;
-    const document = await createFXSLDocument({ source, uri }, undefined, scope);
-    if (!document.diagnosticReport.errors) {
-        return translate(document.root.scope.findFunction(anonymousFuncName, null));
+    const documentEx = await createFXSLDocument({ source, uri }, undefined, document);
+    if (!documentEx.diagnosticReport.errors) {
+        return translate(documentEx.root.scope.findFunction(anonymousFuncName, null));
     }
-    console.error(Diagnostics.stringify(document.diagnosticReport));
+    console.error(Diagnostics.stringify(documentEx.diagnosticReport));
     return null;
 }
 

@@ -181,32 +181,19 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
         const debuggerState = getDebugger(getState());
         const expression = (action.payload && action.payload.expression) || debuggerState.expression || `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`;
 
-        let runtime = null;
-
-        if (!isNull(file.slDocument.root)) {
-            const scope = getScope(file);
-            
-            // TODO: use VM.evaluate() instead.
-            const uri = '://expression';
-            const source = `auto anonymous() { return (${expression}); }`;
-            const document = await createFXSLDocument({ source, uri }, undefined, scope);
-            if (!document.diagnosticReport.errors) {
-                const func = document.root.scope.findFunction('anonymous', null);
-                let layout = 'i32';
-                if (func.def.returnType.isEqual(T_FLOAT)) {
-                    layout = 'f32';
-                }
-                runtime = Bytecode.translate(func);
-                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime, layout } });
+  
+        if (!isNull(file.slDocument)) {
+            let runtime = await Bytecode.translateExpression(expression, file.slDocument);
+            if (!isNull(runtime)) {
+                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
             } else {
                 // workaround for debug purposes (interpretations of the expressions string as function name)
-                const func = scope.findFunction(expression, null);
+                const func = file.slDocument.root.scope.findFunction(expression, null);
                 if (func) {
                     runtime = Bytecode.translate(func);
-                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime, layout: 'i32' } });
+                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
                 } else {
                     alert('could not evaluate expression, see console log for details');
-                    console.error(Diagnostics.stringify(document.diagnosticReport));
                 }
             }
 

@@ -91,7 +91,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     render() {
         const { props } = this;
-        const { runtime: { code }, layout } = props;
+        const { runtime: { code, layout } } = props;
 
         if (isNull(code)) {
             return null;
@@ -124,14 +124,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     }
                 </Table>
                 <Button animated onClick={ async () => {
-                    const u8a = await VM.evaluate(code);
-                    switch(layout) {
-                        case 'f32':
-                            alert(u8ArrayAsF32(u8a));
-                            break;
-                        default:
-                            alert(u8ArrayAsI32(u8a));
-                    }
+                    const result = VM.asNative(await VM.evaluate(code), layout);
+                    alert(JSON.stringify(result, null, '   '));
                 } }>
                     <Button.Content visible>Run</Button.Content>
                     <Button.Content hidden>

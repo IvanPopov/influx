@@ -160,11 +160,11 @@ export async function parse(textDocument: ITextDocument): Promise<IAutotests> {
 }
 
 
-async function runTest(test: ITest, scope: IScope) {
+async function runTest(test: ITest, document: ISLDocument) {
     const { cases } = test;
     for (let exam of cases) {
         const { expr, expected } = exam;
-        const result = u8ArrayAsI32(await VM.evaluate(expr, scope));
+        const result = await VM.evaluate(expr, document);
         exam.passed = result === expected;
         if (!exam.passed) {
             exam.note = `Test failed. Expected is '${expected}', but given is '${result}'`;
@@ -178,7 +178,7 @@ async function runTest(test: ITest, scope: IScope) {
 export async function run(autotests: IAutotests) {
     autotests.passed = true;
     for (const test of autotests.tests) {
-        await runTest(test, autotests.document.root.scope);
+        await runTest(test, autotests.document);
         autotests.passed = autotests.passed && test.passed;
     }
 }

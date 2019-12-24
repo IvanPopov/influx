@@ -455,11 +455,10 @@ class App extends React.Component<IAppProps> {
                         <Tab.Pane attached={'bottom'} key='bytecode-view'>
                             {showAutotestMenu &&
                                 <Segment color='orange'>
-                                    <div>Autotest controls</div>
                                     {!this.state.testProcessing &&
                                         <Button
                                             onClick={this.runAutotests} width={'100%'} >
-                                            <span>Test it!</span>
+                                            <span>Run autotests!</span>
                                         </Button>
                                     }
                                     {this.state.testProcessing &&

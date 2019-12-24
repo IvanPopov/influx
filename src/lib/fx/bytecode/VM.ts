@@ -1,10 +1,11 @@
-import { assert, isDefAndNotNull, isString } from "@lib/common";
+import { assert, isDefAndNotNull, isString, isNull } from "@lib/common";
 import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
 import * as Bytecode from '@lib/fx/bytecode';
 
-import { i32ToU8Array, u8ArrayToI32 } from "./common";
-import { IScope } from "@lib/idl/IInstruction";
+import { i32ToU8Array, u8ArrayToI32, u8ArrayAsI32, u8ArrayAsF32 } from "./common";
+import { IScope, ITypeInstruction } from "@lib/idl/IInstruction";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 
 // // import { remote } from 'electron';
 // import * as isElectron from 'is-electron-renderer';
@@ -297,16 +298,82 @@ export function play(pack: Bundle): Uint8Array {
 }
 
 
-export async function evaluate(code: Uint8Array): Promise<Uint8Array>;
-export async function evaluate(expr: string, scope?: IScope): Promise<Uint8Array>;
-export async function evaluate(param: string | Uint8Array, param2?: IScope): Promise<Uint8Array> {
+function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
+    const vector = [];
+    for (let i = 0; i < length; ++i) {
+        vector.push(elementDecoder(value.subarray(stride * i, stride * i + stride)));
+    }
+    return vector;
+}
+
+const asInt = u8ArrayAsI32;
+const asUint = u8a => (asInt(u8a) >>> 0);
+const asFloat = u8ArrayAsF32;
+const asBool = u8a => asInt(u8a) !== 0;
+
+export function asNative(result: Uint8Array, layout: ITypeInstruction): any {
+    // TODO: remove it?
+    while (layout !== layout.baseType) {
+        layout = layout.baseType;
+    }
+    switch (layout.name) {
+        case 'bool':
+            return asBool(result);
+        case 'int':
+            return asInt(result);
+        case 'float':
+            return asFloat(result);
+        case 'uint':
+            return asUint(result);
+        case 'uint2':
+        case 'uint3':
+        case 'uint4':
+            return asNativeVector(asUint, result, layout.length, 4);
+        case 'int2':
+        case 'int3':
+        case 'int4':
+            return asNativeVector(asInt, result, layout.length, 4);
+        case 'float2':
+        case 'float3':
+        case 'float4':
+            return asNativeVector(asFloat, result, layout.length, 4);
+    }
+
+    if (layout.isComplex()) {
+        let complex = {};
+        layout.fields.forEach(field => {
+            const { type, type: { padding, size } } = field;
+            complex[field.name] = asNative(result.subarray(padding, padding + size), type);
+        });
+        return complex;
+    }
+
+    if (layout.isNotBaseArray()) {
+        return asNativeVector(u8a => asNative(u8a, layout.arrayElementType), result, layout.length, layout.arrayElementType.size);
+    }
+
+    assert(false, `not implemented: ${layout.toCode()}`);
+    return null;
+}
+
+
+export async function evaluate(code: Uint8Array): Promise<any>;
+export async function evaluate(expr: string, document: ISLDocument): Promise<any>;
+export async function evaluate(param: string | Uint8Array, param2?: ISLDocument): Promise<any> {
     let code: Uint8Array;
     if (isString(arguments[0])) {
-        const program = await Bytecode.translateExpression(arguments[0], arguments[1]);
+        const expr = <string>arguments[0];
+        const slDocument = <ISLDocument>arguments[1];
+        const program = await Bytecode.translateExpression(expr, slDocument);
+        if (isNull(program)) {
+            return null;
+        }
         code = program.code;
+        return asNative(play(load(code)), program.layout);
     } else {
         code = arguments[0];
     }
+
     return play(load(code));
 }
 

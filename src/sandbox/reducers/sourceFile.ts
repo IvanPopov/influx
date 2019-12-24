@@ -18,7 +18,6 @@ const initialState: IFileState = {
     debugger: {
         expression: null,
         runtime: null,
-        layout: 'i32',
         options: {
             colorize: true,
             disableOptimizations: true,
@@ -123,8 +122,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.DEBUGGER_START_DEBUG]: (state, action: IDebuggerStartDebug) => {
         const options = state.debugger.options;
-        const { expression, runtime, layout } = action.payload;
-        return { ...state, debugger: { expression, runtime, options, layout } };
+        const { expression, runtime } = action.payload;
+        return { ...state, debugger: { expression, runtime, options } };
     },
 
     [evt.DEBUGGER_RESET]: (state) => {

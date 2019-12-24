@@ -3474,16 +3474,20 @@ export class Analyzer {
         return new Context(uri);
     }
 
-    protected createProgram(parent: IScope = SystemScope.SCOPE): ProgramScope {
+    protected createProgram(document: ISLDocument = null): ProgramScope {
+        let parent = <IScope>SystemScope.SCOPE;
+        if (!isNull(document)) {
+            parent = document.root.scope;
+        }
         return new ProgramScope(parent);
     }
 
 
-    async parse(slastDocument: ISLASTDocument, scope?: IScope): Promise<ISLDocument> {
+    async parse(slastDocument: ISLASTDocument, document?: ISLDocument): Promise<ISLDocument> {
         const uri = slastDocument.uri;
         // console.time(`analyze(${uri})`);
 
-        const program = this.createProgram(scope);
+        const program = this.createProgram(document);
         const context = this.createContext(uri);
 
         let instructions: IInstruction[] = null;

@@ -7,23 +7,24 @@ import { ITextDocument } from "@lib/idl/ITextDocument";
 import { FxAnalyzer } from "./analisys/FxAnalyzer";
 import { createSLASTDocument } from "./SLASTDocument";
 
-export async function createFXSLDocument(textDocument: ITextDocument, flags?: number, scope?: IScope): Promise<ISLDocument>;
-export async function createFXSLDocument(slastDocument: ISLASTDocument, scope?: IScope): Promise<ISLDocument>;
-export async function createFXSLDocument(param1: ISLASTDocument | ITextDocument, param2?: number | IScope): Promise<ISLDocument> {
+export async function createFXSLDocument(textDocument: ITextDocument, flags?: number, document?: ISLDocument): Promise<ISLDocument>;
+export async function createFXSLDocument(slastDocument: ISLASTDocument, document?: ISLDocument): Promise<ISLDocument>;
+export async function createFXSLDocument(param1: ISLASTDocument | ITextDocument, param2?: number | ISLDocument, param3?: ISLDocument): Promise<ISLDocument> {
     let textDocument: ITextDocument;
     let slastDocument: ISLASTDocument;
-    let scope: IScope;
+    let slDocument: ISLDocument;
 
     if (isString(arguments[0].source)) {    
+        const flags = isNumber(arguments[1]) ? <number>arguments[1] : undefined;
         textDocument = <ITextDocument>arguments[0];
-        slastDocument = await createSLASTDocument(textDocument, isNumber(arguments[1]) ? arguments[1] : undefined);
-        scope = arguments[2];
+        slastDocument = await createSLASTDocument(textDocument, flags);
+        slDocument = arguments[2];
     } else {
         slastDocument = <ISLASTDocument>arguments[0];
-        scope = arguments[1];
+        slDocument = arguments[1];
     }
     
     const analyzer = new FxAnalyzer;
-    return await analyzer.parse(slastDocument, scope);
+    return await analyzer.parse(slastDocument, slDocument);
 }
 
