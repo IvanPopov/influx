@@ -50,6 +50,7 @@ export const language = <ILanguage>{
 
     keywords: [
         'AppendStructuredBuffer',
+        'auto',
         'bool',
         'break',
         'case',

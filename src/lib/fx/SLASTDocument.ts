@@ -15,7 +15,8 @@ const PREDEFINED_TYPES = [
     'float2x2', 'float3x3', 'float4x4',
     'int2', 'int3', 'int4',
     'uint2', 'uint3', 'uint4',
-    'bool2', 'bool3', 'bool4'
+    'bool2', 'bool3', 'bool4',
+    'auto'
 ];
 
 export class SLASTDocument extends ASTDocument implements ISLASTDocument {

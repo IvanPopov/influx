@@ -47,9 +47,10 @@ export type ISourceFileActions =
 // debugger api
 //
 
-export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { entryPoint: string }>;
+export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { expression: string }>;
 export type IDebuggerReset = IAction<typeof evt.DEBUGGER_RESET, {}>;
-export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { entryPoint: string; runtime: ISubProgram }>;
+// tslint:disable-next-line:max-line-length
+export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { expression: string; runtime: ISubProgram; layout: 'f32' | 'i32' }>;
 export type IDebuggerOptionsChanged = IAction<typeof evt.DEBUGGER_OPTIONS_CHANGED, { options: MakeOptional<IDebuggerState['options']> }>;
 
 export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStartDebug | IDebuggerOptionsChanged;

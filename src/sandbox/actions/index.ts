@@ -77,8 +77,8 @@ export const sourceCode = {
     //
     //
 
-    compile(entryPoint: string) {
-        return { type: evt.DEBUGGER_COMPILE, payload: { entryPoint } };
+    compile(expression: string) {
+        return { type: evt.DEBUGGER_COMPILE, payload: { expression } };
     },
 
     specifyOptions(options: MakeOptional<IDebuggerState['options']>) {

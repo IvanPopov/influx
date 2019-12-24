@@ -20,7 +20,8 @@ export interface IDebuggerState {
         autocompile: boolean;
     };
 
-    entryPoint: string;
+    expression: string;
+    layout: 'f32' | 'i32';
 
     // (current debugger runtime)
     // BytecodeView shows instructions

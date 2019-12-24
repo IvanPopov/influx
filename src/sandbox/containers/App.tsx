@@ -211,7 +211,7 @@ class App extends React.Component<IAppProps> {
         showFileBrowser: boolean;
     };
 
-    private entryPointRef = React.createRef<Input>();
+    private expressionRef = React.createRef<Input>();
 
     constructor(props) {
         super(props);
@@ -253,10 +253,10 @@ class App extends React.Component<IAppProps> {
 
     @autobind
     compile() {
-        const { state, props, entryPointRef } = this;
+        const { state, props, expressionRef } = this;
 
         // fixme: kinda hack!
-        const input: HTMLInputElement = (entryPointRef.current as any).inputRef.current;
+        const input: HTMLInputElement = (expressionRef.current as any).inputRef.current;
         props.actions.compile(input.value || null);
     }
 
@@ -451,9 +451,9 @@ class App extends React.Component<IAppProps> {
                                             <Input
                                                 fluid
                                                 size='small'
-                                                label='entry point'
-                                                placeholder={ Bytecode.DEFAULT_ENTRY_POINT_NAME }
-                                                ref={ this.entryPointRef }
+                                                label='expression'
+                                                placeholder={ `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()` }
+                                                ref={ this.expressionRef }
                                             />
                                         </Table.Cell>
                                         <Table.Cell >

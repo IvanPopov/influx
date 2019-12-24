@@ -5,7 +5,7 @@
 import { assert, isDef, isNull, verbose } from '@lib/common';
 import { type } from '@lib/fx/analisys/helpers';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import { i32ToU8Array } from '@lib/fx/bytecode/common';
+import { i32ToU8Array, u8ArrayAsI32 } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
@@ -15,7 +15,7 @@ import * as THREE from 'three';
 type PartFx = IPartFxInstruction;
 
 interface IRunnable {
-    run(...input: Uint8Array[]): VM.INT32;
+    run(...input: Uint8Array[]): Uint8Array;
     setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean;
     setPipelineConstants(constants: IPipelineConstants): IRunnable;
 }
@@ -333,7 +333,7 @@ export class Emitter {
 
 
     private spawn(constants: IPipelineConstants) {
-        const nSpawn = this.spawnRoutine.run();
+        const nSpawn = u8ArrayAsI32(this.spawnRoutine.run());
 
         this.nPartAddFloat += nSpawn * constants.elapsedTime;
         this.nPartAdd = Math.floor(this.nPartAddFloat);
@@ -371,7 +371,7 @@ export class Emitter {
             const partId = TEMP_INT32;
             partId.set(i32ToU8Array(i));
 
-            if (!this.updateRoutine.run(currPtr, partId)) {
+            if (u8ArrayAsI32(this.updateRoutine.run(currPtr, partId)) === 0) {
                 // swap last particle with current in order to remove particle
                 const lastPtr = this.getParticlePtr(this.nPart - 1);
                 currPtr.set(lastPtr);

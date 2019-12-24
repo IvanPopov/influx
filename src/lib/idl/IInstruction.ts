@@ -20,6 +20,7 @@ export enum EInstructionTypes {
     k_VariableType,
     k_SystemType,
     k_ComplexType,
+    k_ProxyType,
     
     k_Expr,         // NOTE: Abstract type
     k_IdExpr,
@@ -311,7 +312,7 @@ export interface IDeclInstruction extends IInstruction {
 
 
 export interface IFunctionDefInstruction extends IDeclInstruction {
-    readonly returnType: ITypeInstruction;
+    readonly returnType: IVariableTypeInstruction;
     readonly name: string;
     readonly params: IVariableDeclInstruction[];
 }

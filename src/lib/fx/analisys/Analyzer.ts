@@ -44,6 +44,7 @@ import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/Po
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
 import { ProvideInstruction } from "./instructions/ProvideInstruction";
+import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
 import { SamplerOperator, SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
@@ -91,6 +92,17 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 }
 
 const asType = (instr: ITypedInstruction) => instr ? instr.type : null;
+
+// TODO: rework 'auto' api
+function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruction) {
+    if (type.subType.instructionType === EInstructionTypes.k_ProxyType) {
+        const proxy = <ProxyTypeInstruction>type.subType;
+        if (!proxy.isResolved()) {
+            proxy.resolve(host);
+        }
+    }
+}
+
 
 function getRenderStateValue(state: ERenderStates, value: string): ERenderStateValues {
     let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
@@ -840,6 +852,11 @@ export class Analyzer {
 
         switch (sourceNode.name) {
             case 'T_TYPE_ID':
+                if (sourceNode.value === 'auto') {
+                    type = new ProxyTypeInstruction({ scope });
+                    break;
+                }
+
                 type = scope.findType(sourceNode.value);
 
                 if (isNull(type)) {
@@ -2329,8 +2346,6 @@ export class Analyzer {
 
         const definition = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
 
-
-
         let func = globalScope.findFunction(definition.name, definition.params.map(asType));
 
         if (!isDef(func)) {
@@ -2627,6 +2642,10 @@ export class Analyzer {
 
         const funcReturnType = context.funcDef.returnType;
         context.haveCurrentFunctionReturnOccur = true;
+        
+        if (children.length === 2) {
+            tryResolveProxyType(funcReturnType, T_VOID);
+        }
 
         if (funcReturnType.isEqual(T_VOID) && children.length === 3) {
             context.error(sourceNode, EErrors.InvalidReturnStmtVoid);
@@ -2635,7 +2654,7 @@ export class Analyzer {
         else if (!funcReturnType.isEqual(T_VOID) && children.length === 2) {
             context.error(sourceNode, EErrors.InvalidReturnStmtEmpty);
             return null;
-        }
+        }   
 
         let expr: IExprInstruction = null;
         if (children.length === 3) {
@@ -2645,6 +2664,8 @@ export class Analyzer {
                 context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
                 return null;
             }
+
+            tryResolveProxyType(funcReturnType, expr.type);
 
             if (!funcReturnType.isEqual(expr.type)) {
                 context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
@@ -3453,16 +3474,16 @@ export class Analyzer {
         return new Context(uri);
     }
 
-    protected createProgram(): ProgramScope {
-        return new ProgramScope(SystemScope.SCOPE);
+    protected createProgram(parent: IScope = SystemScope.SCOPE): ProgramScope {
+        return new ProgramScope(parent);
     }
 
 
-    async parse(slastDocument: ISLASTDocument): Promise<ISLDocument> {
+    async parse(slastDocument: ISLASTDocument, scope?: IScope): Promise<ISLDocument> {
         const uri = slastDocument.uri;
         console.time(`analyze(${uri})`);
 
-        const program = this.createProgram();
+        const program = this.createProgram(scope);
         const context = this.createContext(uri);
 
         let instructions: IInstruction[] = null;
@@ -3480,13 +3501,11 @@ export class Analyzer {
 
         assert(program.currentScope == program.globalScope);
 
-        const scope = program.globalScope;
-        const root = new InstructionCollector({ scope, instructions });
+        const root = new InstructionCollector({ scope: program.globalScope, instructions });
         const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
 
         return { root, diagnosticReport, uri };
     }
-
 
 
     // function addFunctionDecl(context: Context, program: ProgramScope, sourceNode: IParseNode, func: IFunctionDeclInstruction): void {

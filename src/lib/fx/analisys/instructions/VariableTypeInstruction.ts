@@ -34,7 +34,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         this._usageList = [];
 
         let instrType = type.instructionType;
-        if (instrType === EInstructionTypes.k_SystemType ||
+        if (instrType === EInstructionTypes.k_ProxyType ||
+            instrType === EInstructionTypes.k_SystemType ||
             instrType === EInstructionTypes.k_ComplexType) {
             this._subType = type;
         }

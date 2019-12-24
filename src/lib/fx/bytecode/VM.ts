@@ -65,17 +65,20 @@ export type INT32 = number;
 
 class VM {
     static $regs = new ArrayBuffer(512 * 4);
+    static iregs = new Int32Array(VM.$regs);
+    static fregs = new Float32Array(VM.$regs);
+    static regs = new Uint8Array(VM.$regs);
 
-    static play(data: Bundle): INT32 {
+    static play(data: Bundle): Uint8Array {
         let i4 = 0;                      // current instruction;
         let ilist = data.instructions;
 
-        let iregs = new Int32Array(VM.$regs);
-        let fregs = new Float32Array(VM.$regs);
+        let iregs = VM.iregs;
+        let fregs = VM.fregs;
 
         let $cb = data.constants;
         let icb = new Int32Array($cb.buffer, $cb.byteOffset);
-        let fcb = new Float32Array($cb.buffer, $cb.byteOffset);
+        // let fcb = new Float32Array($cb.buffer, $cb.byteOffset);
 
         // TODO: handle correctly empty input
         // TODO: don't allocate inputs here
@@ -259,7 +262,7 @@ class VM {
             i4 += 5;
         }
 
-        return iregs[0];
+        return VM.regs;
     }
 }
 
@@ -287,12 +290,12 @@ export function load(code: Uint8Array): Bundle {
     return { instructions, constants, input, layout };
 }
 
-export function play(pack: Bundle): INT32 {
+export function play(pack: Bundle): Uint8Array {
     return VM.play(pack);
 }
 
 
-export function evaluate(code: Uint8Array): INT32 {
+export function evaluate(code: Uint8Array): Uint8Array {
     return play(load(code));
 }
 

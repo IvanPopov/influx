@@ -1,8 +1,8 @@
+import { assert, isNull } from "@lib/common";
 import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { variable } from "./variable";
 import { instruction } from "./instruction";
-import { assert, isNull } from "@lib/common";
+import { variable } from "./variable";
 
 export namespace type {
     // todo: rename it
@@ -157,6 +157,8 @@ export namespace type {
                 return signatureVType(<IVariableTypeInstruction>type, strong);
             case EInstructionTypes.k_ComplexType:
                 return `${type.name}${type.instructionID}`;
+            case EInstructionTypes.k_ProxyType:
+                return type.baseType ? signature(type.baseType) : type.name;
             case EInstructionTypes.k_SystemType:
                 return type.name;
             default:
@@ -191,6 +193,8 @@ export namespace type {
                 return hashVType(<IVariableTypeInstruction>type, strong);
             case EInstructionTypes.k_ComplexType:
                 return hashComplex(type, strong);
+            case EInstructionTypes.k_ProxyType:
+                return type.baseType ? hash(type.baseType) : type.name;
             case EInstructionTypes.k_SystemType:
                 return type.name;
             default:

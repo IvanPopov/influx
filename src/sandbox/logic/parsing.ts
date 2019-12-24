@@ -1,11 +1,13 @@
 /* tslint:disable:typedef */
 
-import { assert, isNull, verbose } from '@lib/common';
+import { isNull } from '@lib/common';
+import { T_BOOL, T_FLOAT, T_INT, T_UINT, T_VOID } from '@lib/fx/analisys/SystemScope';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { createDefaultSLParser } from '@lib/fx/SLParser';
+import { Diagnostics } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox/actions/ActionTypes';
@@ -145,7 +147,7 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 
 
 function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
-    const fn = fileState.slDocument.root.scope.findFunction(debuggerState.entryPoint, null);
+    const fn = fileState.slDocument.root.scope.findFunction(debuggerState.expression, null);
     const locList = [];
 
     if (fn && debuggerState.runtime) {
@@ -177,15 +179,37 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
         const debuggerState = getDebugger(getState());
-        const entryPoint = (action.payload && action.payload.entryPoint) || debuggerState.entryPoint || Bytecode.DEFAULT_ENTRY_POINT_NAME;
+        const expression = (action.payload && action.payload.expression) || debuggerState.expression || `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`;
 
         let runtime = null;
 
         if (!isNull(file.slDocument.root)) {
             const scope = getScope(file);
-            const func = scope.findFunction(entryPoint, null);
-            runtime = Bytecode.translate(func);
-            dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { entryPoint, runtime } });
+            // const func = scope.findFunction(expression, null);
+
+            const uri = '://expression';
+            const source = `auto anonymous() { return (${expression}); }`;
+            const document = await createFXSLDocument({ source, uri }, undefined, scope);
+            if (!document.diagnosticReport.errors) {
+                const func = document.root.scope.findFunction('anonymous', null);
+                let layout = 'i32';
+                if (func.def.returnType.isEqual(T_FLOAT)) {
+                    layout = 'f32';
+                }
+                runtime = Bytecode.translate(func);
+                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime, layout } });
+            } else {
+                // workaround for debug purposes (interpretations of the expressions string as function name)
+                const func = scope.findFunction(expression, null);
+                if (func) {
+                    runtime = Bytecode.translate(func);
+                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime, layout: 'i32' } });
+                } else {
+                    alert('could not evaluate expression, see console log for details');
+                    console.error(Diagnostics.stringify(document.diagnosticReport));
+                }
+            }
+
         } else {
             console.error('invalid compile request!');
         }

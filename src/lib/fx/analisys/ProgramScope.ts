@@ -177,11 +177,9 @@ export class ProgramScope {
     currentScope: IScope;
 
 
-    constructor(systemScope: IScope) {
-        assert(systemScope !== null);
-
+    constructor(parent: IScope) {
+        assert(parent !== null);
         let type = EScopeType.k_Global;
-        let parent = systemScope;
         this.globalScope = new Scope({ parent, type });
         this.currentScope = this.globalScope;
     }

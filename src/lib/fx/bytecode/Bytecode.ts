@@ -84,25 +84,25 @@ function binary(ctx: IContext): Uint8Array {
 }
 
 
-function translateAsExpression(ctx: IContext, expr: IExprInstruction): ISubProgram {
-    const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
+// function translateAsExpression(ctx: IContext, expr: IExprInstruction): ISubProgram {
+//     const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
-    // NOTE: it does nothing at the momemt :/
-    debug.beginCompilationUnit('[todo]');
-    // simulate function call()
-    let ret = alloca(expr.type.size);
-    push(null, ret);
-    // translate Unknown has a specific implementation for expression
-    // which will write expression's value to the ret address allocated above
-    translateUnknown(ctx, expr);
-    pop();
-    debug.endCompilationUnit();
+//     // NOTE: it does nothing at the momemt :/
+//     debug.beginCompilationUnit('[todo]');
+//     // simulate function call()
+//     let ret = alloca(expr.type.size);
+//     push(null, ret);
+//     // translate Unknown has a specific implementation for expression
+//     // which will write expression's value to the ret address allocated above
+//     translateUnknown(ctx, expr);
+//     pop();
+//     debug.endCompilationUnit();
 
-    let code = binary(ctx);      // todo: stay only binary view
-    let cdl = debug.dump();      // code debug layout;
+//     let code = binary(ctx);      // todo: stay only binary view
+//     let cdl = debug.dump();      // code debug layout;
 
-    return { code, constants, cdl };
-}
+//     return { code, constants, cdl };
+// }
 
 
 function translateAsProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
@@ -1132,28 +1132,28 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     }
 
     // specific workaround for expression tranlsations
-    function translateExpr(expr: IExprInstruction)
-    {
-        if (isNull(expr)) {
-            return null;
-        }
+    // function translateExpr(expr: IExprInstruction)
+    // {
+    //     if (isNull(expr)) {
+    //         return null;
+    //     }
         
-        let src = raddr(expr);
-        if (src.type !== EAddrType.k_Registers) {
-            src = iload(src);
-            debug.map(expr);
-        }
+    //     let src = raddr(expr);
+    //     if (src.type !== EAddrType.k_Registers) {
+    //         src = iload(src);
+    //         debug.map(expr);
+    //     }
 
-        const dest = ret();
-        assert(src.size === ret().size);
-        imove(dest, src);
-        debug.map(expr);
-    }
+    //     const dest = ret();
+    //     assert(src.size === ret().size);
+    //     imove(dest, src);
+    //     debug.map(expr);
+    // }
 
-    if (instruction.isExpression(instr)) {
-        translateExpr(instr as IExprInstruction);
-        return;
-    }
+    // if (instruction.isExpression(instr)) {
+    //     translateExpr(instr as IExprInstruction);
+    //     return;
+    // }
 
     translate(instr);
 }
@@ -1184,16 +1184,16 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
 }
 
 
-export function translateExpression(expr: IExprInstruction): ISubProgram {
-    let ctx = ContextBuilder();
-    let res: ISubProgram = null;
+// export function translateExpression(expr: IExprInstruction): ISubProgram {
+//     let ctx = ContextBuilder();
+//     let res: ISubProgram = null;
 
-    try {
-        res = translateAsExpression(ctx, expr);
-    } catch (e) {
-        throw e;
-        console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
-    }
-    return res;
-}
+//     try {
+//         res = translateAsExpression(ctx, expr);
+//     } catch (e) {
+//         throw e;
+//         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
+//     }
+//     return res;
+// }
 

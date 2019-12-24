@@ -16,8 +16,9 @@ const initialState: IFileState = {
     slastDocument: null,
     slDocument: null,
     debugger: {
-        entryPoint: null,
+        expression: null,
         runtime: null,
+        layout: 'i32',
         options: {
             colorize: true,
             disableOptimizations: true,
@@ -122,13 +123,13 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.DEBUGGER_START_DEBUG]: (state, action: IDebuggerStartDebug) => {
         const options = state.debugger.options;
-        const { entryPoint, runtime } = action.payload;
-        return { ...state, debugger: { entryPoint, runtime, options } };
+        const { expression, runtime, layout } = action.payload;
+        return { ...state, debugger: { expression, runtime, options, layout } };
     },
 
     [evt.DEBUGGER_RESET]: (state) => {
         const { debugger: { options } } = state;
-        return { ...state, debugger: { entryPoint: null, runtime: null, options } };
+        return { ...state, debugger: { expression: null, runtime: null, options, layout: 'i32' } };
     },
 
     [evt.DEBUGGER_OPTIONS_CHANGED]: (state: IFileState, action: IDebuggerOptionsChanged) => {
