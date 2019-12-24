@@ -238,7 +238,7 @@ class App extends React.Component<IAppProps> {
     hideFileBrowser = () => this.setState({ showFileBrowser: false });
 
 
-    
+
     @autobind
     async runAutotests() {
         const { content: source, uri } = getFileState(this.props);
@@ -247,11 +247,8 @@ class App extends React.Component<IAppProps> {
         console.log(description);
         for (const test of tests) {
             this.highlightTest(test, false);
-            if (await autotests.run(test, getScope(getFileState(this.props)))) {
-                this.highlightTest(test, true, 0x00FF00);
-            } else {
-                this.highlightTest(test, true, 0xFF0000);
-            }
+            const passed = await autotests.run(test, getScope(getFileState(this.props)));
+            this.highlightTest(test, true, passed ? 10 : 14); // TODO: use normal colors
         }
     }
 
@@ -376,7 +373,7 @@ class App extends React.Component<IAppProps> {
         // console.log(JSON.stringify(props.match, null, '\t'));
 
         const showAutotestMenu = (sourceFile.content || '').substr(0, 40).indexOf('@autotests') !== -1;
- 
+
         const analysisResults = [
             {
                 menuItem: {

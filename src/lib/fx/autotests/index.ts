@@ -169,6 +169,9 @@ export async function run(test: ITest, scope: IScope): Promise<boolean> {
             let { code } = Bytecode.translate(func);
             const result = u8ArrayAsI32(VM.evaluate(code));
             exam.passed = result === expected;
+            if (!exam.passed) {
+                console.log(`expected: ${expected}, given: ${result}`);
+            }
         }
     }
 
