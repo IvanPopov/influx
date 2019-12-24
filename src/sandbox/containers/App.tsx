@@ -1,4 +1,4 @@
-import * as autotests from '@lib/fx/autotests';
+import * as Autotests from '@lib/fx/autotests';
 /* tslint:disable:max-func-body-length */
 /* tslint:disable:typedef */
 /* tslint:disable:no-single-line-block-comment */
@@ -20,7 +20,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
-import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Popup, Segment, Sidebar, Tab, Table, Loader } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -133,14 +133,14 @@ const Version = (props) => {
         <Popup
             trigger={
                 <div>
-                    <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
-                        { MODE !== 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+                    <Message warning={MODE !== 'production'} size='tiny' compact className={props.classes.versionFix}>
+                        {MODE !== 'production' && <Icon name={'issue opened' as UnknownIcon} />}{MODE} | {BRANCH}-{VERSION}
                     </Message>
                 </div>
             }
             // position='left center'
             size='small'
-            content={ TIMESTAMP }
+            content={TIMESTAMP}
             inverted
         />
     );
@@ -164,35 +164,35 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
         const { state: { activeItem }, props: { path } } = this;
 
         return (
-            <Menu size='mini' pointing secondary inverted attached className={ this.props.classes.mebFix }>
+            <Menu size='mini' pointing secondary inverted attached className={this.props.classes.mebFix}>
                 <Menu.Item
                     name='sourcecode'
                     // position='right'
-                    active={ activeItem === 'sourcecode' }
-                    onClick={ this.handleItemClick }
+                    active={activeItem === 'sourcecode'}
+                    onClick={this.handleItemClick}
                 >
-                    source code <Icon name={ 'chevron right' as any } />
+                    source code <Icon name={'chevron right' as any} />
                 </Menu.Item>
 
                 <Menu.Item
                     name='vertexshader'
                     // position='right'
-                    active={ activeItem === 'vertexshader' }
-                    onClick={ this.handleItemClick }
+                    active={activeItem === 'vertexshader'}
+                    onClick={this.handleItemClick}
                 >
-                    { path.name &&
+                    {path.name &&
                         <div>
-                            { path.name } < Icon name={ 'chevron right' as any } />
+                            {path.name} < Icon name={'chevron right' as any} />
                         </div>
                     }
-                    { path.pass &&
+                    {path.pass &&
                         <div>
-                            { `pass[${path.pass}]` } < Icon name={ 'chevron right' as any } />
+                            {`pass[${path.pass}]`} < Icon name={'chevron right' as any} />
                         </div>
                     }
-                    { path.property &&
+                    {path.property &&
                         <div>
-                            { path.property }
+                            {path.property}
                         </div>
                     }
                 </Menu.Item>
@@ -209,6 +209,7 @@ class App extends React.Component<IAppProps> {
 
     state: {
         showFileBrowser: boolean;
+        testProcessing: boolean;
     };
 
     private expressionRef = React.createRef<Input>();
@@ -217,6 +218,7 @@ class App extends React.Component<IAppProps> {
         super(props);
         this.state = {
             showFileBrowser: false,
+            testProcessing: false
         };
     }
 
@@ -241,15 +243,33 @@ class App extends React.Component<IAppProps> {
 
     @autobind
     async runAutotests() {
-        const { content: source, uri } = getFileState(this.props);
-        const { description, tests } = autotests.parse({ source, uri });
+        this.setState({ testProcessing: true });
 
-        console.log(description);
-        for (const test of tests) {
-            this.highlightTest(test, false);
-            const passed = await autotests.run(test, getScope(getFileState(this.props)));
-            this.highlightTest(test, true, passed ? 10 : 14); // TODO: use normal colors
-        }
+        // timeout for playing animation in UI
+        setTimeout(async () => {
+            const { content: source, uri } = getFileState(this.props);
+            const autotests = await Autotests.parse({ source, uri });
+
+            await Autotests.run(autotests);
+
+            if (!autotests.passed) {
+                console.warn(autotests);
+            }
+
+            autotests.tests.forEach((test, iTest) => {
+                const testName = `${test.name}-${iTest}`;
+                this.highlightTest(test.name, test.loc, false);
+                this.highlightTest(test.name, test.loc, true, test.passed);
+
+                test.cases.forEach((exam, iExam) => {
+                    const examName = `${testName}-${iExam}`;
+                    this.highlightTest(examName, exam.loc, false);
+                    this.highlightTest(examName, exam.loc, true, exam.passed, exam.note);
+                });
+            });
+
+            this.setState({ testProcessing: false });
+        }, 10);
     }
 
     @autobind
@@ -289,20 +309,18 @@ class App extends React.Component<IAppProps> {
     }
 
     /** @deprecated */
-    highlightTest(test: autotests.ITest, show: boolean = true, color = 0xFFFFFF) {
-        const markerName = `ast-range-${test.name}`;
+    highlightTest(testName: string, loc: IRange, show: boolean = true, passed?: boolean, tooltip?: string) {
+        const name = `autotest-${testName}`;
         if (show) {
-            const range = this.resolveLocation(test.loc);
-            this.props.actions.addMarker({
-                name: markerName,
-                range,
-                type: `line`,
-                payload: {
-                    color
-                }
-            });
+            const range = this.resolveLocation(loc);
+            const color = passed ? 10 : 14;
+            this.props.actions.addMarker({ name, range, type: `line`, payload: { color } });
+            if (!passed && tooltip) {
+                this.props.actions.addMarker({ name: `${name}-error`, range, type: `error`, payload: { color }, tooltip });
+            }
         } else {
-            this.props.actions.removeMarker(markerName);
+            this.props.actions.removeMarker(`${name}`);
+            this.props.actions.removeMarker(`${name}-error`);
         }
     }
 
@@ -388,15 +406,15 @@ class App extends React.Component<IAppProps> {
                         {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
                             Playground
                         </Header> */}
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Dropdown item icon='gear' simple>
                                 <Dropdown.Menu>
                                     {
                                         this.buildShaderMenu().map(item => (
                                             <Dropdown.Item
-                                                as={ NavLink }
-                                                to={ item.link } >
-                                                { item.name }
+                                                as={NavLink}
+                                                to={item.link} >
+                                                {item.name}
                                             </Dropdown.Item>
                                         ))
                                     }
@@ -408,7 +426,7 @@ class App extends React.Component<IAppProps> {
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='playground-view'>
+                        <Tab.Pane attached={'bottom'} key='playground-view'>
                             <Playground />
                         </Tab.Pane>
                     </Route>
@@ -427,39 +445,44 @@ class App extends React.Component<IAppProps> {
                         {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
                             Bytecode Debugger
                         </Header> */}
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Bytecode Debugger
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='bytecode-view'>
-                            { showAutotestMenu &&
+                        <Tab.Pane attached={'bottom'} key='bytecode-view'>
+                            {showAutotestMenu &&
                                 <Segment color='orange'>
                                     <div>Autotest controls</div>
-                                    <Button
-                                        onClick={ this.runAutotests } width={ '100%' } >
-                                        Test it!
-                                    </Button>
+                                    {!this.state.testProcessing &&
+                                        <Button
+                                            onClick={this.runAutotests} width={'100%'} >
+                                            <span>Test it!</span>
+                                        </Button>
+                                    }
+                                    {this.state.testProcessing &&
+                                        <Loader active inline />
+                                    }
                                 </Segment>
                             }
                             <Table size='small' basic='very' compact='very'>
                                 <Table.Body>
-                                    <Table.Row style={ { paddingTop: 0 } }>
+                                    <Table.Row style={{ paddingTop: 0 }}>
                                         <Table.Cell>
                                             <Input
                                                 fluid
                                                 size='small'
                                                 label='expression'
-                                                placeholder={ `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()` }
-                                                ref={ this.expressionRef }
+                                                placeholder={`${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`}
+                                                ref={this.expressionRef}
                                             />
                                         </Table.Cell>
                                         <Table.Cell >
                                             <Button
-                                                disabled={ ($debugger.options.autocompile || !this.canCompile()) }
-                                                onClick={ this.compile } width={ 10 } >
+                                                disabled={($debugger.options.autocompile || !this.canCompile())}
+                                                onClick={this.compile} width={10} >
                                                 Compile
                                             </Button>
                                             &nbsp;
@@ -467,7 +490,7 @@ class App extends React.Component<IAppProps> {
                                                 <Dropdown.Menu>
                                                     <Dropdown.Item>
                                                         <Checkbox label='auto compilation' size='small'
-                                                            checked={ $debugger.options.autocompile }
+                                                            checked={$debugger.options.autocompile}
                                                             onMouseDown={
                                                                 e => this.setAutocompile(!$debugger.options.autocompile)
                                                             } />
@@ -477,27 +500,27 @@ class App extends React.Component<IAppProps> {
                                                     </Dropdown.Item>
                                                     <Dropdown.Item>
                                                         <Checkbox label='colorize' size='small'
-                                                            checked={ $debugger.options.colorize }
+                                                            checked={$debugger.options.colorize}
                                                             onMouseDown={
                                                                 e => this.setBytecodeColorization(!$debugger.options.colorize)
                                                             } />
                                                     </Dropdown.Item>
                                                 </Dropdown.Menu>
                                             </Dropdown>
-                                            {/* <NoOptimizations /> */ }
+                                            {/* <NoOptimizations /> */}
                                         </Table.Cell>
                                     </Table.Row>
                                 </Table.Body>
                             </Table>
-                            { $debugger.runtime ? (
+                            {$debugger.runtime ? (
                                 <div>
-                                    {/* todo: move memory view inside bytecode view; */ }
+                                    {/* todo: move memory view inside bytecode view; */}
                                     <MemoryView
-                                        binaryData={ $debugger.runtime.constants.data.byteArray }
-                                        layout={ $debugger.runtime.constants.data.layout } />
+                                        binaryData={$debugger.runtime.constants.data.byteArray}
+                                        layout={$debugger.runtime.constants.data.layout} />
                                     <BytecodeView />
                                 </div>
-                            ) : null }
+                            ) : null}
                         </Tab.Pane>
                     </Route>
                 )
@@ -512,18 +535,18 @@ class App extends React.Component<IAppProps> {
                 },
                 pane: (
                     <Route path='/program'>
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Semantic Analisys
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='program-view'>
+                        <Tab.Pane attached={'bottom'} key='program-view'>
                             <ProgramView
-                                onNodeOver={ inst => this.highlightInstruction(inst, true) }
-                                onNodeOut={ inst => this.highlightInstruction(inst, false) }
-                                onNodeClick={ inst => { } }
+                                onNodeOver={inst => this.highlightInstruction(inst, true)}
+                                onNodeOut={inst => this.highlightInstruction(inst, false)}
+                                onNodeClick={inst => { }}
                             />
                         </Tab.Pane>
                     </Route>
@@ -542,17 +565,17 @@ class App extends React.Component<IAppProps> {
                         {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
                             Syntax Analysis
                         </Header> */}
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Syntax Analysis
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='ast-view'>
+                        <Tab.Pane attached={'bottom'} key='ast-view'>
                             <ASTView
-                                onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
-                                onNodeOut={ idx => this.highlightPNode(idx, null, false) }
+                                onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
+                                onNodeOut={idx => this.highlightPNode(idx, null, false)}
                             />
                         </Tab.Pane>
                     </Route>
@@ -572,19 +595,19 @@ class App extends React.Component<IAppProps> {
                 menuItem: (
                     <Menu.Item>
                         Source File
-                        <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
-                            &nbsp;|&nbsp;{ path.basename(props.sourceFile.uri || '') }
+                        <span style={{ fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' }}>
+                            &nbsp;|&nbsp;{path.basename(props.sourceFile.uri || '')}
                         </span>
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
-                        <Grid divided={ false }>
-                            <Grid.Row columns={ 2 }>
-                                <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
-                                    <SourceCodeMenu path={ props.match.params } />
+                    <Tab.Pane key='source' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
+                        <Grid divided={false}>
+                            <Grid.Row columns={2}>
+                                <Grid.Column computer='10' tablet='8' mobile='6' className={props.classes.leftColumnFix}>
+                                    <SourceCodeMenu path={props.match.params} />
                                     <Switch>
-                                        {/* TODO: sync all pathes with business logic */ }
+                                        {/* TODO: sync all pathes with business logic */}
                                         <Route path='/playground/:fx/:name/:pass/(vertexshader|pixelshader)'>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
@@ -605,13 +628,13 @@ class App extends React.Component<IAppProps> {
                                         </Route>
                                     </Switch>
                                 </Grid.Column>
-                                <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
+                                <Grid.Column computer='6' tablet='8' mobile='10' className={props.classes.rightColumnFix}>
                                     <Container>
                                         <Tab
-                                            defaultActiveIndex={ defaultActiveIndex }
-                                            menu={ { attached: false, secondary: true, pointing: false, size: 'mini' } }
-                                            panes={ analysisResults }
-                                            renderActiveOnly={ false } />
+                                            defaultActiveIndex={defaultActiveIndex}
+                                            menu={{ attached: false, secondary: true, pointing: false, size: 'mini' }}
+                                            panes={analysisResults}
+                                            renderActiveOnly={false} />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -622,7 +645,7 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: 'Grammar',
                 render: () => (
-                    <Tab.Pane key='grammar' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
+                    <Tab.Pane key='grammar' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
                         <ParserParameters />
                     </Tab.Pane>
                 )
@@ -630,28 +653,28 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key='ver' position='right' inverted disabled color='red'>
-                        <Version classes={ props.classes } />
+                        <Version classes={props.classes} />
                     </Menu.Item>),
                 render: () => null
             }
         ];
 
         return (
-            <div className={ props.classes.mainContentHotfix }>
+            <div className={props.classes.mainContentHotfix}>
                 <Sidebar.Pushable>
                     <Sidebar
-                        as={ Segment }
+                        as={Segment}
                         animation='overlay'
                         vertical
-                        visible={ this.state.showFileBrowser }
-                        className={ this.props.classes.fileBrowserSidebarFix }
+                        visible={this.state.showFileBrowser}
+                        className={this.props.classes.fileBrowserSidebarFix}
                     >
                         <FileListView
                             path='./assets/fx/tests/'
-                            filters={ ['.fx'] }
-                            onFileClick={ (file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); } } />
+                            filters={['.fx']}
+                            onFileClick={(file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); }} />
                     </Sidebar>
-                    <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
+                    <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
                         {
                             /*
                                 NOTE: "renderActiveOnly" should always be true
@@ -660,17 +683,17 @@ class App extends React.Component<IAppProps> {
                             */
                         }
                         <Tab
-                            menu={ { secondary: true, pointing: true } }
-                            panes={ panes }
-                            renderActiveOnly={ true }
+                            menu={{ secondary: true, pointing: true }}
+                            panes={panes}
+                            renderActiveOnly={true}
                             size='tiny'
-                            className={ props.classes.topMenuFix } />
+                            className={props.classes.topMenuFix} />
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
-                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
-                        <Icon name={ 'three bars' as UnknownIcon } />
+                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={props.classes.sidebarLeftHotfix}>
+                    <Menu.Item name='home' onClick={this.handleShowFileBrowser} >
+                        <Icon name={'three bars' as UnknownIcon} />
                         File Browser
                         </Menu.Item>
                 </Menu>

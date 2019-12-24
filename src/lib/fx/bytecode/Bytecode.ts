@@ -4,16 +4,18 @@ import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstr
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IScope } from "@lib/idl/IInstruction";
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+import { Diagnostics } from "@lib/util/Diagnostics";
+
 
 export interface ISubProgram {
     code: Uint8Array;
@@ -84,28 +86,8 @@ function binary(ctx: IContext): Uint8Array {
 }
 
 
-// function translateAsExpression(ctx: IContext, expr: IExprInstruction): ISubProgram {
-//     const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
-//     // NOTE: it does nothing at the momemt :/
-//     debug.beginCompilationUnit('[todo]');
-//     // simulate function call()
-//     let ret = alloca(expr.type.size);
-//     push(null, ret);
-//     // translate Unknown has a specific implementation for expression
-//     // which will write expression's value to the ret address allocated above
-//     translateUnknown(ctx, expr);
-//     pop();
-//     debug.endCompilationUnit();
-
-//     let code = binary(ctx);      // todo: stay only binary view
-//     let cdl = debug.dump();      // code debug layout;
-
-//     return { code, constants, cdl };
-// }
-
-
-function translateAsProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
+function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
     const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
     // NOTE: it does nothing at the momemt :/
@@ -203,7 +185,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
             const op: EOperation = opFloatMap[opName];
             if (!isDef(op)) {
-                diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                diag.error(EErrors.k_UnsupportedArithmeticExpr, {});
                 return PromisedAddress.INVALID;
             }
 
@@ -236,7 +218,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
             const op: EOperation = opIntMap[opName];
             if (!isDef(op)) {
-                diag.critical(EErrors.k_UnsupportedArithmeticExpr, {});
+                diag.error(EErrors.k_UnsupportedArithmeticExpr, {});
                 return PromisedAddress.INVALID;
             }
 
@@ -473,7 +455,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const init = expr as IInitExprInstruction;
 
                     if (init.isArray()) {
-                        diag.critical(EErrors.k_UnsupportedExprType, {});
+                        diag.error(EErrors.k_UnsupportedExprType, {});
+                        return PromisedAddress.INVALID;
                     }
 
                     let arg = init.args[0];
@@ -646,11 +629,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         op = opFloatMap[relExpr.operator];
                     } else {
                         // todo: add type description
-                        diag.critical(EErrors.k_UnsupportedRelationalExpr, {});
+                        diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                        return PromisedAddress.INVALID;
                     }
 
                     if (!isDef(op)) {
-                        diag.critical(EErrors.k_UnsupportedExprType, {});
+                        diag.error(EErrors.k_UnsupportedExprType, {});
                         return PromisedAddress.INVALID;
                     }
 
@@ -695,7 +679,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         op = EOperation.k_I32ToF32;
                     } else {
                         // todo: add type descriptions
-                        diag.critical(EErrors.k_UnsupoortedTypeConversion, {});
+                        diag.error(EErrors.k_UnsupoortedTypeConversion, {});
                         return PromisedAddress.INVALID;
                     }
 
@@ -1131,30 +1115,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
     }
 
-    // specific workaround for expression tranlsations
-    // function translateExpr(expr: IExprInstruction)
-    // {
-    //     if (isNull(expr)) {
-    //         return null;
-    //     }
-        
-    //     let src = raddr(expr);
-    //     if (src.type !== EAddrType.k_Registers) {
-    //         src = iload(src);
-    //         debug.map(expr);
-    //     }
-
-    //     const dest = ret();
-    //     assert(src.size === ret().size);
-    //     imove(dest, src);
-    //     debug.map(expr);
-    // }
-
-    // if (instruction.isExpression(instr)) {
-    //     translateExpr(instr as IExprInstruction);
-    //     return;
-    // }
-
     translate(instr);
 }
 
@@ -1174,7 +1134,7 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
             console.error(`Entry point '${entryFunc.name}' not found.`);
             return null;
         }
-        res = translateAsProgram(ctx, entryFunc);
+        res = translateProgram(ctx, entryFunc);
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
@@ -1184,16 +1144,15 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
 }
 
 
-// export function translateExpression(expr: IExprInstruction): ISubProgram {
-//     let ctx = ContextBuilder();
-//     let res: ISubProgram = null;
-
-//     try {
-//         res = translateAsExpression(ctx, expr);
-//     } catch (e) {
-//         throw e;
-//         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
-//     }
-//     return res;
-// }
+export async function translateExpression(expr: string, scope?: IScope): Promise<ISubProgram> {
+    const uri = '://expression';
+    const anonymousFuncName = `anonymous`;
+    const source = `auto ${anonymousFuncName}() { return (${expr}); }`;
+    const document = await createFXSLDocument({ source, uri }, undefined, scope);
+    if (!document.diagnosticReport.errors) {
+        return translate(document.root.scope.findFunction(anonymousFuncName, null));
+    }
+    console.error(Diagnostics.stringify(document.diagnosticReport));
+    return null;
+}
 

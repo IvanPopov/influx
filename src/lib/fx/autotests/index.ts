@@ -10,6 +10,7 @@ import { END_SYMBOL } from "@lib/parser/symbols";
 import { cloneRange } from "@lib/parser/util";
 
 import { u8ArrayAsI32 } from "../bytecode/common";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 
 function nativeFromString(str) {
     switch(str.toLowerCase()) {
@@ -39,6 +40,7 @@ export interface ITestCase {
     expected: number | boolean;
     loc: IRange;
     passed?: boolean;
+    note?: string;
 }
 
 export interface ITest {
@@ -50,7 +52,7 @@ export interface ITest {
 
 export interface IAutotests {
     description: string;
-    document: ITextDocument;
+    document: ISLDocument;
     tests: ITest[];
     passed?: boolean;
 }
@@ -59,12 +61,12 @@ export interface IAutotests {
  * 
  * @param source SL text document with test markup inside.
  */
-export function parse(document: ITextDocument): IAutotests {
+export async function parse(textDocument: ITextDocument): Promise<IAutotests> {
     let description = null;
     let tests = [];
 
     // NOTE: temp solution (until the parser gets comment support)
-    exractComments(document).forEach((commentToken: IToken) => {
+    exractComments(textDocument).forEach((commentToken: IToken) => {
         let comment = commentToken.value.slice(2, -2);
         let list = comment
             .split('\n')
@@ -111,11 +113,11 @@ export function parse(document: ITextDocument): IAutotests {
 
             // FIXME: dirty hack in order to make the range correct
             loc.start.line += line;
-            loc.start.offset = -1;
-            loc.start.column = 0;
+            // loc.start.offset = -1;
+            loc.start.column = 3; // hack in order to simulate offset of beginning of the comment line => ' * '
             loc.end.line = loc.start.line;
-            loc.end.offset = loc.start.offset;
-            loc.end.column = loc.start.column + 1;
+            // loc.end.offset = loc.start.offset;
+            loc.end.column = loc.start.column + parts.join(' ').length;
 
             switch (ruleName) {
                 case '@autotests':
@@ -153,28 +155,30 @@ export function parse(document: ITextDocument): IAutotests {
         }
     });
 
+    const document = await createFXSLDocument(textDocument);
     return { description, document, tests };
 }
 
 
-export async function run(test: ITest, scope: IScope): Promise<boolean> {
+async function runTest(test: ITest, scope: IScope) {
     const { cases } = test;
     for (let exam of cases) {
         const { expr, expected } = exam;
-        const uri = '://test';
-        const source = `auto anonymous() { return (${expr}); }`;
-        const document = await createFXSLDocument({ source, uri }, undefined, scope);
-        if (!document.diagnosticReport.errors) {
-            const func = document.root.scope.findFunction('anonymous', null);
-            let { code } = Bytecode.translate(func);
-            const result = u8ArrayAsI32(VM.evaluate(code));
-            exam.passed = result === expected;
-            if (!exam.passed) {
-                console.log(`expected: ${expected}, given: ${result}`);
-            }
+        const result = u8ArrayAsI32(await VM.evaluate(expr, scope));
+        exam.passed = result === expected;
+        if (!exam.passed) {
+            exam.note = `Test failed. Expected is '${expected}', but given is '${result}'`;
         }
     }
 
     test.passed = cases.reduce((acc, exam) => (acc && exam.passed), true);
-    return test.passed;
+}
+
+
+export async function run(autotests: IAutotests) {
+    autotests.passed = true;
+    for (const test of autotests.tests) {
+        await runTest(test, autotests.document.root.scope);
+        autotests.passed = autotests.passed && test.passed;
+    }
 }

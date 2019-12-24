@@ -1,8 +1,10 @@
-import { assert, isDefAndNotNull } from "@lib/common";
+import { assert, isDefAndNotNull, isString } from "@lib/common";
 import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
+import * as Bytecode from '@lib/fx/bytecode';
 
 import { i32ToU8Array, u8ArrayToI32 } from "./common";
+import { IScope } from "@lib/idl/IInstruction";
 
 // // import { remote } from 'electron';
 // import * as isElectron from 'is-electron-renderer';
@@ -295,7 +297,17 @@ export function play(pack: Bundle): Uint8Array {
 }
 
 
-export function evaluate(code: Uint8Array): Uint8Array {
+export async function evaluate(code: Uint8Array): Promise<Uint8Array>;
+export async function evaluate(expr: string, scope?: IScope): Promise<Uint8Array>;
+export async function evaluate(param: string | Uint8Array, param2?: IScope): Promise<Uint8Array> {
+    let code: Uint8Array;
+    if (isString(arguments[0])) {
+        const program = await Bytecode.translateExpression(arguments[0], arguments[1]);
+        code = program.code;
+    } else {
+        code = arguments[0];
+    }
     return play(load(code));
 }
+
 

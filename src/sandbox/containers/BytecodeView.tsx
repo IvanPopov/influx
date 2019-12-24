@@ -3,7 +3,7 @@
 
 import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
-import { u8ArrayAsI32, u8ArrayAsF32, u8ArrayAsF32 } from '@lib/fx/bytecode/common';
+import { u8ArrayAsI32, u8ArrayAsF32 } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EChunkType } from '@lib/idl/bytecode';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
@@ -123,8 +123,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                         </Table.Footer>
                     }
                 </Table>
-                <Button animated onClick={ () => {
-                    const u8a = VM.evaluate(code);
+                <Button animated onClick={ async () => {
+                    const u8a = await VM.evaluate(code);
                     switch(layout) {
                         case 'f32':
                             alert(u8ArrayAsF32(u8a));

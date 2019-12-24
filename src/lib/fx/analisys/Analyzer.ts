@@ -3481,7 +3481,7 @@ export class Analyzer {
 
     async parse(slastDocument: ISLASTDocument, scope?: IScope): Promise<ISLDocument> {
         const uri = slastDocument.uri;
-        console.time(`analyze(${uri})`);
+        // console.time(`analyze(${uri})`);
 
         const program = this.createProgram(scope);
         const context = this.createContext(uri);
@@ -3497,7 +3497,7 @@ export class Analyzer {
             console.error(e);
         }
 
-        console.timeEnd(`analyze(${uri})`);
+        // console.timeEnd(`analyze(${uri})`);
 
         assert(program.currentScope == program.globalScope);
 

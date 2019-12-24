@@ -185,8 +185,8 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 
         if (!isNull(file.slDocument.root)) {
             const scope = getScope(file);
-            // const func = scope.findFunction(expression, null);
-
+            
+            // TODO: use VM.evaluate() instead.
             const uri = '://expression';
             const source = `auto anonymous() { return (${expression}); }`;
             const document = await createFXSLDocument({ source, uri }, undefined, scope);
