@@ -1,9 +1,15 @@
 import { assert, isEmpty, isNull } from "@lib/common";
-import { Lexer } from "@lib/parser/Lexer";
-import { IToken, ETokenType, IRange } from "@lib/idl/parser/IParser";
-import { END_SYMBOL } from "@lib/parser/symbols";
+import * as Bytecode from '@lib/fx/bytecode';
+import * as VM from '@lib/fx/bytecode/VM';
+import { createFXSLDocument } from "@lib/fx/FXSLDocument";
+import { IScope } from "@lib/idl/IInstruction";
 import { ITextDocument } from "@lib/idl/ITextDocument";
+import { ETokenType, IRange, IToken } from "@lib/idl/parser/IParser";
+import { Lexer } from "@lib/parser/Lexer";
+import { END_SYMBOL } from "@lib/parser/symbols";
 import { cloneRange } from "@lib/parser/util";
+
+import { u8ArrayAsI32 } from "../bytecode/common";
 
 function nativeFromString(str) {
     switch(str.toLowerCase()) {
@@ -148,4 +154,24 @@ export function parse(document: ITextDocument): IAutotests {
     });
 
     return { description, document, tests };
+}
+
+
+export async function run(test: ITest, scope: IScope): Promise<boolean> {
+    const { cases } = test;
+    for (let exam of cases) {
+        const { expr, expected } = exam;
+        const uri = '://test';
+        const source = `auto anonymous() { return (${expr}); }`;
+        const document = await createFXSLDocument({ source, uri }, undefined, scope);
+        if (!document.diagnosticReport.errors) {
+            const func = document.root.scope.findFunction('anonymous', null);
+            let { code } = Bytecode.translate(func);
+            const result = u8ArrayAsI32(VM.evaluate(code));
+            exam.passed = result === expected;
+        }
+    }
+
+    test.passed = cases.reduce((acc, exam) => (acc && exam.passed), true);
+    return test.passed;
 }

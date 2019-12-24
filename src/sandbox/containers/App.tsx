@@ -240,15 +240,19 @@ class App extends React.Component<IAppProps> {
 
     
     @autobind
-    runAutotests() {
+    async runAutotests() {
         const { content: source, uri } = getFileState(this.props);
         const { description, tests } = autotests.parse({ source, uri });
 
         console.log(description);
-        tests.forEach(test => {
+        for (const test of tests) {
             this.highlightTest(test, false);
-            this.highlightTest(test);
-        });
+            if (await autotests.run(test, getScope(getFileState(this.props)))) {
+                this.highlightTest(test, true, 0x00FF00);
+            } else {
+                this.highlightTest(test, true, 0xFF0000);
+            }
+        }
     }
 
     @autobind
@@ -288,17 +292,16 @@ class App extends React.Component<IAppProps> {
     }
 
     /** @deprecated */
-    highlightTest(test: autotests.ITest, show: boolean = true) {
+    highlightTest(test: autotests.ITest, show: boolean = true, color = 0xFFFFFF) {
         const markerName = `ast-range-${test.name}`;
         if (show) {
-            
             const range = this.resolveLocation(test.loc);
             this.props.actions.addMarker({
                 name: markerName,
                 range,
                 type: `line`,
                 payload: {
-                    color: 0xffffff
+                    color
                 }
             });
         } else {
