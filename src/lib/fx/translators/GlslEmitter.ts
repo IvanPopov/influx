@@ -43,7 +43,7 @@ export class GlslEmitter extends CodeEmitter {
         if (this.isMain() && this.mode !== 'raw') {
             if (pfxp.element.instructionType === EInstructionTypes.k_IdExpr) {
                 const id = pfxp.element as IdExprInstruction;
-                if (id.decl.isParameter() && !id.decl.isUniform()) {
+                if (id.decl.isParameter() && !id.decl.type.isUniform()) {
                     return true;
                 }
             }
@@ -65,7 +65,7 @@ export class GlslEmitter extends CodeEmitter {
         this.begin();
         {
             for (const param of def.params) {
-                if (param.isUniform()) {
+                if (param.type.isUniform()) {
                     continue;
                 }
 
@@ -91,7 +91,7 @@ export class GlslEmitter extends CodeEmitter {
         this.begin();
         {
             for (const param of def.params) {
-                if (!param.isUniform()) {
+                if (!param.type.isUniform()) {
                     continue;
                 }
 

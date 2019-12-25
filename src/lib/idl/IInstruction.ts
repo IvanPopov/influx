@@ -336,16 +336,11 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly initExpr: IInitExprInstruction;
 
     readonly defaultValue: any;
-
-
+    
     isParameter(): boolean;
     isLocal(): boolean;
     isGlobal(): boolean;
-
     isField(): boolean;
-
-    /** Alias for type.isUniform() */
-    isUniform(): boolean;
 }
 
 

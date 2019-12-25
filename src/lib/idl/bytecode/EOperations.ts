@@ -2,16 +2,16 @@ export enum EOperation {
     // note: assuming that Load is 32bit and Move is 32bit too
     k_I32LoadRegister,          // registers => registers
     k_I32LoadInput,             // input => registers
-    k_I32LoadConst,             // constant => registers
     
     k_I32LoadInputPointer,      // input pointer => register
     k_I32LoadRegistersPointer,  // register pointer => register
-
+    
     k_I32StoreRegisterPointer,  // register => register pointer
     
     k_I32StoreInput,            // registers => input
     k_I32StoreInputPointer,     // register => input pointer
-
+    
+    k_I32SetConst,              // set constant => registers
 
     //
     // Arithemtic operations

@@ -18,12 +18,18 @@ import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 
+export const CBUFFER0_REGISTER = 0;
+export const INPUTS_REGISTER = 1;
+
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
     code: Uint8Array;
     constants: ConstanPool;
     cdl: CdlRaw;
+
+    // function return value layout
     layout: ITypeInstruction; // << FIXME: move to cdl
+    
     // diagnosticReport: IDiagnosticReport;
     // uri: string
 }
@@ -110,7 +116,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
             continue;
         }
 
-        const inputIndex = variable.parameterIndex(param);
+        const inputIndex = variable.parameterIndex(param) + INPUTS_REGISTER;
         const size = param.type.size;
         const src = loc({ type: EAddrType.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
@@ -149,10 +155,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         iop2,
         iop1,
         iload,
+        iset,
+        iconst_i32,
+        iconst_f32,
         ret,
         depth,
         instructions
     } = ctx;
+
 
     // NOTE: pc - number of written instructions
     // NOTE: rc - number of occupied registers
@@ -323,7 +333,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             const n = size / sizeof.f32();
             const swizzle = Array(n).fill(0);
 
-            let one = iload(constants.f32(1.0));
+            let one = iconst_f32(1.0);
             // todo: fix bu with vectored koef.
             let kInv: PromisedAddress;
             if (k.size === sizeof.f32()) {
@@ -355,9 +365,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
 
         if (decl.isGlobal()) {
-            if (decl.isUniform()) {
-                return EAddrType.k_Constants;
+            if (decl.type.isUniform()) {
+                return EAddrType.k_Input;
             }
+            // if (decl.type.isUAV()) {
+            //     return EAddrType.k_Input;
+            // }
             assert(false, 'unsupported');
         }
 
@@ -472,19 +485,19 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case EInstructionTypes.k_BoolExpr:
                 {
                     const i32 = (expr as ILiteralInstruction<boolean>).value ? 1 : 0;
-                    return constants.i32(i32);
+                    return iconst_i32(i32);
                 }
                 break;
             case EInstructionTypes.k_IntExpr:
                 {
                     const i32 = (expr as ILiteralInstruction<number>).value;
-                    return constants.i32(i32);
+                    return iconst_i32(i32);
                 }
                 break;
             case EInstructionTypes.k_FloatExpr:
                 {
                     const f32 = (expr as ILiteralInstruction<number>).value;
-                    return constants.f32(f32);
+                    return iconst_f32(f32);
                 }
                 break;
             case EInstructionTypes.k_IdExpr:
@@ -503,18 +516,19 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             }
                         case EAddrType.k_Input:
                             {
+                                // CBUFFER0_REGISTER input is always being used for hidden constant buffer (uniform constants)
+                                if (decl.type.isUniform()) {
+                                    return constants.deref(decl);
+                                } 
+
                                 // implies that each parameter is loaded from its stream, so 
                                 // the offset is always zero. 
                                 // Otherwise use 'variable.getParameterOffset(decl);'
                                 // in order to determ correct offset between parameters
                                 const offset = 0;
                                 const src = offset;
-                                const inputIndex = variable.parameterIndex(decl);
+                                const inputIndex = variable.parameterIndex(decl) + INPUTS_REGISTER;
                                 return loc({ inputIndex, addr: src, size, type: addrType });
-                            }
-                        case EAddrType.k_Constants:
-                            {
-                                return constants.deref(id.decl);
                             }
                     }
 
@@ -578,12 +592,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         switch (op) {
                             case '-':
 
-                                let constant = constants.i32(-1);
-                                if (constant.type !== EAddrType.k_Registers) {
-                                    constant = iload(constant);
-                                }
-
-
+                                const constant = iconst_i32(-1);
                                 intrinsics.arithi('*', dest, constant, src);
                                 debug.map(unary);
                                 return dest;
@@ -593,11 +602,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         switch (op) {
                             case '-':
 
-                                let constant = constants.f32(-1.0);
-                                if (constant.type !== EAddrType.k_Registers) {
-                                    constant = iload(constant);
-                                }
-
+                                const constant = iconst_f32(-1.0);
                                 intrinsics.arithf('*', dest, constant, src);
                                 debug.map(unary);
                                 return dest;
@@ -743,7 +748,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const { element, index } = postfixIndex;
 
                     assert(type.equals(index.type, T_INT) || type.equals(index.type, T_UINT));
-                    assert(element.type.isNotBaseArray());
+                    // assert(element.type.isNotBaseArray());
                     assert(!isNull(element.type.arrayElementType));
 
                     if (/*index.isConstExpr()*/false) {
@@ -755,7 +760,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         // sizeof(element[i])
                         let arrayElementSize = element.type.arrayElementType.size;
-                        let sizeAddr = constants.i32(arrayElementSize);
+                        let sizeAddr = iconst_i32(arrayElementSize);
                         // NOTE: size can be unresolved yet
 
                         // index => index of element in the array (element)
@@ -769,14 +774,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             elementAddr = iload(elementAddr);
                         }
 
-                        let baseAddr = constants.addr(elementAddr.addr);
-
-                        let pointerAddr = alloca(sizeof.addr()); // addr <=> i32
+                        let baseAddr = iconst_i32(elementAddr.addr);    // TODO: use iconst_addr()
+                        let pointerAddr = alloca(sizeof.addr());        // addr <=> i32
 
                         // load all to registers
-                        if (baseAddr.type !== EAddrType.k_Registers) baseAddr = iload(baseAddr);
                         if (indexAddr.type !== EAddrType.k_Registers) indexAddr = iload(indexAddr);
-                        if (sizeAddr.type !== EAddrType.k_Registers) sizeAddr = iload(sizeAddr);
 
                         intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
                         debug.map(postfixIndex);

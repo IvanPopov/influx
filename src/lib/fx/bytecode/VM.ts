@@ -5,8 +5,9 @@ import { IScope, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 
-import { i32ToU8Array, u8ArrayAsF32, u8ArrayAsI32, u8ArrayToI32 } from "./common";
+import { u8ArrayAsF32, u8ArrayAsI32, u8ArrayToI32 } from "./common";
 import InstructionList from "./InstructionList";
+import { CBUFFER0_REGISTER } from "./Bytecode";
 
 // // import { remote } from 'electron';
 // import * as isElectron from 'is-electron-renderer';
@@ -76,24 +77,12 @@ class VM {
     static regs = new Uint8Array(VM.$regs);
 
     static play(data: Bundle): Uint8Array {
+        const ilist = data.instructions;
+        const iregs = VM.iregs;
+        const fregs = VM.fregs;
+        const iinput = data.input;
+        
         let i5 = 0;                      // current instruction;
-        let ilist = data.instructions;
-
-        let iregs = VM.iregs;
-        let fregs = VM.fregs;
-
-        let $cb = data.constants;
-        let icb = new Int32Array($cb.buffer, $cb.byteOffset);
-        // let fcb = new Float32Array($cb.buffer, $cb.byteOffset);
-
-        // TODO: handle correctly empty input
-        // TODO: don't allocate inputs here
-        let $input = data.input || [];
-        for (let i = 0; i < 3; ++i) {
-            $input[i] = $input[i] || new Uint8Array(0);
-        }
-        let iinput = $input.map(u8 => new Int32Array(u8.buffer, u8.byteOffset));
-
         end:
         while (i5 < ilist.length) {
             let op = ilist[i5];
@@ -103,8 +92,8 @@ class VM {
             let d = ilist[i5 + 4];
 
             switch (op) {
-                case EOperation.k_I32LoadConst:
-                    iregs[a] = icb[b];
+                case EOperation.k_I32SetConst:
+                    iregs[a] = b;
                     break;
                 case EOperation.k_I32LoadInput:
                     iregs[b] = iinput[a][c];
@@ -286,10 +275,10 @@ class VM {
 }
 
 interface Bundle {
-    instructions: Uint32Array;
-    constants: Uint8Array;
-    input: Uint8Array[];
-    layout: IMap<number>;
+    readonly instructions: Uint32Array;
+    readonly input: Int32Array[];
+    // constants layout
+    readonly layout: IMap<number>;
 }
 
 export function load(code: Uint8Array): Bundle {
@@ -304,9 +293,11 @@ export function load(code: Uint8Array): Bundle {
     let instructions = decodeCodeChunk(codeChunk);
     let constants = decodeConstChunk(constChunk);
     let layout = decodeLayoutChunk(layoutChunk);
-    let input = null;
+    let input: Int32Array[] = Array(64).fill(null);
 
-    return { instructions, constants, input, layout };
+    input[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset);
+
+    return { instructions, input, layout };
 }
 
 export function play(pack: Bundle): Uint8Array {
@@ -376,6 +367,31 @@ export function resetRegisters(): void {
     VM.regs.fill(0);
 }
 
+
+export async function prebuild(code: Uint8Array): Promise<Bundle>;
+export async function prebuild(expr: string, document: ISLDocument): Promise<Bundle>;
+export async function prebuild(param: string | Uint8Array, param2?: ISLDocument): Promise<Bundle> {
+    if (MODE === 'development') {
+        resetRegisters();
+    }
+
+    let code: Uint8Array;
+    if (isString(arguments[0])) {
+        const expr = <string>arguments[0];
+        const slDocument = <ISLDocument>arguments[1];
+        const program = await Bytecode.translateExpression(expr, slDocument);
+        if (isNull(program)) {
+            return null;
+        }
+        code = program.code;
+    } else {
+        code = arguments[0];
+    }
+
+    return load(code);
+}
+
+// TODO: use bundle inside
 export async function evaluate(code: Uint8Array): Promise<any>;
 export async function evaluate(expr: string, document: ISLDocument): Promise<any>;
 export async function evaluate(param: string | Uint8Array, param2?: ISLDocument): Promise<any> {

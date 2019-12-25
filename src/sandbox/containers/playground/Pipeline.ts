@@ -57,13 +57,17 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
     const bundle = VM.load(code);
     return {
         run(...input: Uint8Array[]) {
-            return VM.play({ ...bundle, input });
+            for (let i = 0; i < input.length; ++i) {
+                // TODO: don't convert u8 to i32 here.
+                bundle.input[Bytecode.INPUTS_REGISTER + i] = new Int32Array(input[i].buffer, input[i].byteOffset, input[i].byteLength >> 2);
+            }
+            return VM.play(bundle);
         },
 
         setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean {
             const layout = bundle.layout;
             const offset = layout[name];
-            const constants = bundle.constants;
+            const constants = bundle.input[0];
 
             if (!isDef(offset)) {
                 return false;

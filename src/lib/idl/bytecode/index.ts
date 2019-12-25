@@ -3,11 +3,9 @@ export { EOperation } from "./EOperations"
 export enum EAddrType {
     k_Registers,
     k_Input,
-    k_Constants,
-    
+
     k_PointerRegisters,
-    k_PointerInput,
-    k_PointerConstants
+    k_PointerInput
 };
 
 export enum EChunkType {

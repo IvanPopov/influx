@@ -40,8 +40,13 @@ class InstructionList {
 
         // NOTE: keep order as it is done in the VM.ts
         switch (op) {
+            case EOperation.k_I32SetConst:
+                assert(args.length == 3);
+                args[0] >>= 2;
+                // args[1] => constant itself
+                // args[2] => hint about what type lies in the constant
+                break;
             case EOperation.k_I32LoadRegister:
-            case EOperation.k_I32LoadConst:
             case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32LoadRegistersPointer:
             case EOperation.k_I32StoreRegisterPointer:

@@ -5,7 +5,7 @@ import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IIn
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-import { sname } from "./common";
+import { sname, f32Asi32 } from "./common";
 import ConstanPool from "./ConstantPool";
 import debugLayout from './DebugLayout';
 import InstructionList from "./InstructionList";
@@ -67,8 +67,7 @@ export function ContextBuilder() {
         retRequests: number[];
     }[] = [];
 
-    // global symbol table for all constants loaded during bytecode generation process
-    const constSymbols = new SymbolTable<PromisedAddress>();
+
     const instructions = new InstructionList;
     const constants = new ConstanPool;
 
@@ -232,15 +231,6 @@ export function ContextBuilder() {
                                     src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
-                        case EAddrType.k_Constants:
-                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
-                            assert(dest.type === EAddrType.k_Registers);
-                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                                icode(EOperation.k_I32LoadConst,
-                                    dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
-                                    src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
-                            }
-                            break;
                         case EAddrType.k_PointerRegisters:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
@@ -314,24 +304,30 @@ export function ContextBuilder() {
         assert(src.type !== EAddrType.k_Registers);
 
         let dest: PromisedAddress = null;
-        // Special case for constants
-        // Implementation of the global caching for all constantns across the program
-        // if (src.location === EMemoryLocation.k_Constants) {
-        //     dest = cderef(src);
-        //     if (dest === PromisedAddress.INVALID) {
-        //         dest = alloca(src.size);
-        //         imove(dest, src);
-        //         cref(src, dest);
-        //     }
-        // } else {
         dest = alloca(src.size);
         imove(dest, src);
-        // }
 
         return dest;
     }
 
 
+    const I32_HINT = 0;
+    const F32_HINT = 1;
+    // hint: 0 -> i32, 1 -> f32 (hints for bytecode viewer only)
+    function iset(dest: PromisedAddress, i32: number, i32Hint: 0 | 1): PromisedAddress {
+        assert(dest.type === EAddrType.k_Registers);
+        icode(EOperation.k_I32SetConst, dest.addr + (dest.swizzle ? dest.swizzle[0] : 0) * sizeof.i32(), i32, i32Hint);
+        return dest;
+    }
+
+
+    function iconst_i32(i32: number): PromisedAddress {
+        return iset(alloca(sizeof.i32()), i32, I32_HINT);
+    }
+
+    function iconst_f32(f32: number): PromisedAddress {
+        return iset(alloca(sizeof.f32()), f32Asi32(f32), F32_HINT);
+    }
 
 
     /**
@@ -362,22 +358,6 @@ export function ContextBuilder() {
         }
         assert(false, `cannot dereference varaible ${name} (${decl.toCode()})`);
         return PromisedAddress.INVALID;
-    }
-
-
-    /** Same as ref but for constants only */
-    function cref(caddr: PromisedAddress, raddr: PromisedAddress): void {
-        assert(raddr.type === EAddrType.k_Registers &&
-            caddr.type === EAddrType.k_Constants);
-        assert(!isDef(constSymbols[caddr.addr]));
-        constSymbols[caddr.addr] = loc(raddr);
-    }
-
-
-    /** Derederence for constants */
-    function cderef(src: PromisedAddress): PromisedAddress {
-        assert(src.type === EAddrType.k_Constants);
-        return constSymbols[src.addr] || PromisedAddress.INVALID;
     }
 
 
@@ -413,12 +393,15 @@ export function ContextBuilder() {
         debug,
         deref,
         ref,
-        cderef,
-        cref,
+        // cderef,
+        // cref,
         alloca,
         icode,
         imove,
         iload,
+        iset,
+        iconst_i32,
+        iconst_f32,
         iop4,
         iop3,
         iop2,

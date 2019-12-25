@@ -340,10 +340,10 @@ export class CodeEmitter extends BaseEmitter {
         // TODO: add support of main arguments with basic types (attributes)
         // }
 
-        const isUniformArg = this.isMain() && decl.isParameter() && decl.isUniform();
+        const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
         if (decl.isGlobal() || isUniformArg) {
-            assert(decl.isUniform());
+            assert(decl.type.isUniform());
 
             if (this.knownGlobals.indexOf(name) === -1) {
                 this.begin();

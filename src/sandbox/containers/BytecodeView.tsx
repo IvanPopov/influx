@@ -3,7 +3,7 @@
 
 import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
-import { u8ArrayAsF32, u8ArrayAsI32 } from '@lib/fx/bytecode/common';
+import { u8ArrayAsF32, u8ArrayAsI32, i32Asf32 } from '@lib/fx/bytecode/common';
 import InstructionList from '@lib/fx/bytecode/InstructionList';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EChunkType } from '@lib/idl/bytecode';
@@ -39,8 +39,8 @@ const REG_NAMES = {
     [0x100]: 'rax' // todo: get register adresses from bytecode generator
 };
 
-
-
+const float = (v: number) => String(v).indexOf('.') === -1 ? `${v}.f` : `${v}f`;
+const fixPrecision = (v: number, precision = 2) => Math.floor(v * Math.pow(10, 2)) / Math.pow(10, 2);
 const hex2 = (v: number) => `0x${minWidth(v.toString(16), 2, '0')}`;
 const hex4 = (v: number) => `0x${minWidth(v.toString(16), 4, '0')}`;
 const reg = (v: number) => REG_NAMES[v] || `[${hex2(v >>> 0)}]`;    // register address;
@@ -104,19 +104,19 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         return (
             // fixed
             <div>
-                <Table size='small' unstackable basic compact style={ { fontFamily: 'consolas', whiteSpace: 'pre' } }>
-                    <Table.Body style={ {
+                <Table size='small' unstackable basic compact style={{ fontFamily: 'consolas', whiteSpace: 'pre' }}>
+                    <Table.Body style={{
                         maxHeight: 'calc(100vh - 432px)',
                         overflowY: 'auto',
                         display: 'block'
-                    } }>
-                        { this.renderOpList(ilist) }
+                    }}>
+                        {this.renderOpList(ilist)}
                     </Table.Body>
-                    { props.options.disableOptimizations &&
+                    {props.options.disableOptimizations &&
                         <Table.Footer>
                             <Table.Row >
-                                <Table.Cell colSpan={ 5 } inverted warning textAlign='center'
-                                    style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
+                                <Table.Cell colSpan={5} inverted warning textAlign='center'
+                                    style={{ padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}
                                 >
                                     optimizations are disabled
                             </Table.Cell>
@@ -124,10 +124,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                         </Table.Footer>
                     }
                 </Table>
-                <Button animated onClick={ async () => {
+                <Button animated onClick={async () => {
                     const result = VM.asNative(await VM.evaluate(code), layout);
                     alert(JSON.stringify(result, null, '   '));
-                } }>
+                }}>
                     <Button.Content visible>Run</Button.Content>
                     <Button.Content hidden>
                         <Icon name='rocket' />
@@ -152,7 +152,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         const args = [op[1], op[2], op[3], op[4]];
         switch (op[3]) {
             default:
-                return this.renderOpInternal(code, args.map(String));
+                return this.renderOpInternal(code, args);
         }
     }
 
@@ -165,11 +165,16 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
     }
 
 
-    renderOpInternal(code: EOperation, args: string[]) {
+    renderOpInternal(code: EOperation, args: number[]) {
         const i = this.state.count++;
         const { cdlView } = this.state;
 
         switch (code) {
+            case EOperation.k_I32SetConst:
+                args.length = 3;
+                // op, const, hint
+                break;
+
             case EOperation.k_I32LoadInput:
             case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32StoreInput:
@@ -181,43 +186,63 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_I32LogicalAnd:
                 args.length = 3;
                 break;
+
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
-            case EOperation.k_I32LoadConst:
             case EOperation.k_I32LoadRegister:
             case EOperation.k_I32LoadRegistersPointer:
             case EOperation.k_I32StoreRegisterPointer:
                 args.length = 2;
                 break;
+
             case EOperation.k_JumpIf:
             case EOperation.k_Jump:
                 args.length = 1;
                 break;
+
             case EOperation.k_Ret:
                 args.length = 0;
                 break;
+
             default:
         }
 
-        const pointer = (x) => `%${x}`;
+        switch (code) {
+            case EOperation.k_I32SetConst:
+                args[1] = args[2] == 1 ? fixPrecision(i32Asf32(args[1])) : args[1];
+                break;
+        }
+
+        //
+        // Convert all arguments to strings
+        //
+
+        let sArgs = args.map(String);
+
+        const pointer = (x: number) => `%${x}`;
 
         // tslint:disable-next-line:switch-default
         switch (code) {
             case EOperation.k_I32LoadInputPointer:
-                args[2] = pointer(args[2]);
+                sArgs[2] = pointer(args[2]);
                 break;
             case EOperation.k_I32LoadRegistersPointer:
-                args[1] = pointer(args[1]);
+                sArgs[1] = pointer(args[1]);
                 break;
             case EOperation.k_Jump:
-                args[0] = hex2(Number(args[0]) / InstructionList.STRIDE);
+                sArgs[0] = hex2(args[0] / InstructionList.STRIDE);
+                break;
+            case EOperation.k_I32SetConst:
+                if (args[2] === 1) { // is float
+                    sArgs[1] = float(args[1]);
+                    sArgs.length = 2;
+                }
+                break;
         }
 
-        // tslint:disable-next-line:no-parameter-reassignment
-        args = args.map(any4);
+        sArgs = sArgs.map(any4);
 
         let specColor = null;
-
         if (this.props.options.colorize) {
             specColor = {
                 padding: '0.2em 0',
@@ -228,14 +253,14 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         }
 
         return (
-            <Table.Row key={ `op-${code}-${i}` }
-                style={ { width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' } }
-                onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
-                <Table.Cell style={ specColor }></Table.Cell>
-                <Table.Cell style={ { padding: '0.2em 0.7em', width: '50px' } }>{ hex4(i) }</Table.Cell>
-                <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
-                <Table.Cell colSpan={ 2 } style={ { padding: '0.2em 0.7em' } }>
-                    { args.join(' ') }
+            <Table.Row key={`op-${code}-${i}`}
+                style={{ width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' }}
+                onMouseOver={() => this.showSourceLine(i)} onMouseOut={() => this.hideSourceLine(i)}>
+                <Table.Cell style={specColor}></Table.Cell>
+                <Table.Cell style={{ padding: '0.2em 0.7em', width: '50px' }}>{hex4(i)}</Table.Cell>
+                <Table.Cell style={{ padding: '0.2em 0.7em' }}>{scode(code)}</Table.Cell>
+                <Table.Cell colSpan={2} style={{ padding: '0.2em 0.7em' }}>
+                    {sArgs.join(' ')}
                 </Table.Cell>
             </Table.Row>
         );

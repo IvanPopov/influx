@@ -181,16 +181,16 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
         const debuggerState = getDebugger(getState());
         const expression = (action.payload && action.payload.expression) || debuggerState.expression || `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`;
 
-  
+
         if (!isNull(file.slDocument)) {
-            let runtime = await Bytecode.translateExpression(expression, file.slDocument);
-            if (!isNull(runtime)) {
+            const func = file.slDocument.root.scope.findFunction(expression, null);
+            // workaround for debug purposes (interpretations of the expressions string as function name)
+            if (func) {
+                const runtime = Bytecode.translate(func);
                 dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
             } else {
-                // workaround for debug purposes (interpretations of the expressions string as function name)
-                const func = file.slDocument.root.scope.findFunction(expression, null);
-                if (func) {
-                    runtime = Bytecode.translate(func);
+                const runtime = await Bytecode.translateExpression(expression, file.slDocument);
+                if (!isNull(runtime)) {
                     dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
                 } else {
                     alert('could not evaluate expression, see console log for details');

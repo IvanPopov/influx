@@ -472,7 +472,7 @@ function checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean
     for (let i: number = 0; i < params.length; i++) {
         let param = params[i];
 
-        if (param.isUniform()) {
+        if (param.type.isUniform()) {
             continue;
         }
 
@@ -524,7 +524,7 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
     for (let i: number = 0; i < params.length; i++) {
         let param: IVariableDeclInstruction = params[i];
 
-        if (param.isUniform()) {
+        if (param.type.isUniform()) {
             continue;
         }
 

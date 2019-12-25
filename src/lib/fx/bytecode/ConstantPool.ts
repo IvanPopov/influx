@@ -4,8 +4,9 @@ import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
 import PromisedAddress from "./PromisedAddress";
-import sizeof from "./sizeof";
+// import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
+import { CBUFFER0_REGISTER } from "./Bytecode";
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;
@@ -36,23 +37,23 @@ export class ConstantPoolMemory {
         this.byteArray = newBuffer;
     }
 
-    /** Write constant to buffer and update layout info. */
-    addInt32(i32: number, type: 'i32' | 'addr' = 'i32') {
-        this.check(sizeof.i32());
-        new DataView(this.byteArray.buffer).setInt32(this.byteLength, i32, true);
-        this.byteLength += sizeof.i32();
+    // /** Write constant to buffer and update layout info. */
+    // addInt32(i32: number, type: 'i32' | 'addr' = 'i32') {
+    //     this.check(sizeof.i32());
+    //     new DataView(this.byteArray.buffer).setInt32(this.byteLength, i32, true);
+    //     this.byteLength += sizeof.i32();
 
-        this.layout.push({ range: sizeof.i32(), value: i32, type: 'i32' });
-    }
+    //     this.layout.push({ range: sizeof.i32(), value: i32, type: 'i32' });
+    // }
 
-    /** Write constant to buffer and update layout info. */
-    addFloat32(f32: number) {
-        this.check(sizeof.f32());
-        new DataView(this.byteArray.buffer).setFloat32(this.byteLength, f32, true);
-        this.byteLength += sizeof.f32();
+    // /** Write constant to buffer and update layout info. */
+    // addFloat32(f32: number) {
+    //     this.check(sizeof.f32());
+    //     new DataView(this.byteArray.buffer).setFloat32(this.byteLength, f32, true);
+    //     this.byteLength += sizeof.f32();
 
-        this.layout.push({ range: sizeof.f32(), value: f32, type: 'f32' });
-    }
+    //     this.layout.push({ range: sizeof.f32(), value: f32, type: 'f32' });
+    // }
 
     /**
      * 
@@ -68,8 +69,8 @@ export class ConstantPoolMemory {
 
 export class ConstanPool {
     protected _data: ConstantPoolMemory = new ConstantPoolMemory;
-    protected _int32Map: SymbolTable<PromisedAddress> = new SymbolTable;
-    protected _float32Map: SymbolTable<PromisedAddress> = new SymbolTable;
+    // protected _int32Map: SymbolTable<PromisedAddress> = new SymbolTable;
+    // protected _float32Map: SymbolTable<PromisedAddress> = new SymbolTable;
 
     // variable name => addr map
     protected _variableMap: SymbolTable<PromisedAddress> = new SymbolTable;
@@ -77,44 +78,46 @@ export class ConstanPool {
     protected _semanticToNameMap: IMap<string> = {};
 
 
-    i32(i32: number, type: 'i32' | 'addr' = 'i32'): PromisedAddress {
-        let addr = this._int32Map[i32];
-        if (!isDef(addr)) {
-            this._int32Map[i32] = new PromisedAddress({
-                addr: this.size,
-                size: sizeof.i32(),
-                type: EAddrType.k_Constants
-            });
-            this._data.addInt32(i32, type);
-            return this._int32Map[i32];
-        }
-        // TODO: update layout tooltip
-        return addr;
-    }
+    // i32(i32: number, type: 'i32' | 'addr' = 'i32'): PromisedAddress {
+    //     let addr = this._int32Map[i32];
+    //     if (!isDef(addr)) {
+    //         this._int32Map[i32] = new PromisedAddress({
+    //             addr: this.size,
+    //             size: sizeof.i32(),
+    //             type: EAddrType.k_Input,
+    //             inputIndex: 0
+    //         });
+    //         this._data.addInt32(i32, type);
+    //         return this._int32Map[i32];
+    //     }
+    //     // TODO: update layout tooltip
+    //     return addr;
+    // }
 
 
-    f32(f32: number): PromisedAddress {
-        let addr = this._float32Map[f32];
-        if (!isDef(addr)) {
-            this._float32Map[f32] = new PromisedAddress({
-                addr: this.size,
-                size: sizeof.f32(),
-                type: EAddrType.k_Constants
-            });
-            this._data.addFloat32(f32);
-            return this._float32Map[f32];
-        }
-        return addr;
-    }
+    // f32(f32: number): PromisedAddress {
+    //     let addr = this._float32Map[f32];
+    //     if (!isDef(addr)) {
+    //         this._float32Map[f32] = new PromisedAddress({
+    //             addr: this.size,
+    //             size: sizeof.f32(),
+    //             type: EAddrType.k_Input,
+    //             inputIndex: 0
+    //         });
+    //         this._data.addFloat32(f32);
+    //         return this._float32Map[f32];
+    //     }
+    //     return addr;
+    // }
 
 
-    addr(i32: number): PromisedAddress {
-        return this.i32(i32, 'addr');
-    }
+    // addr(i32: number): PromisedAddress {
+    //     return this.i32(i32, 'addr');
+    // }
 
 
     deref(decl: IVariableDeclInstruction): PromisedAddress {
-        assert(decl.isGlobal() && decl.isUniform());
+        assert(decl.isGlobal() && decl.type.isUniform());
         const { name, semantic, initExpr, type: { size } } = decl;
 
         let addr = this._variableMap[name];
@@ -144,7 +147,8 @@ export class ConstanPool {
         this._data.addUniform(size, desc);
 
         return new PromisedAddress({
-            type: EAddrType.k_Constants,
+            type: EAddrType.k_Input,
+            inputIndex: CBUFFER0_REGISTER,
             addr,
             size
         });

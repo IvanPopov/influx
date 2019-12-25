@@ -92,10 +92,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    isUniform(): boolean {
-        return this.type.hasUsage('uniform');
-    }
-
 
     isField(): boolean {
         if (isNull(this.parent)) {
@@ -125,7 +121,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
         if (!isNull(this.initExpr) &&
             // !SystemScope.isSamplerType(this.type) && // TODO: is it correct check?
-            !this.isUniform()) {
+            !this.type.isUniform()) {
             code += '=' + this.initExpr.toCode();
         }
         return code;
