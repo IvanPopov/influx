@@ -1,15 +1,16 @@
 export enum EOperation {
     // note: assuming that Load is 32bit and Move is 32bit too
     k_I32LoadRegister,          // registers => registers
-    k_I32LoadInput,             // input memory => registers
-    k_I32LoadConst,             // constant memory => registers
+    k_I32LoadInput,             // input => registers
+    k_I32LoadConst,             // constant => registers
     
-    k_I32LoadRegistersPointer,
-    k_I32LoadInputPointer,
-    k_I32LoadConstPointer,
+    k_I32LoadInputPointer,      // input pointer => register
+    k_I32LoadRegistersPointer,  // register pointer => register
+
+    k_I32StoreRegisterPointer,  // register => register pointer
     
-    k_I32StoreInput,            // registers => input memory
-    // k_I32StoreInputPointer   // 
+    k_I32StoreInput,            // registers => input
+    k_I32StoreInputPointer,     // register => input pointer
 
 
     //
@@ -34,11 +35,20 @@ export enum EOperation {
     k_I32GreaterThan,
     k_I32LessThanEqual,
     k_I32GreaterThanEqual,
+    k_I32Equal,
+    k_I32NotEqual, // << replace with 2 instructions?
 
     k_F32LessThan,
     k_F32GreaterThan,
     k_F32LessThanEqual,
     k_F32GreaterThanEqual,
+
+    //
+    // Logical operations
+    //
+
+    k_I32LogicalOr,
+    k_I32LogicalAnd,
 
     //
     // intrinsics

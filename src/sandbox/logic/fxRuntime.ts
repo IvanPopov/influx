@@ -1,7 +1,7 @@
 // tslint:disable:no-for-in
 // tslint:disable:forin
 
-import { verbose } from '@lib/common';
+import { verbose, isNull } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
@@ -9,7 +9,6 @@ import Pipeline from '@sandbox/containers/playground/Pipeline';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import { isNull } from 'util';
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
     type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT ],

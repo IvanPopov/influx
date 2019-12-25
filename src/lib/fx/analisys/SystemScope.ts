@@ -1,4 +1,4 @@
-import { assert, isNull } from "@lib/common";
+import { assert, isNull, isObject } from "@lib/common";
 import { instruction, type } from "@lib/fx/analisys/helpers";
 import { FunctionDefInstruction } from "@lib/fx/analisys/instructions/FunctionDefInstruction";
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
@@ -10,7 +10,6 @@ import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
-import { isObject } from "util";
 
 // TODO: use it
 export enum ESystemTypes {

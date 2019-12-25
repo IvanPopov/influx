@@ -147,10 +147,10 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 
 
 function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
-    const fn = fileState.slDocument.root.scope.findFunction(debuggerState.expression, null);
+    // const fn = fileState.slDocument.root.scope.findFunction(debuggerState.expression, null);
     const locList = [];
 
-    if (fn && debuggerState.runtime) {
+    if (debuggerState.runtime) {
         // const from = fn.sourceNode.loc.start.line;
         // const to = fn.sourceNode.loc.end.line;
 
@@ -160,7 +160,7 @@ function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileStat
         const cdl = cdlview(debuggerState.runtime.cdl);
 
         for (let ln = from; ln <= to; ++ln) {
-            const color = cdl.resolveLineColor(ln);
+            const color = cdl.resolveLineColor(ln, fileState.uri);
             if (color !== -1) {
                 const loc = { start: { file: null, line: ln, column: 0 }, end: null };
                 locList.push({ loc, payload: { color } });

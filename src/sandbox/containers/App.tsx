@@ -20,7 +20,7 @@ import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
-import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Menu, Message, Popup, Segment, Sidebar, Tab, Table, Loader } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -365,6 +365,10 @@ class App extends React.Component<IAppProps> {
         const props = this.props;
         const file = getFileState(props);
         const list = filterPartFx(getScope(file));
+
+        if (!file.uri) {
+            return [];
+        }
 
         const links: string[] = [];
         const basepath = `/playground/${path.basename(file.uri)}`;

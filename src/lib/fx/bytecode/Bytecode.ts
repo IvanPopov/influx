@@ -7,15 +7,16 @@ import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IScope, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { ISLDocument } from "@lib/idl/ISLDocument";
+import { Diagnostics } from "@lib/util/Diagnostics";
+
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { Diagnostics } from "@lib/util/Diagnostics";
-import { ISLDocument } from "@lib/idl/ISLDocument";
 
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
@@ -606,6 +607,38 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     console.error('unsupported type of unary expression found');
                     return PromisedAddress.INVALID;
                 }
+            case EInstructionTypes.k_LogicalExpr:
+                {
+                    const logicExpr = expr as ILogicalExprInstruction;
+
+                    const opMap = {
+                        '||': EOperation.k_I32LogicalOr,
+                        '&&': EOperation.k_I32LogicalAnd
+                    };
+
+                    let op: EOperation = opMap[logicExpr.operator];;
+
+                    const { left, right } = logicExpr;
+
+                    let leftAddr = raddr(left);
+                    if (leftAddr.type !== EAddrType.k_Registers) {
+                        leftAddr = iload(leftAddr);
+                        debug.map(left);
+                    }
+
+                    let rightAddr = raddr(right);
+                    if (rightAddr.type !== EAddrType.k_Registers) {
+                        rightAddr = iload(rightAddr);
+                        debug.map(right);
+                    }
+
+                    const size = logicExpr.type.size;
+                    const dest = alloca(size);
+                    iop3(op, dest, leftAddr, rightAddr);
+                    debug.map(logicExpr);
+
+                    return loc({ addr: dest, size });
+                }
             case EInstructionTypes.k_RelationalExpr:
                 {
                     const relExpr = expr as IRelationalExprInstruction;
@@ -614,15 +647,19 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         '<': EOperation.k_I32LessThan,
                         '>': EOperation.k_I32GreaterThan,
                         '<=': EOperation.k_I32LessThanEqual,
-                        '>=': EOperation.k_I32GreaterThanEqual
-                    }
+                        '>=': EOperation.k_I32GreaterThanEqual,
+                        '==': EOperation.k_I32Equal,
+                        '!=': EOperation.k_I32NotEqual
+                    };
 
                     const opFloatMap = {
                         '<': EOperation.k_F32LessThan,
                         '>': EOperation.k_F32GreaterThan,
                         '<=': EOperation.k_F32LessThanEqual,
-                        '>=': EOperation.k_F32GreaterThanEqual
-                    }
+                        '>=': EOperation.k_F32GreaterThanEqual,
+                        '==': EOperation.k_I32Equal,    // << compare with I32 operator
+                        '!=': EOperation.k_I32NotEqual  // << compare with I32 operator
+                    };
 
                     let op: EOperation;
 
@@ -657,7 +694,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     const size = relExpr.type.size;
                     const dest = alloca(size);
-                    icode(op, dest, leftAddr, rightAddr);
+                    iop3(op, dest, leftAddr, rightAddr);
                     debug.map(relExpr);
 
                     return loc({ addr: dest, size });
@@ -694,7 +731,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (exprAddr.type !== EAddrType.k_Registers) {
                         exprAddr = iload(exprAddr);
                     }
-                    icode(op, dest, exprAddr);
+                    iop2(op, dest, exprAddr);
                     debug.map(castExpr);
                     return loc({ addr: dest, size });
                 }
@@ -1011,7 +1048,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         condAddr = iload(condAddr);
                     }
 
-                    icode(EOperation.k_JumpIf, condAddr);
+                    iop1(EOperation.k_JumpIf, condAddr);
 
                     let unresolvedJump = pc();
                     icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);

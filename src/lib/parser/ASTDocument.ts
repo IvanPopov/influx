@@ -1,13 +1,11 @@
 import bf from "@lib/bf";
-import { isDef } from "@lib/common";
+import { isDef, isNull } from "@lib/common";
 import { assert } from "@lib/common";
 import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
-import { StringRef } from "@lib/util/StringRef";
-import { isNull } from "util";
 
 import { Lexer } from "./Lexer";
 import { ParseTree } from "./ParseTree";

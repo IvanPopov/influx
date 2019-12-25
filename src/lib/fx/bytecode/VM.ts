@@ -1,14 +1,17 @@
-import { assert, isDefAndNotNull, isString, isNull } from "@lib/common";
-import { EChunkType, EOperation } from "@lib/idl/bytecode";
-import { IMap } from "@lib/idl/IMap";
+import { assert, isDefAndNotNull, isNull, isString } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode';
-
-import { i32ToU8Array, u8ArrayToI32, u8ArrayAsI32, u8ArrayAsF32 } from "./common";
+import { EChunkType, EOperation } from "@lib/idl/bytecode";
 import { IScope, ITypeInstruction } from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
+
+import { i32ToU8Array, u8ArrayAsF32, u8ArrayAsI32, u8ArrayToI32 } from "./common";
+import InstructionList from "./InstructionList";
 
 // // import { remote } from 'electron';
 // import * as isElectron from 'is-electron-renderer';
+
+declare const MODE: string;
 
 type Chunk = Uint8Array;
 type ChunkMap = IMap<Chunk>;
@@ -73,7 +76,7 @@ class VM {
     static regs = new Uint8Array(VM.$regs);
 
     static play(data: Bundle): Uint8Array {
-        let i4 = 0;                      // current instruction;
+        let i5 = 0;                      // current instruction;
         let ilist = data.instructions;
 
         let iregs = VM.iregs;
@@ -91,43 +94,39 @@ class VM {
         }
         let iinput = $input.map(u8 => new Int32Array(u8.buffer, u8.byteOffset));
 
-
         end:
-        while (i4 < ilist.length) {
-            let op = ilist[i4];
-            let a = ilist[i4 + 1];
-            let b = ilist[i4 + 2];
-            let c = ilist[i4 + 3];
-            let d = ilist[i4 + 4];
-
-            // TODO: use already aligned adresses
-            let a4 = a >> 2;
-            let b4 = b >> 2;
-            let c4 = c >> 2;
-            let d4 = d >> 2;
+        while (i5 < ilist.length) {
+            let op = ilist[i5];
+            let a = ilist[i5 + 1];
+            let b = ilist[i5 + 2];
+            let c = ilist[i5 + 3];
+            let d = ilist[i5 + 4];
 
             switch (op) {
                 case EOperation.k_I32LoadConst:
-                    iregs[a4] = icb[b4];
+                    iregs[a] = icb[b];
                     break;
                 case EOperation.k_I32LoadInput:
-                    iregs[b4] = iinput[a][c4];
+                    iregs[b] = iinput[a][c];
                     break;
                 case EOperation.k_I32LoadRegister:
-                    iregs[a4] = iregs[b4];
+                    iregs[a] = iregs[b];
                     break;
                 case EOperation.k_I32StoreInput:
-                    iinput[a][b4] = iregs[c4];
+                    iinput[a][b] = iregs[c];
+                    break;
+                case EOperation.k_I32StoreInputPointer:
+                    iinput[a][iregs[b] >> 2] = iregs[c];    // TODO: use already aligned pointer
                     break;
 
                 case EOperation.k_I32LoadRegistersPointer:
-                    iregs[a4] = iregs[iregs[b4] >> 2];
+                    iregs[a] = iregs[iregs[b] >> 2];        // TODO: use already aligned pointer
+                    break;
+                case EOperation.k_I32StoreRegisterPointer:
+                    iregs[iregs[a] >> 2] = iregs[b];        // TODO: use already aligned pointer
                     break;
                 case EOperation.k_I32LoadInputPointer:
-                    iregs[b4] = iinput[a][iregs[c4] >> 2];
-                    break;
-                case EOperation.k_I32LoadConstPointer:
-                    iregs[a4] = icb[iregs[b4] >> 2];
+                    iregs[b] = iinput[a][iregs[c] >> 2];    // TODO: use already aligned pointer
                     break;
 
                 //
@@ -135,33 +134,33 @@ class VM {
                 //
 
                 case EOperation.k_I32Add:
-                    iregs[a4] = iregs[b4] + iregs[c4];
+                    iregs[a] = iregs[b] + iregs[c];
                     break;
                 case EOperation.k_I32Sub:
-                    iregs[a4] = iregs[b4] - iregs[c4];
+                    iregs[a] = iregs[b] - iregs[c];
                     break;
                 case EOperation.k_I32Mul:
-                    iregs[a4] = iregs[b4] * iregs[c4];
+                    iregs[a] = iregs[b] * iregs[c];
                     break;
                 case EOperation.k_I32Div:
-                    iregs[a4] = iregs[b4] / iregs[c4];
+                    iregs[a] = iregs[b] / iregs[c];
                     break;
 
                 case EOperation.k_I32Mad:
-                    iregs[a4] = iregs[b4] + iregs[c4] * iregs[d4];
+                    iregs[a] = iregs[b] + iregs[c] * iregs[d];
                     break;
 
                 case EOperation.k_F32Add:
-                    fregs[a4] = fregs[b4] + fregs[c4];
+                    fregs[a] = fregs[b] + fregs[c];
                     break;
                 case EOperation.k_F32Sub:
-                    fregs[a4] = fregs[b4] - fregs[c4];
+                    fregs[a] = fregs[b] - fregs[c];
                     break;
                 case EOperation.k_F32Mul:
-                    fregs[a4] = fregs[b4] * fregs[c4];
+                    fregs[a] = fregs[b] * fregs[c];
                     break;
                 case EOperation.k_F32Div:
-                    fregs[a4] = fregs[b4] / fregs[c4];
+                    fregs[a] = fregs[b] / fregs[c];
                     break;
 
 
@@ -170,29 +169,47 @@ class VM {
                 //
 
                 case EOperation.k_I32LessThan:
-                    iregs[a4] = Number(iregs[b4] < iregs[c4]);
+                    iregs[a] = +(iregs[b] < iregs[c]);
                     break;
                 case EOperation.k_I32GreaterThan:
-                    iregs[a4] = Number(iregs[b4] > iregs[c4]);
+                    iregs[a] = +(iregs[b] > iregs[c]);
                     break;
                 case EOperation.k_I32LessThanEqual:
-                    iregs[a4] = Number(iregs[b4] <= iregs[c4]);
+                    iregs[a] = +(iregs[b] <= iregs[c]);
                     break;
                 case EOperation.k_I32GreaterThanEqual:
-                    iregs[a4] = Number(iregs[b4] >= iregs[c4]);
+                    iregs[a] = +(iregs[b] >= iregs[c]);
+                    break;
+                case EOperation.k_I32Equal:
+                    iregs[a] = +(iregs[b] === iregs[c]);
+                    break;
+                case EOperation.k_I32NotEqual:
+                    iregs[a] = +(iregs[b] !== iregs[c]);
                     break;
 
                 case EOperation.k_F32LessThan:
-                    fregs[a4] = Number(fregs[b4] < fregs[c4]);
+                    fregs[a] = +(fregs[b] < fregs[c]);
                     break;
                 case EOperation.k_F32GreaterThan:
-                    fregs[a4] = Number(fregs[b4] > fregs[c4]);
+                    fregs[a] = +(fregs[b] > fregs[c]);
                     break;
                 case EOperation.k_F32LessThanEqual:
-                    fregs[a4] = Number(fregs[b4] <= fregs[c4]);
+                    fregs[a] = +(fregs[b] <= fregs[c]);
                     break;
                 case EOperation.k_F32GreaterThanEqual:
-                    fregs[a4] = Number(fregs[b4] >= fregs[c4]);
+                    fregs[a] = +(fregs[b] >= fregs[c]);
+                    break;
+
+                //
+                // Logical operations
+                //
+
+
+                case EOperation.k_I32LogicalOr:
+                    iregs[a] = +(iregs[b] || iregs[c]);
+                    break;
+                case EOperation.k_I32LogicalAnd:
+                    iregs[a] = +(iregs[b] && iregs[c]);
                     break;
 
                 //
@@ -201,30 +218,30 @@ class VM {
 
                 case EOperation.k_F32Frac:
                     // same as frac() in HLSL
-                    fregs[a4] = fregs[b4] - Math.floor(fregs[b4]);
+                    fregs[a] = fregs[b] - Math.floor(fregs[b]);
                     break;
                 case EOperation.k_F32Floor:
-                    fregs[a4] = Math.floor(fregs[b4]);
+                    fregs[a] = Math.floor(fregs[b]);
                     break;
 
                 case EOperation.k_F32Sin:
-                    fregs[a4] = Math.sin(fregs[b4]);
+                    fregs[a] = Math.sin(fregs[b]);
                     break;
                 case EOperation.k_F32Cos:
-                    fregs[a4] = Math.cos(fregs[b4]);
+                    fregs[a] = Math.cos(fregs[b]);
                     break;
 
                 case EOperation.k_F32Abs:
-                    fregs[a4] = Math.abs(fregs[b4]);
+                    fregs[a] = Math.abs(fregs[b]);
                     break;
                 case EOperation.k_F32Sqrt:
-                    fregs[a4] = Math.sqrt(fregs[b4]);
+                    fregs[a] = Math.sqrt(fregs[b]);
                     break;
                 case EOperation.k_F32Min:
-                    fregs[a4] = Math.min(fregs[b4], fregs[c4]);
+                    fregs[a] = Math.min(fregs[b], fregs[c]);
                     break;
                 case EOperation.k_F32Max:
-                    fregs[a4] = Math.max(fregs[b4], fregs[c4]);
+                    fregs[a] = Math.max(fregs[b], fregs[c]);
                     break;
 
                 //
@@ -232,11 +249,11 @@ class VM {
                 //
 
                 case EOperation.k_F32ToI32:
-                    iregs[a4] = Math.trunc(fregs[b4]);
+                    iregs[a] = Math.trunc(fregs[b]);
                     break;
                 case EOperation.k_I32ToF32:
                     // nothing to do here :)
-                    fregs[a4] = iregs[b4];
+                    fregs[a] = iregs[b];
                     break;
 
 
@@ -246,13 +263,12 @@ class VM {
 
                 case EOperation.k_Jump:
                     // TODO: don't use multiplication here
-                    i4 = a * 5;
+                    i5 = a;
                     continue;
-                    break;
                 case EOperation.k_JumpIf:
-                    i4 = iregs[a4] !== 0
-                        ? i4 + 5 /* skip one instruction */
-                        : i4;    /* do nothing (cause next instruction must always be Jump) */
+                    i5 = iregs[a] !== 0
+                        ? i5 + InstructionList.STRIDE /* skip one instruction */
+                        : i5;                         /* do nothing (cause next instruction must always be Jump) */
                     break;
                 case EOperation.k_Ret:
                     {
@@ -262,7 +278,7 @@ class VM {
                 default:
                     console.error(`unknown operation found: ${op}`);
             }
-            i4 += 5;
+            i5 += InstructionList.STRIDE;
         }
 
         return VM.regs;
@@ -356,10 +372,17 @@ export function asNative(result: Uint8Array, layout: ITypeInstruction): any {
     return null;
 }
 
+export function resetRegisters(): void {
+    VM.regs.fill(0);
+}
 
 export async function evaluate(code: Uint8Array): Promise<any>;
 export async function evaluate(expr: string, document: ISLDocument): Promise<any>;
 export async function evaluate(param: string | Uint8Array, param2?: ISLDocument): Promise<any> {
+    if (MODE === 'development') {
+        resetRegisters();
+    }
+
     let code: Uint8Array;
     if (isString(arguments[0])) {
         const expr = <string>arguments[0];
