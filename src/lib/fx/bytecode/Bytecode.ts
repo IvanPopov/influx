@@ -34,13 +34,13 @@ export interface ISubProgram {
 
     // function return value layout
     layout: ITypeInstruction; // << FIXME: move to cdl
-    
+
     // diagnosticReport: IDiagnosticReport;
     // uri: string
 }
 
- // TODO: rewrite with cleaner code
- function constLayoutChunk(ctx: IContext): ArrayBuffer {
+// TODO: rewrite with cleaner code
+function constLayoutChunk(ctx: IContext): ArrayBuffer {
     const { constants } = ctx;
     const layout = constants.layout;
     const byteLength = 4/* names.length */ + layout.names.map(entry => entry.name.length + 8/* sizeof(name.length) + sizeof(addr)*/).reduce((prev, curr) => prev + curr, 0);
@@ -465,6 +465,24 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'lerp':
                 assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
+            //
+            // UAVs
+            //
+            case 'DecrementCounter':
+            case 'IncrementCounter':
+                {
+                    
+                    const diff = { 'IncrementCounter': +1, 'DecrementCounter': -1 };
+
+                    const uav = call.callee;
+                    const uavAddr = raddr(uav);
+                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    const valueAddr = iload(uavCounterAddr);
+                    const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(diff[fdecl.name]));
+                    imove(uavCounterAddr, nextValueAddr);
+                    return valueAddr;
+                }
+                return PromisedAddress.INVALID;
         }
 
         assert(false, `unsupported intrinsic found '${fdecl.name}'`);
@@ -525,7 +543,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                 // CBUFFER0_REGISTER input is always being used for hidden constant buffer (uniform constants)
                                 if (decl.type.isUniform()) {
                                     return constants.deref(decl);
-                                } 
+                                }
 
 
                                 if (decl.type.isUAV()) {
@@ -560,30 +578,30 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     assert(SystemScope.isScalarType(left.type) || SystemScope.isVectorType(left.type));
                     assert(SystemScope.isScalarType(right.type) || SystemScope.isVectorType(right.type));
-        
+
                     let leftAddr = raddr(left);
                     if (leftAddr.type !== EAddrType.k_Registers) {
                         leftAddr = iload(leftAddr);
                         debug.map(left);
                     }
-        
+
                     let rightAddr = raddr(right);
                     if (rightAddr.type !== EAddrType.k_Registers) {
                         rightAddr = iload(rightAddr);
                         debug.map(right);
                     }
-        
+
                     if (SystemScope.isFloatBasedType(left.type)) {
                         assert(SystemScope.isFloatBasedType(right.type));
                         intrinsics.arithf(opName, dest, leftAddr, rightAddr);
                     } else if (SystemScope.isIntBasedType(left.type)) {
                         assert(SystemScope.isIntBasedType(right.type));
                         intrinsics.arithi(opName, dest, leftAddr, rightAddr);
-                    } else {    
+                    } else {
                         assert(false);
                         return PromisedAddress.INVALID;
                     }
-                
+
                     debug.map(arithExpr);
                     return dest;
                 }
@@ -682,7 +700,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     const { left, right } = relExpr;
 
-                    if (left.type.isEqual(T_INT) && right.type.isEqual(T_INT)) {
+                    if ((left.type.isEqual(T_INT) && right.type.isEqual(T_INT)) ||
+                        (left.type.isEqual(T_UINT) && right.type.isEqual(T_UINT))) { // TODO: add proper UINT comparison
                         op = opIntMap[relExpr.operator];
                     } else if (left.type.isEqual(T_FLOAT) && right.type.isEqual(T_FLOAT)) {
                         op = opFloatMap[relExpr.operator];
@@ -733,9 +752,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // FIXME: add support for dedicated FLOAT => UINT conversion
                     if (srcType.isEqual(T_FLOAT) && (dstType.isEqual(T_INT) || dstType.isEqual(T_UINT))) {
                         op = EOperation.k_F32ToI32;
-                    // FIXME: add support for dedicated UINT => FLOAT conversion
+                        // FIXME: add support for dedicated UINT => FLOAT conversion
                     } else if ((srcType.isEqual(T_INT) || srcType.isEqual(T_UINT)) && dstType.isEqual(T_FLOAT)) {
                         op = EOperation.k_I32ToF32;
+                    } else if ((srcType.isEqual(T_INT) && dstType.isEqual(T_UINT)) ||
+                               (srcType.isEqual(T_UINT) && dstType.isEqual(T_INT))) {
+                        // TODO: add real conversion for UINT <=> INT
+                        return raddr(castExpr.expr);
                     } else {
                         // todo: add type descriptions
                         diag.error(EErrors.k_UnsupoortedTypeConversion, {});
@@ -772,7 +795,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         // sizeof(element[i])
                         let arrayElementSize = element.type.arrayElementType.size;
-                        let sizeAddr = iconst_i32(arrayElementSize);
+                        assert(arrayElementSize % sizeof.i32() === 0, `all sizes must be multiple of ${sizeof.i32()}`);
+                        let sizeAddr = iconst_i32(arrayElementSize >> 2);
                         // NOTE: size can be unresolved yet
 
                         // index => index of element in the array (element)
@@ -786,7 +810,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             elementAddr = iload(elementAddr);
                         }
 
-                        let baseAddr = iconst_i32(elementAddr.addr);    // TODO: use iconst_addr()
+                        assert(elementAddr.addr % sizeof.i32() === 0, `all adresses must be aligned by ${sizeof.i32()}`);
+                        let baseAddr = iconst_i32(elementAddr.addr >> 2);    // TODO: use iconst_addr()
                         let pointerAddr = alloca(sizeof.addr());        // addr <=> i32
 
                         // load all to registers
@@ -1069,16 +1094,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     translate(conseq);
                     // jump co contrary or out of if
                     let jumpTo = pc() + (contrary ? 1 : 0);
-                    instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]); 
-                    
+                    instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]);
+
                     if (contrary) {
                         unresolvedJump = pc();
-                        icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION); 
+                        icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
                         translate(contrary);
                         // jump to skip contrary
                         jumpTo = pc();
                         instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]);
-                    } 
+                    }
 
                     return;
                 }
@@ -1099,12 +1124,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         assert(src.size === ret().size);
                         imove(dest, src);
                         debug.map(expr);
-                        // breakpoint before leaving function
-                        debug.ns();
-
-                        icode(EOperation.k_Ret);
-                        debug.map(retStmt);
                     }
+                    // breakpoint before leaving function
+                    debug.ns();
+                    icode(EOperation.k_Ret);
+                    debug.map(retStmt);
                     return;
                 }
             case EInstructionTypes.k_StmtBlock:
@@ -1194,6 +1218,11 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
+    }
+
+    let report = ctx.diag.resolve();
+    if (report.errors) {
+        console.error(Diagnostics.stringify(report));
     }
 
     return res;

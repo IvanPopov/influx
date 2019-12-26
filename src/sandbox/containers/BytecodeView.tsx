@@ -3,7 +3,7 @@
 
 import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
-import { u8ArrayAsF32, u8ArrayAsI32, i32Asf32 } from '@lib/fx/bytecode/common';
+import { u8ArrayAsF32, u8ArrayAsI32, i32Asf32, u32Asf32, u32Asi32 } from '@lib/fx/bytecode/common';
 import InstructionList from '@lib/fx/bytecode/InstructionList';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EChunkType } from '@lib/idl/bytecode';
@@ -60,16 +60,20 @@ const scode = (c: EOperation) => {
     }
 
     switch (c) {
-        case EOperation.k_I32LoadRegister:
-            return 'i32_load';
-        case EOperation.k_I32LoadRegistersPointer:
-            return 'i32_load*';
-        case EOperation.k_I32StoreRegisterPointer:
-            return 'i32_store*';
-        case EOperation.k_I32LoadInputPointer:
-            return 'i32_load_input*';
-        case EOperation.k_I32StoreInputPointer:
-            return 'i32_store_input*';
+        case EOperation.k_I32SetConst: return 'i32_set';
+        case EOperation.k_I32LoadRegister: return 'i32_load';
+        case EOperation.k_I32LoadRegistersPointer: return 'i32_load*';
+        case EOperation.k_I32StoreRegisterPointer: return 'i32_store*';
+        case EOperation.k_I32LoadInputPointer: return 'i32_load_input*';
+        case EOperation.k_I32StoreInputPointer: return 'i32_store_input*';
+        case EOperation.k_I32GreaterThan: return 'i32_gt';
+        case EOperation.k_I32GreaterThanEqual: return 'i32_gte';
+        case EOperation.k_I32LessThan: return 'i32_lt';
+        case EOperation.k_I32LessThanEqual: return 'i32_lte';
+        case EOperation.k_F32GreaterThan: return 'f32_gt';
+        case EOperation.k_F32GreaterThanEqual: return 'f32_gte';
+        case EOperation.k_F32LessThan: return 'f32_lt';
+        case EOperation.k_F32LessThanEqual: return 'f32_lte';
         default:
             return v;
     }
@@ -174,13 +178,32 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 args.length = 3;
                 // op, const, hint
                 break;
+                
+            case EOperation.k_I32LoadRegister:
+                args.length = 2;
+                break;    
+
+            case EOperation.k_I32LoadRegistersPointer:
+            case EOperation.k_I32StoreRegisterPointer:
+                args.length = 3;
+                break;
 
             case EOperation.k_I32LoadInput:
-            case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32StoreInput:
+                args.length = 3;
+                break;
+                
+            case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32StoreInputPointer:
+                args.length = 4;
+                break;
 
             case EOperation.k_I32Equal:
+            case EOperation.k_I32NotEqual:
+            case EOperation.k_I32GreaterThan:
+            case EOperation.k_I32GreaterThanEqual:
+            case EOperation.k_I32LessThan:
+            case EOperation.k_I32LessThanEqual:
             case EOperation.k_I32NotEqual:
             case EOperation.k_I32LogicalOr:
             case EOperation.k_I32LogicalAnd:
@@ -189,12 +212,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
-            case EOperation.k_I32LoadRegister:
-            case EOperation.k_I32LoadRegistersPointer:
-            case EOperation.k_I32StoreRegisterPointer:
                 args.length = 2;
                 break;
 
+                
             case EOperation.k_JumpIf:
             case EOperation.k_Jump:
                 args.length = 1;
@@ -209,7 +230,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         switch (code) {
             case EOperation.k_I32SetConst:
-                args[1] = args[2] == 1 ? fixPrecision(i32Asf32(args[1])) : args[1];
+                args[1] = args[2] == 1 ? fixPrecision(u32Asf32(args[1])) : u32Asi32(args[1]);
                 break;
         }
 
@@ -220,24 +241,41 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         let sArgs = args.map(String);
 
         const pointer = (x: number) => `%${x}`;
+        const register = (x: number) => `r${x}`;
 
         // tslint:disable-next-line:switch-default
         switch (code) {
-            case EOperation.k_I32LoadInputPointer:
-                sArgs[2] = pointer(args[2]);
+            case EOperation.k_I32SetConst:
+                sArgs[0] = register(args[0]);
+                if (args[2] === 1) { // is float
+                    sArgs[1] = float(args[1]);
+                }
+                sArgs.length = 2;
+                break;
+            case EOperation.k_I32LoadRegister:
+                sArgs[0] = register(args[0]);
+                sArgs[1] = register(args[1]);
                 break;
             case EOperation.k_I32LoadRegistersPointer:
+                sArgs[0] = register(args[0]);
                 sArgs[1] = pointer(args[1]);
+                break;
+            case EOperation.k_I32LoadInput:
+                sArgs[1] = register(args[1]);
+                break;
+            case EOperation.k_I32LoadInputPointer:
+                sArgs[1] = register(args[1]);
+                sArgs[2] = pointer(args[2]);
+                break;
+            case EOperation.k_I32StoreInputPointer:
+                sArgs[1] = pointer(args[1]);
+                sArgs[2] = register(args[1]);
                 break;
             case EOperation.k_Jump:
                 sArgs[0] = hex2(args[0] / InstructionList.STRIDE);
                 break;
-            case EOperation.k_I32SetConst:
-                if (args[2] === 1) { // is float
-                    sArgs[1] = float(args[1]);
-                    sArgs.length = 2;
-                }
-                break;
+            default:
+                sArgs = args.map(register);
         }
 
         sArgs = sArgs.map(any4);

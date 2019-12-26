@@ -21,14 +21,12 @@ export class UAVPool {
         let { index, type } = variable.resolveRegister(decl);
         assert(type === 'u');
 
-        if (index === -1) {
-            index = knownUAVs.indexOf(decl);
+        const knownIndex = knownUAVs.indexOf(decl);
 
-            if (index === -1) {
-                index = knownUAVs.findIndex(decl => isNull(decl));
-                assert(index !== -1, `uav limit is reached (uav total: ${UAV_TOTAL})`);
-                knownUAVs[index] = decl;
-            }
+        if (index === -1 || knownIndex == -1) {
+            index = knownUAVs.findIndex(decl => isNull(decl));
+            assert(index !== -1, `uav limit is reached (uav total: ${UAV_TOTAL})`);
+            knownUAVs[index] = decl;
         }
 
         assert(knownUAVs[index] === decl);

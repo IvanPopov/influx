@@ -136,7 +136,7 @@ export enum EScopeType {
 export interface ITypeTemplate {
     readonly scope: IScope;
     readonly name: string;
-    produceType(args?: ITypeInstruction[]): ITypeInstruction;
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction;
     typeName(args?: ITypeInstruction[]): string;
 }
 
@@ -342,7 +342,7 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly initExpr: IInitExprInstruction;
 
     readonly defaultValue: any;
-    
+
     isParameter(): boolean;
     isLocal(): boolean;
     isGlobal(): boolean;

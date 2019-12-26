@@ -50,6 +50,20 @@ int postfix_index_getter()
     return (int)(x[2]);
 }
 
+
+/**
+ * @test Postfix index getter swizzled (registers)
+ * @expected {postfix_index_getter_swizzled() == 3}
+ */
+int postfix_index_getter_swizzled()
+{
+    float2 x[2];
+    x[1] = float2(2.2f, 1.1f);
+    x[0] = float2(4.4f, 3.3f);
+    return (int)x[0].y;
+}
+
+
 /**
  * @test Postfix index setter (registers)
  * @expected {postfix_index_setter() == -2}
@@ -59,4 +73,15 @@ int postfix_index_setter()
     int x[5];
     x[2] = -2;
     return x[2];
+}
+
+/**
+ * @test Postfix index setter swizzled (registers)
+ * @expected {postfix_index_setter_swizzled() == true}
+ */
+bool postfix_index_setter_swizzled()
+{
+    float3 x[5];
+    x[2].zyx = float3(-1.f, -2.f, -3.f);
+    return x[2].x == -3.f && x[2].y == -2.f && x[2].z == -1.f;
 }

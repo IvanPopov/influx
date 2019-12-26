@@ -1,4 +1,4 @@
-import { assert, isDef, isNull } from "@lib/common";
+import { assert, isDef, isNull, isString, isNumber } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
@@ -14,6 +14,7 @@ import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
 import { UAVPool } from "./UAVPool";
+import { IMap } from "@lib/idl/IMap";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -41,7 +42,8 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
     }
 
     protected diagnosticMessages() {
-        return {};
+        // TODO: implement error messages
+        return <IMap<string>><any>EErrors;
     }
 }
 
@@ -234,23 +236,28 @@ export function ContextBuilder() {
                         case EAddrType.k_PointerRegisters:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            assert(!(src.swizzle));
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                                 icode(EOperation.k_I32LoadRegistersPointer,
+                                    // destination register
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
-                                    // NOTE: pointer can't be swizzled
-                                    src.addr + i * sizeof.i32());
+                                    // source pointer
+                                    src.addr,
+                                    // pointer offset
+                                    (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         case EAddrType.k_PointerInput:
                             assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            assert(!(src.swizzle));
                             for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                                icode(EOperation.k_I32LoadInputPointer, src.inputIndex,
+                                icode(EOperation.k_I32LoadInputPointer, 
+                                    src.inputIndex,
+                                    // destination register
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
-                                    // NOTE: pointer can't be swizzled
-                                    src.addr + i * sizeof.i32());
+                                    // source pointer
+                                    src.addr, 
+                                    // pointer offset
+                                    (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         default:
@@ -271,23 +278,27 @@ export function ContextBuilder() {
             case EAddrType.k_PointerInput:
                 assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 assert(src.type === EAddrType.k_Registers);
-                assert(!(dest.swizzle));
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                     icode(EOperation.k_I32StoreInputPointer, dest.inputIndex,
-                        // NOTE: pointer can't be swizzled
-                        dest.addr + i * sizeof.i32(),
-                        src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
+                        // destination pointer
+                        dest.addr,
+                        // source register
+                        src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32(),
+                        // destination offset
+                        (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32());
                 }
                 break;
             case EAddrType.k_PointerRegisters:
                 assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 assert(src.type === EAddrType.k_Registers);
-                assert(!(dest.swizzle));
                 for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
                     icode(EOperation.k_I32StoreRegisterPointer,
-                        // NOTE: pointer can't be swizzled
-                        dest.addr + i * sizeof.i32(),
-                        src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
+                        // destination pointer
+                        dest.addr,
+                        // source register
+                        src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32(),
+                        // destination offset
+                        (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32());
                 }
                 break;
             default:

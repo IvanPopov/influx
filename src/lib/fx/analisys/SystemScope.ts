@@ -41,7 +41,7 @@ type ITypeInfo = Pick<ISystemTypeInstructionSettings, Exclude<keyof ISystemTypeI
 
 function generateSystemType(name: string, size?: number, elementType?: ITypeInstruction, 
     length?: number, fields?: IVariableDeclInstruction[], methods?: IFunctionDeclInstruction[]): SystemTypeInstruction;
-function generateSystemType({ name, length, elementType, fields, size, methods }: ITypeInfo): SystemTypeInstruction;
+// function generateSystemType({ name, length, elementType, fields, size, methods }: ITypeInfo): SystemTypeInstruction;
 function generateSystemType(...args: any[]): SystemTypeInstruction {
     let name: string;
     let size: number;
@@ -50,11 +50,11 @@ function generateSystemType(...args: any[]): SystemTypeInstruction {
     let fields: IVariableDeclInstruction[];
     let methods: IFunctionDeclInstruction[];
 
-    if (isObject(args[0])) {
-        ({ name, size, elementType, length, fields, methods } = args[0]);
-    } else{
+    // if (isObject(args[0])) {
+    //     ({ name, size, elementType, length, fields, methods } = args[0]);
+    // } else{
         [ name, size, elementType, length, fields, methods ] = args;
-    }
+    // }
 
     if (getSystemType(name)) {
         console.error(`type already exists: ${name}`);
@@ -77,7 +77,7 @@ class TypeTemplate implements ITypeTemplate {
         this.scope = scope;
     }
 
-    produceType(): ITypeInstruction {
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
         return null;
     }
 
@@ -94,7 +94,7 @@ class RWBufferTemplate extends TypeTemplate {
     constructor() {
         super('RWBuffer', scope);
     }
-    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
         if (args.length !== 1) {
             // TODO: print error
             return null;
@@ -105,7 +105,14 @@ class RWBufferTemplate extends TypeTemplate {
             return null;
         }
 
-        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH);
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
 
@@ -114,14 +121,19 @@ class RWStructuredBufferTemplate extends TypeTemplate {
     constructor() {
         super('RWStructuredBuffer', scope);
     }
-    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
         if (args.length !== 1) {
             // TODO: print error
             return null;
         }
         
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
         
         {
             let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
@@ -140,7 +152,7 @@ class RWStructuredBufferTemplate extends TypeTemplate {
         }
 
 
-        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH, fields, methods);
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
 
@@ -149,14 +161,19 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
     constructor() {
         super('AppendStructuredBuffer', scope);
     }
-    produceType(args?: ITypeInstruction[]): ITypeInstruction {
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
         if (args.length !== 1) {
             // TODO: print error
             return null;
         }
 
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
         {
             const paramList = [];
 
@@ -175,7 +192,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
             methods.push(func);
         }
         
-        return generateSystemType(this.typeName(args), -1, args[0], instruction.UNDEFINE_LENGTH, fields, methods);
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
 

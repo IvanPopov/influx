@@ -25,6 +25,7 @@ export const u8ArrayAsF32 = (arr: Uint8Array) => new Float32Array(arr.buffer, ar
 const ab = new ArrayBuffer(4);
 const f32a = new Float32Array(ab);
 const i32a = new Int32Array(ab);
+const u32a = new Uint32Array(ab);
 export function f32Asi32(f32: number): number {
     f32a[0] = f32;
     return i32a[0];
@@ -33,4 +34,21 @@ export function f32Asi32(f32: number): number {
 export function i32Asf32(i32: number): number {
     i32a[0] = i32;
     return f32a[0];
+}
+
+export function u32Asf32(u32: number): number {
+    u32a[0] = u32;
+    return f32a[0];
+}
+
+
+export function i32Asu32(i32: number): number {
+    i32a[0] = i32;
+    return u32a[0];
+}
+
+
+export function u32Asi32(u32: number): number {
+    u32a[0] = u32;
+    return i32a[0];
 }

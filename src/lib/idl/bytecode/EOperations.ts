@@ -32,15 +32,15 @@ export enum EOperation {
     //
 
     k_I32LessThan,
-    k_I32GreaterThan,
-    k_I32LessThanEqual,
-    k_I32GreaterThanEqual,
+    k_I32GreaterThan,       // TODO: remove
+    k_I32LessThanEqual,     // TODO: remove
+    k_I32GreaterThanEqual, 
     k_I32Equal,
     k_I32NotEqual, // << replace with 2 instructions?
 
     k_F32LessThan,
-    k_F32GreaterThan,
-    k_F32LessThanEqual,
+    k_F32GreaterThan,       // TODO: remove
+    k_F32LessThanEqual,     // TODO: remove
     k_F32GreaterThanEqual,
 
     //

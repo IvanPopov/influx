@@ -92,30 +92,40 @@ class VM {
             let d = ilist[i5 + 4];
 
             switch (op) {
+                // registers
                 case EOperation.k_I32SetConst:
                     iregs[a] = b;
-                    break;
-                case EOperation.k_I32LoadInput:
-                    iregs[b] = iinput[a][c];
                     break;
                 case EOperation.k_I32LoadRegister:
                     iregs[a] = iregs[b];
                     break;
+                // inputs
+                case EOperation.k_I32LoadInput:
+                    iregs[b] = iinput[a][c];
+                    break;
                 case EOperation.k_I32StoreInput:
                     iinput[a][b] = iregs[c];
                     break;
-                case EOperation.k_I32StoreInputPointer:
-                    iinput[a][iregs[b] >> 2] = iregs[c];    // TODO: use already aligned pointer
-                    break;
-
+                // registers pointers    
+                // a => dest
+                // b => source pointer
+                // c => offset
                 case EOperation.k_I32LoadRegistersPointer:
-                    iregs[a] = iregs[iregs[b] >> 2];        // TODO: use already aligned pointer
+                    iregs[a] = iregs[iregs[b] + c];
                     break;
                 case EOperation.k_I32StoreRegisterPointer:
-                    iregs[iregs[a] >> 2] = iregs[b];        // TODO: use already aligned pointer
+                    iregs[iregs[a] + c] = iregs[b];
                     break;
+                // input pointers
+                // a => input index
+                // b => dest
+                // c => source pointer
+                // d => offset
                 case EOperation.k_I32LoadInputPointer:
-                    iregs[b] = iinput[a][iregs[c] >> 2];    // TODO: use already aligned pointer
+                    iregs[b] = iinput[a][iregs[c] + d];
+                    break;
+                case EOperation.k_I32StoreInputPointer:
+                    iinput[a][iregs[b] + d] = iregs[c];
                     break;
 
                 //
@@ -160,10 +170,10 @@ class VM {
                 case EOperation.k_I32LessThan:
                     iregs[a] = +(iregs[b] < iregs[c]);
                     break;
-                case EOperation.k_I32GreaterThan:
+                case EOperation.k_I32GreaterThan:       // TODO: remove
                     iregs[a] = +(iregs[b] > iregs[c]);
                     break;
-                case EOperation.k_I32LessThanEqual:
+                case EOperation.k_I32LessThanEqual:     // TODO: remove
                     iregs[a] = +(iregs[b] <= iregs[c]);
                     break;
                 case EOperation.k_I32GreaterThanEqual:
@@ -179,10 +189,10 @@ class VM {
                 case EOperation.k_F32LessThan:
                     fregs[a] = +(fregs[b] < fregs[c]);
                     break;
-                case EOperation.k_F32GreaterThan:
+                case EOperation.k_F32GreaterThan:       // TODO: remove
                     fregs[a] = +(fregs[b] > fregs[c]);
                     break;
-                case EOperation.k_F32LessThanEqual:
+                case EOperation.k_F32LessThanEqual:     // TODO: remove
                     fregs[a] = +(fregs[b] <= fregs[c]);
                     break;
                 case EOperation.k_F32GreaterThanEqual:
@@ -236,6 +246,9 @@ class VM {
                 //
                 // Cast
                 //
+
+                // case EOperation.k_F32ToU32:
+                // case EOperation.k_U32ToUF32:
 
                 case EOperation.k_F32ToI32:
                     iregs[a] = Math.trunc(fregs[b]);

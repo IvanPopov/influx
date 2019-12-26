@@ -31,19 +31,8 @@ export class FunctionCallInstruction extends ExprInstruction implements IFunctio
 
 
     toCode(): string {
-        let code: string = "";
-
-        code += this.decl.def.id.toCode();
-        code += "(";
-        for (let i: number = 0; i < this.args.length; i++) {
-            code += this.args[i].toCode();
-            if (i !== this.args.length - 1) {
-                code += ","
-            }
-        }
-        code += ")"
-
-        return code;
+        const { callee, decl: { def }, args } = this;
+        return `${callee ? callee.toCode() + '.' : ''}${def.id.toCode()}(${args.map(arg => arg.toCode()).join(',')})`;
     }
 }
 

@@ -908,11 +908,12 @@ export class Analyzer {
                         type = scope.findType(typeName);
 
                         if (isNull(type)) {
-                            type = template.produceType(args);
+                            type = template.produceType(scope, args);
                             if (isNull(type)) {
                                 context.error(sourceNode, EErrors.CannotProduceType, { typeName });
                                 return null;
                             }
+                            scope.addType(type);
                         }
                     } else {
                         type = scope.findType(typeName);

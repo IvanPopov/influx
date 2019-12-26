@@ -47,19 +47,31 @@ class InstructionList {
                 // args[2] => hint about what type lies in the constant
                 break;
             case EOperation.k_I32LoadRegister:
-            case EOperation.k_I32LoadInputPointer:
-            case EOperation.k_I32LoadRegistersPointer:
-            case EOperation.k_I32StoreRegisterPointer:
                 assert(args.length == 2);
                 args[0] >>= 2;
                 args[1] >>= 2;
                 break;
+            case EOperation.k_I32LoadRegistersPointer:
+            case EOperation.k_I32StoreRegisterPointer:
+                assert(args.length == 3);
+                args[0] >>= 2;
+                args[1] >>= 2;
+                args[2] >>= 2; // byte offset => register offset
+                break;
             case EOperation.k_I32LoadInput:
             case EOperation.k_I32StoreInput:
-            case EOperation.k_I32StoreInputPointer:
-                assert(args.length == 3);
+            assert(args.length == 3);
+                // args[0] => input index    
                 args[1] >>= 2;
                 args[2] >>= 2;
+                break;
+            case EOperation.k_I32LoadInputPointer:
+            case EOperation.k_I32StoreInputPointer:
+                assert(args.length == 4);
+                // args[0] => input index
+                args[1] >>= 2;
+                args[2] >>= 2; 
+                args[3] >>= 2; // byte offset => register offset
                 break;
             case EOperation.k_I32Add:
             case EOperation.k_I32Sub:
