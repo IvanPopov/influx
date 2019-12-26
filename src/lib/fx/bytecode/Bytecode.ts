@@ -869,9 +869,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
                         debug.map(postfixIndex);
 
-                        return PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize);
-                        //                                 ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
-                        //                           [reg. based addr] [destination type] [destination size]
+                        return PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize, elementAddr.inputIndex);
+                        //                                 ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+                        //                           [reg. based addr] [destination type] [destination size][destination input index]
                     }
 
                     return PromisedAddress.INVALID; // << FIXME

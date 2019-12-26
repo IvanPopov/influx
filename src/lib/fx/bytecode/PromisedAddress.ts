@@ -73,12 +73,11 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
-    static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number): PromisedAddress {
+    static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number, inputIndex?: number): PromisedAddress {
         assert(regAddr.type === EAddrType.k_Registers);
         assert(!regAddr.swizzle, 'something went wrong :/');
         const type = PromisedAddress.castToPointer(destType);
         const addr = regAddr.addr;
-        const inputIndex = regAddr.inputIndex;
         return new PromisedAddress({ type, addr, size, inputIndex });
     }
 
