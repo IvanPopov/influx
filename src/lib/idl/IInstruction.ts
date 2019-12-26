@@ -160,7 +160,7 @@ export interface IScope {
     findVariable(variableName: string): IVariableDeclInstruction;
     findType(typeName: string): ITypeInstruction;
     findTypeTemplate(typeName: string): ITypeTemplate;
-    findFunction(funcName: string, args: ITypeInstruction[]): IFunctionDeclInstruction | null | undefined;
+    findFunction(funcName: string, args: Array<ITypeInstruction | RegExp>): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
 
     /** @deprecated */
@@ -268,7 +268,8 @@ export interface ITypeInstruction extends IInstruction {
     getField(fieldName: string): IVariableDeclInstruction;
     getFieldBySemantics(semantic: string): IVariableDeclInstruction;
 
-    getMethod(methodName: string, args?: ITypeInstruction[]): IFunctionDeclInstruction;
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    getMethod(methodName: string, args?: Array<ITypeInstruction | RegExp>): IFunctionDeclInstruction;
 
     /** @deprecated */
     toDeclString(): string;

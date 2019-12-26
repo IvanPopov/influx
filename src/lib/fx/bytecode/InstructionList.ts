@@ -82,15 +82,13 @@ class InstructionList {
             case EOperation.k_F32Mul:
             case EOperation.k_F32Div:
 
+            case EOperation.k_U32LessThan:
+            case EOperation.k_U32GreaterThanEqual:
             case EOperation.k_I32LessThan:
-            case EOperation.k_I32GreaterThan:
-            case EOperation.k_I32LessThanEqual:
             case EOperation.k_I32GreaterThanEqual:
             case EOperation.k_I32Equal:
             case EOperation.k_I32NotEqual:
             case EOperation.k_F32LessThan:
-            case EOperation.k_F32GreaterThan:
-            case EOperation.k_F32LessThanEqual:
             case EOperation.k_F32GreaterThanEqual:
                 assert(args.length == 3);
                 args[0] >>= 2;
@@ -135,6 +133,8 @@ class InstructionList {
 
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
+            case EOperation.k_F32ToU32:
+            case EOperation.k_U32ToF32:
                 assert(args.length == 2);
                 args[0] >>= 2;
                 args[1] >>= 2;

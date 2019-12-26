@@ -66,14 +66,12 @@ const scode = (c: EOperation) => {
         case EOperation.k_I32StoreRegisterPointer: return 'i32_store*';
         case EOperation.k_I32LoadInputPointer: return 'i32_load_input*';
         case EOperation.k_I32StoreInputPointer: return 'i32_store_input*';
-        case EOperation.k_I32GreaterThan: return 'i32_gt';
-        case EOperation.k_I32GreaterThanEqual: return 'i32_gte';
+        case EOperation.k_I32GreaterThanEqual: return 'i32_ge';
         case EOperation.k_I32LessThan: return 'i32_lt';
-        case EOperation.k_I32LessThanEqual: return 'i32_lte';
-        case EOperation.k_F32GreaterThan: return 'f32_gt';
-        case EOperation.k_F32GreaterThanEqual: return 'f32_gte';
+        case EOperation.k_U32GreaterThanEqual: return 'u32_ge';
+        case EOperation.k_U32LessThan: return 'u32_lt';
+        case EOperation.k_F32GreaterThanEqual: return 'f32_ge';
         case EOperation.k_F32LessThan: return 'f32_lt';
-        case EOperation.k_F32LessThanEqual: return 'f32_lte';
         default:
             return v;
     }
@@ -178,10 +176,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 args.length = 3;
                 // op, const, hint
                 break;
-                
+
             case EOperation.k_I32LoadRegister:
                 args.length = 2;
-                break;    
+                break;
 
             case EOperation.k_I32LoadRegistersPointer:
             case EOperation.k_I32StoreRegisterPointer:
@@ -192,7 +190,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_I32StoreInput:
                 args.length = 3;
                 break;
-                
+
             case EOperation.k_I32LoadInputPointer:
             case EOperation.k_I32StoreInputPointer:
                 args.length = 4;
@@ -200,10 +198,12 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
             case EOperation.k_I32Equal:
             case EOperation.k_I32NotEqual:
-            case EOperation.k_I32GreaterThan:
             case EOperation.k_I32GreaterThanEqual:
             case EOperation.k_I32LessThan:
-            case EOperation.k_I32LessThanEqual:
+            case EOperation.k_U32GreaterThanEqual:
+            case EOperation.k_U32LessThan:
+            case EOperation.k_F32GreaterThanEqual:
+            case EOperation.k_F32LessThan:
             case EOperation.k_I32NotEqual:
             case EOperation.k_I32LogicalOr:
             case EOperation.k_I32LogicalAnd:
@@ -212,10 +212,12 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
             case EOperation.k_F32ToI32:
             case EOperation.k_I32ToF32:
+            case EOperation.k_F32ToU32:
+            case EOperation.k_U32ToF32:
                 args.length = 2;
                 break;
 
-                
+
             case EOperation.k_JumpIf:
             case EOperation.k_Jump:
                 args.length = 1;

@@ -31,16 +31,13 @@ export enum EOperation {
     // Relational operations
     //
 
+    k_U32LessThan,
+    k_U32GreaterThanEqual,
     k_I32LessThan,
-    k_I32GreaterThan,       // TODO: remove
-    k_I32LessThanEqual,     // TODO: remove
     k_I32GreaterThanEqual, 
     k_I32Equal,
-    k_I32NotEqual, // << replace with 2 instructions?
-
+    k_I32NotEqual,
     k_F32LessThan,
-    k_F32GreaterThan,       // TODO: remove
-    k_F32LessThanEqual,     // TODO: remove
     k_F32GreaterThanEqual,
 
     //
@@ -69,7 +66,9 @@ export enum EOperation {
     // Cast operations
     //
 
+    k_F32ToU32,
     k_F32ToI32,
+    k_U32ToF32,
     k_I32ToF32,
 
     //

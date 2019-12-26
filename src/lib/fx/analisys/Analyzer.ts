@@ -11,7 +11,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
-import { expression, type } from './helpers';
+import { expression, type, instruction } from './helpers';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
@@ -91,7 +91,23 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
     return inst;
 }
 
-const asType = (instr: ITypedInstruction) => instr ? instr.type : null;
+const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.type : null;
+
+// FIXME: refuse from the regular expressions in favor of a full typecasting graph
+const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
+    if (!instr) {
+        return null;
+    }
+
+    if (instruction.isLiteral(instr)) {
+        if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
+            // temp workaround in order to match int to uint and etc. 
+            return /int|uint/g;
+        }
+    }
+
+    return instr.type;
+};
 
 // TODO: rework 'auto' api
 function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruction) {
@@ -1225,13 +1241,13 @@ export class Analyzer {
             }
         }
 
-        args = compileArgs ? compileArgs.map(arg => arg.type) : null;
+        args = compileArgs ? compileArgs.map(asType) : null;
 
         let func: IFunctionDeclInstruction = null;
 
         if (validators) {
             for (let validator of validators) {
-                args = compileArgs ? compileArgs.map(arg => arg.type) : null;
+                args = compileArgs ? compileArgs.map(asType) : null;
                 retType = null;
 
                 args = validator.args || args;
@@ -1494,7 +1510,7 @@ export class Analyzer {
             case 'T_NON_TYPE_ID':
                 {
                     funcName = children[children.length - 1].value;
-                    func = globalScope.findFunction(funcName, args.map(asType));
+                    func = globalScope.findFunction(funcName, args.map(asRelaxedType));
                 }
                 break;
             // call as method
@@ -1502,7 +1518,7 @@ export class Analyzer {
                 {
                     callee = this.analyzeCallee(context, program, children[children.length - 1]);
                     funcName = children[children.length - 1].children[0].value; // method name
-                    func = callee.type.getMethod(funcName, args.map(asType));
+                    func = callee.type.getMethod(funcName, args.map(asRelaxedType));
                 }
                 break;
         }
@@ -1869,7 +1885,24 @@ export class Analyzer {
             return null;
         }
 
-        let unaryExpr = new UnaryExprInstruction({ scope, sourceNode, expr, operator });
+        let unaryExpr: IExprInstruction = null;
+
+        if (operator === '-' || operator === '+') {
+            if (instruction.isLiteral(expr)) {
+                switch (expr.instructionType) {
+                    case EInstructionTypes.k_IntExpr:
+                        unaryExpr = new IntInstruction({ scope, sourceNode, value: `${operator}${(<ILiteralInstruction<number>>expr).value}` });
+                        break;
+                    case EInstructionTypes.k_FloatExpr:
+                        unaryExpr = new FloatInstruction({ scope, sourceNode, value: `${operator}${(<ILiteralInstruction<number>>expr).value}` });
+                }
+            }
+        }
+
+        if (!unaryExpr) {
+            unaryExpr = new UnaryExprInstruction({ scope, sourceNode, expr, operator });
+        }
+
         return checkInstruction(context, unaryExpr, ECheckStage.CODE_TARGET_SUPPORT);
     }
 
@@ -2355,6 +2388,7 @@ export class Analyzer {
 
         const definition = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
 
+        // looking for function with exact type signatures (that's why we cant use 'asRelaxedType' predicate here!)
         let func = globalScope.findFunction(definition.name, definition.params.map(asType));
 
         if (!isDef(func)) {

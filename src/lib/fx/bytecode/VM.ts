@@ -81,7 +81,7 @@ class VM {
         const iregs = VM.iregs;
         const fregs = VM.fregs;
         const iinput = data.input;
-        
+
         let i5 = 0;                      // current instruction;
         end:
         while (i5 < ilist.length) {
@@ -167,14 +167,14 @@ class VM {
                 // Relational operations
                 //
 
+                case EOperation.k_U32LessThan:
+                    iregs[a] = +((iregs[b] >>> 0) < (iregs[c] >>> 0));
+                    break;
+                case EOperation.k_U32GreaterThanEqual:
+                    iregs[a] = +((iregs[b] >>> 0) >= (iregs[c] >>> 0));
+                    break;
                 case EOperation.k_I32LessThan:
                     iregs[a] = +(iregs[b] < iregs[c]);
-                    break;
-                case EOperation.k_I32GreaterThan:       // TODO: remove
-                    iregs[a] = +(iregs[b] > iregs[c]);
-                    break;
-                case EOperation.k_I32LessThanEqual:     // TODO: remove
-                    iregs[a] = +(iregs[b] <= iregs[c]);
                     break;
                 case EOperation.k_I32GreaterThanEqual:
                     iregs[a] = +(iregs[b] >= iregs[c]);
@@ -188,12 +188,6 @@ class VM {
 
                 case EOperation.k_F32LessThan:
                     fregs[a] = +(fregs[b] < fregs[c]);
-                    break;
-                case EOperation.k_F32GreaterThan:       // TODO: remove
-                    fregs[a] = +(fregs[b] > fregs[c]);
-                    break;
-                case EOperation.k_F32LessThanEqual:     // TODO: remove
-                    fregs[a] = +(fregs[b] <= fregs[c]);
                     break;
                 case EOperation.k_F32GreaterThanEqual:
                     fregs[a] = +(fregs[b] >= fregs[c]);
@@ -247,17 +241,17 @@ class VM {
                 // Cast
                 //
 
-                // case EOperation.k_F32ToU32:
-                // case EOperation.k_U32ToUF32:
 
+                case EOperation.k_U32ToF32:
+                    fregs[a] = iregs[b] >>> 0;
+                    break;
+                case EOperation.k_I32ToF32:
+                    fregs[a] = iregs[b];
+                    break;
+                case EOperation.k_F32ToU32: // TODO: remove it?
                 case EOperation.k_F32ToI32:
                     iregs[a] = Math.trunc(fregs[b]);
                     break;
-                case EOperation.k_I32ToF32:
-                    // nothing to do here :)
-                    fregs[a] = iregs[b];
-                    break;
-
 
                 //
                 // Flow controls

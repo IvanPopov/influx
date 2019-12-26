@@ -24,7 +24,8 @@ export namespace fn {
     }
 
 
-    export function match(def: IFunctionDefInstruction, args: ITypeInstruction[], strong: boolean = false): boolean {
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    export function match(def: IFunctionDefInstruction, args: Array<ITypeInstruction | RegExp>, strong: boolean = false): boolean {
         if (!strong && isNull(args)) {
             return true;
         }
@@ -33,10 +34,11 @@ export namespace fn {
             return false;
         }
 
-
-        return args.every((arg, i) => (!strong && isNull(arg)) ||
+        return args.every((arg, i) => 
+            (!strong && isNull(arg)) ||
             (!strong && isNull(def.params[i].type)) ||
-            type.equals(arg, def.params[i].type, strong));
+            type.equals(arg, def.params[i].type, strong)
+        );
     }
 
 
@@ -47,8 +49,9 @@ export namespace fn {
      *   'undefined' if there more then one function; 
      *    function if all is ok;
      */
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
     export function matchList(funcList: IFunctionDeclInstruction[],
-        args: ITypeInstruction[],
+        args: Array<ITypeInstruction | RegExp>,
         strong: boolean = false): IFunctionDeclInstruction | null | undefined {
 
         if (!funcList) {

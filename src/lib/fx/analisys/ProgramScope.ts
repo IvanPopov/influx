@@ -64,7 +64,8 @@ export class Scope implements IScope {
      *   'undefined' if there more then one function; 
      *    function if all is ok;
      */
-    findFunction(funcName: string, args: ITypeInstruction[] = null): IFunctionDeclInstruction | null | undefined {
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    findFunction(funcName: string, args: Array<ITypeInstruction | RegExp> = null): IFunctionDeclInstruction | null | undefined {
         return this.filter(scope => fn.matchList(scope.functions[funcName], args))
     }
 

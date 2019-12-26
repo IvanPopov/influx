@@ -4,6 +4,17 @@
  */
 
 /**
+ * @test Less than equal test (uint);
+ * @expected {lessThanEqual_uint(-1, 1) == false}
+ * @expected {lessThanEqual_uint(1, -1) == true}
+ * @expected {lessThanEqual_uint(0, 0) == true}
+ */
+bool lessThanEqual_uint(uint x, uint y)
+{
+    return x <= y;
+}
+
+/**
  * @test Vector ctor test.
  * @expected {vector_ctor_test2() == true}
  */

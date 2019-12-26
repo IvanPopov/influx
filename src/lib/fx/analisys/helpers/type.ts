@@ -207,20 +207,42 @@ export namespace type {
         return hash(a, strong) === hash(b, strong);
     }
 
-    export function compare(a: ITypeInstruction, b: ITypeInstruction, strong: boolean = false): boolean {
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    export function compare(a: ITypeInstruction | RegExp, b: ITypeInstruction | RegExp, strong: boolean = false): boolean {
         if (isNull(a) || isNull(b)) {
             return false;
         }
-        if (a.isArray() && b.isArray()) {
-            if (a.length === instruction.UNDEFINE_LENGTH ||
-                b.length === instruction.UNDEFINE_LENGTH) {
+
+        if (a instanceof RegExp && b instanceof RegExp) {
+            assert(false);
+            return false;
+        }
+
+        if (a instanceof RegExp) {
+            let ra = <RegExp>a;
+            let sb = signature(<ITypeInstruction>b, strong);
+            return !!sb.match(ra);
+        }
+
+        if (b instanceof RegExp) {
+            let sa = signature(<ITypeInstruction>a, strong);
+            let rb = <RegExp>b;
+            return !!sa.match(rb);
+        }
+
+        let ta = <ITypeInstruction>a;
+        let tb = <ITypeInstruction>b;
+        if (ta.isArray() && tb.isArray()) {
+            if (ta.length === instruction.UNDEFINE_LENGTH ||
+                tb.length === instruction.UNDEFINE_LENGTH) {
                 return false;
             }
         }
-        return signature(a, strong) === signature(b, strong);
+        return signature(ta, strong) === signature(tb, strong);
     }
 
-    export function equals(a: ITypeInstruction, b: ITypeInstruction, strong: boolean = false): boolean {
+    // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    export function equals(a: ITypeInstruction | RegExp, b: ITypeInstruction | RegExp, strong: boolean = false): boolean {
         return compare(a, b, strong);
     }
 }

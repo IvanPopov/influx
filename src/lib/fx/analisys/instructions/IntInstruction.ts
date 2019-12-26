@@ -6,39 +6,43 @@ import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableT
 
 export interface IIntInstructionSettings extends IInstructionSettings {
     value: string;
+    signed?: boolean;
 }
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction<number> {
-    protected _value: number;
+    readonly value: number;
+    // readonly signed: boolean;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
-    constructor({ value, scope, ...settings }: IIntInstructionSettings) {
+    constructor({ value, signed = true, scope, ...settings }: IIntInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IntExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes 
             type: VariableTypeInstruction.wrapAsConst(T_INT, SCOPE), scope, ...settings });
 
-        this._value = ((<number><any>value) * 1);
+        this.value = ((<number><any>value) * 1);
+        // this.signed = signed;
+
+        // if (!signed) {
+        //     this.value >>>= 0;
+        // }
     }
 
     
-    get value(): number {
-        return this._value;
-    }
-
 
     toString(): string {
-        return <string><any>this._value;
+        // return `${this.value}${this.signed? '' : 'u'}`;
+        return `${this.value}`;
     }
 
     
     toCode(): string {
-        return this._value.toString();
+        return this.toString();
     }
 
     
     evaluate(): boolean {
-        this._evalResult = this._value;
+        this._evalResult = this.value;
         return true;
     }
 

@@ -17,6 +17,7 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+import { IMap } from "@lib/idl/IMap";
 
 export const CBUFFER0_REGISTER = 0;
 export const INPUT0_REGISTER = 1;
@@ -471,7 +472,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'DecrementCounter':
             case 'IncrementCounter':
                 {
-                    
+
                     const diff = { 'IncrementCounter': +1, 'DecrementCounter': -1 };
 
                     const uav = call.callee;
@@ -678,41 +679,71 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const relExpr = expr as IRelationalExprInstruction;
 
+                    const opUintMap = {
+                        '<': EOperation.k_U32LessThan,          //lt
+                        '>=': EOperation.k_U32GreaterThanEqual, // ge
+                        '==': EOperation.k_I32Equal,            // << compare with I32 operator
+                        '!=': EOperation.k_I32NotEqual          // << compare with I32 operator
+                    }
+
                     const opIntMap = {
-                        '<': EOperation.k_I32LessThan,
-                        '>': EOperation.k_I32GreaterThan,
-                        '<=': EOperation.k_I32LessThanEqual,
-                        '>=': EOperation.k_I32GreaterThanEqual,
-                        '==': EOperation.k_I32Equal,
-                        '!=': EOperation.k_I32NotEqual
+                        '<': EOperation.k_I32LessThan,          //lt
+                        '>=': EOperation.k_I32GreaterThanEqual, // ge
+                        '==': EOperation.k_I32Equal,            // eq
+                        '!=': EOperation.k_I32NotEqual          // ne
                     };
 
                     const opFloatMap = {
-                        '<': EOperation.k_F32LessThan,
-                        '>': EOperation.k_F32GreaterThan,
-                        '<=': EOperation.k_F32LessThanEqual,
-                        '>=': EOperation.k_F32GreaterThanEqual,
-                        '==': EOperation.k_I32Equal,    // << compare with I32 operator
-                        '!=': EOperation.k_I32NotEqual  // << compare with I32 operator
+                        '<': EOperation.k_F32LessThan,          // lt
+                        '>=': EOperation.k_F32GreaterThanEqual, // ge
+                        '==': EOperation.k_I32Equal,            // << compare with I32 operator
+                        '!=': EOperation.k_I32NotEqual          // << compare with I32 operator
                     };
 
                     let op: EOperation;
+                    let { left, right } = relExpr;
+                    let operator = relExpr.operator;
 
-                    const { left, right } = relExpr;
-
-                    if ((left.type.isEqual(T_INT) && right.type.isEqual(T_INT)) ||
-                        (left.type.isEqual(T_UINT) && right.type.isEqual(T_UINT))) { // TODO: add proper UINT comparison
-                        op = opIntMap[relExpr.operator];
-                    } else if (left.type.isEqual(T_FLOAT) && right.type.isEqual(T_FLOAT)) {
-                        op = opFloatMap[relExpr.operator];
-                    } else {
-                        // todo: add type description
-                        diag.error(EErrors.k_UnsupportedRelationalExpr, {});
-                        return PromisedAddress.INVALID;
+                    // (left > right) => (right < left)
+                    if (operator === '>') {
+                        operator = '<';
+                        [right, left] = [left, right];
                     }
 
-                    if (!isDef(op)) {
-                        diag.error(EErrors.k_UnsupportedExprType, {});
+                    // (left <= right) => (right >= left)
+                    if (operator === '<=') {
+                        operator = '>=';
+                        [right, left] = [left, right];
+                    }
+
+
+                    if (left.type.isEqual(T_INT)) {
+                        op = opIntMap[operator];
+
+                        // print warning if right type is UINT;
+                        if (!right.type.isEqual(T_INT) && !right.type.isEqual(T_UINT)) {
+                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            return PromisedAddress.INVALID;
+                        }
+                    } else if (left.type.isEqual(T_UINT)) {
+                        op = opUintMap[operator];
+
+                        // print warning if right type is INT;
+                        if (!right.type.isEqual(T_UINT) && !right.type.isEqual(T_INT)) {
+                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            return PromisedAddress.INVALID;
+                        }
+                    } else if (left.type.isEqual(T_FLOAT)) {
+                        op = opFloatMap[operator];
+
+                        if (!right.type.isEqual(T_FLOAT)) {
+                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            return PromisedAddress.INVALID;
+                        }
+                    }
+
+                    if (!op) {
+                        diag.error(EErrors.k_UnsupportedRelationalExpr, {});
                         return PromisedAddress.INVALID;
                     }
 
@@ -749,20 +780,38 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const dstType = castExpr.type;
 
                     let op: EOperation;
-                    // FIXME: add support for dedicated FLOAT => UINT conversion
-                    if (srcType.isEqual(T_FLOAT) && (dstType.isEqual(T_INT) || dstType.isEqual(T_UINT))) {
-                        op = EOperation.k_F32ToI32;
-                        // FIXME: add support for dedicated UINT => FLOAT conversion
-                    } else if ((srcType.isEqual(T_INT) || srcType.isEqual(T_UINT)) && dstType.isEqual(T_FLOAT)) {
-                        op = EOperation.k_I32ToF32;
-                    } else if ((srcType.isEqual(T_INT) && dstType.isEqual(T_UINT)) ||
-                               (srcType.isEqual(T_UINT) && dstType.isEqual(T_INT))) {
-                        // TODO: add real conversion for UINT <=> INT
-                        return raddr(castExpr.expr);
-                    } else {
-                        // todo: add type descriptions
-                        diag.error(EErrors.k_UnsupoortedTypeConversion, {});
-                        return PromisedAddress.INVALID;
+
+                    // TODO: add support for vectors
+
+                    if (srcType.isEqual(T_FLOAT)) {
+                        if (dstType.isEqual(T_INT)) {
+                            op = EOperation.k_F32ToI32;
+                        } else if (dstType.isEqual(T_UINT)) {
+                            op = EOperation.k_F32ToU32;
+                        } else {
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            return PromisedAddress.INVALID;
+                        }
+                    } else if (srcType.isEqual(T_INT)) {
+                        if (dstType.isEqual(T_FLOAT)) {
+                            op = EOperation.k_I32ToF32;
+                        } else if (dstType.isEqual(T_UINT)) {
+                            // useless conversion
+                            return raddr(castExpr.expr);
+                        } else {
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            return PromisedAddress.INVALID;
+                        }
+                    } else if (srcType.isEqual(T_UINT)) {
+                        if (dstType.isEqual(T_FLOAT)) {
+                            op = EOperation.k_U32ToF32;
+                        } else if (dstType.isEqual(T_INT)) {
+                            // useless conversion
+                            return raddr(castExpr.expr);
+                        } else {
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            return PromisedAddress.INVALID;
+                        }
                     }
 
                     const size = castExpr.type.size;
