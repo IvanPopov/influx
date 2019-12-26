@@ -80,6 +80,17 @@ export class ProxyTypeInstruction extends Instruction implements ITypeInstructio
         this._host = host;
     }
 
+    isSampler(): boolean {
+        return this.isResolved() ? this.host.isSampler() : false;
+    }
+
+    isTexture(): boolean {
+        return this.isResolved() ? this.host.isTexture() : false;
+    }
+
+    isUAV(): boolean {
+        return this.isResolved() ? this.host.isUAV() : false;
+    }
     
     toString(): string {
         return this.isResolved() ? this.host.toString() : this.name;

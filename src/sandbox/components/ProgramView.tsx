@@ -341,12 +341,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             <SystemProperty { ...this.bindProps(instr, false) } name={ type.signature(instr, true) }>
                 <SystemProperty name='writable' value={ `${instr.writable}` } />
                 <SystemProperty name='readable' value={ `${instr.readable}` } />
-                <SystemProperty name='size' value={ `${instr.size} bytes` } />
-                <SystemProperty name='length' value={ `${instr.length}` } />
+                <SystemProperty name='size' value={ `${instr.size === instruction.UNDEFINE_SIZE ? 'undef' : instr.size} bytes` } />
+                <SystemProperty name='length' value={ `${instr.length === instruction.UNDEFINE_LENGTH ? 'undef' : instr.length}` } />
                 <SystemProperty name='base' value={ `${instr.isBase()}` } />
                 <SystemProperty name='array' value={ `${instr.isArray()}` } />
                 <SystemProperty name='complex' value={ `${instr.isComplex()}` } />
                 <SystemProperty name='const' value={ `${instr.isConst()}` } />
+                <PropertyOpt name='element type'>
+                    { this.Unknown(instr.arrayElementType) }
+                </PropertyOpt>
                 <PropertyOpt name='methods' >
                     { instr.methods.map(method => fn.signatureEx(method.def, true))
                         .map(signature =>
@@ -388,6 +391,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='id' value={ instr.id.toString() } />
+                <Property name='semantic' value={ instr.semantic } />
                 <Property name='type' opened={ true }>
                     { this.VariableType(instr.type) }
                 </Property>

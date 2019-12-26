@@ -281,6 +281,21 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    isSampler(): boolean {
+        return !this.isNotBaseArray() && this.subType.isSampler();
+    }
+
+
+    isTexture(): boolean {
+        return !this.isNotBaseArray() && this.subType.isTexture();
+    }
+
+
+    isUAV(): boolean {
+        return !this.isNotBaseArray() && this.subType.isUAV();
+    }
+
+
     $overwritePadding(val: number) {
         this._padding = val;
     }

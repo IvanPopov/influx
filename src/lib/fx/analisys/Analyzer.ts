@@ -1076,9 +1076,17 @@ export class Analyzer {
      *         T_NON_TYPE_ID = 'SEMANTIC'
      *         T_PUNCTUATOR_58 = ':'
      */
+    /**
+     * AST example:
+     *    Semantic
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_NON_TYPE_ID = 'u2'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_KW_REGISTER = 'register'
+     *         T_PUNCTUATOR_58 = ':'
+     */
     protected analyzeSemantic(sourceNode: IParseNode): string {
-        let semantic = sourceNode.children[0].value;
-        return semantic;
+        return sourceNode.children.slice(0, -1).reverse().map(child => child.value).join('');
     }
 
 

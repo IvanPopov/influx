@@ -5,13 +5,15 @@ import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IIn
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-import { sname, f32Asi32 } from "./common";
+import { variable } from "../analisys/helpers";
+import { f32Asi32, sname } from "./common";
 import ConstanPool from "./ConstantPool";
 import debugLayout from './DebugLayout';
 import InstructionList from "./InstructionList";
 import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
+import { UAVPool } from "./UAVPool";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -45,7 +47,6 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
 
 
 
-
 export function ContextBuilder() {
     // occupied registers count 
     // same as stack pointer; 
@@ -70,6 +71,7 @@ export function ContextBuilder() {
 
     const instructions = new InstructionList;
     const constants = new ConstanPool;
+    const uavs = new UAVPool;
 
     const diag = new TranslatorDiagnostics; // todo: remove it?
 
@@ -83,8 +85,6 @@ export function ContextBuilder() {
     const ret = () => top().ret;
     const pc = () => instructions.pc;
     const loc = (desc: IAddrDesc) => new PromisedAddress(desc);
-    // const consti32 = (i32: number) => constants.i32(i32);
-    // const constf32 = (f32: number) => constants.f32(f32);
 
     const debug = debugLayout(pc);
 
@@ -393,8 +393,6 @@ export function ContextBuilder() {
         debug,
         deref,
         ref,
-        // cderef,
-        // cref,
         alloca,
         icode,
         imove,
@@ -410,6 +408,7 @@ export function ContextBuilder() {
         pop,
         ret,
         constants,
+        uavs,
         depth,
         diag
     };

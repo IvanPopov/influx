@@ -1,0 +1,91 @@
+RWBuffer<uint2> uavCeatetionRequests: register(u0);
+
+
+// The buffer contains indicies of dead particles.
+RWStructuredBuffer<uint> uavDeadIndices: register(u1);
+
+
+struct Part
+{
+	float3 speed;
+	float3 pos;
+	float3 size;
+	float timelife;
+};
+
+// The buffer contains user-defined particle data.
+RWStructuredBuffer<Part> uavParticles: register(u2);
+
+
+// uniform float elapsedTimeLevel;
+// uniform float elapsedTime;
+
+// float random(float2 uv)
+// {
+// 	return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
+// }
+
+// float3 randUnitCircle(uint partId)
+// {
+// 	float2 seed = float2(elapsedTimeLevel,(float)partId * elapsedTime);
+// 	float alpha = random(seed) * 3.14f * 2.f;
+// 	float dist = random(seed * 2.f);
+// 	return float3(sin(alpha), 0.f, cos(alpha)) * dist;
+// }
+
+// float noise(in float2 st)
+// {
+// 	float2 i = floor(st);
+// 	float2 f = frac(st);
+// 	float a = random(i);
+// 	float b = random(i + float2(1.f, 0.f));
+// 	float c = random(i + float2(0.f, 1.f));
+// 	float d = random(i + float2(1.f, 1.f));
+// 	float2 u = f * f *(3.f - 2.f * f);
+// 	return lerp(a, b, u.x) +(c - a) * u.y *(1.f - u.x) +(d - b) * u.x * u.y;
+// }
+
+// float3 sizeFromPos(float3 pos)
+// {
+// 	return float3(1.f, noise(pos.xz * 1.3f + float2(elapsedTimeLevel * 1.f, 0.f)) / 0.06f, 1.f) * 0.03f;
+// }
+
+// void Init(out Part part, uint partId)
+// {
+// 	part.pos = randUnitCircle(partId);
+// 	part.size = sizeFromPos(part.pos);
+// 	part.timelife = 0.f;
+// 	part.speed = float3(0.f);
+// }
+
+// The buffer contains the state of the particles, Alive or dead.
+RWBuffer<uint> uavStates: register(u3);
+
+
+[numthreads(1, 1, 1)]
+void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3 GTid: SV_GroupThreadID, uint3 DTid: SV_DispatchThreadID)
+{
+	uint GroupId = Gid.x;
+	uint ThreadId = GTid.x;
+	uint nPart = uavCeatetionRequests[GroupId].x;
+
+	if (ThreadId >= nPart) return;
+
+	int n = (int)uavDeadIndices.DecrementCounter();
+	// a bit confusing way to check for particles running out
+	if (n <= 0)
+
+	{
+		// not very beautiful, but a cheap way not to
+		// think about the correctness of this counter
+		uavDeadIndices.IncrementCounter();
+		return;
+	}
+
+	uint PartId = uavDeadIndices[n];
+	Part Particle;
+	// Init(Particle, PartId);
+	uavParticles[PartId] = Particle;
+	// set particles's state as 'Alive'
+	uavStates[PartId] = 1;
+}

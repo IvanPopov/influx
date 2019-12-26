@@ -57,4 +57,44 @@ export namespace variable {
         }
         return decl.name;
     }
+
+
+    export interface IRegister {
+        type: 'u' | 'b' | 't' | 's' | null;
+        index: number;
+        // space ?
+    };
+
+    export function resolveRegister(decl: IVariableDeclInstruction): IRegister {
+        let type = null;
+        let index = -1;
+
+        const semantic = decl.semantic;
+        if (semantic) {
+            const match = semantic.match(/^register\(([utbs]{1})([\d]+)\)$/);
+            if (match) {
+                type = match[1];
+                index = Number(match[2]);
+            }
+        }
+
+        if (decl.type.isUAV()) {
+            assert(type === null || type === 'u');
+            type = 'u';
+        }
+
+        if (decl.type.isTexture()) {
+            assert(type === null || type === 't');
+            type = 't';
+        }
+
+        if (decl.type.isSampler()) {
+            assert(type === null || type === 's');
+            type = 's';
+        }
+
+        // TODO: buffers
+
+        return { type, index };
+    }
 }

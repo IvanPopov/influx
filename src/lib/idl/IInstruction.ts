@@ -272,6 +272,11 @@ export interface ITypeInstruction extends IInstruction {
 
     /** @deprecated */
     toDeclString(): string;
+
+
+    isUAV(): boolean;
+    isSampler(): boolean;
+    isTexture(): boolean;
 }
 
 
@@ -283,6 +288,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly padding: number;
 
     isUniform(): boolean;
+
     hasUsage(usageName: IVariableUsage): boolean;
 
     // for structures internal usage

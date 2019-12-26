@@ -19,7 +19,12 @@ import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 
 export const CBUFFER0_REGISTER = 0;
-export const INPUTS_REGISTER = 1;
+export const INPUT0_REGISTER = 1;
+export const UAV0_REGISTER = 17;
+
+export const UAV_TOTAL = 33 - UAV0_REGISTER;
+export const INPUT_TOTAL = UAV_TOTAL - INPUT0_REGISTER;
+export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
 
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
@@ -116,7 +121,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
             continue;
         }
 
-        const inputIndex = variable.parameterIndex(param) + INPUTS_REGISTER;
+        const inputIndex = variable.parameterIndex(param) + INPUT0_REGISTER;
         const size = param.type.size;
         const src = loc({ type: EAddrType.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
@@ -141,6 +146,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         pc,
         diag,
         constants,
+        uavs,
         alloca,
         loc,
         debug,
@@ -368,10 +374,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             if (decl.type.isUniform()) {
                 return EAddrType.k_Input;
             }
-            // if (decl.type.isUAV()) {
-            //     return EAddrType.k_Input;
-            // }
-            assert(false, 'unsupported');
+            if (decl.type.isUAV()) {
+                return EAddrType.k_Input;
+            }
+            assert(false, `could not resolve address type for '${decl.toCode()}'`);
         }
 
         assert(decl.isLocal());
@@ -521,13 +527,19 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     return constants.deref(decl);
                                 } 
 
+
+                                if (decl.type.isUAV()) {
+                                    return uavs.deref(decl);
+                                }
+
                                 // implies that each parameter is loaded from its stream, so 
                                 // the offset is always zero. 
                                 // Otherwise use 'variable.getParameterOffset(decl);'
                                 // in order to determ correct offset between parameters
                                 const offset = 0;
                                 const src = offset;
-                                const inputIndex = variable.parameterIndex(decl) + INPUTS_REGISTER;
+                                const inputIndex = variable.parameterIndex(decl) + INPUT0_REGISTER;
+                                assert(variable.parameterIndex(decl) < INPUT_TOTAL);
                                 return loc({ inputIndex, addr: src, size, type: addrType });
                             }
                     }

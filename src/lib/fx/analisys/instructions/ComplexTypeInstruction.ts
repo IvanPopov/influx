@@ -89,6 +89,19 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return [];
     }
 
+
+    isSampler(): boolean {
+        return false;
+    }
+
+    isTexture(): boolean {
+        return false;
+    }
+
+    isUAV(): boolean {
+        return false;
+    }
+
     
     toString(): string {
         return this.name || type.hash(this);

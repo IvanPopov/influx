@@ -59,7 +59,7 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
         run(...input: Uint8Array[]) {
             for (let i = 0; i < input.length; ++i) {
                 // TODO: don't convert u8 to i32 here.
-                bundle.input[Bytecode.INPUTS_REGISTER + i] = new Int32Array(input[i].buffer, input[i].byteOffset, input[i].byteLength >> 2);
+                bundle.input[Bytecode.INPUT0_REGISTER + i] = new Int32Array(input[i].buffer, input[i].byteOffset, input[i].byteLength >> 2);
             }
             return VM.play(bundle);
         },

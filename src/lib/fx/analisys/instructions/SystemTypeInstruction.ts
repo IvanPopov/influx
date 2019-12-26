@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { fn, type } from '@lib/fx/analisys/helpers';
+import { fn, type, instruction } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -14,6 +14,9 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     writable?: boolean;
     readable?: boolean;
     complex?: boolean;
+    sampler?: boolean;
+    texture?: boolean;
+    uav?: boolean;
 }
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
@@ -26,7 +29,10 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _bIsWritable: boolean;
     protected _bIsReadable: boolean;
     protected _bIsComplex: boolean;
-    protected _declaration: string;
+    protected _bIsUAV: boolean;
+    protected _bIsTexture: boolean;
+    protected _bIsSampler: boolean;
+    
 
     constructor({
         name, 
@@ -38,6 +44,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         writable = true, 
         readable = true, 
         complex = false,
+        sampler = false,
+        texture = false,
+        uav = false,
         ...settings
     }: ISystemTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemType, ...settings });
@@ -51,6 +60,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._bIsComplex = complex;
+        this._bIsSampler = sampler;
+        this._bIsTexture = texture;
+        this._bIsUAV = uav;
 
         fields.forEach(field => this.addField(field));
         methods.forEach(method => this.addMethod(method));
@@ -89,6 +101,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     get size(): number {
         if (this.isArray()) {
+            if (this.length === instruction.UNDEFINE_LENGTH) {
+                return instruction.UNDEFINE_LENGTH;
+            }
             return this.arrayElementType.size * this.length;
         }
         return this._size;
@@ -127,6 +142,21 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
     get fieldNames(): string[] {
         return this._fields.map(field => field.name);
+    }
+
+
+    isSampler(): boolean {
+        return this._bIsSampler;
+    }
+
+
+    isTexture(): boolean {
+        return this._bIsTexture;
+    }
+
+
+    isUAV(): boolean {
+        return this._bIsUAV;
     }
 
 
