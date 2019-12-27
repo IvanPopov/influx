@@ -11,7 +11,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
-import { expression, type, instruction } from './helpers';
+import { expression, instruction, type } from './helpers';
 import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
@@ -92,6 +92,7 @@ function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: 
 }
 
 const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.type : null;
+
 
 // FIXME: refuse from the regular expressions in favor of a full typecasting graph
 const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
@@ -3693,6 +3694,14 @@ export class Analyzer {
                 return null;
             }
 
+        }
+
+        // temp workaround for INT/UINT comparison
+        if (Analyzer.isRelationalOperator(operator)) {
+            if ((leftType.isEqual(T_UINT) && rightType.isEqual(T_INT)) ||
+                (leftType.isEqual(T_INT) && rightType.isEqual(T_UINT))) {
+                return boolType;
+            }
         }
 
         if (Analyzer.isArithmeticalOperator(operator)) {

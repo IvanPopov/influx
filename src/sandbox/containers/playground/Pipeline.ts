@@ -39,17 +39,17 @@ const makeCRCTable = () => {
     return table;
 };
 
-const crcTable = makeCRCTable();
+// const crcTable = makeCRCTable();
 
-const crc32 = (str: string) => {
-    let crc = 0 ^ (-1);
+// const crc32 = (str: string) => {
+//     let crc = 0 ^ (-1);
 
-    for (let i = 0; i < str.length; i++) {
-        crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
-    }
+//     for (let i = 0; i < str.length; i++) {
+//         crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
+//     }
 
-    return (crc ^ (-1)) >>> 0;
-};
+//     return (crc ^ (-1)) >>> 0;
+// };
 
 function prebuild(expr: ICompileExprInstruction): IRunnable {
     const program = Bytecode.translate(expr.function);

@@ -4,6 +4,18 @@
  */
 
 /**
+ * @test Less than equal test (int);
+ * @expected {lessThanEqual_int(-1, 1) == true}
+ * @expected {lessThanEqual_int(1, -1) == false}
+ * @expected {lessThanEqual_int(0, 0) == true}
+ */
+bool lessThanEqual_int(int x, int y)
+{
+    return x <= y;
+}
+
+
+/**
  * @test Less than equal test (uint);
  * @expected {lessThanEqual_uint(-1, 1) == false}
  * @expected {lessThanEqual_uint(1, -1) == true}

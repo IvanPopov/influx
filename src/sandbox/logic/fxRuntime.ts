@@ -1,11 +1,12 @@
 // tslint:disable:no-for-in
 // tslint:disable:forin
 
-import { verbose, isNull } from '@lib/common';
+import { isNull, verbose } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 import Pipeline from '@sandbox/containers/playground/Pipeline';
+import PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
@@ -56,6 +57,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 .indexOf(active);
 
             if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
+                PipelineNEXT(list[i]);
                 pipelineNext = Pipeline(list[i]);
                 verbose('next pipeline has been created.');
             }

@@ -33,6 +33,7 @@ export interface ICSShaderReflection {
 }
 
 export interface IFxReflection {
+    CSParticlesResetRoutine: ICSShaderReflection;
     CSParticlesInitRoutine: ICSShaderReflection;
     CSParticlesUpdateRoutine: ICSShaderReflection;
     CSParticlesPrerenderRoutines: ICSShaderReflection[];
@@ -70,6 +71,56 @@ export class FxTranslator extends FxEmitter {
         }
 
         return this.knownUAVs[register];
+    }
+
+    emitResetShader(fx: IPartFxInstruction): ICSShaderReflection {
+        const name = 'CSParticlesResetRoutine';
+        const numthreads = [1, 1, 1];
+        const uavs = [];
+
+        const reflection: ICSShaderReflection = { name, numthreads, uavs };
+
+        const capacity = fx.capacity;
+
+        this.begin();
+        {
+            this.emitLine(`[numthreads(${numthreads.join(', ')})]`);
+            this.emitLine(`void ${name}(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3 GTid: SV_GroupThreadID, uint3 DTid: SV_DispatchThreadID)`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`uint tid = DTid.x;`);
+                this.emitLine(`if (tid >= ${capacity}) return;`);
+
+                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, uavDeadIndices, uavDeadIndicesComment));
+                this.emitLine(`${uavDeadIndices}[tid] = tid;`);
+
+                uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
+                this.emitLine(`${uavStates}[tid] = 0;`);
+
+                const { typeName: partType } = this.resolveType(fx.particle);
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
+                this.emitLine(`${partType} Particle;`);
+                
+                assert(fx.particle.isComplex());
+                fx.particle.fields.forEach(({ name, type }) => {
+                    assert(type.length >= 1);
+                    // TODO: add support for INT/UINT types
+                    if (type.length === 1) {
+                        this.emitLine(`Particle.${name} = 0.f;`);
+                    } else {
+                        this.emitLine(`Particle.${name} = ${type.name}(${Array(type.length).fill('0.f').join(', ')});`);
+                    }
+                });
+
+                this.emitLine(`${uavParticles}[tid] = Particle;`);
+            }
+            this.pop();
+            this.emitChar('}');
+        }
+        this.end();
+
+        return reflection;
     }
 
     emitInitShader(fx: IPartFxInstruction): ICSShaderReflection {
@@ -262,6 +313,7 @@ export class FxTranslator extends FxEmitter {
     emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
         const IFxReflection = {};
 
+        const CSParticlesResetRoutine = this.emitResetShader(fx);
         const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
         const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(fx);
         const CSParticlesPrerenderRoutines = [];
@@ -287,6 +339,7 @@ export class FxTranslator extends FxEmitter {
         });
 
         return {
+            CSParticlesResetRoutine,
             CSParticlesInitRoutine,
             CSParticlesUpdateRoutine,
             CSParticlesPrerenderRoutines,

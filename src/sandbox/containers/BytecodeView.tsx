@@ -1,9 +1,11 @@
 // tslint:disable:typedef
+// tslint:disable:max-func-body-length
+// tslint:disable:cyclomatic-complexity
 
 
 import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
-import { u8ArrayAsF32, u8ArrayAsI32, i32Asf32, u32Asf32, u32Asi32 } from '@lib/fx/bytecode/common';
+import { i32Asf32, u32Asf32, u32Asi32, u8ArrayAsF32, u8ArrayAsI32 } from '@lib/fx/bytecode/common';
 import InstructionList from '@lib/fx/bytecode/InstructionList';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EChunkType } from '@lib/idl/bytecode';
@@ -106,19 +108,19 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         return (
             // fixed
             <div>
-                <Table size='small' unstackable basic compact style={{ fontFamily: 'consolas', whiteSpace: 'pre' }}>
-                    <Table.Body style={{
+                <Table size='small' unstackable basic compact style={ { fontFamily: 'consolas', whiteSpace: 'pre' } }>
+                    <Table.Body style={ {
                         maxHeight: 'calc(100vh - 432px)',
                         overflowY: 'auto',
                         display: 'block'
-                    }}>
-                        {this.renderOpList(ilist)}
+                    } }>
+                        { this.renderOpList(ilist) }
                     </Table.Body>
-                    {props.options.disableOptimizations &&
+                    { props.options.disableOptimizations &&
                         <Table.Footer>
                             <Table.Row >
-                                <Table.Cell colSpan={5} inverted warning textAlign='center'
-                                    style={{ padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}
+                                <Table.Cell colSpan={ 5 } inverted warning textAlign='center'
+                                    style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
                                 >
                                     optimizations are disabled
                             </Table.Cell>
@@ -126,10 +128,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                         </Table.Footer>
                     }
                 </Table>
-                <Button animated onClick={async () => {
+                <Button animated onClick={ async () => {
                     const result = VM.asNative(await VM.evaluate(code), layout);
                     alert(JSON.stringify(result, null, '   '));
-                }}>
+                } }>
                     <Button.Content visible>Run</Button.Content>
                     <Button.Content hidden>
                         <Icon name='rocket' />
@@ -167,6 +169,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
     }
 
 
+    // tslint:disable-next-line:max-func-body-length:
+    // tslint:disable-next-line:cyclomatic-complexity
     renderOpInternal(code: EOperation, args: number[]) {
         const i = this.state.count++;
         const { cdlView } = this.state;
@@ -204,7 +208,6 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_U32LessThan:
             case EOperation.k_F32GreaterThanEqual:
             case EOperation.k_F32LessThan:
-            case EOperation.k_I32NotEqual:
             case EOperation.k_I32LogicalOr:
             case EOperation.k_I32LogicalAnd:
                 args.length = 3;
@@ -215,6 +218,33 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_F32ToU32:
             case EOperation.k_U32ToF32:
                 args.length = 2;
+                break;
+
+            case EOperation.k_I32Add:
+            case EOperation.k_I32Sub:
+            case EOperation.k_I32Div:
+            case EOperation.k_I32Mul:
+                args.length = 3;
+                break;
+
+            case EOperation.k_F32Add:
+            case EOperation.k_F32Sub:
+            case EOperation.k_F32Div:
+            case EOperation.k_F32Mul:
+                args.length = 3;
+                break;
+
+            case EOperation.k_F32Sin:
+            case EOperation.k_F32Cos:
+            case EOperation.k_F32Frac:
+            case EOperation.k_F32Sqrt:
+            case EOperation.k_F32Floor:
+                args.length = 2;
+                break;
+
+            case EOperation.k_F32Min:
+            case EOperation.k_F32Max:
+                args.length = 3;
                 break;
 
 
@@ -233,7 +263,6 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         switch (code) {
             case EOperation.k_I32SetConst:
                 args[1] = args[2] == 1 ? fixPrecision(u32Asf32(args[1])) : u32Asi32(args[1]);
-                break;
         }
 
         //
@@ -271,7 +300,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 break;
             case EOperation.k_I32StoreInputPointer:
                 sArgs[1] = pointer(args[1]);
-                sArgs[2] = register(args[1]);
+                sArgs[2] = register(args[2]);
                 break;
             case EOperation.k_Jump:
                 sArgs[0] = hex2(args[0] / InstructionList.STRIDE);
@@ -293,14 +322,14 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         }
 
         return (
-            <Table.Row key={`op-${code}-${i}`}
-                style={{ width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' }}
-                onMouseOver={() => this.showSourceLine(i)} onMouseOut={() => this.hideSourceLine(i)}>
-                <Table.Cell style={specColor}></Table.Cell>
-                <Table.Cell style={{ padding: '0.2em 0.7em', width: '50px' }}>{hex4(i)}</Table.Cell>
-                <Table.Cell style={{ padding: '0.2em 0.7em' }}>{scode(code)}</Table.Cell>
-                <Table.Cell colSpan={2} style={{ padding: '0.2em 0.7em' }}>
-                    {sArgs.join(' ')}
+            <Table.Row key={ `op-${code}-${i}` }
+                style={ { width: '100%', display: 'table', tableLayout: 'fixed', borderBottom: 'none' } }
+                onMouseOver={ () => this.showSourceLine(i) } onMouseOut={ () => this.hideSourceLine(i) }>
+                <Table.Cell style={ specColor }></Table.Cell>
+                <Table.Cell style={ { padding: '0.2em 0.7em', width: '50px' } }>{ hex4(i) }</Table.Cell>
+                <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
+                <Table.Cell colSpan={ 2 } style={ { padding: '0.2em 0.7em' } }>
+                    { sArgs.join(' ') }
                 </Table.Cell>
             </Table.Row>
         );

@@ -141,7 +141,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     get length(): number {
         if (!this.isNotBaseArray()) {
-            return 0;
+            return this.subType.length;
         }
 
         if (this.isNotBaseArray() && isNull(this._arrayElementType)) {

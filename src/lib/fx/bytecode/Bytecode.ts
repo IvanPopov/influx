@@ -8,6 +8,7 @@ import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
@@ -17,7 +18,6 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CdlRaw } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { IMap } from "@lib/idl/IMap";
 
 export const CBUFFER0_REGISTER = 0;
 export const INPUT0_REGISTER = 1;
@@ -838,14 +838,22 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (/*index.isConstExpr()*/false) {
                         // TODO: implement constexpr branch
                     } else {
+                        let offset = 0;
                         let elementAddr = raddr(element);
                         // NOTE: element can be not loaded yet
                         //       we don't want to load all the array (all 'element' object)
 
+                        if (element.type.isUAV()) {
+                            // some UAVs can have hidden counter at the beginning of the data
+                            // in such cases we need to step forward before fetching the data
+                            offset += sizeof.i32();
+                        }
+
                         // sizeof(element[i])
                         let arrayElementSize = element.type.arrayElementType.size;
                         assert(arrayElementSize % sizeof.i32() === 0, `all sizes must be multiple of ${sizeof.i32()}`);
-                        let sizeAddr = iconst_i32(arrayElementSize >> 2);
+                        // convert byte offset to register index (cause VM uses registers not byte offsets)
+                        let sizeAddr = iconst_i32(arrayElementSize >> 2); 
                         // NOTE: size can be unresolved yet
 
                         // index => index of element in the array (element)
@@ -855,12 +863,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         if (elementAddr.swizzle) {
                             // swizzles must be removed in order to be able to handle expressions like:
                             // vec2.xxyy[3]
+                            // TODO: just resolve swizzle
                             // TODO: is it possible to not load it here and do it late as possible?
                             elementAddr = iload(elementAddr);
                         }
 
                         assert(elementAddr.addr % sizeof.i32() === 0, `all adresses must be aligned by ${sizeof.i32()}`);
-                        let baseAddr = iconst_i32(elementAddr.addr >> 2);    // TODO: use iconst_addr()
+                        // convert byte offset to register index
+                        let baseAddr = iconst_i32((elementAddr.addr + offset) >> 2);    // TODO: use iconst_addr()
                         let pointerAddr = alloca(sizeof.addr());        // addr <=> i32
 
                         // load all to registers
