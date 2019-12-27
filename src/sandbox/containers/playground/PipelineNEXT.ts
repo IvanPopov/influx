@@ -10,14 +10,19 @@ import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 /* tslint:disable:variable-name */
 /* tslint:disable:member-ordering */
 
+type IUAVResource = ReturnType<typeof VM.createUAV>;
 
-function createUAVEx(document: ISLDocument, reflection: IUavReflection, length: number) {
+
+function createUAVEx(document: ISLDocument, reflection: IUavReflection, length: number): IUAVResource {
     const elementSize = document.root.scope.findType(reflection.elementType).size; // in bytes
     return VM.createUAV(reflection.name, elementSize, length, reflection.register);
 }
 
-function createUAVsEx(document: ISLDocument, reflection: ICSShaderReflection, capacity: number) {
-    return reflection.uavs.map(uavReflection => createUAVEx(document, uavReflection, capacity));
+function createUAVsEx(document: ISLDocument, reflection: ICSShaderReflection, capacity: number, sharedUAVs: IUAVResource[] = []): IUAVResource[] {
+    return reflection.uavs.map(uavReflection => {
+        const shraredUAV = sharedUAVs.find(uav => uav.name == uavReflection.name);
+        return shraredUAV || createUAVEx(document, uavReflection, capacity);
+    });
 }
 
 function createBundle(document: ISLDocument, reflection: ICSShaderReflection): VM.Bundle {
@@ -28,13 +33,16 @@ function createBundle(document: ISLDocument, reflection: ICSShaderReflection): V
     return VM.load(program.code);
 }
 
-function setupResetBundle(document: ISLDocument, reflection: ICSShaderReflection, capacity: number) {
+function setupBundle(document: ISLDocument, reflection: ICSShaderReflection, capacity: number, sharedUAVs: IUAVResource[]) {
     const bundle = createBundle(document, reflection);
-    const uavs = createUAVsEx(document, reflection, capacity);
+    const uavs = createUAVsEx(document, reflection, capacity, sharedUAVs);
     uavs.forEach(uav => { bundle.input[uav.index] = uav.buffer; });
 
-    function run() {
-        VM.dispatch(bundle, [capacity, 1, 1]);
+    // update shared uavs
+    sharedUAVs.push(...uavs.filter(uav => sharedUAVs.indexOf(uav) === -1));
+
+    function run(numthreads: number) {
+        VM.dispatch(bundle, [numthreads, 1, 1]);
     }
 
     return {
@@ -51,22 +59,55 @@ async function Pipeline(fx: IPartFxInstruction) {
     const textDocument = { uri: '://raw', source: emitter.toString() };
     const slDocument = await createSLDocument(textDocument);
 
+    const uavResources: IUAVResource[] = [];
+    const resetBundle = setupBundle(slDocument, reflection.CSParticlesResetRoutine, capacity, uavResources);
+    const initBundle = setupBundle(slDocument, reflection.CSParticlesInitRoutine, capacity, uavResources);
 
-    const resetBundle = setupResetBundle(slDocument, reflection.CSParticlesResetRoutine, capacity);
-    const uavDeadIndices = resetBundle.uavs.find(uav => uav.name === 'uavDeadIndices');
+    const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
+    const uavCeatetionRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
+    const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
+    const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
+
+    const spawnRoutine = VM.asNativeFunction(fx.spawnRoutine.function);
+
+    const numParticles = (): number => capacity - 1 - uavDeadIndices.readCounter();
 
     function reset() {
-        resetBundle.run();
-        uavDeadIndices.overwriteCounter(0);
+        // reset all available particles
+        resetBundle.run(capacity);
+        uavDeadIndices.overwriteCounter(capacity - 1);
     }
 
+    function emit(npartices: number) {
+        // TODO: move creation to GPU side
+        uavCeatetionRequests.data.fill(1, 0, npartices * 2); // fill requests fro N groups, with 1 thread inside
+        initBundle.run(npartices);
+    }
+
+    function dumpParticles() {
+        const npart = numParticles();
+        const partSize = fx.particle.size;
+
+        console.log(`particles total: ${npart} (${uavDeadIndices.readCounter()}/${capacity})`);
+        
+        uavStates.data.forEach((alive, iPart) => {
+            if (!alive) return;
+            const partRaw = new Uint8Array(uavParticles.data.buffer, uavParticles.data.byteOffset + iPart * partSize, partSize);
+            console.log(iPart, VM.asNative(partRaw, fx.particle));
+        });
+    }
+
+    
     reset();
-    console.log(uavDeadIndices.data);
+    emit(spawnRoutine());
+    dumpParticles();
 
     // VM.play(bundle)
 
     return {
-        reset
+        reset,
+        emit,
+        dumpParticles
     };
 }
 

@@ -100,12 +100,12 @@ const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
         return null;
     }
 
-    if (instruction.isLiteral(instr)) {
+    // if (instruction.isLiteral(instr)) {
         if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
             // temp workaround in order to match int to uint and etc. 
             return /int|uint/g;
         }
-    }
+    // }
 
     return instr.type;
 };

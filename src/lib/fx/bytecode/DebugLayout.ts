@@ -141,8 +141,8 @@ function debugInfo(pc: PC) {
 
 
 export interface CdlRaw {
-    line: ReturnType<ReturnType<typeof debugLine>['dump']>;
-    info: ReturnType<ReturnType<typeof debugInfo>['dump']>;
+    line: ReturnType<ReturnType<typeof debugLine>['dump']>; // << descriptoption for each line
+    info: ReturnType<ReturnType<typeof debugInfo>['dump']>; // << empty for now
 }
 
 export function debug (pc: PC) {

@@ -518,9 +518,7 @@ class App extends React.Component<IAppProps> {
                             {$debugger.runtime ? (
                                 <div>
                                     {/* todo: move memory view inside bytecode view; */}
-                                    <MemoryView
-                                        binaryData={$debugger.runtime.constants.data.byteArray}
-                                        layout={$debugger.runtime.constants.data.layout} />
+                                    <MemoryView program={$debugger.runtime} />
                                     <BytecodeView />
                                 </div>
                             ) : null}

@@ -30,38 +30,50 @@ export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
     code: Uint8Array;
-    constants: ConstanPool;
     cdl: CdlRaw;
 
-    // function return value layout
+    // function's return value layout
     layout: ITypeInstruction; // << FIXME: move to cdl
 
     // diagnosticReport: IDiagnosticReport;
     // uri: string
 }
 
+function writeString(u8data: Uint8Array, offset: number, value: string): number {
+    u8data.set(i32ToU8Array(value.length), offset);
+    offset += 4;
+
+    u8data.set(value.split('').map(c => c.charCodeAt(0)), offset);
+    offset += value.length;
+    return offset;
+}
+
+function writeInt(u8data: Uint8Array, offset: number, value: number): number {
+    u8data.set(i32ToU8Array(value), offset);
+    offset += 4;
+    return offset;
+}
+
 // TODO: rewrite with cleaner code
 function constLayoutChunk(ctx: IContext): ArrayBuffer {
     const { constants } = ctx;
-    const layout = constants.layout;
-    const byteLength = 4/* names.length */ + layout.names.map(entry => entry.name.length + 8/* sizeof(name.length) + sizeof(addr)*/).reduce((prev, curr) => prev + curr, 0);
+    const reflection = constants.dump();
+    const byteLength = 4/* names.length */ + reflection.map(entry => entry.name.length + entry.type.length + 
+        16/* sizeof(name.length) + sizeof(addr) + sizeof(size) + sizeof(type.length)*/).reduce((prev, curr) => prev + curr, 0);
     const size = (byteLength + 4) >> 2;
     const chunkHeader = [EChunkType.k_Layout, size];
     const data = new Uint32Array(chunkHeader.length + size);
     data.set(chunkHeader);
 
     const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
-    let written = 0;
-    u8data.set(i32ToU8Array(layout.names.length), written);
-    written += 4;
-    for (let i = 0; i < layout.names.length; ++i) {
-        let { name, offset } = layout.names[i];
-        u8data.set(i32ToU8Array(name.length), written);
-        written += 4;
-        u8data.set(name.split('').map(c => c.charCodeAt(0)), written);
-        written += name.length;
-        u8data.set(i32ToU8Array(offset), written);
-        written += 4;
+    let written = writeInt(u8data, reflection.length, size);
+    for (let i = 0; i < reflection.length; ++i) {
+        const { name, offset, type, size, semantic } = reflection[i];
+        written = writeString(u8data, written, name);
+        written = writeString(u8data, written, type);
+        written = writeString(u8data, written, semantic);
+        written = writeInt(u8data, written, offset);
+        written = writeInt(u8data, written, size);
     }
     // console.log('after write', u8data.length, 'bytes', written);
     return data.buffer;
@@ -139,7 +151,11 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     let cdl = debug.dump();         // code debug layout;
     let layout = fn.def.returnType; // TODO: move layout inside CDL
 
-    return { code, constants, cdl, layout };
+    return { 
+        code,           // final binary pack
+        cdl,            // same as PDB
+        layout          // TODO: remove
+    };
 }
 
 function translateUnknown(ctx: IContext, instr: IInstruction): void {

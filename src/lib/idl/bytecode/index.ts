@@ -14,9 +14,9 @@ export enum EChunkType {
     k_Code,
 };
 
-export interface IMemoryRecord {
-    range: number;
-    value: number | string;
-    type: 'f32' | 'i32' | 'uniform' | 'unknown';
-}
+// export interface IMemoryRecord {
+//     range: number;
+//     value: number | string;
+//     type: 'f32' | 'i32' | 'uniform' | 'unknown';
+// }
 

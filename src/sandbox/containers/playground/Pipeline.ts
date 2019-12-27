@@ -66,20 +66,20 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
 
         setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean {
             const layout = bundle.layout;
-            const offset = layout[name];
+            const reflection = layout.find(entry => entry.name === name);
             const constants = bundle.input[0];
 
-            if (!isDef(offset)) {
+            if (!isDef(reflection)) {
                 return false;
             }
 
             // TODO: validate layout / constant type in memory / size
             switch (type) {
                 case 'float32':
-                    (new DataView(constants.buffer, constants.byteOffset + offset)).setFloat32(0, <number>value, true);
+                    (new DataView(constants.buffer, constants.byteOffset + reflection.offset)).setFloat32(0, <number>value, true);
                     break;
                 case 'int32':
-                    (new DataView(constants.buffer, constants.byteOffset + offset)).setInt32(0, <number>value);
+                    (new DataView(constants.buffer, constants.byteOffset + reflection.offset)).setInt32(0, <number>value);
                     break;
                 default:
                     assert(false, 'unsupported');

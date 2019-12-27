@@ -59,3 +59,5 @@ export function asNative(result: Uint8Array, layout: ITypeInstruction): any {
     assert(false, `not implemented: ${layout.toCode()}`);
     return null;
 }
+
+

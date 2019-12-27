@@ -1,9 +1,11 @@
 
-import { IMemoryRecord } from '@lib/idl/bytecode';
+// import { IMemoryRecord } from '@lib/idl/bytecode';
 import { IWithStyles } from '@sandbox/components';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { Popup, Table } from 'semantic-ui-react';
+import { ISubProgram, CBUFFER0_REGISTER } from '@lib/fx/bytecode/Bytecode';
+import * as VM from '@lib/fx/bytecode/VM';
 
 
 export const styles = {
@@ -15,15 +17,14 @@ export const styles = {
 };
 
 export interface IMemoryViewProps extends IWithStyles<typeof styles> {
-    binaryData: Uint8Array;
-    layout: IMemoryRecord[];
+    program: ISubProgram;
 }
 
 @injectSheet(styles)
 class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     render() {
-        if (!this.props.binaryData) {
+        if (!this.props.program) {
             return null;
         }
         return (
@@ -38,7 +39,9 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     renderContent() {
         const { props } = this;
-        const { binaryData, layout } = props;
+        const bundle = VM.load(props.program.code);
+        const binaryData = bundle.input[CBUFFER0_REGISTER];
+        const layout = bundle.layout;
 
         const WIDTH_MAX = 12;
         const u8view = new Uint8Array(binaryData.buffer);
@@ -54,11 +57,11 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
         let leftClosed;
         let rightClosed;
 
-        layout.map((section, i) => {
+        layout.map((constant, i) => {
             let written = 0;
             leftClosed = columns.length === 0;
             do {
-                const segWidth = Math.min(section.range - written, WIDTH_MAX - colLen);
+                const segWidth = Math.min(constant.size - written, WIDTH_MAX - colLen);
 
                 const n4 = n >> 2;
                 const content = [];
@@ -72,7 +75,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                     written++;
                 }
 
-                rightClosed = written >= section.range;
+                rightClosed = written >= constant.size;
 
                 const style = {
                     padding: 0,
@@ -88,19 +91,22 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                         textAlign="center"
                         colSpan={ segWidth }
                         style={ style }>
-                        {['f32', 'i32'].indexOf(section.type) !== -1 &&
+                        {/* {['f32', 'i32'].indexOf(constant.type) !== -1 &&
                             <Popup inverted
                                 content={ <div style={ { fontFamily: 'consolas' } }>f32: {f32view[n4]}<br/>i32: {i32view[n4]}</div> }
                                 trigger={ <span>{content}</span> } />
-                        }
-                        {['uniform'].indexOf(section.type) !== -1 &&
+                        } */}
+                        {/* {['uniform'].indexOf(constant.type) !== -1 &&
                             <Popup inverted
-                                content={ <div style={ { fontFamily: 'consolas' } }>{section.value}</div> }
+                                content={ <div style={ { fontFamily: 'consolas' } }>{constant.value}</div> }
                                 trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
-                        }
-                        {['unknown'].indexOf(section.type) !== -1 &&
+                        } */}
+                        {/* {['unknown'].indexOf(constant.type) !== -1 &&
                             content
-                        }
+                        } */}
+                        <Popup inverted
+                                content={ <div style={ { fontFamily: 'consolas' } }>{constant.name}</div> }
+                                trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
                     </Table.Cell>
                 );
                 colLen += segWidth;
@@ -111,7 +117,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                     columns = [];
                     colLen = 0;
                 }
-            } while (written < section.range);
+            } while (written < constant.size);
         });
         if (columns.length > 0) {
             const csRest = WIDTH_MAX - n % WIDTH_MAX;

@@ -8,6 +8,8 @@ import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 
 import { asNative } from "./native";
+import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
+import { IConstantReflection } from "../ConstantPool";
 
 export { default as dispatch } from "./dispatch";
 export { asNative } from './native';
@@ -56,21 +58,31 @@ export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
 
 
 // TODO: rewrite with cleaner code
-export function decodeLayoutChunk(layoutChunk: Uint8Array): IMap<number> {
+export function decodeLayoutChunk(layoutChunk: Uint8Array): IConstantReflection[] {
     // console.log('before read', layoutChunk.length, 'bytes');
-    let offset = 0;
-    let count = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
-    offset += 4;
+    let readed = 0;
+    let count = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+    readed += 4;
 
-    let layout = {};
+    let layout: IConstantReflection[] = [];
     for (let i = 0; i < count; ++i) {
-        const nameLength = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
-        offset += 4;
-        const name = String.fromCharCode(...layoutChunk.subarray(offset, offset + nameLength));
-        offset += nameLength;
-        const addr = u8ArrayToI32(layoutChunk.subarray(offset, offset + 4));
-        offset += 4;
-        layout[name] = addr;
+        const nameLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const name = String.fromCharCode(...layoutChunk.subarray(readed, readed + nameLength));
+        readed += nameLength;
+        const typeLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const type = String.fromCharCode(...layoutChunk.subarray(readed, readed + typeLength));
+        readed += nameLength;
+        const semanticLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const semantic = String.fromCharCode(...layoutChunk.subarray(readed, readed + semanticLength));
+        readed += nameLength;
+        const offset = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const size = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
+        readed += 4;
+        layout.push({ name, type, offset, size, semantic });
     }
     return layout;
 }
@@ -291,8 +303,7 @@ class VM {
 export interface Bundle {
     readonly instructions: Uint32Array;
     readonly input: Int32Array[];
-    // constants layout
-    readonly layout: IMap<number>;
+    readonly layout: IConstantReflection[];
 }
 
 export function load(code: Uint8Array): Bundle {
@@ -324,28 +335,38 @@ export function resetRegisters(): void {
 }
 
 
-export async function prebuild(code: Uint8Array): Promise<Bundle>;
-export async function prebuild(expr: string, document: ISLDocument): Promise<Bundle>;
-export async function prebuild(param: string | Uint8Array, param2?: ISLDocument): Promise<Bundle> {
-    if (MODE === 'development') {
-        resetRegisters();
-    }
-
-    let code: Uint8Array;
-    if (isString(arguments[0])) {
-        const expr = <string>arguments[0];
-        const slDocument = <ISLDocument>arguments[1];
-        const program = await Bytecode.translateExpression(expr, slDocument);
-        if (isNull(program)) {
-            return null;
-        }
-        code = program.code;
-    } else {
-        code = arguments[0];
-    }
-
-    return load(code);
+export function asNativeFunction(fn: IFunctionDeclInstruction): Function
+{
+    const program = Bytecode.translate(fn);
+    const bundle = load(program.code);
+    return (...args: any[]) => {
+        assert(!args || args.length === 0, 'arguments not supported');
+        return asNative(play(bundle), program.layout);
+    };
 }
+
+// export async function prebuildExpression(code: Uint8Array): Promise<Bundle>;
+// export async function prebuildExpression(expr: string, document: ISLDocument): Promise<Bundle>;
+// export async function prebuildExpression(param: string | Uint8Array, param2?: ISLDocument): Promise<Bundle> {
+//     if (MODE === 'development') {
+//         resetRegisters();
+//     }
+
+//     let code: Uint8Array;
+//     if (isString(arguments[0])) {
+//         const expr = <string>arguments[0];
+//         const slDocument = <ISLDocument>arguments[1];
+//         const program = await Bytecode.translateExpression(expr, slDocument);
+//         if (isNull(program)) {
+//             return null;
+//         }
+//         code = program.code;
+//     } else {
+//         code = arguments[0];
+//     }
+
+//     return load(code);
+// }
 
 // TODO: use bundle inside
 export async function evaluate(code: Uint8Array): Promise<any>;

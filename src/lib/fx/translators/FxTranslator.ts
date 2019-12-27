@@ -3,20 +3,6 @@ import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartF
 
 import { FxEmitter } from "./FxEmitter";
 
-const uavParticles = 'uavParticles';
-const uavParticlesComment = `The buffer contains user-defined particle data.`;
-
-const uavStates = 'uavStates';
-const uavStatesComment = `The buffer contains the state of the particles, Alive or dead.`;
-
-const uavDeadIndices = 'uavDeadIndices';
-const uavDeadIndicesComment = `The buffer contains indicies of dead particles.`;
-
-const uavCreationRequests = 'uavCeatetionRequests';
-const uavPrerendered = 'uavPrerendered';
-
-// const UPDTAE_GROUP_SIZE = 256;
-// const INIT_GROUP_SIZE = 64; // size of creation bunch
 
 export interface IUavReflection {
     register: number;
@@ -42,6 +28,17 @@ export interface IFxReflection {
 }
 
 export class FxTranslator extends FxEmitter {
+    static UAV_PARTICLES = 'uavParticles';
+    static UAV_STATES = 'uavStates';
+    static UAV_DEAD_INDICES = 'uavDeadIndices';
+    static UAV_CREATION_REQUESTS = 'uavCeatetionRequests';
+
+    private static UAV_PARTICLES_DESCRIPTION = `The buffer contains user-defined particle data.`;
+    private static UAV_STATES_DESCRIPTION = `The buffer contains the state of the particles, Alive or dead.`;
+    private static UAV_DEAD_INDICES_DESCRIPTION = `The buffer contains indicies of dead particles.`;
+    private static UAV_CREATION_REQUESTS_DESCRIPTION = 'uavPrerendered';
+
+
     protected knownUAVs: IUavReflection[] = [];
 
     emitUav(type: string, name: string, comment?: string): IUavReflection {
@@ -92,14 +89,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`uint tid = DTid.x;`);
                 this.emitLine(`if (tid >= ${capacity}) return;`);
 
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, uavDeadIndices, uavDeadIndicesComment));
-                this.emitLine(`${uavDeadIndices}[tid] = tid;`);
+                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
+                this.emitLine(`${FxTranslator.UAV_DEAD_INDICES}[tid] = tid;`);
 
-                uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
-                this.emitLine(`${uavStates}[tid] = 0;`);
+                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                this.emitLine(`${FxTranslator.UAV_STATES}[tid] = 0;`);
 
                 const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
                 
                 assert(fx.particle.isComplex());
@@ -113,7 +110,7 @@ export class FxTranslator extends FxEmitter {
                     }
                 });
 
-                this.emitLine(`${uavParticles}[tid] = Particle;`);
+                this.emitLine(`${FxTranslator.UAV_PARTICLES}[tid] = Particle;`);
             }
             this.pop();
             this.emitChar('}');
@@ -127,7 +124,7 @@ export class FxTranslator extends FxEmitter {
         const initFn = fx.initRoutine.function;
 
         const name = 'CSParticlesInitRoutine';
-        const numthreads = [1, 1, 1];
+        const numthreads = [64, 1, 1];
         const uavs = [];
 
         const reflection: ICSShaderReflection = { name, numthreads, uavs };
@@ -141,13 +138,13 @@ export class FxTranslator extends FxEmitter {
             {
                 this.emitLine(`uint GroupId = Gid.x;`);
                 this.emitLine(`uint ThreadId = GTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint2>`, uavCreationRequests));
-                this.emitLine(`uint nPart = ${uavCreationRequests}[GroupId].x;`);
+                uavs.push(this.emitUav(`RWBuffer<uint2>`, FxTranslator.UAV_CREATION_REQUESTS));
+                this.emitLine(`uint nPart = ${FxTranslator.UAV_CREATION_REQUESTS}[GroupId].x;`);
                 this.emitNewline();
                 this.emitLine(`if (ThreadId >= nPart) return;`);
                 this.emitNewline();
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, uavDeadIndices, uavDeadIndicesComment));
-                this.emitLine(`int n = (int)${uavDeadIndices}.DecrementCounter();`);
+                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
+                this.emitLine(`int n = (int)${FxTranslator.UAV_DEAD_INDICES}.DecrementCounter();`);
                 this.emitComment(`a bit confusing way to check for particles running out`);
                 this.emitLine(`if (n <= 0)`);
                 this.emitNewline();
@@ -156,24 +153,24 @@ export class FxTranslator extends FxEmitter {
                 {
                     this.emitComment(`not very beautiful, but a cheap way not to`);
                     this.emitComment(`think about the correctness of this counter`);
-                    this.emitLine(`${uavDeadIndices}.IncrementCounter();`);
+                    this.emitLine(`${FxTranslator.UAV_DEAD_INDICES}.IncrementCounter();`);
                     this.emitLine('return;');
                 }
                 this.pop();
                 this.emitChar('}');
                 this.emitNewline();
                 this.emitNewline();
-                this.emitLine(`uint PartId = ${uavDeadIndices}[n];`);
+                this.emitLine(`uint PartId = ${FxTranslator.UAV_DEAD_INDICES}[n];`);
 
                 const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
                 this.emitFunction(initFn);
                 this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
-                this.emitLine(`${uavParticles}[PartId] = Particle;`);
+                this.emitLine(`${FxTranslator.UAV_PARTICLES}[PartId] = Particle;`);
                 this.emitComment('set particles\'s state as \'Alive\'');
-                uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
-                this.emitLine(`${uavStates}[PartId] = 1;`);
+                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                this.emitLine(`${FxTranslator.UAV_STATES}[PartId] = 1;`);
             }
             this.pop();
             this.emitChar('}');
@@ -187,7 +184,7 @@ export class FxTranslator extends FxEmitter {
         const updateFn = fx.updateRoutine.function;
 
         const name = 'CSParticlesUpdateRoutine';
-        const numthreads = [1, 1, 1];
+        const numthreads = [64, 1, 1];
         const uavs = [];
 
         const reflection: ICSShaderReflection = { name, numthreads, uavs };
@@ -200,16 +197,16 @@ export class FxTranslator extends FxEmitter {
             this.push();
             {
                 this.emitLine(`uint PartId = DTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
-                this.emitLine(`bool Alive = (bool)${uavStates}[PartId];`);
+                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
                 this.emitNewline();
                 this.emitLine(`[branch]`);
                 this.emitLine(`if(!Alive) return;`);
                 this.emitNewline();
 
                 const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
-                this.emitLine(`${partType} Particle = ${uavParticles}[PartId];`);
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
                 this.emitNewline();
 
                 this.emitFunction(updateFn);
@@ -218,14 +215,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitChar('{');
                 this.push();
                 {
-                    uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, uavDeadIndices, uavDeadIndicesComment));
+                    uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
                     this.emitComment('returning the particle index to the list of the dead');
-                    this.emitLine(`uint n = ${uavDeadIndices}.IncrementCounter();`);
-                    this.emitLine(`${uavDeadIndices}[n] = PartId;`);
+                    this.emitLine(`uint n = ${FxTranslator.UAV_DEAD_INDICES}.IncrementCounter();`);
+                    this.emitLine(`${FxTranslator.UAV_DEAD_INDICES}[n] = PartId;`);
                     this.emitNewline();
 
                     this.emitComment('set particles\'s state as \'dead\'');
-                    this.emitLine(`${uavStates}[PartId] = 0;`);
+                    this.emitLine(`${FxTranslator.UAV_STATES}[PartId] = 0;`);
                     this.emitLine('return;');
                 }
                 this.pop();
@@ -233,7 +230,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitNewline();
                 this.emitNewline();
 
-                this.emitLine(`${uavParticles}[PartId] = Particle;`);
+                this.emitLine(`${FxTranslator.UAV_PARTICLES}[PartId] = Particle;`);
             }
             this.pop();
             this.emitChar('}');
@@ -247,7 +244,7 @@ export class FxTranslator extends FxEmitter {
         const prerenderFn = pass.prerenderRoutine.function;
 
         const name = `CSParticlesPrerenderShader${i}`;
-        const numthreads = [1, 1, 1];
+        const numthreads = [64, 1, 1];
         const uavs = [];
 
         const reflection: ICSShaderReflection = { name, numthreads, uavs };
@@ -260,8 +257,8 @@ export class FxTranslator extends FxEmitter {
             this.push();
             {
                 this.emitLine(`uint PartId = DTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint>`, uavStates, uavStatesComment));
-                this.emitLine(`bool Alive = (bool)${uavStates}[PartId];`);
+                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
                 this.emitNewline();
                 this.emitLine(`[branch]`);
                 this.emitLine(`if(!Alive) return;`);
@@ -269,12 +266,12 @@ export class FxTranslator extends FxEmitter {
 
                 this.emitFunction(prerenderFn);
                 const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, uavParticles, uavParticlesComment));
-                this.emitLine(`${partType} Particle = ${uavParticles}[PartId];`);
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
 
                 const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
                 
-                uavs.push(this.emitUav(`AppendStructuredBuffer<${prerenderedType}>`, `${uavPrerendered}${i}`));
+                uavs.push(this.emitUav(`AppendStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION}${i}`));
                 
                 if (pass.instanceCount > 1) {
                     this.emitLine(`for(int InstanceId = 0; InstanceId < ${pass.instanceCount}; InstanceId++)`);
@@ -292,7 +289,7 @@ export class FxTranslator extends FxEmitter {
                     } else {
                         this.emitLine(`${prerenderFn.name}(Particle, Prerendered);`);
                     }
-                    this.emitLine(`${uavPrerendered}${i}.Append(Prerendered);`);
+                    this.emitLine(`${FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION}${i}.Append(Prerendered);`);
                 }
 
                 if (pass.instanceCount > 1) {

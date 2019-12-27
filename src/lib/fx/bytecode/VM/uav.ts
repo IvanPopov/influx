@@ -16,10 +16,15 @@ export function createUAV(name: string, elementSize: number, length: number, reg
         counter[0] = value;
     }
 
+    function readCounter(): number {
+        return counter[0];
+    }
+
     overwriteCounter(0);
 
     return {
         name,
+        readCounter,
         overwriteCounter,
 
         // [ elements ]
