@@ -24,7 +24,6 @@ import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
 import { ConditionalExprInstruction } from './instructions/ConditionalExprInstruction';
 import { ConstructorCallInstruction } from './instructions/ConstructorCallInstruction';
 import { DeclStmtInstruction } from './instructions/DeclStmtInstruction';
-import { ExprInstruction } from './instructions/ExprInstruction';
 import { ExprStmtInstruction } from './instructions/ExprStmtInstruction';
 import { FloatInstruction } from './instructions/FloatInstruction';
 import { ForStmtInstruction } from './instructions/ForStmtInstruction';

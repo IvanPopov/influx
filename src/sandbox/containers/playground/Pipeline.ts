@@ -16,7 +16,6 @@ type PartFx = IPartFxInstruction;
 
 interface IRunnable {
     run(...input: Uint8Array[]): Uint8Array;
-    setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean;
     setPipelineConstants(constants: IPipelineConstants): IRunnable;
 }
 
@@ -26,71 +25,18 @@ interface IPipelineConstants {
 }
 
 
-const makeCRCTable = () => {
-    let c: number;
-    const table = [];
-    for (let n = 0; n < 256; n++) {
-        c = n;
-        for (let k = 0; k < 8; k++) {
-            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
-        }
-        table[n] = c;
-    }
-    return table;
-};
-
-// const crcTable = makeCRCTable();
-
-// const crc32 = (str: string) => {
-//     let crc = 0 ^ (-1);
-
-//     for (let i = 0; i < str.length; i++) {
-//         crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
-//     }
-
-//     return (crc ^ (-1)) >>> 0;
-// };
-
 function prebuild(expr: ICompileExprInstruction): IRunnable {
     const program = Bytecode.translate(expr.function);
     const code = program.code;
     const bundle = VM.load(code);
     return {
-        run(...input: Uint8Array[]) {
-            for (let i = 0; i < input.length; ++i) {
-                // TODO: don't convert u8 to i32 here.
-                bundle.input[Bytecode.INPUT0_REGISTER + i] = new Int32Array(input[i].buffer, input[i].byteOffset, input[i].byteLength >> 2);
-            }
-            return VM.play(bundle);
-        },
-
-        setConstant(name: string, type: 'float32' | 'int32', value: number | Uint8Array): boolean {
-            const layout = bundle.layout;
-            const reflection = layout.find(entry => entry.name === name);
-            const constants = bundle.input[0];
-
-            if (!isDef(reflection)) {
-                return false;
-            }
-
-            // TODO: validate layout / constant type in memory / size
-            switch (type) {
-                case 'float32':
-                    (new DataView(constants.buffer, constants.byteOffset + reflection.offset)).setFloat32(0, <number>value, true);
-                    break;
-                case 'int32':
-                    (new DataView(constants.buffer, constants.byteOffset + reflection.offset)).setInt32(0, <number>value);
-                    break;
-                default:
-                    assert(false, 'unsupported');
-            }
-
-            return true;
+        run(...inputs: Uint8Array[]) {
+            return VM.play(bundle, inputs.map(input => new Int32Array(input.buffer, input.byteOffset, input.byteLength >> 2)));
         },
 
         setPipelineConstants(constants: IPipelineConstants): IRunnable {
-            this.setConstant('elapsedTime', 'float32', constants.elapsedTime);
-            this.setConstant('elapsedTimeLevel', 'float32', constants.elapsedTimeLevel);
+            VM.setConstant(bundle, 'elapsedTime', constants.elapsedTime);
+            VM.setConstant(bundle, 'elapsedTimeLevel', constants.elapsedTimeLevel);
             return this;
         }
     };

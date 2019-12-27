@@ -1,12 +1,10 @@
-
-// import { IMemoryRecord } from '@lib/idl/bytecode';
+import { CBUFFER0_REGISTER, ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import * as VM from '@lib/fx/bytecode/VM';
+// import { IWithStyles } from '@lib/idl/bytecode';
 import { IWithStyles } from '@sandbox/components';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { Popup, Table } from 'semantic-ui-react';
-import { ISubProgram, CBUFFER0_REGISTER } from '@lib/fx/bytecode/Bytecode';
-import * as VM from '@lib/fx/bytecode/VM';
-
 
 export const styles = {
     memoryVal: {
@@ -23,7 +21,7 @@ export interface IMemoryViewProps extends IWithStyles<typeof styles> {
 @injectSheet(styles)
 class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
-    render() {
+    render(): JSX.Element {
         if (!this.props.program) {
             return null;
         }
@@ -37,29 +35,30 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
     }
 
 
-    renderContent() {
+    renderContent(): JSX.Element[] {
         const { props } = this;
         const bundle = VM.load(props.program.code);
         const binaryData = bundle.input[CBUFFER0_REGISTER];
         const layout = bundle.layout;
 
         const WIDTH_MAX = 12;
-        const u8view = new Uint8Array(binaryData.buffer);
-        const f32view = new Float32Array(binaryData.buffer);
-        const i32view = new Int32Array(binaryData.buffer);
+        const u8view = new Uint8Array(binaryData.buffer, binaryData.byteOffset, binaryData.byteLength);
+        // const f32view = new Float32Array(binaryData.buffer, binaryData.byteOffset, binaryData.byteLength);
+        // const i32view = new Int32Array(binaryData.buffer, binaryData.byteOffset, binaryData.byteLength);
 
         let n = 0;
 
-        let rows = [];
-        let columns = [];
+        let rows: JSX.Element[] = [];
+        let columns: JSX.Element[] = [];
+
         let colLen = 0;
 
-        let leftClosed;
-        let rightClosed;
+        let bLeftClosed: boolean;
+        let bRightClosed: boolean;
 
         layout.map((constant, i) => {
             let written = 0;
-            leftClosed = columns.length === 0;
+            bLeftClosed = columns.length === 0;
             do {
                 const segWidth = Math.min(constant.size - written, WIDTH_MAX - colLen);
 
@@ -75,12 +74,12 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                     written++;
                 }
 
-                rightClosed = written >= constant.size;
+                bRightClosed = written >= constant.size;
 
                 const style = {
                     padding: 0,
-                    borderLeft: `1px solid ${leftClosed ? '#ccc' : 'transparent'}`,
-                    borderRight: `1px solid ${rightClosed ? '#ccc' : 'transparent'}`,
+                    borderLeft: `1px solid ${bLeftClosed ? '#ccc' : 'transparent'}`,
+                    borderRight: `1px solid ${bRightClosed ? '#ccc' : 'transparent'}`,
                     borderTop: `${rows.length === 0 ? 1 : 0}px solid #ccc`,
                     borderBottom: `1px solid #ccc`,
                 };
@@ -110,7 +109,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                     </Table.Cell>
                 );
                 colLen += segWidth;
-                leftClosed = false;
+                bLeftClosed = false;
 
                 if (n % WIDTH_MAX === 0) {
                     rows.push(<Table.Row key={ `mvk-tc-${rows.length}` }>{ columns }</Table.Row>);

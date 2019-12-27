@@ -1,5 +1,5 @@
 import { assert, isDef } from "@lib/common";
-import { IFunctionDeclInstruction, IInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IFunctionDeclInstruction, IInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import DistinctColor from "@lib/util/DistinctColor";
 import { isNull } from "util";
 
@@ -112,18 +112,24 @@ interface ISubProgram extends ITag {
 
 function debugInfo(pc: PC) {
 
+    let unitLayout: ITypeInstruction;
+
     function locate(decl: IVariableDeclInstruction, reg: number) {
 
     }
 
-    function beginCompilationUnit(name: string = null): void {}
+    function beginCompilationUnit(name: string = null, layout: ITypeInstruction): void {
+        unitLayout = layout;
+    }
     function endCompilationUnit(): void {};
 
     function beginSubProgram(func: IFunctionDeclInstruction): void {}
     function endSubProgram(): void {}
 
     function dump() {
-
+        return {
+            layout: unitLayout
+        };
     }
 
     return {
@@ -140,7 +146,7 @@ function debugInfo(pc: PC) {
 
 
 
-export interface CdlRaw {
+export interface CDL {
     line: ReturnType<ReturnType<typeof debugLine>['dump']>; // << descriptoption for each line
     info: ReturnType<ReturnType<typeof debugInfo>['dump']>; // << empty for now
 }
@@ -149,7 +155,7 @@ export function debug (pc: PC) {
     const line = debugLine(pc);
     const info = debugInfo(pc);
    
-    function dump(): CdlRaw {
+    function dump(): CDL {
         return {
             line: line.dump(),
             info: info.dump()
@@ -166,7 +172,7 @@ type Color = number;
 /**
  * Code Debug Layout View.
  */
-export function cdlview(cdlRaw: CdlRaw) {
+export function cdlview(cdlRaw: CDL) {
     if (isNull(cdlRaw)) {
         return null;
     }

@@ -1,4 +1,4 @@
-import { assert, isDef, isNull, isString, isNumber } from "@lib/common";
+import { assert, isDef, isNull, isString, isNumber, isDefAndNotNull } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
@@ -14,7 +14,7 @@ import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
 import { UAVPool } from "./UAVPool";
-import { IMap } from "@lib/idl/IMap";
+import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -41,9 +41,13 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
         return { start: { line: 0, column: 0, file: null }, end: { line: 0, column: 0, file: null } }; // todo: fixme
     }
 
-    protected diagnosticMessages() {
-        // TODO: implement error messages
-        return <IMap<string>><any>EErrors;
+
+    protected resolveDescription(code: number, category: EDiagnosticCategory, desc: any): string {
+        let { ...data } = desc;
+        if (category == EDiagnosticCategory.k_Warning) {
+            return `warning: ${JSON.stringify(data)}`;
+        }
+        return `${EErrors[code]}: ${JSON.stringify(data)}`;
     }
 }
 

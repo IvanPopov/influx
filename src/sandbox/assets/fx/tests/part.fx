@@ -54,6 +54,7 @@ struct Part {
     float3 pos;
     float size;
     float timelife;
+    int updateCount;
 };
 
 /* Example of default shader input. */
@@ -84,6 +85,7 @@ void init(out Part part, int partId)
     part.pos = float3(0.f, float2(0.0).x, 0.0);
     part.size = 0.1;
     part.timelife = 0.0;
+    part.updateCount = 0;
     
     float3 dir;
     // dir.x = random(float2(elapsedTimeLevel, 1.f));
@@ -98,6 +100,7 @@ bool update(inout Part part)
 {
     part.pos = part.speed * part.timelife * 3.0f;
     part.timelife = (part.timelife + elapsedTime / 3.0f);
+    part.updateCount = part.updateCount + 1;
     return part.timelife < 1.0f;
 }
 

@@ -12,6 +12,7 @@ struct Part
 	float3 pos;
 	float size;
 	float timelife;
+	int updateCount;
 };
 
 // The buffer contains user-defined particle data.
@@ -30,6 +31,7 @@ void CSParticlesResetRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint
 	Particle.pos = float3(0.f, 0.f, 0.f);
 	Particle.size = 0.f;
 	Particle.timelife = 0.f;
+	Particle.updateCount = 0;
 	uavParticles[tid] = Particle;
 }
 
@@ -78,6 +80,7 @@ void init(out Part part, int partId)
 	part.pos = float3(0.f, float2(0.f).x, 0.f);
 	part.size = 0.1f;
 	part.timelife = 0.f;
+	part.updateCount = 0;
 	float3 dir;
 	part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
 }
@@ -114,6 +117,7 @@ bool update(inout Part part)
 {
 	part.pos = part.speed * part.timelife * 3.f;
 	part.timelife = (part.timelife + elapsedTime / 3.f);
+	part.updateCount = part.updateCount + 1;
 	return part.timelife < 1.f;
 }
 

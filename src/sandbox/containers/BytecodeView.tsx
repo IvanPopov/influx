@@ -74,6 +74,8 @@ const scode = (c: EOperation) => {
         case EOperation.k_U32LessThan: return 'u32_lt';
         case EOperation.k_F32GreaterThanEqual: return 'f32_ge';
         case EOperation.k_F32LessThan: return 'f32_lt';
+        case EOperation.k_I32Not: return 'i32_not';
+        case EOperation.k_I32NotEqual: return 'i32_ne';
         default:
             return v;
     }
@@ -96,7 +98,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     render() {
         const { props } = this;
-        const { runtime: { code, layout } } = props;
+        const { runtime: { code, cdl } } = props; 
 
         if (isNull(code)) {
             return null;
@@ -129,7 +131,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     }
                 </Table>
                 <Button animated onClick={ async () => {
-                    const result = VM.asNative(await VM.evaluate(code), layout);
+                    const result = VM.asNative(await VM.evaluate(code), cdl);
                     alert(JSON.stringify(result, null, '   '));
                 } }>
                     <Button.Content visible>Run</Button.Content>
@@ -200,6 +202,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 args.length = 4;
                 break;
 
+            case EOperation.k_I32Not:
+                args.length = 2;
+                break;
+
             case EOperation.k_I32Equal:
             case EOperation.k_I32NotEqual:
             case EOperation.k_I32GreaterThanEqual:
@@ -260,9 +266,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             default:
         }
 
+        // tslint:disable-next-line:switch-default
         switch (code) {
             case EOperation.k_I32SetConst:
-                args[1] = args[2] == 1 ? fixPrecision(u32Asf32(args[1])) : u32Asi32(args[1]);
+                args[1] = args[2] === 1 ? fixPrecision(u32Asf32(args[1])) : u32Asi32(args[1]);
         }
 
         //

@@ -2,8 +2,8 @@ import { assert, isNull } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
-import PromisedAddress from "./PromisedAddress";
 import { CBUFFER0_REGISTER } from "./Bytecode";
+import PromisedAddress from "./PromisedAddress";
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;
@@ -57,8 +57,8 @@ export class ConstanPool {
         assert(decl.isGlobal() && decl.type.isUniform());
         const { name, semantic, initExpr, type: { size } } = decl;
 
-        let constant = this._knownConstants.find(c => c.name === name);
-        if (!constant) {
+        let reflection = this._knownConstants.find(c => c.name === name);
+        if (!reflection) {
             let addr = null;
             if (isNull(initExpr)) {
                 // TODO: add type to description
@@ -71,20 +71,22 @@ export class ConstanPool {
             const { addr: offset } = addr;
             const type = decl.type.name; // TODO: use signature?
 
-            this._knownConstants.push({
+            reflection = {
                 name,
                 semantic,
                 offset,
                 size,
                 type
-            });
+            };
+
+            this._knownConstants.push(reflection);
         }
 
         // NOTE: we return copy because adress will be loaded
         return new PromisedAddress({
             type: EAddrType.k_Input,
             inputIndex: CBUFFER0_REGISTER,
-            addr: constant.offset,
+            addr: reflection.offset,
             size
         });
     }

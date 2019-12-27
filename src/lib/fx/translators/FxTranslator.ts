@@ -1,8 +1,9 @@
 import { assert } from "@lib/common";
+import * as SystemScope from "@lib/fx/analisys/SystemScope";
+import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { FxEmitter } from "./FxEmitter";
-
 
 export interface IUavReflection {
     register: number;
@@ -100,13 +101,13 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${partType} Particle;`);
                 
                 assert(fx.particle.isComplex());
-                fx.particle.fields.forEach(({ name, type }) => {
-                    assert(type.length >= 1);
-                    // TODO: add support for INT/UINT types
+                fx.particle.fields.forEach(({ name, type }: IVariableDeclInstruction) => {
+                    assert(type.length >= 1);                
+                    let zero = SystemScope.isFloatBasedType(type) ? '0.f' : '0';
                     if (type.length === 1) {
-                        this.emitLine(`Particle.${name} = 0.f;`);
+                        this.emitLine(`Particle.${name} = ${zero};`);
                     } else {
-                        this.emitLine(`Particle.${name} = ${type.name}(${Array(type.length).fill('0.f').join(', ')});`);
+                        this.emitLine(`Particle.${name} = ${type.name}(${Array(type.length).fill(zero).join(', ')});`);
                     }
                 });
 

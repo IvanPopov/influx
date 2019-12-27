@@ -37,6 +37,7 @@ export enum EOperation {
     k_I32GreaterThanEqual, 
     k_I32Equal,
     k_I32NotEqual,
+    k_I32Not,
     k_F32LessThan,
     k_F32GreaterThanEqual,
 

@@ -1,5 +1,6 @@
 import { assert } from "@lib/common";
 import { u8ArrayAsF32, u8ArrayAsI32 } from "@lib/fx/bytecode/common";
+import { CDL } from "@lib/fx/bytecode/DebugLayout";
 import { ITypeInstruction } from "@lib/idl/IInstruction";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
@@ -15,7 +16,9 @@ const asUint = u8a => (asInt(u8a) >>> 0);
 const asFloat = u8ArrayAsF32;
 const asBool = u8a => asInt(u8a) !== 0;
 
-export function asNative(result: Uint8Array, layout: ITypeInstruction): any {
+type TypeLayout = ITypeInstruction;
+
+export function asNativeInner(result: Uint8Array, layout: TypeLayout): any {
     // TODO: remove it?
     while (layout !== layout.baseType) {
         layout = layout.baseType;
@@ -47,17 +50,21 @@ export function asNative(result: Uint8Array, layout: ITypeInstruction): any {
         let complex = {};
         layout.fields.forEach(field => {
             const { type, type: { padding, size } } = field;
-            complex[field.name] = asNative(result.subarray(padding, padding + size), type);
+            complex[field.name] = asNativeInner(result.subarray(padding, padding + size), type);
         });
         return complex;
     }
 
     if (layout.isNotBaseArray()) {
-        return asNativeVector(u8a => asNative(u8a, layout.arrayElementType), result, layout.length, layout.arrayElementType.size);
+        return asNativeVector(u8a => asNativeInner(u8a, layout.arrayElementType), result, layout.length, layout.arrayElementType.size);
     }
 
     assert(false, `not implemented: ${layout.toCode()}`);
     return null;
 }
 
+export function asNative(result: Uint8Array, cdl: CDL): any {
+    let layout = cdl.info.layout;
+    return asNativeInner(result, layout);
+}
 

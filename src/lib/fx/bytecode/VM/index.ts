@@ -1,18 +1,18 @@
-import { assert, isDefAndNotNull, isNull, isString } from "@lib/common";
+import { assert, isDef, isDefAndNotNull, isNull, isString } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode';
-import { CBUFFER0_REGISTER } from "@lib/fx/bytecode/Bytecode";
+import { CBUFFER0_REGISTER, INPUT0_REGISTER } from "@lib/fx/bytecode/Bytecode";
 import { u8ArrayToI32 } from "@lib/fx/bytecode/common";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import { EChunkType, EOperation } from "@lib/idl/bytecode";
+import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 
-import { asNative } from "./native";
-import { IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 import { IConstantReflection } from "../ConstantPool";
+import { asNative } from "./native";
 
 export { default as dispatch } from "./dispatch";
-export { asNative } from './native';
+export { asNative, asNativeInner } from './native';
 export { createUAV } from './uav';
 
 
@@ -31,14 +31,14 @@ export function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
         chunks = {};
     }
 
-    let view = new DataView(code.buffer, code.byteOffset, code.byteLength);
-    let type = view.getUint32(0, true);
-    let byteLength = view.getUint32(4, true) << 2;
-    let content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
+    const view = new DataView(code.buffer, code.byteOffset, code.byteLength);
+    const type = view.getUint32(0, true);
+    const byteLength = view.getUint32(4, true) << 2;
+    const content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
 
     chunks[type] = content;
 
-    let nextChunkOffset = content.byteOffset + content.byteLength;
+    const nextChunkOffset = content.byteOffset + content.byteLength;
     if (nextChunkOffset < code.buffer.byteLength) {
         decodeChunks(new Uint8Array(content.buffer, nextChunkOffset), chunks);
     }
@@ -52,14 +52,13 @@ export function decodeCodeChunk(codeChunk: Uint8Array): Uint32Array {
 }
 
 export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
-    // return new Uint8Array(constChunk.buffer, constChunk.byteOffset, constChunk.byteLength >> 2);
     return constChunk;
 }
 
 
+
 // TODO: rewrite with cleaner code
 export function decodeLayoutChunk(layoutChunk: Uint8Array): IConstantReflection[] {
-    // console.log('before read', layoutChunk.length, 'bytes');
     let readed = 0;
     let count = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
     readed += 4;
@@ -70,18 +69,22 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): IConstantReflection[
         readed += 4;
         const name = String.fromCharCode(...layoutChunk.subarray(readed, readed + nameLength));
         readed += nameLength;
+
         const typeLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
         const type = String.fromCharCode(...layoutChunk.subarray(readed, readed + typeLength));
-        readed += nameLength;
+        readed += typeLength;
+
         const semanticLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
         const semantic = String.fromCharCode(...layoutChunk.subarray(readed, readed + semanticLength));
-        readed += nameLength;
+        readed += semanticLength;
+
         const offset = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
         const size = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
+        
         layout.push({ name, type, offset, size, semantic });
     }
     return layout;
@@ -204,6 +207,9 @@ class VM {
                 case EOperation.k_I32NotEqual:
                     iregs[a] = +(iregs[b] !== iregs[c]);
                     break;
+                case EOperation.k_I32Not:
+                    iregs[a] = +(!iregs[b]);
+                    break;
 
                 case EOperation.k_F32LessThan:
                     fregs[a] = +(fregs[b] < fregs[c]);
@@ -307,26 +313,30 @@ export interface Bundle {
 }
 
 export function load(code: Uint8Array): Bundle {
-    let chunks = decodeChunks(code);
+    const chunks = decodeChunks(code);
 
-    let codeChunk = chunks[EChunkType.k_Code];
+    const codeChunk = chunks[EChunkType.k_Code];
     assert(isDefAndNotNull(codeChunk) && isDefAndNotNull(chunks[EChunkType.k_Constants]));
+    const constChunk = chunks[EChunkType.k_Constants];
+    const layoutChunk = chunks[EChunkType.k_Layout];
 
-    let constChunk = chunks[EChunkType.k_Constants];
-    let layoutChunk = chunks[EChunkType.k_Layout];
+    const instructions = decodeCodeChunk(codeChunk);
+    const constants = decodeConstChunk(constChunk);
+    const layout = decodeLayoutChunk(layoutChunk);
+    const input = Array<Int32Array>(64).fill(null);
 
-    let instructions = decodeCodeChunk(codeChunk);
-    let constants = decodeConstChunk(constChunk);
-    let layout = decodeLayoutChunk(layoutChunk);
-    let input: Int32Array[] = Array(64).fill(null);
-
-    input[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset);
+    input[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset, constants.length >> 2);
 
     return { instructions, input, layout };
 }
 
-export function play(pack: Bundle): Uint8Array {
-    return VM.play(pack);
+export function play(bundle: Bundle, inputs: Int32Array[] = null): Uint8Array {
+    if (inputs) {
+        for (let i = 0; i < inputs.length; ++i) {
+            bundle.input[INPUT0_REGISTER + i] = inputs[i];
+        }
+    }
+    return VM.play(bundle);
 }
 
 
@@ -337,11 +347,11 @@ export function resetRegisters(): void {
 
 export function asNativeFunction(fn: IFunctionDeclInstruction): Function
 {
-    const program = Bytecode.translate(fn);
-    const bundle = load(program.code);
+    const { code, cdl } = Bytecode.translate(fn);
+    const bundle = load(code);
     return (...args: any[]) => {
         assert(!args || args.length === 0, 'arguments not supported');
-        return asNative(play(bundle), program.layout);
+        return asNative(VM.play(bundle), cdl);
     };
 }
 
@@ -384,11 +394,41 @@ export async function evaluate(param: string | Uint8Array, param2?: ISLDocument)
         if (isNull(program)) {
             return null;
         }
-        code = program.code;
-        return asNative(play(load(code)), program.layout);
+        const { code, cdl } = program;
+        return asNative(VM.play(load(code)), cdl);
     } else {
         code = arguments[0];
     }
 
-    return play(load(code));
+    return VM.play(load(code));
+}
+
+
+export function setConstant(bundle: Bundle, name: string, value: number): boolean {
+    const layout = bundle.layout;
+    const reflection = layout.find(entry => entry.name === name);
+    const constants = bundle.input[CBUFFER0_REGISTER];
+
+    if (!reflection) {
+        return false;
+    }
+
+    const view = new DataView(constants.buffer, constants.byteOffset + reflection.offset);
+
+    // TODO: validate layout / constant type in memory / size
+    switch (reflection.type) {
+        case 'float':
+            view.setFloat32(0, <number>value, true);
+            break;
+        case 'int':
+            view.setInt32(0, <number>value, true);
+            break;
+        case 'uint':
+            view.setUint32(0, <number>value, true);
+            break;
+        default:
+            assert(false, 'unsupported');
+    }
+
+    return true;
 }

@@ -186,17 +186,16 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
             const func = file.slDocument.root.scope.findFunction(expression, null);
             // workaround for debug purposes (interpretations of the expressions string as function name)
             if (func) {
-                const runtime = Bytecode.translate(func);
-                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
+                const program = Bytecode.translate(func);
+                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime: program } });
             } else {
-                const runtime = await Bytecode.translateExpression(expression, file.slDocument);
-                if (!isNull(runtime)) {
-                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime } });
+                const program = await Bytecode.translateExpression(expression, file.slDocument);
+                if (!isNull(program)) {
+                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime: program } });
                 } else {
                     alert('could not evaluate expression, see console log for details');
                 }
             }
-
         } else {
             console.error('invalid compile request!');
         }

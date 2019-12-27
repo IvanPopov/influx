@@ -1,7 +1,9 @@
+import { T_BOOL, SCOPE } from '@lib/fx/analisys/SystemScope';
 import { EInstructionTypes, IExprInstruction, IUnaryExprInstruction, IUnaryOperator } from '@lib/idl/IInstruction';
 
 import { ExprInstruction } from './ExprInstruction';
 import { IInstructionSettings, Instruction } from './Instruction';
+import { VariableTypeInstruction } from './VariableTypeInstruction';
 
 export interface IUnaryExprInstructionSettings extends IInstructionSettings {
     expr: IExprInstruction;
@@ -19,8 +21,15 @@ export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprI
 
 
     constructor({ expr, operator, ...settings }: IUnaryExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_UnaryExpr, type: expr.type, ...settings });
-        
+        super({
+            instrType: EInstructionTypes.k_UnaryExpr,
+            // NOTE: type wraping is no really necessary, just for debug purposes
+            type: operator === '!'
+                ? VariableTypeInstruction.wrapAsConst(T_BOOL, SCOPE)
+                : expr.type,
+            ...settings
+        });
+
         this._expr = Instruction.$withParent(expr, this);
         this._operator = operator;
     }

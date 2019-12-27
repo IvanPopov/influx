@@ -3,7 +3,7 @@ import { expression, instruction, type, variable } from "@lib/fx/analisys/helper
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { T_FLOAT, T_INT, T_UINT, T_BOOL } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
@@ -15,7 +15,7 @@ import { Diagnostics } from "@lib/util/Diagnostics";
 import { i32ToU8Array } from "./common";
 import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
-import { CdlRaw } from "./DebugLayout";
+import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 
@@ -30,10 +30,7 @@ export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
     code: Uint8Array;
-    cdl: CdlRaw;
-
-    // function's return value layout
-    layout: ITypeInstruction; // << FIXME: move to cdl
+    cdl: CDL;
 
     // diagnosticReport: IDiagnosticReport;
     // uri: string
@@ -58,20 +55,32 @@ function writeInt(u8data: Uint8Array, offset: number, value: number): number {
 function constLayoutChunk(ctx: IContext): ArrayBuffer {
     const { constants } = ctx;
     const reflection = constants.dump();
-    const byteLength = 4/* names.length */ + reflection.map(entry => entry.name.length + entry.type.length + 
-        16/* sizeof(name.length) + sizeof(addr) + sizeof(size) + sizeof(type.length)*/).reduce((prev, curr) => prev + curr, 0);
+    const byteLength = 
+        4/* names.length */ + 
+        reflection.map(entry =>
+            entry.name.length + 
+            entry.type.length + 
+            entry.semantic.length +
+            4 + /* sizeof(name.length) */ 
+            4 + /* sizeof(type.length) */
+            4 + /* sizeof(semantic.length) */
+            4 + /* sizeof(addr) */ 
+            4 + /* sizeof(size) */
+            4   /* sizeof(type.length) */
+        ).reduce((prev, curr) => prev + curr, 0);
+
     const size = (byteLength + 4) >> 2;
     const chunkHeader = [EChunkType.k_Layout, size];
     const data = new Uint32Array(chunkHeader.length + size);
     data.set(chunkHeader);
 
     const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
-    let written = writeInt(u8data, reflection.length, size);
+    let written = writeInt(u8data, 0, reflection.length);
     for (let i = 0; i < reflection.length; ++i) {
         const { name, offset, type, size, semantic } = reflection[i];
         written = writeString(u8data, written, name);
         written = writeString(u8data, written, type);
-        written = writeString(u8data, written, semantic);
+        written = writeString(u8data, written, semantic || '');
         written = writeInt(u8data, written, offset);
         written = writeInt(u8data, written, size);
     }
@@ -98,7 +107,6 @@ function codeChunk(ctx: IContext): ArrayBuffer {
     const data = new Uint32Array(chunkHeader.length + instructions.length);
     data.set(chunkHeader);
     data.set(instructions.data, chunkHeader.length);
-
     return data.buffer;
 }
 
@@ -120,7 +128,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
 
     // NOTE: it does nothing at the momemt :/
-    debug.beginCompilationUnit('[todo]');
+    debug.beginCompilationUnit('[todo]', fn.def.returnType);
     // simulate function call()
     const fdef = fn.def;
     let ret = alloca(fdef.returnType.size);
@@ -149,12 +157,10 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
 
     let code = binary(ctx);         // TODO: stay only binary view
     let cdl = debug.dump();         // code debug layout;
-    let layout = fn.def.returnType; // TODO: move layout inside CDL
 
     return { 
         code,           // final binary pack
-        cdl,            // same as PDB
-        layout          // TODO: remove
+        cdl             // same as PDB
     };
 }
 
@@ -293,6 +299,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         // dest = a + b * c
         madi(dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress): PromisedAddress {
             iop4(EOperation.k_I32Mad, dest, a, b, c);
+            return dest;
+        },
+
+        noti(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            iop2(EOperation.k_I32Not, dest, src);
             return dest;
         },
 
@@ -626,16 +637,24 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case EInstructionTypes.k_UnaryExpr:
                 {
                     const unary = expr as IUnaryExprInstruction;
+                    const operand = unary.expr;
                     const op = unary.operator;
                     const dest = alloca(unary.type.size);
 
-                    let src = raddr(unary.expr);
+                    let src = raddr(operand);
                     if (src.type !== EAddrType.k_Registers) {
                         src = iload(src);
                     }
 
+                    if (SystemScope.isBoolBasedType(operand.type)) {
+                        if (op === '!') {
+                            intrinsics.noti(dest, src);
+                            debug.map(unary);
+                            return dest;
+                        }
+                    }
 
-                    if (SystemScope.isIntBasedType(unary.type)) {
+                    if (SystemScope.isIntBasedType(operand.type)) {
                         switch (op) {
                             case '-':
 
@@ -656,7 +675,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // fall to unsupported warning
                         }
                     }
-                    console.error('unsupported type of unary expression found');
+                    console.error(`unsupported type of unary expression found: '${op}'(${unary.toCode()})`);
                     return PromisedAddress.INVALID;
                 }
             case EInstructionTypes.k_LogicalExpr:
@@ -799,15 +818,29 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     // TODO: add support for vectors
 
+                    if (dstType.isEqual(T_BOOL)) {
+                        const size = castExpr.type.size;
+                        const dest = alloca(size);
+                        let exprAddr = raddr(castExpr.expr);
+                        if (exprAddr.type !== EAddrType.k_Registers) {
+                            exprAddr = iload(exprAddr);
+                        }
+
+                        iop3(EOperation.k_I32NotEqual, dest, exprAddr, iconst_i32(0));
+                        debug.map(castExpr);
+                        return loc({ addr: dest, size });
+                    }
+
+                    
                     if (srcType.isEqual(T_FLOAT)) {
                         if (dstType.isEqual(T_INT)) {
                             op = EOperation.k_F32ToI32;
                         } else if (dstType.isEqual(T_UINT)) {
                             op = EOperation.k_F32ToU32;
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
-                        }
+                        }           
                     } else if (srcType.isEqual(T_INT)) {
                         if (dstType.isEqual(T_FLOAT)) {
                             op = EOperation.k_I32ToF32;
@@ -815,7 +848,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
                     } else if (srcType.isEqual(T_UINT)) {
@@ -825,7 +858,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, {});
+                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
                     }
