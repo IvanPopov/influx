@@ -41,6 +41,7 @@ const REG_NAMES = {
     [0x100]: 'rax' // todo: get register adresses from bytecode generator
 };
 
+const constant = (v: string) => `"${v}"`;
 const float = (v: number) => String(v).indexOf('.') === -1 ? `${v}.f` : `${v}f`;
 const fixPrecision = (v: number, precision = 2) => Math.floor(v * Math.pow(10, 2)) / Math.pow(10, 2);
 const hex2 = (v: number) => `0x${minWidth(v.toString(16), 2, '0')}`;
@@ -98,7 +99,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     render() {
         const { props } = this;
-        const { runtime: { code, cdl } } = props; 
+        const { runtime: { code, cdl } } = props;
 
         if (isNull(code)) {
             return null;
@@ -288,6 +289,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 if (args[2] === 1) { // is float
                     sArgs[1] = float(args[1]);
                 }
+                sArgs[1] = constant(sArgs[1]);
                 sArgs.length = 2;
                 break;
             case EOperation.k_I32LoadRegister:
@@ -321,6 +323,18 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         sArgs = sArgs.map(any4);
 
+        // let htmlArgs: JSX.Element[] = [];
+        // const asSpan = (v: string) => (<span>&nbsp;{ v }&nbsp;</span>);
+
+        // switch (code) {
+        //     case EOperation.k_I32SetConst:
+        //         htmlArgs[0] = asSpan(sArgs[0]);
+        //         htmlArgs[1] = (<span style={ { color: 'gray' } }>&nbsp;{ sArgs[1] }&nbsp;</span>);
+        //         break;
+        //     default:
+        //         htmlArgs = sArgs.map(asSpan);
+        // }
+
         let specColor = null;
         if (this.props.options.colorize) {
             specColor = {
@@ -339,6 +353,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 <Table.Cell style={ { padding: '0.2em 0.7em', width: '50px' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
                 <Table.Cell colSpan={ 2 } style={ { padding: '0.2em 0.7em' } }>
+                    {/* { htmlArgs } */}
                     { sArgs.join(' ') }
                 </Table.Cell>
             </Table.Row>

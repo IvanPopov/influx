@@ -125,6 +125,7 @@ async function Pipeline(fx: IPartFxInstruction) {
     const initBundle = setupBundle(slDocument, reflection.CSParticlesInitRoutine, capacity, uavResources);
     const updateBundle = setupBundle(slDocument, reflection.CSParticlesUpdateRoutine, capacity, uavResources);
 
+
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavCeatetionRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);

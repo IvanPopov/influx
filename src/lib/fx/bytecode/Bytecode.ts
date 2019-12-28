@@ -296,7 +296,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
-        // dest = a + b * c
+        /** dest = a + b * c */
         madi(dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress): PromisedAddress {
             iop4(EOperation.k_I32Mad, dest, a, b, c);
             return dest;
@@ -509,6 +509,25 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(diff[fdecl.name]));
                     imove(uavCounterAddr, nextValueAddr);
                     return valueAddr;
+                }
+                return PromisedAddress.INVALID;
+            case 'Append':
+                {
+                    const { callee: uav, args } = call;
+                    const uavAddr = raddr(uav);
+                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    assert(args.length === 1);
+                    const srcAddr = raddr(args[0]);
+                    const valueAddr = iload(uavCounterAddr);
+
+                    const arrayElementSize = args[0].type.size;
+                    const baseAddr = iconst_i32(sizeof.i32() >> 2); // offset of counter
+                    const sizeAddr = iconst_i32(arrayElementSize >> 2);
+                    const pointerAddr = intrinsics.madi(valueAddr, baseAddr, valueAddr, sizeAddr);
+
+                    const elementPointer = PromisedAddress.makePointer(pointerAddr, uavAddr.type, arrayElementSize, uavAddr.inputIndex);
+                    imove(elementPointer, srcAddr);
+                    return elementPointer;
                 }
                 return PromisedAddress.INVALID;
         }
