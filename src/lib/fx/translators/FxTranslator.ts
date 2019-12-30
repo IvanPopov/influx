@@ -1,7 +1,7 @@
 import { assert } from "@lib/common";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxInstruction, IPartFxPassInstruction, EPartFxPassGeometry } from "@lib/idl/part/IPartFx";
 
 import { FxEmitter } from "./FxEmitter";
 
@@ -20,12 +20,22 @@ export interface ICSShaderReflection {
 }
 
 export interface IFxReflection {
+    name: string;
+    capacity: number;
+    particle: string; // << particle type name
     CSParticlesResetRoutine: ICSShaderReflection;
     CSParticlesInitRoutine: ICSShaderReflection;
     CSParticlesUpdateRoutine: ICSShaderReflection;
-    CSParticlesPrerenderRoutines: ICSShaderReflection[];
-    VSParticleShaders: string[];
-    PSParticleShaders: string[];
+
+    passes: {
+        instance: string;
+        sorting: boolean;
+        geometry: EPartFxPassGeometry;
+        instanceCount: number;
+        VSParticleShader: string;
+        PSParticleShader: string;
+        CSParticlesPrerenderRoutine: ICSShaderReflection;
+    }[];
 }
 
 export class FxTranslator extends FxEmitter {
@@ -309,40 +319,56 @@ export class FxTranslator extends FxEmitter {
     }
 
     emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
-        const IFxReflection = {};
+        const { name, capacity } = fx;
 
         const CSParticlesResetRoutine = this.emitResetShader(fx);
         const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
         const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(fx);
-        const CSParticlesPrerenderRoutines = [];
-        const VSParticleShaders = [];
-        const PSParticleShaders = [];
 
-        fx.passList.forEach((pass, i) => {
+        const passes = fx.passList.map((pass, i) => {
             const { prerenderRoutine, vertexShader, pixelShader } = pass;
+            let { sorting, geometry, instanceCount } = pass;
+            let VSParticleShader: string = null;
+            let PSParticleShader: string = null;
+            let CSParticlesPrerenderRoutine: ICSShaderReflection = null;
 
             if (prerenderRoutine) {
-                CSParticlesPrerenderRoutines[i] = this.emitPrerenderShader(fx, pass, i);
+                CSParticlesPrerenderRoutine = this.emitPrerenderShader(fx, pass, i);
             }
 
             if (vertexShader) {
                 this.emitFunction(vertexShader);
-                VSParticleShaders[i] = vertexShader.name;
+                VSParticleShader = vertexShader.name;
             }
 
             if (pixelShader) {
                 this.emitFunction(pixelShader);
-                PSParticleShaders[i] = pixelShader.name;
+                PSParticleShader = pixelShader.name;
             }
+
+            const { typeName: instance } = this.resolveType(pass.particleInstance);
+
+            return {
+                instance,
+                sorting,
+                geometry,
+                instanceCount,
+                VSParticleShader,
+                PSParticleShader,
+                CSParticlesPrerenderRoutine
+            };
         });
 
+        const { typeName: particle } = this.resolveType(fx.particle);
+
         return {
+            name,
+            capacity,
+            particle,
+            passes,
             CSParticlesResetRoutine,
             CSParticlesInitRoutine,
-            CSParticlesUpdateRoutine,
-            CSParticlesPrerenderRoutines,
-            VSParticleShaders,
-            PSParticleShaders
+            CSParticlesUpdateRoutine
         };
     }
 }

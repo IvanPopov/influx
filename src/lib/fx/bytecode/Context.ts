@@ -59,17 +59,21 @@ export function ContextBuilder() {
     // counter grows forward;
     let rc: number = 0;
 
+    // stack of functions and logical blocks for ex: braces.
     const stack: {
-        fn: IFunctionDeclInstruction;
-        // symbol table containing local variables of the function including parameters
-        symbols: SymbolTable<PromisedAddress>;
-        // registers count at the moment of function's call
-        rc: number;
+        scopes: {
+            // symbol table containing local variables of the function including parameters
+            symbols: SymbolTable<PromisedAddress>;
+            // registers count at the moment of block's entry
+            rc: number;
+        }[];
+
         // program counter's value before the function's start 
-        pc: number;
+        pc: number; // << NOTE: currently is unsed
+        
+        fn: IFunctionDeclInstruction;
         // address of register where return call should save its value
         ret: PromisedAddress;
-
         // addresses of function return instructions to be resolved
         retRequests: number[];
     }[] = [];
@@ -83,11 +87,8 @@ export function ContextBuilder() {
 
 
     /** @returns Description of the top of the callstack */
-    const top = () => stack[depth() - 1];
+    const top = () => stack[stack.length - 1];
     const depth = () => stack.length;
-    const fn = () => top().fn;
-    /** Symbol table of the function at the top of the callstack */
-    const symbols = () => top().symbols;
     const ret = () => top().ret;
     const pc = () => instructions.pc;
     const loc = (desc: IAddrDesc) => new PromisedAddress(desc);
@@ -353,8 +354,11 @@ export function ContextBuilder() {
     function ref(decl: IVariableDeclInstruction, src: PromisedAddress): void {
         const name = sname.var(decl);
         assert(src.type === EAddrType.k_Registers);
-        assert(!isDef(symbols()[name]));
-        symbols()[name] = src;
+
+        const scopes = top().scopes;
+        const symbols = scopes[scopes.length - 1].symbols;
+        assert(!isDef(symbols[name]));
+        symbols[name] = src;
     }
 
 
@@ -365,10 +369,13 @@ export function ContextBuilder() {
     function deref(decl: IVariableDeclInstruction): PromisedAddress {
         const name = sname.var(decl);
         // is zero register available?
-        for (let i = depth() - 1; i >= 0; --i) {
-            let symbols = stack[i].symbols;
-            if (isDef(symbols[name])) {
-                return symbols[name];
+        for (let iFn = stack.length - 1; iFn >= 0; --iFn) {
+            const scopes = stack[iFn].scopes;
+            for (let iScope = scopes.length - 1; iScope >= 0; --iScope) {
+                const symbols = scopes[iScope].symbols;
+                if (isDef(symbols[name])) {
+                    return symbols[name];
+                }
             }
         }
         assert(false, `cannot dereference varaible ${name} (${decl.toCode()})`);
@@ -378,21 +385,41 @@ export function ContextBuilder() {
 
     /** @returns Address of the return value. */
     function push(fn: IFunctionDeclInstruction, ret: PromisedAddress): void {
-        const symbols = new SymbolTable<PromisedAddress>();
         const pc = instructions.pc;
         const retRequests = [];
-        stack.push({ fn, symbols, rc, ret, pc, retRequests });
+        const scopes = [];
+        stack.push({ fn, scopes, ret, pc, retRequests });
+        open();
     }
 
 
     function pop(): void {
-        const entryPoint = depth() === 1;
+        // check that there are no non-closed blocks left inside the function
+        assert(top().scopes.length === 1);
+        close();
+
         const entry = stack.pop();
+
+        const entryPoint = stack.length === 0;
         // updating all return adresses to correct values
         if (!entryPoint) {
             entry.retRequests.forEach(pc => instructions.replace(pc, EOperation.k_Jump, [instructions.pc]));
+            //                                                                          ^^^^^^^^^^^^^^^^^
+            //                                                     instruction immediately after function
         }
-        rc = entry.rc;
+    }
+
+    /** Open new block */
+    function open() {
+        const symbols = new SymbolTable<PromisedAddress>();
+        top().scopes.push({ symbols, rc });
+    }
+
+
+    /** CLose last block */
+    function close() {
+        const scope = top().scopes.pop();
+        rc = scope.rc;
     }
 
 
@@ -412,7 +439,6 @@ export function ContextBuilder() {
         icode,
         imove,
         iload,
-        iset,
         iconst_i32,
         iconst_f32,
         iop4,
@@ -421,6 +447,8 @@ export function ContextBuilder() {
         iop1,
         push,
         pop,
+        open,
+        close,
         ret,
         constants,
         uavs,

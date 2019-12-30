@@ -20,18 +20,30 @@ export function createUAV(name: string, elementSize: number, length: number, reg
         return counter[0];
     }
 
+    function readElement(iElement: number): Uint8Array {
+        return new Uint8Array(data.buffer, data.byteOffset + iElement * elementSize, elementSize);
+    }
+
     overwriteCounter(0);
 
     return {
         name,
+        readElement,
         readCounter,
         overwriteCounter,
+        // byte length of a single element
+        elementSize,
+        // number of elements
+        length, 
+        // register specified in the shader
+        register,
 
         // [ elements ]
         data,
 
         // raw data [ counter, ...elements ]
         buffer,
+        // input index for VM
         index
     };
 }

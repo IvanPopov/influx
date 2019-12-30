@@ -8,12 +8,12 @@
 
 import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import { EPartFxPassGeometry } from '@lib/idl/part/IPartFx';
-import { Emitter, IPipeline, Pass } from '@sandbox/containers/playground/Pipeline';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import * as OrbitControls from 'three-orbitcontrols';
+import { IEmitter, IPass } from './IEmitter';
 
 const $vertexShader = `
 precision highp float;
@@ -46,11 +46,11 @@ void main() {
 
 interface ITreeSceneProps {
     style: React.CSSProperties;
-    pipeline?: IPipeline;
+    emitter?: IEmitter;
 }
 
 interface IThreeSceneState {
-    pipeline: IPipeline;
+    emitter: IEmitter;
     nParticles: number;
 }
 
@@ -81,7 +81,7 @@ const progressStyleFix: React.CSSProperties = {
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     state: IThreeSceneState = {
-        pipeline: null,
+        emitter: null,
         nParticles: 0
     };
 
@@ -120,7 +120,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.createGridHelper();
         // this.createCube();
 
-        this.addEmitter(this.props.pipeline.emitter);
+        this.addEmitter(this.props.emitter);
         this.start();
 
         window.addEventListener('resize', this.onWindowResize, false);
@@ -138,7 +138,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         return this.renderer.domElement;
     }
 
-    addPassLine(pass: Pass) {
+    addPassLine(pass: IPass) {
         const geometry = new THREE.BufferGeometry();
         const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
 
@@ -163,7 +163,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         });
 
         // geometry.setIndex(Array(pass.capacity).fill(0).map((x, i) => i));
-        geometry.setDrawRange(0, pass.length);
+        geometry.setDrawRange(0, pass.length());
         // geometry.index = new THREE.Uint16BufferAttribute(Array(pass.length).fill(0).map((x, i) => i), 1);
 
         const mesh = new THREE.LineSegments(geometry, material);
@@ -175,7 +175,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
 
-    addPass(pass: Pass) {
+    addPass(pass: IPass) {
 
         if (pass.geometry === EPartFxPassGeometry.k_Line) {
             this.addPassLine(pass);
@@ -233,7 +233,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
 
-    addPassDefaultMat(pass: Pass) {
+    addPassDefaultMat(pass: IPass) {
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
         // tslint:disable-next-line:max-line-length
@@ -258,7 +258,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         geometry.addAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
         geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
         geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
-        geometry.maxInstancedCount = pass.length;
+        geometry.maxInstancedCount = pass.length();
 
 
         const material = new THREE.RawShaderMaterial({
@@ -278,7 +278,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         verbose('emitter added.');
     }
 
-    createInstinceGeometry(pass: Pass): THREE.BufferGeometry {
+    createInstinceGeometry(pass: IPass): THREE.BufferGeometry {
         let instanceGeometry: THREE.BufferGeometry = null;
         switch (pass.geometry) {
             case EPartFxPassGeometry.k_Box:
@@ -300,7 +300,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     // tslint:disable-next-line:max-func-body-length
-    addEmitter(emitter: Emitter) {
+    addEmitter(emitter: IEmitter) {
         this.passes = [];
 
         if (!isDefAndNotNull(emitter)) {
@@ -310,7 +310,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         // tslint:disable-next-line:max-func-body-length
         emitter.passes.forEach((pass, i) => {
-            if (!pass.requiresDefaultMaterial()) {
+            if (pass.vertexShader && pass.pixelShader) {
                this.addPass(pass);
             } else {
                 this.addPassDefaultMat(pass);
@@ -382,14 +382,13 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
 
     animate = (time: number) => {
-        const pipeline = this.state.pipeline;
+        const emitter = this.state.emitter;
 
-        if (!pipeline) {
+        if (!emitter) {
             return;
         }
 
-        const emitter = pipeline.emitter;
-        pipeline.update();
+        emitter.tick();
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];
@@ -403,9 +402,9 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
             rendPass.instancedBuffer.needsUpdate = true;
             if (emitPass.geometry === EPartFxPassGeometry.k_Line) {
-                geometry.setDrawRange(0, emitPass.length);
+                geometry.setDrawRange(0, emitPass.length());
             } else {
-                (geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length;
+                (geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length();
             }
         }
 
@@ -413,33 +412,32 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.renderer.render(this.scene, this.camera);
         this.frameId = requestAnimationFrame(this.animate);
 
-        this.setState({ nParticles: emitter.length });
+        this.setState({ nParticles: emitter.length() });
     }
 
     shouldComponentUpdate(nextProps: ITreeSceneProps, nexState) {
-        return this.state.pipeline !== nextProps.pipeline || this.state.nParticles !== nexState.nParticles;
+        return this.state.emitter !== nextProps.emitter || this.state.nParticles !== nexState.nParticles;
     }
 
     // tslint:disable-next-line:member-ordering
     static getDerivedStateFromProps(props: ITreeSceneProps, state: IThreeSceneState) {
-        if (state.pipeline === props.pipeline) {
+        if (state.emitter === props.emitter) {
             return null;
         }
 
-        return { pipeline: props.pipeline };
+        return { emitter: props.emitter };
     }
 
     componentDidUpdate(prevProps, prevState) {
-        if (prevState.pipeline === this.state.pipeline) {
-            const pipeline = this.props.pipeline;
-            const emitter = pipeline.emitter;
+        if (prevState.emitter === this.state.emitter) {
+            const emitter = this.props.emitter;
 
             emitter.passes.forEach((pass, i) => {
                 let { mesh } = this.passes[i];
                 let material = mesh.material as THREE.RawShaderMaterial;
                 // let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
 
-                if (pass.requiresDefaultMaterial()) {
+                if (!pass.vertexShader || !pass.pixelShader) {
                     return;
                 }
 
@@ -473,8 +471,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             verbose('emitter removed.');
         });
 
-        if (this.props.pipeline) {
-            this.addEmitter(this.props.pipeline.emitter);
+        if (this.props.emitter) {
+            this.addEmitter(this.props.emitter);
         }
     }
 
@@ -488,7 +486,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             >
                 <Progress
                     value={ this.state.nParticles }
-                    total={ this.state.pipeline.emitter.capacity }
+                    total={ this.state.emitter.capacity }
                     attached='top'
                     size='medium'
                     indicating

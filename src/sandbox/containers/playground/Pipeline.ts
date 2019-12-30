@@ -11,15 +11,16 @@ import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { ICompileExprInstruction, ITypeInstruction } from '@lib/idl/IInstruction';
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as THREE from 'three';
+import { IPass, IEmitter } from './IEmitter';
 
 type PartFx = IPartFxInstruction;
 
 interface IRunnable {
     run(...input: Uint8Array[]): Uint8Array;
-    setPipelineConstants(constants: IPipelineConstants): IRunnable;
+    setPipelineConstants(constants: IEmitterConstants): IRunnable;
 }
 
-interface IPipelineConstants {
+interface IEmitterConstants {
     elapsedTime: number;
     elapsedTimeLevel: number;
 }
@@ -34,13 +35,23 @@ function prebuild(expr: ICompileExprInstruction): IRunnable {
             return VM.play(bundle, inputs.map(input => new Int32Array(input.buffer, input.byteOffset, input.byteLength >> 2)));
         },
 
-        setPipelineConstants(constants: IPipelineConstants): IRunnable {
+        setPipelineConstants(constants: IEmitterConstants): IRunnable {
             VM.setConstant(bundle, 'elapsedTime', constants.elapsedTime);
             VM.setConstant(bundle, 'elapsedTimeLevel', constants.elapsedTimeLevel);
             return this;
         }
     };
 }
+
+function fxHash(fx: PartFx) {
+
+    const hashPart = fx.passList
+        .map(pass => `${type.signature(pass.particleInstance)}:${pass.geometry}:${pass.sorting}:`) // +
+        // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
+        .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
+    return `${type.signature(fx.particle)}:${fx.capacity}:${hashPart}`;
+}
+
 
 
 interface IPassDesc {
@@ -58,7 +69,7 @@ const TEMP_INT32_ARRAY = Array(10)
     .fill(null)
     .map(x => new Uint8Array(4));
 
-export class Pass {
+export class Pass implements IPass {
     private _owner: Emitter;
     private _prerenderRoutine: IRunnable;
     private _prerenderedParticles: Uint8Array[];
@@ -116,11 +127,11 @@ export class Pass {
         return this._prerenderedParticles[this.sorting ? 1 : 0];
     }
 
-    get length(): number {
-        return this._owner.length * this._instanceCount;
+    length(): number {
+        return this._owner.length() * this._instanceCount;
     }
 
-    get capacity(): number {
+    capacity(): number {
         return this._owner.capacity * this._instanceCount;
     }
 
@@ -132,9 +143,9 @@ export class Pass {
         return !this.vertexShader || !this.pixelShader;
     }
 
-    prerender(constants: IPipelineConstants): void {
+    prerender(constants: IEmitterConstants): void {
         this._prerenderRoutine.setPipelineConstants(constants);
-        const len = this._owner.length;
+        const len = this._owner.length();
         const ic = this._instanceCount;
 
         assert(ic < TEMP_INT32_ARRAY.length);
@@ -166,7 +177,7 @@ export class Pass {
 
         const v3 = new THREE.Vector3();
 
-        const length = this._owner.length;
+        const length = this._owner.length();
         const capacity = this._owner.capacity;
         const instanceCount = this._instanceCount;
 
@@ -198,6 +209,7 @@ export class Pass {
         }
     }
 
+
     shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader }) {
         this._prerenderRoutine = prerenderRoutine;
         this._sorting = sorting;
@@ -212,7 +224,26 @@ export class Pass {
     }
 }
 
-export class Emitter {
+class Emitter implements IEmitter {
+    private startTime: number;
+    private elapsedTimeLevel: number;
+    private active: boolean;
+
+    private constants: IEmitterConstants = {
+        elapsedTime: 0,
+        elapsedTimeLevel: 0
+    };
+
+    //
+    //
+    //
+
+    private fx: IPartFxInstruction;
+
+    //
+    //
+    //
+
     private nPartAddFloat: number;
     private nPartAdd: number;
     private nPart: number;          // number of alive particles
@@ -226,12 +257,16 @@ export class Emitter {
     private passList: Pass[];
 
 
-    constructor({ spawnRoutine, initRoutine, updateRoutine, partByteLength, capacity = -1, passList }) {
+    constructor(fx: IPartFxInstruction) {
+        let capacity = fx.capacity;
+
+        const { spawnRoutine, initRoutine, updateRoutine, partByteLength, passList } = Emitter.rebuild(fx);
 
         if (capacity < 0) {
             capacity = 1024;
         }
 
+        this.fx = fx;
         this.nPartAdd = 0;
         this.nPartAddFloat = 0;
         this.nPart = 0;
@@ -246,13 +281,56 @@ export class Emitter {
     }
 
 
-    shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList }) {
+    get name(): string {
+        return this.fx.name;
+    }
+
+
+    private static rebuild(fx: IPartFxInstruction) {
+        const spawnRoutine = prebuild(fx.spawnRoutine);
+        const initRoutine = prebuild(fx.initRoutine);
+        const updateRoutine = prebuild(fx.updateRoutine);
+        const partByteLength = fx.particle.size;
+        const passList = fx.passList
+            .filter(pass => pass.particleInstance != null)
+            .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader, instanceCount }): IPassDesc => {
+                return {
+                    instance: particleInstance,
+                    prerenderRoutine: prebuild(prerenderRoutine),
+                    sorting,
+                    geometry,
+                    instanceCount,
+                    vertexShader: Glsl.translate(vertexShader, { mode: 'vertex' }),
+                    pixelShader: Glsl.translate(pixelShader, { mode: 'pixel' })
+                };
+            });
+        return { spawnRoutine, initRoutine, updateRoutine, partByteLength, passList };
+    }
+
+
+    private isReplaceable(fxNext: PartFx) {
+        const left = fxHash(fxNext);
+        const right = fxHash(this.fx);
+        return left === right;
+    }
+
+    async shadowReload(fxNext: IPartFxInstruction): Promise<boolean> {
+        if (!this.isReplaceable(fxNext)) {
+            return false;
+        }
+
+        verbose('emitter reloaded from the shadow');
+        const { spawnRoutine, initRoutine, updateRoutine, partByteLength, passList } = Emitter.rebuild(fxNext);
+
+        this.fx = fxNext;
         this.initRoutine = initRoutine;
         this.spawnRoutine = spawnRoutine;
         this.updateRoutine = updateRoutine;
         passList.forEach(({ prerenderRoutine, sorting, vertexShader, pixelShader }, i) => {
             this.passList[i].shadowReload({ prerenderRoutine, sorting, vertexShader, pixelShader });
         });
+        this.tick(true);
+        return true;
     }
 
 
@@ -260,7 +338,7 @@ export class Emitter {
         return this.particles.byteLength / this.partByteLength;
     }
 
-    get length(): number {
+    length(): number {
         return this.nPart;
     }
 
@@ -275,14 +353,14 @@ export class Emitter {
         // return new Uint8Array(this.particles, i * this.partByteLength, this.partByteLength);
     }
 
-    tick(constants: IPipelineConstants) {
+    private tickInternal(constants: IEmitterConstants) {
         this.update(constants);
         this.spawn(constants);
         this.prerender(constants);
     }
 
 
-    private spawn(constants: IPipelineConstants) {
+    private spawn(constants: IEmitterConstants) {
         const nSpawn = u8ArrayAsI32(this.spawnRoutine.run());
 
         this.nPartAddFloat += nSpawn * constants.elapsedTime;
@@ -314,7 +392,7 @@ export class Emitter {
     }
 
 
-    private update(constants: IPipelineConstants) {
+    private update(constants: IEmitterConstants) {
         this.updateRoutine.setPipelineConstants(constants);
         for (let i = 0; i < this.nPart; ++i) {
             const currPtr = this.getParticlePtr(i);
@@ -327,138 +405,55 @@ export class Emitter {
                 currPtr.set(lastPtr);
                 this.nPart--;
             }
-
-            // const f32View = new Float32Array(ptr.buffer, ptr.byteOffset, 4);
-            // verbose(`update(${i}) => pos: [${f32View[0]}, ${f32View[1]}, ${f32View[2]}], size: ${f32View[3]}`);
         }
     }
 
-    private prerender(constants: IPipelineConstants) {
+    private prerender(constants: IEmitterConstants) {
         this.passList.forEach((pass) => {
             pass.prerender(constants);
         });
     }
-}
 
 
-
-// tslint:disable-next-line:max-func-body-length
-function Pipeline(fx: PartFx) {
-    let emitter: Emitter = null;
-
-    let $startTime: number;
-    let $elapsedTimeLevel: number;
-    // let $interval = null;
-    let $active: boolean;
-
-    const constants: IPipelineConstants = {
-        elapsedTime: 0,
-        elapsedTimeLevel: 0
-    };
-
-    let $name: string = null;
-    function name() {
-        return $name;
+    stop() {
+        this.active = false;
+        verbose('emitter stopped');
     }
 
-    function load(fx: PartFx) {
-        const spawnRoutine = prebuild(fx.spawnRoutine);
-        const initRoutine = prebuild(fx.initRoutine);
-        const updateRoutine = prebuild(fx.updateRoutine);
-        const partByteLength = fx.particle.size;
-        const capacity = fx.capacity;
-        const passList = fx.passList
-            .filter(pass => pass.particleInstance != null)
-            .map(({ particleInstance, prerenderRoutine, sorting, geometry, vertexShader, pixelShader, instanceCount }): IPassDesc => {
-                return {
-                    instance: particleInstance,
-                    prerenderRoutine: prebuild(prerenderRoutine),
-                    sorting,
-                    geometry,
-                    instanceCount,
-                    vertexShader: Glsl.translate(vertexShader, { mode: 'vertex' }),
-                    pixelShader: Glsl.translate(pixelShader, { mode: 'pixel' }),
-                };
-            });
+    start() {
+        this.constants.elapsedTime = 0;
+        this.constants.elapsedTimeLevel = 0;
 
-        if (isNull(emitter)) {
-            emitter = new Emitter({ spawnRoutine, initRoutine, updateRoutine, partByteLength, passList, capacity });
-            play();
-        } else {
-            emitter.shadowReload({ spawnRoutine, initRoutine, updateRoutine, passList });
-            emitter.tick(constants);
-        }
-
-        $name = fx.name;
-    }
-
-    function stop() {
-        // clearInterval($interval);
-        // $interval = null;
-        $active = false;
-        verbose('pipeline stopped');
-    }
-
-    function play() {
-        constants.elapsedTime = 0;
-        constants.elapsedTimeLevel = 0;
-
-        $startTime = Date.now();
-        $elapsedTimeLevel = 0;
-        $active = true;
+        this.startTime = Date.now();
+        this.elapsedTimeLevel = 0;
+        this.active = true;
         // TODO: replace with requestAnimationFrame() ?
         // $interval = setInterval(update, 33);
     }
 
-    function update() {
-        if (!$active) {
+    tick(force: boolean = false) {
+        if (!this.active && !force) {
             return;
         }
 
-        emitter.tick(constants);
-        const dt = Date.now() - $startTime;
-        constants.elapsedTime = (dt - $elapsedTimeLevel) / 1000;
-        constants.elapsedTimeLevel = $elapsedTimeLevel / 1000;
-        $elapsedTimeLevel = dt;
+        this.tickInternal(this.constants);
+        const dt = Date.now() - this.startTime;
+        this.constants.elapsedTime = (dt - this.elapsedTimeLevel) / 1000;
+        this.constants.elapsedTimeLevel = this.elapsedTimeLevel / 1000;
+        this.elapsedTimeLevel = dt;
     }
 
-    function isStopped() {
+    isStopped() {
         // return $interval === null;
-        return !$active;
+        return !this.active;
     }
 
-    function fxHash(fx: PartFx) {
-
-        const hashPart = fx.passList
-            .map(pass => `${type.signature(pass.particleInstance)}:${pass.geometry}:${pass.sorting}:`) // +
-            // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
-            .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
-        return `${type.signature(fx.particle)}:${fx.capacity}:${hashPart}`;
+    reset(): void {
+        // NOT implemented
     }
-
-    const isReplaceable = (fxNext: PartFx) => {
-        const left = fxHash(fxNext);
-        const right = fxHash(fx);
-        return left === right;
-    }
-
-    function shadowReload(fxNext: PartFx): boolean {
-        if (!isReplaceable(fxNext)) {
-            return false;
-        }
-
-        verbose('pipeline reloaded from the shadow');
-        load(fxNext);
-        return true;
-    }
-
-    load(fx);
-
-    return { stop, play, isStopped, emitter, shadowReload, name, update };
 }
 
 
-export default Pipeline;
-
-
-export type IPipeline = ReturnType<typeof Pipeline>;
+export async function createEmitter(fx: IPartFxInstruction): Promise<IEmitter> {
+    return new Emitter(fx);
+}

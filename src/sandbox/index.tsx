@@ -41,7 +41,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.slastDocument',
         'sourceFile.slDocument',
         'sourceFile.debugger.runtime',
-        'sourceFile.pipeline'
+        'sourceFile.emitter'
     ]
 } as any);
 

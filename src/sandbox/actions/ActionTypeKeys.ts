@@ -24,6 +24,6 @@ export const DEBUGGER_RESET                         = 'debugger-reset';
 export const DEBUGGER_COLORIZE                      = 'debugger-colorize';
 export const DEBUGGER_OPTIONS_CHANGED               = 'debugger-options-changed';
 
-export const PLAYGROUND_PIPELINE_UPDATE             = 'playground-pipeline-update';
+export const PLAYGROUND_EMITER_UPDATE               = 'playground-emitter-update';
 export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
 

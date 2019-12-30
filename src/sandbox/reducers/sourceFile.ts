@@ -2,7 +2,7 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundPipelineUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -24,7 +24,7 @@ const initialState: IFileState = {
             autocompile: false
         }
     },
-    pipeline: null,
+    emitter: null,
     // HACK: additional counter in order to call component's update in case of shadow pipeline reloading
     $pipeline: 0
 };
@@ -47,7 +47,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             breakpoints: [],
             slASTDocument: null,
             slDocument: null,
-            pipeline: null,
+            emitter: null,
             $pipeline: 0
         }),
 
@@ -60,7 +60,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             breakpoints: [],
             slASTDocument: null,
             slDocument: null,
-            pipeline: null,
+            emitter: null,
             $pipeline: 0
         }),
 
@@ -142,8 +142,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
     // playground
     //
 
-    [evt.PLAYGROUND_PIPELINE_UPDATE]: (state, action: IPlaygroundPipelineUpdate) =>
-        ({ ...state, pipeline: action.payload.pipeline, $pipeline: state.$pipeline + 1 })
+    [evt.PLAYGROUND_EMITER_UPDATE]: (state, action: IPlaygroundEmitterUpdate) =>
+        ({ ...state, emitter: action.payload.emitter, $pipeline: state.$pipeline + 1 })
 
 }, initialState);
 
@@ -154,7 +154,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 export const getFileState = (state: IStoreState): IFileState => state.sourceFile;
 export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(state).debugger;
 export const getScope = (file: IFileState): IScope => file.slDocument ? file.slDocument.root.scope : null;
-export const getPipelineName = (file: IFileState) => file.pipeline ? file.pipeline.name() : null;
+export const getEmitterName = (file: IFileState) => file.emitter ? file.emitter.name : null;
 export function filterPartFx(scope: IScope): IPartFxInstruction[] {
     if (!scope) {
         return [];

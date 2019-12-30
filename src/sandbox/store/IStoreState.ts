@@ -3,7 +3,7 @@ import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
-import { IPipeline } from '@sandbox/containers/playground/Pipeline';
+import { IEmitter } from '@sandbox/containers/playground/IEmitter';
 import { RouterState } from 'connected-react-router';
 
 export interface IMarker {
@@ -43,7 +43,7 @@ export interface IFileState {
     breakpoints: number[];
 
     debugger: IDebuggerState;
-    pipeline: IPipeline; // todo: add type.
+    emitter: IEmitter; // todo: add type.
     $pipeline: number;
 }
 

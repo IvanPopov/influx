@@ -1,12 +1,16 @@
 import { assert, verbose } from '@lib/common';
+import { type } from '@lib/fx/analisys/helpers';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import { createSLDocument } from '@lib/fx/SLDocument';
-import { FxTranslator, ICSShaderReflection, IFxReflection, IUavReflection } from '@lib/fx/translators/FxTranslator';
+import { FxTranslator, ICSShaderReflection, IUavReflection } from '@lib/fx/translators/FxTranslator';
+import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
-import { time } from '@lib/time';
+import * as THREE from 'three';
+import { IPass } from './IEmitter';
+
 
 // TODO: use CDL instead of reflection
 
@@ -22,9 +26,10 @@ function createUAVEx(document: ISLDocument, reflection: IUavReflection, length: 
     return VM.createUAV(reflection.name, elementSize, length, reflection.register);
 }
 
+// tslint:disable-next-line:max-line-length
 function createUAVsEx(document: ISLDocument, reflection: ICSShaderReflection, capacity: number, sharedUAVs: IUAVResource[] = []): IUAVResource[] {
     return reflection.uavs.map(uavReflection => {
-        const shraredUAV = sharedUAVs.find(uav => uav.name == uavReflection.name);
+        const shraredUAV = sharedUAVs.find(uav => uav.name === uavReflection.name);
         return shraredUAV || createUAVEx(document, uavReflection, capacity);
     });
 }
@@ -63,6 +68,15 @@ function setupBundle(document: ISLDocument, reflection: ICSShaderReflection, cap
 }
 
 
+function fxHash(fx: IPartFxInstruction) {
+    const hashPart = fx.passList
+        .map(pass => `${type.signature(pass.particleInstance)}:${pass.geometry}:${pass.sorting}:`) // +
+        // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
+        .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
+    return `${type.signature(fx.particle)}:${fx.capacity}:${hashPart}`;
+}
+
+
 function createTimelime() {
     let startTime: number;
     let elapsedTimeLevel: number;
@@ -75,7 +89,7 @@ function createTimelime() {
 
     function stop() {
         active = false;
-        verbose('pipeline stopped');
+        verbose('emitter stopped');
     }
 
     function start() {
@@ -85,7 +99,7 @@ function createTimelime() {
         startTime = Date.now();
         elapsedTimeLevel = 0;
         active = true;
-        verbose('pipeline started');
+        verbose('emitter started');
     }
 
     function tick() {
@@ -112,127 +126,311 @@ function createTimelime() {
     };
 }
 
+type ITimeline = ReturnType<typeof createTimelime>;
+
+interface IPassEx extends IPass {
+    bundle: ReturnType<typeof setupBundle>;
+    dump(): void;
+}
+
 // tslint:disable-next-line:max-func-body-length
-async function Pipeline(fx: IPartFxInstruction) {
-    const capacity = fx.capacity;
+async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const textDocument = { uri: '://raw', source: emitter.toString() };
     const slDocument = await createSLDocument(textDocument);
+    const { name, capacity } = reflection;
+    const scope = slDocument.root.scope;
+    const particle = scope.findType(reflection.particle);
 
-    const uavResources: IUAVResource[] = [];
     const resetBundle = setupBundle(slDocument, reflection.CSParticlesResetRoutine, capacity, uavResources);
     const initBundle = setupBundle(slDocument, reflection.CSParticlesInitRoutine, capacity, uavResources);
     const updateBundle = setupBundle(slDocument, reflection.CSParticlesUpdateRoutine, capacity, uavResources);
 
-
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
-    const uavCeatetionRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
 
-    const spawnRoutine = VM.asNativeFunction(fx.spawnRoutine.function);
+    const passes = reflection.passes.map(({ VSParticleShader,
+        PSParticleShader,
+        geometry,
+        sorting,
+        instanceCount,
+        instance,
+        CSParticlesPrerenderRoutine
+    }, i): IPassEx => {
 
-    const timeline = createTimelime();
+        const UAV_PRERENDERED = `uavPrerendered${i}`;
+        const bundle = setupBundle(slDocument, CSParticlesPrerenderRoutine, capacity * instanceCount, uavResources);
+        const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
 
-    const numParticles = () => capacity - 1 - uavDeadIndices.readCounter();
+        const vertexShader = Glsl.translate(scope.findFunction(VSParticleShader, null), { mode: 'vertex' });
+        const pixelShader = Glsl.translate(scope.findFunction(PSParticleShader, null), { mode: 'pixel' });
+        const instanceType = scope.findType(instance);
+        const stride = instanceType.size >> 2;
+
+        const numRenderedParticles = () => numParticles() * instanceCount;
+
+        const instanceLayout = instanceType.fields.map(field => {
+            const size = field.type.size >> 2;
+            const offset = field.type.padding >> 2;
+            const attrName = Glsl.GlslEmitter.$declToAttributeName(field);
+            return { attrName, size, offset };
+        });
+
+        // tslint:disable-next-line:max-line-length
+        const uavPrerenderedReflection = CSParticlesPrerenderRoutine.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
+        const elementType = scope.findType(uavPrerenderedReflection.elementType);
+
+        // dump prerendered particles
+        const dump = (): void => {
+            verbose(`dump ${uav.readCounter()}/${capacity} prerendred particles: `);
+            for (let iElement = 0; iElement < uav.readCounter(); ++iElement) {
+                verbose(VM.asNativeInner(uav.readElement(iElement), elementType));
+            }
+        };
+
+
+        //
+        // Sorting
+        //
+
+        function sort(targetPos: THREE.Vector3) {
+            // assert(sorting);
+
+            // // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
+            // //       I hate javascript for that :/
+
+            // const v3 = new THREE.Vector3();
+            // const length = numRenderedParticles();
+
+            // const nStride = stride * instanceCount; // stride in floats
+
+            // const src = new Float32Array(_prerenderedParticles[0].buffer, 0, nStride * capacity);
+            // const dst = new Float32Array(_prerenderedParticles[1].buffer, 0, nStride * capacity);
+
+            // const indicies = [];
+
+            // // NOTE: sort using only first instance's postion
+            // for (let iPart = 0; iPart < length; ++iPart) {
+            //     const offset = iPart * nStride;
+            //     const dist = v3
+            //         .fromArray(src, offset/* add offset of POSTION semantic */)
+            //         .distanceTo(targetPos);
+            //     indicies.push([iPart, dist]);
+            // }
+
+            // indicies.sort((a, b) => -a[1] + b[1]);
+
+            // for (let i = 0; i < indicies.length; ++i) {
+            //     const iFrom = indicies[i][0] * nStride;
+            //     const iTo = i * nStride;
+
+            //     const from = src.subarray(iFrom, iFrom + nStride);
+            //     const copyTo = dst.subarray(iTo, iTo + nStride);
+            //     copyTo.set(from);
+            // }
+        }
+
+        const data = new Uint8Array(uav.data.buffer, uav.data.byteOffset, uav.data.byteLength);
+        return {
+            data,
+            instanceLayout,
+            stride,
+            geometry,
+            sorting,
+            vertexShader,
+            pixelShader,
+            length: numRenderedParticles,
+            sort,
+            bundle,
+            dump
+        };
+    });
+
+    const numParticles = () => capacity - uavDeadIndices.readCounter();
 
     function reset() {
         // reset all available particles
         resetBundle.run(capacity);
-        uavDeadIndices.overwriteCounter(capacity - 1);
+        uavDeadIndices.overwriteCounter(capacity);
     }
 
-    function emit(nparticles: number) {
-        // TODO: move creation to GPU side
-        uavCeatetionRequests.data.fill(1, 0, nparticles * 2); // fill requests fro N groups, with 1 thread inside
-        initBundle.setConstants(timeline.constants);
-        initBundle.run(nparticles);
-    }
 
-    function update() {
+    function update(timeline: ITimeline) {
         updateBundle.setConstants(timeline.constants);
         updateBundle.run(capacity);
     }
 
+
+    function prerender() {
+        passes.forEach(({ bundle }, i) => {
+            const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
+            uavPrerendered.overwriteCounter(0);
+            bundle.run(capacity);
+        });
+    }
+
+
     function dumpParticles() {
         const npart = numParticles();
-        const partSize = fx.particle.size;
+        const partSize = particle.size;
 
         verbose(`particles total: ${npart} (${uavDeadIndices.readCounter()}/${capacity})`);
 
         uavStates.data.forEach((alive, iPart) => {
             if (alive) {
                 const partRaw = new Uint8Array(uavParticles.data.buffer, uavParticles.data.byteOffset + iPart * partSize, partSize);
-                verbose(iPart, VM.asNativeInner(partRaw, fx.particle));
+                verbose(iPart, VM.asNativeInner(partRaw, particle));
             }
         });
     }
 
 
-    reset();
-    // emit(spawnRoutine());
-    // dumpParticles();
+    //
+    // Custom emission
+    //
 
-    const { start, stop, isStopped } = timeline;
 
-    function tick() {
-        if (timeline.isStopped()) {
-            return;
-        }
-        console.log(timeline.constants.elapsedTime, timeline.constants.elapsedTimeLevel);
-        update();
-        // emit(spawnRoutine());
-        emit(1);
-        // prerender()
+    // TODO: do not use fx.spawnRoutine, use CSSpawnRoutine instead.
+    const spawnRoutine = VM.asNativeFunction(fx.spawnRoutine.function);
+    const uavCeatetionRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
 
-        timeline.tick();
+    let nPartAdd = 0;
+    let nPartAddFloat = 0;
+    // TODO: move emission to the GPU side
+    function emit(timeline: ITimeline) {
+        nPartAddFloat += spawnRoutine() * timeline.constants.elapsedTime;
+        nPartAdd = Math.floor(nPartAddFloat);
+        nPartAddFloat -= nPartAdd;
+        nPartAdd = Math.min(nPartAdd, capacity - numParticles());
+
+        // TODO: move creation to the GPU side
+        uavCeatetionRequests.data.fill(1, 0, nPartAdd * 2); // fill requests fro N groups, with 1 thread inside
+        initBundle.setConstants(timeline.constants);
+        initBundle.run(nPartAdd);
     }
 
-    function asyncTest() {
-        let counter = 0;
-        const interval = setInterval(() => {
-            if (counter === 0) {
-                start();
-            }
-            verbose(`tick: ${counter}`);
-            tick();
-            if (counter === 5) {
-                stop();
-                dumpParticles();
-                clearInterval(interval);
-            }
-            counter++;
-        }, 1000);
-    }
-
-    function syncTest() {
-        // debug setup
-        // >>>
-        start();
-        tick();
-        tick();
-        tick();
-        tick();
-        stop();
-        dumpParticles();
-        // <<<
-    }
-
-    // asyncTest();
-    // syncTest();
 
     return {
-        start,
-        stop,
-        tick,
-        isStopped,
-
+        name,
+        capacity,
+        passes,
+        numParticles,
         reset,
+        emit,
+        update,
+        prerender,
         dumpParticles
     };
 }
 
 
-export default Pipeline;
-export type IPipeline = ReturnType<typeof Pipeline>;
+// tslint:disable-next-line:max-func-body-length
+export async function createEmitter(fx: IPartFxInstruction) {
+
+    const uavResources: IUAVResource[] = []; // << shared UAV resources
+    const timeline = createTimelime();
+    let {
+        name,
+        capacity,
+        passes,
+        numParticles,
+        reset,
+        emit,
+        update,
+        prerender,
+        dumpParticles,
+    } = await load(fx, uavResources);
+
+    reset();
+
+    const { start, stop, isStopped } = timeline;
+
+    function tick() {
+        if (!timeline.isStopped()) {
+            update(timeline);
+            emit(timeline);
+            prerender();
+            timeline.tick();
+        }
+    }
+
+    // function asyncTest() {
+    //     let counter = 0;
+    //     const interval = setInterval(() => {
+    //         if (counter === 0) {
+    //             start();
+    //         }
+    //         verbose(`tick: ${counter}`);
+    //         tick();
+    //         if (counter === 5) {
+    //             stop();
+    //             dumpParticles();
+    //             clearInterval(interval);
+    //         }
+    //         counter++;
+    //     }, 1000);
+    // }
+
+    // function syncTest() {
+    //     // debug setup
+    //     // >>>
+    //     start();
+    //     tick();
+    //     // tick();
+    //     // tick();
+    //     // tick();
+    //     stop();
+    //     dumpParticles();
+    //     passes.forEach(pass => pass.dump());
+    //     // <<<
+    // }
+
+    // // asyncTest();
+    // // syncTest();
+
+    async function shadowReload(fxNext: IPartFxInstruction): Promise<boolean> {
+        if (fxHash(fxNext) !== fxHash(fx)) {
+            return false;
+        }
+
+        verbose('emitter reloaded from the shadow');
+
+        ({
+            name,
+            capacity,
+            passes,
+            numParticles,
+            reset,
+            emit,
+            update,
+            prerender,
+            dumpParticles
+        } = await load(fxNext, uavResources));
+
+        return true;
+    }
+
+    return {
+        get name() {
+            return name;
+        },
+
+        capacity,
+
+        start,
+        stop,
+        tick,
+        isStopped,
+        length: numParticles,
+        passes,
+
+        reset,
+        shadowReload
+    };
+}
+
+
+export type Emitter = ReturnType<typeof createEmitter>;
+export type Pass = IPass;

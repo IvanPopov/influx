@@ -5,8 +5,8 @@ import { isNull, verbose } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
-import Pipeline from '@sandbox/containers/playground/Pipeline';
-import PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
+import * as Pipeline from '@sandbox/containers/playground/Pipeline';
+import * as PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
@@ -33,13 +33,13 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const list: IPartFxInstruction[] = filterPartFx(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
-        let pipelinePrev = file.pipeline;
-        let pipelineNext = null;
+        let emitterPrev = file.emitter;
+        let emitterNext = null;
 
-        if (!isNull(pipelinePrev) && isNull(active)) {
+        if (!isNull(emitterPrev) && isNull(active)) {
             if (list.map(fx => fx.name)
-                .indexOf(pipelinePrev.name()) !== -1) {
-                active = pipelinePrev.name();
+                .indexOf(emitterPrev.name) !== -1) {
+                active = emitterPrev.name;
             }
         }
 
@@ -56,21 +56,22 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             const i = list.map(fx => fx.name)
                 .indexOf(active);
 
-            if (!pipelinePrev || !pipelinePrev.shadowReload(list[i])) {
-                PipelineNEXT(list[i]);
-                pipelineNext = Pipeline(list[i]);
-                verbose('next pipeline has been created.');
+            if (!emitterPrev || !(await emitterPrev.shadowReload(list[i]))) {
+                emitterNext = await PipelineNEXT.createEmitter(list[i]);
+                // emitterNext = await Pipeline.createEmitter(list[i]);
+                emitterNext.start();
+                verbose('next emitter has been created.');
             }
         }
 
-        if (pipelineNext && pipelinePrev) {
-            pipelinePrev.stop();
-            pipelinePrev = null;
-            verbose('previous pipeline has been dropped.');
+        if (emitterNext && emitterPrev) {
+            emitterPrev.stop();
+            emitterPrev = null;
+            verbose('previous emitter has been dropped.');
         }
 
-        const pipeline = pipelineNext || pipelinePrev;
-        dispatch({ type: evt.PLAYGROUND_PIPELINE_UPDATE, payload: { pipeline } });
+        const emitter = emitterNext || emitterPrev;
+        dispatch({ type: evt.PLAYGROUND_EMITER_UPDATE, payload: { emitter } });
         done();
     }
 });

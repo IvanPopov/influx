@@ -108,3 +108,15 @@ bool postfix_index_setter_swizzled()
     x[2].zyx = float3(-1.f, -2.f, -3.f);
     return x[2].x == -3.f && x[2].y == -2.f && x[2].z == -1.f;
 }
+
+/**
+ * @test For loop test 1.
+ * @expected {for_loop_test1() == 10}
+ */
+int for_loop_test1() {
+    int x;
+    for (int i = 0; i < 11; i = i + 1) {
+        x = i;
+    }
+    return x;
+}

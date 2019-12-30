@@ -8,14 +8,13 @@ import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { mapProps } from '@sandbox/reducers';
-import { filterPartFx, getFileState, getPipelineName, getScope } from '@sandbox/reducers/sourceFile';
+import { filterPartFx, getEmitterName, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, List, Message } from 'semantic-ui-react';
 
-import Pipeline from './Pipeline';
 import ThreeScene from './ThreeScene';
 
 interface IPlaygroundProps extends IFileState {
@@ -35,7 +34,7 @@ const threeStylesHotfix: React.CSSProperties = {
 
 
 class Playground extends React.Component<IPlaygroundProps> {
-    $pipelineName: string = null;
+    $emitterName: string = null;
 
     constructor(props) {
         super(props);
@@ -48,9 +47,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePlayClick() {
         const props = this.props;
-        if (props.pipeline) {
-            if (props.pipeline.isStopped()) {
-                props.pipeline.play();
+        if (props.emitter) {
+            if (props.emitter.isStopped()) {
+                props.emitter.start();
                 this.forceUpdate();
             }
         }
@@ -59,9 +58,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePauseClick() {
         const props = this.props;
-        if (props.pipeline) {
-            if (!props.pipeline.isStopped()) {
-                props.pipeline.stop();
+        if (props.emitter) {
+            if (!props.emitter.isStopped()) {
+                props.emitter.stop();
                 this.forceUpdate();
             }
         }
@@ -74,15 +73,15 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return nextProps.pipeline !== this.props.pipeline || 
-        (this.props.pipeline && this.$pipelineName !== this.props.pipeline.name());
+        return nextProps.emitter !== this.props.emitter ||
+            (this.props.emitter && this.$emitterName !== this.props.emitter.name);
     }
 
     componentDidUpdate() {
-        if (this.props.pipeline) {
-            this.$pipelineName = this.props.pipeline.name();
+        if (this.props.emitter) {
+            this.$emitterName = this.props.emitter.name;
         } else {
-            this.$pipelineName = null;
+            this.$emitterName = null;
         }
     }
 
@@ -90,11 +89,11 @@ class Playground extends React.Component<IPlaygroundProps> {
     render() {
         // console.log('Playground:render()');
         const props = this.props;
-        const pipeline = props.pipeline;
+        const emitter = props.emitter;
         const scope = getScope(props);
 
         const list: IPartFxInstruction[] = filterPartFx(scope);
-        const active = getPipelineName(props);
+        const active = getEmitterName(props);
 
         return (
             <div>
@@ -105,7 +104,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                     </Message.Content>
                     </Message>
                 }
-                { pipeline &&
+                { emitter &&
                     <div>
                         <List bulleted horizontal>
                             { list.map(fx => (
@@ -122,20 +121,20 @@ class Playground extends React.Component<IPlaygroundProps> {
                             <Button.Group compact >
                                 <Button
                                     icon='playback pause'
-                                    color={ (pipeline.isStopped() ? 'black' : null) }
-                                    disabled={ pipeline.isStopped() }
+                                    color={ (emitter.isStopped() ? 'black' : null) }
+                                    disabled={ emitter.isStopped() }
                                     onClick={ this.handlePauseClick }
                                 />
                                 <Button
                                     icon='playback play'
-                                    color={ (!pipeline.isStopped() ? 'black' : null) }
-                                    disabled={ !pipeline.isStopped() }
+                                    color={ (!emitter.isStopped() ? 'black' : null) }
+                                    disabled={ !emitter.isStopped() }
                                     onClick={ this.handlePlayClick }
                                 />
                             </Button.Group>
                             <ThreeScene
                                 style={ threeStylesHotfix }
-                                pipeline={ pipeline }
+                                emitter={ emitter }
                             />
                         </div>
                     </div>

@@ -3,11 +3,11 @@ import { expression, instruction, type, variable } from "@lib/fx/analisys/helper
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { T_FLOAT, T_INT, T_UINT, T_BOOL } from "@lib/fx/analisys/SystemScope";
+import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IForStmtInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -26,6 +26,9 @@ export const UAV0_REGISTER = 17;
 export const UAV_TOTAL = 33 - UAV0_REGISTER;
 export const INPUT_TOTAL = UAV_TOTAL - INPUT0_REGISTER;
 export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
+
+
+const UNRESOLVED_JUMP_LOCATION = -1;
 
 // TODO: rename as IProgramDocument
 export interface ISubProgram {
@@ -175,6 +178,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         debug,
         push,
         pop,
+        open,
+        close,
         deref,
         ref,
         icode,
@@ -184,7 +189,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         iop2,
         iop1,
         iload,
-        iset,
         iconst_i32,
         iconst_f32,
         ret,
@@ -496,17 +500,26 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             //
             // UAVs
             //
+
+            /** @returns: The post-decremented counter value. */
             case 'DecrementCounter':
-            case 'IncrementCounter':
                 {
-
-                    const diff = { 'IncrementCounter': +1, 'DecrementCounter': -1 };
-
                     const uav = call.callee;
                     const uavAddr = raddr(uav);
                     const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
                     const valueAddr = iload(uavCounterAddr);
-                    const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(diff[fdecl.name]));
+                    const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(-1));
+                    imove(uavCounterAddr, nextValueAddr);
+                    return nextValueAddr;
+                }
+            /** @returns: The pre-incremented counter value. */
+            case 'IncrementCounter':
+                {
+                    const uav = call.callee;
+                    const uavAddr = raddr(uav);
+                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    const valueAddr = iload(uavCounterAddr);
+                    const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(+1));
                     imove(uavCounterAddr, nextValueAddr);
                     return valueAddr;
                 }
@@ -523,10 +536,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const arrayElementSize = args[0].type.size;
                     const baseAddr = iconst_i32(sizeof.i32() >> 2); // offset of counter
                     const sizeAddr = iconst_i32(arrayElementSize >> 2);
-                    const pointerAddr = intrinsics.madi(valueAddr, baseAddr, valueAddr, sizeAddr);
+                    const pointerAddr = intrinsics.madi(alloca(sizeof.addr()), baseAddr, valueAddr, sizeAddr);
 
                     const elementPointer = PromisedAddress.makePointer(pointerAddr, uavAddr.type, arrayElementSize, uavAddr.inputIndex);
                     imove(elementPointer, srcAddr);
+                    
+                    // TODO: replace with intrinsics.inc();
+                    intrinsics.addi(valueAddr, valueAddr, iconst_i32(1));
+                    imove(uavCounterAddr, valueAddr);
+
                     return elementPointer;
                 }
                 return PromisedAddress.INVALID;
@@ -1202,7 +1220,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // [out of if code]                   <--+ 
 
 
-                    const UNRESOLVED_JUMP_LOCATION = -1;
+                    
 
                     let ifStmt = instr as IIfStmtInstruction;
                     let { cond, conseq, contrary } = ifStmt;
@@ -1260,10 +1278,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 }
             case EInstructionTypes.k_StmtBlock:
                 {
+                    open(); // open block
                     let block = instr as IStmtBlockInstruction;
                     for (let stmt of block.stmtList) {
                         translate(stmt);
                     }
+                    close(); // close block
                     return;
                 }
             case EInstructionTypes.k_FunctionDecl:
@@ -1315,6 +1335,55 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     // TODO: check function side effects and dont resolve in case of pure function.
                     raddr(instr as IFunctionCallInstruction);
+                    return;
+                }
+            case EInstructionTypes.k_ForStmt:
+                {
+                    const loop = instr as IForStmtInstruction;
+                    const { init, cond, step, body } = loop;
+                    
+                    open(); // open block
+
+                    // TODO: make the code more readable
+                    if (instruction.isExpression(init)) {
+                        // translate as expression
+                        raddr(init as IExprInstruction);
+                    } else {
+                        // translate as varaible declaration
+                        translate(init as IVariableDeclInstruction);
+                    }
+
+                    assert(cond.type.isEqual(T_BOOL));
+                    // before cond:
+                    let beforeCondPc = pc();
+                    let condAddr = raddr(cond);
+                    assert(condAddr.size === sizeof.bool());
+
+                    if (condAddr.type !== EAddrType.k_Registers) {
+                        condAddr = iload(condAddr);
+                    }
+
+                    // TOOD: add support for break statement.
+
+                    iop1(EOperation.k_JumpIf, condAddr);
+                    let unresolvedJump = pc();
+                    icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
+
+                    translate(body);
+
+                    // step:
+                    // raddr(step);
+                    translate(step);
+                    // goto to before condition
+                    icode(EOperation.k_Jump, beforeCondPc);
+
+                    // out of loop:
+                    let outofLoopPc = pc();
+                    // resolve jump in case of invalid condition => go to out of loop
+                    instructions.replace(unresolvedJump, EOperation.k_Jump, [outofLoopPc]);
+
+                    close(); // close block
+
                     return;
                 }
             default:
