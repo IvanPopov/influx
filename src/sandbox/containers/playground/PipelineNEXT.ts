@@ -161,6 +161,7 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     }, i): IPassEx => {
 
         const UAV_PRERENDERED = `uavPrerendered${i}`;
+
         const bundle = setupBundle(slDocument, CSParticlesPrerenderRoutine, capacity * instanceCount, uavResources);
         const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
 
@@ -195,44 +196,49 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         // Sorting
         //
 
+        let uavNonSorted = uav;
+        let uavSorted = !sorting ? uavNonSorted : createUAVEx(slDocument, uavPrerenderedReflection, capacity);
+
         function sort(targetPos: THREE.Vector3) {
-            // assert(sorting);
+            assert(sorting);
 
-            // // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
-            // //       I hate javascript for that :/
+            // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
+            //       I hate javascript for that :/
 
-            // const v3 = new THREE.Vector3();
-            // const length = numRenderedParticles();
+            const v3 = new THREE.Vector3();
+            const length = numRenderedParticles();
 
-            // const nStride = stride * instanceCount; // stride in floats
+            const nStride = stride * instanceCount; // stride in floats
 
-            // const src = new Float32Array(_prerenderedParticles[0].buffer, 0, nStride * capacity);
-            // const dst = new Float32Array(_prerenderedParticles[1].buffer, 0, nStride * capacity);
+            assert(uavSorted.data.byteLength >> 2 === nStride * capacity);
 
-            // const indicies = [];
+            const src = new Float32Array(uavNonSorted.data.buffer, uavNonSorted.data.byteOffset, uavNonSorted.data.byteLength >> 2);
+            const dst = new Float32Array(uavSorted.data.buffer, uavSorted.data.byteOffset, uavSorted.data.byteLength >> 2);
 
-            // // NOTE: sort using only first instance's postion
-            // for (let iPart = 0; iPart < length; ++iPart) {
-            //     const offset = iPart * nStride;
-            //     const dist = v3
-            //         .fromArray(src, offset/* add offset of POSTION semantic */)
-            //         .distanceTo(targetPos);
-            //     indicies.push([iPart, dist]);
-            // }
+            const indicies = [];
 
-            // indicies.sort((a, b) => -a[1] + b[1]);
+            // NOTE: sort using only first instance's postion
+            for (let iPart = 0; iPart < length; ++iPart) {
+                const offset = iPart * nStride;
+                const dist = v3
+                    .fromArray(src, offset/* add offset of POSTION semantic */)
+                    .distanceTo(targetPos);
+                indicies.push([iPart, dist]);
+            }
 
-            // for (let i = 0; i < indicies.length; ++i) {
-            //     const iFrom = indicies[i][0] * nStride;
-            //     const iTo = i * nStride;
+            indicies.sort((a, b) => -a[1] + b[1]);
 
-            //     const from = src.subarray(iFrom, iFrom + nStride);
-            //     const copyTo = dst.subarray(iTo, iTo + nStride);
-            //     copyTo.set(from);
-            // }
+            for (let i = 0; i < indicies.length; ++i) {
+                const iFrom = indicies[i][0] * nStride;
+                const iTo = i * nStride;
+
+                const from = src.subarray(iFrom, iFrom + nStride);
+                const copyTo = dst.subarray(iTo, iTo + nStride);
+                copyTo.set(from);
+            }
         }
 
-        const data = new Uint8Array(uav.data.buffer, uav.data.byteOffset, uav.data.byteLength);
+        const data = new Uint8Array(uavSorted.data.buffer, uavSorted.data.byteOffset, uavSorted.data.byteLength);
         return {
             data,
             instanceLayout,

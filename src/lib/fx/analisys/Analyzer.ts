@@ -2589,6 +2589,10 @@ export class Analyzer {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
+        if (!children) {
+            return null;
+        }
+
         let stmtList: IStmtInstruction[] = [];
         for (let i = children.length - 2; i > 0; i--) {
             let stmt = this.analyzeStmt(context, program, children[i]);

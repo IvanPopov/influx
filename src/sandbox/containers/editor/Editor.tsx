@@ -5,7 +5,6 @@
 
 import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
-import { IParserParams } from '@lib/idl/parser/IParser';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { IWithStyles } from '@sandbox/components';
@@ -24,9 +23,9 @@ import { connect } from 'react-redux';
 import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
-
 import { ILanguageServiceProvider } from './LanguageServiceProvider';
 import styles from './styles.jss';
+
 
 const m2p = new MonacoToProtocolConverter();
 const p2m = new ProtocolToMonacoConverter();

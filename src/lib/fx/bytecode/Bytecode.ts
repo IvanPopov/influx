@@ -7,7 +7,7 @@ import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IForStmtInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IForStmtInstruction, IStmtInstruction, IPostfixArithmeticInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -671,12 +671,89 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     return dest;
                 }
                 break;
+            case EInstructionTypes.k_AssignmentExpr:
+                {
+                    const assigment = expr as IAssignmentExprInstruction;
+                    const size = assigment.type.size;
+                    assert(size % sizeof.i32() === 0);
+                    assert(assigment.operator === '=');
+
+                    // left address can be both from the registers and in the external memory
+                    const leftAddr = raddr(assigment.left);
+
+                    assert(instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
+                    // right address always from the registers
+                    let rightAddr = raddr(<IExprInstruction>assigment.right);
+                    if (rightAddr.type !== EAddrType.k_Registers) {
+                        rightAddr = iload(rightAddr);
+                        debug.map(assigment.right);
+                    }
+
+                    imove(leftAddr, rightAddr, size);
+                    debug.map(assigment);
+                    // breakpoint right after assingment
+                    debug.ns();
+                    return leftAddr;
+                }
+            case EInstructionTypes.k_PostfixArithmeticExpr:
+                {
+                    const postfix = expr as IPostfixArithmeticInstruction;
+                    const operand = postfix.expr;
+                    const op = postfix.operator;
+                    const size = postfix.type.size;
+
+                    let src = raddr(operand);
+                    if (src.type !== EAddrType.k_Registers) {
+                        src = iload(src);
+                    }
+
+                    if (SystemScope.isIntBasedType(operand.type)) {
+                        switch (op) {
+                            case '++':
+                                {
+                                    const dest = imove(alloca(size), src);
+                                    intrinsics.arithi('+', src, src, iconst_i32(1));
+                                    debug.map(postfix);
+                                    return dest;
+                                }
+                            case '--':
+                                {
+                                    const dest = imove(alloca(size), src);
+                                    intrinsics.arithi('-', src, src, iconst_i32(1));
+                                    debug.map(postfix);
+                                    return dest;
+                                }
+                            // fall to unsupported warning
+                        }
+                    } else {
+                        switch (op) {
+                            case '++':
+                                {
+                                    const dest = imove(alloca(size), src);
+                                    intrinsics.arithf('+', src, src, iconst_f32(1));
+                                    debug.map(postfix);
+                                    return dest;
+                                }
+                            case '--':
+                                {
+                                    const dest = imove(alloca(size), src);
+                                    intrinsics.arithf('-', src, src, iconst_f32(1));
+                                    debug.map(postfix);
+                                    return dest;
+                                }
+                            // fall to unsupported warning
+                        }
+                    }
+
+                    console.error(`unsupported type of unary expression found: '${op}'(${postfix.toCode()})`);
+                    return PromisedAddress.INVALID;
+                }
             case EInstructionTypes.k_UnaryExpr:
                 {
                     const unary = expr as IUnaryExprInstruction;
                     const operand = unary.expr;
                     const op = unary.operator;
-                    const dest = alloca(unary.type.size);
+                    const size = unary.type.size;
 
                     let src = raddr(operand);
                     if (src.type !== EAddrType.k_Registers) {
@@ -685,7 +762,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     if (SystemScope.isBoolBasedType(operand.type)) {
                         if (op === '!') {
-                            intrinsics.noti(dest, src);
+                            const dest = intrinsics.noti(alloca(size), src);
                             debug.map(unary);
                             return dest;
                         }
@@ -694,21 +771,48 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (SystemScope.isIntBasedType(operand.type)) {
                         switch (op) {
                             case '-':
-
-                                const constant = iconst_i32(-1);
-                                intrinsics.arithi('*', dest, constant, src);
-                                debug.map(unary);
-                                return dest;
+                                {
+                                    const dest = intrinsics.arithi('*', alloca(size), src, iconst_i32(-1));
+                                    debug.map(unary);
+                                    return dest;
+                                }
+                            case '+':
+                                // nothing todo
+                                return src;
+                            case '++':
+                                {
+                                    const dest = intrinsics.arithi('+', src, src, iconst_i32(1));
+                                    debug.map(unary);
+                                    return dest;
+                                }
+                            case '--':
+                                {
+                                    const dest = intrinsics.arithi('-', src, src, iconst_i32(1));
+                                    debug.map(unary);   
+                                    return dest;
+                                }
                             // fall to unsupported warning
                         }
                     } else {
                         switch (op) {
                             case '-':
-
-                                const constant = iconst_f32(-1.0);
-                                intrinsics.arithf('*', dest, constant, src);
-                                debug.map(unary);
-                                return dest;
+                                {
+                                    const dest = intrinsics.arithf('*', alloca(size), src, iconst_f32(-1.0));
+                                    debug.map(unary);
+                                    return dest;
+                                }
+                            case '++':
+                                {
+                                    const dest = intrinsics.arithf('+', src, src, iconst_f32(1));
+                                    debug.map(unary);
+                                    return dest;
+                                }
+                            case '--':
+                                {
+                                    const dest = intrinsics.arithf('-', src, src, iconst_f32(1));
+                                    debug.map(unary);   
+                                    return dest;
+                                }
                             // fall to unsupported warning
                         }
                     }
@@ -1304,37 +1408,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case EInstructionTypes.k_ExprStmt:
                 {
                     let stmt = instr as IExprStmtInstruction;
-                    translate(stmt.expr);
-                    return;
-                }
-            case EInstructionTypes.k_AssignmentExpr:
-                {
-                    const assigment = instr as IAssignmentExprInstruction;
-                    const size = assigment.type.size;
-                    assert(size % sizeof.i32() === 0);
-                    assert(assigment.operator === '=');
-
-                    // left address can be both from the registers and in the external memory
-                    const leftAddr = raddr(assigment.left);
-
-                    assert(instruction.isExpression(assigment.right), EInstructionTypes[assigment.right.instructionType]);
-                    // right address always from the registers
-                    let rightAddr = raddr(<IExprInstruction>assigment.right);
-                    if (rightAddr.type !== EAddrType.k_Registers) {
-                        rightAddr = iload(rightAddr);
-                        debug.map(assigment.right);
-                    }
-
-                    imove(leftAddr, rightAddr, size);
-                    debug.map(assigment);
-                    // breakpoint right after assingment
-                    debug.ns();
-                    return;
-                }
-            case EInstructionTypes.k_FunctionCallExpr:
-                {
-                    // TODO: check function side effects and dont resolve in case of pure function.
-                    raddr(instr as IFunctionCallInstruction);
+                    raddr(stmt.expr);
                     return;
                 }
             case EInstructionTypes.k_ForStmt:
@@ -1372,8 +1446,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     translate(body);
 
                     // step:
-                    // raddr(step);
-                    translate(step);
+                    raddr(step);
                     // goto to before condition
                     icode(EOperation.k_Jump, beforeCondPc);
 

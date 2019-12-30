@@ -207,7 +207,7 @@ export function ContextBuilder() {
      * @param src Source address.
      * @param size Size of the source location.
      */
-    function imove(dest: PromisedAddress, src: PromisedAddress, size: number = 0): void {
+    function imove(dest: PromisedAddress, src: PromisedAddress, size: number = 0): PromisedAddress {
         if (size === 0) {
             size = src.size;
         }
@@ -309,6 +309,8 @@ export function ContextBuilder() {
             default:
                 assert(false, 'unsupported memory type found.');
         }
+
+        return dest;
     }
 
 
@@ -318,12 +320,7 @@ export function ContextBuilder() {
      */
     function iload(src: PromisedAddress): PromisedAddress {
         assert(src.type !== EAddrType.k_Registers);
-
-        let dest: PromisedAddress = null;
-        dest = alloca(src.size);
-        imove(dest, src);
-
-        return dest;
+        return imove(alloca(src.size), src);
     }
 
 
