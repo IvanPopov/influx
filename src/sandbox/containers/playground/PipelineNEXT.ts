@@ -9,8 +9,8 @@ import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as THREE from 'three';
-import { IPass } from './IEmitter';
 
+import { IPass } from './IEmitter';
 
 // TODO: use CDL instead of reflection
 
@@ -269,10 +269,11 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     }
 
 
-    function prerender() {
+    function prerender(timelime: ITimeline) {
         passes.forEach(({ bundle }, i) => {
             const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
             uavPrerendered.overwriteCounter(0);
+            bundle.setConstants(timelime.constants);
             bundle.run(capacity);
         });
     }
@@ -357,7 +358,7 @@ export async function createEmitter(fx: IPartFxInstruction) {
         if (!timeline.isStopped()) {
             update(timeline);
             emit(timeline);
-            prerender();
+            prerender(timeline);
             timeline.tick();
         }
     }
