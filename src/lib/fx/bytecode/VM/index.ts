@@ -170,6 +170,13 @@ class VM {
                 case EOperation.k_I32Mad:
                     iregs[a] = iregs[b] + iregs[c] * iregs[d];
                     break;
+                
+                case EOperation.k_I32Min:
+                    iregs[a] = Math.min(iregs[b], iregs[c]);
+                    break;
+                case EOperation.k_I32Max:
+                    iregs[a] = Math.max(iregs[b], iregs[c]);
+                    break;
 
                 case EOperation.k_F32Add:
                     fregs[a] = fregs[b] + fregs[c];
@@ -240,6 +247,9 @@ class VM {
                     break;
                 case EOperation.k_F32Floor:
                     fregs[a] = Math.floor(fregs[b]);
+                    break;
+                case EOperation.k_F32Ceil:
+                    fregs[a] = Math.ceil(fregs[b]);
                     break;
 
                 case EOperation.k_F32Sin:

@@ -68,6 +68,7 @@ export class ConstructorCallInstruction extends ExprInstruction implements ICons
     }
 
 
+    /** @deprecated */
     evaluate(): boolean {
         if (!this.isConst()) {
             return false;

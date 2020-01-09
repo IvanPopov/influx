@@ -72,6 +72,10 @@ class PromisedAddress implements IAddrDesc {
         return this.addr;
     }
 
+    toString() {
+        return `${EAddrType[this.type]} [${this.size} bytes]`;
+    }
+
 
     static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number, inputIndex?: number): PromisedAddress {
         assert(regAddr.type === EAddrType.k_Registers);

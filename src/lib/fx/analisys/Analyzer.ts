@@ -102,7 +102,7 @@ const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
     // if (instruction.isLiteral(instr)) {
         if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
             // temp workaround in order to match int to uint and etc. 
-            return /int|uint/g;
+            return /^int$|^uint$/g;
         }
     // }
 
@@ -1509,6 +1509,7 @@ export class Analyzer {
             // call as function
             case 'T_NON_TYPE_ID':
                 {
+                    // TODO: validate intrinsics like 'InterlockedAdd', check that dest is UAV address
                     funcName = children[children.length - 1].value;
                     func = globalScope.findFunction(funcName, args.map(asRelaxedType));
                 }
@@ -1887,14 +1888,19 @@ export class Analyzer {
 
         let unaryExpr: IExprInstruction = null;
 
+        // shortcut for replacment of unary expressions with literals
         if (operator === '-' || operator === '+') {
             if (instruction.isLiteral(expr)) {
                 switch (expr.instructionType) {
                     case EInstructionTypes.k_IntExpr:
-                        unaryExpr = new IntInstruction({ scope, sourceNode, value: `${operator}${(<ILiteralInstruction<number>>expr).value}` });
+                        {
+                            let lit = <IntInstruction>expr;
+                            let signed = operator === '-' || lit.signed;
+                            unaryExpr = new IntInstruction({ scope, sourceNode, value: Number(`${operator}${lit.value}`), signed });
+                        }
                         break;
                     case EInstructionTypes.k_FloatExpr:
-                        unaryExpr = new FloatInstruction({ scope, sourceNode, value: `${operator}${(<ILiteralInstruction<number>>expr).value}` });
+                        unaryExpr = new FloatInstruction({ scope, sourceNode, value: Number(`${operator}${(<ILiteralInstruction<number>>expr).value}`) });
                 }
             }
         }
@@ -2223,15 +2229,19 @@ export class Analyzer {
 
         switch (name) {
             case 'T_UINT':
-                return new IntInstruction({ scope, sourceNode, value });
+                {
+                    const match = value.match(/^([0-9]+)(u?)$/);
+                    const signed = match[2] !== 'u';
+                    return new IntInstruction({ scope, sourceNode, value: Number(match[1]), signed });
+                }
             case 'T_FLOAT':
-                return new FloatInstruction({ scope, sourceNode, value });
+                return new FloatInstruction({ scope, sourceNode, value: Number(value) });
             case 'T_STRING':
                 return new StringInstruction({ scope, sourceNode, value });
             case 'T_KW_TRUE':
-                return new BoolInstruction({ scope, sourceNode, value: "true" });
+                return new BoolInstruction({ scope, sourceNode, value: true });
             case 'T_KW_FALSE':
-                return new BoolInstruction({ scope, sourceNode, value: "false" });
+                return new BoolInstruction({ scope, sourceNode, value: false });
         }
 
         return null;
@@ -3710,7 +3720,8 @@ export class Analyzer {
         if (Analyzer.isArithmeticalOperator(operator)) {
             if (SystemScope.isBoolBasedType(leftType) || SystemScope.isBoolBasedType(rightType) ||
                 SystemScope.isFloatBasedType(leftType) !== SystemScope.isFloatBasedType(rightType) ||
-                SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType)) {
+                SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType) || 
+                SystemScope.isUIntBasedType(leftType) !== SystemScope.isUIntBasedType(rightType)) {
                 return null;
             }
 

@@ -7,13 +7,11 @@ import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IScope, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IForStmtInstruction, IStmtInstruction, IPostfixArithmeticInstruction } from "@lib/idl/IInstruction";
-import { IMap } from "@lib/idl/IMap";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
 import { i32ToU8Array } from "./common";
-import ConstanPool from "./ConstantPool";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
@@ -58,16 +56,16 @@ function writeInt(u8data: Uint8Array, offset: number, value: number): number {
 function constLayoutChunk(ctx: IContext): ArrayBuffer {
     const { constants } = ctx;
     const reflection = constants.dump();
-    const byteLength = 
-        4/* names.length */ + 
+    const byteLength =
+        4/* names.length */ +
         reflection.map(entry =>
-            entry.name.length + 
-            entry.type.length + 
+            entry.name.length +
+            entry.type.length +
             entry.semantic.length +
-            4 + /* sizeof(name.length) */ 
+            4 + /* sizeof(name.length) */
             4 + /* sizeof(type.length) */
             4 + /* sizeof(semantic.length) */
-            4 + /* sizeof(addr) */ 
+            4 + /* sizeof(addr) */
             4 + /* sizeof(size) */
             4   /* sizeof(type.length) */
         ).reduce((prev, curr) => prev + curr, 0);
@@ -161,7 +159,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     let code = binary(ctx);         // TODO: stay only binary view
     let cdl = debug.dump();         // code debug layout;
 
-    return { 
+    return {
         code,           // final binary pack
         cdl             // same as PDB
     };
@@ -311,6 +309,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
+        mini(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_I32Min, dest, left, right);
+            return dest;
+        },
+
+        maxi(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_I32Max, dest, left, right);
+            return dest;
+        },
+
         fracf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             iop2(EOperation.k_F32Frac, dest, src);
             return dest;
@@ -318,6 +326,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
         floorf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             iop2(EOperation.k_F32Floor, dest, src);
+            return dest;
+        },
+
+        ceilf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+            iop2(EOperation.k_F32Ceil, dest, src);
             return dest;
         },
 
@@ -441,15 +454,28 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         const retType = fdef.returnType;
 
         const dest = alloca(retType.size);
-        const args = preloadArguments(fdef);
+
+        let forceLoadArgumentsToRegisters: boolean;
+
+        switch (fdecl.name) {
+            case 'InterlockedAdd':
+                // expected InterlockedAdd(UAV pointer [uint/int], any [uint/int], any [uint/int])
+                forceLoadArgumentsToRegisters = false;
+                break;
+            default:
+                forceLoadArgumentsToRegisters = true;
+        }
+
+
+        const args = preloadArguments(fdef, forceLoadArgumentsToRegisters);
         // TODO: add support for INT type
 
-        function preloadArguments(fdef: IFunctionDefInstruction): PromisedAddress[] {
+        function preloadArguments(fdef: IFunctionDefInstruction, forceLoad: boolean): PromisedAddress[] {
             const args: PromisedAddress[] = [];
             for (let i = 0; i < fdef.params.length; ++i) {
                 const arg = call.args[i];
                 let argAddr = raddr(arg);
-                if (argAddr.type !== EAddrType.k_Registers) {
+                if (argAddr.type !== EAddrType.k_Registers && forceLoad) {
                     argAddr = iload(argAddr);
                 }
                 args.push(argAddr);
@@ -458,6 +484,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
 
         switch (fdecl.name) {
+            case 'asuint':
+            case 'asfloat':
+            case 'asint':
+                // NOTE: nothing todo
+                assert(fdef.params.length === 1);
+                return args[0];
             case 'mul':
                 assert(fdef.params.length === 2);
                 return intrinsics.mulf(dest, args[0], args[1]);
@@ -488,15 +520,59 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'floor':
                 assert(fdef.params.length === 1);
                 return intrinsics.floorf(dest, args[0]);
+            case 'ceil':
+                assert(fdef.params.length === 1);
+                return intrinsics.ceilf(dest, args[0]);
             case 'min':
-                assert(fdef.params.length === 2);
-                return intrinsics.minf(dest, args[0], args[1]);
+                // TODO: separate INT/FLOAT intrisics
+                if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
+                    assert(fdef.params.length === 2);
+                    return intrinsics.minf(dest, args[0], args[1]);
+                }
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUIntBasedType(fdef.params[0].type));
+                // handle INT/UINT params as int intrinsic
+                return intrinsics.mini(dest, args[0], args[1]);
             case 'max':
-                assert(fdef.params.length === 2);
-                return intrinsics.maxf(dest, args[0], args[1]);
+                // TODO: separate INT/FLOAT intrisics
+                if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
+                    assert(fdef.params.length === 2);
+                    return intrinsics.maxf(dest, args[0], args[1]);
+                }
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUIntBasedType(fdef.params[0].type));
+                // handle INT/UINT params as int intrinsic
+                return intrinsics.maxi(dest, args[0], args[1]);
             case 'lerp':
                 assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
+
+            case 'InterlockedAdd':
+                {
+                    assert(fdef.params.length === 3);
+
+                    assert(args[0].type === EAddrType.k_PointerInput, 'destination must be UAV address');
+                    assert(args[0].size === sizeof.i32(), 'only int/uint values are supported');
+
+                    if (args[1].type !== EAddrType.k_Registers) {
+                        args[1] = iload(args[1]);
+                    }
+
+                    let originalAddr = args[2];
+                    if (args[2].type !== EAddrType.k_Registers) {
+                        originalAddr = alloca(sizeof.i32());
+                    }
+
+                    imove(originalAddr, args[0]);
+
+                    const changedAddr = intrinsics.addi(alloca(sizeof.i32()), originalAddr, args[1]);
+                    imove(args[0], changedAddr);
+
+                    if (args[2] !== originalAddr) {
+                        imove(args[2], originalAddr);
+                    }
+
+                    return PromisedAddress.INVALID;
+                }
+
             //
             // UAVs
             //
@@ -540,7 +616,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     const elementPointer = PromisedAddress.makePointer(pointerAddr, uavAddr.type, arrayElementSize, uavAddr.inputIndex);
                     imove(elementPointer, srcAddr);
-                    
+
                     // TODO: replace with intrinsics.inc();
                     intrinsics.addi(valueAddr, valueAddr, iconst_i32(1));
                     imove(uavCounterAddr, valueAddr);
@@ -659,8 +735,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (SystemScope.isFloatBasedType(left.type)) {
                         assert(SystemScope.isFloatBasedType(right.type));
                         intrinsics.arithf(opName, dest, leftAddr, rightAddr);
-                    } else if (SystemScope.isIntBasedType(left.type)) {
-                        assert(SystemScope.isIntBasedType(right.type));
+                    } else if (SystemScope.isIntBasedType(left.type) || SystemScope.isUIntBasedType(left.type)) {
+                        assert(SystemScope.isIntBasedType(right.type) || SystemScope.isUIntBasedType(right.type));
                         intrinsics.arithi(opName, dest, leftAddr, rightAddr);
                     } else {
                         assert(false);
@@ -788,7 +864,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             case '--':
                                 {
                                     const dest = intrinsics.arithi('-', src, src, iconst_i32(1));
-                                    debug.map(unary);   
+                                    debug.map(unary);
                                     return dest;
                                 }
                             // fall to unsupported warning
@@ -810,7 +886,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             case '--':
                                 {
                                     const dest = intrinsics.arithf('-', src, src, iconst_f32(1));
-                                    debug.map(unary);   
+                                    debug.map(unary);
                                     return dest;
                                 }
                             // fall to unsupported warning
@@ -972,7 +1048,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         return loc({ addr: dest, size });
                     }
 
-                    
+
                     if (srcType.isEqual(T_FLOAT)) {
                         if (dstType.isEqual(T_INT)) {
                             op = EOperation.k_F32ToI32;
@@ -981,7 +1057,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         } else {
                             diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
-                        }           
+                        }
                     } else if (srcType.isEqual(T_INT)) {
                         if (dstType.isEqual(T_FLOAT)) {
                             op = EOperation.k_I32ToF32;
@@ -1043,7 +1119,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         let arrayElementSize = element.type.arrayElementType.size;
                         assert(arrayElementSize % sizeof.i32() === 0, `all sizes must be multiple of ${sizeof.i32()}`);
                         // convert byte offset to register index (cause VM uses registers not byte offsets)
-                        let sizeAddr = iconst_i32(arrayElementSize >> 2); 
+                        let sizeAddr = iconst_i32(arrayElementSize >> 2);
                         // NOTE: size can be unresolved yet
 
                         // index => index of element in the array (element)
@@ -1190,6 +1266,17 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         case 'float2':
                         case 'float3':
                         case 'float4':
+                        case 'int':
+                        case 'int1':
+                        case 'int2':
+                        case 'int3':
+                        case 'int4':
+                        case 'uint':
+                        case 'uint1':
+                        case 'uint2':
+                        case 'uint3':
+                        case 'uint4':
+
                             switch (args.length) {
                                 case 1:
                                     // TODO: convert float to int if necessary
@@ -1202,10 +1289,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                         debug.map(args[0]);
                                     }
 
+                                    const elementSize = SystemScope.isFloatBasedType(type) ? sizeof.f32() : sizeof.i32();
+
                                     // FIXME: use 'length' property
-                                    let length = type.size / sizeof.f32();
+                                    let length = type.size / elementSize;
                                     let swizzle = null;
-                                    if (src.size === sizeof.f32()) {
+                                    if (src.size === elementSize) {
                                         swizzle = [...Array(length).fill(0)];
                                     } else {
                                         swizzle = [...Array(length).keys()];
@@ -1324,7 +1413,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // [out of if code]                   <--+ 
 
 
-                    
+
 
                     let ifStmt = instr as IIfStmtInstruction;
                     let { cond, conseq, contrary } = ifStmt;
@@ -1415,7 +1504,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const loop = instr as IForStmtInstruction;
                     const { init, cond, step, body } = loop;
-                    
+
                     open(); // open block
 
                     // TODO: make the code more readable

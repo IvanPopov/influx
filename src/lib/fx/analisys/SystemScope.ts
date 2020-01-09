@@ -636,13 +636,22 @@ function addSystemFunctions(): void {
     generateSystemFunction("cross", "float3", ["float3", "float3"], null);
     generateSystemFunction("reflect", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
+    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
+
+    generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
+    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "int"], ["int2", "int3", "int4"]);
+
+    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
+    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "uint"], ["uint2", "uint3", "uint4"]);
 
     generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
+    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
 
-    // generateSystemFunction("mix", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    // generateSystemFunction("mix", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
+    generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
+    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "int"], ["int2", "int3", "int4"]);
+
+    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
+    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "uint"], ["uint2", "uint3", "uint4"]);
 
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float", "float"], ["float2", "float3", "float4"]);
@@ -743,6 +752,28 @@ function addSystemFunctions(): void {
     generateSystemFunction("lerp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
 
     generateSystemFunction("saturate", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+
+    generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int"/*, "uint"*/]);
+    generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["int2", "uint2"]);
+    generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["int3", "uint3"]);
+    generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["int4", "uint4"]);
+    
+    generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "uint"]);
+    generateSystemFunction("asint", "int2", [TEMPLATE_TYPE], ["float2", "uint2"]);
+    generateSystemFunction("asint", "int3", [TEMPLATE_TYPE], ["float3", "uint3"]);
+    generateSystemFunction("asint", "int4", [TEMPLATE_TYPE], ["float4", "uint4"]);
+    
+    generateSystemFunction("asuint", "uint", [TEMPLATE_TYPE], ["float", "int"]);
+    generateSystemFunction("asuint", "uint2", [TEMPLATE_TYPE], ["float2", "int2"]);
+    generateSystemFunction("asuint", "uint3", [TEMPLATE_TYPE], ["float3", "int3"]);
+    generateSystemFunction("asuint", "uint4", [TEMPLATE_TYPE], ["float4", "int4"]);
+
+    generateSystemFunction("InterlockedAdd", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["int"]);
+    // generateSystemFunction("InterlockedAdd", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint"]);
+
+    // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
+    // generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int", "int2", "int3", "int4", "uint", "uint2", "uint3", "uint4"]);
+    // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
 }
 
 
@@ -946,6 +977,7 @@ export function isSamplerType(type: ITypeInstruction): boolean {
 
 
 
+/** @deprecated */
 export function getExternalType(type: ITypeInstruction): any {
     if (type.isEqual(T_INT) ||
         type.isEqual(T_UINT) ||

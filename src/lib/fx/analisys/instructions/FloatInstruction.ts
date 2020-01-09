@@ -5,11 +5,11 @@ import { SCOPE, T_FLOAT } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
 
 export interface IFloatInstructionSettings extends IInstructionSettings {
-    value: string;
+    value: number;
 }
 
 export class FloatInstruction extends ExprInstruction implements ILiteralInstruction<number> {
-    protected _value: number;
+    readonly value: number;
     /**
      * EMPTY_OPERATOR EMPTY_ARGUMENTS
      */
@@ -18,32 +18,22 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
             // NOTE: type wraping is no really necessary, just for debug purposes
             type: VariableTypeInstruction.wrapAsConst(T_FLOAT, SCOPE), scope, ...settings });
 
-        this._value = ((<number><any>value) * 1.0);
-    }
-
-    
-    get value(): number {
-        return this._value;
+        this.value = value;
     }
 
     
     toString(): string {
-        return String(this._value);
+        return String(this.value);
     }
 
     
     toCode(): string {
-        var code: string = "";
-        code += this._value.toString();
-        if (this._value % 1 === 0) {
-            code += ".";
-        }
-        return code;
+        return `${this.value}${this.value % 1 === 0? '.': ''}`;
     }
 
     
     evaluate(): boolean {
-        this._evalResult = this._value;
+        this._evalResult = this.value;
         return true;
     }
 

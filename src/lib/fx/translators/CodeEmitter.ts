@@ -85,7 +85,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar(line);
         comment && assert(comment.split('\n').length === 1);
         comment && (this.emitChar('\t'), this.emitComment(comment));
-        this.emitNewline(); 
+        this.emitNewline();
     }
 
     emitComment(comment: string) {
@@ -146,7 +146,7 @@ export class CodeEmitter extends BaseEmitter {
 
     emitCompile(compile: ICompileExprInstruction) {
         this.emitFunction(compile.function);
-        
+
         this.emitKeyword('compile');
         this.emitKeyword(compile.function.name);
         this.emitChar('(');
@@ -330,11 +330,8 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar(pfxp.postfix.name);
     }
 
-
-    emitIdentifier(id: IIdExprInstruction) {
-        const decl = id.decl;
-        const name = id.name;
-
+    emitGlobal(decl: IVariableDeclInstruction) {
+        const name = decl.name;
 
         // if (isMain() && decl.isParameter() && !decl.isUniform()) {
         // TODO: add support of main arguments with basic types (attributes)
@@ -352,7 +349,12 @@ export class CodeEmitter extends BaseEmitter {
                 this.knownGlobals.push(name);
             }
         }
+    }
 
+    emitIdentifier(id: IIdExprInstruction) {
+        const { decl, name } = id;
+
+        this.emitGlobal(decl);
         this.emitKeyword(name);
     }
 
@@ -448,13 +450,13 @@ export class CodeEmitter extends BaseEmitter {
         this.emitNewline();
     }
 
-    
+
 
     emitPassBody(pass: IPassInstruction) {
         // TODO: replace with emitCompile();
         pass.vertexShader && (
             this.emitFunction(pass.vertexShader),
-            
+
             this.emitKeyword('VertexShader'),
             this.emitKeyword('='),
             this.emitKeyword('compile'),
@@ -477,7 +479,7 @@ export class CodeEmitter extends BaseEmitter {
         );
 
         this.emitNewline();
-        
+
         // mwalk(pass.renderStates, (val, key) => {
         //     console.log(ERenderStates[key], ERenderStateValues[val]);
         // });
@@ -492,7 +494,7 @@ export class CodeEmitter extends BaseEmitter {
         if (instruction.isExpression(instr)) {
             this.emitExpression(instr as IExprInstruction);
             return this;
-        } 
+        }
 
         if (instruction.isStatement(instr)) {
             this.emitStmt(instr);

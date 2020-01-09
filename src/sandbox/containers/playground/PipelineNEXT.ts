@@ -1,4 +1,4 @@
-import { assert, verbose } from '@lib/common';
+import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import { type } from '@lib/fx/analisys/helpers';
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
@@ -38,6 +38,9 @@ function createBundle(document: ISLDocument, reflection: ICSShaderReflection): V
     const shader = document.root.scope.findFunction(reflection.name, null);
     assert(shader);
 
+    // const numthreads = shader.attributes.find(attr => attr.name === 'numthreads');
+    // assert(isDefAndNotNull(numthreads));
+
     const program = Bytecode.translate(shader);
     return VM.load(program.code);
 }
@@ -45,6 +48,7 @@ function createBundle(document: ISLDocument, reflection: ICSShaderReflection): V
 function setupBundle(document: ISLDocument, reflection: ICSShaderReflection, capacity: number, sharedUAVs: IUAVResource[]) {
     const bundle = createBundle(document, reflection);
     const uavs = createUAVsEx(document, reflection, capacity, sharedUAVs);
+    const numthreads = reflection.numthreads;
     uavs.forEach(uav => { bundle.input[uav.index] = uav.buffer; });
 
     // update shared uavs
@@ -55,15 +59,18 @@ function setupBundle(document: ISLDocument, reflection: ICSShaderReflection, cap
             .forEach(name => VM.setConstant(bundle, name, constants[name]));
     }
 
-    function run(numthreads: number) {
-        VM.dispatch(bundle, [numthreads, 1, 1]);
+    assert(numthreads[0] >= 1 && numthreads[1] === 1 && numthreads[2] === 1);
+
+    function run(numgroups: number) {
+        VM.dispatch(bundle, [numgroups, 1, 1], numthreads);
     }
 
     return {
         uavs,
         bundle,
         run,
-        setConstants
+        setConstants,
+        groupsizex: numthreads[0]
     };
 }
 
@@ -146,10 +153,12 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     const resetBundle = setupBundle(slDocument, reflection.CSParticlesResetRoutine, capacity, uavResources);
     const initBundle = setupBundle(slDocument, reflection.CSParticlesInitRoutine, capacity, uavResources);
     const updateBundle = setupBundle(slDocument, reflection.CSParticlesUpdateRoutine, capacity, uavResources);
+    const spawnBundle = setupBundle(slDocument, reflection.CSParticlesSpawnRoutine, 4, uavResources);
 
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
+    const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
 
     const passes = reflection.passes.map(({ VSParticleShader,
         PSParticleShader,
@@ -196,8 +205,8 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         // Sorting
         //
 
-        let uavNonSorted = uav;
-        let uavSorted = !sorting ? uavNonSorted : createUAVEx(slDocument, uavPrerenderedReflection, capacity);
+        const uavNonSorted = uav;
+        const uavSorted = !sorting ? uavNonSorted : createUAVEx(slDocument, uavPrerenderedReflection, capacity);
 
         function sort(targetPos: THREE.Vector3) {
             assert(sorting);
@@ -258,14 +267,14 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
 
     function reset() {
         // reset all available particles
-        resetBundle.run(capacity);
+        resetBundle.run(Math.ceil(capacity / resetBundle.groupsizex));
         uavDeadIndices.overwriteCounter(capacity);
     }
 
 
     function update(timeline: ITimeline) {
         updateBundle.setConstants(timeline.constants);
-        updateBundle.run(capacity);
+        updateBundle.run(Math.ceil(capacity / updateBundle.groupsizex));
     }
 
 
@@ -274,12 +283,23 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
             const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
             uavPrerendered.overwriteCounter(0);
             bundle.setConstants(timelime.constants);
-            bundle.run(capacity);
+            bundle.run(Math.ceil(capacity / bundle.groupsizex));
         });
     }
 
 
-    function dumpParticles() {
+    function emit(timeline: ITimeline) {
+        initBundle.setConstants(timeline.constants);
+        initBundle.run(uavInitArguments.data[0]);
+
+        spawnBundle.setConstants(timeline.constants);
+        spawnBundle.run(1);
+        // console.log(spawnBundle.uavs, timeline.constants.elapsedTime);
+        return;
+    }
+
+
+    function dump() {
         const npart = numParticles();
         const partSize = particle.size;
 
@@ -294,31 +314,6 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     }
 
 
-    //
-    // Custom emission
-    //
-
-
-    // TODO: do not use fx.spawnRoutine, use CSSpawnRoutine instead.
-    const spawnRoutine = VM.asNativeFunction(fx.spawnRoutine.function);
-    const uavCeatetionRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
-
-    let nPartAdd = 0;
-    let nPartAddFloat = 0;
-    // TODO: move emission to the GPU side
-    function emit(timeline: ITimeline) {
-        nPartAddFloat += spawnRoutine() * timeline.constants.elapsedTime;
-        nPartAdd = Math.floor(nPartAddFloat);
-        nPartAddFloat -= nPartAdd;
-        nPartAdd = Math.min(nPartAdd, capacity - numParticles());
-
-        // TODO: move creation to the GPU side
-        uavCeatetionRequests.data.fill(1, 0, nPartAdd * 2); // fill requests fro N groups, with 1 thread inside
-        initBundle.setConstants(timeline.constants);
-        initBundle.run(nPartAdd);
-    }
-
-
     return {
         name,
         capacity,
@@ -328,7 +323,7 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         emit,
         update,
         prerender,
-        dumpParticles
+        dump
     };
 }
 
@@ -347,7 +342,7 @@ export async function createEmitter(fx: IPartFxInstruction) {
         emit,
         update,
         prerender,
-        dumpParticles,
+        dump
     } = await load(fx, uavResources);
 
     reset();
@@ -363,39 +358,6 @@ export async function createEmitter(fx: IPartFxInstruction) {
         }
     }
 
-    // function asyncTest() {
-    //     let counter = 0;
-    //     const interval = setInterval(() => {
-    //         if (counter === 0) {
-    //             start();
-    //         }
-    //         verbose(`tick: ${counter}`);
-    //         tick();
-    //         if (counter === 5) {
-    //             stop();
-    //             dumpParticles();
-    //             clearInterval(interval);
-    //         }
-    //         counter++;
-    //     }, 1000);
-    // }
-
-    // function syncTest() {
-    //     // debug setup
-    //     // >>>
-    //     start();
-    //     tick();
-    //     // tick();
-    //     // tick();
-    //     // tick();
-    //     stop();
-    //     dumpParticles();
-    //     passes.forEach(pass => pass.dump());
-    //     // <<<
-    // }
-
-    // // asyncTest();
-    // // syncTest();
 
     async function shadowReload(fxNext: IPartFxInstruction): Promise<boolean> {
         if (fxHash(fxNext) !== fxHash(fx)) {
@@ -413,7 +375,7 @@ export async function createEmitter(fx: IPartFxInstruction) {
             emit,
             update,
             prerender,
-            dumpParticles
+            dump
         } = await load(fxNext, uavResources));
 
         return true;

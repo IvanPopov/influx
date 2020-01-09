@@ -23,12 +23,15 @@ function debugLine(pc: PC) {
     const files: string[] = [];
     const layout: DebugLineRecord[] = [];
 
-    const lastRecord = () => layout[layout.length -1];
+    const lastRecord = () => layout[layout.length -1] || null;
 
     // mark last record as 'new statement';
     function ns() {
         let rec = lastRecord();
-        rec.flags |= EDebugLineFlags.k_NewStatement;
+        // TOOD: allow breakpoints in case of no instructions have already beed added
+        if (rec) {
+            rec.flags |= EDebugLineFlags.k_NewStatement;
+        }
     }
 
     // add last instruction to record table;

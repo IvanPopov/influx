@@ -10,9 +10,8 @@ const GTid = new Int32Array([0, 0, 0]);
 // uint3 DTid: SV_DispatchThreadID
 const DTid = new Int32Array([0, 0, 0]);
 
-function dispatch(bundle: VM.Bundle, numgroups: number[]) {
-    // TODO: use numthreads from bundle
-    const numthreads = [1, 1, 1];
+
+function dispatch(bundle: VM.Bundle, numgroups: number[], numthreads: number[] = [1, 1, 1]) {
     const [nGroupX, nGroupY, nGroupZ] = numgroups;
     const [nThreadX, nThreadY, nThreadZ] = numthreads;
 

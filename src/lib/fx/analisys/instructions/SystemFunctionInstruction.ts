@@ -13,7 +13,7 @@ export class SystemFunctionInstruction extends FunctionDeclInstruction implement
     protected _bForVertex: boolean;
     protected _bForPixel: boolean;
     
-    constructor({ vertex = true, pixel = true, implementation = null, ...settings }: ISystemFunctionInstructionSettings) {
+     constructor({ vertex = true, pixel = true, implementation = null, ...settings }: ISystemFunctionInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemFunctionDecl, implementation: null, ...settings });
         
         assert(isNull(implementation));

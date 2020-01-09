@@ -476,7 +476,8 @@ export class Lexer {
         let isFloat = false;
         let chPrevious = ch;
         let isGoodFinish = false;
-        let isE = false;
+        let isE = false; // exponential
+        let isU = false; // unsigned
         let start = this.pos();
 
         if (ch === ".") {
@@ -489,7 +490,7 @@ export class Lexer {
         while (true) {
             ch = this.readNextChar();
             if (ch === ".") {
-                if (isFloat) {
+                if (isFloat || isU) {
                     break;
                 }
                 else {
@@ -497,11 +498,19 @@ export class Lexer {
                 }
             }
             else if (ch === "e") {
-                if (isE) {
+                if (isE || isU) {
                     break;
                 }
                 else {
                     isE = true;
+                }
+            }
+            else if (ch === "u") {
+                if (isE || isU) {
+                    break;
+                }
+                else {
+                    isU = true;
                 }
             }
             else if (((ch === "+" || ch === "-") && chPrevious === "e")) {
@@ -520,7 +529,7 @@ export class Lexer {
             else if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
                 break;
             }
-            else if (!((ch >= "0") && (ch <= "9")) || !ch) {
+            else if (!((ch >= "0") && (ch <= "9")) || !ch || isU) {
                 if ((isE && chPrevious !== "+" && chPrevious !== "-" && chPrevious !== "e") || !isE) {
                     isGoodFinish = true;
                 }

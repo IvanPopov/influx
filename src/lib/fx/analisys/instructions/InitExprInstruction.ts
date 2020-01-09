@@ -173,6 +173,8 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
         }
     }
 
+
+    /** @deprecated */
     evaluate(): boolean {
         if (!this.isConst()) {
             this._evalResult = null;

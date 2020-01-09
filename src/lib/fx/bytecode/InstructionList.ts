@@ -121,6 +121,7 @@ class InstructionList {
 
             case EOperation.k_F32Frac:
             case EOperation.k_F32Floor:
+            case EOperation.k_F32Ceil:
             case EOperation.k_F32Sin:
             case EOperation.k_F32Cos:
             case EOperation.k_F32Abs:
@@ -130,6 +131,8 @@ class InstructionList {
                 args[1] >>= 2;
                 break;
 
+            case EOperation.k_I32Min:
+            case EOperation.k_I32Max:
             case EOperation.k_F32Min:
             case EOperation.k_F32Max:
                 assert(args.length == 3);

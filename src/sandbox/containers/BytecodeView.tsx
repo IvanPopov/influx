@@ -234,6 +234,11 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 args.length = 3;
                 break;
 
+            case EOperation.k_I32Min:
+            case EOperation.k_I32Max:
+                args.length = 3;
+                break;
+
             case EOperation.k_F32Add:
             case EOperation.k_F32Sub:
             case EOperation.k_F32Div:
@@ -246,6 +251,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             case EOperation.k_F32Frac:
             case EOperation.k_F32Sqrt:
             case EOperation.k_F32Floor:
+            case EOperation.k_F32Ceil:
                 args.length = 2;
                 break;
 

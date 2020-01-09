@@ -153,6 +153,31 @@ PixelInputType VSCylinders(PartInstance partInstance, Geometry geometry)
 }
 
 
+PixelInputType VSCylinders2(PartInstance partInstance, Geometry geometry)
+{
+    PixelInputType res;
+
+    float3 wnorm;
+    wnorm = mul(modelMatrix, float4(geometry.normal, 0.f)).xyz;
+     
+    // Calculate the position of the vertex against the world, view, and projection matrices.
+    res.position = mul(modelMatrix, float4(partInstance.pos + geometry.position * partInstance.size, 1.f));
+    res.position = mul(viewMatrix, res.position);
+    res.position = mul(projectionMatrix, res.position);
+    
+    // Store the input color for the pixel shader to use.
+    float3 lightDir;
+    lightDir = normalize(float3(1.f, 4.f, 0.f));
+
+    float NdL;
+    NdL = max(0.f, dot(geometry.normal, lightDir) * 0.5);
+    // partInstance.color + 
+    res.color = float4(abs(wnorm), partInstance.color.a);
+    
+    return res;
+}
+
+
 float4 PSCylinders(PixelInputType input) : COLOR
 {
     return input.color;
@@ -178,7 +203,7 @@ float4 PSLines(PixelInputType input) : COLOR
 /////////////////////////////////////////////////////////////////////
 partFx holographicTable 
 {
-    Capacity = 4000;
+    Capacity = 4096;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile Init();
     UpdateRoutine = compile Update();
@@ -206,5 +231,25 @@ partFx holographicTable
 
         VertexShader = compile VSLines();
         PixelShader = compile PSLines();
+    }
+}
+
+
+partFx coloredNoise
+{
+    Capacity = 4096;
+    SpawnRoutine = compile Spawn();
+    InitRoutine = compile Init();
+    UpdateRoutine = compile Update();
+
+    pass Cylinders {
+        Sorting = true;
+        PrerenderRoutine = compile PrerenderCylinders();
+        Geometry = Cylinder;
+
+        ZWriteEnable = false;
+
+        VertexShader = compile VSCylinders2();
+        PixelShader = compile PSCylinders();
     }
 }

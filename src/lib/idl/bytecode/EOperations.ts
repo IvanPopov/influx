@@ -54,6 +54,7 @@ export enum EOperation {
 
     k_F32Frac,
     k_F32Floor,
+    k_F32Ceil,
     k_F32Sin,
     k_F32Cos,
     k_F32Abs,
@@ -62,6 +63,8 @@ export enum EOperation {
     k_F32Min,
     
     k_I32Mad,
+    k_I32Min,
+    k_I32Max,
     
     // 
     // Cast operations

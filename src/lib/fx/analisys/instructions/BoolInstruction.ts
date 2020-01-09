@@ -5,38 +5,30 @@ import { SCOPE, T_BOOL } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
 
 export interface IBoolInstructionSettings extends IInstructionSettings {
-    value: "true" | "false";
+    value: boolean;
 }
 
 export class BoolInstruction extends ExprInstruction implements ILiteralInstruction<boolean> {
-    protected _value: boolean;
+    readonly value: boolean;
 
     constructor({ value, scope, ...settings }: IBoolInstructionSettings) {
         super({ instrType: EInstructionTypes.k_BoolExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes
             type: VariableTypeInstruction.wrapAsConst(T_BOOL, SCOPE), scope, ...settings });
 
-        this._value = (value === "true");
-    }
-
-    set value(bValue: boolean) {
-        this._value = bValue;
-    }
-
-    get value(): boolean {
-        return this._value;
+        this.value = value;
     }
 
     toString(): string {
-        return String(this._value);
+        return String(this.value);
     }
 
     toCode(): string {
-        return this._value ? "true" : "false";
+        return this.value ? "true" : "false";
     }
 
     evaluate(): boolean {
-        this._evalResult = this._value;
+        this._evalResult = this.value;
         return true;
     }
 

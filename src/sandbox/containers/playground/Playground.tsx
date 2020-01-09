@@ -67,6 +67,15 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 
 
+    @autobind
+    handleResetClick() {
+        const props = this.props;
+        if (props.emitter) {
+            props.emitter.reset();
+        }
+    }
+
+
     pickEffect(active) {
         this.props.actions.selectEffect(active);
     }
@@ -124,6 +133,10 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     color={ (emitter.isStopped() ? 'black' : null) }
                                     disabled={ emitter.isStopped() }
                                     onClick={ this.handlePauseClick }
+                                />
+                                <Button
+                                    icon='sync'
+                                    onClick={ this.handleResetClick }
                                 />
                                 <Button
                                     icon='playback play'
