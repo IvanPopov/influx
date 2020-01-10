@@ -2,7 +2,7 @@
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -3539,6 +3539,14 @@ export class Analyzer {
         return new ProgramScope(parent);
     }
 
+    /**
+     * Post-analysis validation.
+     */
+    protected validate(context: Context, program: ProgramScope, root: IInstructionCollector) {
+        checkFunctionsForRecursion(context, program);
+        program.validate();
+    }
+
 
     async parse(slastDocument: ISLASTDocument, document?: ISLDocument): Promise<ISLDocument> {
         const uri = slastDocument.uri;
@@ -3550,8 +3558,6 @@ export class Analyzer {
         let instructions: IInstruction[] = null;
         try {
             instructions = this.analyzeGlobals(context, program, slastDocument);
-            checkFunctionsForRecursion(context, program);
-            program.validate();
         } catch (e) {
             // critical errors were occured
             // throw e;
@@ -3560,11 +3566,11 @@ export class Analyzer {
 
         // console.timeEnd(`analyze(${uri})`);
 
-        assert(program.currentScope == program.globalScope);
-
         const root = new InstructionCollector({ scope: program.globalScope, instructions });
-        const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
+        this.validate(context, program, root);
 
+
+        const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
         return { root, diagnosticReport, uri };
     }
 

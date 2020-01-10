@@ -125,6 +125,8 @@ void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3
 
 	if (ThreadId >= nPart) return;
 
+	uint InitRoutineId = uavCeatetionRequests[GroupId].y;
+
 	int n = (int)uavDeadIndices.DecrementCounter();
 	// a bit confusing way to check for particles running out
 	if (n <= 0)
@@ -137,6 +139,10 @@ void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3
 
 	uint PartId = uavDeadIndices[n];
 	Part Particle;
+
+	     if (InitRoutineId == 0) Init(Particle, PartId);
+	else if (InitRoutineId == 1) Init2(Particle, PartId);
+
 	Init(Particle, PartId);
 	uavParticles[PartId] = Particle;
 	// set particles's state as 'Alive'

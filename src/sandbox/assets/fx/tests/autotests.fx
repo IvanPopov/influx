@@ -164,3 +164,43 @@ int for_loop_test1() {
     }
     return x;
 }
+
+
+/**
+ * @test Dot intrinsic test for float4 vectors.
+ * @expected {dot4_test(float4(1.f, 2.f, 3.f, 4.f), float4(5.f, 6.f, 7.f, 8.f)) == 70}
+ */
+int dot4_test(float4 a, float4 b) {
+    return (int)dot(a, b);
+}
+
+
+//
+//
+// KNOWN ISSUES
+//
+
+/*
+struct __SPAWN_T__
+{
+	uint count;
+	uint type[3];
+};
+
+// The buffer contatins information about the number and type of particles to be created
+RWStructuredBuffer<__SPAWN_T__> uavCeatetionRequests: register(u0);
+
+
+// [no description added :/]
+RWBuffer<uint> uavSpawnDispatchArguments: register(u1);
+
+
+void __spawn_op__(uint nPart)
+{
+	uavCeatetionRequests[11].count = 99u;
+    uavCeatetionRequests[11].type[2] = 10u;
+//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//      add support for multiple adressing
+}
+
+*/

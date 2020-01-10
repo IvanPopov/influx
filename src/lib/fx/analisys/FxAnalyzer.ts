@@ -2,7 +2,7 @@ import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common
 import { expression, instruction, type, variable } from "@lib/fx/analisys/helpers";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
-import { IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IIdInstruction, IInstruction, IPassInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
@@ -10,6 +10,7 @@ import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
+import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
 import { ProgramScope } from "./ProgramScope";
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_UINT, T_VOID } from "./SystemScope";
@@ -19,13 +20,23 @@ type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruc
 // so we can omit it.
 type IPartFxProperties = Omit<PropertiesDiff<IPartFxInstruction, IDeclInstruction>, "type">;
 
-
+const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.type : null;
 
 class FxContext extends Context {
     /** Main particle structure type describing particle's simulation. */
     particleCore: ITypeInstruction;
     /** Particle instance structure type which describe per pass render instance of the particle. */
     particleInstance: ITypeInstruction;
+
+    spawnStmts: SpawnInstruction[] = [];
+
+    // beginFunc(): void {
+    //     super.beginFunc();
+    // }
+
+    // endFunc(): void {
+    //     super.endFunc();
+    // }
 
     beginPartFxPass(): void {
         this.beginPass();
@@ -47,8 +58,65 @@ class FxContext extends Context {
 }
 
 
+function sliceNode(source: IParseNode, from: number, to?: number): IParseNode {
+    const { children, parent, name, value, loc } = source;
+    return {
+        children: children.slice(from, to),
+        parent,
+        name,
+        value,
+        loc
+    };
+}
+
 
 export class FxAnalyzer extends Analyzer {
+
+    /**
+     * AST example:
+     *    SimpleStmt
+     *         T_PUNCTUATOR_59 = ';'
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_NON_TYPE_ID = 'Init'
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_UINT = '10'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_KW_SPAWN = 'spawn'
+     */
+    protected analyzeSpawnStmt(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        const count = Number(children.slice(-3, -2)[0].value);
+        const name = children.slice(-5, -4)[0].value;
+        const args = <IExprInstruction[]>[];
+
+        for (let i = children.length - 7; i >= 2; i--) {
+            if (children[i].value !== ',') {
+                const arg = this.analyzeExpr(context, program, children[i]);
+                args.push(arg);
+            }
+        }
+
+        const spawnStmt = new SpawnInstruction({ sourceNode, scope, name, args, count });
+        context.spawnStmts.push(spawnStmt);
+
+        return spawnStmt;
+    }
+
+    protected analyzeSimpleStmt(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+        const children = sourceNode.children;
+        const firstNodeName: string = children[children.length - 1].name;
+
+        switch (firstNodeName) {
+            case 'T_KW_SPAWN':
+                return this.analyzeSpawnStmt(context, program, sourceNode);
+
+            default:
+                return super.analyzeSimpleStmt(context, program, sourceNode);
+        }
+    }
 
     /**
      * AST example:
@@ -58,7 +126,7 @@ export class FxAnalyzer extends Analyzer {
      *         T_PUNCTUATOR_61 = '='
      *         T_NON_TYPE_ID = 'SpawnRoutine'
      */
-    protected analyzePartFXProperty(context: Context, program: ProgramScope, sourceNode: IParseNode): any {
+    protected analyzePartFXProperty(context: FxContext, program: ProgramScope, sourceNode: IParseNode): any {
         const children = sourceNode.children;
         console.log(sourceNode);
     }
@@ -583,6 +651,56 @@ export class FxAnalyzer extends Analyzer {
 
     protected createContext(uri: string): FxContext {
         return new FxContext(uri);
+    }
+
+
+    protected validate(context: FxContext, program: ProgramScope, root: IInstructionCollector) {
+        super.validate(context, program, root);
+
+        const scope = program.globalScope;
+
+        // NOTE: all effects are assumed to be valid
+        const fxList = <IPartFxInstruction[]>root.instructions.filter(instr => instr.instructionType === EInstructionTypes.k_PartFxDecl);
+
+        //
+        // spawn operator validation
+        //
+
+        for (const spawnStmt of context.spawnStmts) {
+            const bImportedEffect = false;
+            //parse as the spawn from the same effect
+
+            assert(!bImportedEffect, 'unsupported');
+            
+            if (!bImportedEffect) {
+
+                let initializer = <IFunctionDeclInstruction>null;
+                for (const fx of fxList) {
+                    // looaking for signature like: Init(out Part part, ...parameters)
+                    // TODO: check that second parameter doesn't have PART_ID semantic in 
+                    //       order to not find false positive signature
+                    let args = [ fx.particle, ...spawnStmt.args.map(asType) ];
+                    initializer = scope.findFunction(spawnStmt.name, args);
+
+                    // in case of signature not found:
+                    // looaking for signature like: Init(out Part part, int partId: PART_ID, ...parameters)
+                    if (!initializer) {
+                        args = [ fx.particle, T_INT, ...spawnStmt.args.map(asType) ];
+                        initializer = scope.findFunction(spawnStmt.name, args);
+                    }
+
+                    if (initializer) {
+                        spawnStmt.$resolve(fx, initializer);
+                        break;
+                    }
+                } 
+
+                if (!initializer) {
+                    context.error(spawnStmt.sourceNode, EErrors.PartFx_InvalidSpawnStmtInitializerNotFound,
+                        { tooltip: 'Invalid spawn statement. Effect initializer not found.' });
+                }
+            }
+        }
     }
 }
 

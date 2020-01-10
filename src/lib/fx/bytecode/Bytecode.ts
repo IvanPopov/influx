@@ -288,11 +288,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             let mlr = intrinsics.mulf(temp, left, right);
             let n = mlr.size / sizeof.f32();
 
+            // copy first element of 'mlr' to dest
             imove(dest, mlr.override({ size: sizeof.f32() }));
             for (let i = 1; i < n; ++i) {
-                let offset = i * sizeof.f32();
+                let padding = i * sizeof.f32();
                 let size = sizeof.f32();
-                intrinsics.addf(dest, dest, mlr.override({ offset, size }));
+                let swizzle = swizzlePatternFromPadding(padding, size);
+                intrinsics.addf(dest, dest, mlr.override({ swizzle, size }));
             }
 
             return dest;
@@ -447,6 +449,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     const swizzlePatternFromName = (postfixName: string) =>
         postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
 
+    const swizzlePatternFromPadding = (padding: number, size: number) => {
+        assert(padding % sizeof.i32() === 0);
+        assert(size % sizeof.i32() === 0);
+
+        return [...Array(size / sizeof.i32()).keys()].map(i => i + padding / sizeof.i32());
+    };
+
 
     function iintrinsic(call: IFunctionCallInstruction): PromisedAddress {
         const fdecl = call.decl as IFunctionDeclInstruction;
@@ -582,7 +591,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const uav = call.callee;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
                     const valueAddr = iload(uavCounterAddr);
                     const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(-1));
                     imove(uavCounterAddr, nextValueAddr);
@@ -593,7 +602,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const uav = call.callee;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
                     const valueAddr = iload(uavCounterAddr);
                     const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(+1));
                     imove(uavCounterAddr, nextValueAddr);
@@ -604,7 +613,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const { callee: uav, args } = call;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ offset: 0, size: sizeof.i32() });
+                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
                     assert(args.length === 1);
                     const srcAddr = raddr(args[0]);
                     const valueAddr = iload(uavCounterAddr);
@@ -1145,9 +1154,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
                         debug.map(postfixIndex);
 
-                        return PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize, elementAddr.inputIndex);
-                        //                                 ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
-                        //                           [reg. based addr] [destination type] [destination size][destination input index]
+                        const dest = PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize, elementAddr.inputIndex);
+                        //                                       ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+                        //                                 [reg. based addr] [destination type] [destination size][destination input index]
+                        // console.log('>>', dest.toString());
+                        return dest;
                     }
 
                     return PromisedAddress.INVALID; // << FIXME
@@ -1177,11 +1188,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                             assert(padding === instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
                             padding = 0;
+                        } else {
+                            swizzle = swizzlePatternFromPadding(padding, size);
+                            padding = 0;
                         }
 
                         // If loading not allowed then we are inside the recursive call to calculate the final address
                         // so in this case we just have to return address with padding added to it.
-                        return elementAddr.override({ offset: padding, size, swizzle });
+                        return elementAddr.override({ size, swizzle });
                     }
 
                     assert(false, 'not implemented!');
@@ -1296,17 +1310,18 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     let swizzle = null;
                                     if (src.size === elementSize) {
                                         swizzle = [...Array(length).fill(0)];
+                                        src = src.override({ swizzle });
                                     } else {
                                         swizzle = [...Array(length).keys()];
+                                        src = src.override({ swizzle });
                                     }
 
-                                    src = src.override({ swizzle });
 
                                     imove(dest, src, size);
                                     debug.map(ctorCall);
                                     break;
                                 default:
-                                    let offset = 0;
+                                    let padding = 0;
                                     for (let i = 0; i < args.length; ++i) {
                                         assert(instruction.isExpression(args[i]), EInstructionTypes[args[i].instructionType]);
                                         let src = raddr(args[i]);
@@ -1316,9 +1331,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                             debug.map(args[i]);
                                         }
 
-                                        imove(dest.override({ offset }), src);
+                                        let swizzle = swizzlePatternFromPadding(padding, src.size);
+                                        imove(dest.override({ swizzle, size: src.size }), src);
                                         debug.map(ctorCall);
-                                        offset += args[i].type.size;
+                                        padding += args[i].type.size;
                                     }
                                     break;
 
@@ -1331,7 +1347,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 }
                 break;
             default:
-                console.warn(`Unknown expression found: ${EInstructionTypes[expr.instructionType]}`);
+                console.warn(`Unknown expression found: ${expr.instructionName} (${expr.toCode()})`);
                 return PromisedAddress.INVALID;
         }
     }
@@ -1387,9 +1403,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case EInstructionTypes.k_DeclStmt:
                 {
                     let stmt = instr as DeclStmtInstruction;
-                    for (let decl of stmt.declList) {
-                        translate(decl);
-                    }
+                    stmt.declList.forEach(translate);
                     return;
                 }
             case EInstructionTypes.k_IfStmt:
@@ -1489,7 +1503,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     let def = func.def; // todo: handle all arguments!!
                     let impl = func.impl;
 
-
                     translate(impl);
 
                     return;
@@ -1549,7 +1562,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     return;
                 }
             default:
-                console.warn(`Unknown statement found: ${EInstructionTypes[instr.instructionType]}`);
+                console.warn(`Unknown statement found: ${instr.instructionName} (${instr.toCode()})`);
         }
     }
 

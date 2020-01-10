@@ -1,13 +1,13 @@
 import { assert } from "@lib/common";
 import { EInstructionTypes, ICompileExprInstruction, IFunctionDeclInstruction, IInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 
 export class FxEmitter extends CodeEmitter {
 
-    private emitRoutineProperty(name: string, routine: ICompileExprInstruction) {
+    protected emitRoutineProperty(name: string, routine: ICompileExprInstruction) {
         this.emitKeyword(name);
         this.emitKeyword('=');
         this.emitSpace();
@@ -16,12 +16,25 @@ export class FxEmitter extends CodeEmitter {
         this.emitNewline();
     }
 
-    private emitStringProperty(name: string, id: string) {
+    protected emitStringProperty(name: string, id: string) {
         this.emitKeyword(name),
-            this.emitKeyword('='),
-            this.emitKeyword(id),
-            this.emitChar(';'),
-            this.emitNewline()
+        this.emitKeyword('='),
+        this.emitKeyword(id),
+        this.emitChar(';'),
+        this.emitNewline()
+    }
+
+    protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
+        this.emitKeyword(`spawn(${stmt.count})`);
+        this.emitKeyword(stmt.name);
+        this.emitChar('(');
+        this.emitNoSpace();
+        stmt.args.forEach((arg, i, list) => {
+            this.emitExpression(arg);
+            (i + 1 != list.length) && this.emitChar(',');
+        });
+        this.emitChar(')');
+        this.emitChar(';');
     }
 
     emitPartFxDecl(fx: IPartFxInstruction) {
@@ -69,6 +82,17 @@ export class FxEmitter extends CodeEmitter {
         this.pop();
         this.emitChar('}');
         this.emitNewline();
+    }
+
+
+    emitStmt(stmt: IInstruction) {
+        switch (stmt.instructionType) {
+            case EInstructionTypes.k_SpawnStmt:
+                this.emitSpawnStmt(stmt as ISpawnStmtInstruction);
+                break;
+            default:
+                super.emitStmt(stmt);
+        }
     }
 
 

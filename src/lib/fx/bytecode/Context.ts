@@ -214,6 +214,7 @@ export function ContextBuilder() {
 
         assert(src.size <= size,
             `source size is ${(src as PromisedAddress).size} and less then the requested size ${size}.`);
+        // TODO: check ranges with swizzles!
         assert(dest.size >= size, `expected size is ${dest.size}, but given is ${size}`);
 
         switch (dest.type) {

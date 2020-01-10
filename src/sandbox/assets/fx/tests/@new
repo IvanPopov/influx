@@ -1,0 +1,19 @@
+struct __SPAWN_T__
+{
+	uint count;
+	uint type;
+};
+
+// The buffer contatins information about the number and type of particles to be created
+RWStructuredBuffer<__SPAWN_T__> uavCeatetionRequests: register(u0);
+
+
+// [no description added :/]
+RWBuffer<uint> uavSpawnDispatchArguments: register(u1);
+
+
+void __spawn_op__(uint nPart)
+{
+	uavCeatetionRequests[11].count = 99u;
+    uavCeatetionRequests[11].type = 10u;
+}

@@ -2,19 +2,19 @@ import { assert, isNull } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 
 import { REG_INVALID } from "./common";
+import sizeof from "./sizeof";
 
 export interface IAddrDesc {
     type?: EAddrType;
     addr: number | PromisedAddress;
     size: number;
-    // required for input locatons
-    inputIndex?: number;
+
+    inputIndex?: number; // required for input locatons
     swizzle?: number[];
 }
 
 
 export interface IAddrOverride {
-    offset?: number;
     size?: number;
     swizzle?: number[];
 }
@@ -24,24 +24,27 @@ class PromisedAddress implements IAddrDesc {
     type: EAddrType;
     addr: number;
     size: number | undefined;
+
     inputIndex?: number;
     swizzle?: number[];
 
-    constructor( desc: IAddrDesc) {
+    constructor(desc: IAddrDesc) {
         this.type = desc.type || EAddrType.k_Registers;
         this.addr = Number(desc.addr);
         this.size = desc.size;                          // todo: validate size
         this.inputIndex = desc.inputIndex;
-        this.swizzle = desc.swizzle;
+        this.swizzle = desc.swizzle ? [ ...desc.swizzle ] : null;
     }
 
     // specify region inside of the original location
-    override({ offset, size, swizzle }: IAddrOverride): PromisedAddress {
-        offset = offset || 0;
-        size = size || 0;
+    override({ size, swizzle }: IAddrOverride): PromisedAddress {
+        assert(size || swizzle);
 
-        assert(size + offset <= Math.max(swizzle ? swizzle.length * 4 : 0, this.size),
-            `current allocation (size ${this.size}) cannot accommodate size ${size} with offset ${offset}`);
+        if (swizzle) {
+            assert(!size || size === swizzle.length * sizeof.i32());
+            if (size && size !== swizzle.length * sizeof.i32()) debugger;
+            size = swizzle.length * sizeof.i32();
+        }
 
         let { type, addr, inputIndex } = this;
 
@@ -49,11 +52,9 @@ class PromisedAddress implements IAddrDesc {
             swizzle = swizzle.map(i => this.swizzle[i]);
         }
 
-        addr += offset;
-        size = size || (this.size - offset);
         swizzle = swizzle || this.swizzle;
         assert(size > 0);
-        
+
         return new PromisedAddress({ type, addr, size, inputIndex, swizzle });
     }
 
@@ -68,12 +69,25 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
+    isPointer(): boolean {
+        return this.type >= EAddrType.k_PointerRegisters;
+    }
+
+    isInput(): boolean {
+        return this.type == EAddrType.k_Input || this.type == EAddrType.k_PointerInput;
+    }
+
+
     toNumber() {
         return this.addr;
     }
 
     toString() {
-        return `${EAddrType[this.type]} [${this.size} bytes]`;
+        const { type, size, inputIndex, addr, swizzle } = this;
+        const isPointer = this.isPointer();
+        const isInput = this.isInput();
+        
+        return `${EAddrType[type]} [${isPointer ? '%' : isInput ? '' : 'r'}${addr / 4} ${isInput ? `input(${inputIndex})` : ``}, ${size} bytes]}`;
     }
 
 

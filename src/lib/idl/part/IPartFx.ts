@@ -1,4 +1,4 @@
-import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeInstruction, IStmtInstruction, IExprInstruction } from "@lib/idl/IInstruction";
 
 // import { EPartFxInstructionTypes } from "./IPartFxInstruction";
 
@@ -35,4 +35,15 @@ export interface IPartFxPassInstruction extends IPassInstruction {
 
     /** check if the technique is ready for runtime */
     isValid(): boolean;
+ }
+
+
+ export interface ISpawnStmtInstruction extends IStmtInstruction {
+    readonly name: string;
+    readonly count: number;
+    readonly args: IExprInstruction[];
+    
+    // resolved properties
+    readonly fx: IPartFxInstruction;
+    readonly init: IFunctionDeclInstruction;
  }

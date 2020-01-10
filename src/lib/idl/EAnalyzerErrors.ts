@@ -77,5 +77,10 @@ export enum EAnalyzerErrors {
     UnsupportedProvideAs,
     UnreachableCode,
 
-    PartFx_VertexShaderParametersMismatch
+    //
+    //
+    //
+
+    PartFx_VertexShaderParametersMismatch,
+    PartFx_InvalidSpawnStmtInitializerNotFound
 };

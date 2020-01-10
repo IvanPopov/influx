@@ -6,6 +6,7 @@ import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { BaseEmitter } from "./BaseEmitter";
+import { IntInstruction } from "../analisys/instructions/IntInstruction";
 
 export interface ITypeInfo {
     typeName: string;
@@ -254,7 +255,8 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitInteger(lit: ILiteralInstruction<number>) {
-        this.emitKeyword(lit.value.toFixed(0));
+        // TODO: use IIntInstructions instead of ILiteralInstruction
+        this.emitKeyword(`${lit.value.toFixed(0)}${!(lit as IntInstruction).signed? 'u': ''}`);
     }
 
     emitRelationalExpr(rel: IRelationalExprInstruction) {
@@ -427,6 +429,11 @@ export class CodeEmitter extends BaseEmitter {
                 this.emitVariableDecl(stmt as IVariableDeclInstruction);
                 this.emitChar(';');
                 break;
+            case EInstructionTypes.k_SemicolonStmt:
+                this.emitChar(';');
+                break;
+            default:
+                console.warn(`unknown stmt found: '${stmt.instructionName}'`);
         }
     }
 
