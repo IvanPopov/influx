@@ -126,7 +126,7 @@ function binary(ctx: IContext): Uint8Array {
 
 
 function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
-    const { constants, debug, alloca, push, pop, loc, imove, ref } = ctx;
+    const { constants, debug, alloca, push, pop, addr, imove, ref } = ctx;
 
     // NOTE: it does nothing at the momemt :/
     debug.beginCompilationUnit('[todo]', fn.def.returnType);
@@ -145,9 +145,9 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
 
         const inputIndex = variable.parameterIndex(param) + INPUT0_REGISTER;
         const size = param.type.size;
-        const src = loc({ type: EAddrType.k_Input, inputIndex, addr: 0, size });
+        const src = addr.loc({ type: EAddrType.k_Input, inputIndex, addr: 0, size });
         const dest = alloca(size);
-        imove(dest, src, size);
+        imove(dest, src);
         debug.map(fdef); // FIXME: is it ok?
         ref(param, dest);
     }
@@ -172,7 +172,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         constants,
         uavs,
         alloca,
-        loc,
+        addr,
         debug,
         push,
         pop,
@@ -209,15 +209,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
          * vector [op] vector | vector [op] scalar | scalar [op] vector
          */
         arithf(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            const size = Math.max(left.size, right.size);
+            const size = Math.max(left.byteLength, right.byteLength);
             const n = size / sizeof.f32();
 
             // handle case: scalar * vector => scalar.xxxx * vector
-            if (left.size != right.size) {
-                if (left.size === sizeof.f32()) {
-                    left = left.override({ size: right.size, swizzle: Array(n).fill(0) });
-                } else if (right.size === sizeof.f32()) {
-                    right = right.override({ size: left.size, swizzle: Array(n).fill(0) });
+            if (left.byteLength != right.byteLength) {
+                if (left.byteLength === sizeof.f32()) {
+                    left = addr.override(left, Array(n).fill(0));
+                } else if (right.byteLength === sizeof.f32()) {
+                    right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
                 }
@@ -242,15 +242,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
         // TODO: merhe with function above
         arithi(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            const size = Math.max(left.size, right.size);
+            const size = Math.max(left.byteLength, right.byteLength);
             const n = size / sizeof.f32();
 
             // handle case: scalar * vector => scalar.xxxx * vector
-            if (left.size !== right.size) {
-                if (left.size === sizeof.f32()) {
-                    left = left.override({ size: right.size, swizzle: Array(n).fill(0) });
-                } else if (right.size === sizeof.f32()) {
-                    right = right.override({ size: right.size, swizzle: Array(n).fill(0) });
+            if (left.byteLength !== right.byteLength) {
+                if (left.byteLength === sizeof.f32()) {
+                    left = addr.override(left, Array(n).fill(0));
+                } else if (right.byteLength === sizeof.f32()) {
+                    right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
                 }
@@ -284,17 +284,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         subi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('-', dest, left, right),
 
         dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            let temp = alloca(Math.max(left.size, right.size));
+            let temp = alloca(Math.max(left.byteLength, right.byteLength));
             let mlr = intrinsics.mulf(temp, left, right);
-            let n = mlr.size / sizeof.f32();
+            let n = mlr.byteLength / sizeof.f32();
 
             // copy first element of 'mlr' to dest
-            imove(dest, mlr.override({ size: sizeof.f32() }));
+            imove(dest, addr.shrink(mlr, sizeof.f32()));
             for (let i = 1; i < n; ++i) {
                 let padding = i * sizeof.f32();
                 let size = sizeof.f32();
-                let swizzle = swizzlePatternFromPadding(padding, size);
-                intrinsics.addf(dest, dest, mlr.override({ swizzle, size }));
+                intrinsics.addf(dest, dest, addr.sub(mlr, padding, size));
             }
 
             return dest;
@@ -380,22 +379,21 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         },
 
         lerpf(dest: PromisedAddress, from: PromisedAddress, to: PromisedAddress, k: PromisedAddress): PromisedAddress {
-            assert(from.size === to.size);
+            assert(from.byteLength === to.byteLength);
 
-            const size = from.size;
+            const size = from.byteLength;
             const n = size / sizeof.f32();
             const swizzle = Array(n).fill(0);
 
             let one = iconst_f32(1.0);
             // todo: fix bu with vectored koef.
             let kInv: PromisedAddress;
-            if (k.size === sizeof.f32()) {
+            if (k.byteLength === sizeof.f32()) {
                 kInv = intrinsics.subf(one, one, k);
-                kInv.override({ size, swizzle });
             } else {
-                k = k.override({ size, swizzle });
-                one = one.override({ size, swizzle });
-                kInv = intrinsics.subf(one, one, k);
+                assert(k.byteLength === from.byteLength);
+                one = addr.override(one, swizzle);
+                kInv = intrinsics.subf(alloca(dest.byteLength), one, k);
             }
 
             let temp = alloca(size);
@@ -449,12 +447,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     const swizzlePatternFromName = (postfixName: string) =>
         postfixName.split('').map(c => POSTFIX_COMPONENT_MAP[c]);
 
-    const swizzlePatternFromPadding = (padding: number, size: number) => {
-        assert(padding % sizeof.i32() === 0);
-        assert(size % sizeof.i32() === 0);
+    // const swizzlePatternFromPadding = (padding: number, size: number) => {
+    //     assert(padding % sizeof.i32() === 0);
+    //     assert(size % sizeof.i32() === 0);
 
-        return [...Array(size / sizeof.i32()).keys()].map(i => i + padding / sizeof.i32());
-    };
+    //     return [...Array(size / sizeof.i32()).keys()].map(i => i + padding / sizeof.i32());
+    // };
 
 
     function iintrinsic(call: IFunctionCallInstruction): PromisedAddress {
@@ -503,7 +501,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 assert(fdef.params.length === 2);
                 return intrinsics.mulf(dest, args[0], args[1]);
             case 'dot':
-                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
+                assert(fdef.params.length === 2 && dest.byteLength === sizeof.f32());
                 return intrinsics.dotf(dest, args[0], args[1]);
             case 'frac':
                 assert(fdef.params.length === 1);
@@ -559,7 +557,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     assert(fdef.params.length === 3);
 
                     assert(args[0].type === EAddrType.k_PointerInput, 'destination must be UAV address');
-                    assert(args[0].size === sizeof.i32(), 'only int/uint values are supported');
+                    assert(args[0].byteLength === sizeof.i32(), 'only int/uint values are supported');
 
                     if (args[1].type !== EAddrType.k_Registers) {
                         args[1] = iload(args[1]);
@@ -591,7 +589,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const uav = call.callee;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
+                    const uavCounterAddr = addr.shrink(uavAddr, sizeof.i32());
                     const valueAddr = iload(uavCounterAddr);
                     const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(-1));
                     imove(uavCounterAddr, nextValueAddr);
@@ -602,7 +600,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const uav = call.callee;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
+                    const uavCounterAddr = addr.shrink(uavAddr, sizeof.i32());
                     const valueAddr = iload(uavCounterAddr);
                     const nextValueAddr = intrinsics.addi(alloca(sizeof.i32()), valueAddr, iconst_i32(+1));
                     imove(uavCounterAddr, nextValueAddr);
@@ -613,7 +611,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     const { callee: uav, args } = call;
                     const uavAddr = raddr(uav);
-                    const uavCounterAddr = uavAddr.override({ size: sizeof.i32() });
+                    const uavCounterAddr = addr.shrink(uavAddr, sizeof.i32());
                     assert(args.length === 1);
                     const srcAddr = raddr(args[0]);
                     const valueAddr = iload(uavCounterAddr);
@@ -708,7 +706,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                 const src = offset;
                                 const inputIndex = variable.parameterIndex(decl) + INPUT0_REGISTER;
                                 assert(variable.parameterIndex(decl) < INPUT_TOTAL);
-                                return loc({ inputIndex, addr: src, size, type: addrType });
+                                return addr.loc({ inputIndex, addr: src, size, type: addrType });
                             }
                     }
 
@@ -774,7 +772,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         debug.map(assigment.right);
                     }
 
-                    imove(leftAddr, rightAddr, size);
+                    imove(leftAddr, rightAddr);
                     debug.map(assigment);
                     // breakpoint right after assingment
                     debug.ns();
@@ -934,7 +932,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     iop3(op, dest, leftAddr, rightAddr);
                     debug.map(logicExpr);
 
-                    return loc({ addr: dest, size });
+                    return addr.loc({ addr: dest, size });
                 }
             case EInstructionTypes.k_RelationalExpr:
                 {
@@ -1025,7 +1023,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     iop3(op, dest, leftAddr, rightAddr);
                     debug.map(relExpr);
 
-                    return loc({ addr: dest, size });
+                    return addr.loc({ addr: dest, size });
                 }
                 break;
             case EInstructionTypes.k_CastExpr:
@@ -1054,7 +1052,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         iop3(EOperation.k_I32NotEqual, dest, exprAddr, iconst_i32(0));
                         debug.map(castExpr);
-                        return loc({ addr: dest, size });
+                        return addr.loc({ addr: dest, size });
                     }
 
 
@@ -1097,7 +1095,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     }
                     iop2(op, dest, exprAddr);
                     debug.map(castExpr);
-                    return loc({ addr: dest, size });
+                    return addr.loc({ addr: dest, size });
                 }
                 break;
             case EInstructionTypes.k_PostfixIndexExpr:
@@ -1187,15 +1185,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             swizzle = swizzlePatternFromName(postfix.name);
 
                             assert(padding === instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
-                            padding = 0;
+                            
+                            // If loading not allowed then we are inside the recursive call to calculate the final address
+                            // so in this case we just have to return address with padding added to it.
+                            return addr.override(elementAddr, swizzle);
                         } else {
-                            swizzle = swizzlePatternFromPadding(padding, size);
-                            padding = 0;
-                        }
-
-                        // If loading not allowed then we are inside the recursive call to calculate the final address
-                        // so in this case we just have to return address with padding added to it.
-                        return elementAddr.override({ size, swizzle });
+                            return addr.sub(elementAddr, padding, size);
+                        }   
                     }
 
                     assert(false, 'not implemented!');
@@ -1251,7 +1247,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             const size = params[i].type.size;
                             const dest = alloca(size);
 
-                            imove(dest, src, size);
+                            imove(dest, src);
                             debug.map(args[i]);
 
                             ref(params[i], dest);
@@ -1308,16 +1304,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     // FIXME: use 'length' property
                                     let length = type.size / elementSize;
                                     let swizzle = null;
-                                    if (src.size === elementSize) {
+                                    if (src.byteLength === elementSize) {
                                         swizzle = [...Array(length).fill(0)];
-                                        src = src.override({ swizzle });
+                                        src = addr.override(src, swizzle);
                                     } else {
                                         swizzle = [...Array(length).keys()];
-                                        src = src.override({ swizzle });
+                                        src = addr.override(src, swizzle);
                                     }
 
 
-                                    imove(dest, src, size);
+                                    imove(dest, src);
                                     debug.map(ctorCall);
                                     break;
                                 default:
@@ -1331,15 +1327,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                             debug.map(args[i]);
                                         }
 
-                                        let swizzle = swizzlePatternFromPadding(padding, src.size);
-                                        imove(dest.override({ swizzle, size: src.size }), src);
+                                        imove(addr.sub(dest, padding, src.byteLength), src);
                                         debug.map(ctorCall);
                                         padding += args[i].type.size;
                                     }
                                     break;
 
                             }
-                            return loc({ addr: dest, size });
+                            return addr.loc({ addr: dest, size });
                         default:
                     }
                     console.warn(`Unknown constructor found: ${ctorCall.toCode()}`);
@@ -1433,7 +1428,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     let { cond, conseq, contrary } = ifStmt;
 
                     let condAddr = raddr(cond);
-                    assert(condAddr.size === sizeof.bool());
+                    assert(condAddr.byteLength === sizeof.bool());
 
                     if (condAddr.type !== EAddrType.k_Registers) {
                         condAddr = iload(condAddr);
@@ -1473,7 +1468,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         const dest = ret();
 
-                        assert(src.size === ret().size);
+                        assert(src.byteLength === ret().byteLength);
                         imove(dest, src);
                         debug.map(expr);
                     }
@@ -1533,7 +1528,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // before cond:
                     let beforeCondPc = pc();
                     let condAddr = raddr(cond);
-                    assert(condAddr.size === sizeof.bool());
+                    assert(condAddr.byteLength === sizeof.bool());
 
                     if (condAddr.type !== EAddrType.k_Registers) {
                         condAddr = iload(condAddr);

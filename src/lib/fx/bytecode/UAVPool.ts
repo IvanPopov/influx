@@ -37,7 +37,8 @@ export class UAVPool {
 
         const inputIndex = UAV0_REGISTER + index;
         const addr = 0;
-        const size = decl.type.size;
-        return new PromisedAddress({ type: EAddrType.k_Input, addr, size, inputIndex });
+        // NOTE: UAV's size is unknown in advance
+        // so we use maximum aligned int as possible
+        return new PromisedAddress({ type: EAddrType.k_Input, addr, size: 1 << 30, inputIndex });
     }
 }

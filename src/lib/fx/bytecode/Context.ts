@@ -1,4 +1,4 @@
-import { assert, isDef, isNull, isString, isNumber, isDefAndNotNull } from "@lib/common";
+import { assert, isDef, isNull, isString, isNumber, isDefAndNotNull, MakeOptional } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
@@ -70,7 +70,7 @@ export function ContextBuilder() {
 
         // program counter's value before the function's start 
         pc: number; // << NOTE: currently is unsed
-        
+
         fn: IFunctionDeclInstruction;
         // address of register where return call should save its value
         ret: PromisedAddress;
@@ -91,15 +91,19 @@ export function ContextBuilder() {
     const depth = () => stack.length;
     const ret = () => top().ret;
     const pc = () => instructions.pc;
-    const loc = (desc: IAddrDesc) => new PromisedAddress(desc);
+
 
     const debug = debugLayout(pc);
 
     /* (assuming that all registers for all types are placed in the same memory) */
     function alloca(size: number): PromisedAddress {
-        let addr = rc;
+        if (size === 0) {
+            return PromisedAddress.INVALID;
+        }
+
+        const dest = addr.loc({ type: EAddrType.k_Registers, addr: rc, size });
         rc += size;
-        return loc({ addr, size });
+        return dest;
     }
 
 
@@ -123,15 +127,10 @@ export function ContextBuilder() {
      * Apply per component operation between two register-based adresses
      * op(a[i])
      */
-    function iop1(op: EOperation, a: PromisedAddress, size: number = 0): void {
-        if (size === 0) {
-            size = a.size;
-        }
-
-        assert(a.type === EAddrType.k_Registers);
-
-        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-            icode(op, a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32());
+    function iop1(op: EOperation, dest: PromisedAddress): void {
+        assert(dest.type === EAddrType.k_Registers);
+        for (let i = 0; i < dest.length; ++i) {
+            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32());
         }
     }
 
@@ -139,18 +138,15 @@ export function ContextBuilder() {
      * Apply per component operation between two register-based adresses
      * a[i] = op(b[i])
      */
-    function iop2(op: EOperation, a: PromisedAddress, b: PromisedAddress, size: number = 0): void {
-        if (size === 0) {
-            size = b.size;
-        }
-
+    function iop2(op: EOperation, dest: PromisedAddress, a: PromisedAddress): void {
+        assert(dest.type === EAddrType.k_Registers);
         assert(a.type === EAddrType.k_Registers);
-        assert(b.type === EAddrType.k_Registers);
 
-        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-            icode(op,
-                a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32(),
-                b.addr + (b.swizzle ? b.swizzle[i] : i) * sizeof.i32());
+        assert(dest.length === a.length);
+
+        for (let i = 0; i < dest.length; ++i) {
+            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+                a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32());
         }
     }
 
@@ -159,19 +155,16 @@ export function ContextBuilder() {
      * Apply per component operation between two register-based adresses
      * dest[i] = op(a[i], b[i])
      */
-    function iop3(op: EOperation, dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, size: number = 0): void {
-        if (size === 0) {
-            // TODO: use min(left.size, right.size) ?
-            size = dest.size;
-        }
-
+    function iop3(op: EOperation, dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress): void {
         assert(dest.type === EAddrType.k_Registers);
         assert(a.type === EAddrType.k_Registers);
         assert(b.type === EAddrType.k_Registers);
 
-        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-            icode(op,
-                dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
+        assert(dest.length === a.length);
+        assert(dest.length === b.length);
+
+        for (let i = 0; i < dest.length; ++i) {
+            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                 a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32(),
                 b.addr + (b.swizzle ? b.swizzle[i] : i) * sizeof.i32());
         }
@@ -182,20 +175,19 @@ export function ContextBuilder() {
      * Apply per component operation between two register-based adresses
      * dest[i] = op(a[i], b[i], c[i])
      */
-    function iop4(op: EOperation, dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress, size: number = 0): void {
-        if (size === 0) {
-            // TODO: use min(left.size, right.size) ?
-            size = dest.size;
-        }
-
+    function iop4(op: EOperation, dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress): void {
         assert(dest.type === EAddrType.k_Registers);
         assert(a.type === EAddrType.k_Registers);
         assert(b.type === EAddrType.k_Registers);
         assert(c.type === EAddrType.k_Registers);
 
-        for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-            icode(op,
-                dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
+
+        assert(dest.length === a.length);
+        assert(dest.length === b.length);
+        assert(dest.length === c.length);
+
+        for (let i = 0; i < dest.length; ++i) {
+            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                 a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32(),
                 b.addr + (b.swizzle ? b.swizzle[i] : i) * sizeof.i32(),
                 c.addr + (c.swizzle ? c.swizzle[i] : i) * sizeof.i32());
@@ -207,42 +199,33 @@ export function ContextBuilder() {
      * @param src Source address.
      * @param size Size of the source location.
      */
-    function imove(dest: PromisedAddress, src: PromisedAddress, size: number = 0): PromisedAddress {
-        if (size === 0) {
-            size = src.size;
-        }
-
-        assert(src.size <= size,
-            `source size is ${(src as PromisedAddress).size} and less then the requested size ${size}.`);
-        // TODO: check ranges with swizzles!
-        assert(dest.size >= size, `expected size is ${dest.size}, but given is ${size}`);
+    function imove(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
+        assert(src.length === dest.length,
+            `source size is ${src.byteLength} and less then the requested size ${dest.byteLength}.`);
 
         switch (dest.type) {
             case EAddrType.k_Registers:
                 {
                     switch (src.type) {
                         case EAddrType.k_Registers:
-                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                            for (let i = 0; i < dest.length; ++i) {
                                 icode(EOperation.k_I32LoadRegister,
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                                     src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         case EAddrType.k_Input:
-                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                            for (let i = 0; i < dest.length; ++i) {
                                 icode(EOperation.k_I32LoadInput, src.inputIndex,
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                                     src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
                             break;
                         case EAddrType.k_PointerRegisters:
-                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                            for (let i = 0; i < dest.length; ++i) {
                                 icode(EOperation.k_I32LoadRegistersPointer,
                                     // destination register
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
@@ -253,15 +236,14 @@ export function ContextBuilder() {
                             }
                             break;
                         case EAddrType.k_PointerInput:
-                            assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                             assert(dest.type === EAddrType.k_Registers);
-                            for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
-                                icode(EOperation.k_I32LoadInputPointer, 
+                            for (let i = 0; i < dest.length; ++i) {
+                                icode(EOperation.k_I32LoadInputPointer,
                                     src.inputIndex,
                                     // destination register
                                     dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                                     // source pointer
-                                    src.addr, 
+                                    src.addr,
                                     // pointer offset
                                     (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                             }
@@ -273,18 +255,16 @@ export function ContextBuilder() {
                 break;
 
             case EAddrType.k_Input:
-                assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 assert(src.type === EAddrType.k_Registers);
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                for (let i = 0; i < dest.length; ++i) {
                     icode(EOperation.k_I32StoreInput, dest.inputIndex,
                         dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                         src.addr + (src.swizzle ? src.swizzle[i] : i) * sizeof.i32());
                 }
                 break;
             case EAddrType.k_PointerInput:
-                assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 assert(src.type === EAddrType.k_Registers);
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                for (let i = 0; i < dest.length; ++i) {
                     icode(EOperation.k_I32StoreInputPointer, dest.inputIndex,
                         // destination pointer
                         dest.addr,
@@ -295,9 +275,8 @@ export function ContextBuilder() {
                 }
                 break;
             case EAddrType.k_PointerRegisters:
-                assert(size % sizeof.i32() === 0, 'Per byte/bit loading is not supported.');
                 assert(src.type === EAddrType.k_Registers);
-                for (let i = 0, n = size / sizeof.i32(); i < n; ++i) {
+                for (let i = 0; i < dest.length; ++i) {
                     icode(EOperation.k_I32StoreRegisterPointer,
                         // destination pointer
                         dest.addr,
@@ -321,7 +300,7 @@ export function ContextBuilder() {
      */
     function iload(src: PromisedAddress): PromisedAddress {
         assert(src.type !== EAddrType.k_Registers);
-        return imove(alloca(src.size), src);
+        return imove(alloca(src.byteLength), src);
     }
 
 
@@ -426,9 +405,53 @@ export function ContextBuilder() {
         top().retRequests.push(pc());
     }
 
+    const addr = {
+        loc({ type = EAddrType.k_Registers, addr, inputIndex, size, swizzle }: MakeOptional<IAddrDesc>) {
+            return new PromisedAddress({ type, addr, inputIndex, size, swizzle });
+        },
+
+        // override layout
+        override(src, swizzle: number[]): PromisedAddress {
+            // TODO: check that swizzle is not useless!
+            return new PromisedAddress({ ...src, size: 0, swizzle: swizzle.map(i => src.swizzle ? src.swizzle[i] : i) });
+        },
+
+
+        sub(src: PromisedAddress, offset: number, range: number): PromisedAddress {
+            const { type, addr, size, inputIndex, swizzle } = src;
+
+            assert(range % sizeof.i32() === 0);
+            assert(offset % sizeof.i32() === 0);
+            assert(size >= offset + range);
+
+            if (src.isPointer()) {
+                if (!swizzle) {
+                    let subAddr = alloca(sizeof.addr());
+                    icode(EOperation.k_I32Add, subAddr.addr, addr, offset >> 2);
+                    return new PromisedAddress({ type, addr, size: range, inputIndex });
+                }
+
+                assert('unsupported subaddress');
+                return PromisedAddress.INVALID;
+            } 
+
+     
+            if (!swizzle) {
+                return new PromisedAddress({ type, addr: addr + offset, size: range, inputIndex });
+            }
+
+            let ordered = [...Array(range / sizeof.i32()).keys()].map(i => i + offset / sizeof.i32());
+            return new PromisedAddress({ type, addr, size: range, swizzle: ordered.map(i => swizzle[i]), inputIndex });
+        },
+
+        shrink(src: PromisedAddress, size: number): PromisedAddress {
+            return addr.sub(src, 0, size);
+        }
+    }   
+
     return {
         pc,
-        loc,
+        addr,
         instructions,
         debug,
         deref,

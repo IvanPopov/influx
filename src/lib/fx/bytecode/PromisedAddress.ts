@@ -1,16 +1,15 @@
-import { assert, isNull } from "@lib/common";
+import { assert } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 
 import { REG_INVALID } from "./common";
 import sizeof from "./sizeof";
 
 export interface IAddrDesc {
-    type?: EAddrType;
+    type: EAddrType;
     addr: number | PromisedAddress;
-    size: number;
-
-    inputIndex?: number; // required for input locatons
+    size?: number;
     swizzle?: number[];
+    inputIndex?: number;
 }
 
 
@@ -20,48 +19,45 @@ export interface IAddrOverride {
 }
 
 
-class PromisedAddress implements IAddrDesc {
+class PromisedAddress {
     type: EAddrType;
     addr: number;
-    size: number | undefined;
+    size: number;
+    inputIndex: number;
+    swizzle: number[];
 
-    inputIndex?: number;
-    swizzle?: number[];
 
-    constructor(desc: IAddrDesc) {
-        this.type = desc.type || EAddrType.k_Registers;
-        this.addr = Number(desc.addr);
-        this.size = desc.size;                          // todo: validate size
-        this.inputIndex = desc.inputIndex;
-        this.swizzle = desc.swizzle ? [ ...desc.swizzle ] : null;
-    }
+    constructor({ type, addr, size = 0, inputIndex = -1, swizzle = null }: IAddrDesc) {
+        this.type = type;
+        this.addr = Number(addr);
+        this.inputIndex = inputIndex;
 
-    // specify region inside of the original location
-    override({ size, swizzle }: IAddrOverride): PromisedAddress {
-        assert(size || swizzle);
-
+        assert(!swizzle || !size || swizzle.length * sizeof.i32() === size, 'size and swizzling are not compatible');
         if (swizzle) {
-            assert(!size || size === swizzle.length * sizeof.i32());
-            if (size && size !== swizzle.length * sizeof.i32()) debugger;
             size = swizzle.length * sizeof.i32();
         }
 
-        let { type, addr, inputIndex } = this;
+        this.size = size;
+        this.swizzle = swizzle;
 
-        if (swizzle && this.swizzle) {
-            swizzle = swizzle.map(i => this.swizzle[i]);
-        }
+        assert(addr === REG_INVALID || size > 0, 'invalid address size found');
+        assert(size % sizeof.i32() === 0, 'invalid address alignment found');
+    }
 
-        swizzle = swizzle || this.swizzle;
-        assert(size > 0);
+    
+    get byteLength(): number {
+        return this.size;
+    }
 
-        return new PromisedAddress({ type, addr, size, inputIndex, swizzle });
+    get length(): number {
+        return this.size / sizeof.i32();
     }
 
 
     valueOf(): number {
+         // guard of implicit loading
         if (this.type != EAddrType.k_Registers) {
-            assert(false, `address has implicitly moved to ${EAddrType[EAddrType.k_Registers]} from ${EAddrType[this.type]}`); // implicit loading is not allowed
+            assert(false, `address has implicitly moved to ${EAddrType[EAddrType.k_Registers]} from ${EAddrType[this.type]}`);
             return REG_INVALID;
         }
 
@@ -82,14 +78,20 @@ class PromisedAddress implements IAddrDesc {
         return this.addr;
     }
 
+
     toString() {
-        const { type, size, inputIndex, addr, swizzle } = this;
+        const { type, inputIndex, addr, swizzle, byteLength } = this;
         const isPointer = this.isPointer();
         const isInput = this.isInput();
-        
-        return `${EAddrType[type]} [${isPointer ? '%' : isInput ? '' : 'r'}${addr / 4} ${isInput ? `input(${inputIndex})` : ``}, ${size} bytes]}`;
+        // TODO: print swizzling
+        return `${EAddrType[type]} [${isPointer ? '%' : isInput ? '' : 'r'}${addr / 4} ${isInput ? `input(${inputIndex})` : ``}, ${byteLength} bytes]}`;
     }
 
+    // non-pointer address type => pointer
+    static castToPointer(type: EAddrType): EAddrType {
+        assert(type < EAddrType.k_PointerRegisters);
+        return (type + EAddrType.k_PointerRegisters);
+    }
 
     static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number, inputIndex?: number): PromisedAddress {
         assert(regAddr.type === EAddrType.k_Registers);
@@ -100,13 +102,7 @@ class PromisedAddress implements IAddrDesc {
     }
 
 
-    static INVALID = new PromisedAddress({ addr: REG_INVALID, size: undefined });
-
-    // non-pointer address type => pointer
-    static castToPointer(type: EAddrType): EAddrType {
-        assert(type < EAddrType.k_PointerRegisters);
-        return (type + EAddrType.k_PointerRegisters);
-    }
+    static INVALID = new PromisedAddress({ type: EAddrType.k_Registers, addr: REG_INVALID, size: 0 });
 }
 
 export default PromisedAddress;

@@ -167,18 +167,100 @@ int for_loop_test1() {
 
 
 /**
- * @test Dot intrinsic test for float4 vectors.
- * @expected {dot4_test(float4(1.f, 2.f, 3.f, 4.f), float4(5.f, 6.f, 7.f, 8.f)) == 70}
+ * @test "dot" intrinsic test for float4 vectors.
+ * @expected {dot4_test() == true}
  */
-int dot4_test(float4 a, float4 b) {
-    return (int)dot(a, b);
+bool dot4_test() {
+    return (int)dot(float4(1.f, 2.f, 3.f, 4.f), float4(5.f, 6.f, 7.f, 8.f)) == 70;
 }
 
+// float equals
+bool feq(float a, float b)
+{
+    return abs(a - b) < 0.00001f;
+}
+
+/**
+ * @test "lerp" intrinsic test for float4 vectors and float koeff.
+ * @expected {lerp_float() == true}
+ */
+bool lerp_float() {
+    float4 res = lerp(float4(1.f, 2.f, 3.f, 4.f), float4(4.f, 3.f, 2.f, 1.f), 1.f);
+    return feq(res.x, 4.f) && feq(res.y, 3.f) && feq(res.z, 2.f) && feq(res.w, 1.f);
+}
+
+
+/**
+ * @test "lerp" intrinsic test for float4 vectors and float koeff inv.
+ * @expected {lerp_float_inv() == true}
+ */
+bool lerp_float_inv() {
+    float4 res = lerp(float4(1.f, 2.f, 3.f, 4.f), float4(4.f, 3.f, 2.f, 1.f), 0.f);
+    return feq(res.a, 4.f) && feq(res.b, 3.f) && feq(res.g, 2.f) && feq(res.r, 1.f);
+}
+
+
+/**
+ * @test "lerp" intrinsic test for float4 vectors and float koeff half.
+ * @expected {lerp_float_half() == true}
+ */
+bool lerp_float_half() {
+    float4 res = lerp(float4(1.f, 2.f, 3.f, 4.f), float4(4.f, 3.f, 2.f, 1.f), 0.5f);
+    return feq(res.x, 2.5f) && feq(res.y, 2.5f) && feq(res.z, 2.5f) && feq(res.w, 2.5f);
+}
+
+
+/**
+ * @test "lerp" intrinsic test for float4 vectors and float4 koeff half.
+ * @expected {lerp_float4_half() == true}
+ */
+bool lerp_float4_half() {
+    float4 res = lerp(float4(1.f, 2.f, 3.f, 4.f), float4(4.f, 3.f, 2.f, 1.f), float4(0.f, 1.f, 0.5f, 0.5f));
+    return feq(res.x, 1.f) && feq(res.y, 3.f) && feq(res.z, 2.5f) && feq(res.w, 2.5f);
+}
+
+/**
+ * @test Swizzle test 1.
+ * @expected {swizzle_test_1() == true}
+ */
+bool swizzle_test_1() 
+{
+    float4 v4 = float4(1.f, 2.f, 3.f, 4.f);
+    return feq(v4.wzyx.xyzw.wzyx.x, 1.f) && feq(v4.wzyx.xyzw.wzyx.y, 2.f);
+}
+
+struct T_1 {
+    float4 v4;
+};
+
+/**
+ * @test Pointer writing test.
+ * @expected {pointer_writing_test() == true}
+ */
+bool pointer_writing_test() 
+{
+    T_1 t[10];
+    t[7].v4 = float4(1.f, 2.f, 3.f, 4.f);
+    return feq(t[7].v4.y, 2.f);
+}
+
+/**
+ * @test Swizzled pointer writing test.
+ * @expected {swizzled_pointer_writing_test() == true}
+ */
+bool swizzled_pointer_writing_test() 
+{
+    T_1 t;
+    t.v4.abgr[1] = 10.f;
+    return feq(t.v4.y, 10.f);
+}
 
 //
 //
 // KNOWN ISSUES
 //
+
+// NOTE: LERP!!!
 
 /*
 struct __SPAWN_T__
