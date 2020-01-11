@@ -101,7 +101,7 @@ export function ContextBuilder() {
             return PromisedAddress.INVALID;
         }
 
-        const dest = addr.loc({ type: EAddrType.k_Registers, addr: rc, size });
+        const dest = Addr.loc({ type: EAddrType.k_Registers, addr: rc, size });
         rc += size;
         return dest;
     }
@@ -405,7 +405,7 @@ export function ContextBuilder() {
         top().retRequests.push(pc());
     }
 
-    const addr = {
+    const Addr = {
         loc({ type = EAddrType.k_Registers, addr, inputIndex, size, swizzle }: MakeOptional<IAddrDesc>) {
             return new PromisedAddress({ type, addr, inputIndex, size, swizzle });
         },
@@ -413,38 +413,46 @@ export function ContextBuilder() {
         // override layout
         override(src: PromisedAddress, swizzle: number[]): PromisedAddress {
 
-            // NOTE: 
-            // All this optimizations are need only for debug purposes.
-            
-            // removment of the unary swizzles
-            if (swizzle.length === 1) {
-                let offset = swizzle.map(i => src.swizzle ? src.swizzle[i] : i)[0];
-                return new PromisedAddress({ ...src, size: sizeof.i32(), addr: src.addr + offset * sizeof.i32() });
-            }
+            let offset = 0;
+            let size = 0;
 
             swizzle = swizzle.map(i => src.swizzle ? src.swizzle[i] : i);
 
-            const ordered = [ ...swizzle ].sort((a, b) => a - b);
-            let offset = 0;
-            let size = 0;
+
+            // NOTE: 
+            // All this optimizations are need only for debug purposes.
             
-            // removment of the gap
-            // example: v.zw => (&v + 2).xy
-            if (ordered[0] !== 0) {
-                offset = ordered[0] * sizeof.i32();
-                swizzle = swizzle.map(si => si - ordered[0]);
-            }
-            
-            // removment of the useless swizzles
-            // example: v.xy => v
-            const useless = ordered.every((si, i, arr) => si === i + arr[0]);
-            if (useless) {
-                size = swizzle.length * sizeof.i32();
-                swizzle = null;
+            if (!src.isPointer()) {
+                // removment of the unary swizzles
+                if (swizzle.length === 1) {
+                    offset = swizzle[0] * sizeof.i32();
+                    size = sizeof.i32();
+                    swizzle = null;
+                    return new PromisedAddress({ ...src, addr: src.addr + offset, size, swizzle });
+                }
+
+
+                const ordered = [ ...swizzle ].sort((a, b) => a - b);
+                
+                // removment of the gap
+                // example: v.zw => (&v + 2).xy
+                if (ordered[0] !== 0) {
+                    offset = ordered[0] * sizeof.i32();
+                    swizzle = swizzle.map(si => si - ordered[0]);
+                }
+                
+                // removment of the useless swizzles
+                // example: v.xy => v
+                const useless = swizzle.every((si, i) => si === i);
+                if (useless) {
+                    size = swizzle.length * sizeof.i32();
+                    swizzle = null;
+                }
             }
 
             return new PromisedAddress({ ...src, addr: src.addr + offset, size, swizzle });
         },
+
 
         subPointer(src: PromisedAddress, indexAddr: PromisedAddress, arrayElementSize: number) {
             const { type, addr, size, inputIndex, swizzle } = src;
@@ -454,7 +462,7 @@ export function ContextBuilder() {
             }
 
             //
-            // (no swizzles)
+            // no swizzling (pointers & non-pointers)
             //
 
             if (!swizzle) {
@@ -474,7 +482,7 @@ export function ContextBuilder() {
             }
 
             //
-            // Non-pointers with swizzling
+            // swizzling (pointers & non-pointers)
             //
 
             assert(arrayElementSize === sizeof.i32());
@@ -511,6 +519,7 @@ export function ContextBuilder() {
 
             return new PromisedAddress({ type: pointerType, addr: pointerAddr, size: arrayElementSize, inputIndex });
         },
+
 
         sub(src: PromisedAddress, offset: number, range?: number): PromisedAddress {
             const { type, addr, size, inputIndex, swizzle } = src;
@@ -549,16 +558,16 @@ export function ContextBuilder() {
             }
 
             // implicitly move padding inside swizzles
-            // TODO: shift address (remove implicit offset from the swizzles)
-            // TODO: check that swizzles donot have gaps
             const ordered = [...Array(range / sizeof.i32()).keys()].map(i => i + offset / sizeof.i32());
-            return new PromisedAddress({ type, addr, size: range, swizzle: ordered.map(i => swizzle[i]), inputIndex });
+            return Addr.override(src, ordered);
         },
 
         shrink(src: PromisedAddress, size: number): PromisedAddress {
-            return addr.sub(src, 0, size);
+            return Addr.sub(src, 0, size);
         }
     }
+
+    const addr = Addr;
 
     return {
         pc,
