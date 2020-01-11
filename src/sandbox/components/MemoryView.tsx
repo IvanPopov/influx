@@ -1,6 +1,5 @@
 import { CBUFFER0_REGISTER, ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
-// import { IWithStyles } from '@lib/idl/bytecode';
 import { IWithStyles } from '@sandbox/components';
 import * as React from 'react';
 import injectSheet from 'react-jss';

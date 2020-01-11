@@ -306,6 +306,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 sArgs[0] = register(args[0]);
                 sArgs[1] = pointer(args[1]);
                 break;
+            case EOperation.k_I32StoreRegisterPointer:
+                sArgs[0] = pointer(args[0]);
+                sArgs[1] = register(args[1]);
+                break;
             case EOperation.k_I32LoadInput:
                 sArgs[1] = register(args[1]);
                 break;

@@ -209,14 +209,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
          * vector [op] vector | vector [op] scalar | scalar [op] vector
          */
         arithf(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            const size = Math.max(left.byteLength, right.byteLength);
+            const size = Math.max(left.size, right.size);
             const n = size / sizeof.f32();
 
             // handle case: scalar * vector => scalar.xxxx * vector
-            if (left.byteLength != right.byteLength) {
-                if (left.byteLength === sizeof.f32()) {
+            if (left.size != right.size) {
+                if (left.size === sizeof.f32()) {
                     left = addr.override(left, Array(n).fill(0));
-                } else if (right.byteLength === sizeof.f32()) {
+                } else if (right.size === sizeof.f32()) {
                     right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
@@ -242,14 +242,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
         // TODO: merhe with function above
         arithi(opName: ArithmeticOp, dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            const size = Math.max(left.byteLength, right.byteLength);
+            const size = Math.max(left.size, right.size);
             const n = size / sizeof.f32();
 
             // handle case: scalar * vector => scalar.xxxx * vector
-            if (left.byteLength !== right.byteLength) {
-                if (left.byteLength === sizeof.f32()) {
+            if (left.size !== right.size) {
+                if (left.size === sizeof.f32()) {
                     left = addr.override(left, Array(n).fill(0));
-                } else if (right.byteLength === sizeof.f32()) {
+                } else if (right.size === sizeof.f32()) {
                     right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
@@ -284,9 +284,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         subi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('-', dest, left, right),
 
         dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
-            let temp = alloca(Math.max(left.byteLength, right.byteLength));
+            let temp = alloca(Math.max(left.size, right.size));
             let mlr = intrinsics.mulf(temp, left, right);
-            let n = mlr.byteLength / sizeof.f32();
+            let n = mlr.size / sizeof.f32();
 
             // copy first element of 'mlr' to dest
             imove(dest, addr.shrink(mlr, sizeof.f32()));
@@ -379,21 +379,21 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         },
 
         lerpf(dest: PromisedAddress, from: PromisedAddress, to: PromisedAddress, k: PromisedAddress): PromisedAddress {
-            assert(from.byteLength === to.byteLength);
+            assert(from.size === to.size);
 
-            const size = from.byteLength;
+            const size = from.size;
             const n = size / sizeof.f32();
             const swizzle = Array(n).fill(0);
 
             let one = iconst_f32(1.0);
             // todo: fix bu with vectored koef.
             let kInv: PromisedAddress;
-            if (k.byteLength === sizeof.f32()) {
+            if (k.size === sizeof.f32()) {
                 kInv = intrinsics.subf(one, one, k);
             } else {
-                assert(k.byteLength === from.byteLength);
+                assert(k.size === from.size);
                 one = addr.override(one, swizzle);
-                kInv = intrinsics.subf(alloca(dest.byteLength), one, k);
+                kInv = intrinsics.subf(alloca(dest.size), one, k);
             }
 
             let temp = alloca(size);
@@ -501,7 +501,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 assert(fdef.params.length === 2);
                 return intrinsics.mulf(dest, args[0], args[1]);
             case 'dot':
-                assert(fdef.params.length === 2 && dest.byteLength === sizeof.f32());
+                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
                 return intrinsics.dotf(dest, args[0], args[1]);
             case 'frac':
                 assert(fdef.params.length === 1);
@@ -557,7 +557,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     assert(fdef.params.length === 3);
 
                     assert(args[0].type === EAddrType.k_PointerInput, 'destination must be UAV address');
-                    assert(args[0].byteLength === sizeof.i32(), 'only int/uint values are supported');
+                    assert(args[0].size === sizeof.i32(), 'only int/uint values are supported');
 
                     if (args[1].type !== EAddrType.k_Registers) {
                         args[1] = iload(args[1]);
@@ -612,16 +612,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const { callee: uav, args } = call;
                     const uavAddr = raddr(uav);
                     const uavCounterAddr = addr.shrink(uavAddr, sizeof.i32());
+
                     assert(args.length === 1);
                     const srcAddr = raddr(args[0]);
                     const valueAddr = iload(uavCounterAddr);
 
                     const arrayElementSize = args[0].type.size;
-                    const baseAddr = iconst_i32(sizeof.i32() >> 2); // offset of counter
-                    const sizeAddr = iconst_i32(arrayElementSize >> 2);
-                    const pointerAddr = intrinsics.madi(alloca(sizeof.addr()), baseAddr, valueAddr, sizeAddr);
 
-                    const elementPointer = PromisedAddress.makePointer(pointerAddr, uavAddr.type, arrayElementSize, uavAddr.inputIndex);
+                    const uavDataAddr = addr.sub(uavAddr, sizeof.i32());
+                    const elementPointer = addr.subPointer(uavDataAddr, valueAddr, arrayElementSize);
+
                     imove(elementPointer, srcAddr);
 
                     // TODO: replace with intrinsics.inc();
@@ -1111,7 +1111,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (/*index.isConstExpr()*/false) {
                         // TODO: implement constexpr branch
                     } else {
-                        let offset = 0;
                         let elementAddr = raddr(element);
                         // NOTE: element can be not loaded yet
                         //       we don't want to load all the array (all 'element' object)
@@ -1119,43 +1118,19 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         if (element.type.isUAV()) {
                             // some UAVs can have hidden counter at the beginning of the data
                             // in such cases we need to step forward before fetching the data
-                            offset += sizeof.i32();
+                            elementAddr = addr.sub(elementAddr, sizeof.i32());
                         }
 
                         // sizeof(element[i])
                         let arrayElementSize = element.type.arrayElementType.size;
                         assert(arrayElementSize % sizeof.i32() === 0, `all sizes must be multiple of ${sizeof.i32()}`);
-                        // convert byte offset to register index (cause VM uses registers not byte offsets)
-                        let sizeAddr = iconst_i32(arrayElementSize >> 2);
-                        // NOTE: size can be unresolved yet
 
                         // index => index of element in the array (element)
                         let indexAddr = raddr(index);
                         // NOTE: index can be unresolved yet
 
-                        if (elementAddr.swizzle) {
-                            // swizzles must be removed in order to be able to handle expressions like:
-                            // vec2.xxyy[3]
-                            // TODO: just resolve swizzle
-                            // TODO: is it possible to not load it here and do it late as possible?
-                            elementAddr = iload(elementAddr);
-                        }
-
-                        assert(elementAddr.addr % sizeof.i32() === 0, `all adresses must be aligned by ${sizeof.i32()}`);
-                        // convert byte offset to register index
-                        let baseAddr = iconst_i32((elementAddr.addr + offset) >> 2);    // TODO: use iconst_addr()
-                        let pointerAddr = alloca(sizeof.addr());        // addr <=> i32
-
-                        // load all to registers
-                        if (indexAddr.type !== EAddrType.k_Registers) indexAddr = iload(indexAddr);
-
-                        intrinsics.madi(pointerAddr, baseAddr, indexAddr, sizeAddr);
+                        const dest = addr.subPointer(elementAddr, indexAddr, arrayElementSize);
                         debug.map(postfixIndex);
-
-                        const dest = PromisedAddress.makePointer(pointerAddr, elementAddr.type, arrayElementSize, elementAddr.inputIndex);
-                        //                                       ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
-                        //                                 [reg. based addr] [destination type] [destination size][destination input index]
-                        // console.log('>>', dest.toString());
                         return dest;
                     }
 
@@ -1197,15 +1172,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     assert(false, 'not implemented!');
 
                     // todo: add support for move_reg_ptr, move_ptr_ptr, move_ptr_reg
-                    // if (padding > 0) {
-                    //     const postfixReg = rconst_addr(padding);     // write element's padding to register
-                    //     const elementReg = rconst_addr(elementAddr); // write element's addr to register
-                    //     const destReg = alloca(sizeof.addr());
-                    //     icode(EOperation.k_I32Add, destReg, elementReg, postfixReg);
-                    //     debug.map(point);
-                    //     return destReg; // << !!!! return addr!!!
-                    // }
-
                     return elementAddr;
                 }
                 break;
@@ -1304,7 +1270,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     // FIXME: use 'length' property
                                     let length = type.size / elementSize;
                                     let swizzle = null;
-                                    if (src.byteLength === elementSize) {
+                                    if (src.size === elementSize) {
                                         swizzle = [...Array(length).fill(0)];
                                         src = addr.override(src, swizzle);
                                     } else {
@@ -1327,7 +1293,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                             debug.map(args[i]);
                                         }
 
-                                        imove(addr.sub(dest, padding, src.byteLength), src);
+                                        imove(addr.sub(dest, padding, src.size), src);
                                         debug.map(ctorCall);
                                         padding += args[i].type.size;
                                     }
@@ -1428,7 +1394,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     let { cond, conseq, contrary } = ifStmt;
 
                     let condAddr = raddr(cond);
-                    assert(condAddr.byteLength === sizeof.bool());
+                    assert(condAddr.size === sizeof.bool());
 
                     if (condAddr.type !== EAddrType.k_Registers) {
                         condAddr = iload(condAddr);
@@ -1468,7 +1434,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         const dest = ret();
 
-                        assert(src.byteLength === ret().byteLength);
+                        assert(src.size === ret().size);
                         imove(dest, src);
                         debug.map(expr);
                     }
@@ -1528,7 +1494,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // before cond:
                     let beforeCondPc = pc();
                     let condAddr = raddr(cond);
-                    assert(condAddr.byteLength === sizeof.bool());
+                    assert(condAddr.size === sizeof.bool());
 
                     if (condAddr.type !== EAddrType.k_Registers) {
                         condAddr = iload(condAddr);

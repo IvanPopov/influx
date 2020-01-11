@@ -1,6 +1,7 @@
-import { assert, isDef, isNull, isString, isNumber, isDefAndNotNull, MakeOptional } from "@lib/common";
+import { assert, isDef, isDefAndNotNull, isNull, isNumber, isString, MakeOptional } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
+import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -14,7 +15,6 @@ import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
 import { UAVPool } from "./UAVPool";
-import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -145,7 +145,7 @@ export function ContextBuilder() {
         assert(dest.length === a.length);
 
         for (let i = 0; i < dest.length; ++i) {
-            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(), 
+            icode(op, dest.addr + (dest.swizzle ? dest.swizzle[i] : i) * sizeof.i32(),
                 a.addr + (a.swizzle ? a.swizzle[i] : i) * sizeof.i32());
         }
     }
@@ -201,7 +201,7 @@ export function ContextBuilder() {
      */
     function imove(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
         assert(src.length === dest.length,
-            `source size is ${src.byteLength} and less then the requested size ${dest.byteLength}.`);
+            `source size is ${src.size} and less then the requested size ${dest.size}.`);
 
         switch (dest.type) {
             case EAddrType.k_Registers:
@@ -300,7 +300,7 @@ export function ContextBuilder() {
      */
     function iload(src: PromisedAddress): PromisedAddress {
         assert(src.type !== EAddrType.k_Registers);
-        return imove(alloca(src.byteLength), src);
+        return imove(alloca(src.size), src);
     }
 
 
@@ -411,14 +411,111 @@ export function ContextBuilder() {
         },
 
         // override layout
-        override(src, swizzle: number[]): PromisedAddress {
-            // TODO: check that swizzle is not useless!
-            return new PromisedAddress({ ...src, size: 0, swizzle: swizzle.map(i => src.swizzle ? src.swizzle[i] : i) });
+        override(src: PromisedAddress, swizzle: number[]): PromisedAddress {
+
+            // NOTE: 
+            // All this optimizations are need only for debug purposes.
+            
+            // removment of the unary swizzles
+            if (swizzle.length === 1) {
+                let offset = swizzle.map(i => src.swizzle ? src.swizzle[i] : i)[0];
+                return new PromisedAddress({ ...src, size: sizeof.i32(), addr: src.addr + offset * sizeof.i32() });
+            }
+
+            swizzle = swizzle.map(i => src.swizzle ? src.swizzle[i] : i);
+
+            const ordered = [ ...swizzle ].sort((a, b) => a - b);
+            let offset = 0;
+            let size = 0;
+            
+            // removment of the gap
+            // example: v.zw => (&v + 2).xy
+            if (ordered[0] !== 0) {
+                offset = ordered[0] * sizeof.i32();
+                swizzle = swizzle.map(si => si - ordered[0]);
+            }
+            
+            // removment of the useless swizzles
+            // example: v.xy => v
+            const useless = ordered.every((si, i, arr) => si === i + arr[0]);
+            if (useless) {
+                size = swizzle.length * sizeof.i32();
+                swizzle = null;
+            }
+
+            return new PromisedAddress({ ...src, addr: src.addr + offset, size, swizzle });
         },
 
-
-        sub(src: PromisedAddress, offset: number, range: number): PromisedAddress {
+        subPointer(src: PromisedAddress, indexAddr: PromisedAddress, arrayElementSize: number) {
             const { type, addr, size, inputIndex, swizzle } = src;
+
+            if (indexAddr.type !== EAddrType.k_Registers) {
+                indexAddr = iload(indexAddr);
+            }
+
+            //
+            // (no swizzles)
+            //
+
+            if (!swizzle) {
+
+                // convert byte offset to register index (cause VM uses registers not byte offsets)
+                const sizeAddr = iconst_i32(arrayElementSize >> 2);
+
+                // convert byte offset to register index
+                const baseAddr =  !src.isPointer() ? iconst_i32(addr >> 2) : addr;
+                const pointerType = !src.isPointer() ? PromisedAddress.castToPointer(type) : type;
+
+                const pointerAddr = alloca(sizeof.addr());        // addr <=> i32
+                icode(EOperation.k_I32Mad, pointerAddr, baseAddr, indexAddr, sizeAddr);
+
+
+                return new PromisedAddress({ type: pointerType, addr: pointerAddr, size: arrayElementSize, inputIndex });
+            }
+
+            //
+            // Non-pointers with swizzling
+            //
+
+            assert(arrayElementSize === sizeof.i32());
+
+            assert(swizzle.length <= 4);
+
+            const swBaseRegister = rc;
+            swizzle.forEach(si => iconst_i32(si));
+            // ----- sw base rigister
+            // [z]
+            // [x]
+            // [y]
+            // -----
+
+            const swAddr = iconst_i32(swBaseRegister >> 2);
+
+            // swAddr ==> [ sw base rigister ]
+
+            icode(EOperation.k_I32Add, swAddr, swAddr, indexAddr);
+
+            // swAddr ==> [ sw base rigister + offset ]
+
+            // pointer to value of the swizzle for given offset
+            const offsetPointer = new PromisedAddress({ type: EAddrType.k_PointerRegisters, addr: swAddr, size: sizeof.i32() });
+
+            const pointerAddr = iload(offsetPointer);
+            // destAddr ==> [ swizzles[offset] ]
+
+            const baseAddr = !src.isPointer()? iconst_i32(addr >> 2) : addr;
+            const pointerType = !src.isPointer() ? PromisedAddress.castToPointer(type) : type;
+
+            // add given swizzle to base pointer (all pointers already aligned in registers, so 'mad' isn't not needed here)
+            icode(EOperation.k_I32Add, pointerAddr, baseAddr, pointerAddr);
+
+            return new PromisedAddress({ type: pointerType, addr: pointerAddr, size: arrayElementSize, inputIndex });
+        },
+
+        sub(src: PromisedAddress, offset: number, range?: number): PromisedAddress {
+            const { type, addr, size, inputIndex, swizzle } = src;
+
+            range = range || (size - offset);
 
             assert(range % sizeof.i32() === 0);
             assert(offset % sizeof.i32() === 0);
@@ -426,28 +523,42 @@ export function ContextBuilder() {
 
             if (src.isPointer()) {
                 if (!swizzle) {
-                    let subAddr = alloca(sizeof.addr());
-                    icode(EOperation.k_I32Add, subAddr.addr, addr, offset >> 2);
+                    if (offset !== 0) {
+                        // calc the summ of the original addr and given offset
+                        const newAddr = alloca(sizeof.addr());
+                        const offsetAddr = iconst_i32(offset >> 2);
+                        icode(EOperation.k_I32Add, newAddr, addr, offsetAddr);
+                        return new PromisedAddress({ type, addr: newAddr, size: range, inputIndex });
+                    }
+                    // nothing todo, just shrink the size
                     return new PromisedAddress({ type, addr, size: range, inputIndex });
                 }
 
-                assert('unsupported subaddress');
+                // offsets from the swizzled pointers are unsupported
+                // ex: uav[i].xyz.field
+                //                ^^^^^
+                //                there are not such case can be! 
+                
+                assert(false, 'unsupported branch');
                 return PromisedAddress.INVALID;
-            } 
+            }
 
-     
+            // just shift the address
             if (!swizzle) {
                 return new PromisedAddress({ type, addr: addr + offset, size: range, inputIndex });
             }
 
-            let ordered = [...Array(range / sizeof.i32()).keys()].map(i => i + offset / sizeof.i32());
+            // implicitly move padding inside swizzles
+            // TODO: shift address (remove implicit offset from the swizzles)
+            // TODO: check that swizzles donot have gaps
+            const ordered = [...Array(range / sizeof.i32()).keys()].map(i => i + offset / sizeof.i32());
             return new PromisedAddress({ type, addr, size: range, swizzle: ordered.map(i => swizzle[i]), inputIndex });
         },
 
         shrink(src: PromisedAddress, size: number): PromisedAddress {
             return addr.sub(src, 0, size);
         }
-    }   
+    }
 
     return {
         pc,

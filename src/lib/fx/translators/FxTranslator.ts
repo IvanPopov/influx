@@ -164,23 +164,23 @@ export class FxTranslator extends FxEmitter {
         // emit 'spawn' operator implementation
         //
 
-        // this.begin();
-        // {
-        //     this.emitLine(`struct ${FxTranslator.SPAWN_OPERATOR_TYPE}`);
-        //     this.emitChar(`{`);
-        //     this.push();
-        //     {
-        //         this.emitLine(`uint count;`);
-        //         this.emitLine(`uint type;`);
-        //         if (params.length) {
-        //             // todo:
-        //         }
-        //     }
-        //     this.pop();
-        //     this.emitChar(`}`);
-        //     this.emitChar(';');
-        // }
-        // this.end();
+        this.begin();
+        {
+            this.emitLine(`struct ${FxTranslator.SPAWN_OPERATOR_TYPE}`);
+            this.emitChar(`{`);
+            this.push();
+            {
+                this.emitLine(`uint count;`);
+                this.emitLine(`uint type;`);
+                if (params.length) {
+                    // todo:
+                }
+            }
+            this.pop();
+            this.emitChar(`}`);
+            this.emitChar(';');
+        }
+        this.end();
 
         this.begin();
         {
@@ -188,7 +188,7 @@ export class FxTranslator extends FxEmitter {
             this.emitChar('{');
             this.push();
             {
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint2>`, 
+                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`, 
                     FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
                 uavs.push(this.emitUav(`RWBuffer<uint>`, 
                     FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
@@ -203,8 +203,8 @@ export class FxTranslator extends FxEmitter {
                     this.emitLine(`InterlockedAdd(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[0], 1u, RequestId);`);
                     // params
                     const request = `${FxTranslator.UAV_CREATION_REQUESTS}[RequestId]`;
-                    this.emitLine(`${request}.x = min(nPart, ${groupSize}u);`);
-                    this.emitLine(`${request}.y = 0u;`);
+                    this.emitLine(`${request}.count = min(nPart, ${groupSize}u);`);
+                    this.emitLine(`${request}.type = 0u;`);
 
                     params.forEach(param => {
                         let type = param.type;
@@ -304,8 +304,8 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`uint GroupId = Gid.x;`);
                 this.emitLine(`uint ThreadId = GTid.x;`);
                 // TODO: emit operator instead!
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint2>`, FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
-                this.emitLine(`uint nPart = ${FxTranslator.UAV_CREATION_REQUESTS}[GroupId].x;`);
+                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`, FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
+                this.emitLine(`uint nPart = ${FxTranslator.UAV_CREATION_REQUESTS}[GroupId].count;`);
                 this.emitNewline();
                 this.emitLine(`if (ThreadId >= nPart) return;`);
                 this.emitNewline();

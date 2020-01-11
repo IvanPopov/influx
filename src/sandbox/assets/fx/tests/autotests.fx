@@ -231,6 +231,9 @@ bool swizzle_test_1()
 
 struct T_1 {
     float4 v4;
+    uint2 u2;
+    int2 arr[5];
+    int i;
 };
 
 /**
@@ -252,37 +255,15 @@ bool swizzled_pointer_writing_test()
 {
     T_1 t;
     t.v4.abgr[1] = 10.f;
-    return feq(t.v4.y, 10.f);
+    return feq(t.v4.z, 10.f);
 }
 
-//
-//
-// KNOWN ISSUES
-//
-
-// NOTE: LERP!!!
-
-/*
-struct __SPAWN_T__
-{
-	uint count;
-	uint type[3];
-};
-
-// The buffer contatins information about the number and type of particles to be created
-RWStructuredBuffer<__SPAWN_T__> uavCeatetionRequests: register(u0);
-
-
-// [no description added :/]
-RWBuffer<uint> uavSpawnDispatchArguments: register(u1);
-
-
-void __spawn_op__(uint nPart)
-{
-	uavCeatetionRequests[11].count = 99u;
-    uavCeatetionRequests[11].type[2] = 10u;
-//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//      add support for multiple adressing
+/**
+ * @test Swizzled pointer writing test (pointer of pointer).
+ * @expected {swizzled_pointer_writing_test2() == true}
+ */
+bool swizzled_pointer_writing_test2() {
+    T_1 t[3];
+    t[2].arr[3].y = 99;
+    return t[2].arr[3].y == 99;
 }
-
-*/

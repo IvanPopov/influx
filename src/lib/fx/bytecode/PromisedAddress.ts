@@ -34,6 +34,9 @@ class PromisedAddress {
 
         assert(!swizzle || !size || swizzle.length * sizeof.i32() === size, 'size and swizzling are not compatible');
         if (swizzle) {
+            assert(swizzle.length > 1, 'unary swizzles must be removed in favor of offsetted adress');
+            assert(swizzle.length <= 4, 'only xyzw/rgba swizzles are supported');
+
             size = swizzle.length * sizeof.i32();
         }
 
@@ -44,10 +47,6 @@ class PromisedAddress {
         assert(size % sizeof.i32() === 0, 'invalid address alignment found');
     }
 
-    
-    get byteLength(): number {
-        return this.size;
-    }
 
     get length(): number {
         return this.size / sizeof.i32();
@@ -80,25 +79,17 @@ class PromisedAddress {
 
 
     toString() {
-        const { type, inputIndex, addr, swizzle, byteLength } = this;
+        const { type, inputIndex, addr, swizzle, size } = this;
         const isPointer = this.isPointer();
         const isInput = this.isInput();
-        // TODO: print swizzling
-        return `${EAddrType[type]} [${isPointer ? '%' : isInput ? '' : 'r'}${addr / 4} ${isInput ? `input(${inputIndex})` : ``}, ${byteLength} bytes]}`;
+        
+        return `${EAddrType[type]} [${isPointer ? '%' : isInput ? '' : 'r'}${addr / 4} ${isInput ? `input(${inputIndex})` : ``}, ${size} bytes, [${(swizzle || []).join(', ')}]]`;
     }
 
     // non-pointer address type => pointer
     static castToPointer(type: EAddrType): EAddrType {
         assert(type < EAddrType.k_PointerRegisters);
         return (type + EAddrType.k_PointerRegisters);
-    }
-
-    static makePointer(regAddr: PromisedAddress, destType: EAddrType, size: number, inputIndex?: number): PromisedAddress {
-        assert(regAddr.type === EAddrType.k_Registers);
-        assert(!regAddr.swizzle, 'something went wrong :/');
-        const type = PromisedAddress.castToPointer(destType);
-        const addr = regAddr.addr;
-        return new PromisedAddress({ type, addr, size, inputIndex });
     }
 
 
