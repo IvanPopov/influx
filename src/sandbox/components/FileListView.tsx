@@ -49,7 +49,8 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
             'messy.fx',
             'speed.fx',
             'errorHandling.fx',
-            'autotests.fx'
+            'autotests.fx',
+            'tail.fx'
         ].map(file => `./assets/fx/tests/${file}`).sort();
         node.path = 'tests';
         node.totalFiles = 5;

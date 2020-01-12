@@ -753,10 +753,11 @@ function addSystemFunctions(): void {
 
     generateSystemFunction("saturate", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
 
+    generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["float"/*, "uint"*/]);
     generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int"/*, "uint"*/]);
-    generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["int2", "uint2"]);
-    generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["int3", "uint3"]);
-    generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["int4", "uint4"]);
+    generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["int2"/*, "uint2"*/]);
+    generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["int3"/*, "uint3"*/]);
+    generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["int4"/*, "uint4"*/]);
     
     generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "uint"]);
     generateSystemFunction("asint", "int2", [TEMPLATE_TYPE], ["float2", "uint2"]);

@@ -999,6 +999,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             diag.error(EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
+                    } else if (left.type.isEqual(T_BOOL)) {
+                        op = opIntMap[operator];
+                        if (!right.type.isEqual(T_BOOL)) {
+                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            return PromisedAddress.INVALID;
+                        }
                     }
 
                     if (!op) {

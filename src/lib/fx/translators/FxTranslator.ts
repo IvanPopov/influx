@@ -1,5 +1,5 @@
 import { assert } from "@lib/common";
-import { T_FLOAT, isFloatBasedType } from "@lib/fx/analisys/SystemScope";
+import { T_FLOAT, isFloatBasedType, T_FLOAT4, isBoolBasedType } from "@lib/fx/analisys/SystemScope";
 import { IVariableDeclInstruction, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
@@ -53,7 +53,7 @@ export class FxTranslator extends FxEmitter {
     private static UAV_CREATION_REQUESTS_DESCRIPTION = 'The buffer contatins information about the number and type of particles to be created';
     private static UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION = '[no description added :/]';
 
-    private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op__';
+    private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op';
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
 
 
@@ -63,14 +63,26 @@ export class FxTranslator extends FxEmitter {
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
 
-        let ctor = this.knownSpawnCtors.find(ctor => ctor === stmt.init);
+        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === stmt.init);
 
-        if (!ctor) {
-            ctor = stmt.init;
-            this.knownSpawnCtors.push(ctor);
+        if (guid === -1) {
+            this.knownSpawnCtors.push(stmt.init);
+            guid = this.knownSpawnCtors.length;
+
+            this.emitSpawnOperator(guid, stmt.init);
         }
 
-
+        this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitKeyword(`${stmt.count}u`);
+        if (stmt.args.length) {
+            this.emitChar(',');
+            this.emitExpressionList(stmt.args);
+        }
+        this.emitChar(')');
+        this.emitChar(';');
+        this.emitNewline();
 
         // super.emitSpawnStmt(stmt);
     }
@@ -137,7 +149,7 @@ export class FxTranslator extends FxEmitter {
                 assert(fx.particle.isComplex());
                 fx.particle.fields.forEach(({ name, type }: IVariableDeclInstruction) => {
                     assert(type.length >= 1);
-                    let zero = isFloatBasedType(type) ? '0.f' : '0';
+                    let zero = isFloatBasedType(type) ? '0.f' : isBoolBasedType(type) ? 'false' : '0';
                     if (type.length === 1) {
                         this.emitLine(`Particle.${name} = ${zero};`);
                     } else {
@@ -157,40 +169,27 @@ export class FxTranslator extends FxEmitter {
 
 
     // TOOD: sync groupSize with value used inside the emitInitShader();
-    protected emitSpawnOperator(params: IVariableDeclInstruction[], groupSize: number = 64): IUavReflection[] {
+    protected emitSpawnOperator(guid: number, ctor: IFunctionDeclInstruction, groupSize: number = 64): IUavReflection[] {
         const uavs = <IUavReflection[]>[];
 
-        //
-        // emit 'spawn' operator implementation
-        //
-
         this.begin();
         {
-            this.emitLine(`struct ${FxTranslator.SPAWN_OPERATOR_TYPE}`);
-            this.emitChar(`{`);
-            this.push();
-            {
-                this.emitLine(`uint count;`);
-                this.emitLine(`uint type;`);
-                if (params.length) {
-                    // todo:
-                }
+            this.emitKeyword('void');
+            this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitKeyword(`uint nPart`);
+            if (ctor) {
+                this.emitChar(',');
+                this.emitParams(ctor.def.params.slice(2));
             }
-            this.pop();
-            this.emitChar(`}`);
-            this.emitChar(';');
-        }
-        this.end();
-
-        this.begin();
-        {
-            this.emitLine(`void ${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}(uint nPart)`);
+            this.emitChar(')');
             this.emitChar('{');
             this.push();
             {
-                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`, 
+                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
                     FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
-                uavs.push(this.emitUav(`RWBuffer<uint>`, 
+                uavs.push(this.emitUav(`RWBuffer<uint>`,
                     FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
 
                 this.emitLine(`int nGroups = (int)ceil((float)nPart / ${groupSize}.f);`);
@@ -204,22 +203,29 @@ export class FxTranslator extends FxEmitter {
                     // params
                     const request = `${FxTranslator.UAV_CREATION_REQUESTS}[RequestId]`;
                     this.emitLine(`${request}.count = min(nPart, ${groupSize}u);`);
-                    this.emitLine(`${request}.type = 0u;`);
+                    this.emitLine(`${request}.type = ${guid}u;`);
 
-                    params.forEach(param => {
-                        let type = param.type;
+                    if (ctor) {
+                        const params = ctor.def.params;
                         let nfloat = 0;
-                        if (type.isComplex()) {
-                            assert(false, 'unsupported');
-                        }
-
-                        if (type.isArray()) {
-                            let n = type.size / T_FLOAT.size;
-                            for (let i = 0; i < n; ++i) {
-                                this.emitLine(`${request}.data[${i + (nfloat++)}] = 0u;`);
+                        // skip first two arguments
+                        params.slice(2).forEach(param => {
+                            let type = param.type;
+                            if (type.isComplex()) {
+                                assert(false, 'unsupported', type.toCode());
                             }
-                        }
-                    });
+
+                            if (type.isArray()) {
+                                let n = type.size / T_FLOAT.size;
+                                for (let i = 0; i < n; ++i) {
+                                    this.emitLine(`${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}] = asfloat(${param.name}[${nfloat % 4}]);`);
+                                    nfloat++;
+                                }
+                            } else {
+                                assert(false, 'unsupported', type.toCode()); 
+                            }
+                        });
+                    }
 
                     this.emitLine(`nPart = nPart - ${groupSize}u;`);
                 }
@@ -248,7 +254,7 @@ export class FxTranslator extends FxEmitter {
 
         const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
 
-        uavs.push(...this.emitSpawnOperator([]));
+        uavs.push(...this.emitSpawnOperator(0, null));
 
         this.begin();
         {
@@ -264,7 +270,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitFunction(spawnFn);
                 this.emitGlobal(elapsedTime);
 
-                this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[4]) + (float)${spawnFn.name}() * elapsedTime;`);
+                this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3]) + (float)${spawnFn.name}() * elapsedTime;`);
                 this.emitLine(`float nPartAdd = floor(nPartAddFloat);`);
                 // TODO: replace with InterlockedExchange()
 
@@ -274,7 +280,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3] = asuint(nPartAddFloat - nPartAdd);`);
                 // TODO: check the capacity
                 // this.emitLine(`nPartAdd = min(nPartAdd, )`)
-                this.emitLine(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}((uint)nPartAdd);`);
+                this.emitLine(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}0__((uint)nPartAdd);`);
             }
             this.pop();
             this.emitChar('}');
@@ -331,7 +337,58 @@ export class FxTranslator extends FxEmitter {
                 uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
                 this.emitFunction(initFn);
-                this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+
+                const request = `${FxTranslator.UAV_CREATION_REQUESTS}[GroupId]`;
+
+                this.emitLine(`uint type = ${request}.type;`);
+                this.emitLine(`if (type == 0u)`);
+                this.emitChar('{');
+                this.push();
+                {
+                    this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+                }
+                this.pop();
+                this.emitChar('}');
+                this.emitNewline();
+
+                this.knownSpawnCtors.forEach((ctor, i) => {
+                    this.emitFunction(ctor);
+                    this.emitLine(`else if (type == ${i + 1}u)`);
+                    this.emitChar('{');
+                    this.push();
+                    {
+                        // TODO: move param unpacking to separate function
+                        // unpack arguments
+                        let nfloat = 0;
+                        let params = ctor.def.params.slice(2);
+                        params.forEach(param => {
+                            this.emitVariableDecl(param);
+                            this.emitChar(';');
+                            this.emitNewline();
+
+                            const type = param.type;
+                            if (type.isComplex()) {
+                                assert(false, 'unsupported', type.toCode());
+                            }
+
+                            if (type.isArray()) {
+                                let n = type.size / T_FLOAT.size;
+                                for (let i = 0; i < n; ++i) {
+                                    this.emitLine(`${param.name}[${nfloat % 4}] = asfloat(${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}]);`);
+                                    nfloat++;
+                                }
+                            } else {
+                                assert(false, 'unsupported', type.toCode()); 
+                            }
+
+                            this.emitNewline();
+                        });
+                        this.emitLine(`${ctor.name}(Particle, PartId, ${params.map(param => param.name).join(', ')});`);
+                    }
+                    this.pop();
+                    this.emitChar('}');
+                    this.emitNewline();
+                });
                 this.emitLine(`${FxTranslator.UAV_PARTICLES}[PartId] = Particle;`);
                 this.emitComment('set particles\'s state as \'Alive\'');
                 uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
@@ -401,6 +458,13 @@ export class FxTranslator extends FxEmitter {
             this.emitChar('}');
         }
         this.end();
+
+        // hack
+        uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+            FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
+        uavs.push(this.emitUav(`RWBuffer<uint>`,
+            FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
+
 
         return reflection;
     }
@@ -472,13 +536,49 @@ export class FxTranslator extends FxEmitter {
         return reflection;
     }
 
+    emitSpawnOpContainer() {
+
+
+        const payloadSize = this.knownSpawnCtors.map(
+            // slice 1 or 2 depending on necessity of partID
+            ctor => ctor.def.params.slice(2).map(param => param.type.size).reduce((size, summ) => summ + size, 0))
+            .reduce((size, summ) => summ + size, 0);
+
+        const alignment = T_FLOAT4.size;
+        const numF4 = Math.ceil(payloadSize / alignment);
+
+        this.begin();
+        {
+            this.emitLine(`struct ${FxTranslator.SPAWN_OPERATOR_TYPE}`);
+            this.emitChar(`{`);
+            this.push();
+            {
+                this.emitLine(`uint count;`);
+                this.emitLine(`uint type;`);
+
+                // this.emitLine(`uint _pad[2];`);
+                // emit padding?
+
+                if (numF4 > 0) {
+                    this.emitNewline();
+                    this.emitLine(`float4 payload[${numF4}];`);
+                }
+            }
+            this.pop();
+            this.emitChar(`}`);
+            this.emitChar(';');
+        }
+        // NOTE: emit as prologue!
+        this.end(true);
+    }
+
     emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
         const { name, capacity } = fx;
 
         const CSParticlesSpawnRoutine = this.emitSpawnShader(fx);
         const CSParticlesResetRoutine = this.emitResetShader(fx);
-        const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
         const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(fx);
+        const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
 
         const passes = fx.passList.map((pass, i) => {
             const { prerenderRoutine, vertexShader, pixelShader } = pass;
@@ -513,6 +613,8 @@ export class FxTranslator extends FxEmitter {
                 CSParticlesPrerenderRoutine
             };
         });
+
+        this.emitSpawnOpContainer();
 
         const { typeName: particle } = this.resolveType(fx.particle);
 

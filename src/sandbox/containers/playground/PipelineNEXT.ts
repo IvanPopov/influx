@@ -11,6 +11,7 @@ import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as THREE from 'three';
 
 import { IPass } from './IEmitter';
+import { Diagnostics } from '@lib/util/Diagnostics';
 
 // TODO: use CDL instead of reflection
 
@@ -146,6 +147,12 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     const reflection = emitter.emitPartFxDecl(fx);
     const textDocument = { uri: '://raw', source: emitter.toString() };
     const slDocument = await createSLDocument(textDocument);
+
+    if (slDocument.diagnosticReport.errors) {
+        console.error(Diagnostics.stringify(slDocument.diagnosticReport));
+        return null;
+    }
+
     const { name, capacity } = reflection;
     const scope = slDocument.root.scope;
     const particle = scope.findType(reflection.particle);
@@ -290,6 +297,9 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
 
     function emit(timeline: ITimeline) {
         initBundle.setConstants(timeline.constants);
+        // console.log('emit >>', uavInitArguments.data[0],
+        //     (new Float32Array(uavInitArguments.data.buffer, uavInitArguments.data.byteOffset))[3],
+        //     (new Float32Array(uavInitArguments.data.buffer, uavInitArguments.data.byteOffset))[4]);
         initBundle.run(uavInitArguments.data[0]);
 
         spawnBundle.setConstants(timeline.constants);
@@ -333,6 +343,12 @@ export async function createEmitter(fx: IPartFxInstruction) {
 
     const uavResources: IUAVResource[] = []; // << shared UAV resources
     const timeline = createTimelime();
+    const emitter = await load(fx, uavResources);
+
+    if (!emitter) {
+        return null;
+    }
+
     let {
         name,
         capacity,
@@ -343,7 +359,7 @@ export async function createEmitter(fx: IPartFxInstruction) {
         update,
         prerender,
         dump
-    } = await load(fx, uavResources);
+    } = emitter;
 
     reset();
 
@@ -366,6 +382,12 @@ export async function createEmitter(fx: IPartFxInstruction) {
 
         verbose('emitter reloaded from the shadow');
 
+        const emitter = await load(fxNext, uavResources);
+
+        if (!emitter) {
+            return false;
+        }
+
         ({
             name,
             capacity,
@@ -376,7 +398,7 @@ export async function createEmitter(fx: IPartFxInstruction) {
             update,
             prerender,
             dump
-        } = await load(fxNext, uavResources));
+        } = emitter);
 
         return true;
     }

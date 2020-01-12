@@ -58,9 +58,11 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
             if (!emitterPrev || !(await emitterPrev.shadowReload(list[i]))) {
                 emitterNext = await PipelineNEXT.createEmitter(list[i]);
-                // emitterNext = await Pipeline.createEmitter(list[i]);
-                emitterNext.start();
-                verbose('next emitter has been created.');
+                if (emitterNext) {
+                    // emitterNext = await Pipeline.createEmitter(list[i]);
+                    emitterNext.start();
+                    verbose('next emitter has been created.');
+                }
             }
         }
 

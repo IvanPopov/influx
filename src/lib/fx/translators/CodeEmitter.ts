@@ -3,7 +3,7 @@ import { instruction } from "@lib/fx/analisys/helpers";
 import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IIfStmtInstruction } from "@lib/idl/IInstruction";
 
 import { BaseEmitter } from "./BaseEmitter";
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
@@ -136,6 +136,24 @@ export class CodeEmitter extends BaseEmitter {
         src.annotation && this.emitAnnotation(src.annotation);
     }
 
+
+    emitIfStmt(stmt: IIfStmtInstruction): void {
+        this.emitKeyword('if');
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitExpression(stmt.cond);
+        this.emitChar(')');
+        this.emitNewline();
+        this.emitStmt(stmt.conseq);
+
+        if (stmt.contrary) {
+            this.emitNewline();
+            this.emitKeyword('else');
+            this.emitStmt(stmt.contrary);
+        }
+    }
+
+
     emitSemantic(semantic: string) {
         this.emitChar(':');
         this.emitKeyword(semantic);
@@ -157,6 +175,17 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitFunction(fn: IFunctionDeclInstruction) {
+
+        if (fn.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
+           return;
+        }
+
+        if (this.knownFunctions.indexOf(fn.instructionID) !== -1) {
+            return;
+        }
+
+        this.knownFunctions.push(fn.instructionID);
+
         const def = fn.def;
         const { typeName } = this.resolveType(def.returnType);
 
@@ -166,10 +195,7 @@ export class CodeEmitter extends BaseEmitter {
             this.emitKeyword(fn.name);
             this.emitChar('(');
             this.emitNoSpace();
-            def.params.forEach((param, i, list) => {
-                this.emitVariableDecl(param);
-                (i + 1 != list.length) && this.emitChar(',');
-            });
+            this.emitParams(def.params);
             this.emitChar(')');
             this.emitNewline();
             this.emitBlock(fn.impl);
@@ -282,6 +308,13 @@ export class CodeEmitter extends BaseEmitter {
         })
     }
 
+    emitParams(params: IVariableDeclInstruction[]) {
+        params.forEach((param, i, list) => {
+            this.emitVariableDecl(param);
+            (i + 1 != list.length) && this.emitChar(',');
+        });
+    }
+
     emitInitExpr(init: IInitExprInstruction) {
         if (init.args.length > 1) {
             this.emitChar('{');
@@ -377,12 +410,7 @@ export class CodeEmitter extends BaseEmitter {
         const decl = call.decl;
         const args = call.args;
 
-        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
-            if (this.knownFunctions.indexOf(decl.instructionID) === -1) {
-                this.emitFunction(decl);
-                this.knownFunctions.push(decl.instructionID);
-            }
-        }
+        this.emitFunction(decl);
 
         this.emitKeyword(decl.name);
         this.emitChar('(');
@@ -406,11 +434,7 @@ export class CodeEmitter extends BaseEmitter {
 
 
     /*
-        | IDeclStmtInstruction
-        | IReturnStmtInstruction
-        | IIfStmtInstruction
         | IStmtBlockInstruction
-        | IExprStmtInstruction
         | IWhileStmtInstruction
         | IForStmtInstruction;
     */
@@ -431,6 +455,12 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_SemicolonStmt:
                 this.emitChar(';');
+                break;
+            case EInstructionTypes.k_IfStmt:
+                this.emitIfStmt(stmt as IIfStmtInstruction);
+                break;
+            case EInstructionTypes.k_StmtBlock:
+                this.emitBlock(stmt as IStmtBlockInstruction);
                 break;
             default:
                 console.warn(`unknown stmt found: '${stmt.instructionName}'`);

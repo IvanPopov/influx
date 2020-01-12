@@ -14,8 +14,15 @@ export class BaseEmitter {
         this.stack.push(createOutput());
     }
 
-    protected end() {
-        this.blocks.push(this.stack.pop());
+    /**
+     * @param prologue Move block to the beginning.
+     */
+    protected end(prologue = false) {
+        if (!prologue) {
+            this.blocks.push(this.stack.pop());
+        } else {
+            this.blocks = [ this.stack.pop(), ...this.blocks ];
+        }
     }
 
     protected push(pad?) {
