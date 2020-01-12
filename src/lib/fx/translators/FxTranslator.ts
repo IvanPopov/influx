@@ -1,6 +1,6 @@
-import { assert } from "@lib/common";
-import { T_FLOAT, isFloatBasedType, T_FLOAT4, isBoolBasedType } from "@lib/fx/analisys/SystemScope";
-import { IVariableDeclInstruction, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
+import { assert, isUint } from "@lib/common";
+import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUIntBasedType, T_FLOAT, T_FLOAT4 } from "@lib/fx/analisys/SystemScope";
+import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { FxEmitter } from "./FxEmitter";
@@ -63,9 +63,9 @@ export class FxTranslator extends FxEmitter {
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
 
-        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === stmt.init);
+        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === stmt.init) + 1;
 
-        if (guid === -1) {
+        if (guid === 0) {
             this.knownSpawnCtors.push(stmt.init);
             guid = this.knownSpawnCtors.length;
 
@@ -215,14 +215,10 @@ export class FxTranslator extends FxEmitter {
                                 assert(false, 'unsupported', type.toCode());
                             }
 
-                            if (type.isArray()) {
-                                let n = type.size / T_FLOAT.size;
-                                for (let i = 0; i < n; ++i) {
-                                    this.emitLine(`${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}] = asfloat(${param.name}[${nfloat % 4}]);`);
-                                    nfloat++;
-                                }
-                            } else {
-                                assert(false, 'unsupported', type.toCode()); 
+                            let n = type.size / T_FLOAT.size;
+                            for (let i = 0; i < n; ++i) {
+                                this.emitLine(`${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}] = asfloat(${param.name}${type.isArray()? `[${i % 4}]`: ``});`);
+                                nfloat++;
                             }
                         });
                     }
@@ -371,15 +367,17 @@ export class FxTranslator extends FxEmitter {
                                 assert(false, 'unsupported', type.toCode());
                             }
 
-                            if (type.isArray()) {
-                                let n = type.size / T_FLOAT.size;
-                                for (let i = 0; i < n; ++i) {
-                                    this.emitLine(`${param.name}[${nfloat % 4}] = asfloat(${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}]);`);
-                                    nfloat++;
-                                }
-                            } else {
-                                assert(false, 'unsupported', type.toCode()); 
+                            let interpreter = 'asfloat';
+                            if (isFloatBasedType(type)) { interpreter = 'asfloat'; }
+                            if (isIntBasedType(type)) { interpreter = 'asint'; }
+                            if (isUIntBasedType(type)) { interpreter = 'asuint'; }
+                            
+                            let n = type.size / T_FLOAT.size;
+                            for (let i = 0; i < n; ++i) {
+                                this.emitLine(`${param.name}${type.isArray() ? `[${i % 4}]`: ``} = ${interpreter}(${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}]);`);
+                                nfloat++;
                             }
+                            
 
                             this.emitNewline();
                         });

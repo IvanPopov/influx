@@ -65,13 +65,6 @@ struct DefaultShaderInput {
     float  size : SIZE;
 };
 
-float4 foo() {
-    float4 x = float4(10.f);
-    return float4(x.ab, x.rr);
-}
-
-
-
 
 int Spawn()
 {

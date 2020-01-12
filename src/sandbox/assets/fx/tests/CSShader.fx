@@ -27,14 +27,9 @@ void __spawn_op0__(uint nPart){
 	}
 }
 
-int summ(int a, int b)
-{
-	return a + b;
-}
-
 int Spawn()
 {
-	return summ(1, 200);
+	return 1;
 }
 
 uniform float elapsedTime: ELAPSED_TIME;
@@ -45,7 +40,7 @@ void CSParticlesSpawnRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint
 	if (DTid.x != 0u) return;
 
 	// usage of 4th element of uavSpawnDispatchArguments as temp value of number of particles
-	float nPartAddFloat = asfloat(uavSpawnDispatchArguments[4]) + (float)Spawn() * elapsedTime;
+	float nPartAddFloat = asfloat(uavSpawnDispatchArguments[3]) + (float)Spawn() * elapsedTime;
 	float nPartAdd = floor(nPartAddFloat);
 	uavSpawnDispatchArguments[0] = 0u;
 	uavSpawnDispatchArguments[1] = 1u;
@@ -68,7 +63,7 @@ struct Part
 	float3 pos;
 	float size;
 	float timelife;
-	int updateCount;
+	uint depth;
 };
 
 // The buffer contains user-defined particle data.
@@ -87,11 +82,11 @@ void CSParticlesResetRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint
 	Particle.pos = float3(0.f, 0.f, 0.f);
 	Particle.size = 0.f;
 	Particle.timelife = 0.f;
-	Particle.updateCount = 0;
+	Particle.depth = 0;
 	uavParticles[tid] = Particle;
 }
 
-void __spawn_op1__(uint nPart, float3 pos){
+void __spawn_op1__(uint nPart, uint depth = 0u){
 	int nGroups = (int)ceil((float)nPart / 64.f);
 	for (int i = 0; i < nGroups; ++i)
 	{
@@ -100,20 +95,21 @@ void __spawn_op1__(uint nPart, float3 pos){
 		InterlockedAdd(uavSpawnDispatchArguments[0], 1u, RequestId);
 		uavCreationRequests[RequestId].count = min(nPart, 64u);
 		uavCreationRequests[RequestId].type = 1u;
-		uavCreationRequests[RequestId].payload[0][0] = asfloat(pos[0]);
-		uavCreationRequests[RequestId].payload[0][1] = asfloat(pos[1]);
-		uavCreationRequests[RequestId].payload[0][2] = asfloat(pos[2]);
+		uavCreationRequests[RequestId].payload[0][0] = asfloat(depth[0]);
 		nPart = nPart - 64u;
 	}
 }
 
 bool update(inout Part part)
 {
-	part.pos = part.speed * part.timelife * 3.f;
-	part.timelife = (part.timelife + elapsedTime / 3.f);
-	part.updateCount = part.updateCount + 1;
-	__spawn_op1__(1u, part.pos);
+	part.timelife = part.timelife + elapsedTime * 0.25f;
+	part.pos = part.speed * part.timelife;
+	if(part.depth == 0u)
+	{
+		__spawn_op1__(1u, 1);
 
+		part.depth = 10u;
+	}
 	return part.timelife < 1.f;
 }
 
@@ -143,58 +139,13 @@ void CSParticlesUpdateRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uin
 	uavParticles[PartId] = Particle;
 }
 
-float random(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
-}
-
-float3 randVUnit(float seed)
-{
-	float3 v;
-	v.x = random(float2(seed, 0.f)) - 0.5f;
-	v.y = random(float2(seed, 1.f)) - 0.5f;
-	v.z = random(float2(seed, 2.f)) - 0.5f;
-	return normalize(v);
-}
-
-uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
-
-float deg2rad(float deg)
-{
-	return((deg) * 3.14f / 180.f);
-}
-
-float3 RndVUnitConus(float3 vBaseNorm, float angle, int partId = 0)
-{
-	float3 vRand;
-	float3 vBaseScale; float3 vTangScale;
-	float3 v; float3 vTang;
-	v = randVUnit(elapsedTimeLevel);
-	vTang = v - vBaseNorm * dot(v, vBaseNorm);
-	vTang = normalize(vTang);
-	angle = deg2rad(random(float2(elapsedTimeLevel,(float)partId * elapsedTime)) * angle);
-	vRand = vBaseNorm * cos(angle) + vTang * sin(angle);
-	vRand = normalize(vRand);
-	return vRand;
-}
-
-void init(out Part part, int partId)
+void init(out Part part, int partId, uint depth = 0u)
 {
 	part.pos = float3(0.f, float2(0.f).x, 0.f);
 	part.size = 0.1f;
 	part.timelife = 0.f;
-	part.updateCount = 0;
-	float3 dir;
-	part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
-}
-
-void initChild(out Part part, int partId, float3 pos)
-{
-	part.pos = pos;
-	part.size = 0.05f;
-	part.timelife = 0.f;
-	part.updateCount = 0;
-	part.speed = float3(0.f);
+	part.depth = depth;
+	part.speed = float3(0.f, 5.f, 0.f);
 }
 
 [numthreads(64, 1, 1)]
@@ -225,12 +176,10 @@ void CSParticlesInitRoutine(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3
 	}
 	else if (type == 1u)
 	{
-		float3 pos;
-		pos[0] = asfloat(uavCreationRequests[GroupId].payload[0][0]);
-		pos[1] = asfloat(uavCreationRequests[GroupId].payload[0][1]);
-		pos[2] = asfloat(uavCreationRequests[GroupId].payload[0][2]);
+		uint depth = 0u;
+		depth[0] = asuint(uavCreationRequests[GroupId].payload[0][0]);
 
-		initChild(Particle, PartId, pos);
+		init(Particle, PartId, depth);
 	}
 	uavParticles[PartId] = Particle;
 	// set particles's state as 'Alive'

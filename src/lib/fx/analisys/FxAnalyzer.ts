@@ -671,21 +671,22 @@ export class FxAnalyzer extends Analyzer {
             //parse as the spawn from the same effect
 
             assert(!bImportedEffect, 'unsupported');
-            
+
             if (!bImportedEffect) {
 
                 let initializer = <IFunctionDeclInstruction>null;
                 for (const fx of fxList) {
-                    // looaking for signature like: Init(out Part part, ...parameters)
-                    // TODO: check that second parameter doesn't have PART_ID semantic in 
-                    //       order to not find false positive signature
-                    let args = [ fx.particle, ...spawnStmt.args.map(asType) ];
+                    // looking for Init(out Part part, int partId: PART_ID, ...parameters)
+                    let args = [fx.particle, T_INT, ...spawnStmt.args.map(asType)];
                     initializer = scope.findFunction(spawnStmt.name, args);
 
                     // in case of signature not found:
-                    // looaking for signature like: Init(out Part part, int partId: PART_ID, ...parameters)
+                    // looking for signature like: Init(out Part part, ...parameters)
                     if (!initializer) {
-                        args = [ fx.particle, T_INT, ...spawnStmt.args.map(asType) ];
+                        // looaking for signature like: Init(out Part part, ...parameters)
+                        // TODO: check that second parameter doesn't have PART_ID semantic in 
+                        //       order to not find false positive signature
+                        args = [fx.particle, ...spawnStmt.args.map(asType)];
                         initializer = scope.findFunction(spawnStmt.name, args);
                     }
 
@@ -693,7 +694,7 @@ export class FxAnalyzer extends Analyzer {
                         spawnStmt.$resolve(fx, initializer);
                         break;
                     }
-                } 
+                }
 
                 if (!initializer) {
                     context.error(spawnStmt.sourceNode, EErrors.PartFx_InvalidSpawnStmtInitializerNotFound,
