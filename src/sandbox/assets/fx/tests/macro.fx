@@ -1,10 +1,12 @@
 #define MACRO_0
+#define MACRO_1
+#define MACRO_2
 
-#ifdef MACRO_0
+#ifdef (MACRO_3 || (MACRO_2 && MACRO_1))
 int x = 1;
 #endif
 
-#ifdef MACRO_UNKNOWN
+#ifdef !MACRO_2 || MACRO_UNKNOWN
 bla bla bla...
 #endif
 
