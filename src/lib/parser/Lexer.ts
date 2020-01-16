@@ -166,6 +166,7 @@ interface ILexerConfig {
     engine?: LexerEngine;
     knownTypes?: Set<string>;
     skipComments?: boolean;
+    allowLineTerminators?: boolean;
 }
 
 export class Lexer {
@@ -179,8 +180,9 @@ export class Lexer {
     diagnostics: LexerDiagnostics;
     knownTypes: Set<string>;
     skipComments: boolean;
+    allowLineTerminators: boolean;
 
-    constructor({ engine = new LexerEngine, knownTypes = new Set(), skipComments = true }: ILexerConfig) {
+    constructor({ engine = new LexerEngine, knownTypes = new Set(), skipComments = true, allowLineTerminators = false }: ILexerConfig) {
         this.lineNumber = 0;
         this.columnNumber = 0;
         this.index = 0;
@@ -189,6 +191,7 @@ export class Lexer {
         this.knownTypes = knownTypes;
         this.engine = engine;
         this.skipComments = skipComments;
+        this.allowLineTerminators = allowLineTerminators;
     }
 
     setup(textDocument: ITextDocument) {
@@ -202,7 +205,7 @@ export class Lexer {
     }
 
 
-    getNextToken(allowLineTerminators?: boolean): IToken {
+    getNextToken(allowLineTerminators: boolean = this.allowLineTerminators): IToken {
         let ch = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -269,6 +272,24 @@ export class Lexer {
                 }
         }
         return token;
+    }
+
+
+    getNextLine(): IToken {
+        let start = this.pos();
+        let value = '';
+        let c = this.currentChar();
+        while (c && c !== '\n') {
+            value += c;
+            c = this.readNextChar();
+        }
+
+        return {
+            index: this.index,
+            name: UNKNOWN_TOKEN,
+            value,
+            loc: { start, end: this.pos() }
+        };
     }
 
 
