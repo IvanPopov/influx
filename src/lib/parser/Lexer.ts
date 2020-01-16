@@ -272,6 +272,24 @@ export class Lexer {
     }
 
 
+    getNextLine(): IToken {
+        let start = this.pos();
+        let value = '';
+        let c = this.currentChar();
+        while (c && c !== '\n') {
+            value += c;
+            c = this.readNextChar();
+        }
+
+        return {
+            index: this.index,
+            name: UNKNOWN_TOKEN,
+            value,
+            loc: { start, end: this.pos() }
+        };
+    }
+
+
     /** @deprecated */
     getLocation() {
         return { line: this.lineNumber, file: this.uri };

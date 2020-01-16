@@ -66,7 +66,7 @@ class ASTView extends React.Component<IASTViewProps, {}> {
         const show = forceShow || (nodeStats[idx] || { opened: false, selected: false }).opened;
         const selected = (nodeStats[idx] || { opened: false, selected: false }).selected;
 
-        if (node.value) {
+        if (node.value || node.children === null) {
             return (
                 <List.Item key={ idx }
                     onClick={ this.handleNodeClick.bind(this, idx, node) }
