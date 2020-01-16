@@ -23,9 +23,9 @@ import { connect } from 'react-redux';
 import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
+
 import { ILanguageServiceProvider } from './LanguageServiceProvider';
 import styles from './styles.jss';
-
 
 const m2p = new MonacoToProtocolConverter();
 const p2m = new ProtocolToMonacoConverter();
@@ -164,6 +164,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                             options: {
                                 isWholeLine: true,
                                 className: classes[`dc_${DistinctColor.resolveColor(payload['color'])}`]
+                                // inlineClassName
                             }
                         });
                         break;

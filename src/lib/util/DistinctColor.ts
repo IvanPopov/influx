@@ -50,7 +50,7 @@ class DistinctColor {
         return DistinctColor.list.reduce((styles, color) => (
             styles[`${prefix}_${color}`] = { 
                 opacity: 0.3, 
-                backgroundColor: `${DistinctColor.toRGBAString(color)}` 
+                backgroundColor: `${DistinctColor.toRGBAString(color)}`
             }, styles), {});
 
         // [`dc_${0xe6194b}`]: { opacity: 0.3, backgroundColor: '#e6194b' },

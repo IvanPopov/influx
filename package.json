@@ -90,6 +90,7 @@
     "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack",
     "build:electron": "cross-env NODE_ENV=production APP_TARGET=electron webpack",
     "dev:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack",
+    "dev:web": "cross-env NODE_ENV=development APP_TARGET=web webpack",
     "dev-server:web": "cross-env APP_TARGET=web webpack-dev-server",
     "dev-server:electron": "cross-env APP_TARGET=electron webpack --watch",
     "docs:web": "typedoc --out dist/web/docs src"
