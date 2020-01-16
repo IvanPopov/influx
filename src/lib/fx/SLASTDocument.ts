@@ -20,6 +20,9 @@ const PREDEFINED_TYPES = [
     'auto'
 ];
 
+const ALLOW_ELSE_MACRO = true;
+const FORBID_ELSE_MACRO = false;
+
 export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected includeList: Map<string, IRange>;
     protected lexers: { lexer: Lexer; nextToken: IToken }[];
@@ -27,6 +30,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected tokens: IToken[];
 
     protected macroList: Set<string>;
+    protected macroState: boolean[]; // false => ignore all
 
     constructor({ parser = defaultSLParser() }: IASTConfig = {}) {
         super({ parser, knownTypes: new Set(PREDEFINED_TYPES) });
@@ -49,6 +53,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         this.lexers = [];
         this.tokens = [];
         this.macroList = new Set;
+        this.macroState = [];
         this.ruleFunctions.set('addType', this._addType.bind(this));
         this.ruleFunctions.set('includeCode', this._includeCode.bind(this));
 
@@ -60,7 +65,16 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         this.ruleFunctions.set('processElifMacro', this._processElifMacro.bind(this));
         this.ruleFunctions.set('processElseMacro', this._processElseMacro.bind(this));
         this.ruleFunctions.set('processEndifMacro', this._processEndifMacro.bind(this));
+
+        // this.ruleFunctions.set('alt', this._allowLineTerminators.bind(this, true));
+        // this.ruleFunctions.set('flt', this._allowLineTerminators.bind(this, false));
     }
+
+
+    // private _allowLineTerminators(value: boolean): EOperationType {
+    //     this.lexer.allowLineTerminators = value;
+    //     return EOperationType.k_Ok;
+    // }
 
     private _addType(): EOperationType {
         const tree = this.tree;
@@ -92,72 +106,114 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    private async _beginMacro(): Promise<EOperationType> {
-        let macroName = this.token;
-        let macroText = this.lexer.getNextLine();
+    private _beginMacro(): EOperationType {
+        const macroText = this.lexer.getNextLine();
         macroText.name = 'MACRO_TEXT';
-        console.log(macroName.value, macroText.value);
         this.tokens.push(macroText);
+        return EOperationType.k_Ok;
+    }
 
-        if (this.macroList.has(macroName.value)) {
-            console.warn(`macro redefinition found: ${macroName.value}`);
+
+    private _endMacro(): EOperationType  {
+        // console.log(this.tree);
+
+        let nodes = this.tree.nodes;
+
+        let macroType = <string>null;
+        let args: string[];
+        for (let i = nodes.length - 1; i >= 0; i--) {
+            if (nodes[i].value === '#') {
+                macroType = nodes[i + 1].name;
+                args  = nodes.slice(i + 2).map(node => node.value);
+                break;
+            }
+        }
+
+        switch(macroType) {
+            case 'T_KW_DEFINE': return this._processDefineMacro(args);
+            case 'T_KW_IFDEF': return this._processIfdefMacro(args);
+            case 'T_KW_ENDIF': return this._processEndifMacro();
+            case 'T_KW_ELSE': return this._processElseMacro();
+            case 'T_KW_ELIF': return this._processElifMacro(args);
+            case 'T_KW_IF': return this._processIfMacro(args);
+        }
+
+        console.warn(`unsupported macro type found: ${macroType}`);
+
+        return EOperationType.k_Ok;
+    }
+
+    private _processDefineMacro(args: string[]): EOperationType {
+        let [ name, value ] = args;
+
+        if (this.macroList.has(name)) {
+            console.warn(`macro redefinition found: ${name}`);
         } else {
-            this.macroList.add(macroName.value);
+            this.macroList.add(name);
         }
 
         return EOperationType.k_Ok;
     }
 
 
-    private async _endMacro(): Promise<EOperationType>  {
+    private _processIfdefMacro(args: string[]): EOperationType  {
+        let [ value ] = args;
 
-        return EOperationType.k_Ok;
-    }
+        let identifier = value.trim();
 
+        assert(identifier.split(' ').length === 1, 'todo');
 
-    private _processIfdefMacro(): EOperationType  {
-        console.log('process ifdef macro');
-        
-        let tree = this.tree;
-        const definedExpr = tree.lastNode;
-
-        assert(definedExpr.children.length === 1, 'todo');
-
-        let macroId = definedExpr.children[0].value;
-
-        if (this.macroList.has(macroId)) {
+        if (this.macroList.has(identifier)) {
+            this.macroState.push(FORBID_ELSE_MACRO);
             return EOperationType.k_Ok;
         }
 
-        let token = this.readToken();
-        while (token && token.value !== '#') {
-            token = this.readToken();
-        }
-
-        // this.tokens.push(token);
-        this.token = token;
+        this.macroState.push(ALLOW_ELSE_MACRO);
+        this.skipUnreachableCode();
         return EOperationType.k_Ok;
     }
 
-    private _processIfMacro(): EOperationType  {
+
+
+    private _processIfMacro(args: string[]): EOperationType  {
         console.log('process if macro');
         return EOperationType.k_Ok;
     }
 
-    private _processElifMacro(): EOperationType  {
+    private _processElifMacro(args: string[]): EOperationType  {
         console.log('process elif macro');
         return EOperationType.k_Ok;
     }
 
     private _processElseMacro(): EOperationType  {
-        console.log('process else macro');
+        const macroState = this.macroState[this.macroState.length - 1];
+
+        if (macroState === ALLOW_ELSE_MACRO) {
+            return EOperationType.k_Ok;
+        }
+
+        this.skipUnreachableCode();
         return EOperationType.k_Ok;
     }
 
     private _processEndifMacro(): EOperationType  {
-        console.log('process endif macro');
+        this.macroState.pop();
 
         return EOperationType.k_Ok;
+    }
+
+    private skipUnreachableCode() {
+        let token = this.readToken();
+        while (token.value !== END_SYMBOL && token.value !== '#') {
+            console.log('skip token >>', token.value);
+            token = this.readToken();
+        }
+
+        if (token.value === END_SYMBOL) {
+            // TODO: emit error
+        }
+
+        this.tokens.push(token);
     }
 
     private async _includeCode(): Promise<EOperationType> {

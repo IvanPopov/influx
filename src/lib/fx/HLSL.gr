@@ -32,16 +32,18 @@ Decl : DefineMacro
 
 IncludeMacro : '#' T_KW_INCLUDE String --skip --F includeCode
 
-IfdefMacro : '#' T_KW_IFDEF DefinedExprMacro --skip --F processIfdefMacro
-IfMacro : '#' T_KW_IF ExprMacro              --F processIfMacro
-ElifMacro : '#' T_KW_ELIF ExprMacro          --F processElifMacro
-ElseMacro : '#' T_KW_ELSE                    --F processElseMacro
-EndifMacro : '#' T_KW_ENDIF                  --skip --F processEndifMacro
-
 #
 # beginMacro() function transfers control over input stream to parser, 
 # which in turn will scan the macro text and return MACRO_TEXT token
 # 
+
+# NOTE: all preprocesor logic is hidden inside beginMacro()/endMacro()
+
+IfdefMacro : '#' T_KW_IFDEF --F beginMacro MACRO_TEXT --skip --F endMacro
+ElseMacro : '#' T_KW_ELSE --F beginMacro MACRO_TEXT --skip --F endMacro
+ElifMacro : '#' T_KW_ELIF --F beginMacro MACRO_TEXT --skip --F endMacro
+IfMacro : '#' T_KW_IF --F beginMacro MACRO_TEXT --skip --F endMacro
+EndifMacro : '#' T_KW_ENDIF --F beginMacro MACRO_TEXT --skip --F endMacro
 
 # NOTE: do not use "Id" instead of T_NON_TYPE_ID/T_TYPE_ID, because in this case beginMacro() 
 #       will be called only after T_NON_TYPE_ID => Id reduction, which in turn will
@@ -49,30 +51,6 @@ EndifMacro : '#' T_KW_ENDIF                  --skip --F processEndifMacro
 #       the MACRO_TEXT being read as a token
 DefineMacro : '#' T_KW_DEFINE T_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
 DefineMacro : '#' T_KW_DEFINE T_NON_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
-
-
-UndefMacro : T_KW_UNDEF Id
-DefinedMacro : T_KW_DEFINED '(' Id ')'
-
-DefinedArgumentMacro : Id
-DefinedArgumentMacro : T_KW_TRUE
-DefinedArgumentMacro : T_KW_FALSE
-DefinedArgumentMacro : T_UINT
-
-DefinedExprMacro : DefinedArgumentMacro --add
-DefinedExprMacro : DefinedExprMacro T_OP_OR DefinedArgumentMacro
-DefinedExprMacro : DefinedExprMacro T_OP_AND DefinedArgumentMacro
-
-ArgumentMacro : DefinedArgumentMacro
-ArgumentMacro : DefinedMacro
-
-ExprMacro : ArgumentMacro
-ExprMacro : ExprMacro T_OP_OR ArgumentMacro
-ExprMacro : ExprMacro T_OP_AND ArgumentMacro
-
-# TODO: add support for mathematical operators
-# TODO: add support for relational expressions, equalities, inequalities
-# TODO: add support for conditional expr macro like: #if MACRO_0 ? 10 / MACRO_0 : 0
 
 #endif
 
