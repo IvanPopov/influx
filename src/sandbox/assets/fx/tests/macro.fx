@@ -10,6 +10,24 @@ int x = 1;
 bla bla bla...
 #endif
 
+#if 1
+bool b = false;
+#endif
+
+#if 1 + 2 * 3 + defined(MACRO_1)
+bool c = false;
+#else
+foo :/
+#endif
+
+#define MACRO_5 0
+
+#if MACRO_5 == 1
+    float f = 10.f;
+#elif MACRO_5 == 0
+    float f = 0.f;
+#endif
+
 #define MACRO_REDEF
 #define MACRO_REDEF
 
