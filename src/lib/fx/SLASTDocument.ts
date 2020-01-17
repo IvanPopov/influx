@@ -204,48 +204,11 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
     protected _processIfMacro(args: string[]): EOperationType {
         const [source] = args;
-        const macros = this.macroList;
         const lexer = new Lexer({ engine: this.parser.lexerEngine });
         const uri = this.uri;
         lexer.setup({ source, uri });
 
-        const asValue = (val: string): number => this.resolveMacro(val);
-
-        const opPriors = {
-            '(': 1, ')': 1,
-            '||': 2,
-            '&&': 3,
-            '<': 4, '>': 4, '<=': 4, '>=': 4,
-            '==': 5, '!=': 5,
-            '+': 6, '-': 6,
-            '*': 7, '/': 7,
-            '!': 8,
-            'defined': 9
-        };
-
-        // TODO: add conditional operator
-        const opLogic = {
-            '&&': (a, b) => asValue(a) && asValue(b),
-            '||': (a, b) => asValue(a) || asValue(b),
-            '!': (a) => !asValue(a),
-            '+': (a, b) => asValue(a) + asValue(b),
-            '-': (a, b) => asValue(a) - asValue(b),
-            '*': (a, b) => asValue(a) * asValue(b),
-            '/': (a, b) => asValue(a) / asValue(b),
-            '<': (a, b) => asValue(a) < asValue(b),
-            '>': (a, b) => asValue(a) > asValue(b),
-            '<=': (a, b) => asValue(a) <= asValue(b),
-            '>=': (a, b) => asValue(a) >= asValue(b),
-            '==': (a, b) => asValue(a) === asValue(b),
-            '!=': (a, b) => asValue(a) !== asValue(b),
-            'defined': (a) => macros.has(a),
-            asValue
-        };
-
-        const exprValue = this.evaluateMacroExpr(lexer, opPriors, opLogic);
-        console.log('result', exprValue);
-
-        if (exprValue) {
+        if (this.resolveMacroInner(lexer)) {
             this.macroState.push(FORBID_ELSE_MACRO);
             return EOperationType.k_Ok;
         }
