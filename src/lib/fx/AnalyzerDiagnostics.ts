@@ -18,11 +18,11 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
         super("Analyzer Diagnostics", 'A');
     }
 
-    protected resolveFilename(code: number, desc: IAnalyzerDiagDesc): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IAnalyzerDiagDesc): string {
         return desc.file;
     }
 
-    protected resolveRange(code: number, desc: IAnalyzerDiagDesc): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IAnalyzerDiagDesc): IRange {
         return desc.loc;
     }
 

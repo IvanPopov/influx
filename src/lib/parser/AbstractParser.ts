@@ -8,6 +8,7 @@ import { Item } from "./Item";
 import { LexerEngine } from "./Lexer";
 import { State } from "./State";
 import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_EXPOSE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL, FLAG_RULE_SKIP_NODE } from "./symbols";
+import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,
@@ -27,17 +28,17 @@ export class GrammarDiagnostics extends Diagnostics<IMap<any>> {
     }
 
 
-    protected resolveFilename(code: number, desc: IMap<any>): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IMap<any>): string {
         return desc.file;
     }
 
 
-    protected resolveRange(code: number, desc: IMap<any>): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IMap<any>): IRange {
         return null;
     }
 
 
-    protected resolvePosition(code: number, desc: IMap<any>): IPosition {
+    protected resolvePosition(category: EDiagnosticCategory, code: number, desc: IMap<any>): IPosition {
         return { line: desc.line, column: 0, file: null };
     }
 

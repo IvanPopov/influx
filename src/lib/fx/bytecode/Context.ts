@@ -37,7 +37,7 @@ export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
         return '[unknown]';  // FIXME: return correct filename
     }
 
-    protected resolveRange(code: number, desc: ITranslatorDiagDesc): IRange {
+    protected resolveRange(category: EDiagnosticCategory,code: number, desc: ITranslatorDiagDesc): IRange {
         return { start: { line: 0, column: 0, file: null }, end: { line: 0, column: 0, file: null } }; // todo: fixme
     }
 

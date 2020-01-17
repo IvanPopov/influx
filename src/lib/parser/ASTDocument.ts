@@ -1,7 +1,7 @@
 import bf from "@lib/bf";
-import { isDef, isNull } from "@lib/common";
+import { isDef, isNull, isDefAndNotNull } from "@lib/common";
 import { assert } from "@lib/common";
-import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
+import { IDiagnosticReport, EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
@@ -18,9 +18,15 @@ export enum EParsingErrors {
     SyntaxRecoverableStateNotFound,
 
     GeneralCouldNotReadFile = 2200,
-    GeneralParsingLimitIsReached
+    GeneralParsingLimitIsReached,
+
+    MacroUnknownError,
 };
 
+
+export enum EParsingWarnings {
+    MacroUnknownWarning = 3000,
+}
 
 
 export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
@@ -29,24 +35,42 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
     }
 
 
-    protected resolveFilename(code: number, desc: IMap<any>): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IMap<any>): string {
         return desc.file;
     }
 
 
-    protected resolveRange(code: number, desc: IMap<any>): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IMap<any>): IRange {
+        if (category === EDiagnosticCategory.k_Warning) {
+            switch (code) {
+                case EParsingWarnings.MacroUnknownWarning:
+                    return desc.loc;
+            }
+        }
+
+        //
+        // errors
+        //
+        
         switch (code) {
             case EParsingErrors.SyntaxUnknownError:
             case EParsingErrors.SyntaxUnexpectedEOF:
                 return desc.token.loc;
             case EParsingErrors.GeneralCouldNotReadFile:
                 return desc.loc;
+
+            case EParsingErrors.MacroUnknownError:
+                return desc.loc;
         }
+        
         return null;
     }
 
 
-    protected resolvePosition(code: number, desc: IMap<any>): IPosition {
+    //
+    // NODE: position is being resolved only in case of failed range resolving
+    //
+    protected resolvePosition(category: EDiagnosticCategory, code: number, desc: IMap<any>): IPosition {
         console.assert(code != EParsingErrors.SyntaxUnknownError);
         return { line: desc.line, column: 0, file: null };
     }
@@ -61,6 +85,19 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
             [EParsingErrors.GeneralParsingLimitIsReached]: "Parsing limit is reached.",
             [EParsingErrors.SyntaxRecoverableStateNotFound]: "Recoverable state not found."
         };
+    }
+
+    protected resolveDescription(code: number, category: EDiagnosticCategory, desc: IMap<any>): string {
+        let descList = this.diagnosticMessages();
+        if (isDefAndNotNull(descList[code])) {
+            return super.resolveDescription(code, category, desc);
+        }
+
+        let { file, loc, ...data } = desc;
+        if (category == EDiagnosticCategory.k_Warning) {
+            return `${EParsingWarnings[code]}: ${JSON.stringify(data)}`;
+        }
+        return `${EParsingErrors[code]}: ${JSON.stringify(data)}`;
     }
 }
 

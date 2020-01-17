@@ -10,6 +10,10 @@ int x = 1;
 bla bla bla...
 #endif
 
+#if MACRO_7 == 1
+    // ...
+#endif
+
 #if 1
 bool b = false;
 #endif
@@ -30,6 +34,12 @@ foo :/
 
 #define MACRO_REDEF
 #define MACRO_REDEF
+
+#define ADD(A, B) (A + B)
+
+#if ADD(2, ADD(2, 3)) > 6
+    float f2 = -1.f;
+#endif
 
 // #ifdef MACRO_0
 //     // ...

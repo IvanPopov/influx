@@ -659,6 +659,10 @@ export class FxAnalyzer extends Analyzer {
 
         const scope = program.globalScope;
 
+        if (!root.instructions) {
+            return;
+        }
+
         // NOTE: all effects are assumed to be valid
         const fxList = <IPartFxInstruction[]>root.instructions.filter(instr => instr.instructionType === EInstructionTypes.k_PartFxDecl);
 

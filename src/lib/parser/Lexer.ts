@@ -1,5 +1,5 @@
 import { isString } from '@lib/common';
-import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
+import { IDiagnosticReport, EDiagnosticCategory } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
@@ -25,11 +25,11 @@ class LexerDiagnostics extends Diagnostics<ILexerDiagDesc> {
         super("Lexer Diagnostics", 'L');
     }
 
-    protected resolveFilename(code: number, desc: ILexerDiagDesc): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: ILexerDiagDesc): string {
         return desc.file;
     }
 
-    protected resolveRange(code: number, desc: ILexerDiagDesc): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: ILexerDiagDesc): IRange {
         return desc.token.loc;
     }
 
@@ -142,7 +142,7 @@ export class LexerEngine implements ILexerEngine {
 
 
     isNewlineStart(ch: string): boolean {
-        if (ch === "\n" || ch === "\r" ) {
+        if (ch === "\n" || ch === "\r") {
             return true;
         }
         return false;
@@ -156,7 +156,7 @@ export class LexerEngine implements ILexerEngine {
         return false;
     }
 
-    
+
     static getPunctuatorName(value: string): string {
         return "T_PUNCTUATOR_" + value.charCodeAt(0);
     }
@@ -182,11 +182,11 @@ export class Lexer {
     skipComments: boolean;
     allowLineTerminators: boolean;
 
-    constructor({ engine = new LexerEngine, knownTypes = new Set(), skipComments = true, allowLineTerminators = false }: ILexerConfig) {
-        this.lineNumber = 0;
-        this.columnNumber = 0;
-        this.index = 0;
-
+    constructor({ engine = new LexerEngine,
+        knownTypes = new Set(),
+        skipComments = true,
+        allowLineTerminators = false,
+    }: ILexerConfig = {}) {
         this.diagnostics = new LexerDiagnostics;
         this.knownTypes = knownTypes;
         this.engine = engine;
@@ -194,7 +194,10 @@ export class Lexer {
         this.allowLineTerminators = allowLineTerminators;
     }
 
-    setup(textDocument: ITextDocument) {
+    setup(textDocument: ITextDocument, { startColumn = 0, startLine = 0, startIndex = 0 } = {}) {
+        this.columnNumber = startColumn;
+        this.lineNumber = startLine;
+        this.index = startIndex;
         this.uri = StringRef.make(textDocument.uri);
         this.source = textDocument.source;
     }
@@ -296,18 +299,6 @@ export class Lexer {
     /** @deprecated */
     getLocation() {
         return { line: this.lineNumber, file: this.uri };
-    }
-
-
-    /** @deprecated */
-    setSource(sSource: string): void {
-        this.source = sSource;
-    }
-
-
-    /** @deprecated */
-    setIndex(iIndex: number): void {
-        this.index = iIndex;
     }
 
 

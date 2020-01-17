@@ -86,14 +86,14 @@ export class Diagnostics <DESC_T>{
         let range: IRange;
         let start: IPosition;
         let end: IPosition;
-        let file = this.resolveFilename(entry.code, entry.desc);
+        let file = this.resolveFilename(entry.category, entry.code, entry.desc);
 
-        if (range = this.resolveRange(entry.code, entry.desc)) {
+        if (range = this.resolveRange(entry.category, entry.code, entry.desc)) {
             ({ start, end } = range);
             loc = rangeToString(range);
         } 
         else {
-            start = this.resolvePosition(entry.code, entry.desc);
+            start = this.resolvePosition(entry.category, entry.code, entry.desc);
             loc = locToString(start);
         }
 
@@ -103,15 +103,15 @@ export class Diagnostics <DESC_T>{
         return { code, category, content, file, start, end };
     }
 
-    protected resolveFilename(code: number, desc: DESC_T): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: DESC_T): string {
         return '[unknown]';
     }
 
-    protected resolvePosition(code: number, desc: DESC_T): IPosition {
+    protected resolvePosition(category: EDiagnosticCategory, code: number, desc: DESC_T): IPosition {
         return { file: null, line: 0, column: 0 };
     }
 
-    protected resolveRange(code: number, desc: DESC_T): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: DESC_T): IRange {
         return null;
     }
 
