@@ -35,29 +35,28 @@ foo :/
 #define MACRO_REDEF
 #define MACRO_REDEF
 
+#define A 10
+#define B 20
+
+#define MUL(A, B) A * B
 #define ADD(A, B) (A + B)
 
 #if ADD(2, ADD(2, 3)) > 6
     float f2 = -1.f;
 #endif
 
-// #ifdef MACRO_0
-//     // ...
-// #else
-//     // ...
-// #endif
+#if MUL(3, ADD(2, 3))
+uint u = 10u;
+#endif
 
-// #if true
-//     // ...
-// #endif
+AppendStructuredBuffer<float> uav0;
+void main() {
+    max(1, 2);
+    uav0.Append(1.f);
+}
 
-// #if false
-//     // ...
-// #endif
 
-// #if true && false && true
-//     // ...
-// #endif
-
-// #endif
-;
+#pragma warning(disable : 5206) // local variable 'closestIdx' is unreferenced
+#pragma warning(disable : 5557) // vector or matrix accessed with dynamic index, user is responsible for ensuring that index is within bounds.
+#pragma warning(disable : 5581) // target architecture treats 'half' type as full-precision
+#pragma warning(disable : 5524) // unsupported compiler hint

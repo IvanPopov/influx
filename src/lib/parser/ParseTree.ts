@@ -27,7 +27,7 @@ export class ParseTree implements IParseTree {
 
 
     finishTree(): void {
-        this.root = this.nodes.pop();
+        this.root = this.nodes.pop() || null;
     }
 
 
@@ -49,7 +49,7 @@ export class ParseTree implements IParseTree {
             ruleLength--;
         }
 
-        if (eCreate === ENodeCreateMode.k_Skip && iReduceCount > optimize) {
+        if ((eCreate === ENodeCreateMode.k_Skip && iReduceCount > optimize) || iReduceCount === 0) {
             nodes.length -= iReduceCount;
             nodesCountStack.push(0);
         }  else if ((eCreate === ENodeCreateMode.k_Default && iReduceCount > optimize) || 

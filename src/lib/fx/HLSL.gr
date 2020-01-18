@@ -29,6 +29,8 @@ Decl : ElifMacro
 Decl : ElseMacro
 Decl : EndifMacro
 Decl : DefineMacro
+Decl : ErrorMacro
+Decl : PragmaMacro
 
 IncludeMacro : '#' T_KW_INCLUDE String --skip --F includeCode
 
@@ -44,6 +46,9 @@ ElseMacro : '#' T_KW_ELSE --F beginMacro MACRO_TEXT --skip --F endMacro
 ElifMacro : '#' T_KW_ELIF --F beginMacro MACRO_TEXT --skip --F endMacro
 IfMacro : '#' T_KW_IF --F beginMacro MACRO_TEXT --skip --F endMacro
 EndifMacro : '#' T_KW_ENDIF --F beginMacro MACRO_TEXT --skip --F endMacro
+
+ErrorMacro : '#' T_KW_ERROR --F beginMacro MACRO_TEXT --skip --F endMacro
+PragmaMacro : '#' T_KW_PRAGMA --F beginMacro MACRO_TEXT --F endMacro
 
 # NOTE: do not use "Id" instead of T_NON_TYPE_ID/T_TYPE_ID, because in this case beginMacro() 
 #       will be called only after T_NON_TYPE_ID => Id reduction, which in turn will
@@ -406,7 +411,7 @@ SimpleExpr : NonTypeId
 
 ComplexExpr : '(' Expr ')'
 ComplexExpr : TypeId '(' ArgumentsOpt ')'
-ComplexExpr : BaseType '(' ArgumentsOpt ')'
+ComplexExpr : BaseType '(' ArgumentsOpt ')' 
 ComplexExpr : NonTypeId '(' ArgumentsOpt ')'
 ComplexExpr : PostfixPointExpr '(' ArgumentsOpt ')'
 ComplexExpr : ObjectExpr
@@ -566,6 +571,7 @@ String : T_STRING
 
 TypeId : T_TYPE_ID
 NonTypeId : T_NON_TYPE_ID
+
 LineTerminator : T_LINE_TERMINATOR
 
 AsmDecl : T_KW_DECL '{'
@@ -662,6 +668,8 @@ T_KW_DEFINE : "define"
 T_KW_DEFINED : "defined"
 T_KW_UNDEF : "undef"
 T_KW_ELIF : "elif"
+T_KW_ERROR : "error"
+T_KW_PRAGMA : "pragma"
 
 #endif
 

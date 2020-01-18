@@ -1,5 +1,5 @@
 import { isString } from '@lib/common';
-import { IDiagnosticReport, EDiagnosticCategory } from '@lib/idl/IDiagnostics';
+import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
@@ -169,6 +169,12 @@ interface ILexerConfig {
     allowLineTerminators?: boolean;
 }
 
+interface IStartPosition {
+    startColumn: number;
+    startLine: number;
+    startIndex: number;
+}
+
 export class Lexer {
     index: number;
     lineNumber: number;
@@ -194,10 +200,10 @@ export class Lexer {
         this.allowLineTerminators = allowLineTerminators;
     }
 
-    setup(textDocument: ITextDocument, { startColumn = 0, startLine = 0, startIndex = 0 } = {}) {
-        this.columnNumber = startColumn;
-        this.lineNumber = startLine;
-        this.index = startIndex;
+    setup(textDocument: ITextDocument) {
+        this.columnNumber = 0;
+        this.lineNumber = 0;
+        this.index = 0;
         this.uri = StringRef.make(textDocument.uri);
         this.source = textDocument.source;
     }
