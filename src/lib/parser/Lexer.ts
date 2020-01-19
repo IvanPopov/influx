@@ -1,10 +1,10 @@
-import { isString } from '@lib/common';
 import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { StringRef } from '@lib/util/StringRef';
+import * as util from '@lib/parser/util';
 
 import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
@@ -181,6 +181,7 @@ export class Lexer {
     columnNumber: number;
     uri: IFile;
     source: string;
+    offset: IPosition;
 
     engine: LexerEngine;
     diagnostics: LexerDiagnostics;
@@ -206,6 +207,7 @@ export class Lexer {
         this.index = 0;
         this.uri = StringRef.make(textDocument.uri);
         this.source = textDocument.source;
+        this.offset = textDocument.offset || null;
     }
 
 
@@ -214,7 +216,7 @@ export class Lexer {
     }
 
 
-    getNextToken(allowLineTerminators: boolean = this.allowLineTerminators): IToken {
+    private scanToken(allowLineTerminators: boolean = this.allowLineTerminators): IToken {
         let ch = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -238,7 +240,7 @@ export class Lexer {
             case ETokenType.k_MultilineCommentLiteral:
                 token = this.scanComment();
                 if (this.skipComments) {
-                    token = this.getNextToken();
+                    token = this.scanToken();
                 }
                 break;
             case ETokenType.k_StringLiteral:
@@ -253,12 +255,12 @@ export class Lexer {
             case ETokenType.k_NewlineLiteral:
                 token = this.scanLineTerminators();
                 if (!allowLineTerminators) {
-                    token = this.getNextToken();
+                    token = this.scanToken();
                 }
                 break;
             case ETokenType.k_WhitespaceLiteral:
                 this.scanWhiteSpace();
-                token = this.getNextToken();
+                token = this.scanToken();
                 break;
             default:
                 {
@@ -284,7 +286,16 @@ export class Lexer {
     }
 
 
-    getNextLine(): IToken {
+    getNextToken(): IToken {
+        const token = this.scanToken();
+        if (this.offset) {
+            util.offset(token.loc, this.offset);
+        }
+        return token;
+    }
+
+
+    private scanThisLine(): IToken {
         let start = this.pos();
         let value = '';
         let c = this.currentChar();
@@ -299,6 +310,15 @@ export class Lexer {
             value,
             loc: { start, end: this.pos() }
         };
+    }
+
+
+    getNextLine(): IToken {
+        const token = this.scanThisLine();
+        if (this.offset) {
+            util.offset(token.loc, this.offset);
+        }
+        return token;
     }
 
 

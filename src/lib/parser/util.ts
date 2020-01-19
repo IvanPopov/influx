@@ -28,7 +28,7 @@ export function cloneRange(range: IRange): IRange {
 
 
 export function extendRange(parent: IRange, child: IRange): IRange {
-    if (child.start.file !== parent.start.file) {
+    if (String(child.start.file) !== String(parent.start.file)) {
         return parent;
     }
     
@@ -60,6 +60,24 @@ export function commonRange(...rangeList: IRange[]): IRange {
     rangeList.forEach(range => end = positionMax(end, range.end));
 
     return { start, end };
+}
+
+export function offset(source: IRange, offset: IPosition): IRange {
+    // TODO: check that URIs the same
+    const { start, end } = source;
+
+    if (start.line === 0) {
+        start.column += offset.column;
+    }
+
+    if (end.line === 0) {
+        end.column += offset.column;
+    }
+
+    start.line += offset.line;
+    end.line += offset.line;
+
+    return source;
 }
 
 export const checkRange = (range: IRange, offset: number) => range.start.offset <= offset && range.end.offset > offset;

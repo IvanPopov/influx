@@ -60,3 +60,11 @@ void main() {
 #pragma warning(disable : 5557) // vector or matrix accessed with dynamic index, user is responsible for ensuring that index is within bounds.
 #pragma warning(disable : 5581) // target architecture treats 'half' type as full-precision
 #pragma warning(disable : 5524) // unsupported compiler hint
+
+
+#define N 10
+int n = N; 
+  
+#define INITIALIZER_LIST3(a, b, c) { (a), (b), (c) }
+float3 f3 = INITIALIZER_LIST3(1.f + 5.f, (float)N, 3.f);
+ 
