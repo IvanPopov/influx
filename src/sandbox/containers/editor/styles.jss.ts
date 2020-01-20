@@ -20,5 +20,9 @@ export default {
         background: 'red'
     },
 
+    unreachanbleCode: {
+        color: '#666 !important'
+    },
+
     ...DistinctColor.buildVariousClasses('dc')
 };

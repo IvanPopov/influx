@@ -68,3 +68,28 @@ int n = N;
 #define INITIALIZER_LIST3(a, b, c) { (a), (b), (c) }
 float3 f3 = INITIALIZER_LIST3(1.f + 5.f, (float)N, 3.f);
  
+#ifndef SYSTEM_FX
+#define SYSTEM_FX
+
+// make sure the define scaner finds it
+#if defined(_AP_PC)
+#endif
+
+#if defined(_API_DX11)
+   #if defined(_AP_PC) || defined(_AP_DURANGO)
+   
+      #define EQUAL(x, y) (x == y)
+
+   #elif defined(_AP_ORBIS)
+      #pragma warning(disable : 5202) // implicit cast from 'float4' to 'float3'
+ 
+      #define EQUAL(x, y) (x == y)
+
+   #endif
+#elif defined(_API_VULKAN) || defined(_AP_NX64)
+
+#else
+   #error Platform macro is missing
+#endif
+
+#endif // SYSTEM_FX

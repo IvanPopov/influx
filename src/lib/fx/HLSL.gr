@@ -22,40 +22,23 @@ Decl : PartFxDecl
 
 #if PREPROCESSOR
 
-Decl : IncludeMacro
-Decl : IfdefMacro
-Decl : IfMacro
-Decl : ElifMacro
-Decl : ElseMacro
-Decl : EndifMacro
-Decl : DefineMacro
-Decl : ErrorMacro
-Decl : PragmaMacro
-
-IncludeMacro : '#' T_KW_INCLUDE String --skip --F includeCode
+Decl : Macro
 
 #
 # beginMacro() function transfers control over input stream to parser, 
 # which in turn will scan the macro text and return MACRO_TEXT token
 # 
 
-# NOTE: all preprocesor logic is hidden inside beginMacro()/endMacro()
-
-IfdefMacro : '#' T_KW_IFDEF --F beginMacro MACRO_TEXT --skip --F endMacro
-ElseMacro : '#' T_KW_ELSE --F beginMacro MACRO_TEXT --skip --F endMacro
-ElifMacro : '#' T_KW_ELIF --F beginMacro MACRO_TEXT --skip --F endMacro
-IfMacro : '#' T_KW_IF --F beginMacro MACRO_TEXT --skip --F endMacro
-EndifMacro : '#' T_KW_ENDIF --F beginMacro MACRO_TEXT --skip --F endMacro
-
-ErrorMacro : '#' T_KW_ERROR --F beginMacro MACRO_TEXT --skip --F endMacro
-PragmaMacro : '#' T_KW_PRAGMA --F beginMacro MACRO_TEXT --F endMacro
-
 # NOTE: do not use "Id" instead of T_NON_TYPE_ID/T_TYPE_ID, because in this case beginMacro() 
 #       will be called only after T_NON_TYPE_ID => Id reduction, which in turn will
 #       require reading the next token which can lead to a situation where part of 
 #       the MACRO_TEXT being read as a token
-DefineMacro : '#' T_KW_DEFINE T_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
-DefineMacro : '#' T_KW_DEFINE T_NON_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
+
+# NOTE: all preprocesor logic is hidden inside beginMacro()/endMacro()
+Macro : '#' T_NON_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
+Macro : '#' T_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
+Macro : '#' T_KW_IF --F beginMacro MACRO_TEXT --skip --F endMacro
+Macro : '#' T_KW_ELSE --F beginMacro MACRO_TEXT --skip --F endMacro
 
 #endif
 
@@ -658,21 +641,6 @@ T_KW_SPAWN : "spawn"
 
 T_KW_CONTINUE : "continue"
 T_KW_AS : "as"
-
-#if PREPROCESSOR
-
-T_KW_INCLUDE : "include"
-T_KW_IFDEF : "ifdef"
-T_KW_ENDIF : "endif"
-T_KW_DEFINE : "define"
-T_KW_DEFINED : "defined"
-T_KW_UNDEF : "undef"
-T_KW_ELIF : "elif"
-T_KW_ERROR : "error"
-T_KW_PRAGMA : "pragma"
-
-#endif
-
 T_OP_INC : "++"
 T_OP_DEC : "--"
 T_OP_LE : ">="

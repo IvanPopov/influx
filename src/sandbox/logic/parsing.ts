@@ -65,6 +65,10 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     const slastDocument = await createSLASTDocument({ source, uri }, flags);
 
+    // TODO: move it to language service
+    cleanupMarkers(<IDispatch>dispatch, cleanupMarkersBatch(state, 'unreachable-code'));
+    emitMarkers(<IDispatch>dispatch, emitMarkersBatch(slastDocument.unreachableCode.map(loc => ({ loc, payload: {} })), 'unreachable-code', 'unreachable-code'));
+
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
     }

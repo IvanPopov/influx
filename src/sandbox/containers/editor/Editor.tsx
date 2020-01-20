@@ -168,6 +168,15 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                             }
                         });
                         break;
+                        case 'unreachable-code':
+                            decorations.push({
+                                range: new monaco.Range(start.line + 1, 0, end.line + 1, 0),
+                                options: {
+                                    isWholeLine: true,
+                                    inlineClassName: classes.unreachanbleCode
+                                }
+                            });
+                            break;
                     default:
                 }
             }
@@ -434,6 +443,8 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         monaco.editor.setModelMarkers(this.getModel(), 'default', diagnostics.map(diag => SourceEditor.asMarker(diag)));
         this.deferredRequests.forEach(def => def.resolve());
         this.deferredRequests = [];
+
+        // const unreachanbleCode = await provider.provideUnreachableCodeBlocks(document);
     }
 
 

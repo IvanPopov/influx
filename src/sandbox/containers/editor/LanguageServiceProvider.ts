@@ -6,6 +6,7 @@ import { IParserParams } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
 import * as Comlink from 'comlink';
 import { CodeLens, Diagnostic, DiagnosticSeverity, Position, Range, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -42,7 +43,11 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
 
 class LanguageServiceProvider {
     private service: ILanguageService;
-    private documents: Map<string, { textDocument: TextDocument; slDocument: ISLDocument }> = new Map();
+    private documents: Map<string, {
+        textDocument: TextDocument;
+        slastDocument: ISLASTDocument;
+        slDocument: ISLDocument;
+    }> = new Map();
 
     init(parserParams: IParserParams, parsingFlags: number) {
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
@@ -60,8 +65,9 @@ class LanguageServiceProvider {
     async validate(rawDocument): Promise<Diagnostic[]> {
         const textDocument = asTextDocument(rawDocument);
 
-        const slDocument = await this.service.parseDocument(textDocument);
-        this.documents.set(textDocument.uri, { textDocument, slDocument });
+        const slastDocument = await this.service.$parseSLASTDocument(textDocument);
+        const slDocument = await this.service.$parseSLDocument(slastDocument);
+        this.documents.set(textDocument.uri, { textDocument, slastDocument, slDocument });
 
         return slDocument.diagnosticReport.messages.map(asDiagnostic);
     }
@@ -84,10 +90,25 @@ class LanguageServiceProvider {
         return this.service.doSignatureHelp(textDocument, position, slDocument);
     }
 
-    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): { textDocument: TextDocument; slDocument: ISLDocument } {
+    // async provideUnreachableCodeBlocks(textDocumentIdentifier: TextDocumentIdentifier): Promise<Range[]> {
+    //     if (!this.service) {
+    //         return null;
+    //     }
+
+    //     const { textDocument, slastDocument } = await this.getDocument(textDocumentIdentifier);
+    //     if (!slastDocument) {
+    //         return [];
+    //     }
+
+    //     // return slastDocument.unreachableCode.map(range => Range.create(Position.create(), Position.create()));
+    //     return [];
+    // }
+
+    private getDocument(textDocumentIdentifier: TextDocumentIdentifier):
+        { textDocument: TextDocument; slastDocument: ISLASTDocument; slDocument: ISLDocument } {
         if (!this.documents.has(textDocumentIdentifier.uri)) {
             console.warn('could not find document', textDocumentIdentifier.uri);
-            return { textDocument: null, slDocument: null };
+            return { textDocument: null, slastDocument: null, slDocument: null };
         }
         return this.documents.get(textDocumentIdentifier.uri);
     }

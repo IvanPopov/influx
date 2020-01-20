@@ -6,6 +6,8 @@ import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionL
 
 import { FXCodeLenses } from './services/fx/codeLenses';
 import { SLSignatureHelp } from './services/signatureHelp';
+import { createSLASTDocument } from '@lib/fx/SLASTDocument';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 
 // import { SLValidation } from './services/validation';
 
@@ -23,6 +25,18 @@ export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
     const fxCodeLenses = new FXCodeLenses();
 
     return {
+        async $parseSLASTDocument(textDocument: TextDocument): Promise<ISLASTDocument> {
+            const uri = textDocument.uri;
+            const source = textDocument.getText();
+            const slastDocument = await createSLASTDocument({ uri, source }, flags);
+            return slastDocument;
+        },
+
+        async $parseSLDocument(slastDocument: ISLASTDocument): Promise<ISLDocument> {
+            return await createFXSLDocument(slastDocument);
+        },
+
+
         async parseDocument(textDocument: TextDocument): Promise<ISLDocument> { 
             const uri = textDocument.uri;
             const source = textDocument.getText();

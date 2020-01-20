@@ -8,7 +8,7 @@ import { RouterState } from 'connected-react-router';
 
 export interface IMarker {
     range: IRange;
-    type: 'warning' | 'error'| 'marker' | 'line';
+    type: 'warning' | 'error'| 'marker' | 'line' | 'unreachable-code';
     tooltip?: string;
     payload?: Object;
 }

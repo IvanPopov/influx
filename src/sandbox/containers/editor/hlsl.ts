@@ -164,10 +164,10 @@ export const language = <ILanguage>{
             // [[ attributes ]].
             [/\[\[.*\]\]/, 'annotation'],
 
-            [/^\s*#include/, { token: 'keyword.directive.include', next: '@include' }],
+            [/\s*#include/, { token: 'keyword.directive.include', next: '@include' }],
 
             // Preprocessor directive
-            [/^\s*#\s*\w+/, 'keyword'],
+            [/\s*#\s*\w+/, 'keyword'],
 
             // delimiters and operators
             [/[{}()\[\]]/, '@brackets'],

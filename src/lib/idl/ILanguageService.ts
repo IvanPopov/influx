@@ -1,10 +1,14 @@
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { CodeLens, Color, ColorInformation, ColorPresentation, CompletionItem, CompletionList, Diagnostic, FoldingRange, FormattingOptions, Hover, Position, Range, SignatureHelp, SymbolInformation, TextDocument, TextEdit } from 'vscode-languageserver-types';
+import { ISLASTDocument } from './ISLASTDocument';
 
 // FIXME: use correct type
 type SelectionRange = Range;
 
 export interface ILanguageService {
+    $parseSLASTDocument(textDocument: TextDocument): Thenable<ISLASTDocument>;
+    $parseSLDocument(slastDocument: ISLASTDocument): Thenable<ISLDocument>;
+
     parseDocument(textDocument: TextDocument): Thenable<ISLDocument>;
     doResolve(item: CompletionItem): Thenable<CompletionItem>;
     doComplete(textDocument: TextDocument, position: Position, slDocument: ISLDocument): Thenable<CompletionList | null>;
