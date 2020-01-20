@@ -10,6 +10,7 @@ import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
 
 import { defaultSLParser } from './SLParser';
+import { Line } from 'three';
 
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
@@ -95,12 +96,8 @@ function asMacroNative(token: IToken, fallback: (token: IToken) => number = () =
 class MacroState {
     states: EMacroState[] = [];
 
-    get top(): EMacroState {
-        return this.states[this.states.length - 1];
-    }
-
     is(state: EMacroState): boolean {
-        return this.top === state;
+        return this.states[this.states.length - 1] === state;
     }
 
     isEmpty(): boolean {
@@ -113,6 +110,11 @@ class MacroState {
 
     pop(): EMacroState {
         return this.states.pop();
+    }
+
+    replace(state: EMacroState): void {
+        this.pop();
+        this.push(state);
     }
 }
 
@@ -358,27 +360,31 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    protected readToken(): IToken {
+    protected readToken(allowMacro: boolean = true): IToken {
         if (this.tokens.length) {
             return this.popToken();
         }
 
         const token = super.readToken();
-        if (token.value !== END_SYMBOL) {
+        if (token.value === END_SYMBOL) {
+            if (this.lexers.length) {
+                this.popLexer()
+                return this.readToken();
+            }
+    
+            if (!this.macroState.isEmpty()) {
+                // TODO: highlight open tag too.
+                this.emitMacroError(`'endif' non found :/`, token.loc);
+            }
+
+            return token; // END_SYMBOL
+        }
+
+        if (allowMacro) {
             return this.examineMacro(token);
         }
 
-        if (this.lexers.length) {
-            this.popLexer()
-            return this.readToken();
-        }
-
-        if (!this.macroState.isEmpty()) {
-            // TODO: highlight open tag too.
-            this.emitMacroError(`'endif' non found :/`, token.loc);
-        }
-
-        return token; // END_SYMBOL
+        return token;
     }
 
 
@@ -556,7 +562,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         if (this.macroState.is(EMacroState.k_AllowElse)) {
             const { value, loc } = macroText;
             if (this.resolveMacroInner(asMacroToken(value, loc))) {
-                this.macroState.push(EMacroState.k_ForbidElse);
+                this.macroState.replace(EMacroState.k_ForbidElse);
                 return EOperationType.k_Ok;
             }
         }
@@ -573,7 +579,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         }
 
         if (this.macroState.is(EMacroState.k_AllowElse)) {
-            this.macroState.push(EMacroState.k_ForbidElse);
+            this.macroState.replace(EMacroState.k_ForbidElse);
             return EOperationType.k_Ok;
         }
 
@@ -848,7 +854,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
     protected processErrorMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const msg = macroText.value.trim();
-        this.emitMacroCritical(`erroneous macro reached: "${msg}"`,
+        this.emitMacroError(`erroneous macro reached: "${msg}"`,
             util.commonRange(macroType.loc, macroText.loc));
         return EOperationType.k_Ok;
     }
@@ -856,13 +862,13 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
     protected skipUnreachableCode(): void {
         
-        let token = this.readToken();
-        let code = null;
+        let token = this.readToken(false);
+        let begin = token.loc.start;
         
         let nesting = 0;
         while (token.value !== END_SYMBOL) {
             if (token.value === '#') {
-                let macro = this.readToken();
+                let macro = this.readToken(false);
 
                 switch (macro.value) {
                     case 'if':
@@ -872,31 +878,28 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                         break;
                     case 'elif':
                     case 'else':
-                        if (nesting === 0) {
-                            if (code) {
-                                this.unreachableCodeList.push(code);
-                            }
-                            this.pushToken(token, macro);
-                            return;
+                        if (nesting !== 0) {
+                            break;
                         }
-                        break;
                     case 'endif':
                         if (nesting > 0) {
                             nesting --;
-                        } else {
-                            if (code) {
-                                this.unreachableCodeList.push(code);
-                            }
-                            this.pushToken(token, macro);
-                            return;
-                        }
-                }
+                            break;
+                        } 
 
-                code = util.extendRange(code || util.cloneRange(token.loc), macro.loc);
+                        const block = { start: { ...begin, column: 0 }, end: { ...macro.loc.end, column: 0 } };
+                        if (block.end.line - block.start.line > 0) {
+                            this.unreachableCodeList.push(block);
+                        }
+                        
+                        this.pushToken(token, macro);
+                        return;
+                    case 'error':
+                        this.lexer.getNextLine();
+                }
             }
 
-            code = util.extendRange(code || util.cloneRange(token.loc), token.loc);
-            token = this.readToken();
+            token = this.readToken(false);
         }
 
         // TODO: highlight open tag

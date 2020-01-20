@@ -21,7 +21,8 @@ export default {
     },
 
     unreachanbleCode: {
-        color: '#666 !important'
+        // color: '#666 !important'
+        opacity: '0.35'
     },
 
     ...DistinctColor.buildVariousClasses('dc')

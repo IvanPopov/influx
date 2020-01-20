@@ -170,7 +170,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                         break;
                         case 'unreachable-code':
                             decorations.push({
-                                range: new monaco.Range(start.line + 1, 0, end.line + 1, 0),
+                                range: new monaco.Range(start.line + 1, 0, end.line, 0),
                                 options: {
                                     isWholeLine: true,
                                     inlineClassName: classes.unreachanbleCode
