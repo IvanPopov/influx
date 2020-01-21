@@ -512,6 +512,7 @@ export class Lexer {
         let ch = this.currentChar();
         let value = "";
         let isFloat = false;
+        let isHex = false;
         let chPrevious = ch;
         let isGoodFinish = false;
         let isE = false; // exponential
@@ -528,51 +529,56 @@ export class Lexer {
         while (true) {
             ch = this.readNextChar();
             if (ch === ".") {
-                if (isFloat || isU) {
+                if (isFloat || isU || isHex) {
                     break;
                 }
-                else {
-                    isFloat = true;
-                }
+                isFloat = true;
             }
             else if (ch === "e") {
-                if (isE || isU) {
+                if (isE || isU) { // "0x100e2" is valid
                     break;
                 }
-                else {
-                    isE = true;
-                }
+                isE = true;
             }
             else if (ch === "u") {
-                if (isE || isU) {
+                if (isFloat || isU) { // "0x02u" or "0x100e2u" are valid
                     break;
                 }
-                else {
-                    isU = true;
+                isU = true;
+            }
+            else if (ch === "x") {
+                if (isU || isE || isFloat) {
+                    break;
                 }
+                isHex = true;
             }
             else if (((ch === "+" || ch === "-") && chPrevious === "e")) {
-                value += ch;
-                chPrevious = ch;
-                continue;
+                // nothing todo, valid case
             }
             else if (ch === "f" && isFloat) {
                 ch = this.readNextChar();
+                // redundant check?
                 if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
                     break;
                 }
                 isGoodFinish = true;
                 break;
             }
+            // break on any unused alphabetic character
             else if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
-                break;
+                if (!isHex) {
+                    break;
+                }
             }
+            // Handle the case when a character is read not a number (end of numeric seq.)
             else if (!((ch >= "0") && (ch <= "9")) || !ch || isU) {
+                // check that the exponent completely read
                 if ((isE && chPrevious !== "+" && chPrevious !== "-" && chPrevious !== "e") || !isE) {
                     isGoodFinish = true;
                 }
                 break;
             }
+            
             value += ch;
             chPrevious = ch;
         }

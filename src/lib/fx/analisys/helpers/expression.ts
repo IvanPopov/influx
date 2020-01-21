@@ -17,6 +17,7 @@ export namespace expression {
                 return unwind((<IPostfixIndexInstruction>expr).element);
             case EInstructionTypes.k_IdExpr:
                 return (<IIdExprInstruction>expr).decl;
+            case EInstructionTypes.k_BitwiseExpr:
             case EInstructionTypes.k_ArithmeticExpr:
                 // arithmetic expression returns right-hand value;
                 return null;

@@ -2,7 +2,7 @@
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IBitwiseOperator, IArithmeticOperator } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -12,7 +12,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
 import { expression, instruction, type } from './helpers';
-import { ArithmeticExprInstruction, ArithmeticOperator } from './instructions/ArithmeticExprInstruction';
+import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
@@ -61,6 +61,7 @@ import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { BitwiseExprInstruction } from './instructions/BitwiseExprInstruction';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -100,10 +101,10 @@ const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
     }
 
     // if (instruction.isLiteral(instr)) {
-        if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
-            // temp workaround in order to match int to uint and etc. 
-            return /^int$|^uint$/g;
-        }
+    if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
+        // temp workaround in order to match int to uint and etc. 
+        return /^int$|^uint$/g;
+    }
     // }
 
     return instr.type;
@@ -117,6 +118,21 @@ function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruct
             proxy.resolve(host);
         }
     }
+}
+
+
+function parseUintLiteral(value: string) {
+    const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)(u?)$/);
+    assert(match, `cannot parse uint literal: ${value}`);
+
+    const signed = match[5] !== 'u';
+    const exp = Number(match[4] || '0');
+    const base = Number(match[2]);
+    assert(base !== NaN);
+
+    const heximal = value[1] === 'x';
+
+    return { signed, exp, base, heximal };
 }
 
 
@@ -1167,11 +1183,15 @@ export class Analyzer {
             case 'RelationalExpr':
             case 'EqualityExpr':
                 return this.analyzeRelationExpr(context, program, sourceNode);
-            case 'AndExpr':
-            case 'OrExpr':
+            case 'LogicalAndExpr':
+            case 'LogicalOrExpr':
                 return this.analyzeLogicalExpr(context, program, sourceNode);
             case 'AssignmentExpr':
                 return this.analyzeAssignmentExpr(context, program, sourceNode);
+            case 'ShiftExpr':
+            case 'InclusiveOrExpr':
+            case 'ExclusiveOrExpr':
+                return this.analyzeBitwiseExpr(context, program, sourceNode);
             case 'T_NON_TYPE_ID':
                 return this.analyzeIdExpr(context, program, sourceNode);
             case 'T_STRING':
@@ -1488,9 +1508,9 @@ export class Analyzer {
         const children = sourceNode.children;
         const scope = program.currentScope;
         const globalScope = program.globalScope;
-        
+
         const firstNodeName = children[children.length - 1].name;
- 
+
         const args: IExprInstruction[] = [];
         if (children.length > 3) {
             for (let i = children.length - 3; i > 0; i--) {
@@ -1523,7 +1543,7 @@ export class Analyzer {
                 }
                 break;
         }
-        
+
 
         if (isNull(func)) {
             context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName });
@@ -1895,8 +1915,11 @@ export class Analyzer {
                     case EInstructionTypes.k_IntExpr:
                         {
                             let lit = <IntInstruction>expr;
-                            let signed = operator === '-' || lit.signed;
-                            unaryExpr = new IntInstruction({ scope, sourceNode, value: Number(`${operator}${lit.value}`), signed });
+                            let { base, signed, heximal, exp } = lit;
+                            signed = operator === '-' || lit.signed;
+                            // TODO: emit warning in case of '-100u' expr.
+                            base = operator === '-'? -base : base;
+                            unaryExpr = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
                         }
                         break;
                     case EInstructionTypes.k_FloatExpr:
@@ -2018,7 +2041,7 @@ export class Analyzer {
 
         const children = sourceNode.children;
         const scope = program.currentScope
-        const operator = <ArithmeticOperator>sourceNode.children[1].value;
+        const operator = <IArithmeticOperator>sourceNode.children[1].value;
 
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
         const right = this.analyzeExpr(context, program, children[0]);
@@ -2094,7 +2117,7 @@ export class Analyzer {
 
     /**
      * AST example:
-     *    OrExpr
+     *    LogicalOrExpr
      *         T_NON_TYPE_ID = 'b'
      *         T_OP_OR = '||'
      *         T_NON_TYPE_ID = 'a'
@@ -2139,6 +2162,40 @@ export class Analyzer {
 
         let logicalExpr = new LogicalExprInstruction({ scope, sourceNode, left, right, operator });
         return checkInstruction(context, logicalExpr, ECheckStage.CODE_TARGET_SUPPORT);
+    }
+
+
+    /**
+     * AST example:
+     *    InclusiveOrExpr
+     *       + ComplexExpr 
+     *         T_PUNCTUATOR_124 = '|'
+     *       + ComplexExpr 
+     */
+    protected analyzeBitwiseExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+        const operator = <IBitwiseOperator>sourceNode.children[1].value;
+
+        const left = this.analyzeExpr(context, program, children[children.length - 1]);
+        const right = this.analyzeExpr(context, program, children[0]);
+
+        const leftType = <IVariableTypeInstruction>left.type;
+        const rightType = <IVariableTypeInstruction>right.type;
+
+        const type = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
+
+        if (isNull(type)) {
+            context.error(sourceNode, EErrors.InvalidBitwiseOperation, {
+                operator: operator,
+                leftTypeName: String(leftType),
+                rightTypeName: String(rightType)
+            });
+            return null;
+        }
+
+        let bitwiseExpr = new BitwiseExprInstruction({ scope, sourceNode, left, right, type, operator });
+        return checkInstruction(context, bitwiseExpr, ECheckStage.CODE_TARGET_SUPPORT);
     }
 
 
@@ -2230,9 +2287,9 @@ export class Analyzer {
         switch (name) {
             case 'T_UINT':
                 {
-                    const match = value.match(/^([0-9]+)(u?)$/);
-                    const signed = match[2] !== 'u';
-                    return new IntInstruction({ scope, sourceNode, value: Number(match[1]), signed });
+                    const { base, signed, heximal, exp } = parseUintLiteral(value);
+                    
+                    return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
                 }
             case 'T_FLOAT':
                 return new FloatInstruction({ scope, sourceNode, value: Number(value) });
@@ -2699,7 +2756,7 @@ export class Analyzer {
 
         const funcReturnType = context.funcDef.returnType;
         context.haveCurrentFunctionReturnOccur = true;
-        
+
         if (children.length === 2) {
             tryResolveProxyType(funcReturnType, T_VOID);
         }
@@ -2711,7 +2768,7 @@ export class Analyzer {
         else if (!funcReturnType.isEqual(T_VOID) && children.length === 2) {
             context.error(sourceNode, EErrors.InvalidReturnStmtEmpty);
             return null;
-        }   
+        }
 
         let expr: IExprInstruction = null;
         if (children.length === 3) {
@@ -3686,6 +3743,29 @@ export class Analyzer {
             return null;
         }
 
+        if (Analyzer.isBitwiseOperator(operator)) {
+            if (!leftType.isEqual(T_INT) && !leftType.isEqual(T_UINT)) {
+                // TODO: emit error
+                return null;
+            }
+            
+            if (!rightType.isEqual(T_INT) && !rightType.isEqual(T_UINT)) {
+                // TODO: emit error
+                return null;
+            }
+
+            switch (operator) {
+                case '&':
+                case '|':
+                case '^':
+                    if (!leftBaseType.isEqual(rightType)) {
+                        // TODO: emit warning
+                    }
+            }
+
+            return leftBaseType;
+        }
+
         if (leftType.isEqual(rightType)) {
             if (Analyzer.isArithmeticalOperator(operator)) {
                 if (!SystemScope.isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
@@ -3712,7 +3792,6 @@ export class Analyzer {
             else {
                 return null;
             }
-
         }
 
         // temp workaround for INT/UINT comparison
@@ -3726,7 +3805,7 @@ export class Analyzer {
         if (Analyzer.isArithmeticalOperator(operator)) {
             if (SystemScope.isBoolBasedType(leftType) || SystemScope.isBoolBasedType(rightType) ||
                 SystemScope.isFloatBasedType(leftType) !== SystemScope.isFloatBasedType(rightType) ||
-                SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType) || 
+                SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType) ||
                 SystemScope.isUIntBasedType(leftType) !== SystemScope.isUIntBasedType(rightType)) {
                 return null;
             }
@@ -3829,6 +3908,11 @@ export class Analyzer {
             operator === '%=' || operator === '=';
     }
 
+    protected static isBitwiseOperator(operator: string): boolean {
+        return operator === '>>' || operator === '<<' ||
+            operator === '|' || operator === '&' ||
+            operator === '^';
+    }
 
     protected static isArithmeticalOperator(operator: string): boolean {
         return operator === '+' || operator === '+=' ||

@@ -6,7 +6,7 @@
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IBitwiseExprInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -271,6 +271,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.Bool(instr);
             case EInstructionTypes.k_ArithmeticExpr:
                 return this.ArithmeticExpr(instr);
+            case EInstructionTypes.k_BitwiseExpr:
+                return this.BitwiseExpr(instr);
             case EInstructionTypes.k_CastExpr:
                 return this.Cast(instr);
             case EInstructionTypes.k_ComplexExpr:
@@ -518,6 +520,19 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    BitwiseExpr(instr: IBitwiseExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) } >
+                <Property name='operator' value={ instr.operator } />
+                <Property name='operands'>
+                    { this.Unknown(instr.left) }
+                    { this.Unknown(instr.right) }
+                </Property>
+            </Property>
+        );
+    }
+
+
     Cast(instr: ICastExprInstruction) {
         return (
             <Property { ...this.bindProps(instr) } >
@@ -563,26 +578,20 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     Int(instr: ILiteralInstruction<number>) {
         return (
-            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
-            // <Property { ...this.bindProps(instr) } >
-            //     <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
-            //     <Property name='type'>
-            //         { this.Unknown(instr.type) }
-            //     </Property>
-            // </Property>
+            <Property { ...this.bindProps(instr) } value={ String(instr) } />
         );
     }
 
     Float(instr: ILiteralInstruction<number>) {
         return (
-            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+            <Property { ...this.bindProps(instr) } value={ String(instr) } />
         );
     }
 
 
     Bool(instr: ILiteralInstruction<boolean>) {
         return (
-            <Property { ...this.bindProps(instr) } value={ String(instr.value) } />
+            <Property { ...this.bindProps(instr) } value={ String(instr) } />
         );
     }
 

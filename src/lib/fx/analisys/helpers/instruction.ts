@@ -12,6 +12,7 @@ export namespace instruction {
             case EInstructionTypes.k_ConstructorCallExpr:
             case EInstructionTypes.k_AssignmentExpr:
             case EInstructionTypes.k_ArithmeticExpr:
+            case EInstructionTypes.k_BitwiseExpr:
             case EInstructionTypes.k_InitExpr:
             case EInstructionTypes.k_IdExpr:
             case EInstructionTypes.k_FunctionCallExpr:

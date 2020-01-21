@@ -12,6 +12,7 @@ export enum EAnalyzerErrors {
     InvalidArithmeticOperation,
     InvalidArithmeticAssigmentOperation,
     InvalidAssigmentOperation,
+    InvalidBitwiseOperation,
     InvalidLeftHandSideInAssignment,
     InvalidRelationalOperation,
     InvalidLogicOperation,

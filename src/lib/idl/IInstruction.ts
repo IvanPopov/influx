@@ -30,6 +30,7 @@ export enum EInstructionTypes {
     k_StringExpr,
     k_ArithmeticExpr,
     k_AssignmentExpr,
+    k_BitwiseExpr,
     k_RelationalExpr,
     k_LogicalExpr,
     k_ConditionalExpr,
@@ -394,6 +395,14 @@ export interface ILogicalExprInstruction extends IExprInstruction {
     right: IExprInstruction;
 }
 
+export type IBitwiseOperator = ">>" | "<<" | "&" | "|" | "^";
+
+export interface IBitwiseExprInstruction extends IExprInstruction {
+    operator: IBitwiseOperator;
+    left: IExprInstruction;
+    right: IExprInstruction;
+}
+
 export type IUnaryOperator = "+" | "-" | "!" | "++" | "--";
 
 export interface IUnaryExprInstruction extends IExprInstruction {
@@ -418,10 +427,13 @@ export interface IConstructorCallInstruction extends IExprInstruction {
     readonly ctor: IVariableTypeInstruction;
 }
 
+export type IArithmeticOperator = '+' | '-' | '/' | '*' | '%';
+
+
 export interface IArithmeticExprInstruction extends IExprInstruction {
     readonly right: IExprInstruction;
     readonly left: IExprInstruction;
-    readonly operator: '+' | '-' | '/' | '*' | '%';
+    readonly operator: IArithmeticOperator;
 }
 
 export interface ICastExprInstruction extends IExprInstruction {

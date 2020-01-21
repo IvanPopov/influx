@@ -10,8 +10,6 @@ import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
 
 import { defaultSLParser } from './SLParser';
-import { Line } from 'three';
-
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
 const PREDEFINED_TYPES = [
@@ -881,6 +879,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                         if (nesting !== 0) {
                             break;
                         }
+                        /* falls through */
                     case 'endif':
                         if (nesting > 0) {
                             nesting --;
@@ -956,6 +955,10 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 export async function createSLASTDocument(textDocument: ITextDocument, flags?: number): Promise<ISLASTDocument> {
     const document = new SLASTDocument();
+    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
+    console.time(timeLabel);
     await document.parse(textDocument, flags);
+    console.timeEnd(timeLabel);
+
     return document;
 }

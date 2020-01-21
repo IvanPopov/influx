@@ -451,26 +451,33 @@ AddExpr : AddExpr '-' MulExpr
 AddExpr : AddExpr '+' ERROR
 AddExpr : AddExpr '-' ERROR
 
-RelationalExpr : AddExpr
-RelationalExpr : RelationalExpr '<' AddExpr
-RelationalExpr : RelationalExpr '>' AddExpr
-RelationalExpr : RelationalExpr T_OP_LE AddExpr
-RelationalExpr : RelationalExpr T_OP_GE AddExpr
+ShiftExpr : AddExpr
+ShiftExpr : ShiftExpr T_OP_SL AddExpr
+ShiftExpr : ShiftExpr T_OP_SR AddExpr
 
-RelationalExpr : ERROR '<' AddExpr
+ShiftExpr : ShiftExpr T_OP_SR ERROR
+ShiftExpr : ShiftExpr T_OP_SL ERROR
+
+RelationalExpr : ShiftExpr
+RelationalExpr : RelationalExpr '<' ShiftExpr
+RelationalExpr : RelationalExpr '>' ShiftExpr
+RelationalExpr : RelationalExpr T_OP_LE ShiftExpr
+RelationalExpr : RelationalExpr T_OP_GE ShiftExpr
+
+RelationalExpr : ERROR '<' ShiftExpr
 RelationalExpr : RelationalExpr '<' ERROR
 RelationalExpr : ERROR '<' ERROR
 
 RelationalExpr : RelationalExpr '>' ERROR
-RelationalExpr : ERROR '>' AddExpr
+RelationalExpr : ERROR '>' ShiftExpr
 RelationalExpr : ERROR '>' ERROR
 
 RelationalExpr : RelationalExpr T_OP_LE ERROR
-RelationalExpr : ERROR T_OP_LE AddExpr
+RelationalExpr : ERROR T_OP_LE ShiftExpr
 RelationalExpr : ERROR T_OP_LE ERROR
 
 RelationalExpr : RelationalExpr T_OP_GE ERROR
-RelationalExpr : ERROR T_OP_GE AddExpr
+RelationalExpr : ERROR T_OP_GE ShiftExpr
 RelationalExpr : ERROR T_OP_GE ERROR
 
 EqualityExpr : RelationalExpr
@@ -481,21 +488,36 @@ EqualityExpr : EqualityExpr T_OP_NE ERROR
 EqualityExpr : ERROR T_OP_NE ERROR
 
 AndExpr : EqualityExpr
-AndExpr : AndExpr T_OP_AND EqualityExpr
-AndExpr : ERROR T_OP_AND EqualityExpr
-AndExpr : AndExpr T_OP_AND ERROR
+AndExpr : AndExpr '&' EqualityExpr
+AndExpr : ERROR '&' EqualityExpr
+AndExpr : AndExpr '&' ERROR
 
-OrExpr : AndExpr
-OrExpr : OrExpr T_OP_OR AndExpr
-OrExpr : OrExpr T_OP_OR ERROR
-OrExpr : ERROR T_OP_OR AndExpr
+ExclusiveOrExpr : AndExpr
+ExclusiveOrExpr : ExclusiveOrExpr '^' AndExpr
+ExclusiveOrExpr : ERROR '^' AndExpr
+ExclusiveOrExpr : ExclusiveOrExpr '^' ERROR
 
-ConditionalExpr : OrExpr
-ConditionalExpr : OrExpr '?' AssignmentExpr ':' ConditionalExpr
+InclusiveOrExpr : ExclusiveOrExpr
+InclusiveOrExpr : InclusiveOrExpr '|' ExclusiveOrExpr
+InclusiveOrExpr : ERROR '|' ExclusiveOrExpr
+InclusiveOrExpr : InclusiveOrExpr '|' ERROR
+
+LogicalAndExpr : InclusiveOrExpr
+LogicalAndExpr : LogicalAndExpr T_OP_AND InclusiveOrExpr
+LogicalAndExpr : ERROR T_OP_AND InclusiveOrExpr
+LogicalAndExpr : LogicalAndExpr T_OP_AND ERROR
+
+LogicalOrExpr : LogicalAndExpr
+LogicalOrExpr : LogicalOrExpr T_OP_OR LogicalAndExpr
+LogicalOrExpr : ERROR T_OP_OR LogicalAndExpr
+LogicalOrExpr : LogicalOrExpr T_OP_OR ERROR
+
+ConditionalExpr : LogicalOrExpr
+ConditionalExpr : LogicalOrExpr '?' AssignmentExpr ':' ConditionalExpr
 ConditionalExpr : ERROR '?' AssignmentExpr ':' ConditionalExpr
-ConditionalExpr : OrExpr '?' ERROR ':' ConditionalExpr
-ConditionalExpr : OrExpr '?' AssignmentExpr ':' ERROR
-ConditionalExpr : OrExpr '?' ERROR ':' ERROR
+ConditionalExpr : LogicalOrExpr '?' ERROR ':' ConditionalExpr
+ConditionalExpr : LogicalOrExpr '?' AssignmentExpr ':' ERROR
+ConditionalExpr : LogicalOrExpr '?' ERROR ':' ERROR
 ConditionalExpr : ERROR '?' ERROR ':' ERROR
 ConditionalExpr : ERROR '?' ERROR ':' ConditionalExpr
 
@@ -654,3 +676,5 @@ T_OP_DE : "/="
 T_OP_RE : "%="
 T_OP_AE : "+="
 T_OP_SE : "-="
+T_OP_SR : ">>"
+T_OP_SL : "<<"

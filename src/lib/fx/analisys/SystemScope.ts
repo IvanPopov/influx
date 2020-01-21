@@ -666,8 +666,9 @@ function addSystemFunctions(): void {
     generateSystemFunction("inversesqrt", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("sqrt", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
 
-    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
-    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
+    // generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
+    // generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
+    /** @deprecated (SM4) */
     generateSystemFunction("not", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["bool2", "bool3", "bool4"]);
 
     generateSystemFunction("distance", "float", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
@@ -775,6 +776,19 @@ function addSystemFunctions(): void {
     // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
     // generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int", "int2", "int3", "int4", "uint", "uint2", "uint3", "uint4"]);
     // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
+
+    generateSystemFunction("f16tof32", "float", ["uint"], null);
+    generateSystemFunction("f32tof16", "uint", ["float"], null);
+    
+    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int", /*"uint",*/ "float", "bool"]);
+    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int2", "uint2", "float2", "bool2", "float2x2"]);
+    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int3", "uint3", "float3", "bool3", "float3x3"]);
+    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int4", "uint4", "float4", "bool4", "float4x4"]);
+
+    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int", /*"uint",*/ "float", "bool"]);
+    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int2", "uint2", "float2", "bool2", "float2x2"]);
+    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int3", "uint3", "float3", "bool3", "float3x3"]);
+    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int4", "uint4", "float4", "bool4", "float4x4"]);
 }
 
 

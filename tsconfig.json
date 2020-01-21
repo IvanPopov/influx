@@ -21,7 +21,7 @@
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": false,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": false,
     "jsx": "react",
     "noEmitOnError": true,
     "noImplicitReturns": true,

@@ -1,15 +1,14 @@
 import { isNull } from "@lib/common";
-import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction, IArithmeticOperator } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
 
-export type ArithmeticOperator = "+" | "-" | "/" | "*" | "%";
 
 export interface IArithmeticExprInstructionSettings extends IExprInstructionSettings {
     left: IExprInstruction;
     right: IExprInstruction;
-    operator: ArithmeticOperator;
+    operator: IArithmeticOperator;
 }
 
 
@@ -20,7 +19,7 @@ export interface IArithmeticExprInstructionSettings extends IExprInstructionSett
 export class ArithmeticExprInstruction extends ExprInstruction implements IArithmeticExprInstruction {
     protected _leftOperand: IExprInstruction;
     protected _rightOperand: IExprInstruction;
-    protected _operator: ArithmeticOperator;
+    protected _operator: IArithmeticOperator;
 
     constructor({ left, right, operator, ...settings }: IArithmeticExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ArithmeticExpr, ...settings });
@@ -38,7 +37,7 @@ export class ArithmeticExprInstruction extends ExprInstruction implements IArith
         return this._rightOperand;
     }
 
-    get operator(): ArithmeticOperator {
+    get operator(): IArithmeticOperator {
         return this._operator;
     }
     

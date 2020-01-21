@@ -1,4 +1,4 @@
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, ISamplerStateBlockInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IWhileStmtInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, ISamplerStateBlockInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IWhileStmtInstruction, IBitwiseExprInstruction } from "@lib/idl/IInstruction";
 
 // TODO: move it to helpers
 export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: IInstruction) => void) {
@@ -58,6 +58,10 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
         case EInstructionTypes.k_AssignmentExpr:
             visit((owner as IAssignmentExprInstruction).left);
             visit((owner as IAssignmentExprInstruction).right);
+            break;
+        case EInstructionTypes.k_BitwiseExpr:
+            visit((owner as IBitwiseExprInstruction).left);
+            visit((owner as IBitwiseExprInstruction).right);
             break;
         case EInstructionTypes.k_CastExpr:
             visit((owner as ICastExprInstruction).expr);

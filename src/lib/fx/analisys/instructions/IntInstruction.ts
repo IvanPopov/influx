@@ -5,34 +5,40 @@ import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 
 export interface IIntInstructionSettings extends IInstructionSettings {
-    value: number;
     signed: boolean;
+    base: number;
+    exp: number;
+    heximal?: boolean;
 }
 
 export class IntInstruction extends ExprInstruction implements ILiteralInstruction<number> {
-    readonly value: number;
     readonly signed: boolean;
-    /**
-     * EMPTY_OPERATOR EMPTY_ARGUMENTS
-     */
-    constructor({ value, signed, scope, ...settings }: IIntInstructionSettings) {
+    readonly base: number;
+    readonly exp: number;
+    readonly heximal: boolean;
+
+
+    constructor({ base, signed, exp, heximal = false, scope, ...settings }: IIntInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IntExpr, 
             // NOTE: type wraping is no really necessary, just for debug purposes 
             type: VariableTypeInstruction.wrapAsConst(signed ? T_INT : T_UINT, SCOPE), scope, ...settings });
 
-        this.value = value;
+        this.base = base;
+        this.exp = exp;
         this.signed = signed;
+        this.heximal = heximal;
 
         if (!signed) {
-            this.value >>>= 0;
+            this.base >>>= 0;
         }
     }
 
-    
+    get value(): number {
+        return (this.base * Math.pow(10, this.exp));
+    }
 
     toString(): string {
-        // return `${this.value}${this.signed? '' : 'u'}`;
-        return `${this.value}`;
+        return `${this.heximal ? '0x' : ''}${this.base.toString(this.heximal ? 16 : 10).toUpperCase()}${this.exp !== 0? `e${this.exp}`: ''}${this.signed? '': 'u'}`;
     }
 
     
