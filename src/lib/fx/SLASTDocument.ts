@@ -245,7 +245,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     protected pushLexer(textDocument: ITextDocument, source?: 'macro'): void {
-        const lexer = new Lexer({ engine: this.parser.lexerEngine });
+        const lexer = new Lexer({ engine: this.parser.lexerEngine, knownTypes: source === 'macro'? this.knownTypes: null });
         lexer.setup(textDocument);
         this.lexers.push({ lexer: this.lexer, source });
         this.lexer = lexer;
