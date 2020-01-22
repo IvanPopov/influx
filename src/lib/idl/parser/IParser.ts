@@ -44,6 +44,7 @@ export enum ETokenType {
     k_StringLiteral,
     k_PunctuatorLiteral,
     k_WhitespaceLiteral,
+    k_EscapeSequence,
     k_NewlineLiteral,
     k_IdentifierLiteral,
     k_KeywordLiteral,
@@ -152,6 +153,7 @@ export interface ILexerEngine {
     isWhiteSpaceStart(ch: string): boolean;
     isNewlineStart(ch: string): boolean;
     isIdentifierStart(ch: string): boolean;
+    isEscapeSequenceStart(ch: string): boolean;
 }
 
 

@@ -7,6 +7,8 @@ import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { createDefaultSLParser } from '@lib/fx/SLParser';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
+import { IRange } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
@@ -65,9 +67,11 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     const slastDocument = await createSLASTDocument({ source, uri }, flags);
 
+    const unreachableCode = slastDocument.unreachableCode.filter(loc => String(loc.start.file) === String(slastDocument.uri));
+
     // TODO: move it to language service
     cleanupMarkers(<IDispatch>dispatch, cleanupMarkersBatch(state, 'unreachable-code'));
-    emitMarkers(<IDispatch>dispatch, emitMarkersBatch(slastDocument.unreachableCode.map(loc => ({ loc, payload: {} })), 'unreachable-code', 'unreachable-code'));
+    emitMarkers(<IDispatch>dispatch, emitMarkersBatch(unreachableCode.map(loc => ({ loc, payload: {} })), 'unreachable-code', 'unreachable-code'));
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));

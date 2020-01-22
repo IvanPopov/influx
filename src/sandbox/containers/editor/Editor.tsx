@@ -414,7 +414,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
     // tslint:disable-next-line:member-ordering
     static asMarker(diag: Diagnostic): monaco.editor.IMarkerData {
-        const { code, message, range: { start, end }, severity } = diag;
+        const { code, message, range: { start, end }, severity, source } = diag;
 
         const severities = {
             [DiagnosticSeverity.Error]: monaco.MarkerSeverity.Error,

@@ -1,12 +1,12 @@
 import { createDefaultSLParser } from '@lib/fx/SLParser';
 import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { ILanguageService } from '@lib/idl/ILanguageService';
+import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IParserParams } from '@lib/idl/parser/IParser';
+import { IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
 import * as Comlink from 'comlink';
 import { CodeLens, Diagnostic, DiagnosticSeverity, Position, Range, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
-import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 
 /* tslint:disable:typedef */
 /* tslint:disable:no-empty */
@@ -35,11 +35,23 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
         range: Range.create(start.line, start.column, (end || start).line, (end || start).column),
         severity: severities[category],
         code,
-        message: content
+        message: content,
+        source: `${start.file}`
     };
 }
 
+function resolveLocation(src: IRange, slastDocument: ISLASTDocument): IRange {
+    if (!slastDocument) {
+        return null;
+    }
 
+    const { includes, uri } = slastDocument;
+    let dst = src;
+    while (dst && String(uri) !== String(dst.start.file)) {
+        dst = includes.get(String(dst.start.file));
+    }
+    return dst;
+}
 
 class LanguageServiceProvider {
     private service: ILanguageService;
@@ -68,6 +80,12 @@ class LanguageServiceProvider {
         const slastDocument = await this.service.$parseSLASTDocument(textDocument);
         const slDocument = await this.service.$parseSLDocument(slastDocument);
         this.documents.set(textDocument.uri, { textDocument, slastDocument, slDocument });
+
+        slDocument.diagnosticReport.messages.forEach(msg => {
+            const { start, end } = resolveLocation(msg, slastDocument);
+            msg.start = start;
+            msg.end = end;
+        });
 
         return slDocument.diagnosticReport.messages.map(asDiagnostic);
     }
@@ -104,8 +122,7 @@ class LanguageServiceProvider {
     //     return [];
     // }
 
-    private getDocument(textDocumentIdentifier: TextDocumentIdentifier):
-        { textDocument: TextDocument; slastDocument: ISLASTDocument; slDocument: ISLDocument } {
+    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): { textDocument: TextDocument; slastDocument: ISLASTDocument; slDocument: ISLDocument } {
         if (!this.documents.has(textDocumentIdentifier.uri)) {
             console.warn('could not find document', textDocumentIdentifier.uri);
             return { textDocument: null, slastDocument: null, slDocument: null };

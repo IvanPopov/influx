@@ -1,4 +1,4 @@
-import { IPosition } from "./parser/IParser";
+import { IPosition, IRange } from "./parser/IParser";
 
 export enum EDiagnosticCategory {
     k_Warning,
@@ -15,11 +15,12 @@ export interface IDiagnosticEntry<DESC_T> {
 
 type IDiagnosticDescription = string;
 
-export interface IDiagnosticMessage {
+export interface IDiagnosticMessage extends IRange {
     code: string;
     category: EDiagnosticCategory;
-    start?: IPosition;
-    end?: IPosition;
+    start: IPosition;
+    end: IPosition;
+    /** @deprecated */
     file?: string;
     content: string;
 }

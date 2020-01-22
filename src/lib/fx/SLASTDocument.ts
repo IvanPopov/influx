@@ -10,6 +10,7 @@ import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
 
 import { defaultSLParser } from './SLParser';
+
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
 const PREDEFINED_TYPES = [
@@ -471,12 +472,27 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
             lexer.setup({ source, uri, offset });
 
             let token = lexer.getNextToken();
-            if (token.name === 'T_PUNCTUATOR_40') { // '('
+            
+            const bOpenBracket = token.value === '(';
+            const bSameLine = token.loc.start.line === name.loc.end.line;
+            const bNoSpace = token.loc.start.column === name.loc.end.column;
+
+            // A bit tricky way to separate macro like:
+            // >  #define NAME(A, B)
+            // from the macro:
+            // >  #define NAME (A, B)
+            // and macro like:
+            // >  #define NAME\
+            // >              (A, B)
+
+            // note: only macro like 'NAME(a, b)' is a valid function-like macro (no spaces allowed)
+
+            if (bOpenBracket && bSameLine && bNoSpace) {
                 params = [];
                 bFunction = true;
                 let bExpectComma = false;
                 token = lexer.getNextToken();
-                while (token.name !== END_SYMBOL && token.name !== 'T_PUNCTUATOR_41') { // ')'
+                while (token.name !== END_SYMBOL && token.value !== ')') {
                     if (bExpectComma) {
                         if (token.value !== ',') {
                             this.emitMacroError(`invalid macro, comma expected`, token.loc);

@@ -1,10 +1,11 @@
+import { assert } from '@lib/common';
 import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
+import * as util from '@lib/parser/util';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { StringRef } from '@lib/util/StringRef';
-import * as util from '@lib/parser/util';
 
 import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
@@ -149,6 +150,11 @@ export class LexerEngine implements ILexerEngine {
     }
 
 
+    isEscapeSequenceStart(ch: string): boolean {
+        return ch === '\\';
+    }
+
+
     isIdentifierStart(ch: string): boolean {
         if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
             return true;
@@ -169,11 +175,6 @@ interface ILexerConfig {
     allowLineTerminators?: boolean;
 }
 
-interface IStartPosition {
-    startColumn: number;
-    startLine: number;
-    startIndex: number;
-}
 
 export class Lexer {
     index: number;
@@ -216,7 +217,7 @@ export class Lexer {
     }
 
 
-    private scanToken(allowLineTerminators: boolean = this.allowLineTerminators): IToken {
+    private scanToken(): IToken {
         let ch = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -240,7 +241,7 @@ export class Lexer {
             case ETokenType.k_MultilineCommentLiteral:
                 token = this.scanComment();
                 if (this.skipComments) {
-                    token = this.scanToken();
+                    return this.scanToken();
                 }
                 break;
             case ETokenType.k_StringLiteral:
@@ -252,15 +253,27 @@ export class Lexer {
             case ETokenType.k_IdentifierLiteral:
                 token = this.scanIdentifier();
                 break;
+            case ETokenType.k_EscapeSequence:
+                {
+                    let ch = this.readNextChar();
+                    if (ch === '\r') {
+                        ch = this.readNextChar();
+                    }
+                    assert(ch === '\n', 'unsupported escape sequence found');
+                    this.lineNumber++;
+                    this.columnNumber = 0;
+                    return this.scanToken();
+                }
+                break;
             case ETokenType.k_NewlineLiteral:
                 token = this.scanLineTerminators();
-                if (!allowLineTerminators) {
-                    token = this.scanToken();
+                if (!this.allowLineTerminators) {
+                    return this.scanToken();
                 }
                 break;
             case ETokenType.k_WhitespaceLiteral:
                 this.scanWhiteSpace();
-                token = this.scanToken();
+                return this.scanToken();
                 break;
             default:
                 {
@@ -288,20 +301,46 @@ export class Lexer {
 
     getNextToken(): IToken {
         const token = this.scanToken();
+        // FIXME: rework offset mechanics
         if (this.offset) {
             util.offset(token.loc, this.offset);
         }
         return token;
     }
 
-
     private scanThisLine(): IToken {
         let start = this.pos();
         let value = '';
-        let c = this.currentChar();
-        while (c && c !== '\n') {
-            value += c;
-            c = this.readNextChar();
+        let ch = this.currentChar();
+        let chPrev = '';
+        while (ch) {
+            if (ch === '\\') {
+                let chNext = this.readNextChar();
+                if (chNext === '\r') {
+                    chNext = this.readNextChar();
+                }
+                switch (chNext) {
+                    case '\n':
+                        ch = this.readNextChar();
+                        this.lineNumber++;
+                        this.columnNumber = 0;
+                        continue;
+                    case 'n':
+                        ch = '\n';
+                        break;
+                    case 't':
+                        ch = '\t';
+                        break;
+                    default:
+                        assert(false, 'unsupported character sequence found');
+                }
+            } else if (ch === '\n') {
+                break;
+            }
+            
+            value += ch;
+            chPrev = ch;
+            ch = this.readNextChar();
         }
 
         return {
@@ -353,6 +392,9 @@ export class Lexer {
         if (this.isNewlineStart()) {
             return ETokenType.k_NewlineLiteral;
         }
+        if (this.isEscapeSequenceStart()) {
+            return ETokenType.k_EscapeSequence;
+        }
         if (this.isStringStart()) {
             return ETokenType.k_StringLiteral;
         }
@@ -397,6 +439,11 @@ export class Lexer {
 
     private isNewlineStart(): boolean {
         return this.engine.isNewlineStart(this.currentChar());
+    }
+
+
+    private isEscapeSequenceStart(): boolean {
+        return this.engine.isEscapeSequenceStart(this.currentChar());
     }
 
 
