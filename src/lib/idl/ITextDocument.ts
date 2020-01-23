@@ -1,7 +1,9 @@
-import { IPosition } from "./parser/IParser";
+import { IPosition, IFile } from "./parser/IParser";
 
 export interface ITextDocument {
-    uri: string;
+    uri: IFile;
     source: string;
     offset?: IPosition;
 }
+
+

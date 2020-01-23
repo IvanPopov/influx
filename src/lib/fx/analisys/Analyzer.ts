@@ -974,8 +974,8 @@ export class Analyzer {
 
     protected analyzeUsage(sourceNode: IParseNode): IVariableUsage {
         sourceNode = sourceNode.children[0];
-        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout'];
-        assert(supportedUsages.indexOf(sourceNode.value) !== -1);
+        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout', 'static'];
+        assert(supportedUsages.indexOf(sourceNode.value) !== -1, sourceNode.value);
         return <IVariableUsage>sourceNode.value;
     }
 

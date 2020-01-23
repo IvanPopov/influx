@@ -16,6 +16,7 @@ import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox
 import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
+import { createTextDocument } from '@lib/fx/TextDocument';
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -65,7 +66,8 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
         return;
     }
 
-    const slastDocument = await createSLASTDocument({ source, uri }, flags);
+    const textDocument = createTextDocument(uri, source);
+    const slastDocument = await createSLASTDocument(textDocument, flags);
 
     const unreachableCode = slastDocument.unreachableCode.filter(loc => String(loc.start.file) === String(slastDocument.uri));
 

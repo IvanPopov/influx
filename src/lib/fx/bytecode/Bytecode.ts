@@ -16,6 +16,7 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+import { createTextDocument } from "../TextDocument";
 
 export const CBUFFER0_REGISTER = 0;
 export const INPUT0_REGISTER = 1;
@@ -1571,7 +1572,8 @@ export async function translateExpression(expr: string, document?: ISLDocument):
     const uri = `://expression`;
     const anonymousFuncName = `anonymous`;
     const source = `auto ${anonymousFuncName}() { return (${expr}); }`;
-    const documentEx = await createFXSLDocument({ source, uri }, undefined, document);
+    const textDocument = createTextDocument(uri, source);
+    const documentEx = await createFXSLDocument(textDocument, undefined, document);
     if (!documentEx.diagnosticReport.errors) {
         return translate(documentEx.root.scope.findFunction(anonymousFuncName, null));
     }

@@ -8,6 +8,7 @@ import { FXCodeLenses } from './services/fx/codeLenses';
 import { SLSignatureHelp } from './services/signatureHelp';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
+import { createTextDocument } from '@lib/fx/TextDocument';
 
 // import { SLValidation } from './services/validation';
 
@@ -28,7 +29,7 @@ export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
         async $parseSLASTDocument(textDocument: TextDocument): Promise<ISLASTDocument> {
             const uri = textDocument.uri;
             const source = textDocument.getText();
-            const slastDocument = await createSLASTDocument({ uri, source }, flags);
+            const slastDocument = await createSLASTDocument(createTextDocument(uri, source), flags);
             return slastDocument;
         },
 
@@ -40,7 +41,7 @@ export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
         async parseDocument(textDocument: TextDocument): Promise<ISLDocument> { 
             const uri = textDocument.uri;
             const source = textDocument.getText();
-            return await createFXSLDocument({ uri, source }, flags);
+            return await createFXSLDocument(createTextDocument(uri, source), flags);
         },
 
         doResolve(item: CompletionItem): Thenable<CompletionItem> { return null; },

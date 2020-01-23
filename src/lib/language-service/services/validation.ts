@@ -3,6 +3,7 @@ import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { Diagnostic, DiagnosticSeverity, Range, TextDocument } from "vscode-languageserver-types";
+import { createTextDocument } from '@lib/fx/TextDocument';
 
 function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     const { code, content, start, end, category } = diagEntry;
@@ -29,7 +30,7 @@ export class SLValidation {
         const uri = textDocument.uri;
         const source = textDocument.getText();
 
-        const fxslDocument = await createFXSLDocument({ uri, source });
+        const fxslDocument = await createFXSLDocument(createTextDocument(uri, source));
         return fxslDocument.diagnosticReport.messages.map(asDiagnostic);
     }
 }

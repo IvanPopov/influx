@@ -150,8 +150,10 @@ export class ASTDocument implements IASTDocument {
     protected ruleFunctions: Map<string, IRuleFunction>;
 
     protected diag: ParsingDiagnostics;
+
     protected tree: IParseTree;
     protected stack: number[];
+    
     protected lexer: Lexer;
     protected token: IToken;
 
@@ -174,7 +176,7 @@ export class ASTDocument implements IASTDocument {
 
 
     get uri(): string {
-        return this.lexer.uri.toString();
+        return this.lexer.document.uri.toString();
     }
 
 

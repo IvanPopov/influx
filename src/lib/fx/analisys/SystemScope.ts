@@ -197,6 +197,32 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
 }
 
 
+class Texture2DTemplate extends TypeTemplate {
+    constructor() {
+        super('Texture2D', scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+
+        if (!args[0].isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }
+}
+
 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
     for (let suffix in suffixMap) {
@@ -835,6 +861,8 @@ function initSystemTypes(): void {
     scope.addTypeTemplate(new RWBufferTemplate);
     scope.addTypeTemplate(new RWStructuredBufferTemplate);
     scope.addTypeTemplate(new AppendStructuredBufferTemplate);
+
+    scope.addTypeTemplate(new Texture2DTemplate);
 }
 
 

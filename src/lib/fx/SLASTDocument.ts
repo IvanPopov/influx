@@ -2,14 +2,15 @@ import { assert, isDef, isNull, isString } from '@lib/common';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { EOperationType, EParserCode, ETokenType, IASTConfig, IParseNode, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
+import { EOperationType, EParserCode, ETokenType, IASTConfig, IParseNode, IRange, IToken } from '@lib/idl/parser/IParser';
 import { ASTDocument, EParsingErrors, EParsingWarnings } from "@lib/parser/ASTDocument";
 import { Lexer } from '@lib/parser/Lexer';
 import { END_SYMBOL, T_NON_TYPE_ID, T_TYPE_ID } from '@lib/parser/symbols';
 import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
-
 import { defaultSLParser } from './SLParser';
+import { createTextDocument } from './TextDocument';
+
 
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
@@ -68,7 +69,7 @@ function asTextDocument(macro: IMacro): ITextDocument {
     const source = macro.text.value;
     const uri = String(macro.text.loc.start.file);
     const offset = macro.text.loc.start;
-    return { source, uri, offset };
+    return createTextDocument(uri, source, offset);
 }
 
 
@@ -161,7 +162,7 @@ class Macros {
 
 
 export class SLASTDocument extends ASTDocument implements ISLASTDocument {
-    protected lexers: { lexer: Lexer; source?: 'macro' }[];
+    protected lexers: { lexer: Lexer; source?: 'macro', tokens: IToken[] }[];
     // cached tokens
     protected tokens: IToken[];
     
@@ -184,7 +185,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
     async parse(textDocument: ITextDocument, flags?: number): Promise<EParserCode> {
-        this.includeList.set(textDocument.uri, null);
+        this.includeList.set(`${textDocument.uri}`, null);
         return await super.parse(textDocument, flags);
     }
 
@@ -241,31 +242,60 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     protected popToken(): IToken {
-        return this.tokens.shift();
+        return this.tokens.shift() || null;
     }
 
 
     protected pushLexer(textDocument: ITextDocument, source?: 'macro'): void {
         const lexer = new Lexer({ engine: this.parser.lexerEngine, knownTypes: source === 'macro'? this.knownTypes: null });
+        const tokens = this.tokens;
+
         lexer.setup(textDocument);
-        this.lexers.push({ lexer: this.lexer, source });
+        this.lexers.push({ lexer: this.lexer, tokens, source });
         this.lexer = lexer;
+        this.tokens = [];
     }
 
 
     protected popLexer(): void {
-        const { lexer, source } = this.lexers.pop();
+        const { lexer, source, tokens } = this.lexers.pop();
 
         // remove the macro if its source has ended
         if (source === 'macro') {
             this.macros.pop();
         }
 
+        // check that lexer state is correct before replacment
+        // (no one did inconsistent push/pop before
+        this.lexer.validate();
+
         this.lexer = lexer;
+        this.tokens = tokens;
     }
 
+    
 
-    protected examineMacro(token: IToken): IToken {
+    protected examMacro(token: IToken): IToken {
+        const bMacro = this.lexers.length && this.lexers[this.lexers.length - 1].source === 'macro';
+
+        if (bMacro) {
+            const nextToken = this.readToken(false);
+            if (nextToken.name === 'T_MACRO_CONCAT') {
+                const left = token;
+                const right = this.readToken();
+                // TODO: process with lexer
+                return <IToken>{
+                    type: ETokenType.k_IdentifierLiteral,
+                    name: T_NON_TYPE_ID, // use TYPE_ID too
+                    value: `${left.value}${right.value}`,
+                    index: -1,
+                    loc: util.commonRange(left.loc, right.loc)
+                };
+            } else {
+                this.pushToken(nextToken);
+            }
+        }
+
         if (token.name === T_NON_TYPE_ID || token.name === T_TYPE_ID) {
             const macros = this.macros;
             const macro = macros.get(token.value);
@@ -274,6 +304,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                 macros.push();
 
                 if (macro.bFunction) {
+
                     const nextToken = this.readToken();
                     if (nextToken.value !== '(') {
                         this.emitMacroWarning(`for macro '${macro.name} function call signature is expected'`, token.loc);
@@ -354,21 +385,18 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                 return this.readToken();
             }
         }
-
+        
         return token;
     }
 
 
     protected readToken(allowMacro: boolean = true): IToken {
-        if (this.tokens.length) {
-            return this.popToken();
-        }
-
-        const token = super.readToken();
+        const token = this.popToken() || super.readToken();
+        
         if (token.value === END_SYMBOL) {
             if (this.lexers.length) {
                 this.popLexer()
-                return this.readToken();
+                return this.readToken(allowMacro);
             }
     
             if (!this.macroState.isEmpty()) {
@@ -380,9 +408,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         }
 
         if (allowMacro) {
-            return this.examineMacro(token);
+            return this.examMacro(token);
         }
-
         return token;
     }
 
@@ -410,6 +437,10 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         assert(args.length === 1 && args[0].name === T_MACRO_TEXT);
         const [ macroText ] = args;
 
+        if (DEBUG_MACRO) {
+            console.log(`#${macroType.value} ${macroText.value}`);
+        }
+
         switch (macroType.value) {
             case 'define': return this.processDefineMacro(macroType, macroText);
             case 'ifdef': return this.processIfdefMacro(macroType, macroText);
@@ -430,10 +461,10 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     
     protected processDefineMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const lexer = new Lexer({ engine: this.parser.lexerEngine });
-        const uri = `${macroText.loc.start.file}`;
+        const uri = macroText.loc.start.file;
         const source = macroText.value;
         const offset = macroText.loc.start;
-        lexer.setup({ source, uri, offset })
+        lexer.setup(createTextDocument(uri, source, offset));
 
         const name = lexer.getNextToken();
         const text = lexer.getNextLine();
@@ -455,11 +486,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         let bFunction = false;
         let params: string[] = null;
 
-        if (/^\s*$/.test(text.value)) {
-            text = null;
-        }
-
-        if (text) {
+        if (!/^\s*$/.test(text.value)) {
 
             //
             // process macro params
@@ -469,7 +496,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
             const uri = this.uri;
             const source = text.value;
             const offset = text.loc.start;
-            lexer.setup({ source, uri, offset });
+            lexer.setup(createTextDocument(uri, source, offset));
 
             let token = lexer.getNextToken();
             
@@ -517,6 +544,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
                 text = lexer.getNextLine();
             }
+        } else {
+            text.value = '';
         }
 
         return { name: name.value, text, bFunction, params };
@@ -620,8 +649,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         const lexer = new Lexer({ engine: this.parser.lexerEngine });
         const source = textToken.value;
         const offset = textToken.loc.start;
-        const uri = `${textToken.loc.start.file}`;
-        lexer.setup({ source, uri, offset });
+        const uri = textToken.loc.start.file;
+        lexer.setup(createTextDocument(uri, source, offset));
 
         const asRaw = (token: IToken): number => asMacroNative(token, ({ value }) => macros.has(value) ? 1 : 0);
         const asFn = asMacroFunc;
@@ -651,8 +680,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         const lexer = new Lexer({ engine: this.parser.lexerEngine });
         const source = textToken.value;
         const offset = textToken.loc.start;
-        const uri = `${textToken.loc.start.file}`;
-        lexer.setup({ source, uri, offset });
+        const uri = textToken.loc.start.file;
+        lexer.setup(createTextDocument(uri, source, offset));
 
         const macros = this.macros;
 
@@ -875,7 +904,6 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     protected skipUnreachableCode(): void {
-        
         let token = this.readToken(false);
         let begin = token.loc.start;
         
@@ -904,9 +932,13 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
                         const block = { start: { ...begin, column: 0 }, end: { ...macro.loc.end, column: 0 } };
                         if (block.end.line - block.start.line > 0) {
+                            if (DEBUG_MACRO) {
+                                console.log(`unreachable code: [${block.start.line}, ${block.end.line})`);
+                            }
                             this.unreachableCodeList.push(block);
                         }
                         
+                        // push back tokens in order to enable the parser to process 'endif' rule 
                         this.pushToken(token, macro);
                         return;
                     case 'error':
@@ -951,12 +983,13 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
             // Replace lexer with new one 
             //
 
-            this.lexers.push({ lexer: this.lexer });
+            this.lexers.push({ lexer: this.lexer, tokens: this.tokens });
             this.lexer = new Lexer({
                 engine: this.parser.lexerEngine,
                 knownTypes: this.knownTypes
             });
-            this.lexer.setup({ source, uri });
+            this.tokens = [];
+            this.lexer.setup(createTextDocument(uri, source));
 
             return EOperationType.k_Ok;
         } catch (e) {

@@ -21,6 +21,7 @@ import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
 import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { createTextDocument } from '@lib/fx/TextDocument';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -248,7 +249,8 @@ class App extends React.Component<IAppProps> {
         // timeout for playing animation in UI
         setTimeout(async () => {
             const { content: source, uri } = getFileState(this.props);
-            const autotests = await Autotests.parse({ source, uri });
+            const textDocument = createTextDocument(uri, source);
+            const autotests = await Autotests.parse(textDocument);
 
             await Autotests.run(autotests);
 

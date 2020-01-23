@@ -175,20 +175,43 @@ interface ILexerConfig {
     allowLineTerminators?: boolean;
 }
 
-
-export class Lexer {
+interface ICursor {
     index: number;
     lineNumber: number;
     columnNumber: number;
-    uri: IFile;
-    source: string;
-    offset: IPosition;
+}
 
-    engine: LexerEngine;
-    diagnostics: LexerDiagnostics;
-    knownTypes: Set<string>;
-    skipComments: boolean;
-    allowLineTerminators: boolean;
+
+export class Lexer {
+    // position
+    protected cursors: ICursor[];
+
+    protected index: number;
+    protected lineNumber: number;
+    protected columnNumber: number;
+    
+    //
+    // text document
+    //
+    
+    document: ITextDocument;
+
+    //
+    // Setup
+    //
+
+    readonly engine: LexerEngine;
+    readonly diagnostics: LexerDiagnostics;
+    readonly knownTypes: Set<string>;
+
+    //
+    // Config
+    //
+
+    readonly config: {
+        skipComments: boolean;
+        allowLineTerminators: boolean;
+    };
 
     constructor({ engine = new LexerEngine,
         knownTypes = new Set(),
@@ -198,17 +221,31 @@ export class Lexer {
         this.diagnostics = new LexerDiagnostics;
         this.knownTypes = knownTypes;
         this.engine = engine;
-        this.skipComments = skipComments;
-        this.allowLineTerminators = allowLineTerminators;
+        this.config = { skipComments, allowLineTerminators };
+    }
+
+    validate(): void {
+        assert(!this.cursors || this.cursors.length === 0);
+    }
+
+    push(): void {
+        this.cursors = this.cursors || [];
+        const { index, lineNumber, columnNumber } = this;
+        this.cursors.push({ index, lineNumber, columnNumber });
+    }
+
+    pop(doRestore: boolean = true): void {
+        const { index, lineNumber, columnNumber } = this.cursors.pop();
+        this.index = index;
+        this.lineNumber = lineNumber;
+        this.columnNumber = columnNumber;
     }
 
     setup(textDocument: ITextDocument) {
         this.columnNumber = 0;
         this.lineNumber = 0;
         this.index = 0;
-        this.uri = StringRef.make(textDocument.uri);
-        this.source = textDocument.source;
-        this.offset = textDocument.offset || null;
+        this.document = textDocument;
     }
 
 
@@ -217,7 +254,7 @@ export class Lexer {
     }
 
 
-    private scanToken(): IToken {
+    protected scanToken(): IToken {
         let ch = this.currentChar();
         if (!ch) {
             let pos = this.pos();
@@ -240,7 +277,7 @@ export class Lexer {
             case ETokenType.k_SinglelineCommentLiteral:
             case ETokenType.k_MultilineCommentLiteral:
                 token = this.scanComment();
-                if (this.skipComments) {
+                if (this.config.skipComments) {
                     return this.scanToken();
                 }
                 break;
@@ -262,12 +299,13 @@ export class Lexer {
                     assert(ch === '\n', 'unsupported escape sequence found');
                     this.lineNumber++;
                     this.columnNumber = 0;
+                    this.readNextChar();
                     return this.scanToken();
                 }
                 break;
             case ETokenType.k_NewlineLiteral:
                 token = this.scanLineTerminators();
-                if (!this.allowLineTerminators) {
+                if (!this.config.allowLineTerminators) {
                     return this.scanToken();
                 }
                 break;
@@ -280,7 +318,7 @@ export class Lexer {
                     // TODO: move this code to scanInvalid()
                     const start = this.pos();
                     let value = '';
-                    while (this.identityTokenType() === ETokenType.k_Unknown && this.index < this.source.length) {
+                    while (this.identityTokenType() === ETokenType.k_Unknown && this.index < this.document.source.length) {
                         value += this.currentChar();
                         this.readNextChar();
                     }
@@ -301,14 +339,11 @@ export class Lexer {
 
     getNextToken(): IToken {
         const token = this.scanToken();
-        // FIXME: rework offset mechanics
-        if (this.offset) {
-            util.offset(token.loc, this.offset);
-        }
+        util.offset(token.loc, this.document.offset);
         return token;
     }
 
-    private scanThisLine(): IToken {
+    protected scanThisLine(): IToken {
         let start = this.pos();
         let value = '';
         let ch = this.currentChar();
@@ -354,22 +389,20 @@ export class Lexer {
 
     getNextLine(): IToken {
         const token = this.scanThisLine();
-        if (this.offset) {
-            util.offset(token.loc, this.offset);
-        }
+        util.offset(token.loc, this.document.offset);
         return token;
     }
 
 
     /** @deprecated */
     getLocation() {
-        return { line: this.lineNumber, file: this.uri };
+        return { line: this.lineNumber, file: this.document.uri };
     }
 
 
-    private pos(n: number = 0): IPosition {
+    protected pos(n: number = 0): IPosition {
         return {
-            file: this.uri,
+            file: this.document.uri,
             line: this.lineNumber,
             column: this.columnNumber + n,
             offset: this.index + n
@@ -377,12 +410,12 @@ export class Lexer {
     }
 
 
-    private emitError(code: number, token: IToken): void {
-        this.diagnostics.error(code, { file: `${this.uri}`, token });
+    protected emitError(code: number, token: IToken): void {
+        this.diagnostics.error(code, { file: `${this.document.uri}`, token });
     }
 
 
-    private identityTokenType(): ETokenType {
+    protected identityTokenType(): ETokenType {
         if (this.isIdentifierStart()) {
             return ETokenType.k_IdentifierLiteral;
         }
@@ -412,66 +445,66 @@ export class Lexer {
     }
 
 
-    private isNumberStart(): boolean {
+    protected isNumberStart(): boolean {
         return this.engine.isNumberStart(this.currentChar(), this.nextChar());
     }
 
 
-    private isCommentStart(): boolean {
+    protected isCommentStart(): boolean {
         return this.engine.isCommentStart(this.currentChar(), this.nextChar())
     }
 
 
-    private isStringStart(): boolean {
+    protected isStringStart(): boolean {
         return this.engine.isStringStart(this.currentChar());
     }
 
 
-    private isPunctuatorStart(): boolean {
+    protected isPunctuatorStart(): boolean {
         return this.engine.isPunctuatorStart(this.currentChar());
     }
 
 
-    private isWhiteSpaceStart(): boolean {
+    protected isWhiteSpaceStart(): boolean {
         return this.engine.isWhiteSpaceStart(this.currentChar());
     }
 
 
-    private isNewlineStart(): boolean {
+    protected isNewlineStart(): boolean {
         return this.engine.isNewlineStart(this.currentChar());
     }
 
 
-    private isEscapeSequenceStart(): boolean {
+    protected isEscapeSequenceStart(): boolean {
         return this.engine.isEscapeSequenceStart(this.currentChar());
     }
 
 
-    private isIdentifierStart(): boolean {
+    protected isIdentifierStart(): boolean {
         return this.engine.isIdentifierStart(this.currentChar());
     }
 
 
 
 
-    private nextChar(): string {
-        return this.source[this.index + 1];
+    protected nextChar(): string {
+        return this.document.source[this.index + 1];
     }
 
 
-    private currentChar(): string {
-        return this.source[<number>this.index];
+    protected currentChar(): string {
+        return this.document.source[<number>this.index];
     }
 
 
-    private readNextChar(): string {
+    protected readNextChar(): string {
         this.index++;
         this.columnNumber++;
-        return this.source[<number>this.index];
+        return this.document.source[<number>this.index];
     }
 
 
-    private scanString(): IToken {
+    protected scanString(): IToken {
         let chFirst = this.currentChar();
         let value = chFirst;
         let ch = "";
@@ -526,7 +559,7 @@ export class Lexer {
     }
 
 
-    private scanPunctuator(): IToken {
+    protected scanPunctuator(): IToken {
         let value = this.currentChar();
         let start = this.pos();
         let ch: string;
@@ -555,7 +588,7 @@ export class Lexer {
     }
 
 
-    private scanNumber(): IToken {
+    protected scanNumber(): IToken {
         let ch = this.currentChar();
         let value = "";
         let isFloat = false;
@@ -664,7 +697,7 @@ export class Lexer {
     }
 
 
-    private scanIdentifier(): IToken {
+    protected scanIdentifier(): IToken {
         let ch = this.currentChar();
         let value = ch;
         let start = this.pos();
@@ -729,7 +762,7 @@ export class Lexer {
     }
 
 
-    private scanLineTerminators(): IToken {
+    protected scanLineTerminators(): IToken {
         let ch = this.currentChar();
         let value = '';
         let start = this.pos();
@@ -762,7 +795,7 @@ export class Lexer {
             }
         };
     }
-    private scanWhiteSpace(): boolean {
+    protected scanWhiteSpace(): boolean {
         let ch = this.currentChar();
 
         while (true) {
@@ -783,7 +816,7 @@ export class Lexer {
     }
 
 
-    private scanComment(): IToken {
+    protected scanComment(): IToken {
         let value = this.currentChar();
         let ch = this.readNextChar();
         let start = this.pos();

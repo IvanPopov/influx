@@ -129,6 +129,7 @@ ObjectType : T_KW_STATEBLOCK
 ObjectType : T_KW_RWBUFFER '<' Type '>'
 ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
+ObjectType : T_KW_TEXTURE2D '<' Type '>'
 
 
 # struct Name
@@ -605,16 +606,18 @@ T_KW_DOUBLE : "double"
 T_KW_VECTOR : "vector"
 T_KW_MATRIX : "matrix"
 T_KW_STRING : "string"
-T_KW_TEXTURE : "texture"
-T_KW_TEXTURE1D : "texture1D"
-T_KW_TEXTURE2D : "texture2D"
-T_KW_TEXTURE3D : "texture3D"
-T_KW_TEXTURECUBE : "texturecube"
-T_KW_SAMPLER : "sampler"
-T_KW_SAMPLER1D : "sampler1D"
-T_KW_SAMPLER2D : "sampler2D"
-T_KW_SAMPLER3D : "sampler3D"
-T_KW_SAMPLERCUBE : "samplerCUBE"
+T_KW_TEXTURE : "Texture"
+T_KW_TEXTURE1D : "Texture1D"
+T_KW_TEXTURE2D : "Texture2D"
+T_KW_TEXTURE3D : "Texture3D"
+T_KW_TEXTURECUBE : "TextureCube"
+
+# T_KW_SAMPLER : "sampler"
+# T_KW_SAMPLER1D : "sampler1D"
+# T_KW_SAMPLER2D : "sampler2D"
+# T_KW_SAMPLER3D : "sampler3D"
+# T_KW_SAMPLERCUBE : "samplerCUBE"
+
 T_KW_RWBUFFER : "RWBuffer"
 T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_APPENDSTRUCTUREDBUFFER : "AppendStructuredBuffer"
@@ -678,3 +681,8 @@ T_OP_AE : "+="
 T_OP_SE : "-="
 T_OP_SR : ">>"
 T_OP_SL : "<<"
+
+#if PREPROCESSOR
+# FIXME: remove this tokens from grammar
+T_MACRO_CONCAT : "##"
+#endif

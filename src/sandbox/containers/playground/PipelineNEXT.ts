@@ -12,6 +12,7 @@ import * as THREE from 'three';
 
 import { IPass } from './IEmitter';
 import { Diagnostics } from '@lib/util/Diagnostics';
+import { createTextDocument } from '@lib/fx/TextDocument';
 
 // TODO: use CDL instead of reflection
 
@@ -145,7 +146,7 @@ interface IPassEx extends IPass {
 async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
-    const textDocument = { uri: '://raw', source: emitter.toString() };
+    const textDocument = createTextDocument('://raw', emitter.toString());
     const slDocument = await createSLDocument(textDocument);
 
     if (slDocument.diagnosticReport.errors) {

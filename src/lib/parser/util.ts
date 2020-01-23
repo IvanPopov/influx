@@ -31,7 +31,7 @@ export function extendRange(parent: IRange, child: IRange): IRange {
     if (String(child.start.file) !== String(parent.start.file)) {
         return parent;
     }
-    
+
     if (child.start.line < parent.start.line) {
         parent.start = { ...child.start };
     } else if (child.start.line === parent.start.line) {
@@ -52,7 +52,7 @@ export function commonRange(...rangeList: IRange[]): IRange {
     const MIN_I32 = Number.MIN_SAFE_INTEGER;
 
     const file = rangeList[0].start.file;
-    
+
     let start: IPosition = { offset: MAX_I32, column: MAX_I32, line: MAX_I32, file };
     let end: IPosition = { offset: MIN_I32, column: MIN_I32, line: MIN_I32, file };
 
@@ -63,19 +63,21 @@ export function commonRange(...rangeList: IRange[]): IRange {
 }
 
 export function offset(source: IRange, offset: IPosition): IRange {
-    // TODO: check that URIs the same
-    const { start, end } = source;
+    if (offset) {
+        // TODO: check that URIs the same
+        const { start, end } = source;
 
-    if (start.line === 0) {
-        start.column += offset.column;
+        if (start.line === 0) {
+            start.column += offset.column;
+        }
+
+        if (end.line === 0) {
+            end.column += offset.column;
+        }
+
+        start.line += offset.line;
+        end.line += offset.line;
     }
-
-    if (end.line === 0) {
-        end.column += offset.column;
-    }
-
-    start.line += offset.line;
-    end.line += offset.line;
 
     return source;
 }
