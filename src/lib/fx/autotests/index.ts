@@ -23,7 +23,7 @@ function nativeFromString(str) {
 
 function exractComments(document: ITextDocument): IToken[] {
     const lexer = new Lexer({ skipComments: false });
-    lexer.setup(document);
+    lexer.setTextDocument(document);
 
     let comments = [];
     let token: IToken;

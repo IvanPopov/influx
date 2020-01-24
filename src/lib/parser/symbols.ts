@@ -20,5 +20,5 @@ export const T_TYPE_ID                  = 'T_TYPE_ID';           // lexer
 export const T_NON_TYPE_ID              = 'T_NON_TYPE_ID';       // lexer
 export const T_LINE_TERMINATOR          = 'T_LINE_TERMINATOR';   // lexer
 
-export const T_MACRO_CONCAT             = 'T_MACRO_CONCAT';      // 
-export const T_MACRO_TEXT               = 'T_MACRO_TEXT';        //
+export const T_MACRO                    = 'T_MACRO';             // lexer '#define', '#ifdef' etc.
+export const T_MACRO_CONCAT             = 'T_MACRO_CONCAT';      // lexer '##'

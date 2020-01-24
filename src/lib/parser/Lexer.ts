@@ -2,12 +2,12 @@ import { assert } from '@lib/common';
 import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
+import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken, ILexerConfig, ILexer } from '@lib/idl/parser/IParser';
 import * as util from '@lib/parser/util';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { StringRef } from '@lib/util/StringRef';
 
-import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
+import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN, T_MACRO, T_MACRO_CONCAT } from './symbols';
 
 interface ILexerDiagDesc {
     file: string;
@@ -168,29 +168,18 @@ export class LexerEngine implements ILexerEngine {
     }
 }
 
-interface ILexerConfig {
-    engine?: LexerEngine;
-    knownTypes?: Set<string>;
-    skipComments?: boolean;
-    allowLineTerminators?: boolean;
-}
-
-interface ICursor {
-    index: number;
-    lineNumber: number;
-    columnNumber: number;
-}
 
 
-export class Lexer {
+
+export class Lexer implements ILexer {
     protected index: number;
     protected lineNumber: number;
     protected columnNumber: number;
-    
+
     //
     // text document
     //
-    
+
     /* readonly */ document: ITextDocument;
 
     //
@@ -210,7 +199,8 @@ export class Lexer {
         allowLineTerminators: boolean;
     };
 
-    constructor({ engine = new LexerEngine,
+    constructor({ 
+        engine = new LexerEngine,
         knownTypes = new Set(),
         skipComments = true,
         allowLineTerminators = false,
@@ -222,22 +212,25 @@ export class Lexer {
     }
 
 
-   getPosition(): ICursor {
-       const { index, lineNumber, columnNumber } = this;
-       return { index, lineNumber, columnNumber };
-   }
+    getPosition(): IPosition {
+        return this.pos();
+    }
 
-   setPosition(cursor: ICursor): void {
-       this.index = cursor.index;
-       this.lineNumber = cursor.lineNumber;
-       this.columnNumber = cursor.columnNumber; 
-   }
 
-    setup(textDocument: ITextDocument) {
+    setPosition(pos: IPosition): void {
+        assert(String(this.document.uri) === String(pos.file));
+        this.index = pos.offset;
+        this.lineNumber = pos.line;
+        this.columnNumber = pos.column;
+    }
+
+    
+    setTextDocument(textDocument: ITextDocument): ILexer {
         this.columnNumber = 0;
         this.lineNumber = 0;
         this.index = 0;
         this.document = textDocument;
+        return this;
     }
 
 
@@ -245,11 +238,25 @@ export class Lexer {
         return this.diagnostics.resolve();
     }
 
+    
+    getNextToken(): IToken {
+        const token = this.scanToken();
+        util.offset(token.loc, this.document.offset);
+        return token;
+    }
+
+
+    getNextLine(): IToken {
+        const token = this.scanThisLine();
+        util.offset(token.loc, this.document.offset);
+        return token;
+    }
+
 
     protected scanToken(): IToken {
-        let ch = this.currentChar();
+        const ch = this.currentChar();
         if (!ch) {
-            let pos = this.pos();
+            const pos = this.pos();
             return <IToken>{
                 index: this.index,
                 name: END_SYMBOL,
@@ -260,80 +267,41 @@ export class Lexer {
                 }
             };
         }
-        let tokenType = this.identityTokenType();
-        let token: IToken = null;
-        switch (tokenType) {
+
+        switch (this.identityTokenType()) {
             case ETokenType.k_NumericLiteral:
-                token = this.scanNumber();
-                break;
+                return this.scanNumber();
             case ETokenType.k_SinglelineCommentLiteral:
             case ETokenType.k_MultilineCommentLiteral:
-                token = this.scanComment();
                 if (this.config.skipComments) {
+                    this.scanComment();
                     return this.scanToken();
                 }
-                break;
+                return this.scanComment();
             case ETokenType.k_StringLiteral:
-                token = this.scanString();
-                break;
+                return this.scanString();
             case ETokenType.k_PunctuatorLiteral:
-                token = this.scanPunctuator();
-                break;
+                return this.scanPunctuator();
             case ETokenType.k_IdentifierLiteral:
-                token = this.scanIdentifier();
-                break;
+                return this.scanIdentifier();
             case ETokenType.k_EscapeSequence:
-                {
-                    let ch = this.readNextChar();
-                    if (ch === '\r') {
-                        ch = this.readNextChar();
-                    }
-                    assert(ch === '\n', 'unsupported escape sequence found');
-                    this.lineNumber++;
-                    this.columnNumber = 0;
-                    this.readNextChar();
-                    return this.scanToken();
-                }
-                break;
+                return this.scanEscapeSequence();
             case ETokenType.k_NewlineLiteral:
-                token = this.scanLineTerminators();
                 if (!this.config.allowLineTerminators) {
+                    this.scanLineTerminators();
                     return this.scanToken();
                 }
-                break;
+                return this.scanLineTerminators();
             case ETokenType.k_WhitespaceLiteral:
                 this.scanWhiteSpace();
                 return this.scanToken();
-                break;
+            case ETokenType.K_MacroLiteral:
+                return this.scanMacro();
             default:
-                {
-                    // TODO: move this code to scanInvalid()
-                    const start = this.pos();
-                    let value = '';
-                    while (this.identityTokenType() === ETokenType.k_Unknown && this.index < this.document.source.length) {
-                        value += this.currentChar();
-                        this.readNextChar();
-                    }
-                    token = {
-                        index: this.index,
-                        name: UNKNOWN_TOKEN,
-                        value,
-                        loc: { start, end: this.pos() }
-                    };
-                    // console.warn(value);
-                    this.emitError(ELexerErrors.UnknownToken, token);
-                    return token;
-                }
+                return this.scanInvalid();
         }
-        return token;
     }
 
-
-    getNextToken(): IToken {
-        const token = this.scanToken();
-        util.offset(token.loc, this.document.offset);
-        return token;
-    }
 
     protected scanThisLine(): IToken {
         let start = this.pos();
@@ -364,7 +332,7 @@ export class Lexer {
             } else if (ch === '\n') {
                 break;
             }
-            
+
             value += ch;
             chPrev = ch;
             ch = this.readNextChar();
@@ -376,19 +344,6 @@ export class Lexer {
             value,
             loc: { start, end: this.pos() }
         };
-    }
-
-
-    getNextLine(): IToken {
-        const token = this.scanThisLine();
-        util.offset(token.loc, this.document.offset);
-        return token;
-    }
-
-
-    /** @deprecated */
-    getLocation() {
-        return { line: this.lineNumber, file: this.document.uri };
     }
 
 
@@ -433,6 +388,9 @@ export class Lexer {
         if (this.isPunctuatorStart()) {
             return ETokenType.k_PunctuatorLiteral;
         }
+        if (this.isMacroStart()) {
+            return ETokenType.K_MacroLiteral;
+        }
         return ETokenType.k_Unknown;
     }
 
@@ -471,12 +429,13 @@ export class Lexer {
         return this.engine.isEscapeSequenceStart(this.currentChar());
     }
 
+    protected isMacroStart(): boolean {
+        return this.currentChar() === '#';
+    }
 
     protected isIdentifierStart(): boolean {
         return this.engine.isIdentifierStart(this.currentChar());
     }
-
-
 
 
     protected nextChar(): string {
@@ -495,6 +454,18 @@ export class Lexer {
         return this.document.source[<number>this.index];
     }
 
+
+    protected scanEscapeSequence(): IToken {
+        let ch = this.readNextChar();
+        if (ch === '\r') {
+            ch = this.readNextChar();
+        }
+        assert(ch === '\n', 'unsupported escape sequence found');
+        this.lineNumber++;
+        this.columnNumber = 0;
+        this.readNextChar();
+        return this.scanToken();
+    }
 
     protected scanString(): IToken {
         let chFirst = this.currentChar();
@@ -548,6 +519,27 @@ export class Lexer {
             this.emitError(ELexerErrors.InvalidToken, token);
             return Lexer.makeUnknownToken(token);
         }
+    }
+
+
+    protected scanInvalid(): IToken {
+        const start = this.pos();
+        
+        let value = '';
+        while (this.identityTokenType() === ETokenType.k_Unknown && this.index < this.document.source.length) {
+            value += this.currentChar();
+            this.readNextChar();
+        }
+
+        const token = {
+            index: this.index,
+            name: UNKNOWN_TOKEN,
+            value,
+            loc: { start, end: this.pos() }
+        };
+
+        this.emitError(ELexerErrors.UnknownToken, token);
+        return token;
     }
 
 
@@ -650,7 +642,7 @@ export class Lexer {
                 }
                 break;
             }
-            
+
             value += ch;
             chPrevious = ch;
         }
@@ -686,6 +678,53 @@ export class Lexer {
             this.emitError(ELexerErrors.InvalidToken, token);
             return Lexer.makeUnknownToken(token);
         }
+    }
+
+
+    protected scanMacro(): IToken {
+        // TODO: add option config.allowMacro 
+
+        const start = this.pos();
+        const chNext = this.nextChar();
+
+        if ((chNext >= "a" && chNext <= "z") || (chNext >= "A" && chNext <= "Z")) {
+            this.readNextChar();
+            const id = this.scanIdentifier();
+            return {
+                index: this.index,
+                name: T_MACRO,
+                value: `#${id.value}`,
+                loc: {
+                    start,
+                    end: this.pos()
+                }
+            };
+        } else if (chNext === '#') {
+            this.readNextChar();
+            this.readNextChar();
+            
+            return {
+                index: this.index,
+                name: T_MACRO_CONCAT,
+                value: '##',
+                loc: {
+                    start,
+                    end: this.pos()
+                }
+            };
+        } 
+        
+        assert(false, `unsupported macro found: ${this.document.source.substr(this.index, 20)}...`);
+        this.readNextChar();
+        return {
+            index: this.index,
+            name: UNKNOWN_TOKEN,
+            value: '#',
+            loc: {
+                start,
+                end: this.pos()
+            }
+        };
     }
 
 
@@ -787,6 +826,8 @@ export class Lexer {
             }
         };
     }
+
+
     protected scanWhiteSpace(): boolean {
         let ch = this.currentChar();
 
@@ -903,6 +944,8 @@ export class Lexer {
         }
     }
 
+
+    /** @deprecated */
     static makeUnknownToken(token: IToken): IToken {
         return {
             ...token,

@@ -1,6 +1,7 @@
 import { IDiagnosticReport, IDiagnostics } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { StringRef } from "@lib/util/StringRef";
+import { ITextDocument } from '../ITextDocument';
 
 export enum ENodeCreateMode {
     k_Default,
@@ -48,6 +49,7 @@ export enum ETokenType {
     k_NewlineLiteral,
     k_IdentifierLiteral,
     k_KeywordLiteral,
+    K_MacroLiteral,
     k_Unknown,
     k_End
 }
@@ -71,11 +73,11 @@ export interface IRange {
 export interface IToken {
     index: number;
     value: string;
+
     name?: string;
     type?: ETokenType;
 
     loc?: IRange;
-    // range?: number[];
 }
 
 
@@ -154,6 +156,26 @@ export interface ILexerEngine {
     isNewlineStart(ch: string): boolean;
     isIdentifierStart(ch: string): boolean;
     isEscapeSequenceStart(ch: string): boolean;
+}
+
+export interface ILexerConfig {
+    engine?: ILexerEngine;
+    knownTypes?: Set<string>;
+    skipComments?: boolean;
+    allowLineTerminators?: boolean;
+}
+
+
+export interface ILexer {
+    readonly document: ITextDocument;
+    readonly config: ILexerConfig;
+
+    setTextDocument(textDocument: ITextDocument): ILexer;
+    getPosition(): IPosition;
+    setPosition(pos: IPosition): void;
+    getDiagnosticReport(): IDiagnosticReport;
+    getNextToken(): IToken;
+    getNextLine(): IToken;
 }
 
 

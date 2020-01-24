@@ -4,7 +4,7 @@ import { assert } from "@lib/common";
 import { IDiagnosticReport, EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken, ILexer } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 
 import { Lexer } from "./Lexer";
@@ -17,10 +17,7 @@ export enum EParsingErrors {
     SyntaxUnexpectedEOF,
     SyntaxRecoverableStateNotFound,
 
-    GeneralCouldNotReadFile = 2200,
     GeneralParsingLimitIsReached,
-
-    MacroUnknownError,
 };
 
 
@@ -56,11 +53,6 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
             case EParsingErrors.SyntaxUnknownError:
             case EParsingErrors.SyntaxUnexpectedEOF:
                 return desc.token.loc;
-            case EParsingErrors.GeneralCouldNotReadFile:
-                return desc.loc;
-
-            case EParsingErrors.MacroUnknownError:
-                return desc.loc;
         }
         
         return null;
@@ -81,7 +73,6 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
             [EParsingErrors.SyntaxUnknownError]: "Syntax error during parsing. Token: '{token.value}'\n" +
                 "Line: {token.loc.start.line}. Column: {token.loc.start.column}.",
             [EParsingErrors.SyntaxUnexpectedEOF]: "Syntax error. Unexpected EOF.",
-            [EParsingErrors.GeneralCouldNotReadFile]: "Could not read file '{target}'.",
             [EParsingErrors.GeneralParsingLimitIsReached]: "Parsing limit is reached.",
             [EParsingErrors.SyntaxRecoverableStateNotFound]: "Recoverable state not found."
         };
@@ -154,7 +145,7 @@ export class ASTDocument implements IASTDocument {
     protected tree: IParseTree;
     protected stack: number[];
     
-    protected lexer: Lexer;
+    protected lexer: ILexer;
     protected token: IToken;
 
     constructor(config: IASTConfig) {
@@ -163,19 +154,14 @@ export class ASTDocument implements IASTDocument {
     }
 
     protected init({ parser, knownTypes = new Set(), ruleFunctions = new Map }: IASTConfig) {
-        const lexerEngine = parser.lexerEngine;
-
         this.parser = parser;
         this.knownTypes = knownTypes;
         this.ruleFunctions = ruleFunctions;
-        this.lexer = new Lexer({
-            engine: lexerEngine,
-            knownTypes
-        });
     }
 
 
     get uri(): string {
+        // TODO: use uri from original textDocument
         return this.lexer.document.uri.toString();
     }
 
@@ -199,10 +185,11 @@ export class ASTDocument implements IASTDocument {
         this.diag = new ParsingDiagnostics;
         this.tree = new ParseTree(optimizeTree);
         this.stack = [0];
-        this.lexer.setup(textDocument);
-        this.token = this.readToken();
+        
+        this.setTextDocument(textDocument);
+        this.token = await this.readToken();
 
-        if (this.token.value === END_SYMBOL) {
+        if (this.token.name === END_SYMBOL) {
             return EParserCode.k_Ok;
         }
 
@@ -227,18 +214,27 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    protected readToken(): IToken {
+    protected setTextDocument(textDocument: ITextDocument): void {
+        this.lexer = new Lexer({
+            engine: this.parser.lexerEngine,
+            knownTypes: this.knownTypes
+        });
+        this.lexer.setTextDocument(textDocument);
+    }
+
+
+    protected async readToken(): Promise<IToken> {
         return this.lexer.getNextToken();
     }
 
     
     protected emitError(code: number, token: IToken) {
-        this.diag.error(code, { ...this.lexer.getLocation(), token });
+        this.diag.error(code, { ...this.lexer.getPosition(), token });
     }
 
     
     protected emitCritical(code: number, token: IToken = null) {
-        this.diag.critical(code, { ...this.lexer.getLocation(), token });
+        this.diag.critical(code, { ...this.lexer.getPosition(), token });
     }
 
 
@@ -329,14 +325,14 @@ export class ASTDocument implements IASTDocument {
                     if (!op) {
                         // recursion prevention
                         if (causingErrorToken.index !== this.token.index) {
-                            if (this.token.value === END_SYMBOL) {
+                            if (this.token.name === END_SYMBOL) {
                                 this.emitError(EParsingErrors.SyntaxUnexpectedEOF, this.token);
                             } else {
                                 this.emitError(EParsingErrors.SyntaxUnknownError, this.token);
                             }
                         } else {
                             // one more attempt to recover but from the next token
-                            this.token = this.readToken();
+                            this.token = await this.readToken();
                             // NOTE: in order to prevent recusrion on END_SYMBOL
                             causingErrorToken = undefinedToken;
                             continue;
@@ -357,7 +353,7 @@ export class ASTDocument implements IASTDocument {
                         // NOTE: recoveryToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
                         let recoveryToken = cloneToken(causingErrorToken);
                         while (recoveryToken.name === UNKNOWN_TOKEN) {
-                            recoveryToken = this.readToken();
+                            recoveryToken = await this.readToken();
                         }
                         currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
                         if (currStateIndex === -1) {
@@ -395,7 +391,7 @@ export class ASTDocument implements IASTDocument {
                                 if (additionalOperationCode === EOperationType.k_Error) {
                                     this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                    this.token = this.readToken();
+                                    this.token = await this.readToken();
                                 }
                             }
                             break;

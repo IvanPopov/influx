@@ -164,10 +164,15 @@ export class Diagnostics <DESC_T>{
         return null;
     }
 
+    isEmpty(): boolean {
+        return this._entries.length === 0;
+    }
+
     static mergeReports(reportList: IDiagnosticReport[]): IDiagnosticReport {
         let result: IDiagnosticReport = { errors: 0, warnings: 0, messages: [] };
 
         reportList.forEach((report) => {
+            if (!report) return;
             result.errors += report.errors;
             result.warnings += report.warnings;
             result.messages = result.messages.concat(report.messages);
