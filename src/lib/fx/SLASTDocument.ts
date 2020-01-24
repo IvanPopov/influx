@@ -2,15 +2,15 @@ import { assert, isDef, isNull, isString } from '@lib/common';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { EOperationType, EParserCode, ETokenType, IASTConfig, IParseNode, IRange, IToken } from '@lib/idl/parser/IParser';
-import { ASTDocument, EParsingErrors, EParsingWarnings } from "@lib/parser/ASTDocument";
+import { EOperationType, EParserCode, ETokenType, IASTConfig, ILexerEngine, IParseNode, IRange, IToken } from '@lib/idl/parser/IParser';
+import { ASTDocument, EParsingErrors, EParsingWarnings, ParsingDiagnostics } from "@lib/parser/ASTDocument";
 import { Lexer } from '@lib/parser/Lexer';
-import { END_SYMBOL, T_NON_TYPE_ID, T_TYPE_ID } from '@lib/parser/symbols';
+import { END_SYMBOL, T_MACRO_CONCAT, T_MACRO_TEXT, T_NON_TYPE_ID, T_TYPE_ID } from '@lib/parser/symbols';
 import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
+
 import { defaultSLParser } from './SLParser';
 import { createTextDocument } from './TextDocument';
-
 
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
@@ -23,14 +23,12 @@ const PREDEFINED_TYPES = [
     'auto'
 ];
 
-enum EMacroState{
+enum EMacroState {
     k_AllowElse,
     k_ForbidElse
 };
 
-const DEBUG_MACRO = false;
-
-const T_MACRO_TEXT = 'MACRO_TEXT';
+const DEBUG_MACRO = true;
 
 
 interface IMacro {
@@ -48,7 +46,7 @@ interface IMacroFunc {
 
 
 // as macro token
-function asMacroToken(value: string, loc: IRange): IToken {
+function createMacroToken(value: string, loc: IRange): IToken {
     assert(isString(value), value);
     return { index: -1, type: ETokenType.k_Unknown, name: 'T_MACRO', value, loc };
 }
@@ -59,13 +57,17 @@ function asMacroFunc(fn: (...args: IToken[]) => number | boolean): IMacroFunc {
         op: (...args: IToken[]): IToken => {
             const value = String(fn(...args));
             const loc = util.commonRange(...args.map(arg => arg.loc));
-            return asMacroToken(value, loc);
+            return createMacroToken(value, loc);
         },
         length: fn.length
     };
 }
 
-function asTextDocument(macro: IMacro): ITextDocument {
+// function tokenToDocument(tokne: IToken): ITextDocument {
+
+// }
+
+function macroToDocument(macro: IMacro): ITextDocument {
     const source = macro.text.value;
     const uri = String(macro.text.loc.start.file);
     const offset = macro.text.loc.start;
@@ -73,7 +75,7 @@ function asTextDocument(macro: IMacro): ITextDocument {
 }
 
 
-function asMacroNative(token: IToken, fallback: (token: IToken) => number = () => NaN) {
+function tokenToNative(token: IToken, fallback: (token: IToken) => number = () => NaN) {
     const value = token.value;
 
     if (String(value) === 'true') {
@@ -91,6 +93,8 @@ function asMacroNative(token: IToken, fallback: (token: IToken) => number = () =
 
     return fallback(token)
 }
+
+
 
 
 class MacroState {
@@ -161,11 +165,268 @@ class Macros {
 }
 
 
+class Preprocessor {
+    stack: { lexer: Lexer; tokens: IToken[], bMacro: boolean }[] = null;
+    // diag: ParsingDiagnostics;
+
+    macros: Macros;
+    knownTypes: Set<string>;
+    lexerEngine: ILexerEngine;
+
+    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string>, macros: Macros) {
+        this.macros = macros;
+        this.knownTypes = knownTypes;
+        this.lexerEngine = lexerEngine;
+
+        this.stack = [];
+    }
+
+    get lexer(): Lexer {
+        return this.stack[this.stack.length - 1].lexer;
+    }
+
+    get tokens(): IToken[] {
+        return this.stack[this.stack.length - 1].tokens;
+    }
+
+    push(textDocument: ITextDocument): void {
+        this.pushLexer(textDocument);
+    }
+
+    pop(): void {
+        this.popLexer();
+    }
+
+    getLocation() {
+        return this.lexer.getLocation();
+    }
+
+    protected pushToken(...tokens: IToken[]): void {
+        this.tokens.push(...tokens);
+    }
+
+
+    protected popToken(): IToken {
+        return this.tokens.shift() || null;
+    }
+
+
+    protected pushLexer(textDocument: ITextDocument, bMacro = false): void {
+        const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
+        lexer.setup(textDocument);
+        const tokens = <IToken[]>[];
+
+        this.stack.push({ lexer, tokens, bMacro });
+
+        if (bMacro) {
+            this.macros.push();
+        }
+    }
+
+
+    protected popLexer(): void {
+        const { bMacro } = this.stack.pop();
+        if (bMacro) {
+            this.macros.pop();
+        }
+    }
+
+    readLine(): IToken {
+        return this.lexer.getNextLine();
+    }
+
+    isEmpty(): boolean {
+        return this.stack.length === 0;
+    }
+
+
+    readToken(allowMacro: boolean = true, allowStateChanging = true): IToken {
+        const token = this.popToken() || this.lexer.getNextToken();
+
+        if (token.value === END_SYMBOL) {
+            if (this.stack.length > 1 && allowStateChanging) {
+                this.popLexer();
+                return this.readToken(allowMacro);
+            }
+
+            // if (!this.macroState.isEmpty()) {
+            //     // TODO: highlight open tag too.
+            //     this.emitMacroError(`'endif' non found :/`, token.loc);
+            // }
+
+            return token; // END_SYMBOL
+        }
+
+        if (allowMacro) {
+            return this.examMacro(token);
+        }
+
+        return token;
+    }
+
+    protected emitMacroWarning(msg: string, loc: IRange): void {
+        console.warn(msg);
+    }
+
+    protected applyMacro(token: IToken): IMacro {
+        const macros = this.macros;
+        const macro = macros.get(token.value);
+
+        if (!macro) {
+            return null;
+        }
+
+        if (macro.bFunction) {
+
+            const $lexer = this.lexer;
+            const pos = this.lexer.getPosition();
+
+            const nextToken = this.readToken();
+            if (nextToken.value !== '(') {
+                this.emitMacroWarning(`for macro '${macro.name} function call signature is expected'`, token.loc);
+
+                assert($lexer === this.lexer, 'something went wrong');
+                this.lexer.setPosition(pos);
+                return null;
+            }
+
+            let readTokens = [nextToken];
+            let argRanges = <number[]>[];
+            
+            let argToken = this.readToken();
+            let bracketDepth = 0;
+
+            let startPos = 1;
+            let endPos = 1;
+
+            readTokens.push(argToken);
+            while (argToken.name !== END_SYMBOL && !(argToken.value === ')' && bracketDepth == 0)) {
+                switch (argToken.value) {
+                    case '(':
+                        bracketDepth++;
+                        break;
+                    case ')':
+                        bracketDepth--;
+                        break;
+                    case ',':
+                        assert(endPos - startPos > 0);
+                        // TODO: emit error
+                        if ((endPos - startPos) > 0) {
+                            argRanges.push(startPos, endPos);
+                        }
+                        startPos = endPos + 1;
+                        break;
+                }
+
+                endPos++;
+                argToken = this.readToken();
+                readTokens.push(argToken);
+            }
+
+
+            if (endPos > startPos) {
+                argRanges.push(startPos, endPos);
+            }
+
+            const nArgs = argRanges.length / 2;
+
+            if (nArgs !== macro.params.length) {
+                // TODO: emit error
+                assert(false);
+
+                assert($lexer === this.lexer, 'something went wrong');
+                this.lexer.setPosition(pos);
+                return null;
+            }
+
+            this.pushLexer(macroToDocument(macro), true);
+
+            const params = macro.params;
+
+            for (let i = 0; i < params.length; ++i) {
+                const i2 = i * 2;
+
+                const startPos = argRanges[i2];
+                const endPos = argRanges[i2 + 1];
+                const start = readTokens[startPos].loc.start;
+                const end = readTokens[endPos - 1].loc.end;
+                const value = readTokens.slice(startPos, endPos).map(t => t.value).join(' ');
+                const macroToken = createMacroToken(value, { start, end });
+
+                if (DEBUG_MACRO) {
+                    console.log(`${macro.name}.${params[i]} => ${macroToken.value}`);
+                }
+                macros.set({
+                    name: params[i],
+                    text: macroToken,
+                    bFunction: false,
+                    params: null
+                });
+            }
+        } else {
+            this.pushLexer(macroToDocument(macro), true);
+        }
+
+        return macro;
+    }
+
+    protected examMacro(token: IToken): IToken {
+        const bMacro = this.stack.length > 1 && this.stack[this.stack.length - 1].bMacro;
+
+        if (bMacro) {
+            const nextToken = this.readToken(false, false);
+            if (nextToken.name === T_MACRO_CONCAT) {
+                assert(!this.macros.get(token.value) || !this.macros.get(token.value).bFunction);
+
+                const $pp = new Preprocessor(this.lexerEngine, this.knownTypes, this.macros);
+                $pp.push(createTextDocument('://macro', token.value));
+
+                let $tokens = <IToken[]>[];
+                let $token = $pp.readToken();
+                while ($token.name !== END_SYMBOL) {
+                    $tokens.push($token);
+                    $token = $pp.readToken();
+                }
+
+                // const left = token;
+                const left = createMacroToken($tokens.map(t => t.value).join(' '), token.loc);
+                const right = this.readToken();
+
+                const combinedValue = `${left.value}${right.value}`;
+
+                // // TODO: process with lexer
+                // return <IToken>{
+                //     type: ETokenType.k_IdentifierLiteral,
+                //     name: T_NON_TYPE_ID, // use TYPE_ID too
+                //     value: combinedValue,
+                //     index: -1,
+                //     loc: util.commonRange(left.loc, right.loc)
+                // };
+                this.pushLexer(createTextDocument(this.lexer.document.uri, combinedValue)); // bMacro = true? 
+                return this.readToken();
+            } else {
+                this.pushToken(nextToken);
+            }
+        }
+
+        if (token.name === T_NON_TYPE_ID || token.name === T_TYPE_ID) {
+            const macro = this.applyMacro(token);
+            if (macro) {
+                return this.readToken();
+            }
+        }
+
+        return token;
+    }
+}
+
+
 export class SLASTDocument extends ASTDocument implements ISLASTDocument {
-    protected lexers: { lexer: Lexer; source?: 'macro', tokens: IToken[] }[];
-    // cached tokens
+    // TODO: remove it
     protected tokens: IToken[];
-    
+
+    protected preprocessor: Preprocessor;
+
     protected includeList: Map<string, IRange>;
     protected macros: Macros;
     protected macroState: MacroState;
@@ -192,13 +453,15 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected init(config: IASTConfig) {
         super.init(config);
 
-        this.lexers = [];
+        // this.lexers = [];
         this.tokens = [];
-        
+
         this.includeList = new Map();
         this.macros = new Macros;
         this.macroState = new MacroState;
         this.unreachableCodeList = [];
+
+        this.preprocessor = new Preprocessor(this.parser.lexerEngine, this.knownTypes, this.macros);
 
         this.ruleFunctions.set('addType', this._addType.bind(this));
 
@@ -217,205 +480,63 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     protected emitFileNotFound(file: string, range: IRange) {
-        this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.lexer.getLocation(), loc: range, target: file });
+        // this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.lexer.getLocation(), loc: range, target: file });
+        this.diag.error(EParsingErrors.GeneralCouldNotReadFile, { ...this.preprocessor.getLocation(), loc: range, target: file });
     }
 
 
     protected emitMacroWarning(message: string, range: IRange) {
-        this.diag.warning(EParsingWarnings.MacroUnknownWarning, { ...this.lexer.getLocation(), loc: range, message });
+        // this.diag.warning(EParsingWarnings.MacroUnknownWarning, { ...this.lexer.getLocation(), loc: range, message });
+        this.diag.warning(EParsingWarnings.MacroUnknownWarning, { ...this.preprocessor.getLocation(), loc: range, message });
     }
 
 
     protected emitMacroError(message: string, range: IRange) {
-        this.diag.error(EParsingErrors.MacroUnknownError, { ...this.lexer.getLocation(), loc: range, message });
+        // this.diag.error(EParsingErrors.MacroUnknownError, { ...this.lexer.getLocation(), loc: range, message });
+        this.diag.error(EParsingErrors.MacroUnknownError, { ...this.preprocessor.getLocation(), loc: range, message });
     }
 
 
     protected emitMacroCritical(message: string, range: IRange) {
-        this.diag.critical(EParsingErrors.MacroUnknownError, { ...this.lexer.getLocation(), loc: range, message });
+        // this.diag.critical(EParsingErrors.MacroUnknownError, { ...this.lexer.getLocation(), loc: range, message });
+        this.diag.critical(EParsingErrors.MacroUnknownError, { ...this.preprocessor.getLocation(), loc: range, message });
     }
 
 
+    /** @deprecated */
     protected pushToken(...tokens: IToken[]): void {
         this.tokens.push(...tokens);
     }
 
 
+    /** @deprecated */
     protected popToken(): IToken {
         return this.tokens.shift() || null;
     }
 
 
-    protected pushLexer(textDocument: ITextDocument, source?: 'macro'): void {
-        const lexer = new Lexer({ engine: this.parser.lexerEngine, knownTypes: source === 'macro'? this.knownTypes: null });
-        const tokens = this.tokens;
-
-        lexer.setup(textDocument);
-        this.lexers.push({ lexer: this.lexer, tokens, source });
-        this.lexer = lexer;
-        this.tokens = [];
-    }
-
-
-    protected popLexer(): void {
-        const { lexer, source, tokens } = this.lexers.pop();
-
-        // remove the macro if its source has ended
-        if (source === 'macro') {
-            this.macros.pop();
-        }
-
-        // check that lexer state is correct before replacment
-        // (no one did inconsistent push/pop before
-        this.lexer.validate();
-
-        this.lexer = lexer;
-        this.tokens = tokens;
-    }
-
-    
-
-    protected examMacro(token: IToken): IToken {
-        const bMacro = this.lexers.length && this.lexers[this.lexers.length - 1].source === 'macro';
-
-        if (bMacro) {
-            const nextToken = this.readToken(false);
-            if (nextToken.name === 'T_MACRO_CONCAT') {
-                const left = token;
-                const right = this.readToken();
-                // TODO: process with lexer
-                return <IToken>{
-                    type: ETokenType.k_IdentifierLiteral,
-                    name: T_NON_TYPE_ID, // use TYPE_ID too
-                    value: `${left.value}${right.value}`,
-                    index: -1,
-                    loc: util.commonRange(left.loc, right.loc)
-                };
-            } else {
-                this.pushToken(nextToken);
-            }
-        }
-
-        if (token.name === T_NON_TYPE_ID || token.name === T_TYPE_ID) {
-            const macros = this.macros;
-            const macro = macros.get(token.value);
-
-            if (macro) {
-                macros.push();
-
-                if (macro.bFunction) {
-
-                    const nextToken = this.readToken();
-                    if (nextToken.value !== '(') {
-                        this.emitMacroWarning(`for macro '${macro.name} function call signature is expected'`, token.loc);
-                        this.pushToken(nextToken);
-                        return token;
-                    }
-
-                    let readTokens = [nextToken];
-                    let argRanges = <number[]>[];
-                    let argToken = this.readToken();
-                    let bracketDepth = 0;
-
-                    let startPos = 1;
-                    let endPos = 1;
-
-                    readTokens.push(argToken);
-                    while (argToken.name !== END_SYMBOL && !(argToken.value === ')' && bracketDepth == 0)) {
-                        switch (argToken.value) {
-                            case '(':
-                                bracketDepth++;
-                                break;
-                            case ')':
-                                bracketDepth--;
-                                break;
-                            case ',':
-                                assert(endPos - startPos > 0);
-                                // TODO: emit error
-                                if ((endPos - startPos) > 0) {
-                                    argRanges.push(startPos, endPos);
-                                }
-                                startPos = endPos + 1;
-                                break;
-                        }
-
-                        endPos++;
-                        argToken = this.readToken();
-                        readTokens.push(argToken);
-                    }
-
-                    if (endPos > startPos) {
-                        argRanges.push(startPos, endPos);
-                    }
-
-                    const nArgs = argRanges.length / 2;
-
-                    if (nArgs !== macro.params.length) {
-                        // TODO: emit error
-                        assert(false);
-                        this.pushToken(...readTokens);
-                        return this.readToken();
-                    }
-
-                    const params = macro.params;
-
-                    for (let i = 0; i < params.length; ++i) {
-                        const i2 = i * 2;
-
-                        const startPos = argRanges[i2];
-                        const endPos = argRanges[i2 + 1];
-                        const start = readTokens[startPos].loc.start;
-                        const end = readTokens[endPos - 1].loc.end;
-                        const value = readTokens.slice(startPos, endPos).map(t => t.value).join(' ');
-                        const macroToken = asMacroToken(value, { start, end });
-
-                        if (DEBUG_MACRO) {
-                            console.log(`${macro.name}.${params[i]} => ${macroToken.value}`);
-                        }
-                        macros.set({
-                            name: params[i],
-                            text: macroToken,
-                            bFunction: false,
-                            params: null
-                        });
-                    }
-                }
-
-                this.pushLexer(asTextDocument(macro), 'macro');
-                return this.readToken();
-            }
-        }
-        
-        return token;
-    }
-
-
     protected readToken(allowMacro: boolean = true): IToken {
-        const token = this.popToken() || super.readToken();
-        
+        // TODO: remove it
+        if (this.preprocessor.isEmpty()) {
+            this.preprocessor.push(this.lexer.document);
+        }
+
+        const token = this.popToken() || this.preprocessor.readToken(allowMacro);
+
         if (token.value === END_SYMBOL) {
-            if (this.lexers.length) {
-                this.popLexer()
-                return this.readToken(allowMacro);
-            }
-    
             if (!this.macroState.isEmpty()) {
                 // TODO: highlight open tag too.
                 this.emitMacroError(`'endif' non found :/`, token.loc);
             }
-
-            return token; // END_SYMBOL
         }
 
-        if (allowMacro) {
-            return this.examMacro(token);
-        }
         return token;
     }
 
 
     protected _beginMacro(): EOperationType {
-        const macroText = this.lexer.getNextLine();
+        // const macroText = this.lexer.getNextLine();
+        const macroText = this.preprocessor.readLine();
         macroText.name = T_MACRO_TEXT;
         this.pushToken(macroText);
         return EOperationType.k_Ok;
@@ -435,7 +556,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         }
 
         assert(args.length === 1 && args[0].name === T_MACRO_TEXT);
-        const [ macroText ] = args;
+        const [macroText] = args;
 
         if (DEBUG_MACRO) {
             console.log(`#${macroType.value} ${macroText.value}`);
@@ -454,11 +575,11 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
             case 'pragma': return EOperationType.k_Ok;
         }
 
-        this.emitMacroWarning(`unsupported macro type found: ${macroType}`, util.commonRange(pound.loc, macroType.loc, macroText.loc))
+        this.emitMacroWarning(`unsupported macro type found: ${macroType.value}`, util.commonRange(pound.loc, macroType.loc, macroText.loc))
         return EOperationType.k_Ok;
     }
 
-    
+
     protected processDefineMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const lexer = new Lexer({ engine: this.parser.lexerEngine });
         const uri = macroText.loc.start.file;
@@ -499,7 +620,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
             lexer.setup(createTextDocument(uri, source, offset));
 
             let token = lexer.getNextToken();
-            
+
             const bOpenBracket = token.value === '(';
             const bSameLine = token.loc.start.line === name.loc.end.line;
             const bNoSpace = token.loc.start.column === name.loc.end.column;
@@ -551,10 +672,10 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         return { name: name.value, text, bFunction, params };
     }
 
- 
+
     protected processIfdefMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const { value, loc } = macroText;
-        const exprValue = this.resolveDefMacro(asMacroToken(value, loc));
+        const exprValue = this.resolveDefMacro(createMacroToken(value, loc));
 
         if (exprValue) {
             this.macroState.push(EMacroState.k_ForbidElse);
@@ -569,7 +690,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
     protected processIfndefMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const { value, loc } = macroText;
-        const exprValue = this.resolveDefMacro(asMacroToken(value, loc));
+        const exprValue = this.resolveDefMacro(createMacroToken(value, loc));
 
         if (exprValue) {
             this.macroState.push(EMacroState.k_AllowElse);
@@ -585,7 +706,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected processIfMacro(macroType: IParseNode, macroText: IParseNode): EOperationType {
         const { value, loc } = macroText;
 
-        if (this.resolveMacroInner(asMacroToken(value, loc))) {
+        if (this.resolveMacroInner(createMacroToken(value, loc))) {
             this.macroState.push(EMacroState.k_ForbidElse);
             return EOperationType.k_Ok;
         }
@@ -604,7 +725,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
         if (this.macroState.is(EMacroState.k_AllowElse)) {
             const { value, loc } = macroText;
-            if (this.resolveMacroInner(asMacroToken(value, loc))) {
+            if (this.resolveMacroInner(createMacroToken(value, loc))) {
                 this.macroState.replace(EMacroState.k_ForbidElse);
                 return EOperationType.k_Ok;
             }
@@ -652,7 +773,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         const uri = textToken.loc.start.file;
         lexer.setup(createTextDocument(uri, source, offset));
 
-        const asRaw = (token: IToken): number => asMacroNative(token, ({ value }) => macros.has(value) ? 1 : 0);
+        const asRaw = (token: IToken): number => tokenToNative(token, ({ value }) => macros.has(value) ? 1 : 0);
         const asFn = asMacroFunc;
         const asValue = asFn(asRaw);
 
@@ -756,7 +877,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
                         // TODO: use min/max instead?
                         const loc = util.commonRange(...args.map(arg => arg.loc));
-                        return asMacroToken(value, loc);
+                        return createMacroToken(value, loc);
                     },
 
                     length: macro.params.length
@@ -769,7 +890,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     protected resolveMacro(textToken: IToken): number {
-        return asMacroNative(textToken, (token) => {
+        return tokenToNative(textToken, (token) => {
             const macro = this.macros.get(token.value);
             if (!isNull(macro) && !isNull(macro.text)) {
                 const exprValue = this.resolveMacroInner(macro.text);
@@ -891,7 +1012,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         if (DEBUG_MACRO) console.log(`${$input} => {${stack[0].value}}`);
         // assert(asMacroNative(stack[0]) !== NaN, stack);
 
-        return asMacroNative(stack[0]);
+        return tokenToNative(stack[0]);
     }
 
 
@@ -906,7 +1027,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected skipUnreachableCode(): void {
         let token = this.readToken(false);
         let begin = token.loc.start;
-        
+
         let nesting = 0;
         while (token.value !== END_SYMBOL) {
             if (token.value === '#') {
@@ -916,19 +1037,19 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                     case 'if':
                     case 'ifdef':
                     case 'ifndef':
-                        nesting ++;
+                        nesting++;
                         break;
                     case 'elif':
                     case 'else':
                         if (nesting !== 0) {
                             break;
                         }
-                        /* falls through */
+                    /* falls through */
                     case 'endif':
                         if (nesting > 0) {
-                            nesting --;
+                            nesting--;
                             break;
-                        } 
+                        }
 
                         const block = { start: { ...begin, column: 0 }, end: { ...macro.loc.end, column: 0 } };
                         if (block.end.line - block.start.line > 0) {
@@ -937,12 +1058,13 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
                             }
                             this.unreachableCodeList.push(block);
                         }
-                        
+
                         // push back tokens in order to enable the parser to process 'endif' rule 
                         this.pushToken(token, macro);
                         return;
                     case 'error':
-                        this.lexer.getNextLine();
+                        // this.lexer.getNextLine();
+                        this.preprocessor.readLine();
                 }
             }
 
@@ -971,25 +1093,14 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
         try {
             const response = await fetch(uri);
-
             if (!response.ok) {
                 this.emitFileNotFound(uri, loc);
                 return EOperationType.k_Error;
             }
 
             const source = await response.text();
-
-            //
-            // Replace lexer with new one 
-            //
-
-            this.lexers.push({ lexer: this.lexer, tokens: this.tokens });
-            this.lexer = new Lexer({
-                engine: this.parser.lexerEngine,
-                knownTypes: this.knownTypes
-            });
-            this.tokens = [];
-            this.lexer.setup(createTextDocument(uri, source));
+            // this.pushLexer(createTextDocument(uri, source))
+            this.preprocessor.push(createTextDocument(uri, source));
 
             return EOperationType.k_Ok;
         } catch (e) {

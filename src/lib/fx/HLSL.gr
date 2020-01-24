@@ -26,19 +26,19 @@ Decl : Macro
 
 #
 # beginMacro() function transfers control over input stream to parser, 
-# which in turn will scan the macro text and return MACRO_TEXT token
+# which in turn will scan the macro text and return T_MACRO_TEXT token
 # 
 
 # NOTE: do not use "Id" instead of T_NON_TYPE_ID/T_TYPE_ID, because in this case beginMacro() 
 #       will be called only after T_NON_TYPE_ID => Id reduction, which in turn will
 #       require reading the next token which can lead to a situation where part of 
-#       the MACRO_TEXT being read as a token
+#       the T_MACRO_TEXT being read as a token
 
 # NOTE: all preprocesor logic is hidden inside beginMacro()/endMacro()
-Macro : '#' T_NON_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
-Macro : '#' T_TYPE_ID --F beginMacro MACRO_TEXT --skip --F endMacro
-Macro : '#' T_KW_IF --F beginMacro MACRO_TEXT --skip --F endMacro
-Macro : '#' T_KW_ELSE --F beginMacro MACRO_TEXT --skip --F endMacro
+Macro : '#' T_NON_TYPE_ID --F beginMacro T_MACRO_TEXT --skip --F endMacro
+Macro : '#' T_TYPE_ID --F beginMacro T_MACRO_TEXT --skip --F endMacro
+Macro : '#' T_KW_IF --F beginMacro T_MACRO_TEXT --skip --F endMacro
+Macro : '#' T_KW_ELSE --F beginMacro T_MACRO_TEXT --skip --F endMacro
 
 #endif
 

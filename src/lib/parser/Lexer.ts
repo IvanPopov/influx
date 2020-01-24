@@ -183,9 +183,6 @@ interface ICursor {
 
 
 export class Lexer {
-    // position
-    protected cursors: ICursor[];
-
     protected index: number;
     protected lineNumber: number;
     protected columnNumber: number;
@@ -194,7 +191,7 @@ export class Lexer {
     // text document
     //
     
-    document: ITextDocument;
+    /* readonly */ document: ITextDocument;
 
     //
     // Setup
@@ -224,22 +221,17 @@ export class Lexer {
         this.config = { skipComments, allowLineTerminators };
     }
 
-    validate(): void {
-        assert(!this.cursors || this.cursors.length === 0);
-    }
 
-    push(): void {
-        this.cursors = this.cursors || [];
-        const { index, lineNumber, columnNumber } = this;
-        this.cursors.push({ index, lineNumber, columnNumber });
-    }
+   getPosition(): ICursor {
+       const { index, lineNumber, columnNumber } = this;
+       return { index, lineNumber, columnNumber };
+   }
 
-    pop(doRestore: boolean = true): void {
-        const { index, lineNumber, columnNumber } = this.cursors.pop();
-        this.index = index;
-        this.lineNumber = lineNumber;
-        this.columnNumber = columnNumber;
-    }
+   setPosition(cursor: ICursor): void {
+       this.index = cursor.index;
+       this.lineNumber = cursor.lineNumber;
+       this.columnNumber = cursor.columnNumber; 
+   }
 
     setup(textDocument: ITextDocument) {
         this.columnNumber = 0;
