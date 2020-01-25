@@ -1,10 +1,9 @@
 import bf from "@lib/bf";
-import { isDef, isNull, isDefAndNotNull } from "@lib/common";
-import { assert } from "@lib/common";
-import { IDiagnosticReport, EDiagnosticCategory } from "@lib/idl/IDiagnostics";
+import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { EDiagnosticCategory, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken, ILexer } from "@lib/idl/parser/IParser";
+import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, ILexer, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 
 import { Lexer } from "./Lexer";
@@ -160,9 +159,9 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    get uri(): string {
+    get uri(): IFile {
         // TODO: use uri from original textDocument
-        return this.lexer.document.uri.toString();
+        return this.lexer.document.uri;
     }
 
 
@@ -238,7 +237,7 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    private restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken) {
+    private async restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken): Promise<number> {
         while (true) {
             let recoverableState = -1;
             for (let i = stack.length - 1; i >= 0; --i) {
@@ -269,6 +268,7 @@ export class ASTDocument implements IASTDocument {
                 return recoveredStateIndex;
             }
 
+            // TODO: optimize this call!
             extendRange(errorToken.loc, causingErrorToken.loc);
 
             if (causingErrorToken.value === END_SYMBOL) {
@@ -278,7 +278,7 @@ export class ASTDocument implements IASTDocument {
 
             // try to restore from the next token
             // FIXME: 
-            const nextToken = this.readToken();
+            const nextToken = await this.readToken();
             Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
         }
         return -1;
@@ -355,7 +355,7 @@ export class ASTDocument implements IASTDocument {
                         while (recoveryToken.name === UNKNOWN_TOKEN) {
                             recoveryToken = await this.readToken();
                         }
-                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
+                        currStateIndex = await this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
                         if (currStateIndex === -1) {
                             this.emitCritical(EParsingErrors.SyntaxRecoverableStateNotFound);
                         }

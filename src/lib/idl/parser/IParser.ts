@@ -1,7 +1,7 @@
 import { IDiagnosticReport, IDiagnostics } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
+import { ITextDocument } from '@lib/idl/ITextDocument';
 import { StringRef } from "@lib/util/StringRef";
-import { ITextDocument } from '../ITextDocument';
 
 export enum ENodeCreateMode {
     k_Default,
@@ -187,7 +187,7 @@ export interface IASTConfig {
 
 
 export interface IASTDocument {
-    readonly uri: string;
+    readonly uri: IFile;
     readonly diagnosticReport: IDiagnosticReport;
     readonly root: IParseNode;
 }

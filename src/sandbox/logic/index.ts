@@ -10,7 +10,6 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
 
-
 const readFile = fname => fetch(fname).then(resp => resp.text());
 
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
@@ -64,7 +63,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
         if (match) {
             const { view, fx, name } = match.params;
 
-            const supportedViews = ['playground', 'bytecode', 'program', 'ast'];
+            const supportedViews = ['playground', 'bytecode', 'program', 'ast', 'preprocessor'];
             if (supportedViews.indexOf(view) !== -1) {
                 if (!fx) {
                     // dispatch(push(`/${view}/${DEFAULT_FILENAME}/`));

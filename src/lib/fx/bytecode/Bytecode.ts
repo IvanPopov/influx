@@ -5,6 +5,7 @@ import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtI
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
+import { createTextDocument } from "@lib/fx/TextDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
@@ -16,7 +17,6 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { createTextDocument } from "../TextDocument";
 
 export const CBUFFER0_REGISTER = 0;
 export const INPUT0_REGISTER = 1;
@@ -35,7 +35,7 @@ export interface ISubProgram {
     cdl: CDL;
 
     // diagnosticReport: IDiagnosticReport;
-    // uri: string
+    // uri: IFile
 }
 
 function writeString(u8data: Uint8Array, offset: number, value: string): number {

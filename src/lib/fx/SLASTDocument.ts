@@ -1,12 +1,13 @@
+import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { EOperationType, EParserCode, IASTConfig, IRange, IToken } from '@lib/idl/parser/IParser';
+import { IMacro } from '@lib/idl/parser/IMacro';
+import { EOperationType, EParserCode, IASTConfig, IFile, IRange, IToken } from '@lib/idl/parser/IParser';
 import { ASTDocument, EParsingErrors, EParsingWarnings } from "@lib/parser/ASTDocument";
-import { defaultSLParser } from './SLParser';
 import { Preprocessor } from '@lib/parser/Preprocessor';
-import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { Diagnostics } from '@lib/util/Diagnostics';
 
+import { defaultSLParser } from './SLParser';
 
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
@@ -39,8 +40,18 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    get uri(): string {
-        return this.preprocessor.uri.toString();
+    get macros(): IMacro[] {
+        return [ ...this.preprocessor.macros ];
+    }
+
+
+    get unresolvedMacros(): IMacro[] {
+        return this.preprocessor.unresolvedMacros;
+    }
+
+
+    get uri(): IFile {
+        return this.preprocessor.uri;
     }
 
 
@@ -86,11 +97,6 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected async readToken(allowMacro: boolean = true): Promise<IToken> {
         return await this.preprocessor.readToken(allowMacro);
     }
-
-    // async parse(textDocument: ITextDocument, flags?: number): Promise<EParserCode> {
-    //     const res = await super.parse(textDocument, flags);
-    //     return res;
-    // }
 }
 
 

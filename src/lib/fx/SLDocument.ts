@@ -16,7 +16,14 @@ export async function createSLDocument(document: ISLASTDocument | ITextDocument,
         slastDocument = await createSLASTDocument(textDocument, flags);
     }
     
+    const timeLabel = `createSLDocument(${slastDocument.uri})`;
+    console.time(timeLabel);
+
     const analyzer = new Analyzer;
-    return await analyzer.parse(slastDocument);
+    const slDocument = await analyzer.parse(slastDocument);
+
+    console.timeEnd(timeLabel);
+
+    return slDocument;
 }
 

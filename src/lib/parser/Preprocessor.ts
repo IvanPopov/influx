@@ -1,15 +1,18 @@
 import { isDef, isDefAndNotNull } from "@lib/common";
+import { assert, isNull, isString } from "@lib/common";
 import { createTextDocument } from "@lib/fx/TextDocument";
+import { EDiagnosticCategory, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { ETokenType, ILexerEngine, IRange, IToken, ILexer } from "@lib/idl/parser/IParser";
+import { IMacro } from "@lib/idl/parser/IMacro";
+import { ETokenType, IFile, ILexer, ILexerEngine, IRange, IToken } from "@lib/idl/parser/IParser";
 import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
-import { isNull, isString, assert } from "@lib/common";
-import { Lexer } from "./Lexer";
-import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "./symbols";
-import { IDiagnosticReport, EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { Diagnostics } from "@lib/util/Diagnostics";
+
+import { Lexer } from "./Lexer";
+import { Macros } from "./Macros";
+import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "./symbols";
 
 const DEBUG_MACRO = false;
 
@@ -20,20 +23,10 @@ enum EMacroState {
 };
 
 
-interface IMacro {
-    name: string;
-    bFunction: boolean;
-    params: string[];
-    text: IToken;
-}
-
-
 interface IMacroFunc {
     op: (...args: IToken[]) => IToken;
     length: number;
 }
-
-
 
 
 export enum EPreprocessorErrors {
@@ -131,7 +124,7 @@ function asMacroFunc(fn: (...args: IToken[]) => number | boolean): IMacroFunc {
 
 function macroToDocument(macro: IMacro): ITextDocument {
     const source = macro.text.value;
-    const uri = String(macro.text.loc.start.file);
+    const uri = macro.text.loc.start.file;
     const offset = macro.text.loc.start;
     return createTextDocument(uri, source, offset);
 }
@@ -183,57 +176,16 @@ class MacroState {
 }
 
 
-class Macros {
-    stack: Map<string, IMacro>[] = [new Map];
-    push() {
-        this.stack.push(new Map);
-    }
-
-    pop() {
-        this.stack.pop();
-    }
-
-    set(macro: IMacro): void {
-        this.stack[this.stack.length - 1].set(macro.name, macro);
-    }
-
-    get(name: string): IMacro {
-        for (let i = this.stack.length - 1; i >= 0; --i) {
-            const macros = this.stack[i];
-            if (macros.has(name)) {
-                return macros.get(name);
-            }
-        }
-        return null;
-    }
-
-    has(name: string): boolean {
-        return this.get(name) !== null;
-    }
-
-    forEach(cb: (value: IMacro) => void): void {
-        let overrides = new Set;
-        for (let i = this.stack.length - 1; i >= 0; --i) {
-            const macros = this.stack[i];
-            macros.forEach((macro) => {
-                if (!overrides.has(macro.name)) {
-                    overrides.add(macro.name);
-                    cb(macro)
-                }
-            });
-        }
-    }
-}
-
-
 export class Preprocessor {
     protected stack: { lexer: ILexer; tokens: IToken[], bMacro: boolean }[] = null;
     protected diagnostics: PreprocessorDiagnostics;
 
-    protected macros: Macros;
+    /* protected */ macros: Macros;
     protected macroState: MacroState;
     /* protected */ unreachableCodeList: IRange[];
     /* protected */ includeList: Map<string, IRange>;
+
+    /* protected */ unresolvedMacros: IMacro[];
 
     protected knownTypes: Set<string>;
     protected lexerEngine: ILexerEngine;
@@ -246,6 +198,7 @@ export class Preprocessor {
         this.macros = new Macros;
         this.macroState = new MacroState;
         this.unreachableCodeList = [];
+        this.unresolvedMacros = [];
         this.includeList = new Map;
 
         this.knownTypes = knownTypes;
@@ -269,8 +222,8 @@ export class Preprocessor {
     }
 
 
-    get uri(): string {
-        return this.document.uri.toString();
+    get uri(): IFile {
+        return this.document.uri;
     }
 
 
@@ -416,6 +369,7 @@ export class Preprocessor {
 
     protected processMacro(name: IToken, text: IToken): IMacro {
         let bFunction = false;
+        let bRegionExpr = false;
         let params: string[] = null;
 
         if (!/^\s*$/.test(text.value)) {
@@ -480,7 +434,7 @@ export class Preprocessor {
             text.value = '';
         }
 
-        return { name: name.value, text, bFunction, params };
+        return { name: name.value, text, bFunction, params, bRegionExpr };
     }
 
 
@@ -574,7 +528,16 @@ export class Preprocessor {
         const uri = textToken.loc.start.file;
         lexer.setTextDocument(createTextDocument(uri, source, offset));
 
-        const asRaw = (token: IToken): number => tokenToNative(token, ({ value }) => macros.has(value) ? 1 : 0);
+        const asRaw = (token: IToken): number => tokenToNative(token, ({ value }) => {
+            const macro = macros.get(value);
+            if (macro) {
+                // mark macro as a part of ifdef/else expression
+                macro.bRegionExpr = true;
+                return 1;
+            }
+            this.addUnresolvedMacro(value);
+            return 0;
+        });
         const asFn = asMacroFunc;
         const asValue = asFn(asRaw);
 
@@ -647,7 +610,15 @@ export class Preprocessor {
         //
 
         const macroFuncs = <IMap<IMacroFunc>>{
-            'defined': asFn((a: IToken) => macros.has(a.value)),
+            'defined': asFn((a: IToken) => {
+               const macro = macros.get(a.value);
+               if (macro) {
+                   macro.bRegionExpr = true;
+                   return 1;
+               }
+               this.addUnresolvedMacro(a.value);
+               return 0;
+            }),
         };
 
         // TODO: move list construction to preprocess
@@ -669,7 +640,8 @@ export class Preprocessor {
                                 name: params[i],
                                 text: args[i],
                                 bFunction: false,
-                                params: null
+                                params: null,
+                                bRegionExpr: false
                             });
                         }
 
@@ -695,12 +667,33 @@ export class Preprocessor {
             const macro = this.macros.get(token.value);
             if (!isNull(macro) && !isNull(macro.text)) {
                 const exprValue = this.resolveMacroInner(macro.text);
-                if (DEBUG_MACRO) console.log(`macro '${token.value}:${macro.text.value}' resolved to '${exprValue}''`);
+                
+                if (DEBUG_MACRO) {
+                    console.log(`macro '${token.value}:${macro.text.value}' resolved to '${exprValue}''`);
+                }
+
                 return exprValue;
             }
 
             this.emitMacroWarning(`cannot resolve macro '${token.value}'`, textToken.loc);
+            this.addUnresolvedMacro(token.value);
+
             return NaN;
+        });
+    }
+
+
+    protected addUnresolvedMacro(name: string): void {
+        if (this.unresolvedMacros.find(macro => macro.name === name)) {
+            return;
+        }
+        
+        this.unresolvedMacros.push({
+            bFunction: false,
+            name,
+            params: null,
+            text: null,
+            bRegionExpr: true
         });
     }
 
@@ -838,19 +831,12 @@ export class Preprocessor {
                         nesting++;
                         break;
                     case '#elif':
-                        if (nesting !== 0) {
-                            break;
-                        }
-
-                        this.addUnreachableCode(startToken, token);
-                        return this.processElifMacro(token);
                     case '#else':
                         if (nesting !== 0) {
                             break;
                         }
 
-                        this.addUnreachableCode(startToken, token);
-                        return this.processElseMacro(token);
+                        /* fall throught */
                     case '#endif':
                         if (nesting > 0) {
                             nesting--;
@@ -858,7 +844,7 @@ export class Preprocessor {
                         }
 
                         this.addUnreachableCode(startToken, token);
-                        return this.processEndifMacro(token);
+                        return this.readMacro(token);
                     case '#error':
                         await this.readLine();
                 }
@@ -1026,7 +1012,8 @@ export class Preprocessor {
                     name: params[i],
                     text: macroToken,
                     bFunction: false,
-                    params: null
+                    params: null,
+                    bRegionExpr: false
                 });
             }
         } else {

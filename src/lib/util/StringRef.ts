@@ -22,7 +22,19 @@ export class StringRef {
         if (!isString(val)) {
             return <StringRef>val;
         }
-        return new StringRef(`${val}`);
+
+        const sval = val as string;
+        
+        let ref = StringRef.storage[sval];
+        if (ref) {
+            return ref;
+        }
+
+        ref = new StringRef(sval);
+        StringRef.storage[sval] = ref;
+        return ref;
     }
+
+    static storage: { [val: string]: StringRef; } = {};
 }
 

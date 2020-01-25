@@ -2,12 +2,11 @@ import { assert } from '@lib/common';
 import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
-import { ETokenType, IFile, ILexerEngine, IPosition, IRange, IToken, ILexerConfig, ILexer } from '@lib/idl/parser/IParser';
+import { ETokenType, ILexer, ILexerConfig, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
 import * as util from '@lib/parser/util';
 import { Diagnostics } from '@lib/util/Diagnostics';
-import { StringRef } from '@lib/util/StringRef';
 
-import { END_SYMBOL, EOF, ERROR, T_FLOAT, T_LINE_TERMINATOR, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN, T_MACRO, T_MACRO_CONCAT } from './symbols';
+import { END_SYMBOL, EOF, T_FLOAT, T_LINE_TERMINATOR, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
 interface ILexerDiagDesc {
     file: string;
@@ -218,7 +217,7 @@ export class Lexer implements ILexer {
 
 
     setPosition(pos: IPosition): void {
-        assert(String(this.document.uri) === String(pos.file));
+        assert(this.document.uri === pos.file);
         this.index = pos.offset;
         this.lineNumber = pos.line;
         this.columnNumber = pos.column;

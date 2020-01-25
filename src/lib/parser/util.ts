@@ -2,7 +2,7 @@ import { assert } from "@lib/common";
 import { IPosition, IRange } from "@lib/idl/parser/IParser";
 
 export function positionMin(a: IPosition, b: IPosition): IPosition {
-    assert(String(a.file) === String(b.file));
+    assert(a.file === b.file);
     return {
         offset: Math.min(a.offset, b.offset),
         line: Math.min(a.line, b.line),
@@ -12,7 +12,7 @@ export function positionMin(a: IPosition, b: IPosition): IPosition {
 }
 
 export function positionMax(a: IPosition, b: IPosition): IPosition {
-    assert(String(a.file) === String(b.file));
+    assert(a.file === b.file);
     return {
         offset: Math.max(a.offset, b.offset),
         line: Math.max(a.line, b.line),
@@ -26,9 +26,48 @@ export function cloneRange(range: IRange): IRange {
     return { start: { ...range.start }, end: { ...range.end } };
 }
 
+// export function extendRange(parent: IRange, child: IRange): IRange {
+//     if (child.start.file !== parent.start.file) {
+//         return parent;
+//     }
+
+//     assert(parent.end.file === child.end.file);
+
+//     if (child.start.line < parent.start.line) {
+        
+//         parent.start.column = child.start.column;
+//         parent.start.line = child.start.line;
+//         parent.start.file = child.start.file;
+//         parent.start.offset = child.start.offset;
+
+//     } else if (child.start.line === parent.start.line) {
+//         // parent.start = positionMin(child.start, parent.start);
+
+//         parent.start.column = Math.min(child.start.column, parent.start.column);
+//         parent.start.line = Math.min(child.start.line, parent.start.line);
+//         parent.start.offset = Math.min(child.start.offset, parent.start.offset);
+//     }
+
+//     if (child.end.line > parent.end.line) {
+
+//         parent.end.column = child.end.column;
+//         parent.end.line = child.end.line;
+//         parent.end.file = child.end.file;
+//         parent.end.offset = child.end.offset;
+
+//     } else if (child.end.line === parent.end.line) {
+//         // parent.end = positionMax(child.end, parent.end);
+
+//         parent.end.column = Math.max(child.end.column, parent.end.column);
+//         parent.end.line = Math.max(child.end.line, parent.end.line);
+//         parent.end.offset = Math.max(child.end.offset, parent.end.offset);
+//     }
+
+//     return parent;
+// }
 
 export function extendRange(parent: IRange, child: IRange): IRange {
-    if (String(child.start.file) !== String(parent.start.file)) {
+    if (child.start.file !== parent.start.file) {
         return parent;
     }
 

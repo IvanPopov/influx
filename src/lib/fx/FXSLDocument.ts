@@ -1,5 +1,4 @@
-import { isNumber, isObject, isString } from "@lib/common";
-import { IScope } from "@lib/idl/IInstruction";
+import { isNumber, isString } from "@lib/common";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";

@@ -3,7 +3,7 @@ import { expression, instruction, type, variable } from "@lib/fx/analisys/helper
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { IParseNode } from "@lib/idl/parser/IParser";
+import { IFile, IParseNode } from "@lib/idl/parser/IParser";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { Analyzer, Context, ICompileValidator } from "./Analyzer";
@@ -649,7 +649,7 @@ export class FxAnalyzer extends Analyzer {
     }
 
 
-    protected createContext(uri: string): FxContext {
+    protected createContext(uri: IFile): FxContext {
         return new FxContext(uri);
     }
 

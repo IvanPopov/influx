@@ -2,11 +2,11 @@
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IAttributeInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage, IBitwiseOperator, IArithmeticOperator } from '@lib/idl/IInstruction';
+import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IParseNode, IRange } from "@lib/idl/parser/IParser";
+import { IFile, IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
@@ -15,6 +15,7 @@ import { expression, instruction, type } from './helpers';
 import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
+import { BitwiseExprInstruction } from './instructions/BitwiseExprInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
 import { BreakOperator, BreakStmtInstruction } from './instructions/BreakStmtInstruction';
 import { CastExprInstruction } from './instructions/CastExprInstruction';
@@ -61,7 +62,6 @@ import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { T_BOOL, T_INT, T_UINT, T_VOID } from './SystemScope';
-import { BitwiseExprInstruction } from './instructions/BitwiseExprInstruction';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -622,7 +622,7 @@ export interface ICompileValidator {
 
 
 export class Context {
-    readonly uri: string | null;
+    readonly uri: IFile;
     readonly diagnostics: AnalyzerDiagnostics;
 
     /** driven from provide declaration */
@@ -635,7 +635,7 @@ export class Context {
 
     renderStates: IMap<ERenderStateValues>;
 
-    constructor(uri: string) {
+    constructor(uri: IFile) {
         this.diagnostics = new AnalyzerDiagnostics;
         this.uri = uri;
         this.moduleName = null;
@@ -3584,7 +3584,7 @@ export class Analyzer {
     }
 
 
-    protected createContext(uri: string): Context {
+    protected createContext(uri: IFile): Context {
         return new Context(uri);
     }
 
