@@ -4,13 +4,28 @@ import * as path from '@lib/path/path';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import * as React from 'react';
+import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { List } from 'semantic-ui-react';
+import { Checkbox, List } from 'semantic-ui-react';
 
-export interface IPPViewProps extends IStoreState {
+import { IWithStyles } from '.';
+
+const styles = {
+    checkboxTiny: {
+        fontSize: '0.92857143em !important',
+        lineHeight: '15px !important',
+        minWidth: '17px !important',
+        transform: 'scale(0.85) !important',
+        transformOrigin: 'left !important',
+        minHeight: 'auto !important'
+    }
+};
+
+export interface IPPViewProps extends IStoreState, IWithStyles<typeof styles> {
 
 }
 
+@injectSheet(styles)
 class PPView extends React.Component<IPPViewProps, {}> {
     state: {
         // nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
@@ -69,7 +84,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         <List.Icon name={ (showMacros ? `chevron down` : `chevron right`) } />
                         <List.Content>
                             <List.Header>{ 'Macro list' }</List.Header>
-                            { this.renderMacros(macros.concat(unresolvedMacros)) }
+                            { this.renderMacros(macros.concat(unresolvedMacros).sort((a, b) => a.name.localeCompare(b.name))) }
                         </List.Content>
                     </List.Item>
                     <List.Item key={ `pp-unreachable-code` } className='astnode'
@@ -119,7 +134,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
             return null;
         }
 
-        if (macros.length == 0) {
+        if (macros.length === 0) {
             return null;
         }
 
@@ -135,7 +150,10 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         >
                             <List.Content>
                                 {/* <List.Header>{ filename }</List.Header> */ }
-                                <List.Description>{ macro.name }</List.Description>
+                                <List.Description>
+                                    <Checkbox label={macro.name} checked={ (macro.text !== null) } 
+                                        className={ this.props.classes.checkboxTiny }  />
+                                </List.Description>
                             </List.Content>
                         </List.Item>
                     ))

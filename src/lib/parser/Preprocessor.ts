@@ -360,6 +360,13 @@ export class Preprocessor {
 
         const macro = this.processMacro(name, text);
         if (macro) {
+            const unresolvedMacro = this.unresolvedMacros.find(macro => macro.name === name.value);
+            if (unresolvedMacro) {
+                macro.bRegionExpr = unresolvedMacro.bRegionExpr;
+                // TODO: remove this hack
+                this.unresolvedMacros = this.unresolvedMacros.filter(macro => macro.name !== name.value);
+            }
+
             this.macros.set(macro);
         }
 
@@ -687,7 +694,7 @@ export class Preprocessor {
         if (this.unresolvedMacros.find(macro => macro.name === name)) {
             return;
         }
-        
+
         this.unresolvedMacros.push({
             bFunction: false,
             name,
