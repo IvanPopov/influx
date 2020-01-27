@@ -31,7 +31,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
 
     get includes(): Map<string, IRange> {
-        return this.preprocessor.includeList;
+        return this.preprocessor.includeMap;
     }
 
 
@@ -102,7 +102,7 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         if (macroLoc) { 
             token.loc = macroLoc; 
         }
-        
+
         return token;
     }
 }

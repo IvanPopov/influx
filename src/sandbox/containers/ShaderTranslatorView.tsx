@@ -81,6 +81,11 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             return null;
         }
 
+        if (match.params.view === 'preprocessor' && match.params.name === 'raw') {
+            console.log('todo: render preprocessed output');
+            return null;
+        }
+
         const fxList = filterPartFx(scope);
         const fx = fxList.find(tech => tech.name === match.params.name);
 

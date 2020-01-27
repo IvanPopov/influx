@@ -92,6 +92,7 @@ ObjectType : T_KW_STRING --add
 ObjectType : T_KW_TEXTURE
 ObjectType : T_KW_TEXTURE1D
 ObjectType : T_KW_TEXTURE2D
+ObjectType : T_KW_TEXTURE2D '<' Type '>'
 ObjectType : T_KW_TEXTURE3D
 ObjectType : T_KW_TEXTURECUBE
 ObjectType : T_KW_SAMPLER
@@ -107,7 +108,6 @@ ObjectType : T_KW_STATEBLOCK
 ObjectType : T_KW_RWBUFFER '<' Type '>'
 ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
-ObjectType : T_KW_TEXTURE2D '<' Type '>'
 
 
 # struct Name

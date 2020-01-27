@@ -62,7 +62,6 @@ render(
     <Provider store={store}>
         <ConnectedRouter history={history}>
             <Switch>
-                <Route path={LOCATION_PATTERN} component={App} />
                 <Route exact path={LOCATION_NOT_FOUND}>
                     <Modal open basic size='small'>
                         <Header icon='archive' content='Location not found :/' />
@@ -70,6 +69,7 @@ render(
                         </Modal.Content>
                     </Modal>
                 </Route>
+                <Route path={LOCATION_PATTERN} component={App} />
             </Switch>
         </ConnectedRouter>
     </Provider>,

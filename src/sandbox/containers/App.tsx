@@ -302,12 +302,33 @@ class App extends React.Component<IAppProps> {
         this.props.actions.specifyOptions({ colorize });
     }
 
+    resolveLocation(src: IRange): IRange {
+        // if (src.source) {
+        //     return this.resolveLocation(src.source);
+        // }
+        // return src;
+        const file = getFileState(this.props);
+        const uri = file.uri;
+        const slastDocument = file.slastDocument;
+
+        if (!slastDocument) {
+            return null;
+        }
+
+        const includes = slastDocument.includes;
+
+        let dst = src;
+        while (dst && String(uri) !== String(dst.start.file)) {
+            dst = includes.get(String(dst.start.file));
+        }
+        return dst;
+    }
 
     /** @deprecated */
     highlightTest(testName: string, loc: IRange, show: boolean = true, passed?: boolean, tooltip?: string) {
         const name = `autotest-${testName}`;
         if (show) {
-            const range = loc;
+            const range = this.resolveLocation(loc);
             const color = passed ? 10 : 14;
             this.props.actions.addMarker({ name, range, type: `line`, payload: { color } });
             if (!passed && tooltip) {
@@ -323,7 +344,7 @@ class App extends React.Component<IAppProps> {
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         const markerName = `ast-range-${inst.instructionID}`;
         if (show) {
-            const range = inst.sourceNode.loc;
+            const range = this.resolveLocation(inst.sourceNode.loc);
             this.props.actions.addMarker({
                 name: markerName,
                 range,
@@ -338,7 +359,7 @@ class App extends React.Component<IAppProps> {
     /** @deprecated */
     highlightPNode(id: string, pnode: IParseNode = null, show: boolean = true) {
         if (show) {
-            const range = pnode.loc;
+            const range = this.resolveLocation(pnode.loc);
             this.props.actions.addMarker({
                 name: `ast-range-${id}`,
                 range,
@@ -591,6 +612,15 @@ class App extends React.Component<IAppProps> {
                             Syntax Analysis
                         </Header> */}
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Dropdown item icon='gear' simple>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item
+                                        as={ NavLink }
+                                        to={ `${`/preprocessor/${path.basename(getFileState(this.props).uri)}/raw`}` } >
+                                        { 'show preprocessed' }
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Preprocessor Summary
@@ -630,7 +660,7 @@ class App extends React.Component<IAppProps> {
                         <Grid divided={ false }>
                             <Grid.Row columns={ 2 }>
                                 <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
-                                    <SourceCodeMenu path={ props.match.params } />
+                                    {/* <SourceCodeMenu path={ props.match.params } /> */ }
                                     <Switch>
                                         {/* TODO: sync all pathes with business logic */ }
                                         <Route path='/playground/:fx/:name/:pass/(vertexshader|pixelshader)'>
@@ -650,6 +680,9 @@ class App extends React.Component<IAppProps> {
                                         </Route>
                                         <Route exact path='/ast/:fx'>
                                             <SourceEditor2 name='source-code' />
+                                        </Route>
+                                        <Route exact path={ `/preprocessor/:fx/raw` }>
+                                            <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
                                         <Route exact path='/preprocessor/:fx'>
                                             <SourceEditor2 name='source-code' />

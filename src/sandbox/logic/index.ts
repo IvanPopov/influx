@@ -10,21 +10,27 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
 
-const readFile = fname => fetch(fname).then(resp => resp.text());
+const readFile = fname => fetch(fname);
 
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
     type: evt.SOURCE_FILE_REQUEST,
     latest: true,
     async process({ getState, action }, dispatch, done) {
         try {
-            const content = await readFile(action.payload.filename);
-            dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
-            dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+            const response = await readFile(action.payload.filename);
+            if (response.status !== 200) {
+                console.warn(`Could not find file ${action.payload.filename}.`);
+                dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
+                dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { } });
+            } else {
+                const content = await response.text();
+                dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
+                dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+            }
         } catch (error) {
             console.warn(`Could not find file ${action.payload.filename}.`);
             dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
             dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
-            // dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
         } finally {
             done();
         }
@@ -63,7 +69,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
         if (match) {
             const { view, fx, name } = match.params;
 
-            const supportedViews = ['playground', 'bytecode', 'program', 'ast', 'preprocessor'];
+            const supportedViews = ['preprocessor', 'playground', 'bytecode', 'program', 'ast'];
             if (supportedViews.indexOf(view) !== -1) {
                 if (!fx) {
                     // dispatch(push(`/${view}/${DEFAULT_FILENAME}/`));
@@ -104,8 +110,11 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
 
         if (match) {
             const { view, fx } = match.params;
-            if (fx !== DEFAULT_FILENAME) {
+            // if (fx !== DEFAULT_FILENAME) {
+            if (!fx) {
                 history.push(`/${view}/${DEFAULT_FILENAME}`);
+            } else {
+                history.push(LOCATION_NOT_FOUND);
             }
         }
 

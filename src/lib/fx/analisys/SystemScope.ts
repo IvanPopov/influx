@@ -82,7 +82,7 @@ class TypeTemplate implements ITypeTemplate {
     }
 
     typeName(args?: ITypeInstruction[]): string {
-        if (args) {
+        if (args && args.length > 0) {
             return `${this.name}<${args.map(arg => arg.name).join(', ')}>`;
         }
         return this.name;
@@ -199,28 +199,32 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
 
 class Texture2DTemplate extends TypeTemplate {
     constructor() {
-        super('Texture2D', scope);
+        super(Texture2DTemplate.TYPE_NAME, scope);
     }
     produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
-        if (args.length !== 1) {
+        if (args.length > 1) {
             // TODO: print error
             return null;
         }
 
-        if (!args[0].isBase()) {
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
             // TODO: print error
             return null;
         }
 
         const name = this.typeName(args);
         const size = -1; 
-        const elementType = args[0];
+        const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }
+    }   
+
+    static TYPE_NAME = 'Texture2D';
 }
 
 
@@ -863,6 +867,11 @@ function initSystemTypes(): void {
     scope.addTypeTemplate(new AppendStructuredBufferTemplate);
 
     scope.addTypeTemplate(new Texture2DTemplate);
+
+    // produce default Texture2D type
+    const template = scope.findTypeTemplate(Texture2DTemplate.TYPE_NAME);
+    const typeTexture2D = template.produceType(scope, []); 
+    scope.addType(typeTexture2D);
 }
 
 

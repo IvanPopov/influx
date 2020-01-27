@@ -176,14 +176,28 @@ class MacroState {
 }
 
 
+enum EPPDocumentFlags {
+    k_None = 0x00,
+    k_Macro = 0x01,
+    k_Include = 0x02
+}
+
+
 export class Preprocessor {
-    protected stack: { lexer: ILexer; tokens: IToken[], macro: boolean, loc: IRange }[] = null;
+    protected stack: { 
+        lexer: ILexer; 
+        tokens: IToken[], 
+        flags: number,  // EPPDocumentFlags 
+        loc: IRange 
+    }[];
+    protected includes: number[];
+
     protected diagnostics: PreprocessorDiagnostics;
 
     /* protected */ macros: Macros;
     /* protected */ macroState: MacroState;
     /* protected */ unreachableCodeList: IRange[];
-    /* protected */ includeList: Map<string, IRange>;
+    /* protected */ includeMap: Map<string, IRange>;
 
     /* protected */ unresolvedMacros: IMacro[];
 
@@ -198,7 +212,7 @@ export class Preprocessor {
         this.macros = macros;
         
         this.macroState = new MacroState;
-        this.includeList = new Map;
+        this.includeMap = new Map;
 
         this.unreachableCodeList = [];
         this.unresolvedMacros = [];
@@ -211,6 +225,7 @@ export class Preprocessor {
         // TODO: add initital document to includeList !!!
 
         this.stack = [];
+        this.includes = [];
     }
 
 
@@ -236,7 +251,14 @@ export class Preprocessor {
 
     /** Top location of the macro if presented or null otherwise. */
     macroLocation(): IRange {
-        return this.stack.length > 1 ? this.stack[1].loc : null;
+        // return first macro location in the current document
+        const latestInclude = this.includes[this.includes.length - 1];
+        if (latestInclude < this.stack.length - 1) {
+            return this.stack[latestInclude + 1].loc;
+        }
+
+        // return null (we are alrady in the current document)
+        return null;
     }
 
     getDiagnosticReport(): IDiagnosticReport {
@@ -251,19 +273,12 @@ export class Preprocessor {
 
     setTextDocument(textDocument: ITextDocument): Preprocessor {
         this.document = textDocument;
-        this.pushDocument(textDocument, null);
-        this.includeList.set(`${textDocument.uri}`, null);
+        this.pushDocument(textDocument, null, EPPDocumentFlags.k_Include);
         return this;
     }
 
 
-    protected pushMacro(macro: IMacro, loc: IRange): void {
-        const textDocument = macroToDocument(macro);
-        this.pushDocument(textDocument, loc, true);
-    }
-
-
-    protected pushDocument(textDocument: ITextDocument, loc: IRange, macro: boolean = false): void {
+    protected pushDocument(textDocument: ITextDocument, loc: IRange, flags: number): void {
         const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
         lexer.setTextDocument(textDocument);
         const tokens = <IToken[]>[];
@@ -273,24 +288,36 @@ export class Preprocessor {
         //     loc.source = this.stack[this.stack.length - 1].loc;
         // }
 
-        this.stack.push({ lexer, tokens, macro, loc });
         
-        if (macro) {
+        if (flags & EPPDocumentFlags.k_Macro) {
             this.macros.push();
-        }          
+        }       
+        
+        if (flags & EPPDocumentFlags.k_Include) {
+            this.includes.push(this.stack.length);
+
+            assert(!this.includeMap.has(`${textDocument.uri}`));
+            this.includeMap.set(`${textDocument.uri}`, loc);
+        }
+
+        this.stack.push({ lexer, tokens, flags, loc });
     }
 
 
     protected pop(): void {
-        const { macro: bMacro, lexer } = this.stack.pop();
+        const { flags, lexer } = this.stack.pop();
 
         // FIXME: do not Lexer type
         if (!(lexer as Lexer).diagnostics.isEmpty()) {
             this.lexerReport = Diagnostics.mergeReports([this.lexerReport, lexer.getDiagnosticReport()]);
         }
 
-        if (bMacro) {
+        if (flags & EPPDocumentFlags.k_Macro) {
             this.macros.pop();
+        }
+
+        if (flags & EPPDocumentFlags.k_Include) {
+            this.includes.pop();
         }
     }
 
@@ -320,7 +347,6 @@ export class Preprocessor {
                         return this.readToken(allowMacro);
                     }
 
-                    // this.pop();
                     if (!this.macroState.isEmpty()) {
                         // TODO: highlight open tag too.
                         this.emitMacroError(`'endif' not found :/`, token.loc);
@@ -901,13 +927,11 @@ export class Preprocessor {
         const uri = URI.resolve(includeURL, `${token.loc.start.file}`);
         const loc = util.commonRange(token.loc, file.loc);
 
-        if (this.includeList.has(uri)) {
+        if (this.includeMap.has(uri)) {
             console.warn(`'${uri}' file has already been included previously.`);
             // TODO: emit warning
             return this.readToken();
         }
-
-        this.includeList.set(uri, loc);
 
         try {
             const response = await fetch(uri);
@@ -919,7 +943,7 @@ export class Preprocessor {
             const source = await response.text();
             
             // TODO: use precise location (trimmed)
-            this.pushDocument(createTextDocument(uri, source), loc);
+            this.pushDocument(createTextDocument(uri, source), loc, EPPDocumentFlags.k_Include);
         } catch (e) {
             console.error(e);
             this.emitFileNotFound(file.value, loc);
@@ -1018,7 +1042,7 @@ export class Preprocessor {
             {
                 const { loc: { start } } = token;
                 const { loc: { end } } = argToken;
-                this.pushMacro(macro, { start, end });
+                this.pushDocument(macroToDocument(macro), { start, end }, EPPDocumentFlags.k_Macro);
             }
 
             const params = macro.params;
@@ -1045,7 +1069,7 @@ export class Preprocessor {
                 });
             }
         } else {
-            this.pushMacro(macro, token.loc);
+            this.pushDocument(macroToDocument(macro), token.loc, EPPDocumentFlags.k_Macro);
         }
 
         return macro;
@@ -1103,15 +1127,15 @@ export class Preprocessor {
 
         this.pushToken(nextToken);
         // we handle it as text document, because all possible macros inside are already resolved
-        this.pushDocument(createTextDocument(this.lexer.document.uri, raw), loc);
+        this.pushDocument(createTextDocument(this.lexer.document.uri, raw), loc, EPPDocumentFlags.k_None);
         return this.readToken();
     }
 
 
     protected async examMacro(token: IToken): Promise<IToken> {
-        const bMacro = this.stack.length > 1 && this.stack[this.stack.length - 1].macro;
+        const macroProcessing = this.stack[this.stack.length - 1].flags & EPPDocumentFlags.k_Macro;
 
-        if (bMacro) {
+        if (macroProcessing) {
             const nextToken = await this.readToken(false, false);
             if (nextToken.name === T_MACRO_CONCAT) {
                 return this.applyConcatMacro(token);

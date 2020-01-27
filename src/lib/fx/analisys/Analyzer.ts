@@ -908,7 +908,8 @@ export class Analyzer {
                 {
                     let typeName = children[children.length - 1].value;
 
-                    if (children.length !== 1) {
+                    if (children.length !== 1) 
+                    {
                         assert(children[children.length - 2].value === '<' && children[0].value === '>');
                         const tplName = typeName;
                         const args = children
@@ -927,7 +928,7 @@ export class Analyzer {
 
                         // TODO: validate register
                         // TODO: use ESystemTypes enumeration
-                        const SYSTEM_TYPES = ['RWBuffer', 'RWStructuredBuffer', 'AppendStructuredBuffer'];
+                        const SYSTEM_TYPES = ['RWBuffer', 'RWStructuredBuffer', 'AppendStructuredBuffer', 'Texture2D'];
                         if (SYSTEM_TYPES.indexOf(template.name) !== -1) {
                             if (scope.type != EScopeType.k_Global) {
                                 context.error(sourceNode, EErrors.InvalidTypeScope,
