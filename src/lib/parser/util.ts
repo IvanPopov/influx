@@ -122,3 +122,14 @@ export function offset(source: IRange, offset: IPosition): IRange {
 }
 
 export const checkRange = (range: IRange, offset: number) => range.start.offset <= offset && range.end.offset > offset;
+
+// export function stringifyRange(range: IRange, depth = 0) {
+//     if (!range) {
+//         return '';
+//     }
+
+//     const offset = Array(depth).fill('---').join('') + (depth? ' ' : '');
+//     const { start, end, source } = range;
+//     const filename = String(start.file).split('/').reverse()[0];
+//     return `${offset}${filename}:${start.line}:${start.column}-${end.line}:${end.column}\n${stringifyRange(source, depth + 1)}`;
+// } 

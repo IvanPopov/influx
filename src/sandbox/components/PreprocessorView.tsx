@@ -3,6 +3,7 @@ import { IRange } from '@lib/idl/parser/IParser';
 import * as path from '@lib/path/path';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
+import autobind from 'autobind-decorator';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
@@ -31,6 +32,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
         // nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
         showIncludes: boolean;
         showMacros: boolean;
+        showMacrosOther: boolean;
         showUnreachableCode: boolean;
     };
 
@@ -40,7 +42,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
         super(props);
         this.state = {
             showIncludes: false,
-            showMacros: false,
+            showMacros: true,
+            showMacrosOther: false,
             showUnreachableCode: false
         };
 
@@ -70,7 +73,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
             <div ref={ this.rootRef }>
                 <List style={ style } selection size='small' className='astlist' >
                     <List.Item key={ `pp-include-list` } className='astnode'
-                        onClick={ () => this.setState({ showIncludes: !showIncludes }) }
+                        onClick={ this.handleIncludesClick }
                     >
                         <List.Icon name={ (showIncludes ? `chevron down` : `chevron right`) } />
                         <List.Content>
@@ -79,7 +82,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         </List.Content>
                     </List.Item>
                     <List.Item key={ `pp-macros` } className='astnode'
-                        onClick={ () => this.setState({ showMacros: !showMacros }) }
+                        onClick={ this.handleMacrosClick }
                     >
                         <List.Icon name={ (showMacros ? `chevron down` : `chevron right`) } />
                         <List.Content>
@@ -88,7 +91,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         </List.Content>
                     </List.Item>
                     <List.Item key={ `pp-unreachable-code` } className='astnode'
-                        onClick={ () => this.setState({ showUnreachableCode: !showUnreachableCode }) }
+                        onClick={ this.handleUnreachableCodeClick }
                     >
                         <List.Icon name={ (showUnreachableCode ? `chevron down` : `chevron right`) } />
                         <List.Content>
@@ -138,6 +141,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
             return null;
         }
 
+        const { showMacrosOther } = this.state;
+
         return (
             <List.List className='astlist'>
                 {
@@ -151,20 +156,21 @@ class PPView extends React.Component<IPPViewProps, {}> {
                             <List.Content>
                                 {/* <List.Header>{ filename }</List.Header> */ }
                                 <List.Description>
-                                    <Checkbox label={macro.name} checked={ (macro.text !== null) } 
-                                        className={ this.props.classes.checkboxTiny }  />
+                                    <Checkbox label={ macro.name } checked={ (macro.text !== null) }
+                                        className={ this.props.classes.checkboxTiny } />
                                 </List.Description>
                             </List.Content>
                         </List.Item>
                     ))
                 }
                 <List.Item key={ `pp-macros-other` } className='astnode'
-                // onClick={ () => this.setState({ showUnreachableCode: !showUnreachableCode }) }
+                    onClick={ this.handleMacrosOtherClick }
                 >
-                    <List.Icon name={ (true ? `chevron down` : `chevron right`) } />
+                    <List.Icon name={ (showMacrosOther ? `chevron down` : `chevron right`) } />
                     <List.Content>
                         <List.Header>{ 'other...' }</List.Header>
                         {
+                            showMacrosOther &&
                             macros.filter(macro => !macro.bRegionExpr).map((macro, i) => (
                                 <List.Item key={ `pp-macro-${i}` }
                                     // onClick={ this.handleNodeClick.bind(this, idx, node) }
@@ -212,6 +218,37 @@ class PPView extends React.Component<IPPViewProps, {}> {
         );
     }
 
+
+    @autobind
+    handleIncludesClick(e: React.MouseEvent<HTMLAnchorElement>): void {
+        e.stopPropagation();
+        const { showIncludes } = this.state;
+        this.setState({ showIncludes: !showIncludes });
+    }
+
+
+    @autobind
+    handleUnreachableCodeClick(e: React.MouseEvent<HTMLAnchorElement>): void {
+        e.stopPropagation();
+        const { showUnreachableCode } = this.state;
+        this.setState({ showUnreachableCode: !showUnreachableCode });
+    }
+
+
+    @autobind
+    handleMacrosOtherClick(e: React.MouseEvent<HTMLAnchorElement>): void {
+        e.stopPropagation();
+        const { showMacrosOther } = this.state;
+        this.setState({ showMacrosOther: !showMacrosOther });
+    }
+
+
+    @autobind
+    handleMacrosClick(e: React.MouseEvent<HTMLAnchorElement>): void {
+        e.stopPropagation();
+        const { showMacros } = this.state;
+        this.setState({ showMacros: !showMacros });
+    }
 }
 
 export default connect<{}, {}, IPPViewProps>(mapProps(getCommon), {})(PPView) as any;

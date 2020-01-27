@@ -68,6 +68,9 @@ export interface IPosition {
 export interface IRange {
     start: IPosition;
     end: IPosition;
+
+    // see "Preprocessor.ts" for more details
+    // source?: IRange;
 }
 
 export interface IToken {

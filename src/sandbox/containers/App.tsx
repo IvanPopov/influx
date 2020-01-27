@@ -302,29 +302,12 @@ class App extends React.Component<IAppProps> {
         this.props.actions.specifyOptions({ colorize });
     }
 
-    resolveLocation(src: IRange): IRange {
-        const file = getFileState(this.props);
-        const uri = file.uri;
-        const slastDocument = file.slastDocument;
-
-        if (!slastDocument) {
-            return null;
-        }
-
-        const includes = slastDocument.includes;
-
-        let dst = src;
-        while (dst && String(uri) !== String(dst.start.file)) {
-            dst = includes.get(String(dst.start.file));
-        }
-        return dst;
-    }
 
     /** @deprecated */
     highlightTest(testName: string, loc: IRange, show: boolean = true, passed?: boolean, tooltip?: string) {
         const name = `autotest-${testName}`;
         if (show) {
-            const range = this.resolveLocation(loc);
+            const range = loc;
             const color = passed ? 10 : 14;
             this.props.actions.addMarker({ name, range, type: `line`, payload: { color } });
             if (!passed && tooltip) {
@@ -340,7 +323,7 @@ class App extends React.Component<IAppProps> {
     highlightInstruction(inst: IInstruction, show: boolean = true) {
         const markerName = `ast-range-${inst.instructionID}`;
         if (show) {
-            const range = this.resolveLocation(inst.sourceNode.loc);
+            const range = inst.sourceNode.loc;
             this.props.actions.addMarker({
                 name: markerName,
                 range,
@@ -355,7 +338,7 @@ class App extends React.Component<IAppProps> {
     /** @deprecated */
     highlightPNode(id: string, pnode: IParseNode = null, show: boolean = true) {
         if (show) {
-            const range = this.resolveLocation(pnode.loc);
+            const range = pnode.loc;
             this.props.actions.addMarker({
                 name: `ast-range-${id}`,
                 range,

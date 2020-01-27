@@ -14,7 +14,7 @@ import { Lexer } from "./Lexer";
 import { Macros } from "./Macros";
 import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "./symbols";
 
-const DEBUG_MACRO = false;
+let DEBUG_MACRO = false;
 
 
 enum EMacroState {
@@ -177,11 +177,11 @@ class MacroState {
 
 
 export class Preprocessor {
-    protected stack: { lexer: ILexer; tokens: IToken[], bMacro: boolean }[] = null;
+    protected stack: { lexer: ILexer; tokens: IToken[], macro: boolean, loc: IRange }[] = null;
     protected diagnostics: PreprocessorDiagnostics;
 
     /* protected */ macros: Macros;
-    protected macroState: MacroState;
+    /* protected */ macroState: MacroState;
     /* protected */ unreachableCodeList: IRange[];
     /* protected */ includeList: Map<string, IRange>;
 
@@ -194,17 +194,19 @@ export class Preprocessor {
 
     document: ITextDocument;
 
-    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string>) {
-        this.macros = new Macros;
+    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string>, macros = new Macros, diag = new PreprocessorDiagnostics) {
+        this.macros = macros;
+        
         this.macroState = new MacroState;
+        this.includeList = new Map;
+
         this.unreachableCodeList = [];
         this.unresolvedMacros = [];
-        this.includeList = new Map;
 
         this.knownTypes = knownTypes;
         this.lexerEngine = lexerEngine;
 
-        this.diagnostics = new PreprocessorDiagnostics;
+        this.diagnostics = diag;
         this.lexerReport = null;
         // TODO: add initital document to includeList !!!
 
@@ -226,6 +228,16 @@ export class Preprocessor {
         return this.document.uri;
     }
 
+    /** Current location stack (each location contains ".source" property inside.) */
+    // get location(): IRange {
+    //     return this.stack[this.stack.length - 1].loc;
+    // }
+
+
+    /** Top location of the macro if presented or null otherwise. */
+    macroLocation(): IRange {
+        return this.stack.length > 1 ? this.stack[1].loc : null;
+    }
 
     getDiagnosticReport(): IDiagnosticReport {
         return Diagnostics.mergeReports([this.lexerReport, this.diagnostics.resolve()]);
@@ -239,35 +251,38 @@ export class Preprocessor {
 
     setTextDocument(textDocument: ITextDocument): Preprocessor {
         this.document = textDocument;
-        this.pushDocument(textDocument);
+        this.pushDocument(textDocument, null);
         this.includeList.set(`${textDocument.uri}`, null);
         return this;
     }
 
 
-    protected pushMacro(macro: IMacro): void {
+    protected pushMacro(macro: IMacro, loc: IRange): void {
         const textDocument = macroToDocument(macro);
-
-        const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
-        lexer.setTextDocument(textDocument);
-        const tokens = <IToken[]>[];
-
-        this.stack.push({ lexer, tokens, bMacro: true });
-        this.macros.push();
+        this.pushDocument(textDocument, loc, true);
     }
 
 
-    protected pushDocument(textDocument: ITextDocument): void {
+    protected pushDocument(textDocument: ITextDocument, loc: IRange, macro: boolean = false): void {
         const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
         lexer.setTextDocument(textDocument);
         const tokens = <IToken[]>[];
 
-        this.stack.push({ lexer, tokens, bMacro: false });
+        /// link location into chain
+        // if (loc) {
+        //     loc.source = this.stack[this.stack.length - 1].loc;
+        // }
+
+        this.stack.push({ lexer, tokens, macro, loc });
+        
+        if (macro) {
+            this.macros.push();
+        }          
     }
 
 
     protected pop(): void {
-        const { bMacro, lexer } = this.stack.pop();
+        const { macro: bMacro, lexer } = this.stack.pop();
 
         // FIXME: do not Lexer type
         if (!(lexer as Lexer).diagnostics.isEmpty()) {
@@ -305,7 +320,7 @@ export class Preprocessor {
                         return this.readToken(allowMacro);
                     }
 
-                    this.pop();
+                    // this.pop();
                     if (!this.macroState.isEmpty()) {
                         // TODO: highlight open tag too.
                         this.emitMacroError(`'endif' not found :/`, token.loc);
@@ -902,7 +917,9 @@ export class Preprocessor {
             }
 
             const source = await response.text();
-            this.pushDocument(createTextDocument(uri, source));
+            
+            // TODO: use precise location (trimmed)
+            this.pushDocument(createTextDocument(uri, source), loc);
         } catch (e) {
             console.error(e);
             this.emitFileNotFound(file.value, loc);
@@ -998,7 +1015,11 @@ export class Preprocessor {
                 return null;
             }
 
-            this.pushMacro(macro);
+            {
+                const { loc: { start } } = token;
+                const { loc: { end } } = argToken;
+                this.pushMacro(macro, { start, end });
+            }
 
             const params = macro.params;
 
@@ -1024,44 +1045,78 @@ export class Preprocessor {
                 });
             }
         } else {
-            this.pushMacro(macro);
+            this.pushMacro(macro, token.loc);
         }
 
         return macro;
     }
 
+    protected async preprocessToString(value: string): Promise<string> {
+        if (DEBUG_MACRO) {
+            console.info('preprocess to string', value);
+        }
+
+        const pp = new Preprocessor(this.lexerEngine, this.knownTypes, this.macros, this.diagnostics);
+        pp.setTextDocument(createTextDocument('://macro', value));
+        
+        let token = await pp.readToken();
+        let raw = null;
+        while (token.name !== END_SYMBOL) {
+            raw = (raw ? raw + ' ': '') + token.value;
+            token = await pp.readToken();
+        }
+
+        if (DEBUG_MACRO) {
+            console.info(`>> "${raw}"`);
+        }
+        
+        return raw;
+    }
+
+
+    // apply "left'##'right" operator to value and next token
+    protected async applyConcatMacro(left: IToken): Promise<IToken> {
+        assert(!this.macros.get(left.value) || !this.macros.get(left.value).bFunction);
+
+        const right = await this.readToken(false, false);
+        assert(right.name !== END_SYMBOL);
+
+        if (DEBUG_MACRO) {
+            console.info(`concat strings: "${left.value}##${right.value}"`);
+        }
+
+        const leftRaw = await this.preprocessToString(left.value);
+        const rightRaw = await this.preprocessToString(right.value);
+        const raw = `${leftRaw}${rightRaw}`;
+
+        if (DEBUG_MACRO) {
+            console.info(`=> "${leftRaw}${rightRaw}"`);
+        }
+
+        const loc = { start: left.loc.start, end: right.loc.end };
+
+        // multiple concatenation processing: A ## B ## C ##  etc.
+        const nextToken = await this.readToken(false, false);
+        if (nextToken.name === T_MACRO_CONCAT) {
+            return this.applyConcatMacro(createMacroToken(raw, loc));
+        } 
+
+        this.pushToken(nextToken);
+        // we handle it as text document, because all possible macros inside are already resolved
+        this.pushDocument(createTextDocument(this.lexer.document.uri, raw), loc);
+        return this.readToken();
+    }
+
+
     protected async examMacro(token: IToken): Promise<IToken> {
-        const bMacro = this.stack.length > 1 && this.stack[this.stack.length - 1].bMacro;
+        const bMacro = this.stack.length > 1 && this.stack[this.stack.length - 1].macro;
 
         if (bMacro) {
             const nextToken = await this.readToken(false, false);
             if (nextToken.name === T_MACRO_CONCAT) {
-                assert(!this.macros.get(token.value) || !this.macros.get(token.value).bFunction);
-
-                // FIXME: rewrite this code
-
-                const $pp = new Preprocessor(this.lexerEngine, this.knownTypes);
-                $pp.pushDocument(createTextDocument('://macro', token.value));
-
-                let $tokens = <IToken[]>[];
-                let $token = await $pp.readToken();
-                while ($token.name !== END_SYMBOL) {
-                    $tokens.push($token);
-                    $token = await $pp.readToken();
-                }
-
-                // const left = token;
-                const left = createMacroToken($tokens.map(t => t.value).join(' '), token.loc);
-                const right = await this.readToken();
-
-                const combinedValue = `${left.value}${right.value}`;
-
-                // TODO: use pushMacro()
-                this.pushDocument(createTextDocument(this.lexer.document.uri, combinedValue));
-                return this.readToken();
-            } else {
-                this.pushToken(nextToken);
-            }
+                return this.applyConcatMacro(token);
+            } 
+            this.pushToken(nextToken);
         }
 
         if (token.name === T_NON_TYPE_ID || token.name === T_TYPE_ID) {

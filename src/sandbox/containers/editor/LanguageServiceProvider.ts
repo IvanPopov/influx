@@ -40,18 +40,7 @@ function asDiagnostic(diagEntry: IDiagnosticMessage): Diagnostic {
     };
 }
 
-function resolveLocation(src: IRange, slastDocument: ISLASTDocument): IRange {
-    if (!slastDocument) {
-        return null;
-    }
 
-    const { includes, uri } = slastDocument;
-    let dst = src;
-    while (dst && String(uri) !== String(dst.start.file)) {
-        dst = includes.get(String(dst.start.file));
-    }
-    return dst;
-}
 
 class LanguageServiceProvider {
     private service: ILanguageService;
@@ -82,7 +71,7 @@ class LanguageServiceProvider {
         this.documents.set(textDocument.uri, { textDocument, slastDocument, slDocument });
 
         slDocument.diagnosticReport.messages.forEach(msg => {
-            const { start, end } = resolveLocation(msg, slastDocument);
+            const { start, end } = msg;
             msg.start = start;
             msg.end = end;
         });
