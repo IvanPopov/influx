@@ -306,7 +306,6 @@ export class Lexer implements ILexer {
         let start = this.pos();
         let value = '';
         let ch = this.currentChar();
-        let chPrev = '';
         while (ch) {
             if (ch === '\\') {
                 let chNext = this.readNextChar();
@@ -318,6 +317,7 @@ export class Lexer implements ILexer {
                         ch = this.readNextChar();
                         this.lineNumber++;
                         this.columnNumber = 0;
+                        value += '\\\n'; 
                         continue;
                     case 'n':
                         ch = '\n';
@@ -333,7 +333,6 @@ export class Lexer implements ILexer {
             }
 
             value += ch;
-            chPrev = ch;
             ch = this.readNextChar();
         }
 

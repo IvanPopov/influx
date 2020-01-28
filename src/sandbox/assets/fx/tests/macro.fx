@@ -49,6 +49,13 @@ foo :/
 uint u = 10u;
 #endif
 
+#define MAIN_FUNC int main2()\
+{\
+    return 0;\
+}
+
+    MAIN_FUNC
+
 AppendStructuredBuffer<float> uav0;
 void main() {
     max(1, 2);

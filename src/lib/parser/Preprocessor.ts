@@ -1,5 +1,6 @@
 import { isDef, isDefAndNotNull } from "@lib/common";
 import { assert, isNull, isString } from "@lib/common";
+import { defaultSLParser } from "@lib/fx/SLParser";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { EDiagnosticCategory, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
@@ -184,11 +185,11 @@ enum EPPDocumentFlags {
 
 
 export class Preprocessor {
-    protected stack: { 
-        lexer: ILexer; 
-        tokens: IToken[], 
-        flags: number,  // EPPDocumentFlags 
-        loc: IRange 
+    protected stack: {
+        lexer: ILexer;
+        tokens: IToken[];
+        flags: number;  // EPPDocumentFlags 
+        loc: IRange;
     }[];
     protected includes: number[];
 
@@ -210,7 +211,7 @@ export class Preprocessor {
 
     constructor(lexerEngine: ILexerEngine, knownTypes: Set<string> = new Set, macros = new Macros, diag = new PreprocessorDiagnostics) {
         this.macros = macros;
-        
+
         this.macroState = new MacroState;
         this.includeMap = new Map;
 
@@ -261,6 +262,10 @@ export class Preprocessor {
         return null;
     }
 
+    currentMacro(): IMacro {
+        return this.macros.root;
+    }
+
     getDiagnosticReport(): IDiagnosticReport {
         return Diagnostics.mergeReports([this.lexerReport, this.diagnostics.resolve()]);
     }
@@ -278,7 +283,7 @@ export class Preprocessor {
     }
 
 
-    protected pushDocument(textDocument: ITextDocument, loc: IRange, flags: number): void {
+    protected pushDocument(textDocument: ITextDocument, loc: IRange, flags: number, macro: IMacro = null): void {
         const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
         lexer.setTextDocument(textDocument);
         const tokens = <IToken[]>[];
@@ -288,11 +293,12 @@ export class Preprocessor {
         //     loc.source = this.stack[this.stack.length - 1].loc;
         // }
 
-        
+
         if (flags & EPPDocumentFlags.k_Macro) {
-            this.macros.push();
-        }       
-        
+            assert(isDefAndNotNull(macro));
+            this.macros.push(macro);
+        }
+
         if (flags & EPPDocumentFlags.k_Include) {
             this.includes.push(this.stack.length);
 
@@ -659,13 +665,13 @@ export class Preprocessor {
 
         const macroFuncs = <IMap<IMacroFunc>>{
             'defined': asFn((a: IToken) => {
-               const macro = macros.get(a.value);
-               if (macro) {
-                   macro.bRegionExpr = true;
-                   return 1;
-               }
-               this.addUnresolvedMacro(a.value);
-               return 0;
+                const macro = macros.get(a.value);
+                if (macro) {
+                    macro.bRegionExpr = true;
+                    return 1;
+                }
+                this.addUnresolvedMacro(a.value);
+                return 0;
             }),
         };
 
@@ -675,7 +681,7 @@ export class Preprocessor {
                 opPriors[macro.name] = 10;
                 macroFuncs[macro.name] = {
                     op: (...args: IToken[]): IToken => {
-                        macros.push();
+                        macros.push(macro);
 
                         assert(macro.params.length === args.length);
                         const params = macro.params;
@@ -715,7 +721,7 @@ export class Preprocessor {
             const macro = this.macros.get(token.value);
             if (!isNull(macro) && !isNull(macro.text)) {
                 const exprValue = this.resolveMacroInner(macro.text);
-                
+
                 if (DEBUG_MACRO) {
                     console.log(`macro '${token.value}:${macro.text.value}' resolved to '${exprValue}''`);
                 }
@@ -884,7 +890,7 @@ export class Preprocessor {
                             break;
                         }
 
-                        /* fall throught */
+                    /* fall throught */
                     case '#endif':
                         if (nesting > 0) {
                             nesting--;
@@ -941,7 +947,7 @@ export class Preprocessor {
             }
 
             const source = await response.text();
-            
+
             // TODO: use precise location (trimmed)
             this.pushDocument(createTextDocument(uri, source), loc, EPPDocumentFlags.k_Include);
         } catch (e) {
@@ -1042,7 +1048,7 @@ export class Preprocessor {
             {
                 const { loc: { start } } = token;
                 const { loc: { end } } = argToken;
-                this.pushDocument(macroToDocument(macro), { start, end }, EPPDocumentFlags.k_Macro);
+                this.pushDocument(macroToDocument(macro), { start, end }, EPPDocumentFlags.k_Macro, macro);
             }
 
             const params = macro.params;
@@ -1069,7 +1075,7 @@ export class Preprocessor {
                 });
             }
         } else {
-            this.pushDocument(macroToDocument(macro), token.loc, EPPDocumentFlags.k_Macro);
+            this.pushDocument(macroToDocument(macro), token.loc, EPPDocumentFlags.k_Macro, macro);
         }
 
         return macro;
@@ -1082,18 +1088,18 @@ export class Preprocessor {
 
         const pp = new Preprocessor(this.lexerEngine, this.knownTypes, this.macros, this.diagnostics);
         pp.setTextDocument(createTextDocument('://macro', value));
-        
+
         let token = await pp.readToken();
         let raw = null;
         while (token.name !== END_SYMBOL) {
-            raw = (raw ? raw + ' ': '') + token.value;
+            raw = (raw ? raw + ' ' : '') + token.value;
             token = await pp.readToken();
         }
 
         if (DEBUG_MACRO) {
             console.info(`>> "${raw}"`);
         }
-        
+
         return raw;
     }
 
@@ -1123,11 +1129,11 @@ export class Preprocessor {
         const nextToken = await this.readToken(false, false);
         if (nextToken.name === T_MACRO_CONCAT) {
             return this.applyConcatMacro(createMacroToken(raw, loc));
-        } 
+        }
 
         this.pushToken(nextToken);
         // we handle it as text document, because all possible macros inside are already resolved
-        this.pushDocument(createTextDocument(this.lexer.document.uri, raw), loc, EPPDocumentFlags.k_None);
+        this.pushDocument(createTextDocument(this.lexer.document.uri, raw, left.loc.start), loc, EPPDocumentFlags.k_None);
         return this.readToken();
     }
 
@@ -1139,7 +1145,7 @@ export class Preprocessor {
             const nextToken = await this.readToken(false, false);
             if (nextToken.name === T_MACRO_CONCAT) {
                 return this.applyConcatMacro(token);
-            } 
+            }
             this.pushToken(nextToken);
         }
 
@@ -1152,4 +1158,53 @@ export class Preprocessor {
 
         return token;
     }
+}
+
+// create preprocessed document
+export async function createPPDocument(textDocument: ITextDocument): Promise<ITextDocument> {
+    // TODO: try to use default lexer: new LexerEngine()
+
+    const parser = defaultSLParser();
+    const pp = new Preprocessor(parser.lexerEngine);
+    pp.setTextDocument(textDocument);
+
+    const newline = (from: number, to: number): string => Array(Math.min(to - from, 4)).fill('\n').join('');
+    const padding = (length: number): string => Array(length).fill(' ').join('');
+    
+    let content = '';
+    let tokenThis = await pp.readToken();
+    while (tokenThis.name !== END_SYMBOL) {
+        const doPadding = !content || content.substr(-1) === '\n';
+        const locThis = pp.macroLocation() || tokenThis.loc;
+        const macroThis = pp.currentMacro();
+
+        // padding
+        if (doPadding) {
+            content += padding(locThis.start.column);// + padding(tokenThis.loc.start.column);
+            // note: paddings inside multiline macro are not supported
+        }
+
+        // place content
+        content = `${content}${!doPadding ? ' ' : ''}${tokenThis.value}`;
+
+        const tokenNext = await pp.readToken();
+        const locNext = pp.macroLocation() || tokenNext.loc;
+
+        // newline if new file
+        if (locThis.end.file !== locNext.start.file) {
+            content += '\n\n';
+        }
+        // newline if new global macro (or just diff lines) on a new line
+        else if (locThis.end.line < locNext.start.line) {
+            content += newline(locThis.end.line, locNext.start.line);
+        }
+        // new line if it is a multiline macro
+        else if (tokenThis.loc.end.line < tokenNext.loc.start.line && macroThis === pp.currentMacro()) {
+            content += newline(tokenThis.loc.end.line, tokenNext.loc.start.line);
+        }
+
+        tokenThis = tokenNext;
+    }
+
+    return createTextDocument(textDocument.uri, content);
 }

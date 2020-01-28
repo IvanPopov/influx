@@ -2,10 +2,14 @@ import { IMap } from "@lib/idl/IMap";
 import { IMacro } from "@lib/idl/parser/IMacro";
 
 export class Macros {
-    stack: IMap<IMacro>[] = [{}];
+    private stack: { root: IMacro, macros: IMap<IMacro>; }[] = [{ root: null, macros: {} }];
 
-    push() {
-        this.stack.push({});
+    get root(): IMacro{
+        return this.stack[this.stack.length - 1].root;
+    }
+
+    push(source: IMacro) {
+        this.stack.push({ root: source, macros: {} });
     }
 
     pop() {
@@ -13,12 +17,12 @@ export class Macros {
     }
 
     set(macro: IMacro): void {
-        this.stack[this.stack.length - 1][macro.name] = macro;
+        this.stack[this.stack.length - 1].macros[macro.name] = macro;
     }
 
     get(name: string): IMacro {
         for (let i = this.stack.length - 1; i >= 0; --i) {
-            const macros = this.stack[i];
+            const macros = this.stack[i].macros;
             const macro = macros[name];
             if (macro) {
                 return macro;
@@ -34,7 +38,7 @@ export class Macros {
     forEach(cb: (value: IMacro) => void): void {
         let overrides = new Set;
         for (let i = this.stack.length - 1; i >= 0; --i) {
-            const macros = this.stack[i];
+            const macros = this.stack[i].macros;
             for (const macro of Object.values(macros)) {
                 if (!overrides.has(macro.name)) {
                     overrides.add(macro.name);
@@ -47,7 +51,7 @@ export class Macros {
     *[Symbol.iterator]() {
         let overrides = new Set;
         for (let i = this.stack.length - 1; i >= 0; --i) {
-            const macros = this.stack[i];
+            const macros = this.stack[i].macros;
             for (const macro of Object.values(macros)) {
                 if (!overrides.has(macro.name)) {
                     overrides.add(macro.name);
