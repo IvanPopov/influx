@@ -14,6 +14,8 @@ Decl : TechniqueDecl
 Decl : UseDecl
 Decl : ImportDecl
 Decl : ProvideDecl
+Decl : CbufferDecl
+Decl : TbufferDecl
 Decl : ERROR
 
 #if FX_PART
@@ -127,8 +129,10 @@ StructDecl : T_KW_STRUCT Id '{' StructDecls '}'
 ConstStructDecl : StructDecl
 ConstStructDecl : ConstUsages StructDecl
 
-StructDecls : VariableDecl --expose
+StructDecls : VariableDecl --expose 
+StructDecls : VarStructDecl --expose 
 StructDecls : VariableDecl StructDecls
+StructDecls : VarStructDecl StructDecls
 
 Semantic : ':' Id --add
 Semantic : ':' T_KW_REGISTER '(' Register ')'
@@ -170,6 +174,7 @@ Initializer : '=' '{' InitExprs ',' '}'
 VariableDecl : UsageType Variables ';' --add
 VariableDecl : UsageType Variables ERROR --add
 VarStructDecl : UsageStructDecl Variables ';' --add
+
 Variables : Variable --expose
 Variables : Variables ',' Variable
 # Variables : Variables ERROR Variable
@@ -236,6 +241,9 @@ ParamUsage : ConstUsage
 TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --add
 TechniqueBody : '{' '}'  --add
 TechniqueBody : '{' PassDecls '}'
+
+CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
+TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
 
 ComplexNameOpt : ComplexName --add
 ComplexName : Id --expose
@@ -589,6 +597,8 @@ T_KW_TEXTURE1D : "Texture1D"
 T_KW_TEXTURE2D : "Texture2D"
 T_KW_TEXTURE3D : "Texture3D"
 T_KW_TEXTURECUBE : "TextureCube"
+T_KW_CBUFFER : "cbuffer"
+T_KW_TBUFFER : "tbuffer"
 
 # T_KW_SAMPLER : "sampler"
 # T_KW_SAMPLER1D : "sampler1D"

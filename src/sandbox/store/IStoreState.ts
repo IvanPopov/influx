@@ -5,6 +5,7 @@ import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { IEmitter } from '@sandbox/containers/playground/IEmitter';
 import { RouterState } from 'connected-react-router';
+import { ITextDocument } from '@lib/idl/ITextDocument';
 
 export interface IMarker {
     range: IRange;
@@ -33,11 +34,13 @@ export interface IDebuggerState {
 export interface IFileState {
     uri: string;                    // source file's path
     content: string;                // source file's content
+
     contentModified: string;
     error: Error;                   // source file loading's error
 
     slastDocument: ISLASTDocument;
     slDocument: ISLDocument;
+    rawDocument: ITextDocument;
 
     markers: IMap<IMarker>;
     breakpoints: number[];

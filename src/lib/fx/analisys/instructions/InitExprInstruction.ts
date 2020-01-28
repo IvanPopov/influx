@@ -147,6 +147,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     }
                 }
 
+                // TODO: remove this hack!!
+                if (firstInstruction.type.isEqual(SystemScope.T_INT) || firstInstruction.type.isEqual(SystemScope.T_UINT)) {
+                    if (type.isEqual(SystemScope.T_INT) || type.isEqual(SystemScope.T_UINT)) {
+                        return true;
+                    }   
+                }
+
                 if (firstInstruction.type.isEqual(type)) {
                     return true;
                 }

@@ -43,6 +43,16 @@ export const LOCATION_NOT_FOUND = '/NotFound';
 export const LOCATION_PATTERN = '/:view/:fx?/:name?/:pass?/:property?';
 export const DEFAULT_FILENAME = '@new';
 
+export const PLAYGROUND_VIEW = 'playground';
+export const BYTECODE_VIEW = 'bytecode';
+export const PROGRAM_VIEW = 'program';
+export const AST_VIEW = 'ast';
+export const PREPROCESSOR_VIEW = 'preprocessor';
+
+export const RAW_KEYWORD = 'raw';
+
+export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW ];
+
 export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
 
 
@@ -57,7 +67,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
         if (location === '/') {
             // dispatch(push(`/playground/${DEFAULT_FILENAME}/`));
-            history.push(`/playground/${DEFAULT_FILENAME}/`);
+            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/`);
             return done();
         }
 
@@ -69,7 +79,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
         if (match) {
             const { view, fx, name } = match.params;
 
-            const supportedViews = ['preprocessor', 'playground', 'bytecode', 'program', 'ast'];
+            const supportedViews = SUPPORTED_VIEWS;
             if (supportedViews.indexOf(view) !== -1) {
                 if (!fx) {
                     // dispatch(push(`/${view}/${DEFAULT_FILENAME}/`));

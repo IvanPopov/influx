@@ -5,6 +5,7 @@ import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
+import { ITextDocument } from '@lib/idl/ITextDocument';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
@@ -24,6 +25,7 @@ export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string; filename?: string }>;
 export type ISourceCodeParsingComplete = IAction<typeof evt.SOURCE_CODE_PARSING_COMPLETE, { slastDocument: ISLASTDocument }>;
 export type ISourceCodeAnalysisComplete = IAction<typeof evt.SOURCE_CODE_ANALYSIS_COMPLETE, { result: ISLDocument }>;
+export type ISourceCodePreprocessingComplete = IAction<typeof evt.SOURCE_CODE_PREPROCESSING_COMPLETE, { document: ITextDocument }>;
 
 export interface IMarkerDesc extends IMarker {
     name: string;
@@ -41,6 +43,7 @@ export type ISourceFileActions =
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
+    ISourceCodePreprocessingComplete | 
     ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch;
 
 //

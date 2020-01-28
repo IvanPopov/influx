@@ -6,7 +6,7 @@ import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
-import { createDefaultSLParser } from '@lib/fx/SLParser';
+import { createDefaultSLParser, defaultSLParser } from '@lib/fx/SLParser';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { IRange } from '@lib/idl/parser/IParser';
 import { Diagnostics } from '@lib/util/Diagnostics';
@@ -17,6 +17,11 @@ import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFil
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import { createTextDocument } from '@lib/fx/TextDocument';
+import { LocationChangeAction, LOCATION_CHANGE } from 'connected-react-router';
+import { DEFAULT_FILENAME, PATH_PARAMS_TYPE, LOCATION_PATTERN, LOCATION_NOT_FOUND, RAW_KEYWORD } from '.';
+import { matchPath } from 'react-router-dom';
+import { Preprocessor } from '@lib/parser/Preprocessor';
+import { END_SYMBOL } from '@lib/parser/symbols';
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -214,6 +219,68 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
     }
 });
 
+
+
+async function processRaw(state: IStoreState, dispatch): Promise<void> {
+    const file = getFileState(state);
+    // TODO: try to use default lexer engine instead
+    const parser = defaultSLParser();
+    const pp = new Preprocessor(parser.lexerEngine);
+    pp.setTextDocument(createTextDocument(file.uri, file.content));
+
+    let token = await pp.readToken();
+    let content = '';
+    while (token.name !== END_SYMBOL) {
+        content = content ? `${content} ${token.value}` : token.value;
+        const nextToken = await pp.readToken();
+
+        const macroLoc = pp.macroLocation();
+        if (macroLoc) {
+            nextToken.loc = macroLoc;
+        }
+
+        if (nextToken.loc.start.line != token.loc.end.line) {
+            content = `${content}\n`;
+        }
+
+        token = nextToken;
+    }
+    
+    const document = createTextDocument(file.uri, content);
+
+    dispatch({ type: evt.SOURCE_CODE_PREPROCESSING_COMPLETE, payload: { document } });
+}
+
+
+const navigationLogicHook = createLogic<IStoreState, LocationChangeAction['payload']>({
+    type: LOCATION_CHANGE,
+    latest: true,
+    debounce: 10,
+
+    async process({ getState, action }, dispatch, done) {
+        const location = action.payload.location.pathname;
+        const sourceFile = getFileState(getState());
+
+        const match = matchPath<PATH_PARAMS_TYPE>(location, {
+            path: LOCATION_PATTERN,
+            exact: false
+        });
+
+        if (match) {
+            const { view, fx, name } = match.params;
+
+            if (view === 'preprocessor') {
+                if (fx && name === RAW_KEYWORD) {
+                    await processRaw(getState(), dispatch);
+                }
+            }
+        }
+    
+        done();
+    }
+});
+
+
 // const markersAddLogic = createLogic<IStoreState>({
 //     type: evt.SOURCE_CODE_ADD_MARKER_BATCH,
 //     debounce: 10000,
@@ -299,4 +366,5 @@ export default [
     debuggerAutocompileLogic,
     // markersAddLogic,
     // markersDelLogic
+    navigationLogicHook
 ];

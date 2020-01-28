@@ -208,7 +208,7 @@ export class Preprocessor {
 
     document: ITextDocument;
 
-    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string>, macros = new Macros, diag = new PreprocessorDiagnostics) {
+    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string> = new Set, macros = new Macros, diag = new PreprocessorDiagnostics) {
         this.macros = macros;
         
         this.macroState = new MacroState;

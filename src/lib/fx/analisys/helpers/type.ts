@@ -1,8 +1,9 @@
 import { assert, isNull } from "@lib/common";
-import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ITypedInstruction } from "@lib/idl/IInstruction";
 
 import { instruction } from "./instruction";
 import { variable } from "./variable";
+import { T_INT, T_UINT } from "../SystemScope";
 
 export namespace type {
     // todo: rename it
@@ -166,6 +167,30 @@ export namespace type {
                 return null;
         }
     }
+
+    // export function relaxType(type: ITypeInstruction): ITypeInstruction | RegExp {
+    //     if (!type) {
+    //         return null;
+    //     }
+
+
+    //     if (type.isEqual(T_INT) || type.isEqual(T_UINT)) {
+    //         // temp workaround in order to match int to uint and etc. 
+    //         return /^int$|^uint$/g;
+    //     }
+
+    //     return type;
+    // }
+
+
+    // // FIXME: refuse from the regular expressions in favor of a full typecasting graph
+    // export function asRelaxedType(instr: ITypedInstruction): ITypeInstruction | RegExp {
+    //     if (!instr) {
+    //         return null;
+    //     }
+
+    //     return relaxType(instr.type);
+    // };
 
     //
     // hash
