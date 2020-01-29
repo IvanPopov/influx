@@ -170,4 +170,4 @@ export function filterPartFx(scope: IScope): IPartFxInstruction[] {
         .map(name => <IPartFxInstruction>map[name]);
 }
 
-
+export const getRawContent = (file: IFileState): string => file.rawDocument ? file.rawDocument.source : null;

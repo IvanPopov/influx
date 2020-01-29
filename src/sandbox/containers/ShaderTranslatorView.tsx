@@ -15,12 +15,6 @@ import * as React from 'react';
 import { MonacoDiffEditor } from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import { Preprocessor } from '@lib/parser/Preprocessor';
-import { defaultSLParser } from '@lib/fx/SLParser';
-import { IToken } from '@lib/idl/parser/IParser';
-import { createTextDocument } from '@lib/fx/TextDocument';
-import { END_SYMBOL } from '@lib/parser/symbols';
-import { RAW_KEYWORD, PREPROCESSOR_VIEW } from '@sandbox/logic';
 
 interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
@@ -82,29 +76,6 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         const match = matchLocation(props);
         const file = getFileState(props);
         const scope = getScope(file);
-
-        if (match.params.view === PREPROCESSOR_VIEW && match.params.name === RAW_KEYWORD) {
-            if (!file.rawDocument) {
-                return null;
-            }
-
-            return (
-                <MonacoDiffEditor
-                    ref='monaco'
-    
-                    original = { file.content }
-                    value={ file.rawDocument.source }
-    
-                    width='100%'
-                    height='calc(100vh - 74px)' // todo: fixme
-    
-                    options={ diffOptions }
-                    editorDidMount={ this.editorDidMount }
-                // onChange={ this.onChange }
-                // editorWillMount={ this.editorWillMount }
-                />
-            );
-        }
 
         if (!scope) {
             return null;

@@ -96,7 +96,8 @@ const options: monaco.editor.IEditorConstructionOptions = {
     language: LANGUAGE_ID,
     lineDecorationsWidth: 0,
     cursorSmoothCaretAnimation: true,
-    fontLigatures: true
+    fontLigatures: true,
+    // readOnly: true
 };
 
 
