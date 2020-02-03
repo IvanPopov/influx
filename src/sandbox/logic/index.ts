@@ -49,7 +49,8 @@ export const PROGRAM_VIEW = 'program';
 export const AST_VIEW = 'ast';
 export const PREPROCESSOR_VIEW = 'preprocessor';
 
-export const RAW_KEYWORD = 'as:raw';
+export const RAW_KEYWORD = '@preprocessed';
+export const CODE_KEYWORD = '@formatted';
 
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW ];
 

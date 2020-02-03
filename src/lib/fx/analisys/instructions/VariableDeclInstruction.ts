@@ -1,8 +1,8 @@
 import { assert, isNull } from '@lib/common';
 import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
 import { type } from '../helpers';
+import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
 import { Instruction } from './Instruction';
 
 // import * as SystemScope from '@lib/fx/analisys/SystemScope';
@@ -23,6 +23,7 @@ export enum EVariableUsageFlags {
     k_Local     = 0x01,
     k_Global    = 0x02,
     k_Argument  = 0x04,
+    k_Cbuffer   = 0x08
 }
 
 /**
@@ -87,10 +88,10 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
         return !!(this._usageFlags & EVariableUsageFlags.k_Local);
     }
 
+
     isParameter(): boolean {
         return !!(this._usageFlags & EVariableUsageFlags.k_Argument);
     }
-
 
 
     isField(): boolean {
@@ -98,16 +99,19 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
             return false;
         }
 
-        var eParentType: EInstructionTypes = this.parent.instructionType;
-        if (eParentType === EInstructionTypes.k_VariableType ||
-            eParentType === EInstructionTypes.k_ComplexType ||
-            eParentType === EInstructionTypes.k_SystemType) {
+        const parentType = this.parent.instructionType;
+        if (parentType === EInstructionTypes.k_VariableType ||
+            parentType === EInstructionTypes.k_ComplexType ||
+            parentType === EInstructionTypes.k_SystemType) {
             return true;
         }
 
         return false;
     }
 
+    isConstant(): boolean {
+        return !!(this._usageFlags % EVariableUsageFlags.k_Cbuffer) || this.type.isUniform();
+    }
     
     toCode(): string {
         var code = '';        

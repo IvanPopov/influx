@@ -74,35 +74,6 @@ export class Instruction implements IInstruction {
         return this._sourceNode;
     }
 
-    _getLastError(): IInstructionError {
-        return this._lastError;
-    }
-
-    _setError(eCode: number, pInfo: any = null): void {
-        this._lastError = { code: eCode, info: pInfo }
-    }
-
-    _clearError(): void {
-        this._lastError = null
-    }
-
-    _isErrorOccured(): boolean {
-        return !isNull(this._lastError);
-    }
-
-
-    /**
-     * Check that instuction is valid.
-     */
-    _check(eStage: ECheckStage, pInfo: any = null): boolean {
-        if (this._isErrorOccured()) {
-            return false;
-        }
-        else {
-            return true;
-        }
-    }
-
 
     toString(): string {
         console.error("@pure_virtual");

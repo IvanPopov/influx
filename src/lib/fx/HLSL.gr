@@ -243,7 +243,9 @@ TechniqueBody : '{' '}'  --add
 TechniqueBody : '{' PassDecls '}'
 
 CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
+CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' '}' ';' --add
 TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
+TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' '}' ';' --add
 
 ComplexNameOpt : ComplexName --add
 ComplexName : Id --expose

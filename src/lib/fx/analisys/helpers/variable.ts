@@ -1,5 +1,5 @@
 import { assert } from "@lib/common";
-import { EInstructionTypes, IFunctionDefInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDefInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IRegister, ITypedInstruction, ICbufferInstruction } from "@lib/idl/IInstruction";
 
 import { type } from "./type";
 
@@ -59,13 +59,8 @@ export namespace variable {
     }
 
 
-    export interface IRegister {
-        type: 'u' | 'b' | 't' | 's' | null;
-        index: number;
-        // space ?
-    };
 
-    export function resolveRegister(decl: IVariableDeclInstruction): IRegister {
+    export function resolveRegister(decl: IVariableDeclInstruction | ICbufferInstruction): IRegister {
         let type = null;
         let index = -1;
 
@@ -91,6 +86,11 @@ export namespace variable {
         if (decl.type.isSampler()) {
             assert(type === null || type === 's');
             type = 's';
+        }
+
+        if (decl.instructionType === EInstructionTypes.k_CbufferDecl) {
+            assert(type === null || type === 'b');
+            type = 'b';
         }
 
         // TODO: buffers

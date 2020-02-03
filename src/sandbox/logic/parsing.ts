@@ -147,6 +147,22 @@ const updateSourceContentLogic = createLogic<IStoreState>({
             dispatch({ type: evt.DEBUGGER_RESET });
         }
         await processParsing(getState(), dispatch);
+
+        // TODO: move to separate routine
+
+        const location = getState().router.location.pathname;
+        const match = matchPath<PATH_PARAMS_TYPE>(location, {
+            path: LOCATION_PATTERN,
+            exact: false
+        });
+
+        if (match) {
+            const { view, fx, name } = match.params;
+            if (fx && name === RAW_KEYWORD) {
+                await processRaw(getState(), dispatch);
+            }
+        }
+
         done();
     }
 });
@@ -246,11 +262,8 @@ const navigationLogicHook = createLogic<IStoreState, LocationChangeAction['paylo
 
         if (match) {
             const { view, fx, name } = match.params;
-
-            if (view === 'preprocessor') {
-                if (fx && name === RAW_KEYWORD) {
-                    await processRaw(getState(), dispatch);
-                }
+            if (fx && name === RAW_KEYWORD) {
+                await processRaw(getState(), dispatch);
             }
         }
 

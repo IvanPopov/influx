@@ -1,12 +1,10 @@
-import { assert, isDef, mwalk } from "@lib/common";
+import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
-import { ERenderStates } from "@lib/idl/ERenderStates";
-import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IIfStmtInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction } from "@lib/idl/IInstruction";
 
-import { BaseEmitter } from "./BaseEmitter";
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
+import { BaseEmitter } from "./BaseEmitter";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 
 export interface ITypeInfo {
     typeName: string;
@@ -203,6 +201,17 @@ export class CodeEmitter extends BaseEmitter {
         this.end();
     }
 
+
+    emitCollector(instr: IInstructionCollector) {
+        this.begin();
+        instr.instructions.forEach(instr => {
+            this.emit(instr);
+            this.emitNewline();
+        });
+        this.end();
+    }
+
+
     emitExpression(expr: IExprInstruction) {
         if (!expr) {
             return;
@@ -249,8 +258,10 @@ export class CodeEmitter extends BaseEmitter {
                 return this.emitInitExpr(expr as IInitExprInstruction);
             case EInstructionTypes.k_CastExpr:
                 return this.emitCast(expr as ICastExprInstruction);
+            case EInstructionTypes.k_BitwiseExpr:
+                return this.emitBitwise(expr as IBitwiseExprInstruction);
             default:
-                assert(false, 'unsupported instruction found');
+                assert(false, `unsupported instruction found: ${expr.instructionName}`);
         }
     }
 
@@ -343,9 +354,17 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(cast.expr);
     }
 
+    emitBitwise(bwise: IBitwiseExprInstruction) {
+        this.emitExpression(bwise.left);
+        this.emitKeyword(bwise.operator);
+        this.emitSpace();
+        this.emitExpression(bwise.right);
+    }
+
     emitArithmetic(arthm: IArithmeticExprInstruction) {
         this.emitExpression(arthm.left);
         this.emitKeyword(arthm.operator);
+        this.emitSpace();
         this.emitExpression(arthm.right);
     }
 
@@ -364,6 +383,42 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar('.');
         this.emitChar(pfxp.postfix.name);
     }
+
+
+    emitCbuffer(cbuf: ICbufferInstruction) {
+        this.begin();
+        this.emitComment(`size: ${cbuf.type.size}`);
+        this.emitKeyword('cbuffer');
+        if (cbuf.id) {
+            this.emitKeyword(cbuf.name);
+        }
+        const reg = cbuf.register;
+        if (reg.index !== -1) {
+            this.emitChar(':');
+            this.emitKeyword('register');
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitKeyword(`${reg.type}${reg.index}`);
+            this.emitNoSpace();
+            this.emitChar(')');
+        }
+        this.emitNewline();
+        this.emitChar('{');
+        this.push();
+        {
+            cbuf.type.fields.forEach(field => {
+                this.emitVariableDecl(field);
+                this.emitChar(';');
+                this.emitChar('\t')
+                this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
+            });
+        }
+        this.pop();
+        this.emitChar('}');
+        // emit annotation?
+        this.end();
+    }
+
 
     emitGlobal(decl: IVariableDeclInstruction) {
         const name = decl.name;
@@ -546,8 +601,20 @@ export class CodeEmitter extends BaseEmitter {
             case EInstructionTypes.k_FunctionDecl:
                 this.emitFunction(instr as IFunctionDeclInstruction);
                 break;
+            case EInstructionTypes.k_CbufferDecl:
+                this.emitCbuffer(instr as ICbufferInstruction);
+                break;
+            case EInstructionTypes.k_VariableDecl:
+                this.begin();
+                this.emitVariableDecl(instr as IVariableDeclInstruction);
+                this.emitChar(';');
+                this.end();
+                break;
+            case EInstructionTypes.k_Collector:
+                this.emitCollector(instr as IInstructionCollector);
+                break;
             default:
-                assert(false, 'unsupported instruction found');
+                assert(false, `unsupported instruction found: ${instr.instructionName}`);
         }
 
         return this;
@@ -558,3 +625,35 @@ export class CodeEmitter extends BaseEmitter {
 export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
     return (new CodeEmitter(options)).emit(instr).toString();
 }
+
+export function translateDocument(document: ISLDocument): string {
+    if (isNull(document)) {
+        return '';
+    }
+
+    if (isNull(document.root)) {
+        return '';
+    }
+
+    return translate(document.root);
+}
+
+
+// export function translateDocument(document: ISLDocument): ITextDocument {
+//     let source = '';
+//     let uri = null;
+
+//     if (isNull(document)) {
+//         return null
+//     }
+
+//     uri = document.uri;
+    
+//     if (isNull(document.root)) {
+//         return { uri, source };
+//     }
+
+//     source = translate(document.root);
+//     return { uri, source };
+// }
+

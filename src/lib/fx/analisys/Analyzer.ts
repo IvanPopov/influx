@@ -1,8 +1,9 @@
 ﻿import { assert, isDef, isDefAndNotNull, isNull, mwalk } from '@lib/common';
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
+import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { ECheckStage, EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, IInstructionError, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -19,6 +20,7 @@ import { BitwiseExprInstruction } from './instructions/BitwiseExprInstruction';
 import { BoolInstruction } from './instructions/BoolInstruction';
 import { BreakOperator, BreakStmtInstruction } from './instructions/BreakStmtInstruction';
 import { CastExprInstruction } from './instructions/CastExprInstruction';
+import { CbufferInstruction } from './instructions/CbufferInstruction';
 import { CompileExprInstruction } from './instructions/CompileExprInstruction';
 import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
 import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
@@ -61,7 +63,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { T_BOOL, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -76,20 +78,6 @@ function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVar
     return new VariableTypeInstruction({ type, scope: null });
 }
 
-
-function _errorFromInstruction(context: Context, sourceNode: IParseNode, pError: IInstructionError): void {
-    context.error(sourceNode, pError.code, isNull(pError.info) ? {} : pError.info);
-}
-
-
-function checkInstruction<INSTR_T extends IInstruction>(context: Context, inst: INSTR_T, stage: ECheckStage): INSTR_T {
-    // TODO: rework this api
-    if (!inst._check(stage)) {
-        _errorFromInstruction(context, inst.sourceNode, inst._getLastError());
-        return null;
-    }
-    return inst;
-}
 
 const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.type : null;
 
@@ -457,7 +445,7 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
             return false;
         }
     } else {
-        if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
+        if (!returnType.isEqual(T_FLOAT4)) {
             return false;
         }
 
@@ -474,7 +462,7 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
 function checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
     let returnType = <IVariableTypeInstruction>funcDef.returnType;
 
-    if (returnType.isEqual(SystemScope.T_VOID)) {
+    if (returnType.isEqual(T_VOID)) {
         return true;
     }
 
@@ -483,7 +471,7 @@ function checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean
         return false;
     }
 
-    if (!returnType.isEqual(SystemScope.T_FLOAT4)) {
+    if (!returnType.isEqual(T_FLOAT4)) {
         return false;
     }
 
@@ -633,6 +621,8 @@ export class Context {
     funcDef: IFunctionDefInstruction | null;    // Current function definition.
     haveCurrentFunctionReturnOccur: boolean;    // TODO: replace with array of return statements.
 
+    cbuffer: boolean;
+
     renderStates: IMap<ERenderStateValues>;
 
     constructor(uri: IFile) {
@@ -642,6 +632,8 @@ export class Context {
         this.haveCurrentFunctionReturnOccur = false;
     }
 
+    beginCbuffer(): void { this.cbuffer = true; }
+    endCbuffer(): void { this.cbuffer = false; }
 
     beginFunc(): void {
         this.func = true;
@@ -866,8 +858,7 @@ export class Analyzer {
             }
         }
 
-        let varType = new VariableTypeInstruction({ scope, sourceNode, type, usages });
-        return checkInstruction(context, varType, ECheckStage.CODE_TARGET_SUPPORT);
+        return new VariableTypeInstruction({ scope, sourceNode, type, usages })
     }
 
 
@@ -908,8 +899,7 @@ export class Analyzer {
                 {
                     let typeName = children[children.length - 1].value;
 
-                    if (children.length !== 1) 
-                    {
+                    if (children.length !== 1) {
                         assert(children[children.length - 2].value === '<' && children[0].value === '>');
                         const tplName = typeName;
                         const args = children
@@ -981,6 +971,83 @@ export class Analyzer {
     }
 
 
+    /**
+     * AST example:
+     *    CbufferDecl
+     *         T_PUNCTUATOR_59 = ';'
+     *         T_PUNCTUATOR_125 = '}'
+     *       + VarStructDecl 
+     *         T_PUNCTUATOR_123 = '{'
+     *       + Annotation 
+     *       + Semantic 
+     *         T_NON_TYPE_ID = 'NAME'
+     *         T_KW_CBUFFER = 'cbuffer'
+     * 
+     * AST example:
+     *    CbufferDecl
+     *         T_PUNCTUATOR_59 = ';'
+     *         T_PUNCTUATOR_125 = '}'
+     *       + VarStructDecl 
+     *         T_PUNCTUATOR_123 = '{'
+     *         T_KW_CBUFFER = 'cbuffer'
+     */
+    protected analyzeCbufferDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ICbufferInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        let annotation = <IAnnotationInstruction>null;
+        let semantic = '';
+        let id = <IIdInstruction>null;
+
+        context.beginCbuffer();
+
+        let ic = children.length - 2;
+        if (children[ic].name === 'T_NON_TYPE_ID') {
+            id = new IdInstruction({ scope, sourceNode: children[ic], name: children[ic].value });
+            ic--;
+        }
+
+        if (children[ic].name === 'Semantic') {
+            semantic = this.analyzeSemantic(children[ic]);
+
+            const match = semantic.match(/^register\(([utbs]{1})([\d]+)\)$/);
+            if (match) {
+                const rtype = match[1];
+                if (rtype !== 'b') {
+                    context.warn(children[ic], EWarnings.InvalidCbufferRegister);
+                }
+            }
+
+            ic--;
+        }
+
+        if (children[ic].name === 'Annotation') {
+            annotation = this.analyzeAnnotation(children[ic]);
+            ic--;
+        }
+
+        ic--;
+
+        let fields = <IVariableDeclInstruction[]>[];
+        for (let i = ic; i >= 2; i--) {
+            switch (children[i].name) {
+                case 'VariableDecl':
+                    fields = fields.concat(this.analyzeVariableDecl(context, program, children[i]));
+                    break;
+                case 'VarStructDecl':
+                    fields = fields.concat(this.analyzeVarStructDecl(context, program, children[i]));
+                    break;
+                default:
+                    context.error(children[i], EErrors.UnknownInstruction, {});
+            }
+        }
+
+        context.endCbuffer();
+
+        const aligment = T_FLOAT4.size; // float4 aligment!
+        const type = new ComplexTypeInstruction({ scope, sourceNode, name, fields, aligment });
+        return new CbufferInstruction({ id, type, sourceNode, semantic, annotation, scope });
+    }
 
     /**
      * AST example:
@@ -1006,6 +1073,9 @@ export class Analyzer {
 
         if (!context.func) {
             usageFlags |= EVariableUsageFlags.k_Global;
+            if (context.cbuffer) {
+                usageFlags |= EVariableUsageFlags.k_Cbuffer;
+            }
         } else {
             // All variables found inside function definition are arguments.
             if (!context.funcDef) {
@@ -1015,9 +1085,9 @@ export class Analyzer {
         }
 
 
-        let id: IIdInstruction = null;
-        let arrayIndex: IExprInstruction = null;
-        let type: IVariableTypeInstruction = null;
+        let id = <IIdInstruction>null;
+        let arrayIndex = <IExprInstruction>null;
+        let type = <IVariableTypeInstruction>null;
 
         let vdimNode = children[children.length - 1];
         do {
@@ -1088,7 +1158,7 @@ export class Analyzer {
             }
         }
 
-        return checkInstruction(context, varDecl, ECheckStage.CODE_TARGET_SUPPORT);
+        return varDecl;
     }
 
 
@@ -1302,8 +1372,7 @@ export class Analyzer {
 
         let type = VariableTypeInstruction.wrap(<IVariableTypeInstruction>func.def.returnType, scope);
 
-        let expr = new CompileExprInstruction({ args: compileArgs, scope, type, operand: func, sourceNode });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new CompileExprInstruction({ args: compileArgs, scope, type, operand: func, sourceNode });
     }
 
 
@@ -1329,10 +1398,7 @@ export class Analyzer {
             }
         }
 
-        let expr = new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
-        checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return expr;
+        return new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
     }
 
 
@@ -1607,9 +1673,7 @@ export class Analyzer {
 
 
         const type = VariableTypeInstruction.wrap(func.def.returnType, scope); // TODO: remove wrap?
-        const expr = new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode, callee });
-
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode, callee })
     }
 
 
@@ -1663,8 +1727,7 @@ export class Analyzer {
             }
         }
 
-        const expr = new ConstructorCallInstruction({ scope, sourceNode, ctor: exprType, args });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);;
+        return new ConstructorCallInstruction({ scope, sourceNode, ctor: exprType, args });
     }
 
 
@@ -1677,10 +1740,8 @@ export class Analyzer {
         if (isNull(expr)) {
             return null
         }
-        // let type = <IVariableTypeInstruction>expr.type;
 
-        let complexExpr = new ComplexExprInstruction({ scope, sourceNode, expr });
-        return checkInstruction(context, complexExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new ComplexExprInstruction({ scope, sourceNode, expr });
     }
 
 
@@ -1751,8 +1812,7 @@ export class Analyzer {
             return null;
         }
 
-        const expr = new PostfixIndexInstruction({ scope, sourceNode, element: postfixExpr, index: indexExpr });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new PostfixIndexInstruction({ scope, sourceNode, element: postfixExpr, index: indexExpr });
     }
 
 
@@ -1815,9 +1875,7 @@ export class Analyzer {
         }
 
         const id = new IdInstruction({ scope, sourceNode, name });
-        const expr = new IdExprInstruction({ scope, sourceNode, id, decl });
-
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);;
+        return new IdExprInstruction({ scope, sourceNode, id, decl });;
     }
 
     /**
@@ -1849,8 +1907,7 @@ export class Analyzer {
             return null;
         }
 
-        const expr = new PostfixPointInstruction({ sourceNode, scope, element, postfix });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new PostfixPointInstruction({ sourceNode, scope, element, postfix });
     }
 
 
@@ -1879,8 +1936,7 @@ export class Analyzer {
             return null;
         }
 
-        const expr = new PostfixArithmeticInstruction({ scope, sourceNode, operator, expr: postfixExpr });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new PostfixArithmeticInstruction({ scope, sourceNode, operator, expr: postfixExpr });
     }
 
 
@@ -1919,7 +1975,7 @@ export class Analyzer {
                             let { base, signed, heximal, exp } = lit;
                             signed = operator === '-' || lit.signed;
                             // TODO: emit warning in case of '-100u' expr.
-                            base = operator === '-'? -base : base;
+                            base = operator === '-' ? -base : base;
                             unaryExpr = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
                         }
                         break;
@@ -1933,7 +1989,7 @@ export class Analyzer {
             unaryExpr = new UnaryExprInstruction({ scope, sourceNode, expr, operator });
         }
 
-        return checkInstruction(context, unaryExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return unaryExpr;
     }
 
 
@@ -1963,8 +2019,7 @@ export class Analyzer {
             return null;
         }
 
-        const expr = new CastExprInstruction({ scope, sourceNode, sourceExpr, type });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);;
+        return new CastExprInstruction({ scope, sourceNode, sourceExpr, type });
     }
 
 
@@ -2026,8 +2081,7 @@ export class Analyzer {
             return null;
         }
 
-        const condExpr = new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr });
-        return checkInstruction(context, condExpr, ECheckStage.CODE_TARGET_SUPPORT);;
+        return new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr });
     }
 
 
@@ -2070,8 +2124,7 @@ export class Analyzer {
             return null;
         }
 
-        const arithmeticExpr = new ArithmeticExprInstruction({ scope, sourceNode, left, right, operator, type });
-        return checkInstruction(context, arithmeticExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new ArithmeticExprInstruction({ scope, sourceNode, left, right, operator, type });
     }
 
 
@@ -2111,8 +2164,7 @@ export class Analyzer {
             return null;
         }
 
-        const relationExpr = new RelationalExprInstruction({ sourceNode, scope, left, right, operator });
-        return checkInstruction(context, relationExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new RelationalExprInstruction({ sourceNode, scope, left, right, operator });
     }
 
 
@@ -2161,8 +2213,7 @@ export class Analyzer {
             return null;
         }
 
-        let logicalExpr = new LogicalExprInstruction({ scope, sourceNode, left, right, operator });
-        return checkInstruction(context, logicalExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new LogicalExprInstruction({ scope, sourceNode, left, right, operator });
     }
 
 
@@ -2195,8 +2246,7 @@ export class Analyzer {
             return null;
         }
 
-        let bitwiseExpr = new BitwiseExprInstruction({ scope, sourceNode, left, right, type, operator });
-        return checkInstruction(context, bitwiseExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new BitwiseExprInstruction({ scope, sourceNode, left, right, type, operator });
     }
 
 
@@ -2255,8 +2305,7 @@ export class Analyzer {
             });
         }
 
-        let assigmentExpr = new AssignmentExprInstruction({ scope, sourceNode, left, right, operator });
-        return checkInstruction(context, assigmentExpr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new AssignmentExprInstruction({ scope, sourceNode, left, right, operator });
     }
 
 
@@ -2275,8 +2324,7 @@ export class Analyzer {
         }
 
         const id = new IdInstruction({ scope, sourceNode, name });
-        const expr = new IdExprInstruction({ scope, sourceNode, id, decl });
-        return checkInstruction(context, expr, ECheckStage.CODE_TARGET_SUPPORT);
+        return new IdExprInstruction({ scope, sourceNode, id, decl });
     }
 
 
@@ -2289,7 +2337,7 @@ export class Analyzer {
             case 'T_UINT':
                 {
                     const { base, signed, heximal, exp } = parseUintLiteral(value);
-                    
+
                     return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
                 }
             case 'T_FLOAT':
@@ -2326,7 +2374,7 @@ export class Analyzer {
             context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: String(type) });
         }
 
-        return checkInstruction(context, type, ECheckStage.CODE_TARGET_SUPPORT);
+        return type;
     }
 
 
@@ -2372,8 +2420,7 @@ export class Analyzer {
         }
 
         assert(!isNull(type));
-        let varType = new VariableTypeInstruction({ scope, sourceNode, usages, type });
-        return checkInstruction(context, varType, ECheckStage.CODE_TARGET_SUPPORT);
+        return new VariableTypeInstruction({ scope, sourceNode, usages, type });
     }
 
 
@@ -2414,8 +2461,13 @@ export class Analyzer {
 
         program.pop();
 
-        const struct = new ComplexTypeInstruction({ scope, sourceNode, fields, name });
-        return checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
+        let aligment = 1;
+
+        if (context.cbuffer) {
+            aligment = T_FLOAT4.size;
+        }
+
+        return new ComplexTypeInstruction({ scope, sourceNode, fields, name });
     }
 
     /**
@@ -2561,11 +2613,7 @@ export class Analyzer {
         }
 
         let paramList = this.analyzeParamList(context, program, children[children.length - 3]);
-        let funcDef = new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList, semantic })
-
-        checkInstruction(context, funcDef, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return funcDef;
+        return new FunctionDefInstruction({ scope, sourceNode, returnType, id, paramList, semantic });
     }
 
     /**
@@ -2638,10 +2686,7 @@ export class Analyzer {
             }
         }
 
-        let paramType = new VariableTypeInstruction({ scope, sourceNode, type, usages });
-        checkInstruction(context, paramType, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return paramType;
+        return new VariableTypeInstruction({ scope, sourceNode, type, usages });
     }
 
     /**
@@ -2669,10 +2714,7 @@ export class Analyzer {
             }
         }
 
-        const stmtBlock = new StmtBlockInstruction({ sourceNode, scope, stmtList });
-        checkInstruction(context, stmtBlock, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return stmtBlock;
+        return new StmtBlockInstruction({ sourceNode, scope, stmtList });
     }
 
 
@@ -2788,10 +2830,7 @@ export class Analyzer {
             }
         }
 
-        const returnStmtInstruction = new ReturnStmtInstruction({ sourceNode, scope, expr });
-        checkInstruction(context, returnStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return returnStmtInstruction;
+        return new ReturnStmtInstruction({ sourceNode, scope, expr });
     }
 
     /**
@@ -2811,10 +2850,7 @@ export class Analyzer {
             // context.currentFunction.vertex = (false);
         }
 
-        const breakStmtInstruction = new BreakStmtInstruction({ sourceNode, scope, operator });
-        checkInstruction(context, breakStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return breakStmtInstruction;
+        return new BreakStmtInstruction({ sourceNode, scope, operator });
     }
 
 
@@ -2849,10 +2885,7 @@ export class Analyzer {
                 break;
         }
 
-        const declStmtInstruction = new DeclStmtInstruction({ sourceNode, scope, declList });
-        checkInstruction(context, declStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return declStmtInstruction;
+        return new DeclStmtInstruction({ sourceNode, scope, declList });
     }
 
 
@@ -2860,11 +2893,7 @@ export class Analyzer {
         const scope = program.currentScope;
         const children = sourceNode.children;
         const expr = this.analyzeExpr(context, program, children[1]);
-
-        const exprStmt = new ExprStmtInstruction({ sourceNode, scope, expr });
-        checkInstruction(context, exprStmt, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return exprStmt;
+        return new ExprStmtInstruction({ sourceNode, scope, expr });
     }
 
 
@@ -2928,10 +2957,7 @@ export class Analyzer {
             }
         }
 
-        const whileStmt = new WhileStmtInstruction({ sourceNode, scope, cond, body, operator });
-        checkInstruction(context, whileStmt, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return whileStmt;
+        return new WhileStmtInstruction({ sourceNode, scope, cond, body, operator });
     }
 
     /**
@@ -3022,10 +3048,7 @@ export class Analyzer {
             return null;
         }
 
-        const ifStmt = new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attributes });
-        checkInstruction(context, ifStmt, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return ifStmt;
+        return new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attributes });
     }
 
 
@@ -3072,8 +3095,23 @@ export class Analyzer {
         cond = this.analyzeForCond(context, program, children[children.length - 4]);
         step = null;
 
+        if (isNull(init)) {
+            context.error(children[children.length - 3], EErrors.InvalidForInitEmptyIterator);
+        } else if (init.instructionType !== EInstructionTypes.k_VariableDecl) {
+            // EAnalyzerErrors.InvalidForInitExpr
+        }
+
+        if (isNull(cond)) {
+            context.error(children[children.length - 4], EErrors.InvalidForConditionEmpty);
+        } else if (cond.instructionType !== EInstructionTypes.k_RelationalExpr) {
+            // EAnalyzerErrors.InvalidForConditionRelation
+        }
+
         if (children.length === 7) {
             step = this.analyzeForStep(context, program, children[2]);
+            if (isNull(step)) {
+                context.error(children[2], EErrors.InvalidForStepEmpty);
+            }
         }
 
         if (isNonIfStmt) {
@@ -3083,12 +3121,26 @@ export class Analyzer {
             body = this.analyzeStmt(context, program, children[0]);
         }
 
+        //     if (this._step.instructionType === EInstructionTypes.k_UnaryExpr ||
+        //         this._step.instructionType === EInstructionTypes.k_AssignmentExpr ||
+        //         this._step.instructionType === EInstructionTypes.k_PostfixArithmeticExpr) {
+
+        //         // todo: rewrite this check!!
+        //         // var sOperator: string = this._step.operator;
+        //         // if (sOperator !== "++" && sOperator !== "--" &&
+        //         //     sOperator !== "+=" && sOperator !== "-=") {
+        //         //     this._setError(EAnalyzerErrors.BAD_FOR_STEP_OPERATOR, { operator: sOperator });
+        //         //     return false;
+        //         // }
+        //     }
+        //     else {
+        //         this._setError(EAnalyzerErrors.InvalidForStepExpr);
+        //         return false;
+        //     }
+
         program.pop();
 
-        const pForStmtInstruction = new ForStmtInstruction({ sourceNode, scope, init, cond, step, body });
-        checkInstruction(context, pForStmtInstruction, ECheckStage.CODE_TARGET_SUPPORT);
-
-        return pForStmtInstruction;
+        return new ForStmtInstruction({ sourceNode, scope, init, cond, step, body });
     }
 
 
@@ -3505,8 +3557,7 @@ export class Analyzer {
 
         program.pop();
 
-        const struct = new ComplexTypeInstruction({ scope, sourceNode, name, fields });
-        return checkInstruction(context, struct, ECheckStage.CODE_TARGET_SUPPORT);
+        return new ComplexTypeInstruction({ scope, sourceNode, name, fields });
     }
 
 
@@ -3529,9 +3580,9 @@ export class Analyzer {
         }
 
 
-        let typeDecl = new TypeDeclInstruction({ scope, sourceNode, type });
+        const typeDecl = new TypeDeclInstruction({ scope, sourceNode, type });
         addTypeDecl(context, scope, typeDecl);
-        return checkInstruction(context, typeDecl, ECheckStage.CODE_TARGET_SUPPORT);
+        return typeDecl;
     }
 
 
@@ -3559,6 +3610,13 @@ export class Analyzer {
                 fdecl = this.analyzeFunctionDecl(context, program, sourceNode);
                 context.endFunc();
                 return [fdecl];
+            case 'CbufferDecl':
+                return [this.analyzeCbufferDecl(context, program, sourceNode)];
+            case 'T_PUNCTUATOR_59':
+                context.warn(sourceNode, EWarnings.EmptySemicolon);
+                return null;
+            default:
+                context.error(sourceNode, EErrors.UnknownInstruction, { name });
         }
 
         return null;
@@ -3749,7 +3807,7 @@ export class Analyzer {
                 // TODO: emit error
                 return null;
             }
-            
+
             if (!rightType.isEqual(T_INT) && !rightType.isEqual(T_UINT)) {
                 // TODO: emit error
                 return null;

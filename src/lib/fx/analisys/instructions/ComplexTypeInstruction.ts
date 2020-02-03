@@ -1,4 +1,4 @@
-import { isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { isDef, isDefAndNotNull, isNull, assert } from "@lib/common";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
@@ -10,6 +10,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     name?: string;
     fields: IVariableDeclInstruction[]; // << todo: replace this Array<Instruction>;
+    aligment?: number;
 }
 
 export class ComplexTypeInstruction extends Instruction implements ITypeInstruction {
@@ -21,11 +22,14 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     protected _isContainSampler: boolean;
     protected _isContainComplexType: boolean;
 
-    constructor({ name = null, fields, ...settings }: IComplexTypeInstructionSettings) {
+    protected _aligment: number;
+
+    constructor({ name = null, fields, aligment = 1 /* byte */, ...settings }: IComplexTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_ComplexType, ...settings });
 
         this._name = name;
         this._fields = {};
+        this._aligment = aligment;
 
         this._isContainArray = false;
         this._isContainSampler = false;
@@ -52,6 +56,11 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     
     get size(): number {
         return this.calcSize();
+    }
+
+
+    get aligment(): number {
+        return this._aligment;
     }
 
 
@@ -234,18 +243,18 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     
     public calcSize(): number {
-        let size: number = 0;
+        let aligment = this._aligment;
+        let size = 0;
 
-        for (let i: number = 0; i < this.fields.length; i++) {
-            let iFieldSize: number = this.fields[i].type.size;
-
-            if (iFieldSize === instruction.UNDEFINE_SIZE) {
+        for (let i = 0; i < this.fields.length; i++) {
+            const fieldSize = this.fields[i].type.size;
+            if (fieldSize === instruction.UNDEFINE_SIZE) {
                 size = instruction.UNDEFINE_SIZE;
                 break;
             }
-            else {
-                size += iFieldSize;
-            }
+            // size += type.alignSize(fieldSize, aligment);   
+            assert(fieldSize === type.alignSize(fieldSize, aligment));
+            size += fieldSize;
         }
 
         return size;
@@ -292,19 +301,22 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
 
     private calculatePaddings(): void {
-        let padding: number = 0;
+        const aligment = this._aligment;
+        let padding = 0;
 
-        for (let i: number = 0; i < this.fields.length; i++) {
-            let varType: IVariableTypeInstruction = this.fields[i].type;
-            let varSize: number = varType.size;
+        for (let i = 0; i < this.fields.length; i++) {
+            const varType = this.fields[i].type;
+            const varSize = varType.size;
 
             if (varSize === instruction.UNDEFINE_SIZE) {
-                this._setError(EAnalyzerErrors.CannotCalcPadding, { typeName: this.name });
+                // this._setError(EAnalyzerErrors.CannotCalcPadding, { typeName: this.name });
+                // TODO: emit error!
+                assert(false, 'cannot calc padding');
                 return;
             }
 
-            varType.$overwritePadding(padding);
-            padding += varSize;
+            varType.$overwritePadding(padding, aligment);
+            padding += type.alignSize(varSize, aligment);
         }
     }
 }

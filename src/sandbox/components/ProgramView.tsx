@@ -6,7 +6,7 @@
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IBitwiseExprInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IBitwiseExprInstruction, ICbufferInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -18,6 +18,7 @@ import { connect } from 'react-redux';
 import { Icon, List, Message } from 'semantic-ui-react';
 
 import { IWithStyles } from '.';
+import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
 
 const styles = {
     parentIcon: {
@@ -232,6 +233,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ComplexType(instr);
             case EInstructionTypes.k_Provide:
                 return this.ProvideDecl(instr);
+            case EInstructionTypes.k_CbufferDecl:
+                return this.CbufferDecl(instr);
             case EInstructionTypes.k_TechniqueDecl:
                 return this.Technique(instr);
             case EInstructionTypes.k_VariableDecl:
@@ -315,10 +318,26 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    CbufferDecl(instr: ICbufferInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name='name' value={ instr.name } />
+                <Property name='size' value={ instr.type.size } />
+                <Property name='register' value={ instr.register } />
+                {/* annotation */}
+                <PropertyOpt { ...this.bindProps(instr) } name='fields'>
+                    { instr.type.fields.map((field) => this.Unknown(field)) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
     ComplexType(instr: ITypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='name' value={ instr.name } />
+                <Property name='aligment' value={ (instr as ComplexTypeInstruction).aligment } />
                 <PropertyOpt { ...this.bindProps(instr) } name='fields'>
                     { instr.fields.map((field) => this.Unknown(field)) }
                 </PropertyOpt>
@@ -393,6 +412,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr) }>
                 <Property name='id' value={ instr.id.toString() } />
+                { instr.isConstant() && <Property name='constant' value={ 'true' } /> }
                 <Property name='semantic' value={ instr.semantic } />
                 <Property name='type' opened={ true }>
                     { this.VariableType(instr.type) }
@@ -734,6 +754,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             <Property { ...this.bindProps(instr) }>
                 <PropertyOpt name='usages' value={ (instr.usages.join(' ') || null) } />
                 <Property name='padding' value={ instr.padding === instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
+                <Property name='aligment' value={ instr.aligment } />
                 <PropertyOpt name='subType' opened={ true }>
                     { this.Unknown(instr.subType) }
                 </PropertyOpt>

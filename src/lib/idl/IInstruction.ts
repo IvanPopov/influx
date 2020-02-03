@@ -55,6 +55,7 @@ export enum EInstructionTypes {
     k_FunctionDef,
     k_PassDecl,
     k_TechniqueDecl,
+    k_CbufferDecl,
     
     k_Stmt,
     k_ExprStmt,
@@ -196,17 +197,6 @@ export interface IInstruction {
     /** Internal API */
     $withParent<T extends IInstruction>(parent: IInstruction): T;
     $withNoParent<T extends IInstruction>(): T;
-
-    /** @deprecated */
-    _check(eStage: ECheckStage): boolean;
-    /** @deprecated */
-    _getLastError(): IInstructionError;
-    /** @deprecated */
-    _setError(eCode: number, pInfo?: any): void;
-    /** @deprecated */
-    _clearError(): void;
-    /** @deprecated */
-    _isErrorOccured(): boolean;
 }
 
 
@@ -289,13 +279,14 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly usages: IVariableUsage[];
     readonly subType: ITypeInstruction;
     readonly padding: number;
+    readonly aligment: number;
 
     isUniform(): boolean;
 
     hasUsage(usageName: IVariableUsage): boolean;
 
     // for structures internal usage
-    $overwritePadding(val: number): void;
+    $overwritePadding(padding: number, aligment: number): void;
 }
 
 
@@ -329,7 +320,17 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
 
 export interface ITypeDeclInstruction extends IDeclInstruction {
     readonly type: ITypeInstruction;
-    readonly name: string;
+}
+
+
+export interface IRegister {
+    type: 'u' | 'b' | 't' | 's' | null;
+    index: number;
+    // space ?
+};
+
+export interface ICbufferInstruction extends IDeclInstruction, ITypedInstruction {
+    readonly register: IRegister;
 }
 
 
@@ -340,16 +341,18 @@ export interface ISamplerStateInstruction extends IInstruction {
 
 
 export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstruction {
-    readonly id: IIdInstruction;
     readonly type: IVariableTypeInstruction;
     readonly initExpr: IInitExprInstruction;
 
-    readonly defaultValue: any;
+    /** @deprecated */
+    readonly defaultValue: any; // native value evaluated from the initial expression.
 
     isParameter(): boolean;
     isLocal(): boolean;
     isGlobal(): boolean;
     isField(): boolean;
+    // is part of the constant buffer ?
+    isConstant(): boolean;
 }
 
 

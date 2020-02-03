@@ -270,4 +270,17 @@ export namespace type {
     export function equals(a: ITypeInstruction | RegExp, b: ITypeInstruction | RegExp, strong: boolean = false): boolean {
         return compare(a, b, strong);
     }
+
+    //
+    // utils
+    //
+
+    export function alignSize(size: number, aligment: number): number {
+        if (size === instruction.UNDEFINE_SIZE) {
+            return size;
+        }
+        
+        const unaligned = size % aligment;
+        return unaligned !== 0 ? size + aligment - unaligned : size;
+    }
 }

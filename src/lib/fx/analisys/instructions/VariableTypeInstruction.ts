@@ -26,6 +26,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     protected _arrayIndexExpr: IExprInstruction;
     protected _arrayElementType: IVariableTypeInstruction;
     protected _padding: number;
+    protected _aligment: number;
 
     constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, padding = instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableType, ...settings });
@@ -60,6 +61,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         this._arrayIndexExpr = null;
         this._arrayElementType = null;
         this._padding = padding;
+        this._aligment = 1;
 
         if (arrayIndex) {
             //TODO: add support for v[][10]
@@ -120,17 +122,21 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    get aligment(): number {
+        return this._aligment;
+    }
+
     // TODO: move to helpers
     get size(): number {
         if (!isNull(this._arrayElementType)) {
-            const size = this._arrayElementType.size;
+            const size = type.alignSize(this._arrayElementType.size, this.aligment);
             const length = this.length;
             if (length === instruction.UNDEFINE_LENGTH || size === instruction.UNDEFINE_SIZE) {
                 return instruction.UNDEFINE_SIZE;
             }
             return size * length;
         }
-        return this.subType.size;
+        return type.alignSize(this.subType.size, this.aligment);
     }
 
 
@@ -296,9 +302,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-    $overwritePadding(val: number) {
-        this._padding = val;
+    $overwritePadding(padding: number, aligment: number) {
+        this._padding = padding;
+        this._aligment = aligment;
     }
+    
 
 
     private addUsage(usage: IVariableUsage): void {

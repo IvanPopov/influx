@@ -3,5 +3,7 @@ export enum EAnalyzerWarnings {
     IncompleteTechnique,
     IncompletePass,
     UselessPassState,
+    EmptySemicolon,
+    InvalidCbufferRegister,
     // part fx
 }

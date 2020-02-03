@@ -9,6 +9,7 @@ export enum EAnalyzerErrors {
     UnsupportedTypeDecl,
     UnsupportedExpr,
     UnknownVarName,
+    UnknownInstruction,
     InvalidArithmeticOperation,
     InvalidArithmeticAssigmentOperation,
     InvalidAssigmentOperation,
