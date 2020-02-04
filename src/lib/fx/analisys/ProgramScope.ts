@@ -120,6 +120,28 @@ export class Scope implements IScope {
     }
 
 
+    addTypeAlias(typeName: string, aliasName: string): boolean {
+        const type = this.findType(typeName);
+        const alias = this.findType(aliasName);
+
+        if (alias) {
+            return false;
+        }
+
+        if (!type) {
+            return false;
+        }
+
+        // original type must be part of this scope
+        if (!this.types[typeName]) {
+            return false;
+        }
+
+        this.types[aliasName] = type;
+        return true;
+    }
+
+
     addFunction(func: IFunctionDeclInstruction): boolean {
         assert(this.type <= EScopeType.k_Global);
         assert(func.scope === this);

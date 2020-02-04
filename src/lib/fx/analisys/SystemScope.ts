@@ -12,15 +12,15 @@ import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITyped
 import { IMap } from "@lib/idl/IMap";
 
 // TODO: use it
-export enum ESystemTypes {
-    k_Sampler,
-    k_Sampler2D,
-    k_Sampler3D,
-    k_SamplerCube,
-    k_RWBuffer,
-    k_RWStructuredBuffer,
-    k_AppendStructuredBuffer
-};
+// export enum ESystemTypes {
+//     k_Sampler,
+//     k_Sampler2D,
+//     k_Sampler3D,
+//     k_SamplerCube,
+//     k_RWBuffer,
+//     k_RWStructuredBuffer,
+//     k_AppendStructuredBuffer
+// };
 
 const scope = new Scope({ type: EScopeType.k_System });
 
@@ -86,6 +86,32 @@ class TypeTemplate implements ITypeTemplate {
             return `${this.name}<${args.map(arg => arg.name).join(', ')}>`;
         }
         return this.name;
+    }
+}
+
+class BufferTemplate extends TypeTemplate {
+    constructor() {
+        super('Buffer', scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+
+        if (!args[0].isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
 
@@ -197,6 +223,37 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
 }
 
 
+class RWTexture1DTemplate extends TypeTemplate {
+    constructor() {
+        super(RWTexture1DTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }   
+
+    static TYPE_NAME = 'RWTexture1D';
+}
+
+
 class Texture2DTemplate extends TypeTemplate {
     constructor() {
         super(Texture2DTemplate.TYPE_NAME, scope);
@@ -227,6 +284,98 @@ class Texture2DTemplate extends TypeTemplate {
     static TYPE_NAME = 'Texture2D';
 }
 
+class Texture3DTemplate extends TypeTemplate {
+    constructor() {
+        super(Texture3DTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }   
+
+    static TYPE_NAME = 'Texture3D';
+}
+
+
+class Texture2DArrayTemplate extends TypeTemplate {
+    constructor() {
+        super(Texture2DArrayTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }   
+
+    static TYPE_NAME = 'Texture2DArray';
+}
+
+
+class TextureCubeArrayTemplate extends TypeTemplate {
+    constructor() {
+        super(TextureCubeArrayTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1; 
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }   
+
+    static TYPE_NAME = 'TextureCubeArray';
+}
+
 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
     for (let suffix in suffixMap) {
@@ -251,9 +400,12 @@ function addSystemTypeScalar(): void {
     generateSystemType("float", 4);
     generateSystemType("string");
     generateSystemType("texture");
-    generateSystemType("sampler");
-    generateSystemType("sampler2D");
-    generateSystemType("samplerCUBE");
+    // generateSystemType("sampler");
+    // generateSystemType("sampler2D");
+    // generateSystemType("samplerCUBE");
+
+    // TODO: use dedicated type for half
+    scope.addTypeAlias('float', 'half');
 }
 
 
@@ -740,32 +892,32 @@ function addSystemFunctions(): void {
     generateSystemFunction("atan", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("atan", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
 
-    generateSystemFunction("tex2D", "float4", ["sampler", "float2"], null);
-    generateSystemFunction("tex2D", "float4", ["sampler2D", "float2"], null);
-    generateSystemFunction("tex2DProj", "float4", ["sampler", "float3"], null);
-    generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float3"], null);
-    generateSystemFunction("tex2DProj", "float4", ["sampler", "float4"], null);
-    generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float4"], null);
-    generateSystemFunction("texCUBE", "float4", ["sampler", "float3"], null);
-    generateSystemFunction("texCUBE", "float4", ["samplerCUBE", "float3"], null);
+    // generateSystemFunction("tex2D", "float4", ["sampler", "float2"], null);
+    // generateSystemFunction("tex2D", "float4", ["sampler2D", "float2"], null);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler", "float3"], null);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float3"], null);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler", "float4"], null);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float4"], null);
+    // generateSystemFunction("texCUBE", "float4", ["sampler", "float3"], null);
+    // generateSystemFunction("texCUBE", "float4", ["samplerCUBE", "float3"], null);
 
-    generateSystemFunction("tex2D", "float4", ["sampler", "float2", "float"], null, false, true);
-    generateSystemFunction("tex2D", "float4", ["sampler2D", "float2", "float"], null, false, true);
-    generateSystemFunction("tex2DProj", "float4", ["sampler", "float3", "float"], null, false, true);
-    generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float3", "float"], null, false, true);
-    generateSystemFunction("tex2DProj", "float4", ["sampler", "float4", "float"], null, false, true);
-    generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float4", "float"], null, false, true);
-    generateSystemFunction("texCUBE", "float4", ["sampler", "float3", "float"], null, false, true);
-    generateSystemFunction("texCUBE", "float4", ["samplerCUBE", "float3", "float"], null, false, true);
+    // generateSystemFunction("tex2D", "float4", ["sampler", "float2", "float"], null, false, true);
+    // generateSystemFunction("tex2D", "float4", ["sampler2D", "float2", "float"], null, false, true);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler", "float3", "float"], null, false, true);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float3", "float"], null, false, true);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler", "float4", "float"], null, false, true);
+    // generateSystemFunction("tex2DProj", "float4", ["sampler2D", "float4", "float"], null, false, true);
+    // generateSystemFunction("texCUBE", "float4", ["sampler", "float3", "float"], null, false, true);
+    // generateSystemFunction("texCUBE", "float4", ["samplerCUBE", "float3", "float"], null, false, true);
 
-    generateSystemFunction("tex2DLod", "float4", ["sampler", "float2", "float"], null, true, false);
-    generateSystemFunction("tex2DLod", "float4", ["sampler2D", "float2", "float"], null, true, false);
-    generateSystemFunction("tex2DProjLod", "float4", ["sampler", "float3", "float"], null, true, false);
-    generateSystemFunction("tex2DProjLod", "float4", ["sampler2D", "float3", "float"], null, true, false);
-    generateSystemFunction("tex2DProjLod", "float4", ["sampler", "float4", "float"], null, true, false);
-    generateSystemFunction("tex2DProjLod", "float4", ["sampler2D", "float4", "float"], null, true, false);
-    generateSystemFunction("texCUBELod", "float4", ["sampler", "float3", "float"], null, true, false);
-    generateSystemFunction("texCUBELod", "float4", ["samplerCUBE", "float3", "float"], null, true, false);
+    // generateSystemFunction("tex2DLod", "float4", ["sampler", "float2", "float"], null, true, false);
+    // generateSystemFunction("tex2DLod", "float4", ["sampler2D", "float2", "float"], null, true, false);
+    // generateSystemFunction("tex2DProjLod", "float4", ["sampler", "float3", "float"], null, true, false);
+    // generateSystemFunction("tex2DProjLod", "float4", ["sampler2D", "float3", "float"], null, true, false);
+    // generateSystemFunction("tex2DProjLod", "float4", ["sampler", "float4", "float"], null, true, false);
+    // generateSystemFunction("tex2DProjLod", "float4", ["sampler2D", "float4", "float"], null, true, false);
+    // generateSystemFunction("texCUBELod", "float4", ["sampler", "float3", "float"], null, true, false);
+    // generateSystemFunction("texCUBELod", "float4", ["samplerCUBE", "float3", "float"], null, true, false);
 
     //OES_standard_derivatives
 
@@ -862,16 +1014,48 @@ function initSystemTypes(): void {
     addSystemTypeVector();
     addSystemTypeMatrix();
     
+    scope.addTypeTemplate(new BufferTemplate);
     scope.addTypeTemplate(new RWBufferTemplate);
     scope.addTypeTemplate(new RWStructuredBufferTemplate);
     scope.addTypeTemplate(new AppendStructuredBufferTemplate);
 
+    scope.addTypeTemplate(new RWTexture1DTemplate);
+    // TODO: RWTexture2D
+    // TODO: RWTexture3D
+
+    // TODO: Texture1D
     scope.addTypeTemplate(new Texture2DTemplate);
+    scope.addTypeTemplate(new Texture3DTemplate);
+    // TODO: TextureCube
+    // TODO: Texture1DArray
+    scope.addTypeTemplate(new Texture2DArrayTemplate);
+    // TODO: Texture3DArray
+    scope.addTypeTemplate(new TextureCubeArrayTemplate);
 
     // produce default Texture2D type
-    const template = scope.findTypeTemplate(Texture2DTemplate.TYPE_NAME);
-    const typeTexture2D = template.produceType(scope, []); 
+    const templateTexture2D = scope.findTypeTemplate(Texture2DTemplate.TYPE_NAME);
+    const typeTexture2D = templateTexture2D.produceType(scope, []); 
     scope.addType(typeTexture2D);
+
+    // produce default Texture3D type
+    const templateTexture3D = scope.findTypeTemplate(Texture3DTemplate.TYPE_NAME);
+    const typeTexture3D = templateTexture3D.produceType(scope, []); 
+    scope.addType(typeTexture3D);
+
+    // produce default Texture2DArray type
+    const templateTexture2DArray = scope.findTypeTemplate(Texture2DArrayTemplate.TYPE_NAME);
+    const typeTexture2DArray = templateTexture2DArray.produceType(scope, []); 
+    scope.addType(typeTexture2DArray);
+
+    // produce default TextureCubeArray type
+    const templateTextureCubeArray = scope.findTypeTemplate(TextureCubeArrayTemplate.TYPE_NAME);
+    const typeTextureCubeArray = templateTextureCubeArray.produceType(scope, []); 
+    scope.addType(typeTextureCubeArray);
+
+    // produce default RWTexture1D type
+    const templateRWTexture1D = scope.findTypeTemplate(RWTexture1DTemplate.TYPE_NAME);
+    const typeRWTexture1D = templateRWTexture1D.produceType(scope, []); 
+    scope.addType(typeRWTexture1D);
 }
 
 
@@ -904,7 +1088,13 @@ export const T_FLOAT3 = scope.findType("float3");
 export const T_FLOAT4 = scope.findType("float4");
 
 export const T_FLOAT2X2 = scope.findType("float2x2");
+export const T_FLOAT2X3 = scope.findType("float2x3");
+export const T_FLOAT2X4 = scope.findType("float2x4");
+export const T_FLOAT3X2 = scope.findType("float3x2");
 export const T_FLOAT3X3 = scope.findType("float3x3");
+export const T_FLOAT3X4 = scope.findType("float3x3");
+export const T_FLOAT4X2 = scope.findType("float4x2");
+export const T_FLOAT4X3 = scope.findType("float4x3");
 export const T_FLOAT4X4 = scope.findType("float4x4");
 
 export const T_BOOL = scope.findType("bool");
@@ -930,9 +1120,9 @@ export const T_INT2X2 = scope.findType("int2x2");
 export const T_INT3X3 = scope.findType("int3x3");
 export const T_INT4X4 = scope.findType("int4x4");
 
-export const T_SAMPLER = scope.findType("sampler");
-export const T_SAMPLER_2D = scope.findType("sampler2D");
-export const T_SAMPLER_CUBE = scope.findType("samplerCUBE");
+// export const T_SAMPLER = scope.findType("sampler");
+// export const T_SAMPLER_2D = scope.findType("sampler2D");
+// export const T_SAMPLER_CUBE = scope.findType("samplerCUBE");
 
 export const findType = (typeName: string) => scope.findType(typeName);
 export const findVariable = (varName: string) => scope.findVariable(varName);
@@ -1021,11 +1211,11 @@ export function isBoolBasedType(type: ITypeInstruction): boolean {
 }
 
 
-export function isSamplerType(type: ITypeInstruction): boolean {
-    return type.isEqual(T_SAMPLER) ||
-        type.isEqual(getSystemType("sampler2D")) ||
-        type.isEqual(getSystemType("samplerCUBE"));
-}
+// export function isSamplerType(type: ITypeInstruction): boolean {
+//     return type.isEqual(T_SAMPLER) ||
+//         type.isEqual(getSystemType("sampler2D")) ||
+//         type.isEqual(getSystemType("samplerCUBE"));
+// }
 
 
 

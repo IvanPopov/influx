@@ -82,7 +82,12 @@ class LanguageServiceProvider {
         this.documents.set(textDocument.uri, { textDocument, slastDocument, slDocument });
 
         slDocument.diagnosticReport.messages.forEach(msg => {
-            const { start, end } = resolveLocation(msg, slastDocument);
+            const loc = resolveLocation(msg, slastDocument);
+            if (!loc) {
+                return;
+            }
+
+            const { start, end } = loc;
             msg.start = start;
             msg.end = end;
         });

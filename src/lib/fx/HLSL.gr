@@ -25,7 +25,7 @@ Decl : PartFxDecl
 ImportDecl : T_KW_IMPORT String ';'
 
 ProvideDecl : T_KW_PROVIDE ComplexNameOpt ';'
-ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'
+# ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'
 
 UseDecl : T_KW_USE Mode
 Mode : T_KW_STRICT
@@ -95,8 +95,11 @@ ObjectType : T_KW_TEXTURE
 ObjectType : T_KW_TEXTURE1D
 ObjectType : T_KW_TEXTURE2D
 ObjectType : T_KW_TEXTURE2D '<' Type '>'
+ObjectType : T_KW_TEXTURE2DARRAY
 ObjectType : T_KW_TEXTURE3D
+ObjectType : T_KW_TEXTURE3D '<' Type '>'
 ObjectType : T_KW_TEXTURECUBE
+ObjectType : T_KW_TEXTURECUBEARRAY
 ObjectType : T_KW_SAMPLER
 ObjectType : T_KW_SAMPLER1D
 ObjectType : T_KW_SAMPLER2D
@@ -106,10 +109,16 @@ ObjectType : T_KW_PIXELSHADER
 ObjectType : T_KW_VERTEXSHADER
 ObjectType : T_KW_PIXELFRAGMENT
 ObjectType : T_KW_VERTEXFRAGMENT
-ObjectType : T_KW_STATEBLOCK
+# ObjectType : T_KW_STATEBLOCK
+ObjectType : T_KW_RWTEXTURE1D '<' Type '>'
+ObjectType : T_KW_RWTEXTURE2D '<' Type '>'
+ObjectType : T_KW_RWTEXTURE3D '<' Type '>'
+ObjectType : T_KW_BUFFER '<' Type '>'
 ObjectType : T_KW_RWBUFFER '<' Type '>'
 ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
+ObjectType : T_KW_SAMPLER_STATE
+ObjectType : T_KW_SAMPLER_COMPARISON_STATE
 
 
 # struct Name
@@ -391,7 +400,7 @@ ComplexExpr : ObjectExpr
 ObjectExpr : T_KW_COMPILE NonTypeId '(' ArgumentsOpt ')'
 ObjectExpr : T_KW_SAMPLER_STATE StateBlock
 ObjectExpr : T_KW_COMPILE_FRAGMENT Target NonTypeId '(' ArgumentsOpt ')'
-ObjectExpr : T_KW_STATEBLOCK_STATE StateBlock
+# ObjectExpr : T_KW_STATEBLOCK_STATE StateBlock
 
 PrimaryExpr : ComplexExpr
 PrimaryExpr : SimpleExpr
@@ -597,8 +606,10 @@ T_KW_STRING : "string"
 T_KW_TEXTURE : "Texture"
 T_KW_TEXTURE1D : "Texture1D"
 T_KW_TEXTURE2D : "Texture2D"
+T_KW_TEXTURE2DARRAY : "Texture2DArray"
 T_KW_TEXTURE3D : "Texture3D"
 T_KW_TEXTURECUBE : "TextureCube"
+T_KW_TEXTURECUBEARRAY : "TextureCubeArray"
 T_KW_CBUFFER : "cbuffer"
 T_KW_TBUFFER : "tbuffer"
 
@@ -608,6 +619,10 @@ T_KW_TBUFFER : "tbuffer"
 # T_KW_SAMPLER3D : "sampler3D"
 # T_KW_SAMPLERCUBE : "samplerCUBE"
 
+T_KW_BUFFER : "Buffer"
+T_KW_RWTEXTURE1D : "RWTexture1D"
+T_KW_RWTEXTURE2D : "RWTexture2D"
+T_KW_RWTEXTURE3D : "RWTexture3D"
 T_KW_RWBUFFER : "RWBuffer"
 T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_APPENDSTRUCTUREDBUFFER : "AppendStructuredBuffer"
@@ -615,7 +630,7 @@ T_KW_PIXELSHADER : "pixelshader"
 T_KW_VERTEXSHADER : "vertexshader"
 T_KW_PIXELFRAGMENT : "pixelfragment"
 T_KW_VERTEXFRAGMENT : "vertexfragment"
-T_KW_STATEBLOCK : "stateblock"
+# T_KW_STATEBLOCK : "stateblock"
 T_KW_REGISTER : "register"
 T_KW_IN : "in"
 T_KW_OUT : "out"
@@ -635,9 +650,10 @@ T_KW_FOR : "for"
 T_KW_TRUE : "true"
 T_KW_FALSE : "false"
 T_KW_COMPILE : "compile"
-T_KW_SAMPLER_STATE : "sampler_state"
+T_KW_SAMPLER_STATE : "SamplerState"
+T_KW_SAMPLER_COMPARISON_STATE : "SamplerComparisonState"
 T_KW_COMPILE_FRAGMENT : "compile_fragment"
-T_KW_STATEBLOCK_STATE : "stateblock_state"
+# T_KW_STATEBLOCK_STATE : "stateblock_state"
 T_KW_DECL : "decl"
 T_KW_ASM : "asm"
 T_KW_ASM_FRAGMENT : "asm_fragment"
@@ -655,7 +671,7 @@ T_KW_SPAWN : "spawn"
 #endif
 
 T_KW_CONTINUE : "continue"
-T_KW_AS : "as"
+# T_KW_AS : "as"
 T_OP_INC : "++"
 T_OP_DEC : "--"
 T_OP_LE : ">="

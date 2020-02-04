@@ -2,8 +2,8 @@ import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { IMacro } from '@lib/idl/parser/IMacro';
-import { EOperationType, EParserCode, IASTConfig, IFile, IRange, IToken } from '@lib/idl/parser/IParser';
-import { ASTDocument, EParsingErrors, EParsingWarnings } from "@lib/parser/ASTDocument";
+import { EOperationType, IASTConfig, IFile, IRange, IToken } from '@lib/idl/parser/IParser';
+import { ASTDocument } from "@lib/parser/ASTDocument";
 import { Preprocessor } from '@lib/parser/Preprocessor';
 import { Diagnostics } from '@lib/util/Diagnostics';
 
@@ -12,8 +12,11 @@ import { defaultSLParser } from './SLParser';
 // const readFile = fname => fetch(fname).then(resp => resp.text(), reason => console.warn('!!!', reason));
 
 const PREDEFINED_TYPES = [
+    'half2', 'half3', 'half4',
     'float2', 'float3', 'float4',
-    'float2x2', 'float3x3', 'float4x4',
+    'float2x2', 'float2x3', 'float2x4', 
+    'float3x2', 'float3x3', 'float3x4', 
+    'float4x2', 'float4x3', 'float4x4',
     'int2', 'int3', 'int4',
     'uint2', 'uint3', 'uint4',
     'bool2', 'bool3', 'bool4',

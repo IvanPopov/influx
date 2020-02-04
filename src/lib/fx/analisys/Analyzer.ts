@@ -49,7 +49,7 @@ import { ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
-import { SamplerOperator, SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
+// import { SamplerOperator, SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
 import { SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
 import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
@@ -559,8 +559,9 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
 
                 isVaryingsByStruct = true;
             } else if (param.semantic !== "") {
-                if (param.type.isContainSampler() ||
-                    SystemScope.isSamplerType(param.type)) {
+                if (param.type.isContainSampler()
+                //  || SystemScope.isSamplerType(param.type)
+                 ) {
                     return false;
                 }
 
@@ -583,8 +584,9 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
                 return false;
             }
 
-            if (param.type.isContainSampler() ||
-                SystemScope.isSamplerType(param.type)) {
+            if (param.type.isContainSampler()
+                // || SystemScope.isSamplerType(param.type)
+                ) {
                 return false;
             }
 
@@ -918,7 +920,20 @@ export class Analyzer {
 
                         // TODO: validate register
                         // TODO: use ESystemTypes enumeration
-                        const SYSTEM_TYPES = ['RWBuffer', 'RWStructuredBuffer', 'AppendStructuredBuffer', 'Texture2D'];
+                        const SYSTEM_TYPES = [
+                            'Buffer', 
+                            'RWBuffer', 
+                            'RWStructuredBuffer', 
+                            'AppendStructuredBuffer', 
+                            'RWTexture1D',
+                            'RWTexture2D',
+                            'RWTexture3D',
+                            'Texture1D',
+                            'Texture2D',
+                            'Texture3D',
+                            'Texture2DArray',
+                            'TextureCubeArray',
+                        ];
                         if (SYSTEM_TYPES.indexOf(template.name) !== -1) {
                             if (scope.type != EScopeType.k_Global) {
                                 context.error(sourceNode, EErrors.InvalidTypeScope,
@@ -1297,8 +1312,8 @@ export class Analyzer {
         switch (name) {
             case 'T_KW_COMPILE':
                 return this.analyzeCompileExpr(context, program, sourceNode);
-            case 'T_KW_SAMPLER_STATE':
-                return this.analyzeSamplerStateBlock(context, program, sourceNode);
+            // case 'T_KW_SAMPLER_STATE':
+            //     return this.analyzeSamplerStateBlock(context, program, sourceNode);
             default:
         }
         return null;
@@ -1376,30 +1391,30 @@ export class Analyzer {
     }
 
 
-    /**
-     * AST example:
-     *    ObjectExpr
-     *       + StateBlock 
-     *         T_KW_SAMPLER_STATE = 'sampler_state'
-     */
-    protected analyzeSamplerStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
-        sourceNode = sourceNode.children[0];
+    // /**
+    //  * AST example:
+    //  *    ObjectExpr
+    //  *       + StateBlock 
+    //  *         T_KW_SAMPLER_STATE = 'sampler_state'
+    //  */
+    // protected analyzeSamplerStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
+    //     sourceNode = sourceNode.children[0];
 
-        let scope = program.currentScope;
-        let children = sourceNode.children;
-        let operator: SamplerOperator = "sampler_state";
-        let texture = null;
-        let params = <ISamplerStateInstruction[]>[];
+    //     let scope = program.currentScope;
+    //     let children = sourceNode.children;
+    //     let operator: SamplerOperator = "sampler_state";
+    //     let texture = null;
+    //     let params = <ISamplerStateInstruction[]>[];
 
-        for (let i = children.length - 2; i >= 1; i--) {
-            let param = this.analyzeSamplerState(context, program, children[i]);
-            if (!isNull(param)) {
-                params.push(param);
-            }
-        }
+    //     for (let i = children.length - 2; i >= 1; i--) {
+    //         let param = this.analyzeSamplerState(context, program, children[i]);
+    //         if (!isNull(param)) {
+    //             params.push(param);
+    //         }
+    //     }
 
-        return new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
-    }
+    //     return new SamplerStateBlockInstruction({ sourceNode, scope, operator, params });
+    // }
 
 
     /**
@@ -3739,12 +3754,12 @@ export class Analyzer {
 
         const isComplex = leftType.isComplex() || rightType.isComplex();
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
-        const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
+        // const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
 
         const boolType = <IVariableTypeInstruction>T_BOOL;
         // const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
 
-        if (isArray || isSampler) {
+        if (isArray/* || isSampler*/) {
             return null;
         }
 
@@ -3916,9 +3931,9 @@ export class Analyzer {
 
         const isComplex = type.isComplex();
         const isArray = type.isNotBaseArray();
-        const isSampler = SystemScope.isSamplerType(type);
+        // const isSampler = SystemScope.isSamplerType(type);
 
-        if (isComplex || isArray || isSampler) {
+        if (isComplex || isArray/* || isSampler*/) {
             return null;
         }
 

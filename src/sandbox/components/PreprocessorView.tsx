@@ -7,7 +7,7 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import injectSheet from 'react-jss';
 import { connect } from 'react-redux';
-import { Checkbox, List } from 'semantic-ui-react';
+import { Checkbox, List, Popup } from 'semantic-ui-react';
 
 import { IWithStyles } from '.';
 
@@ -156,7 +156,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                             <List.Content>
                                 {/* <List.Header>{ filename }</List.Header> */ }
                                 <List.Description>
-                                    <Checkbox label={ macro.name } checked={ (macro.text !== null) }
+                                    <Checkbox label={ macro.name } checked={ (macro.text !== null) } disabled={ (macro.text !== null) }
                                         className={ this.props.classes.checkboxTiny } />
                                 </List.Description>
                             </List.Content>
@@ -180,7 +180,11 @@ class PPView extends React.Component<IPPViewProps, {}> {
                                 >
                                     <List.Content>
                                         {/* <List.Header>{ filename }</List.Header> */ }
-                                        <List.Description>{ macro.name }</List.Description>
+                                        <List.Description>
+                                            <Popup inverted
+                                                content={ <span>{ `${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${macro.text.value}` }</span> }
+                                                trigger={ <span>{ `${macro.name}` }</span> } />
+                                        </List.Description>
                                     </List.Content>
                                 </List.Item>
                             ))

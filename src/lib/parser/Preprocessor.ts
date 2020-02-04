@@ -302,7 +302,7 @@ export class Preprocessor {
         if (flags & EPPDocumentFlags.k_Include) {
             this.includes.push(this.stack.length);
 
-            assert(!this.includeMap.has(`${textDocument.uri}`));
+            // assert(!this.includeMap.has(`${textDocument.uri}`));
             this.includeMap.set(`${textDocument.uri}`, loc);
         }
 
@@ -934,9 +934,12 @@ export class Preprocessor {
         const loc = util.commonRange(token.loc, file.loc);
 
         if (this.includeMap.has(uri)) {
-            console.warn(`'${uri}' file has already been included previously.`);
-            // TODO: emit warning
-            return this.readToken();
+            const chain = this.includes.map(i => this.stack[i].lexer.document.uri.toString()).map(name => `\t> ${name}`).join('\n');
+            console.warn(`'${uri}' file has already been included previously at "${this.includeMap.get(uri).start.file}":\n${chain}`);  
+           
+            // TODO: prevent recursion!
+            // // TODO: emit warning
+            // return this.readToken();
         }
 
         try {
@@ -1015,12 +1018,14 @@ export class Preprocessor {
                         bracketDepth--;
                         break;
                     case ',':
-                        assert(endPos - startPos > 0);
-                        // TODO: emit error
-                        if ((endPos - startPos) > 0) {
-                            argRanges.push(startPos, endPos);
+                        if (bracketDepth === 0) {
+                            assert(endPos - startPos > 0);
+                            // TODO: emit error
+                            if ((endPos - startPos) > 0) {
+                                argRanges.push(startPos, endPos);
+                            }
+                            startPos = endPos + 1;
                         }
-                        startPos = endPos + 1;
                         break;
                 }
 
@@ -1037,8 +1042,7 @@ export class Preprocessor {
             const nArgs = argRanges.length / 2;
 
             if (nArgs !== macro.params.length) {
-                // TODO: emit error
-                assert(false);
+                this.emitMacroError(`macro '${macro.name}' arguments mismatch, expected count is ${macro.params.length} but recived ${nArgs}`, token.loc);
 
                 assert($lexer === this.lexer, 'something went wrong');
                 this.lexer.setPosition(pos);

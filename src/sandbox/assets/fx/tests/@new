@@ -1,0 +1,1091 @@
+/*
+#define _AP_PC
+#define _API_DX11
+
+#include <husky/registers_base.fx>
+#include <husky/common.vsh>
+#include <husky/base_vsout.fx>
+#include <husky/input_output_defines.fx>
+*/
+
+      bool any1i ( int v ) { return any ( v ) ; }
+      bool any2i ( int2 v ) { return any ( v ) ; }
+      bool any3i ( int3 v ) { return any ( v ) ; }
+      bool any4i ( int4 v ) { return any ( v ) ; }
+
+      bool any1u ( uint v ) { return any ( v ) ; }
+      bool any2u ( uint2 v ) { return any ( v ) ; }
+      bool any3u ( uint3 v ) { return any ( v ) ; }
+      bool any4u ( uint4 v ) { return any ( v ) ; }
+
+      bool any1f ( float v ) { return any ( v ) ; }
+      bool any2f ( float2 v ) { return any ( v ) ; }
+      bool any3f ( float3 v ) { return any ( v ) ; }
+      bool any4f ( float4 v ) { return any ( v ) ; }
+
+      bool all1i ( int v ) { return all ( v ) ; }
+      bool all2i ( int2 v ) { return all ( v ) ; }
+      bool all3i ( int3 v ) { return all ( v ) ; }
+      bool all4i ( int4 v ) { return all ( v ) ; }
+
+      bool all1u ( uint v ) { return all ( v ) ; }
+      bool all2u ( uint2 v ) { return all ( v ) ; }
+      bool all3u ( uint3 v ) { return all ( v ) ; }
+      bool all4u ( uint4 v ) { return all ( v ) ; }
+
+      bool all1f ( float v ) { return all ( v ) ; }
+      bool all2f ( float2 v ) { return all ( v ) ; }
+      bool all3f ( float3 v ) { return all ( v ) ; }
+      bool all4f ( float4 v ) { return all ( v ) ; }
+
+
+
+      uint packHalf2x16 ( float2 v ) { return f32tof16 ( v . x ) | ( f32tof16 ( v . y ) << 16 ) ; }
+      float2 unpackHalf2x16 ( uint pack ) { return float2 ( f16tof32 ( pack ) , f16tof32 ( pack >> 16 ) ) ; }
+
+cbuffer CB_PS_PASS_BASE : register ( b4 ) { struct T_CB_PS_PASS_BASE {
+   float4 PS_REG_BASE_TEX_SWIZZLE_MASK [ 5 ] ;
+   float4 PS_REG_BASE_CONST_COLOR [ 1 ] ;
+   float4 PS_REG_BASE_LUM_THRD [ 1 ] ;
+} CB_PS_PASS_BASE_data [ 1 ] ; } ;
+const uint CB_PS_PASS_BASE_sliceID = 0 ; ;
+
+Texture2D PS_BASE_DIFF_TEX [ 1 ] : register ( t0 ) ;
+static const int PS_BASE_DIFF_SMP = 2 ;
+Texture2D < uint4 > PS_BASE_UINT_TEX [ 1 ] : register ( t1 ) ;
+static const int PS_BASE_UINT_SMP = 0 ;
+
+cbuffer CB_COMMON : register ( b0 ) {
+
+   float4 REG_COMMON_FOG_PARAMS [ 2 ] ;
+   float4 REG_COMMON_FOG_COLOR [ 1 ] ;
+   float4 REG_COMMON_FOG_SUN_DIR [ 1 ] ;
+   float4 REG_COMMON_FOG_RAYLEIGH_FACTOR [ 1 ] ;
+   float4 VS_REG_COMMON_FOG_VOL_START [ 56 ] ;
+
+   float4 PS_REG_COMMON_FOG_PLANE_MIRROR [ 2 ] ;
+   float4 PS_REG_COMMON_FOG_ATMOSPHERE_0 [ 12 ] ;
+   float4 PS_REG_COMMON_FOG_ATMOSPHERE_EXTRA [ 2 ] ;
+
+
+
+   float4 PS_REG_COMMON_HDR_PARAMS [ 2 ] ;
+
+
+
+   float4 PS_REG_COMMON_ELAPSED_TIME [ 1 ] ;
+   float4 PS_REG_COMMON_DEBUG_SHOW_LIGHTING [ 6 ] ;
+   float4 PS_REG_COMMON_AMBIENT [ 1 ] ;
+   float4 COMMON_GAMMA_PARAMS [ 1 ] ;
+   float4 REG_COMMON_MB_PARAMS [ 1 ] ;
+
+
+
+   int4 COMMON_SM_NUM_SPLITS [ 4 ] ;
+   float4 COMMON_SM_MATR_ARRAY [ 112 ] ;
+   float4 COMMON_SM_FITK_ARRAY [ 28 ] ;
+   float4 COMMON_SM_SPLIT_POS [ 28 ] ;
+
+
+
+   int4 COMMON_LIGHTS_NUM [ 1 ] ;
+   float4 COMMON_LIGHTS_VSM_PARAMS [ 1 ] ;
+   float4 COMMON_DYN_LIGHT_PARAMS [ 272 ] ;
+
+   float4 COMMON_DYN_SPOT_PROJ_MATR [ 512 ] ;
+   float4 COMMON_DYN_POINT_ZW_PARAMS [ 128 ] ;
+
+   float4 COMMON_DYN_TEX_PROJ_MATR [ 192 ] ;
+   float4 COMMON_DYN_TEX_IDX [ 16 ] ;
+   float4 COMMON_LM_INTENSITY [ 1 ] ;
+
+
+
+   float4 PS_REG_REFLECTIONS_MATRVIEW [ 3 ] ;
+   float4 PS_REG_REFLECTIONS_MATRVIEW_INV [ 3 ] ;
+   float4 PS_REG_REFLECTIONS_MATRVIEW_PREV [ 3 ] ;
+   float4 PS_REG_REFLECTIONS_JITTER_PARAMS [ 1 ] ;
+   float4 PS_REG_REFLECTIONS_CAM_PARAMS [ 1 ] ;
+   float4 PS_REG_REFLECTIONS_PARAMS [ 2 ] ;
+   float4 PS_REG_REFLECTIONS_DEBUG_PARAMS [ 1 ] ;
+   float4 PS_REG_REFLECTIONS_FLARES [ 64 ] ;
+   float4 PS_REG_REFLECTIONS_FLARES_SPOT [ 96 ] ;
+   float4 PS_REG_REFLECTIONS_BILLBOARDS [ 36 ] ;
+   float4 PS_REG_REFLECTIONS_CUBEMAPS [ 1785 ] ;
+
+   float4 COMMON_VIEWPROJ_MATRIX_NO_JIT [ 4 ] ;
+   float4 COMMON_VIEWPROJ_MATRIX_NO_JIT_PREV [ 4 ] ;
+
+
+
+   float4 PS_REG_SSAO_COMMON_PARAMS [ 2 ] ;
+   float4 PS_REG_FAKE_LIGHT_COMMON_PARAMS [ 1 ] ;
+   float4 PS_REG_COMMON_WPN_ZSCALE [ 1 ] ;
+   float4 PS_REG_COMMON_SKIN_BENT_NORMAL_FACTORS [ 5 ] ;
+} ;
+
+
+
+cbuffer CB_COMMON_DYN : register ( b1 ) {
+
+   float4 COMMON_LBUF_PARAMS [ 1 ] ;
+   int4 PS_REG_REFLECTIONS_NELEM [ 1 ] ;
+   int4 PS_REG_COMMON_FOG_PARAM_SET [ 1 ] ;
+
+   float4 COMMON_VIEW_POSITION [ 1 ] ;
+   float4 COMMON_VIEWPROJ_MATRIX [ 4 ] ;
+   float4 COMMON_FPMODEL_VIEWPROJ_MATRIX [ 4 ] ;
+   float4 COMMON_FPMODEL_ZSCALE [ 1 ] ;
+   float4 COMMON_VIEW_MATRIX [ 3 ] ;
+   float4 COMMON_FPMODEL_CORRECTION_MATRIX [ 4 ] ;
+   float4 COMMON_PROJ_MATRIX [ 4 ] ;
+} ;
+
+cbuffer CB_SCREEN_RECT_DATA : register ( b2 ) {
+
+   float4 COMMON_VP_PARAMS [ 1 ] ;
+   float4 SCREEN_RECT [ 1 ] ;
+   float4 SCREEN_UV [ 1 ] ;
+   float4 RECT_DEPTH [ 1 ] ;
+} ;
+
+
+
+cbuffer CB_PIX_OBJ : register ( b5 ) { struct T_CB_PIX_OBJ {
+   float4 VS_REG_COMMON_OBJ_TEX_OFFSET [ 1 ] ;
+   float4 VS_REG_COMMON_OBJ_WORLD_MATRIX [ 3 ] ;
+   float4 VS_REG_COMMON_OBJ_WORLD_MATRIX_PREV [ 3 ] ;
+   float4 PS_REG_COMMON_ALPHA_KILL_REF [ 1 ] ;
+   float4 PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 8 ] ;
+   float4 PS_REG_COMMON_SH_REFLECTION_COEFFS [ 1 ] ;
+   float4 PS_REG_COMMON_DIR_DIRECT [ 1 ] ;
+   float4 PS_REG_COMMON_DIR_INDIRECT [ 1 ] ;
+   float4 PS_REG_COMMON_COL_DIRECT [ 1 ] ;
+   float4 PS_REG_COMMON_COL_INDIRECT [ 1 ] ;
+   float4 PS_REG_COMMON_OBJ_SKIN_OFFSET [ 1 ] ;
+
+   float4 PS_REG_COMMON_OBJ_NEGATIVE_SCALE [ 1 ] ;
+
+   int4 PS_REG_COMMON_OBJ_CUBE_IDX [ 1 ] ;
+   float4 PS_REG_COMMON_OBJ_CUBE_WEIGHT [ 1 ] ;
+   int4 PS_REG_COMMON_OBJ_CAUST_REFR_IDX [ 1 ] ;
+
+   float4 PS_REG_COMMON_ZFILL_VC_MASK [ 2 ] ;
+
+   int4 PS_REG_COMMON_OBJ_DECAL_NUM [ 1 ] ;
+   int4 PS_REG_COMMON_OBJ_DECAL_IDX [ 4 ] ;
+   int4 PS_REG_COMMON_VERTEX_MASKING_FLAGS [ 1 ] ;
+   float4 VS_REG_COMMON_OBJ_OBB [ 1 ] ;
+} CB_PIX_OBJ_data [ 1 ] ; } ;
+const uint CB_PIX_OBJ_sliceID = 0 ; ;
+
+
+
+cbuffer CB_OBJ_MATERIAL_DATA : register ( b6 ) {
+   int4 OBJ_GLT_UVSET_INDICES [ 1 ] ;
+   float4 OBJ_LAYER_TILING [ 2 ] ;
+   float4 OBJ_LAYER_TILING_BASE_INV [ 1 ] ;
+   float4 OBJ_GLT_TRANSP_VC_MASK [ 2 ] ;
+   float4 OBJ_MTLBLEND_LAYER_CONST [ 52 ] ;
+   float4 OBJ_REFLECTION_PARAMS [ 1 ] ;
+   float4 OBJ_PARALLAX_SECOND_VC_SWZ [ 1 ] ;
+   float4 OBJ_PARALLAX_FLATTEN_VC_SWZ [ 1 ] ;
+
+
+   float4 OBJ_COMPR_VERT_OFFSET [ 1 ] ;
+   float4 OBJ_COMPR_VERT_SCALE [ 1 ] ;
+   float4 OBJ_COMPR_TEX [ 2 ] ;
+} ;
+
+
+cbuffer CB_VS_SHAPES : register ( b7 ) {
+   float4 VS_REG_SHAPES [ 64 ] ;
+} ;
+
+
+
+cbuffer CB_CAUSTICS_DATA : register ( b8 ) {
+   float4 CAUSTICS_VOLUME_PLANES [ 400 ] ;
+   float4 CAUSTICS_DATA [ 920 ] ;
+} ;
+
+
+cbuffer CB_DECAL_TYPE : register ( b9 ) {
+   float4 DECAL_TYPE_DATA [ 4096 ] ;
+} ;
+
+
+
+Texture2D PS_COMMON_FONT_TEX [ 1 ] : register ( t63 ) ;
+static const int PS_COMMON_FONT_SMP = 4 ;
+Texture2D PS_COMMON_SSAO_MASK_TEX [ 1 ] : register ( t64 ) ;
+static const int PS_COMMON_SSAO_MASK_SMP = 3 ;
+Texture2D PS_COMMON_CUBE_MASK_TEX [ 1 ] : register ( t65 ) ;
+static const int PS_COMMON_CUBE_MASK_SMP = 3 ;
+Texture2D PS_COMMON_SM_ARRAY_TEX [ 1 ] : register ( t66 ) ;
+static const int PS_COMMON_SM_ARRAY_SMP = 1 ;
+Texture2D PS_COMMON_SM_MASK0_TEX [ 1 ] : register ( t67 ) ;
+static const int PS_COMMON_SM_MASK0_SMP = 3 ;
+
+Texture2D PS_COMMON_SSR_TEX [ 1 ] : register ( t69 ) ;
+static const int PS_COMMON_SSR_SMP = 4 ;
+Texture2D PS_COMMON_SSR_A_TEX [ 1 ] : register ( t70 ) ;
+static const int PS_COMMON_SSR_A_SMP = 4 ;
+Texture2D PS_COMMON_WATER_REFRACTION_TEX [ 1 ] : register ( t71 ) ;
+static const int PS_COMMON_WATER_REFRACTION_SMP = 4 ;
+
+Texture2D PS_COMMON_FOG_SLICE0_TEX [ 1 ] : register ( t73 ) ;
+static const int PS_COMMON_FOG_SLICE0_SMP = 4 ;
+Texture2D PS_COMMON_FOG_SLICE1_TEX [ 1 ] : register ( t74 ) ;
+static const int PS_COMMON_FOG_SLICE1_SMP = 4 ;
+Texture2D PS_COMMON_FOG_SLICE2_TEX [ 1 ] : register ( t75 ) ;
+static const int PS_COMMON_FOG_SLICE2_SMP = 4 ;
+Texture2D PS_COMMON_FOG_SLICE3_TEX [ 1 ] : register ( t76 ) ;
+static const int PS_COMMON_FOG_SLICE3_SMP = 4 ;
+Texture2D PS_COMMON_DEPTH_TEX [ 1 ] : register ( t77 ) ;
+static const int PS_COMMON_DEPTH_SMP = 3 ;
+Texture2D PS_COMMON_SHAPE_DATA_TEX [ 1 ] : register ( t78 ) ;
+static const int PS_COMMON_SHAPE_DATA_SMP = 3 ;
+Texture2D PS_COMMON_SHAPE_ID_TEX [ 1 ] : register ( t79 ) ;
+static const int PS_COMMON_SHAPE_ID_SMP = 3 ;
+TextureCubeArray PS_COMMON_CUBE_ARR_TEX [ 1 ] : register ( t80 ) ;
+static const int PS_COMMON_CUBE_ARR_SMP = 4 ;
+Texture2DArray PS_COMMON_FOG_DENSITY_INTEGRALS_TEX [ 1 ] : register ( t81 ) ;
+static const int PS_COMMON_FOG_DENSITY_INTEGRALS_SMP = 4 ;
+
+
+Texture2DArray PS_COMMON_SM_SPOT_CACHE_ARRAY_TEX [ 1 ] : register ( t84 ) ;
+static const int PS_COMMON_SM_SPOT_CACHE_ARRAY_SMP = 5 ;
+TextureCubeArray PS_COMMON_SM_POINT_CACHE_ARRAY_TEX [ 1 ] : register ( t85 ) ;
+static const int PS_COMMON_SM_POINT_CACHE_ARRAY_SMP = 5 ;
+
+Texture3D < uint4 > PS_COMMON_LIGHT_VOLUME_BITMASK0_TEX [ 1 ] : register ( t86 ) ;
+static const int PS_COMMON_LIGHT_VOLUME_BITMASK0_SMP = 0 ;
+Texture3D < uint4 > PS_COMMON_LIGHT_VOLUME_BITMASK1_TEX [ 1 ] : register ( t87 ) ;
+static const int PS_COMMON_LIGHT_VOLUME_BITMASK1_SMP = 0 ;
+Texture3D < uint4 > PS_COMMON_LIGHT_VOLUME_BITMASK2_TEX [ 1 ] : register ( t88 ) ;
+static const int PS_COMMON_LIGHT_VOLUME_BITMASK2_SMP = 0 ;
+Texture3D < uint4 > PS_COMMON_LIGHT_VOLUME_BITMASK3_TEX [ 1 ] : register ( t89 ) ;
+static const int PS_COMMON_LIGHT_VOLUME_BITMASK3_SMP = 0 ;
+Texture3D < uint4 > PS_COMMON_LIGHT_VOLUME_BITMASK4_TEX [ 1 ] : register ( t90 ) ;
+static const int PS_COMMON_LIGHT_VOLUME_BITMASK4_SMP = 0 ;
+Texture3D < uint4 > PS_COMMON_TRANSP_SM_MASK_TEX [ 1 ] : register ( t91 ) ;
+static const int PS_COMMON_TRANSP_SM_MASK_SMP = 0 ;
+
+
+Texture2DArray PS_COMMON_LIGHT_TEX_ARR_TEX [ 1 ] : register ( t93 ) ;
+static const int PS_COMMON_LIGHT_TEX_ARR_SMP = 7 ;
+Texture2D PS_COMMON_LM_TEX_TEX [ 5 ] : register ( t94 ) ;
+static const int PS_COMMON_LM_TEX_SMP = 4 ;
+Texture2D PS_COMMON_LM_VC_TEX [ 5 ] : register ( t99 ) ;
+static const int PS_COMMON_LM_VC_SMP = 4 ;
+Texture2D PS_COMMON_STATIC_SM_TEX [ 1 ] : register ( t104 ) ;
+static const int PS_COMMON_STATIC_SM_SMP = 0 ;
+Texture2D PS_COMMON_STATIC_SM_QUARTER_TEX [ 1 ] : register ( t105 ) ;
+static const int PS_COMMON_STATIC_SM_QUARTER_SMP = 0 ;
+Texture2D PS_COMMON_HM_TEX [ 1 ] : register ( t106 ) ;
+static const int PS_COMMON_HM_SMP = 3 ;
+Texture2D PS_COMMON_DECAL_ATLAS_DIFF_TEX [ 1 ] : register ( t107 ) ;
+static const int PS_COMMON_DECAL_ATLAS_DIFF_SMP = 4 ;
+Texture2D PS_COMMON_DECAL_ATLAS_NM_TEX [ 1 ] : register ( t108 ) ;
+static const int PS_COMMON_DECAL_ATLAS_NM_SMP = 4 ;
+Texture2D PS_COMMON_DECAL_ATLAS_SPEC_TEX [ 1 ] : register ( t109 ) ;
+static const int PS_COMMON_DECAL_ATLAS_SPEC_SMP = 4 ;
+Texture2D PS_COMMON_DECAL_ATLAS_HM_TEX [ 1 ] : register ( t110 ) ;
+static const int PS_COMMON_DECAL_ATLAS_HM_SMP = 4 ;
+
+
+Texture2D PS_COMMON_VERT_NORMALS_TEX [ 1 ] : register ( t112 ) ;
+static const int PS_COMMON_VERT_NORMALS_SMP = 4 ;
+Texture2D PS_COMMON_DEPTH_HALF_MIN_TEX [ 1 ] : register ( t113 ) ;
+static const int PS_COMMON_DEPTH_HALF_MIN_SMP = 3 ;
+
+
+
+Buffer < float4 > RB_SKIN_DATA : register ( t111 ) ;
+
+
+
+RWTexture1D < uint > PS_texObjID_UAV [ 1 ] : register ( u3 ) ;
+
+
+
+SamplerState PS_SAMPLERS [ 10 ] : register ( s0 ) ;
+SamplerComparisonState PS_SAMPLERS_CMP [ 2 ] : register ( s10 ) ; ;
+
+struct VS_INPUT_AUTO_I {
+
+
+
+} ;
+
+struct VS_INPUT_AUTO_O {
+   float4 Pos ;
+
+
+
+} ;
+
+float3 norm_decompr_int16 ( float inInt16Value )
+{
+   float3 tmp ;
+   tmp . xz = ( - 1. + 2. * frac ( float2 ( 1. / 181 , 1. / 181.0 / 181.0 ) * abs ( inInt16Value ) ) ) * float2 ( 181. / 179. , 181. / 180. ) ;
+   tmp . y = sign ( inInt16Value ) * sqrt ( saturate ( 1. - tmp . x * tmp . x - tmp . z * tmp . z ) ) ;
+   return tmp ;
+}
+
+
+
+void prepare_shader_input_data_ext_compr (
+   in VS_INPUT_AUTO_I In ,
+   out VS_INPUT_AUTO_O Out ,
+   in float3 comprOffset ,
+   in float3 comprScale ,
+   in float4 comprTex4 ,
+   in float2 comprTex ,
+   in float4 screen_rect ,
+   in float4 screen_rect_uv ,
+   in float screen_rect_depth
+)
+{
+
+
+
+}
+
+struct shCOEFFS {
+   half4 cAr , cAg , cAb , cBr , cBg , cBb , cC ;
+} ;
+
+
+
+half3 shLighting ( in half3 nrm , in shCOEFFS sh )
+{
+   half4 normal = half4 ( nrm . xyz , 1 ) ;
+
+   half3 x1 , x2 , x3 ;
+
+
+   x1 . r = dot ( sh . cAr , normal ) ;
+   x1 . g = dot ( sh . cAg , normal ) ;
+   x1 . b = dot ( sh . cAb , normal ) ;
+
+
+   half4 vB = normal . xyzz * normal . yzzx ;
+   vB . z -= half ( 1.0 ) / half ( 3.0 ) ;
+
+   x2 . r = dot ( sh . cBr , vB ) ;
+   x2 . g = dot ( sh . cBg , vB ) ;
+   x2 . b = dot ( sh . cBb , vB ) ;
+
+
+   half vC = normal . x * normal . x - normal . y * normal . y ;
+   x3 = sh . cC . rgb * vC ;
+
+   half3 res = x1 + x2 + x3 ;
+
+
+
+      res = half3 ( max ( res , half3 ( sh . cAr . a , sh . cAg . a , sh . cAb . a ) * 0.4 ) ) ;
+
+
+   return res ;
+}
+
+half3 shLightingLowres ( in half3 nrm , in shCOEFFS sh )
+{
+   half4 normal = half4 ( nrm , 1 ) ;
+
+   half3 res ;
+
+   res . r = dot ( sh . cAr , normal ) ;
+   res . g = dot ( sh . cAg , normal ) ;
+   res . b = dot ( sh . cAb , normal ) ;
+
+   return res ;
+}
+
+float pow2 ( float x ) {
+   return x * x ;
+}
+
+float2 pow2 ( float2 x ) {
+   return x * x ;
+}
+
+float3 pow2 ( float3 x ) {
+   return x * x ;
+}
+
+float4 pow2 ( float4 x ) {
+   return x * x ;
+}
+
+
+float pow4 ( in float x ) {
+   float x2 = x * x ;
+   return x2 * x2 ;
+}
+
+float pow8 ( in float x ) {
+   x *= x ;
+   x *= x ;
+   x *= x ;
+   return x ;
+}
+
+
+
+float3 normal_component ( float3 vect , float3 norm )
+{
+   return norm * dot ( vect , norm ) ;
+}
+
+
+
+float3 calc_binormal ( float3 norm , float4 tang )
+{
+   return cross ( norm , tang . xyz ) * tang . w ;
+}
+
+
+
+float3 world_to_tang ( float3 v , float3 T , float3 B , float3 N )
+{
+   return float3 ( dot ( v , T ) , dot ( v , B ) , dot ( v , N ) ) ;
+}
+
+
+float3 world_to_tang ( in float3 v , in float3 TBN [ 3 ] )
+{
+   return world_to_tang ( v , TBN [ 0 ] , TBN [ 1 ] , TBN [ 2 ] ) ;
+}
+
+
+float3 tang_to_world ( in float3 v , in float3 TBN [ 3 ] )
+{
+   return v . x * TBN [ 0 ] + v . y * TBN [ 1 ] + v . z * TBN [ 2 ] ;
+}
+
+
+
+float4 apply_view_proj_matrix_world ( float4 wpos )
+{
+
+
+
+   wpos . xyz -= COMMON_VIEW_POSITION [ 0 ] . xyz ;
+
+
+
+      float4 result = float4 ( dot ( wpos , COMMON_VIEWPROJ_MATRIX [ 0 ] ) , dot ( wpos , COMMON_VIEWPROJ_MATRIX [ 1 ] ) , dot ( wpos , COMMON_VIEWPROJ_MATRIX [ 2 ] ) , dot ( wpos , COMMON_VIEWPROJ_MATRIX [ 3 ] ) ) ; ;
+      return result ;
+
+}
+
+
+
+float2 calc_velocity ( float4 wposCur , float4 wposPrev )
+{
+
+
+
+      wposCur = float4 (
+         dot ( wposCur , COMMON_VIEWPROJ_MATRIX_NO_JIT [ 0 ] ) ,
+         dot ( wposCur , COMMON_VIEWPROJ_MATRIX_NO_JIT [ 1 ] ) ,
+         dot ( wposCur , COMMON_VIEWPROJ_MATRIX_NO_JIT [ 2 ] ) ,
+         dot ( wposCur , COMMON_VIEWPROJ_MATRIX_NO_JIT [ 3 ] ) ) ;
+
+      wposPrev = float4 (
+         dot ( wposPrev , COMMON_VIEWPROJ_MATRIX_NO_JIT_PREV [ 0 ] ) ,
+         dot ( wposPrev , COMMON_VIEWPROJ_MATRIX_NO_JIT_PREV [ 1 ] ) ,
+         dot ( wposPrev , COMMON_VIEWPROJ_MATRIX_NO_JIT_PREV [ 2 ] ) ,
+         dot ( wposPrev , COMMON_VIEWPROJ_MATRIX_NO_JIT_PREV [ 3 ] ) ) ;
+
+
+   float2 screenPosCur = wposCur . xy / wposCur . w ;
+   float2 screenPosPrev = wposPrev . xy / wposPrev . w ;
+   float2 res = clamp ( ( screenPosCur - screenPosPrev ) / COMMON_VP_PARAMS [ 0 ] . xy / REG_COMMON_MB_PARAMS [ 0 ] . x , ( float2 ) ( - 1. ) , ( float2 ) ( 1. ) ) ;
+   res = lerp ( res , float2 ( 2. , 2. ) , ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_OBJ_SKIN_OFFSET [ 0 ] ) . w ) ;
+   return res ;
+}
+
+float2 velocity_compress ( in float2 vel )
+{
+   vel . x = sqrt ( abs ( vel . x ) ) * sign ( vel . x ) ;
+   vel . y = sqrt ( abs ( vel . y ) ) * sign ( vel . y ) ;
+   vel = vel * 127. / 255. + 127. / 255. ;
+   return vel ;
+}
+
+float2 velocity_decompress ( float2 vel )
+{
+   vel = vel * 255. / 127. - 1. ;
+   vel . x = pow2 ( vel . x ) * sign ( vel . x ) ;
+   vel . y = pow2 ( vel . y ) * sign ( vel . y ) ;
+   return vel ;
+}
+
+
+float4 tranform_vector4 ( float4 vec , float4 matr_0 , float4 matr_1 , float4 matr_2 )
+{
+   float4 v4 ;
+
+   v4 . x = dot ( vec , matr_0 ) ;
+   v4 . y = dot ( vec , matr_1 ) ;
+   v4 . z = dot ( vec , matr_2 ) ;
+   v4 . w = 1 ;
+   return v4 ;
+}
+
+
+float3 tranform_vector3 ( float3 vec , float3 matr_0 , float3 matr_1 , float3 matr_2 )
+{
+   float3 v3 ;
+   v3 . x = dot ( vec , matr_0 ) ;
+   v3 . y = dot ( vec , matr_1 ) ;
+   v3 . z = dot ( vec , matr_2 ) ;
+
+   return v3 ;
+}
+
+
+
+half3 shLighting ( half3 nrm )
+{
+   shCOEFFS sh ;
+   sh . cAr = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 0 ] ) ) ;
+   sh . cAg = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 1 ] ) ) ;
+   sh . cAb = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 2 ] ) ) ;
+   sh . cBr = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 3 ] ) ) ;
+   sh . cBg = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 4 ] ) ) ;
+   sh . cBb = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 5 ] ) ) ;
+   sh . cC = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 6 ] ) ) ;
+   return shLighting ( nrm , sh ) ;
+}
+
+
+half3 shLightingLowres ( half3 nrm )
+{
+   shCOEFFS sh ;
+   sh . cAr = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 0 ] ) ) ;
+   sh . cAg = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 1 ] ) ) ;
+   sh . cAb = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 2 ] ) ) ;
+   sh . cBr = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 3 ] ) ) ;
+   sh . cBg = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 4 ] ) ) ;
+   sh . cBb = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 5 ] ) ) ;
+   sh . cC = half4 ( ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 6 ] ) ) ;
+   return shLightingLowres ( nrm , sh ) ;
+}
+
+
+half3 shGetDominantDir ( )
+{
+   return half3 ( 0 , 0 , 0 ) ;
+}
+
+float shGetSkyAO ( float3 nrm )
+{
+   return dot ( float4 ( nrm , 1 ) , ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_DIFFUSE_AO_COEFFS [ 7 ] ) ) ;
+}
+
+float shGetCoef ( half3 nrm , float4 coefs )
+{
+   float res = dot ( float4 ( nrm , 1 ) , coefs ) ;
+   return max ( res , coefs . a * 0.4 ) ;
+}
+
+float shGetReflCoef ( half3 nrm )
+{
+   return shGetCoef ( nrm , ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_REFLECTION_COEFFS [ 0 ] ) ) ;
+}
+
+
+float shGetReflCoef ( )
+{
+   return ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . PS_REG_COMMON_SH_REFLECTION_COEFFS [ 0 ] ) . a ;
+
+
+
+}
+
+
+
+float3x4 quatAsMatrix ( float4 q )
+{
+   float3x4 res = ( float3x4 ) 0 ;
+
+   const float s = 2 ;
+
+   float xs = q . x * s ;
+   float ys = q . y * s ;
+   float zs = q . z * s ;
+
+   float wx = q . w * xs ;
+   float wy = q . w * ys ;
+   float wz = q . w * zs ;
+
+   float xx = q . x * xs ;
+   float xy = q . x * ys ;
+   float xz = q . x * zs ;
+
+   float yy = q . y * ys ;
+   float yz = q . y * zs ;
+   float zz = q . z * zs ;
+
+   res [ 0 ] [ 0 ] = 1 - yy - zz ;
+   res [ 1 ] [ 0 ] = xy + wz ;
+   res [ 2 ] [ 0 ] = xz - wy ;
+
+   res [ 0 ] [ 1 ] = xy - wz ;
+   res [ 1 ] [ 1 ] = 1 - xx - zz ;
+   res [ 2 ] [ 1 ] = yz + wx ;
+
+   res [ 0 ] [ 2 ] = xz + wy ;
+   res [ 1 ] [ 2 ] = yz - wx ;
+   res [ 2 ] [ 2 ] = 1 - xx - yy ;
+
+   return res ;
+}
+
+bool dualQuatIsUnit ( float4 q0 , float4 qe )
+{
+
+   return abs ( dot ( q0 , qe ) ) < 1e-5 ;
+}
+
+float4 quatConjugate ( float4 q )
+{
+   return float4 ( - q . xyz , q . w ) ;
+}
+
+float4 quatMul ( float4 a , float4 b )
+{
+   float4 r ;
+
+   r . w = a . w * b . w - dot ( a . xyz , b . xyz ) ;
+   r . xyz = cross ( a . xyz , b . xyz ) ;
+   r . xyz += a . xyz * b . w ;
+   r . xyz += b . xyz * a . w ;
+
+   return r ;
+}
+
+float3 dualQuatGetTranslationFromUnit ( float4 q0 , float4 qe )
+{
+   return 2 * quatMul ( qe , quatConjugate ( q0 ) ) . xyz ;
+}
+
+float3 dualQuatGetTranslation ( float4 q0 , float4 qe )
+{
+   if ( dualQuatIsUnit ( q0 , qe ) ) {
+      return dualQuatGetTranslationFromUnit ( q0 , qe ) ;
+   }
+
+   float scale = - 2.0 / dot ( q0 , q0 ) ;
+
+   return scale * float3 (
+      qe . w * q0 . x - q0 . w * qe . x + qe . y * q0 . z - q0 . y * qe . z ,
+      qe . w * q0 . y - qe . x * q0 . z + q0 . x * qe . z - q0 . w * qe . y ,
+      qe . w * q0 . z - q0 . x * qe . y - q0 . w * qe . z + qe . x * q0 . y ) ;
+}
+
+float3x4 dualQuatAsMatrix ( float4 q0 , float4 qe )
+{
+
+
+   float3x4 mat = quatAsMatrix ( q0 ) ;
+
+
+   float3 translation = dualQuatGetTranslation ( q0 , qe ) ;
+   mat [ 0 ] . w = translation . x ;
+   mat [ 1 ] . w = translation . y ;
+   mat [ 2 ] . w = translation . z ;
+
+   return mat ;
+}
+
+void dualQuatNormalize ( inout float4 q0 , inout float4 qe )
+{
+   float invLen = 1 / length ( q0 ) ;
+
+   q0 *= invLen ;
+   qe *= invLen ;
+
+   qe = qe - dot ( q0 , qe ) * q0 ;
+}
+
+float2x4 dualQuatMul ( float4 q0 , float4 qe , float4 w0 , float4 we )
+{
+   float2x4 res ;
+
+   res [ 0 ] = quatMul ( q0 , w0 ) ;
+
+   res [ 1 ] = quatMul ( qe , w0 ) ;
+   res [ 1 ] += quatMul ( q0 , we ) ;
+
+   return res ;
+}
+
+float3 dualQuatTransform ( float4 q0 , float4 qe , float3 v )
+{
+
+ float4 q = q0 ;
+
+ float3 p = v ;
+
+
+ float3 qxyz = q0 . xyz ;
+
+
+ float3 qxyzcrossp_plus_qwdotp = cross ( qxyz , p ) + q . w * p ;
+
+
+ p += 2 * cross ( qxyz , qxyzcrossp_plus_qwdotp ) ;
+
+
+ float3 dxyz = qe . xyz ;
+
+
+ float3 t = cross ( dxyz , qxyz ) ;
+
+
+ t += qe . w * qxyz ;
+
+
+ t += - q0 . w * dxyz ;
+
+
+ p += - 2.0 * t ;
+
+ return p ;
+
+
+
+}
+
+float4 quatNormalize ( float4 quat )
+{
+   return quat / length ( quat ) ;
+}
+
+float4 quatMultiply ( float4 a , float4 b )
+{
+   float as = a . w ;
+   float bs = b . w ;
+
+   float3 av = a . xyz ;
+   float3 bv = b . xyz ;
+
+   float4 res = ( float4 ) 0 ;
+   res . w = as * bs - dot ( av , bv ) ;
+
+   float3 tmp = cross ( av , bv ) ;
+
+   float3 v = av * bs ;
+   res . xyz = v + tmp ;
+
+   v = bv * as ;
+   res . xyz += v ;
+
+   return res ;
+}
+
+
+float3 quatTransform ( float4 quat , float3 pt )
+{
+   float4 qV = ( float4 ) 0 ; qV . xyz = pt ;
+
+   float4 quatInv = quatConjugate ( quat ) ;
+
+   float4 quatTmp = quatMultiply ( quat , qV ) ;
+   qV = quatMultiply ( quatTmp , quatInv ) ;
+
+   return qV . xyz ;
+}
+
+
+void QuatFromAxisAngle ( float3 axis , float angle , out float4 quat )
+{
+   float sinAngle ;
+   sincos ( angle * 0.5 , sinAngle , quat . w ) ;
+   quat . xyz = sinAngle * axis ;
+}
+
+
+half3 RGBDiv2HDR ( in float4 rgbdiv )
+{
+   float m = rgbdiv . a * rgbdiv . a ;
+
+   m *= m ;
+   return rgbdiv . xyz * 0.5 / m ;
+}
+
+
+float4 HDR2RGBDiv ( in float3 hdr )
+{
+   float m = max ( hdr . r , max ( hdr . g , hdr . b ) ) ;
+   float4 res ;
+
+   res . rgb = hdr / m ;
+   [ flatten ]
+   if ( m > 0.5 ) {
+      res . a = sqrt ( sqrt ( 0.5 / m ) ) ;
+   }
+   return res ;
+}
+
+
+
+half luminance ( half3 c )
+{
+   return dot ( c , half3 ( 0.212671 , 0.715160 , 0.072169 ) ) ;
+}
+
+
+float luminance ( float3 c )
+{
+   return dot ( c , float3 ( 0.212671 , 0.715160 , 0.072169 ) ) ;
+}
+
+
+float SmoothStep ( float x )
+{
+   return x * x * ( 3 - 2 * x ) ;
+}
+
+
+float SmootherStep ( float x )
+{
+   return x * x * x * ( 10 + x * ( 6 * x - 15 ) ) ;
+}
+
+void apply_view_proj_matrix ( in float4 InPos , out float4 Pos )
+{
+
+
+
+   Pos = apply_view_proj_matrix_world ( InPos ) ;
+
+
+}
+
+
+
+void prepare_shader_input_data ( in VS_INPUT_AUTO_I In , out VS_INPUT_AUTO_O Out )
+{
+   float3 offset = OBJ_COMPR_VERT_OFFSET [ 0 ] . xyz ;
+   float3 scale = OBJ_COMPR_VERT_SCALE [ 0 ] . xyz ;
+   float4 tex4 = OBJ_COMPR_TEX [ 0 ] ;
+   float2 tex = OBJ_COMPR_TEX [ 1 ] . xy ;
+
+   prepare_shader_input_data_ext_compr ( In , Out , offset , scale , tex4 , tex , SCREEN_RECT [ 0 ] , SCREEN_UV [ 0 ] , RECT_DEPTH [ 0 ] . x ) ;
+}
+
+struct BLEND_PARAMS {
+    int4 indexVect ;
+    int offset1 ;
+    int offset2 ;
+    int num1 ;
+    float4 weights ;
+    int NMATR ;
+} ;
+
+
+
+void dualQuatMatrBlend ( out float3x4 world_matr , in int nQuat , in float4 quats [ 12 ] , in float4 weights )
+{
+   world_matr = ( float3x4 ) 0 ;
+   float world_scale = 0 ;
+
+   for ( int i = 0 ; i < nQuat ; ++ i ) {
+      float4 q0 = quats [ i * 2 + 0 ] ;
+      float4 qe = quats [ i * 2 + 1 ] ;
+
+      float scale = length ( q0 ) ;
+      q0 /= scale ;
+
+
+      q0 = q0 . yzwx ;
+      qe = qe . yzwx ;
+
+      float3x4 m = dualQuatAsMatrix ( q0 , qe ) ;
+      world_matr [ 0 ] += m [ 0 ] * weights [ i ] ;
+      world_matr [ 1 ] += m [ 1 ] * weights [ i ] ;
+      world_matr [ 2 ] += m [ 2 ] * weights [ i ] ;
+      world_scale += scale * weights [ i ] ;
+   }
+   world_matr [ 0 ] . xyz *= world_scale ;
+   world_matr [ 1 ] . xyz *= world_scale ;
+   world_matr [ 2 ] . xyz *= world_scale ;
+}
+
+void dualQuatBlend ( out float3x4 world_matr , in int nQuat , in float4 quats [ 12 ] , in float4 weights )
+{
+   world_matr = ( float3x4 ) 0 ;
+   float world_scale = 0 ;
+
+   float4 q0_sum = ( float4 ) 0 , qe_sum = ( float4 ) 0 ;
+
+   float4 pivot_quat = quats [ 0 ] ;
+   for ( int i = 0 ; i < nQuat ; i ++ ) {
+      float4 q0 = quats [ i * 2 + 0 ] ;
+      float4 qe = quats [ i * 2 + 1 ] ;
+
+      float dotSign = sign ( dot ( pivot_quat , q0 ) ) ;
+
+      float scale = length ( q0 ) ;
+      q0 /= scale ;
+
+      world_scale += scale * weights [ i ] ;
+
+      q0_sum += q0 * weights [ i ] * dotSign ;
+      qe_sum += qe * weights [ i ] * dotSign ;
+   }
+
+   q0_sum = q0_sum . yzwx ;
+   qe_sum = qe_sum . yzwx ;
+
+   dualQuatNormalize ( q0_sum , qe_sum ) ;
+
+   world_matr = dualQuatAsMatrix ( q0_sum , qe_sum ) ;
+
+   float4 scaleVec = float4 ( world_scale , world_scale , world_scale , 1.0 ) ;
+   world_matr [ 0 ] *= scaleVec ;
+   world_matr [ 1 ] *= scaleVec ;
+   world_matr [ 2 ] *= scaleVec ;
+}
+
+
+
+float4 prepare_shader_input_tex_offset ( in VS_INPUT_AUTO_O input )
+{
+
+
+
+   return ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . VS_REG_COMMON_OBJ_TEX_OFFSET [ 0 ] ) ;
+
+}
+
+
+
+float3 decompr_int16 ( int inInt16Value )
+{
+   float3 tmp ;
+   tmp . xz = ( - 1. + 2. * frac ( float2 ( 1. / 181. , 1. / 181. / 181. ) * abs ( inInt16Value ) ) ) * float2 ( 181. / 179. , 181. / 180. ) ;
+   tmp . y = sign ( inInt16Value ) * sqrt ( saturate ( 1. - tmp . x * tmp . x - tmp . z * tmp . z ) ) ;
+   return tmp ;
+}
+
+
+void prepare_world_matrix ( in VS_INPUT_AUTO_O In , in int matrBaseOffset , in float3 quatScale , in float3 quatPos , out float3x4 world_matr )
+{
+
+
+
+}
+
+
+
+void prepare_shader_input_skinning ( inout VS_INPUT_AUTO_O In )
+{
+
+
+
+   float3x4 world_matr ;
+
+
+
+      world_matr [ 0 ] = ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . VS_REG_COMMON_OBJ_WORLD_MATRIX [ 0 ] ) ;
+      world_matr [ 1 ] = ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . VS_REG_COMMON_OBJ_WORLD_MATRIX [ 1 ] ) ;
+      world_matr [ 2 ] = ( CB_PIX_OBJ_data [ CB_PIX_OBJ_sliceID ] . VS_REG_COMMON_OBJ_WORLD_MATRIX [ 2 ] ) ;
+
+
+
+         In . Pos = tranform_vector4 ( In . Pos , world_matr [ 0 ] , world_matr [ 1 ] , world_matr [ 2 ] ) ;
+
+
+
+}
+
+
+
+void prepare_shader_input ( in VS_INPUT_AUTO_I In , out VS_INPUT_AUTO_O Out )
+{
+   prepare_shader_input_data ( In , Out ) ;
+   prepare_shader_input_skinning ( Out ) ;
+}
+
+
+
+void calc_tang_tang_matr ( in float3 norm , in float4 tanSrc , in float3 binormSrc , in float4 tanDst , out half4 tt_matr )
+{
+   float3 binormDst = calc_binormal ( norm , tanDst ) ;
+
+   tt_matr = half4 (
+      dot ( tanDst . xyz , tanSrc . xyz ) , dot ( tanDst . xyz , binormSrc . xyz ) ,
+      dot ( binormDst . xyz , tanSrc . xyz ) , dot ( binormDst . xyz , binormSrc . xyz )
+   ) ;
+}
+
+void calc_tang_tang_matr ( in float3 norm , in float4 tanSrc , in float4 tanDst , out half4 tt_matr )
+{
+   float3 binormSrc = calc_binormal ( norm , tanSrc ) ;
+
+   calc_tang_tang_matr ( norm , tanSrc , binormSrc , tanDst , tt_matr ) ;
+}
+
+
+
+void apply_masking_flags ( VS_INPUT_AUTO_O input , inout float4 hpos )
+{
+
+
+
+}
+
+
+float3 unpackLBufPolyhedra ( in float3 pos , in float4 col0 , in float4 params [ 4 ] )
+{
+    float3 translate = params [ 0 ] . xyz ;
+    float4 col = col0 * 255.0 + 0.5 ;
+
+
+
+    float4 param1 = params [ 1 ] ;
+    float xyScale = ( int ( col . a ) == 0 ) ? param1 . x : param1 . w ;
+    xyScale = ( int ( col . a ) == 1 ) ? param1 . y : xyScale ;
+    xyScale = ( int ( col . a ) == 2 ) ? param1 . z : xyScale ;
+    float zScale = ( int ( col . g ) == 0 ) ? param1 . x : param1 . w ;
+    zScale = ( int ( col . g ) == 1 ) ? param1 . y : zScale ;
+    zScale = ( int ( col . g ) == 2 ) ? param1 . z : zScale ;
+    float3 xAx = params [ 2 ] . xyz ;
+    float3 yAx = params [ 3 ] . xyz ;
+    float3 zAx = normalize ( cross ( xAx , yAx ) ) ;
+    pos . xyz = xyScale * ( pos . x * xAx + pos . y * yAx ) + zScale * pos . z * zAx ;
+
+    return pos + translate ;
+}
+
+struct BASE_VS_OUTPUT
+{
+
+
+
+   float2 uv : TEXCOORD0 ;
+
+
+
+} ;
+
+      struct _EMPTY_STRUCT1 { } ;
+
+
+
+      struct _EMPTY_STRUCT2 { } ;
+
+
+
+      struct _EMPTY_STRUCT3 { } ;
+
+

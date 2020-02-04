@@ -193,7 +193,9 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
             this._isContainArray = true;
         }
 
-        if (SystemScope.isSamplerType(type) || type.isContainSampler()) {
+        if (
+            // SystemScope.isSamplerType(type) || 
+            type.isContainSampler()) {
             this._isContainSampler = true;
         }
 

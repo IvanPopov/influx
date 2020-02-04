@@ -115,12 +115,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     }
                 }
                 else {
-                    if (SystemScope.isSamplerType(arrayElementType)) {
-                        if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockExpr) {
-                            return false;
-                        }
-                    }
-                    else {
+                    // if (SystemScope.isSamplerType(arrayElementType)) {
+                    //     if (testedInstruction.instructionType !== EInstructionTypes.k_SamplerStateBlockExpr) {
+                    //         return false;
+                    //     }
+                    // }
+                    // else 
+                    {
                         isOk = testedInstruction.type.isEqual(arrayElementType);
                         if (!isOk) {
                             return false;
@@ -138,14 +139,14 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             if (this.args.length === 1 &&
                 firstInstruction.instructionType !== EInstructionTypes.k_InitExpr) {
 
-                if (SystemScope.isSamplerType(type)) {
-                    if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockExpr) {
-                        return true;
-                    }
-                    else {
-                        return false;
-                    }
-                }
+                // if (SystemScope.isSamplerType(type)) {
+                //     if (firstInstruction.instructionType === EInstructionTypes.k_SamplerStateBlockExpr) {
+                //         return true;
+                //     }
+                //     else {
+                //         return false;
+                //     }
+                // }
 
                 // TODO: remove this hack!!
                 if (firstInstruction.type.isEqual(SystemScope.T_INT) || firstInstruction.type.isEqual(SystemScope.T_UINT)) {

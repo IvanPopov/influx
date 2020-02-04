@@ -171,6 +171,7 @@ export interface IScope {
 
     addVariable(variable: IVariableDeclInstruction): boolean;
     addType(type: ITypeInstruction): boolean;
+    addTypeAlias(typeName: string, aliasName: string): boolean;
     addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
