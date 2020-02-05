@@ -67,6 +67,9 @@ function generateSystemType(...args: any[]): SystemTypeInstruction {
     return type;
 }
 
+function defineTypeAlias(typeName: string, aliasName: string) {
+    scope.addTypeAlias(typeName, aliasName);
+}
 
 class TypeTemplate implements ITypeTemplate {
     readonly name: string;
@@ -399,13 +402,17 @@ function addSystemTypeScalar(): void {
     generateSystemType("bool", 4);
     generateSystemType("float", 4);
     generateSystemType("string");
-    generateSystemType("texture");
+
+    generateSystemType("SamplerState");
+    generateSystemType("SamplerComparisonState");
+
+    // generateSystemType("texture");
     // generateSystemType("sampler");
     // generateSystemType("sampler2D");
     // generateSystemType("samplerCUBE");
 
     // TODO: use dedicated type for half
-    scope.addTypeAlias('float', 'half');
+    defineTypeAlias('float', 'half');
 }
 
 
@@ -443,6 +450,11 @@ function addSystemTypeVector(): void {
     let float2 = generateSystemType("float2", -1, float, 2);
     let float3 = generateSystemType("float3", -1, float, 3);
     let float4 = generateSystemType("float4", -1, float, 4);
+
+    // TODO: use dedicated types
+    defineTypeAlias('float2', 'half2');
+    defineTypeAlias('float3', 'half3');
+    defineTypeAlias('float4', 'half4');
 
     let int2 = generateSystemType("int2", -1, int, 2);
     let int3 = generateSystemType("int3", -1, int, 3);
@@ -813,6 +825,7 @@ function addSystemFunctions(): void {
     // generateSystemFunction("fract", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("abs", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("sign", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("sign", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
     generateSystemFunction("normalize", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("length", "float", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("cross", "float3", ["float3", "float3"], null);
@@ -881,11 +894,11 @@ function addSystemFunctions(): void {
     generateSystemFunction("greaterThanEqual", "bool3", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float3", "int3", "uint3"]);
     generateSystemFunction("greaterThanEqual", "bool4", [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float4", "int4", "uint4"]);
 
-
     generateSystemFunction("radians", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("degrees", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("sin", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("cos", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("sincos", "void", [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("tan", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("asin", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("acos", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);

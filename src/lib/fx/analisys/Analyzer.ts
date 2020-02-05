@@ -772,6 +772,19 @@ export class Analyzer {
 
     /**
      * AST example:
+     *    SamplerStateDecl
+     *         T_PUNCTUATOR_59 = ';'
+     *       + StateBlock 
+     *         T_NON_TYPE_ID = 'MeshTextureSampler'
+     *         T_KW_SAMPLER_STATE = 'SamplerState'
+     */
+    protected analyzeSamplerStateDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
+        return null;
+    }
+
+
+    /**
+     * AST example:
      *    VariableDecl
      *         T_PUNCTUATOR_59 = ';'
      *       + Variable 
@@ -1312,8 +1325,6 @@ export class Analyzer {
         switch (name) {
             case 'T_KW_COMPILE':
                 return this.analyzeCompileExpr(context, program, sourceNode);
-            // case 'T_KW_SAMPLER_STATE':
-            //     return this.analyzeSamplerStateBlock(context, program, sourceNode);
             default:
         }
         return null;
@@ -1417,115 +1428,115 @@ export class Analyzer {
     // }
 
 
-    /**
-     * AST example:
-     *    State
-     *         T_PUNCTUATOR_59 = ';'
-     *         StateExpr
-     *              T_PUNCTUATOR_62 = '>'
-     *              T_NON_TYPE_ID = 'tex0'
-     *              T_PUNCTUATOR_60 = '<'
-     *         T_PUNCTUATOR_61 = '='
-     *         T_NON_TYPE_ID = 'Texture'
-     */
-    protected analyzeSamplerState(context: Context, program: ProgramScope, sourceNode: IParseNode): SamplerStateInstruction {
+    // /**
+    //  * AST example:
+    //  *    State
+    //  *         T_PUNCTUATOR_59 = ';'
+    //  *         StateExpr
+    //  *              T_PUNCTUATOR_62 = '>'
+    //  *              T_NON_TYPE_ID = 'tex0'
+    //  *              T_PUNCTUATOR_60 = '<'
+    //  *         T_PUNCTUATOR_61 = '='
+    //  *         T_NON_TYPE_ID = 'Texture'
+    //  */
+    // protected analyzeSamplerState(context: Context, program: ProgramScope, sourceNode: IParseNode): SamplerStateInstruction {
 
-        const children = sourceNode.children;
-        const scope = program.currentScope;
+    //     const children = sourceNode.children;
+    //     const scope = program.currentScope;
 
-        if (children[children.length - 2].name === 'StateIndex') {
-            context.error(sourceNode, EErrors.UnsupportedStateIndex);
-            return null;
-        }
+    //     if (children[children.length - 2].name === 'StateIndex') {
+    //         context.error(sourceNode, EErrors.UnsupportedStateIndex);
+    //         return null;
+    //     }
 
-        let stateExprNode = children[children.length - 3];
-        let subStateExprNode = stateExprNode.children[stateExprNode.children.length - 1];
-        let stateType = children[children.length - 1].value.toUpperCase();
-        let stateValue = '';
+    //     let stateExprNode = children[children.length - 3];
+    //     let subStateExprNode = stateExprNode.children[stateExprNode.children.length - 1];
+    //     let stateType = children[children.length - 1].value.toUpperCase();
+    //     let stateValue = '';
 
-        if (isNull(subStateExprNode.value)) {
-            context.error(subStateExprNode, EErrors.InvalidSamplerTexture);
-            return null;
-        }
+    //     if (isNull(subStateExprNode.value)) {
+    //         context.error(subStateExprNode, EErrors.InvalidSamplerTexture);
+    //         return null;
+    //     }
 
-        switch (stateType) {
-            case 'TEXTURE':
-                if (stateExprNode.children.length !== 3 || subStateExprNode.value === '{') {
-                    context.error(subStateExprNode, EErrors.InvalidSamplerTexture);
-                    return null;
-                }
+    //     switch (stateType) {
+    //         case 'TEXTURE':
+    //             if (stateExprNode.children.length !== 3 || subStateExprNode.value === '{') {
+    //                 context.error(subStateExprNode, EErrors.InvalidSamplerTexture);
+    //                 return null;
+    //             }
 
-                let texNameNode = stateExprNode.children[1];
-                let texName = texNameNode.value;
-                if (isNull(texName) || !scope.findVariable(texName)) {
-                    context.error(stateExprNode.children[1], EErrors.InvalidSamplerTexture);
-                    return null;
-                }
+    //             let texNameNode = stateExprNode.children[1];
+    //             let texName = texNameNode.value;
+    //             if (isNull(texName) || !scope.findVariable(texName)) {
+    //                 context.error(stateExprNode.children[1], EErrors.InvalidSamplerTexture);
+    //                 return null;
+    //             }
 
-                let texDecl = scope.findVariable(texName);
-                let texId = new IdInstruction({ scope, sourceNode: texNameNode, name: texName });
-                let tex = new IdExprInstruction({ scope, sourceNode: texNameNode, id: texId, decl: texDecl });
+    //             let texDecl = scope.findVariable(texName);
+    //             let texId = new IdInstruction({ scope, sourceNode: texNameNode, name: texName });
+    //             let tex = new IdExprInstruction({ scope, sourceNode: texNameNode, id: texId, decl: texDecl });
 
-                return new SamplerStateInstruction({ scope, sourceNode, name: stateType, value: tex });
-            case 'ADDRESSU': /* WRAP_S */
-            case 'ADDRESSV': /* WRAP_T */
-                stateValue = subStateExprNode.value.toUpperCase();
-                switch (stateValue) {
-                    case 'WRAP':
-                    case 'CLAMP':
-                    case 'MIRROR':
-                        break;
-                    default:
-                        // TODO: move to errors
-                        // console.warn('Webgl don`t support this wrapmode: ' + stateValue);
-                        return null;
-                }
-                break;
+    //             return new SamplerStateInstruction({ scope, sourceNode, name: stateType, value: tex });
+    //         case 'ADDRESSU': /* WRAP_S */
+    //         case 'ADDRESSV': /* WRAP_T */
+    //             stateValue = subStateExprNode.value.toUpperCase();
+    //             switch (stateValue) {
+    //                 case 'WRAP':
+    //                 case 'CLAMP':
+    //                 case 'MIRROR':
+    //                     break;
+    //                 default:
+    //                     // TODO: move to errors
+    //                     // console.warn('Webgl don`t support this wrapmode: ' + stateValue);
+    //                     return null;
+    //             }
+    //             break;
 
-            case 'MAGFILTER':
-            case 'MINFILTER':
-                stateValue = subStateExprNode.value.toUpperCase();
-                switch (stateValue) {
-                    case 'POINT':
-                        stateValue = 'NEAREST';
-                        break;
-                    case 'POINT_MIPMAP_POINT':
-                        stateValue = 'NEAREST_MIPMAP_NEAREST';
-                        break;
-                    case 'LINEAR_MIPMAP_POINT':
-                        stateValue = 'LINEAR_MIPMAP_NEAREST';
-                        break;
-                    case 'POINT_MIPMAP_LINEAR':
-                        stateValue = 'NEAREST_MIPMAP_LINEAR';
-                        break;
+    //         case 'MAGFILTER':
+    //         case 'MINFILTER':
+    //             stateValue = subStateExprNode.value.toUpperCase();
+    //             switch (stateValue) {
+    //                 case 'POINT':
+    //                     stateValue = 'NEAREST';
+    //                     break;
+    //                 case 'POINT_MIPMAP_POINT':
+    //                     stateValue = 'NEAREST_MIPMAP_NEAREST';
+    //                     break;
+    //                 case 'LINEAR_MIPMAP_POINT':
+    //                     stateValue = 'LINEAR_MIPMAP_NEAREST';
+    //                     break;
+    //                 case 'POINT_MIPMAP_LINEAR':
+    //                     stateValue = 'NEAREST_MIPMAP_LINEAR';
+    //                     break;
 
-                    case 'NEAREST':
-                    case 'LINEAR':
-                    case 'NEAREST_MIPMAP_NEAREST':
-                    case 'LINEAR_MIPMAP_NEAREST':
-                    case 'NEAREST_MIPMAP_LINEAR':
-                    case 'LINEAR_MIPMAP_LINEAR':
-                        break;
-                    default:
-                        // TODO: move to erros api
-                        // console.warn('Webgl don`t support this texture filter: ' + stateValue);
-                        return null;
-                }
-                break;
+    //                 case 'NEAREST':
+    //                 case 'LINEAR':
+    //                 case 'NEAREST_MIPMAP_NEAREST':
+    //                 case 'LINEAR_MIPMAP_NEAREST':
+    //                 case 'NEAREST_MIPMAP_LINEAR':
+    //                 case 'LINEAR_MIPMAP_LINEAR':
+    //                     break;
+    //                 default:
+    //                     // TODO: move to erros api
+    //                     // console.warn('Webgl don`t support this texture filter: ' + stateValue);
+    //                     return null;
+    //             }
+    //             break;
 
-            default:
-                // TODO: move to erros api
-                console.warn('Don`t support this texture param: ' + stateType);
-                return null;
-        }
+    //         default:
+    //             // TODO: move to erros api
+    //             console.warn('Don`t support this texture param: ' + stateType);
+    //             return null;
+    //     }
 
-        return new SamplerStateInstruction({
-            sourceNode,
-            scope,
-            name: stateType,
-            value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue })
-        });
-    }
+    //     return new SamplerStateInstruction({
+    //         sourceNode,
+    //         scope,
+    //         name: stateType,
+    //         value: new StringInstruction({ sourceNode: stateExprNode, scope, value: stateValue })
+    //     });
+    // }
 
 
     /**
@@ -1735,7 +1746,7 @@ export class Analyzer {
 
         if (!isNull(args)) {
             for (let i = 0; i < args.length; i++) {
-                if (!args[i].type.readable) {
+                if (!args[i] || !args[i].type.readable) {
                     context.error(sourceNode, EErrors.InvalidTypeForReading);
                     return null;
                 }
@@ -2523,6 +2534,13 @@ export class Analyzer {
 
         const definition = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
 
+        if (isNull(definition)) {
+            // TODO: emit proper error
+            context.error(sourceNode, EErrors.UnknownInstruction, { });
+            program.pop();
+            return null;
+        }
+
         // looking for function with exact type signatures (that's why we cant use 'asRelaxedType' predicate here!)
         let func = globalScope.findFunction(definition.name, definition.params.map(asType));
 
@@ -2615,7 +2633,7 @@ export class Analyzer {
         let returnType = this.analyzeUsageType(context, program, retTypeNode);
 
         // TODO: is it really needed?
-        if (returnType.isContainSampler()) {
+        if (!returnType || returnType.isContainSampler()) {
             context.error(retTypeNode, EErrors.InvalidFunctionReturnType, { funcName: name });
             return null;
         }
@@ -3627,6 +3645,8 @@ export class Analyzer {
                 return [fdecl];
             case 'CbufferDecl':
                 return [this.analyzeCbufferDecl(context, program, sourceNode)];
+            case 'SamplerStateDecl':
+                return [this.analyzeSamplerStateDecl(context, program, sourceNode)];
             case 'T_PUNCTUATOR_59':
                 context.warn(sourceNode, EWarnings.EmptySemicolon);
                 return null;
@@ -3745,12 +3765,15 @@ export class Analyzer {
         operator: string,
         leftType: IVariableTypeInstruction,
         rightType: IVariableTypeInstruction,
-        leftSourceNode: IParseNode = leftType.sourceNode,
-        rightSourceNode: IParseNode = rightType.sourceNode): IVariableTypeInstruction {
+        leftSourceNode: IParseNode = null,
+        rightSourceNode: IParseNode = null): IVariableTypeInstruction {
 
         if (!leftType || !rightType) {
             return null;
         }
+
+        leftSourceNode = leftSourceNode || leftType.sourceNode;
+        rightSourceNode = rightSourceNode || rightType.sourceNode;
 
         const isComplex = leftType.isComplex() || rightType.isComplex();
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
