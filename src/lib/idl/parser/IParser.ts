@@ -105,7 +105,7 @@ export enum EOperationType {
     k_Ok
 }
 
-export type IRuleFunction = () => EOperationType | Promise<EOperationType>;
+export type IRuleFunction = () => EOperationType;// | Promise<EOperationType>;
 
 export interface IParseNode {
     children: IParseNode[];

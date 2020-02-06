@@ -132,7 +132,7 @@ function cloneToken(token: IToken): IToken {
 //         this.diagnostics.critical(code, { ...this.lexer.getLocation(), token });
 //     }
 // }
-
+ 
 
 export class ASTDocument implements IASTDocument {
     protected parser: IParser;
@@ -176,7 +176,7 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    async parse(textDocument: ITextDocument, flags: number = EASTParsingFlags.k_Optimize): Promise<EParserCode> {
+    parse(textDocument: ITextDocument, flags: number = EASTParsingFlags.k_Optimize): EParserCode {
         const developerMode = bf.testAll(flags, EASTParsingFlags.k_DeveloperMode);
         const allowErrorRecoverty = true;
         const optimizeTree = bf.testAll(flags, EASTParsingFlags.k_Optimize);
@@ -186,13 +186,13 @@ export class ASTDocument implements IASTDocument {
         this.stack = [0];
         
         this.setTextDocument(textDocument);
-        this.token = await this.readToken();
+        this.token = this.readToken();
 
         if (this.token.name === END_SYMBOL) {
             return EParserCode.k_Ok;
         }
 
-        await this.run({ developerMode, allowErrorRecoverty });
+        this.run({ developerMode, allowErrorRecoverty });
 
         // clear context
 
@@ -222,7 +222,7 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    protected async readToken(): Promise<IToken> {
+    protected readToken(): IToken {
         return this.lexer.getNextToken();
     }
 
@@ -237,7 +237,7 @@ export class ASTDocument implements IASTDocument {
     }
 
 
-    private async restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken): Promise<number> {
+    private restoreState(syntaxTable: ISyntaxTable, parseTree: ParseTree, stack: number[], causingErrorToken: IToken, errorToken: IToken): number {
         while (true) {
             let recoverableState = -1;
             for (let i = stack.length - 1; i >= 0; --i) {
@@ -278,24 +278,24 @@ export class ASTDocument implements IASTDocument {
 
             // try to restore from the next token
             // FIXME: 
-            const nextToken = await this.readToken();
+            const nextToken = this.readToken();
             Object.keys(nextToken).forEach(key => causingErrorToken[key] = nextToken[key]);
         }
         return -1;
     }
 
     
-    private async operationAdditionalAction(stateIndex: number, grammarSymbol: string): Promise<EOperationType> {
+    private operationAdditionalAction(stateIndex: number, grammarSymbol: string): EOperationType {
         const funcName = this.parser.findFunctionByState(stateIndex, grammarSymbol);
         if (!isNull(funcName)) {
             assert(!!this.ruleFunctions.has(funcName));
-            return await this.ruleFunctions.get(funcName)();
+            return this.ruleFunctions.get(funcName)();
         }
         return EOperationType.k_Ok;
     }
 
 
-    private async run({ developerMode = false, allowErrorRecoverty = true }): Promise<void> {
+    private run({ developerMode = false, allowErrorRecoverty = true }): void {
 
         const { syntaxTable } = this.parser;
         const { stack, tree } = this;
@@ -332,7 +332,7 @@ export class ASTDocument implements IASTDocument {
                             }
                         } else {
                             // one more attempt to recover but from the next token
-                            this.token = await this.readToken();
+                            this.token = this.readToken();
                             // NOTE: in order to prevent recusrion on END_SYMBOL
                             causingErrorToken = undefinedToken;
                             continue;
@@ -353,9 +353,9 @@ export class ASTDocument implements IASTDocument {
                         // NOTE: recoveryToken, token, stack and parseTree will be update imlicitly inside the state restore routine. 
                         let recoveryToken = cloneToken(causingErrorToken);
                         while (recoveryToken.name === UNKNOWN_TOKEN) {
-                            recoveryToken = await this.readToken();
+                            recoveryToken = this.readToken();
                         }
-                        currStateIndex = await this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
+                        currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
                         if (currStateIndex === -1) {
                             this.emitCritical(EParsingErrors.SyntaxRecoverableStateNotFound);
                         }
@@ -387,11 +387,11 @@ export class ASTDocument implements IASTDocument {
                                 stack.push(stateIndex);
                                 tree.addToken(this.token);
 
-                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, this.token.name);
+                                const additionalOperationCode = this.operationAdditionalAction(stateIndex, this.token.name);
                                 if (additionalOperationCode === EOperationType.k_Error) {
                                     this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
-                                    this.token = await this.readToken();
+                                    this.token = this.readToken();
                                 }
                             }
                             break;
@@ -406,7 +406,7 @@ export class ASTDocument implements IASTDocument {
                                 stack.push(stateIndex);
                                 tree.reduceByRule(op.rule, this.parser.getRuleCreationMode(op.rule.left));
 
-                                const additionalOperationCode = await this.operationAdditionalAction(stateIndex, op.rule.left);
+                                const additionalOperationCode = this.operationAdditionalAction(stateIndex, op.rule.left);
                                 if (additionalOperationCode === EOperationType.k_Error) {
                                     this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 }

@@ -97,8 +97,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    protected async readToken(): Promise<IToken> {
-        const token = await this.preprocessor.readToken();
+    protected readToken(): IToken {
+        const token = this.preprocessor.readToken();
         
         // replacement of the original token location with the macro location
         const macroLoc = this.preprocessor.macroLocation();

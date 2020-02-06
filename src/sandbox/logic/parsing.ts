@@ -22,7 +22,8 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 
-import { DEFAULT_FILENAME, LOCATION_NOT_FOUND, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from '.';
+import { DEFAULT_FILENAME, LOCATION_NOT_FOUND, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD, PLAYGROUND_VIEW } from '.';
+import { matchLocation } from '@sandbox/reducers';
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -67,6 +68,10 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
     const { content: source, uri } = state.sourceFile;
     const { parsingFlags: flags } = state.parserParams;
+
+    if (matchLocation(state).params.view !== PLAYGROUND_VIEW) {
+        return;
+    }
 
     if (!source) {
         return;
