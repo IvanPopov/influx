@@ -1,6 +1,7 @@
 /* tslint:disable:typedef */
 
 import { isArray } from '@lib/common';
+import { ASSETS_PATH } from '@sandbox/logic';
 import * as fs1 from 'fs';
 import * as isElectron from 'is-electron-renderer';
 import * as path from 'path';
@@ -53,7 +54,7 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
             'tail.fx',
             'tree.fx',
             'macro.fx'
-        ].map(file => `./assets/fx/tests/${file}`).sort();
+        ].map(file => `${ASSETS_PATH}/${file}`).sort();
         node.path = 'tests';
         node.totalFiles = 5;
         return;

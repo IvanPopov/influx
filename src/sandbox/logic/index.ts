@@ -52,6 +52,8 @@ export const PREPROCESSOR_VIEW = 'preprocessor';
 export const RAW_KEYWORD = '@preprocessed';
 export const CODE_KEYWORD = '@formatted';
 
+export const ASSETS_PATH = './assets/fx/tests';
+
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW ];
 
 export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
@@ -88,7 +90,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                     return done();
                 }
 
-                const fxRequest = `./assets/fx/tests/${fx}`;
+                const fxRequest = `${ASSETS_PATH}/${fx}`;
 
                 if (sourceFile.uri !== fxRequest) {
                     dispatch(sourceActions.openFile(fxRequest));

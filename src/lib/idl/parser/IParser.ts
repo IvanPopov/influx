@@ -174,8 +174,9 @@ export interface ILexer {
     readonly config: ILexerConfig;
 
     setTextDocument(textDocument: ITextDocument): ILexer;
-    getPosition(): IPosition;
-    setPosition(pos: IPosition): void;
+    // FIXME: do not use any?
+    getPosition(): any;
+    setPosition(pos: any): void;
     getDiagnosticReport(): IDiagnosticReport;
     getNextToken(): IToken;
     getNextLine(): IToken;

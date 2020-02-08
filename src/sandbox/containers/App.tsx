@@ -11,7 +11,7 @@ import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, IWithStyles, MemoryView, PPView, ProgramView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
+import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { history } from '@sandbox/reducers/router';
 import { filterPartFx, getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
@@ -788,7 +788,7 @@ class App extends React.Component<IAppProps> {
                         className={ this.props.classes.fileBrowserSidebarFix }
                     >
                         <FileListView
-                            path='./assets/fx/tests/'
+                            path={ ASSETS_PATH }
                             filters={ ['.fx'] }
                             onFileClick={ (file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); } } />
                     </Sidebar>

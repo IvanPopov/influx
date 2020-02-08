@@ -156,7 +156,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                             <List.Content>
                                 {/* <List.Header>{ filename }</List.Header> */ }
                                 <List.Description>
-                                    <Checkbox label={ macro.name } checked={ (macro.text !== null) } disabled={ (macro.text !== null) }
+                                    <Checkbox label={ macro.name } checked={ !!macro.tokens } disabled={ !!macro.tokens }
                                         className={ this.props.classes.checkboxTiny } />
                                 </List.Description>
                             </List.Content>
@@ -182,7 +182,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                                         {/* <List.Header>{ filename }</List.Header> */ }
                                         <List.Description>
                                             <Popup inverted
-                                                content={ <span>{ `${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${macro.text.value}` }</span> }
+                                                content={ <span>{ `${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}` }</span> }
                                                 trigger={ <span>{ `${macro.name}` }</span> } />
                                         </List.Description>
                                     </List.Content>

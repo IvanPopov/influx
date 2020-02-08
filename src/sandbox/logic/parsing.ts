@@ -1,29 +1,24 @@
 /* tslint:disable:typedef */
 
 import { isNull } from '@lib/common';
-import { T_BOOL, T_FLOAT, T_INT, T_UINT, T_VOID } from '@lib/fx/analisys/SystemScope';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
-import { createDefaultSLParser, defaultSLParser } from '@lib/fx/SLParser';
+import { createDefaultSLParser } from '@lib/fx/SLParser';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
-import { IRange } from '@lib/idl/parser/IParser';
-import { createPPDocument, Preprocessor } from '@lib/parser/Preprocessor';
-import { END_SYMBOL } from '@lib/parser/symbols';
-import { Diagnostics } from '@lib/util/Diagnostics';
+import { createPPDocument } from '@lib/parser/Preprocessor';
 import { IDispatch } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerCompile, IDebuggerOptionsChanged, IMarkerDesc } from '@sandbox/actions/ActionTypes';
-import { getDebugger, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { matchLocation } from '@sandbox/reducers';
+import { getDebugger, getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store/IStoreState';
 import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 
-import { DEFAULT_FILENAME, LOCATION_NOT_FOUND, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD, PLAYGROUND_VIEW } from '.';
-import { matchLocation } from '@sandbox/reducers';
+import { LOCATION_PATTERN, PATH_PARAMS_TYPE, PLAYGROUND_VIEW, RAW_KEYWORD } from '.';
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -69,9 +64,9 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
     const { content: source, uri } = state.sourceFile;
     const { parsingFlags: flags } = state.parserParams;
 
-    if (matchLocation(state).params.view !== PLAYGROUND_VIEW) {
-        return;
-    }
+    // if (matchLocation(state).params.view !== PLAYGROUND_VIEW) {
+    //     return;
+    // }
 
     if (!source) {
         return;

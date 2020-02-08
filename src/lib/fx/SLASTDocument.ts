@@ -82,16 +82,6 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    protected emitError(code: number, token: IToken) {
-        this.diag.error(code, { ...this.preprocessor.lexer.getPosition(), token });
-    }
-
-    
-    protected emitCritical(code: number, token: IToken = null) {
-        this.diag.critical(code, { ...this.preprocessor.lexer.getPosition(), token });
-    }
-
-
     protected setTextDocument(textDocument: ITextDocument): void {
         this.preprocessor.setTextDocument(textDocument);
     }

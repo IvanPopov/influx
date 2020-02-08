@@ -228,12 +228,12 @@ export class ASTDocument implements IASTDocument {
 
     
     protected emitError(code: number, token: IToken) {
-        this.diag.error(code, { ...this.lexer.getPosition(), token });
+        this.diag.error(code, { token });
     }
 
     
     protected emitCritical(code: number, token: IToken = null) {
-        this.diag.critical(code, { ...this.lexer.getPosition(), token });
+        this.diag.critical(code, { token });
     }
 
 
@@ -333,6 +333,7 @@ export class ASTDocument implements IASTDocument {
                         } else {
                             // one more attempt to recover but from the next token
                             this.token = this.readToken();
+                            if (this.token.index === -1) debugger;
                             // NOTE: in order to prevent recusrion on END_SYMBOL
                             causingErrorToken = undefinedToken;
                             continue;
@@ -354,6 +355,7 @@ export class ASTDocument implements IASTDocument {
                         let recoveryToken = cloneToken(causingErrorToken);
                         while (recoveryToken.name === UNKNOWN_TOKEN) {
                             recoveryToken = this.readToken();
+                            if (recoveryToken.index === -1) debugger;
                         }
                         currStateIndex = this.restoreState(syntaxTable, <ParseTree>tree, stack, recoveryToken, this.token /* error token */);
                         if (currStateIndex === -1) {
@@ -392,6 +394,7 @@ export class ASTDocument implements IASTDocument {
                                     this.emitCritical(EParsingErrors.SyntaxUnknownError, this.token);
                                 } else if (additionalOperationCode === EOperationType.k_Ok) {
                                     this.token = this.readToken();
+                                    if (this.token.index === -1) debugger;
                                 }
                             }
                             break;
