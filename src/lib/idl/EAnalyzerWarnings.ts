@@ -5,5 +5,8 @@ export enum EAnalyzerWarnings {
     UselessPassState,
     EmptySemicolon,
     InvalidCbufferRegister,
+
+    ImplicitTypeConversion,
+    ImplicitTypeTruncation
     // part fx
 }

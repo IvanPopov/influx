@@ -537,7 +537,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     assert(fdef.params.length === 2);
                     return intrinsics.minf(dest, args[0], args[1]);
                 }
-                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUIntBasedType(fdef.params[0].type));
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
                 // handle INT/UINT params as int intrinsic
                 return intrinsics.mini(dest, args[0], args[1]);
             case 'max':
@@ -546,7 +546,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     assert(fdef.params.length === 2);
                     return intrinsics.maxf(dest, args[0], args[1]);
                 }
-                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUIntBasedType(fdef.params[0].type));
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
                 // handle INT/UINT params as int intrinsic
                 return intrinsics.maxi(dest, args[0], args[1]);
             case 'lerp':
@@ -743,8 +743,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     if (SystemScope.isFloatBasedType(left.type)) {
                         assert(SystemScope.isFloatBasedType(right.type));
                         intrinsics.arithf(opName, dest, leftAddr, rightAddr);
-                    } else if (SystemScope.isIntBasedType(left.type) || SystemScope.isUIntBasedType(left.type)) {
-                        assert(SystemScope.isIntBasedType(right.type) || SystemScope.isUIntBasedType(right.type));
+                    } else if (SystemScope.isIntBasedType(left.type) || SystemScope.isUintBasedType(left.type)) {
+                        assert(SystemScope.isIntBasedType(right.type) || SystemScope.isUintBasedType(right.type));
                         intrinsics.arithi(opName, dest, leftAddr, rightAddr);
                     } else {
                         assert(false);

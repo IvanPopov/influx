@@ -39,7 +39,7 @@ function _error(code: number, info = {}): void {
 
 type ITypeInfo = Pick<ISystemTypeInstructionSettings, Exclude<keyof ISystemTypeInstructionSettings, 'scope'>>;
 
-function generateSystemType(name: string, size?: number, elementType?: ITypeInstruction, 
+function generateSystemType(name: string, size?: number, elementType?: ITypeInstruction,
     length?: number, fields?: IVariableDeclInstruction[], methods?: IFunctionDeclInstruction[]): SystemTypeInstruction;
 // function generateSystemType({ name, length, elementType, fields, size, methods }: ITypeInfo): SystemTypeInstruction;
 function generateSystemType(...args: any[]): SystemTypeInstruction {
@@ -53,7 +53,7 @@ function generateSystemType(...args: any[]): SystemTypeInstruction {
     // if (isObject(args[0])) {
     //     ({ name, size, elementType, length, fields, methods } = args[0]);
     // } else{
-        [ name, size, elementType, length, fields, methods ] = args;
+    [name, size, elementType, length, fields, methods] = args;
     // }
 
     if (getSystemType(name)) {
@@ -74,7 +74,7 @@ function defineTypeAlias(typeName: string, aliasName: string) {
 class TypeTemplate implements ITypeTemplate {
     readonly name: string;
     readonly scope: IScope;
-    
+
     constructor(name: string, scope: IScope) {
         this.name = name;
         this.scope = scope;
@@ -108,7 +108,7 @@ class BufferTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = args[0];
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
@@ -135,7 +135,7 @@ class RWBufferTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = args[0];
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
@@ -155,15 +155,15 @@ class RWStructuredBufferTemplate extends TypeTemplate {
             // TODO: print error
             return null;
         }
-        
+
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = args[0];
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
-        
+
         {
             let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
             let id = new IdInstruction({ scope, name: 'IncrementCounter' });
@@ -197,7 +197,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = args[0];
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
@@ -220,7 +220,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
             const func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
             methods.push(func);
         }
-        
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
@@ -244,14 +244,14 @@ class RWTexture1DTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }   
+    }
 
     static TYPE_NAME = 'RWTexture1D';
 }
@@ -275,14 +275,14 @@ class Texture2DTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }   
+    }
 
     static TYPE_NAME = 'Texture2D';
 }
@@ -305,14 +305,14 @@ class Texture3DTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }   
+    }
 
     static TYPE_NAME = 'Texture3D';
 }
@@ -336,14 +336,14 @@ class Texture2DArrayTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }   
+    }
 
     static TYPE_NAME = 'Texture2DArray';
 }
@@ -367,14 +367,14 @@ class TextureCubeArrayTemplate extends TypeTemplate {
         }
 
         const name = this.typeName(args);
-        const size = -1; 
+        const size = -1;
         const elementType = type;
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
-    }   
+    }
 
     static TYPE_NAME = 'TextureCubeArray';
 }
@@ -657,10 +657,11 @@ function generateSuffixLiterals(literals: string[], output: IMap<boolean>, depth
 
 function generateSystemFunctionInstance(type: ITypeInstruction, name: string, paramTypes: ITypeInstruction[], vertex: boolean, pixel: boolean) {
     let paramList = paramTypes.map((type, n) => {
-        return new VariableDeclInstruction({ 
-            type: new VariableTypeInstruction({ type, scope }), 
-            id: new IdInstruction({ name: `p${n}`, scope }), 
-            scope });
+        return new VariableDeclInstruction({
+            type: new VariableTypeInstruction({ type, scope }),
+            id: new IdInstruction({ name: `p${n}`, scope }),
+            scope
+        });
     });
 
     let returnType = new VariableTypeInstruction({ type, scope });
@@ -954,12 +955,12 @@ function addSystemFunctions(): void {
     generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["int2"/*, "uint2"*/]);
     generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["int3"/*, "uint3"*/]);
     generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["int4"/*, "uint4"*/]);
-    
+
     generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "uint"]);
     generateSystemFunction("asint", "int2", [TEMPLATE_TYPE], ["float2", "uint2"]);
     generateSystemFunction("asint", "int3", [TEMPLATE_TYPE], ["float3", "uint3"]);
     generateSystemFunction("asint", "int4", [TEMPLATE_TYPE], ["float4", "uint4"]);
-    
+
     generateSystemFunction("asuint", "uint", [TEMPLATE_TYPE], ["float", "int"]);
     generateSystemFunction("asuint", "uint2", [TEMPLATE_TYPE], ["float2", "int2"]);
     generateSystemFunction("asuint", "uint3", [TEMPLATE_TYPE], ["float3", "int3"]);
@@ -974,7 +975,7 @@ function addSystemFunctions(): void {
 
     generateSystemFunction("f16tof32", "float", ["uint"], null);
     generateSystemFunction("f32tof16", "uint", ["float"], null);
-    
+
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int", /*"uint",*/ "float", "bool"]);
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int2", "uint2", "float2", "bool2", "float2x2"]);
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int3", "uint3", "float3", "bool3", "float3x3"]);
@@ -1015,10 +1016,10 @@ function getSystemType(typeName: string): SystemTypeInstruction {
 
 
 // function addSystemVariables(): void {
-    // generateSystemVariable("fragColor", "gl_FragColor", "float4", false, true, true);
-    // generateSystemVariable("fragCoord", "gl_FragCoord", "float4", false, true, true);
-    // generateSystemVariable("frontFacing", "gl_FrontFacing", "bool", false, true, true);
-    // generateSystemVariable("pointCoord", "gl_PointCoord", "float2", false, true, true);
+// generateSystemVariable("fragColor", "gl_FragColor", "float4", false, true, true);
+// generateSystemVariable("fragCoord", "gl_FragCoord", "float4", false, true, true);
+// generateSystemVariable("frontFacing", "gl_FrontFacing", "bool", false, true, true);
+// generateSystemVariable("pointCoord", "gl_PointCoord", "float2", false, true, true);
 // }
 
 
@@ -1026,7 +1027,7 @@ function initSystemTypes(): void {
     addSystemTypeScalar();
     addSystemTypeVector();
     addSystemTypeMatrix();
-    
+
     scope.addTypeTemplate(new BufferTemplate);
     scope.addTypeTemplate(new RWBufferTemplate);
     scope.addTypeTemplate(new RWStructuredBufferTemplate);
@@ -1047,27 +1048,27 @@ function initSystemTypes(): void {
 
     // produce default Texture2D type
     const templateTexture2D = scope.findTypeTemplate(Texture2DTemplate.TYPE_NAME);
-    const typeTexture2D = templateTexture2D.produceType(scope, []); 
+    const typeTexture2D = templateTexture2D.produceType(scope, []);
     scope.addType(typeTexture2D);
 
     // produce default Texture3D type
     const templateTexture3D = scope.findTypeTemplate(Texture3DTemplate.TYPE_NAME);
-    const typeTexture3D = templateTexture3D.produceType(scope, []); 
+    const typeTexture3D = templateTexture3D.produceType(scope, []);
     scope.addType(typeTexture3D);
 
     // produce default Texture2DArray type
     const templateTexture2DArray = scope.findTypeTemplate(Texture2DArrayTemplate.TYPE_NAME);
-    const typeTexture2DArray = templateTexture2DArray.produceType(scope, []); 
+    const typeTexture2DArray = templateTexture2DArray.produceType(scope, []);
     scope.addType(typeTexture2DArray);
 
     // produce default TextureCubeArray type
     const templateTextureCubeArray = scope.findTypeTemplate(TextureCubeArrayTemplate.TYPE_NAME);
-    const typeTextureCubeArray = templateTextureCubeArray.produceType(scope, []); 
+    const typeTextureCubeArray = templateTextureCubeArray.produceType(scope, []);
     scope.addType(typeTextureCubeArray);
 
     // produce default RWTexture1D type
     const templateRWTexture1D = scope.findTypeTemplate(RWTexture1DTemplate.TYPE_NAME);
-    const typeRWTexture1D = templateRWTexture1D.produceType(scope, []); 
+    const typeRWTexture1D = templateRWTexture1D.produceType(scope, []);
     scope.addType(typeRWTexture1D);
 }
 
@@ -1099,6 +1100,11 @@ export const T_FLOAT = scope.findType("float");
 export const T_FLOAT2 = scope.findType("float2");
 export const T_FLOAT3 = scope.findType("float3");
 export const T_FLOAT4 = scope.findType("float4");
+
+export const T_HALF = scope.findType("half");
+export const T_HALF2 = scope.findType("half2");
+export const T_HALF3 = scope.findType("half3");
+export const T_HALF4 = scope.findType("half4");
 
 export const T_FLOAT2X2 = scope.findType("float2x2");
 export const T_FLOAT2X3 = scope.findType("float2x3");
@@ -1146,9 +1152,15 @@ export const hasType = (typeName: string) => !isNull(scope.findType(typeName));
 export const hasVariable = (varName: string) => !isNull(scope.findVariable(varName));
 export const hasTechnique = (techName: string) => !isNull(scope.findTechnique(techName));
 
-export function isMatrixType(type: ITypeInstruction): boolean { 
+export function isMatrixType(type: ITypeInstruction): boolean {
     return type.isEqual(getSystemType("float2x2")) ||
+        type.isEqual(getSystemType("float2x3")) ||
+        type.isEqual(getSystemType("float2x4")) ||
+        type.isEqual(getSystemType("float3x2")) ||
         type.isEqual(getSystemType("float3x3")) ||
+        type.isEqual(getSystemType("float3x4")) ||
+        type.isEqual(getSystemType("float4x2")) ||
+        type.isEqual(getSystemType("float4x3")) ||
         type.isEqual(getSystemType("float4x4")) ||
         type.isEqual(getSystemType("int2x2")) ||
         type.isEqual(getSystemType("int3x3")) ||
@@ -1168,7 +1180,10 @@ export function isVectorType(type: ITypeInstruction): boolean {
         type.isEqual(getSystemType("bool4")) ||
         type.isEqual(getSystemType("int2")) ||
         type.isEqual(getSystemType("int3")) ||
-        type.isEqual(getSystemType("int4")) || 
+        type.isEqual(getSystemType("half4")) ||
+        type.isEqual(getSystemType("half2")) ||
+        type.isEqual(getSystemType("half3")) ||
+        type.isEqual(getSystemType("int4")) ||
         type.isEqual(getSystemType("uint2")) ||
         type.isEqual(getSystemType("uint3")) ||
         type.isEqual(getSystemType("uint4"));
@@ -1189,10 +1204,32 @@ export function isFloatBasedType(type: ITypeInstruction): boolean {
         type.isEqual(T_FLOAT3) ||
         type.isEqual(T_FLOAT4) ||
         type.isEqual(T_FLOAT2X2) ||
+        type.isEqual(T_FLOAT2X3) ||
+        type.isEqual(T_FLOAT2X4) ||
+        type.isEqual(T_FLOAT3X2) ||
         type.isEqual(T_FLOAT3X3) ||
+        type.isEqual(T_FLOAT3X4) ||
+        type.isEqual(T_FLOAT4X2) ||
+        type.isEqual(T_FLOAT4X3) ||
         type.isEqual(T_FLOAT4X4);
 }
 
+
+export function isHalfBasedType(type: ITypeInstruction): boolean {
+    return type.isEqual(T_HALF) ||
+        type.isEqual(T_HALF2) ||
+        type.isEqual(T_HALF3) ||
+        type.isEqual(T_HALF4);
+}
+
+
+/**
+ * note: vectors are not integers. 
+ * @returns True if type is INT or UINT. 
+ */
+export function isIntegerType(type: ITypeInstruction): boolean {
+    return type.isEqual(T_INT) || type.isEqual(T_UINT);
+}
 
 export function isIntBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(T_INT) ||
@@ -1205,7 +1242,7 @@ export function isIntBasedType(type: ITypeInstruction): boolean {
 }
 
 
-export function isUIntBasedType(type: ITypeInstruction): boolean {
+export function isUintBasedType(type: ITypeInstruction): boolean {
     return type.isEqual(T_UINT) ||
         type.isEqual(T_UINT2) ||
         type.isEqual(T_UINT3) ||
@@ -1223,6 +1260,69 @@ export function isBoolBasedType(type: ITypeInstruction): boolean {
         type.isEqual(T_BOOL4X4);
 }
 
+export function determBaseType(type: ITypeInstruction): ITypeInstruction {
+    if (isScalarType(type)) {
+        return type;
+    }
+
+    if (isVectorType(type) || isMatrixType(type)) {
+        if (isFloatBasedType(type)) {
+            return T_FLOAT;
+        }
+
+        if (isIntBasedType(type)) {
+            return T_INT;
+        }
+
+        if (isUintBasedType(type)) {
+            return T_UINT;
+        }
+
+        if (isHalfBasedType(type)) {
+            return T_HALF;
+        }
+
+        if (isBoolBasedType(type)) {
+            return T_BOOL;
+        }
+    }
+
+    assert(false, `cannot determ base type of ${type.name}`);
+    return null;
+}
+
+/**
+ * Determining the most precise type of two types.
+ * Type hierarchy: 
+ *  float => half => int => uint => bool
+ */
+export function determMostPreciseBaseType(left: ITypeInstruction, right: ITypeInstruction) {
+    assert(isScalarType(left) || isVectorType(left));
+    assert(isScalarType(right) || isVectorType(right));
+
+    if (isFloatBasedType(left) || isFloatBasedType(right)) {
+        return T_FLOAT;
+    }
+
+    if (isHalfBasedType(left) || isHalfBasedType(right)) {
+        return T_HALF;
+    }
+
+    if (isIntBasedType(left) || isIntBasedType(right)) {
+        return T_INT;
+    }
+
+    if (isUintBasedType(left) || isUintBasedType(right)) {
+        return T_UINT;
+    }
+
+    if (isBoolBasedType(left) && isBoolBasedType(right)) {
+        return T_BOOL;
+    }
+
+    assert(false, 'cannot determ base type');
+    return null;
+}
 
 // export function isSamplerType(type: ITypeInstruction): boolean {
 //     return type.isEqual(T_SAMPLER) ||

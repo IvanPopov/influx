@@ -78,6 +78,7 @@ export enum EAnalyzerErrors {
     InvalidFunctionReturnStmtNotFound,
     UnsupportedProvideAs,
     UnreachableCode,
+    OperatorCannotBeUsedWithGivenLValue, // for ex.: cannot perfom (bool4)x*=(int4)y;
 
     //
     //

@@ -49,7 +49,7 @@ import { ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
-// import { SamplerOperator, SamplerStateBlockInstruction } from './instructions/SamplerStateBlockInstruction';
+// import { SamplerStateInstruction } from './instructions/SamplerStateBlockInstruction';
 import { SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
 import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
@@ -63,15 +63,11 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
 
-
-function validate(instr: IInstruction, expectedType: EInstructionTypes) {
-    assert(instr.instructionType === expectedType);
-}
 
 // TODO: refactor it
 function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVariableTypeInstruction {
@@ -416,7 +412,7 @@ function checkForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
 function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
     const returnType = <IVariableTypeInstruction>funcDef.returnType;
 
-    if (returnType.isEqual(SystemScope.T_VOID)) {
+    if (returnType.isEqual(T_VOID)) {
         return true;
     }
 
@@ -560,8 +556,8 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
                 isVaryingsByStruct = true;
             } else if (param.semantic !== "") {
                 if (param.type.isContainSampler()
-                //  || SystemScope.isSamplerType(param.type)
-                 ) {
+                    //  || isSamplerType(param.type)
+                ) {
                     return false;
                 }
 
@@ -585,8 +581,8 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
             }
 
             if (param.type.isContainSampler()
-                // || SystemScope.isSamplerType(param.type)
-                ) {
+                // || isSamplerType(param.type)
+            ) {
                 return false;
             }
 
@@ -934,10 +930,10 @@ export class Analyzer {
                         // TODO: validate register
                         // TODO: use ESystemTypes enumeration
                         const SYSTEM_TYPES = [
-                            'Buffer', 
-                            'RWBuffer', 
-                            'RWStructuredBuffer', 
-                            'AppendStructuredBuffer', 
+                            'Buffer',
+                            'RWBuffer',
+                            'RWStructuredBuffer',
+                            'AppendStructuredBuffer',
                             'RWTexture1D',
                             'RWTexture2D',
                             'RWTexture3D',
@@ -2139,7 +2135,8 @@ export class Analyzer {
         const leftType = <IVariableTypeInstruction>left.type;
         const rightType = <IVariableTypeInstruction>right.type;
 
-        const type = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
+        const type = Analyzer.checkTwoOperandExprTypes(context, operator, leftType,
+            rightType, left.sourceNode, right.sourceNode, sourceNode);
 
         if (isNull(type)) {
             context.error(sourceNode, EErrors.InvalidArithmeticOperation, {
@@ -2169,13 +2166,13 @@ export class Analyzer {
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
         const right = this.analyzeExpr(context, program, children[0]);
 
-        const leftType = left ? left.type : null;
-        const rightType = right ? right.type : null;
+        const leftType = left && left.type;
+        const rightType = right && right.type;
 
         const exprType = Analyzer.checkTwoOperandExprTypes(context, operator,
             leftType, rightType,
-            left ? left.sourceNode : null,
-            right ? right.sourceNode : null);
+            left && left.sourceNode, right && right.sourceNode,
+            sourceNode);
 
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidRelationalOperation, {
@@ -2261,7 +2258,10 @@ export class Analyzer {
         const leftType = <IVariableTypeInstruction>left.type;
         const rightType = <IVariableTypeInstruction>right.type;
 
-        const type = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
+        const type = Analyzer.checkTwoOperandExprTypes(context, operator,
+            leftType, rightType,
+            left.sourceNode, right.sourceNode,
+            sourceNode);
 
         if (isNull(type)) {
             context.error(sourceNode, EErrors.InvalidBitwiseOperation, {
@@ -2309,7 +2309,7 @@ export class Analyzer {
         let exprType: IVariableTypeInstruction = null;
 
         if (operator !== '=') {
-            exprType = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode);
+            exprType = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode, sourceNode);
             if (isNull(exprType)) {
                 context.error(sourceNode, EErrors.InvalidArithmeticAssigmentOperation, {
                     operator: operator,
@@ -2322,7 +2322,7 @@ export class Analyzer {
         }
 
         // FIXME: show corrent source nodes for left and right expression.
-        exprType = Analyzer.checkTwoOperandExprTypes(context, '=', leftType, exprType);
+        exprType = Analyzer.checkTwoOperandExprTypes(context, '=', leftType, exprType, left.sourceNode, null, sourceNode);
 
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidAssigmentOperation, {
@@ -2536,7 +2536,7 @@ export class Analyzer {
 
         if (isNull(definition)) {
             // TODO: emit proper error
-            context.error(sourceNode, EErrors.UnknownInstruction, { });
+            context.error(sourceNode, EErrors.UnknownInstruction, {});
             program.pop();
             return null;
         }
@@ -3766,7 +3766,8 @@ export class Analyzer {
         leftType: IVariableTypeInstruction,
         rightType: IVariableTypeInstruction,
         leftSourceNode: IParseNode = null,
-        rightSourceNode: IParseNode = null): IVariableTypeInstruction {
+        rightSourceNode: IParseNode = null,
+        exprSourceNode: IParseNode = null): IVariableTypeInstruction {
 
         if (!leftType || !rightType) {
             return null;
@@ -3777,7 +3778,7 @@ export class Analyzer {
 
         const isComplex = leftType.isComplex() || rightType.isComplex();
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
-        // const isSampler = SystemScope.isSamplerType(leftType) || SystemScope.isSamplerType(rightType);
+        // const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
 
         const boolType = <IVariableTypeInstruction>T_BOOL;
         // const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
@@ -3825,9 +3826,9 @@ export class Analyzer {
             else if (Analyzer.isEqualOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
                 return boolType;
             }
-            else {
-                return null;
-            }
+
+            // TODO: emit error (unsupported operation on complex values)
+            return null;
         }
 
         // FIXME: use operands' scope instead of system scope?
@@ -3835,6 +3836,7 @@ export class Analyzer {
         const rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
 
 
+        // TODO: remove this check?
         if (leftType.isConst() && Analyzer.isAssignmentOperator(operator)) {
             // TODO: emit proper error
             return null;
@@ -3842,12 +3844,12 @@ export class Analyzer {
 
         if (Analyzer.isBitwiseOperator(operator)) {
             if (!leftType.isEqual(T_INT) && !leftType.isEqual(T_UINT)) {
-                // TODO: emit error
+                // TODO: emit error (cannot perfom bitwise op. on non-integers)
                 return null;
             }
 
             if (!rightType.isEqual(T_INT) && !rightType.isEqual(T_UINT)) {
-                // TODO: emit error
+                // TODO: emit error (cannot perfom bitwise op. on non-integers)
                 return null;
             }
 
@@ -3856,7 +3858,7 @@ export class Analyzer {
                 case '|':
                 case '^':
                     if (!leftBaseType.isEqual(rightType)) {
-                        // TODO: emit warning
+                        // TODO: emit warning (bitwise between int and uint)
                     }
             }
 
@@ -3865,20 +3867,21 @@ export class Analyzer {
 
         if (leftType.isEqual(rightType)) {
             if (Analyzer.isArithmeticalOperator(operator)) {
-                if (!SystemScope.isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
+                if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
                     return leftBaseType;
                 }
-                else {
-                    return null;
-                }
+
+                // TODO: emit error (cannot perfome devision with matrices)
+                return null;
             }
             else if (Analyzer.isRelationalOperator(operator)) {
-                if (SystemScope.isScalarType(leftType)) {
+                if (isScalarType(leftType)) {
                     return boolType;
                 }
-                else {
-                    return null;
-                }
+
+                // TODO: allow vectors?
+                // TODO: emit error (cannot perfome comparison with non-scalar)
+                return null;
             }
             else if (Analyzer.isEqualOperator(operator)) {
                 return boolType;
@@ -3886,9 +3889,9 @@ export class Analyzer {
             else if (operator === '=') {
                 return leftBaseType;
             }
-            else {
-                return null;
-            }
+
+            // TODO: emit error (unknonw operation)
+            return null;
         }
 
         // temp workaround for INT/UINT comparison
@@ -3899,35 +3902,67 @@ export class Analyzer {
             }
         }
 
+        // op: "+", "-", "*", "/"
+        //     "+=", "-=", "*=", "/="
         if (Analyzer.isArithmeticalOperator(operator)) {
-            if (SystemScope.isBoolBasedType(leftType) || SystemScope.isBoolBasedType(rightType) ||
-                SystemScope.isFloatBasedType(leftType) !== SystemScope.isFloatBasedType(rightType) ||
-                SystemScope.isIntBasedType(leftType) !== SystemScope.isIntBasedType(rightType) ||
-                SystemScope.isUIntBasedType(leftType) !== SystemScope.isUIntBasedType(rightType)) {
-                return null;
-            }
 
-            if (SystemScope.isScalarType(leftType)) {
-                return rightBaseType;
-            }
-
-            if (SystemScope.isScalarType(rightType)) {
-                return leftBaseType;
-            }
-
-            if (operator === '*' || operator === '*=') {
-                if (SystemScope.isMatrixType(leftType) && SystemScope.isVectorType(rightType) &&
-                    leftType.length === rightType.length) {
-                    return rightBaseType;
-                }
-                else if (SystemScope.isMatrixType(rightType) && SystemScope.isVectorType(leftType) &&
-                    leftType.length === rightType.length) {
-                    return leftBaseType;
-                }
-                else {
+            // op: "+=", "-=", "*=", "/="
+            if (Analyzer.isAssignmentOperator(operator)) {
+                if (!leftType.isEqual(rightType)) {
+                    // TODO: add support for imlicit conversions
+                    // TODO: emit error (operator cannot be used with a given lvalue)
+                    context.error(leftSourceNode, EErrors.OperatorCannotBeUsedWithGivenLValue, {});
                     return null;
                 }
             }
+
+            // op: "+", "-", "*", "/"
+
+            const length =
+                isScalarType(leftType) ? rightType.length :
+                    isScalarType(rightType) ? leftType.length :
+                        Math.min(leftType.length, rightType.length);
+
+            const baseType = determMostPreciseBaseType(leftType, rightType);
+            const resultType = SystemScope.findType(`${baseType.name}${length === 1 ? '' : length}`);
+
+            if (!resultType) {
+                assert(false, `cannot determ result type for "${leftType.toCode()} ${operator} ${rightType.toCode()}"`);
+                return null;
+            }
+
+            if (resultType.length < leftType.length || resultType.length < rightType.length) {
+                context.warn(exprSourceNode, EWarnings.ImplicitTypeTruncation, {
+                    tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${resultType.toCode()}`
+                });
+            }
+
+            if (!determBaseType(leftType).isEqual(determBaseType(rightType))) {
+                // do not emit errors for expr like: float2 * float, int2 + int etc..
+                context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
+                    tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${resultType.toCode()}`
+                });
+            }
+
+            /**
+             * Special case for matrices
+             */
+            if (operator === '*' || operator === '*=') {
+                if (isMatrixType(leftType) && isVectorType(rightType)) {
+                    if (leftType.length === rightType.length) {
+                        return rightBaseType;
+                    }
+                    return null;
+                }
+                else if (isMatrixType(rightType) && isVectorType(leftType)) {
+                    if (leftType.length === rightType.length) {
+                        return leftBaseType;
+                    }
+                    return null;
+                }
+            }
+
+            return <IVariableTypeInstruction>resultType;
         }
 
         if (operator === '=') {
@@ -3954,7 +3989,7 @@ export class Analyzer {
 
         const isComplex = type.isComplex();
         const isArray = type.isNotBaseArray();
-        // const isSampler = SystemScope.isSamplerType(type);
+        // const isSampler = isSamplerType(type);
 
         if (isComplex || isArray/* || isSampler*/) {
             return null;
@@ -3987,7 +4022,7 @@ export class Analyzer {
             }
         }
         else {
-            if (SystemScope.isBoolBasedType(type)) {
+            if (isBoolBasedType(type)) {
                 return null;
             }
             else {

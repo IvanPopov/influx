@@ -1,5 +1,5 @@
 import { assert, isUint } from "@lib/common";
-import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUIntBasedType, T_FLOAT, T_FLOAT4 } from "@lib/fx/analisys/SystemScope";
+import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4 } from "@lib/fx/analisys/SystemScope";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
@@ -370,7 +370,7 @@ export class FxTranslator extends FxEmitter {
                             let interpreter = 'asfloat';
                             if (isFloatBasedType(type)) { interpreter = 'asfloat'; }
                             if (isIntBasedType(type)) { interpreter = 'asint'; }
-                            if (isUIntBasedType(type)) { interpreter = 'asuint'; }
+                            if (isUintBasedType(type)) { interpreter = 'asuint'; }
                             
                             let n = type.size / T_FLOAT.size;
                             for (let i = 0; i < n; ++i) {
