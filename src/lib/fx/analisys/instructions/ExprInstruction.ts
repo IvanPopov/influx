@@ -18,14 +18,6 @@ export class ExprInstruction extends TypedInstruction implements IExprInstructio
         return <IVariableTypeInstruction>super.type;
     }
 
-    evaluate(): boolean {
-        console.error("@pure_virtual");
-        return false;
-    }
-
-    getEvalValue(): any {
-        return this._evalResult;
-    }
 
     isConst(): boolean {
         // console.error("@pure_virtual");

@@ -22,6 +22,9 @@ import { IMap } from "@lib/idl/IMap";
 //     k_AppendStructuredBuffer
 // };
 
+
+
+
 const scope = new Scope({ type: EScopeType.k_System });
 
 const systemFunctionHashMap: IMap<boolean> = {};
@@ -1291,6 +1294,37 @@ export function determBaseType(type: ITypeInstruction): ITypeInstruction {
     return null;
 }
 
+enum ETypePrecision {
+    k_Bool,
+    k_Uint,
+    k_Int,
+    k_Half,
+    k_Float,
+    k_Unknown = NaN  
+};
+
+export function determTypePrecision(type: ITypeInstruction): ETypePrecision {
+    if (isFloatBasedType(type)) return ETypePrecision.k_Float;
+    if (isHalfBasedType(type)) return ETypePrecision.k_Half;
+    if (isIntBasedType(type)) return ETypePrecision.k_Int;
+    if (isUintBasedType(type)) return ETypePrecision.k_Uint;
+    if (isBoolBasedType(type)) return ETypePrecision.k_Bool;
+    return ETypePrecision.k_Unknown;
+}
+
+
+export function typePrecisionAsType(precision: ETypePrecision): ITypeInstruction {
+    switch (precision) {
+        case ETypePrecision.k_Float: return T_FLOAT;
+        case ETypePrecision.k_Half: return T_HALF;
+        case ETypePrecision.k_Int: return T_INT;
+        case ETypePrecision.k_Uint: return T_UINT;
+        case ETypePrecision.k_Bool: return T_BOOL;
+    }
+
+    return null;
+}
+
 /**
  * Determining the most precise type of two types.
  * Type hierarchy: 
@@ -1300,28 +1334,10 @@ export function determMostPreciseBaseType(left: ITypeInstruction, right: ITypeIn
     assert(isScalarType(left) || isVectorType(left));
     assert(isScalarType(right) || isVectorType(right));
 
-    if (isFloatBasedType(left) || isFloatBasedType(right)) {
-        return T_FLOAT;
-    }
+    const type = typePrecisionAsType(Math.max(determTypePrecision(left), determTypePrecision(right)));
 
-    if (isHalfBasedType(left) || isHalfBasedType(right)) {
-        return T_HALF;
-    }
-
-    if (isIntBasedType(left) || isIntBasedType(right)) {
-        return T_INT;
-    }
-
-    if (isUintBasedType(left) || isUintBasedType(right)) {
-        return T_UINT;
-    }
-
-    if (isBoolBasedType(left) && isBoolBasedType(right)) {
-        return T_BOOL;
-    }
-
-    assert(false, 'cannot determ base type');
-    return null;
+    assert(type !== null, 'cannot determ base type');
+    return type;
 }
 
 // export function isSamplerType(type: ITypeInstruction): boolean {

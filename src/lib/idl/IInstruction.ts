@@ -345,9 +345,6 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
     readonly type: IVariableTypeInstruction;
     readonly initExpr: IInitExprInstruction;
 
-    /** @deprecated */
-    readonly defaultValue: any; // native value evaluated from the initial expression.
-
     isParameter(): boolean;
     isLocal(): boolean;
     isGlobal(): boolean;
@@ -381,11 +378,6 @@ export interface IKeywordInstruction extends IInstruction {
 
 export interface IExprInstruction extends ITypedInstruction {
     readonly type: IVariableTypeInstruction;
-
-    /** @deprecated */
-    evaluate(): boolean;
-    /** @deprecated */
-    getEvalValue(): any;
 
     isConst(): boolean;
     isConstExpr(): boolean;

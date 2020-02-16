@@ -1,4 +1,4 @@
-import { T_BOOL, SCOPE } from '@lib/fx/analisys/SystemScope';
+import { SCOPE, T_BOOL } from '@lib/fx/analisys/SystemScope';
 import { EInstructionTypes, IExprInstruction, IUnaryExprInstruction, IUnaryOperator } from '@lib/idl/IInstruction';
 
 import { ExprInstruction } from './ExprInstruction';
@@ -55,43 +55,5 @@ export class UnaryExprInstruction extends ExprInstruction implements IUnaryExprI
 
     isConst(): boolean {
         return (<IExprInstruction>this.expr).isConst();
-    }
-
-
-    evaluate(): boolean {
-        var op = this.operator;
-        var expr = <IExprInstruction>this.expr;
-
-        if (!expr.evaluate()) {
-            return false;
-        }
-
-        var res: any = null;
-
-        try {
-            res = expr.getEvalValue();
-            switch (op) {
-                case '+':
-                    res = +res;
-                    break;
-                case '-':
-                    res = -res;
-                    break;
-                case '!':
-                    res = !res;
-                    break;
-                case '++':
-                    res = ++res;
-                    break;
-                case '--':
-                    res = --res;
-                    break;
-            }
-        } catch (e) {
-            return false;
-        }
-
-        this._evalResult = res;
-        return true;
     }
 }

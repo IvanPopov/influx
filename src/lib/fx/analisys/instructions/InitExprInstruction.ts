@@ -20,19 +20,9 @@ export interface IInitExprInstructionSettings extends IExprInstructionSettings {
 export class InitExprInstruction extends ExprInstruction implements IInitExprInstruction {
     private _args: IExprInstruction[];
 
-    // Returns true if it is user-defined array.
-    private _isArray: boolean; // todo: remove
-
     constructor({ type, args = [], ...settings }: IInitExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_InitExpr, type, ...settings });
-
-        this._isArray = false;
         this._args = args.map(arg => Instruction.$withParent(arg, this));
-
-        // if (!this.optimizeForVariableType(type)) {
-        //     context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
-        //     return null;
-        // }
     }
 
 
@@ -42,7 +32,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
 
 
     isArray(): boolean {
-        return this._isArray;
+        return this.type.isNotBaseArray();
     }
 
 
@@ -97,20 +87,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 return false;
             }
 
-            if (type.isNotBaseArray()) {
-                this._isArray = true;
-            }
-
             let arrayElementType = <IVariableTypeInstruction>type.arrayElementType;
-            let isOk = false;
-            let testedInstruction: IExprInstruction = null;
 
             for (let i = 0; i < this.args.length; i++) {
-                testedInstruction = (<IExprInstruction>this.args[i]);
+                let testedInstruction = (<IExprInstruction>this.args[i]);
 
                 if (testedInstruction.instructionType === EInstructionTypes.k_InitExpr) {
-                    isOk = (<IInitExprInstruction>testedInstruction).optimizeForVariableType(arrayElementType);
-                    if (!isOk) {
+                    if (!(<IInitExprInstruction>testedInstruction).optimizeForVariableType(arrayElementType)) {
                         return false;
                     }
                 }
@@ -122,8 +105,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     // }
                     // else 
                     {
-                        isOk = testedInstruction.type.isEqual(arrayElementType);
-                        if (!isOk) {
+                        if (!testedInstruction.type.isEqual(arrayElementType)) {
                             return false;
                         }
                     }
@@ -158,9 +140,8 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 if (firstInstruction.type.isEqual(type)) {
                     return true;
                 }
-                else {
-                    return false;
-                }
+                
+                return false;
             }
             else if (this.args.length === 1) {
                 return false;
@@ -170,8 +151,8 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             let fieldNameList = type.fieldNames;
 
             for (let i = 0; i < args.length; i++) {
-                let pFieldType: IVariableTypeInstruction = type.getField(fieldNameList[i]).type;
-                if (!args[i].optimizeForVariableType(pFieldType)) {
+                let fieldType = type.getField(fieldNameList[i]).type;
+                if (!args[i].optimizeForVariableType(fieldType)) {
                     return false;
                 }
             }
@@ -179,73 +160,5 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             this._type = type.baseType;
             return true;
         }
-    }
-
-
-    /** @deprecated */
-    evaluate(): boolean {
-        if (!this.isConst()) {
-            this._evalResult = null;
-            return false;
-        }
-
-        let res: any = null;
-
-        if (this._isArray) {
-            res = new Array(this.args.length);
-
-            for (let i: number = 0; i < this.args.length; i++) {
-                let evalInstruction = (<IExprInstruction>this.args[i]);
-
-                if (evalInstruction.evaluate()) {
-                    res[i] = evalInstruction.getEvalValue();
-                }
-            }
-        }
-        else if (this.args.length === 1) {
-            let pEvalInstruction = (<IExprInstruction>this.args[0]);
-            pEvalInstruction.evaluate();
-            res = pEvalInstruction.getEvalValue();
-        }
-        else {
-            let jsTypeCtor: any = SystemScope.getExternalType(this.type);
-            let args: any[] = new Array(this.args.length);
-
-            if (isNull(jsTypeCtor)) {
-                return false;
-            }
-
-            try {
-                if (SystemScope.isScalarType(this.type)) {
-                    let testedInstruction: IExprInstruction = <IExprInstruction>this.args[1];
-                    if (this.args.length > 2 || !testedInstruction.evaluate()) {
-                        return false;
-                    }
-
-                    res = jsTypeCtor(testedInstruction.getEvalValue());
-                }
-                else {
-                    for (let i: number = 0; i < this.args.length; i++) {
-                        let testedInstruction: IExprInstruction = <IExprInstruction>this.args[i];
-
-                        if (testedInstruction.evaluate()) {
-                            args[i] = testedInstruction.getEvalValue();
-                        }
-                        else {
-                            return false;
-                        }
-                    }
-
-                    res = new jsTypeCtor;
-                    res.set.apply(res, args);
-                }
-            }
-            catch (e) {
-                return false;
-            }
-        }
-
-        this._evalResult = res;
-        return true;
     }
 }

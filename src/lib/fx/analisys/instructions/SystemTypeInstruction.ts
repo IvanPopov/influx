@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { fn, type, instruction } from '@lib/fx/analisys/helpers';
+import { fn, instruction, type } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -79,8 +79,8 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    set name(sName: string) {
-        this._name = sName;
+    set name(name: string) {
+        this._name = name;
     }
 
 

@@ -1,9 +1,8 @@
 import { isNull } from "@lib/common";
-import { EInstructionTypes, IBitwiseExprInstruction, IExprInstruction, IBitwiseOperator } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IBitwiseExprInstruction, IBitwiseOperator, IExprInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
-
 
 export interface IBitwiseExprInstructionSettings extends IExprInstructionSettings {
     left: IExprInstruction;
@@ -27,11 +26,7 @@ export class BitwiseExprInstruction extends ExprInstruction implements IBitwiseE
         this.right = Instruction.$withParent(right, this);
         this.operator = operator;
     }
-
-    /** @deprecated */
-    evaluate(): boolean {
-        return false;
-    }
+    
 
     toCode(): string {
         return `${this.left.toCode()} ${this.operator} ${this.right.toCode()}`;

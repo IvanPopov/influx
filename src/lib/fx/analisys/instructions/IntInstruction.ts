@@ -1,8 +1,8 @@
 import { ExprInstruction } from "@lib/fx/analisys/instructions/ExprInstruction";
 import { IInstructionSettings } from "@lib/fx/analisys/instructions/Instruction";
-import { T_INT, T_UINT, SCOPE } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
+import { SCOPE, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { EInstructionTypes, ILiteralInstruction } from "@lib/idl/IInstruction";
 
 export interface IIntInstructionSettings extends IInstructionSettings {
     signed: boolean;
@@ -44,12 +44,6 @@ export class IntInstruction extends ExprInstruction implements ILiteralInstructi
     
     toCode(): string {
         return this.toString();
-    }
-
-    
-    evaluate(): boolean {
-        this._evalResult = this.value;
-        return true;
     }
 
 

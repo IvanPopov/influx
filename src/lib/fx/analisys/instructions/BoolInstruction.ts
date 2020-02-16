@@ -19,18 +19,16 @@ export class BoolInstruction extends ExprInstruction implements ILiteralInstruct
         this.value = value;
     }
 
+    
     toString(): string {
         return String(this.value);
     }
 
+    
     toCode(): string {
         return this.value ? "true" : "false";
     }
 
-    evaluate(): boolean {
-        this._evalResult = this.value;
-        return true;
-    }
 
     isConst(): boolean {
         return true;

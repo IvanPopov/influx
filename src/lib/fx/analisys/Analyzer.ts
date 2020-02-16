@@ -63,7 +63,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -738,31 +738,177 @@ export class Analyzer {
     }
 
 
+
     /**
      * AST example:
      *    InitExpr
      *         T_UINT = '0'
+     *    InitExpr
+     *         T_PUNCTUATOR_125 = '}'
+     *       + InitExpr 
+     *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IInitExprInstruction {
-        const children = sourceNode.children;
+    protected analyzeInitExprChildren(context: Context, program: ProgramScope, sourceNode: IParseNode, children: IParseNode[], expectedType: ITypeInstruction): IInitExprInstruction {
         const scope = program.currentScope;
 
-        let args: IExprInstruction[] = [];
+        let args = <IExprInstruction[]>[];
+        let type = expectedType;
 
-        if (children.length === 1) {
-            args.push(this.analyzeExpr(context, program, children[0]));
-        }
-        else {
-            for (let i = 0; i < children.length; i++) {
+        // It's a global user defined array or just not unit array;
+        // Trying to exclude types like float1.
+        if ((expectedType.isNotBaseArray() && expectedType.scope.type <= EScopeType.k_Global) ||
+            expectedType.isArray()) {
+
+            /**
+             * AST example:
+             *    Initializer
+             *         T_UINT = '10'
+             */
+            if (children.length === 1) {
+                // TODO: emit error (attemp to init an array with non-array initializer)
+                return null;
+            }
+
+            const numArgs = (children.length - 1) / 2;
+
+            if (expectedType.length === instruction.UNDEFINE_LENGTH ||
+                (expectedType.isNotBaseArray() && numArgs !== expectedType.length) ||
+                (!expectedType.isNotBaseArray() && numArgs !== expectedType.baseType.length)) {
+                // TODO: emit error (invalid number of arguments)
+                return null;
+            }
+
+            const arrayElementType = <IVariableTypeInstruction>expectedType.arrayElementType;
+            /**
+             * AST example:
+             *    InitExpr
+             *         T_PUNCTUATOR_125 = '}'
+             *       + InitExpr 
+             *         T_PUNCTUATOR_44 = ','
+             *       + InitExpr 
+             *         T_PUNCTUATOR_123 = '{'
+             */
+            for (let i = children.length - 2; i >= 1; i--) {
                 if (children[i].name === 'InitExpr') {
-                    args.push(this.analyzeInitExpr(context, program, children[i]));
+                    const initExpr = this.analyzeInitExpr(context, program, children[i], arrayElementType);
+
+                    if (isNull(initExpr)) {
+                        // omit error because it was already produced by the call above
+                        return null;
+                    }
+
+                    args.push(initExpr);
                 }
+            }
+
+            // type = type.baseType;
+        }
+        else if (expectedType.isComplex()) {
+
+
+            /**
+             * AST example:
+             *    InitExpr
+             *         T_UINT = '10'
+             */
+            if (children.length === 1) {
+                const initExpr = this.analyzeExpr(context, program, children[0]);
+
+                if (!expectedType.isEqual(initExpr.type)) {
+                    // TODO: emit error
+                    return null;
+                }
+
+                args.push(initExpr);
+            } 
+            else {
+                const numArgs = (children.length - 1) / 2;
+                const fieldNameList = expectedType.fieldNames;
+
+                if (numArgs !== fieldNameList.length) {
+                    // TODO: emit error (invalid number of arguments)
+                    return null;
+                }
+
+
+                /**
+                 * AST example:
+                 *    InitExpr
+                 *         T_PUNCTUATOR_125 = '}'
+                 *       + InitExpr 
+                 *         T_PUNCTUATOR_44 = ','
+                 *       + InitExpr 
+                 *         T_PUNCTUATOR_123 = '{'
+                 */
+                for (let i = children.length - 2; i >= 1; i--) {
+                    if (children[i].name === 'InitExpr') {
+                        const fieldType = expectedType.getField(fieldNameList[i]).type;
+                        const initExpr = this.analyzeInitExpr(context, program, children[i], fieldType);
+
+                        if (isNull(initExpr)) {
+                            // omit error because it was already produced by the call above
+                            return null;
+                        }
+
+                        args.push(initExpr);
+                    }
+                }
+
+                // type = type.baseType;
+            }
+        } else {
+
+            /**
+            * AST example:
+            *    InitExpr
+            *         T_UINT = '10'
+            */
+            if (children.length === 1) {
+                const initExpr = this.analyzeExpr(context, program, children[0]);
+
+                // TODO: use checkTwoOperandTypes() function instead
+                if (!expectedType.isEqual(initExpr.type)) {
+                    // TODO: emit error
+                    return null;
+                }
+
+                args.push(initExpr);
+            } 
+            else {
+                const numArgs = (children.length - 1) / 2;
+
+                // handle cases like: int a = { 1 };
+                if (numArgs !== 1) {
+                    // TODO: emit error (invalid number of arguments)
+                    return null;
+                }
+
+                const initExpr = this.analyzeExpr(context, program, children[children.length - 3]);
+
+                // TODO: use checkTwoOperandTypes() function instead
+                if (!expectedType.isEqual(initExpr.type)) {
+                    // TODO: emit error
+                    return null;
+                }
+
+                args.push(initExpr);
             }
         }
 
-        // TODO: determ type!!
-        const initExpr: IInitExprInstruction = new InitExprInstruction({ scope, sourceNode, args, type: null });
-        return initExpr;
+        return new InitExprInstruction({ scope, sourceNode, args, type: <IVariableTypeInstruction>type });
+    }
+
+    /**
+     * AST example:
+     *    InitExpr
+     *         T_UINT = '0'
+     *    InitExpr
+     *         T_PUNCTUATOR_125 = '}'
+     *       + InitExpr 
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    protected analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction): IInitExprInstruction {
+        return this.analyzeInitExprChildren(context, program, sourceNode, sourceNode.children, expectedType);
     }
 
 
@@ -1073,6 +1219,7 @@ export class Analyzer {
         return new CbufferInstruction({ id, type, sourceNode, semantic, annotation, scope });
     }
 
+
     /**
      * AST example:
      *    Variable
@@ -1143,18 +1290,11 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else if (children[i].name === 'Initializer') {
-                let args = this.analyzeInitializerArguments(context, program, children[i]);
-                init = new InitExprInstruction({ scope, sourceNode: children[i], args, type });
+                init = this.analyzeInitializer(context, program, children[i], type);
 
-                let isValidInit = false;
-                try {
-                    isValidInit = init.optimizeForVariableType(type);
-                } catch (e) { };
-
-                if (!isValidInit) {
+                if (!init) {
                     // TODO: make it warning
                     context.error(sourceNode, EErrors.InvalidVariableInitializing, { varName: id.name });
-                    init = null;
                 }
             }
         }
@@ -1234,24 +1374,9 @@ export class Analyzer {
      *         T_PUNCTUATOR_123 = '{'
      *         T_PUNCTUATOR_61 = '='
      */
-    protected analyzeInitializerArguments(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction[] {
+    protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction): IInitExprInstruction {
         const children = sourceNode.children;
-        const scope = program.currentScope;
-
-        let args: IExprInstruction[] = [];
-
-        if (children.length === 2) {
-            args.push(this.analyzeExpr(context, program, children[0]));
-        }
-        else {
-            for (let i = children.length - 3; i >= 1; i--) {
-                if (children[i].name === 'InitExpr') {
-                    args.push(this.analyzeInitExpr(context, program, children[i]));
-                }
-            }
-        }
-
-        return args;
+        return this.analyzeInitExprChildren(context, program, sourceNode, children.slice(0, -1), expectedType);
     }
 
 
@@ -3823,7 +3948,7 @@ export class Analyzer {
                 return <IVariableTypeInstruction>leftType;
             }
             // samplers and arrays can't be compared directly
-            else if (Analyzer.isEqualOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
+            else if (Analyzer.isEqualityOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
                 return boolType;
             }
 
@@ -3883,7 +4008,7 @@ export class Analyzer {
                 // TODO: emit error (cannot perfome comparison with non-scalar)
                 return null;
             }
-            else if (Analyzer.isEqualOperator(operator)) {
+            else if (Analyzer.isEqualityOperator(operator)) {
                 return boolType;
             }
             else if (operator === '=') {
@@ -3966,10 +4091,13 @@ export class Analyzer {
         }
 
         if (operator === '=') {
-            // TODO: move conversion logic inside TypeInstruction.
-            if ((leftType.isEqual(T_INT) && rightType.isEqual(T_UINT)) ||
-                (leftType.isEqual(T_UINT) && rightType.isEqual(T_INT))) {
-                return leftType;
+            if (isScalarType(rightType)) {
+                if (determTypePrecision(leftType) > determTypePrecision(rightType)) {
+                    context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
+                        tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${leftType.toCode()}`
+                    });
+                    return leftType;
+                }
             }
         }
 
@@ -4060,7 +4188,7 @@ export class Analyzer {
     }
 
 
-    protected static isEqualOperator(operator: string): boolean {
+    protected static isEqualityOperator(operator: string): boolean {
         return operator === '==' || operator === '!=';
     }
 }

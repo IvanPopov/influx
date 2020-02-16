@@ -35,14 +35,4 @@ export class ComplexExprInstruction extends ExprInstruction implements IComplexE
     isConst(): boolean {
         return (<IExprInstruction>this.expr).isConst();
     }
-
-    
-    evaluate(): boolean {
-        if ((<IExprInstruction>this.expr).evaluate()) {
-            this._evalResult = (<IExprInstruction>this.expr).getEvalValue();
-            return true;
-        } else {
-            return false;
-        }
-    }
 }

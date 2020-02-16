@@ -154,17 +154,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return this.subType.length;
         }
 
-        // TODO: rework evaluation api!
-
-        let isEval = this._arrayIndexExpr.evaluate();
-
-        if (isEval) {
-            let iValue: number = <number>this._arrayIndexExpr.getEvalValue();
-            if (isNumber(iValue)) {
-                return iValue;
-            }
-        }
-
+        // TODO: try to evaluate this._arrayIndexExpr
         return instruction.UNDEFINE_LENGTH;
     }
 

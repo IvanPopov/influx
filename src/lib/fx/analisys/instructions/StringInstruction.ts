@@ -37,13 +37,7 @@ export class StringInstruction extends ExprInstruction implements ILiteralInstru
     toCode(): string {
         return this._value;
     }
-
-
-    evaluate(): boolean {
-        this._evalResult = this._value;
-        return true;
-    }
-
+    
 
     isConst(): boolean {
         return true;

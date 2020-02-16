@@ -32,12 +32,6 @@ export class IdExprInstruction extends ExprInstruction implements IIdExprInstruc
     }
 
 
-    /** @deprecated */
-    evaluate(): boolean {
-        return false;
-    }
-
-
     toCode(): string {
         return this.decl.id.toCode();
     }

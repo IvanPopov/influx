@@ -1,9 +1,8 @@
 import { isNull } from "@lib/common";
-import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction, IArithmeticOperator } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IArithmeticOperator, IExprInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
 import { Instruction } from "./Instruction";
-
 
 export interface IArithmeticExprInstructionSettings extends IExprInstructionSettings {
     left: IExprInstruction;
@@ -39,40 +38,6 @@ export class ArithmeticExprInstruction extends ExprInstruction implements IArith
 
     get operator(): IArithmeticOperator {
         return this._operator;
-    }
-    
-
-    evaluate(): boolean {
-        var pValL: any = this._leftOperand.evaluate() ? this._leftOperand.getEvalValue() : null;
-        var pValR: any = this._rightOperand.evaluate() ? this._rightOperand.getEvalValue() : null;
-
-        if (isNull(pValL) || isNull(pValR)) {
-            return false;
-        }
-
-        try {
-            switch (this.operator) {
-                case "+":
-                    this._evalResult = pValL + pValR;
-                    break;
-                case "-":
-                    this._evalResult = pValL - pValR;
-                    break;
-                case "*":
-                    this._evalResult = pValL * pValR;
-                    break;
-                case "/":
-                    this._evalResult = pValL / pValR;
-                    break;
-                case "%":
-                    this._evalResult = pValL % pValR;
-                    break;
-            }
-            return true;
-        }
-        catch (e) {
-            return false;
-        }
     }
 
     toCode(): string {

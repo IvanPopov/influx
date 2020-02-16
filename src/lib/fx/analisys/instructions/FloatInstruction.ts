@@ -31,12 +31,6 @@ export class FloatInstruction extends ExprInstruction implements ILiteralInstruc
         return `${this.value}${this.value % 1 === 0? '.': ''}`;
     }
 
-    
-    evaluate(): boolean {
-        this._evalResult = this.value;
-        return true;
-    }
-
 
     isConst(): boolean {
         return true;

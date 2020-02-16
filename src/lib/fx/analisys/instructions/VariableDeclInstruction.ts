@@ -57,13 +57,6 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    /** @deprecated */
-    get defaultValue(): any {
-        this._initExpr.evaluate();
-        return this._initExpr.getEvalValue();
-    }
-
-
     get type(): IVariableTypeInstruction {
         return <IVariableTypeInstruction>this._type;
     }
