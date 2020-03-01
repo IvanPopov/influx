@@ -384,7 +384,7 @@ export class FxAnalyzer extends Analyzer {
 
                         if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particleCore ||
                             argv[0].isNotBaseArray() ||
-                            !argv[1].hasUsage('out') || !argv[1].writable || argv[1].isNotBaseArray()) {
+                            !(argv[1].hasUsage('out') || argv[1].hasUsage('inout')) || !argv[1].writable || argv[1].isNotBaseArray()) {
                             context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
                                 { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' type mismatch.` });
                             prerenderRoutine = null;

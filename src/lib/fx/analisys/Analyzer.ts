@@ -63,7 +63,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID, T_FLOAT, isFloatType } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -748,33 +748,47 @@ export class Analyzer {
      *       + InitExpr 
      *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzeInitExprChildren(context: Context, program: ProgramScope, sourceNode: IParseNode, children: IParseNode[], expectedType: ITypeInstruction): IInitExprInstruction {
+    protected analyzeInitExprChildren(context: Context, program: ProgramScope, sourceNode: IParseNode, children: IParseNode[], expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IInitExprInstruction {
         const scope = program.currentScope;
 
         let args = <IExprInstruction[]>[];
         let type = expectedType;
 
-        // It's a global user defined array or just not unit array;
-        // Trying to exclude types like float1.
-        if ((expectedType.isNotBaseArray() && expectedType.scope.type <= EScopeType.k_Global) ||
-            expectedType.isArray()) {
+        if (children.length === 1) {
+            const initExpr = this.analyzeExpr(context, program, children[0]);
 
-            /**
-             * AST example:
-             *    Initializer
-             *         T_UINT = '10'
-             */
-            if (children.length === 1) {
-                // TODO: emit error (attemp to init an array with non-array initializer)
+            // NOTE: exprSourceNode => source node of the whole expression like "const float name = value" for better error highlighting.
+            //                                                                               ^^^^^^^^^^^^
+            //       sourceNode => source node of the init expr: const float3 name = { 1, 2, 3 };
+            //                                                                    ^^^^^^^^^^^^^
+            //       sourceNode => source node of the init expr: const float3[1] name = { { 1, 2, 3 } };
+            //                                                                            ^^^^^^^^^^^
+
+            const resType = Analyzer.checkTwoOperandExprTypes(context, '=', expectedType, initExpr.type,
+                sourceNode/* Use correct source node! */, initExpr.sourceNode, exprSourceNode || sourceNode, { isInitializing: true });
+            assert(resType === null || resType.isEqual(expectedType));
+
+            if (!resType) {
+                // omit error, all errors must be already fired above (inside checkTwoOperandExprTypes)
                 return null;
             }
+
+            args.push(initExpr);
+        }
+        // It's a global user defined array or just not unit array;
+        // Trying to exclude types like float1.
+        else if ((expectedType.isNotBaseArray() && expectedType.scope.type <= EScopeType.k_Global) ||
+            expectedType.isArray()) {
+
 
             const numArgs = (children.length - 1) / 2;
 
             if (expectedType.length === instruction.UNDEFINE_LENGTH ||
                 (expectedType.isNotBaseArray() && numArgs !== expectedType.length) ||
                 (!expectedType.isNotBaseArray() && numArgs !== expectedType.baseType.length)) {
-                // TODO: emit error (invalid number of arguments)
+                context.error(sourceNode, EErrors.InvalidVariableInitializingEx, {
+                    tooltip: `attemp to init an array with invalid number of arguments. expected: ${expectedType.length}, given: ${numArgs}`
+                });
                 return null;
             }
 
@@ -805,94 +819,59 @@ export class Analyzer {
         }
         else if (expectedType.isComplex()) {
 
+            const numArgs = (children.length - 1) / 2;
+            const fieldNameList = expectedType.fieldNames;
+
+            if (numArgs !== fieldNameList.length) {
+                // TODO: emit error (invalid number of arguments)
+                return null;
+            }
+
 
             /**
              * AST example:
              *    InitExpr
-             *         T_UINT = '10'
+             *         T_PUNCTUATOR_125 = '}'
+             *       + InitExpr 
+             *         T_PUNCTUATOR_44 = ','
+             *       + InitExpr 
+             *         T_PUNCTUATOR_123 = '{'
              */
-            if (children.length === 1) {
-                const initExpr = this.analyzeExpr(context, program, children[0]);
+            for (let i = children.length - 2; i >= 1; i--) {
+                if (children[i].name === 'InitExpr') {
+                    const fieldType = expectedType.getField(fieldNameList[i]).type;
+                    const initExpr = this.analyzeInitExpr(context, program, children[i], fieldType);
 
-                if (!expectedType.isEqual(initExpr.type)) {
-                    // TODO: emit error
-                    return null;
-                }
-
-                args.push(initExpr);
-            } 
-            else {
-                const numArgs = (children.length - 1) / 2;
-                const fieldNameList = expectedType.fieldNames;
-
-                if (numArgs !== fieldNameList.length) {
-                    // TODO: emit error (invalid number of arguments)
-                    return null;
-                }
-
-
-                /**
-                 * AST example:
-                 *    InitExpr
-                 *         T_PUNCTUATOR_125 = '}'
-                 *       + InitExpr 
-                 *         T_PUNCTUATOR_44 = ','
-                 *       + InitExpr 
-                 *         T_PUNCTUATOR_123 = '{'
-                 */
-                for (let i = children.length - 2; i >= 1; i--) {
-                    if (children[i].name === 'InitExpr') {
-                        const fieldType = expectedType.getField(fieldNameList[i]).type;
-                        const initExpr = this.analyzeInitExpr(context, program, children[i], fieldType);
-
-                        if (isNull(initExpr)) {
-                            // omit error because it was already produced by the call above
-                            return null;
-                        }
-
-                        args.push(initExpr);
+                    if (isNull(initExpr)) {
+                        // omit error because it was already produced by the call above
+                        return null;
                     }
-                }
 
-                // type = type.baseType;
+                    args.push(initExpr);
+                }
             }
+
+            // type = type.baseType;
+
         } else {
+            const numArgs = (children.length - 1) / 2;
 
-            /**
-            * AST example:
-            *    InitExpr
-            *         T_UINT = '10'
-            */
-            if (children.length === 1) {
-                const initExpr = this.analyzeExpr(context, program, children[0]);
-
-                // TODO: use checkTwoOperandTypes() function instead
-                if (!expectedType.isEqual(initExpr.type)) {
-                    // TODO: emit error
-                    return null;
-                }
-
-                args.push(initExpr);
-            } 
-            else {
-                const numArgs = (children.length - 1) / 2;
-
-                // handle cases like: int a = { 1 };
-                if (numArgs !== 1) {
-                    // TODO: emit error (invalid number of arguments)
-                    return null;
-                }
-
-                const initExpr = this.analyzeExpr(context, program, children[children.length - 3]);
-
-                // TODO: use checkTwoOperandTypes() function instead
-                if (!expectedType.isEqual(initExpr.type)) {
-                    // TODO: emit error
-                    return null;
-                }
-
-                args.push(initExpr);
+            // handle cases like: int a = { 1 };
+            if (numArgs !== 1) {
+                // TODO: emit error (invalid number of arguments)
+                return null;
             }
+
+            const initExpr = this.analyzeExpr(context, program, children[children.length - 3]);
+
+            // TODO: use checkTwoOperandTypes() function instead
+            if (!expectedType.isEqual(initExpr.type)) {
+                // TODO: emit error
+                return null;
+            }
+
+            args.push(initExpr);
+
         }
 
         return new InitExprInstruction({ scope, sourceNode, args, type: <IVariableTypeInstruction>type });
@@ -1290,7 +1269,7 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else if (children[i].name === 'Initializer') {
-                init = this.analyzeInitializer(context, program, children[i], type);
+                init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
 
                 if (!init) {
                     // TODO: make it warning
@@ -1374,9 +1353,9 @@ export class Analyzer {
      *         T_PUNCTUATOR_123 = '{'
      *         T_PUNCTUATOR_61 = '='
      */
-    protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction): IInitExprInstruction {
+    protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IInitExprInstruction {
         const children = sourceNode.children;
-        return this.analyzeInitExprChildren(context, program, sourceNode, children.slice(0, -1), expectedType);
+        return this.analyzeInitExprChildren(context, program, sourceNode, children.slice(0, -1), expectedType, exprSourceNode);
     }
 
 
@@ -1973,31 +1952,38 @@ export class Analyzer {
             return null;
         }
 
+        const decl =
+            // FIXME: remove 'logical OR' operation, always use subType
+            (elementType.subType || elementType).getField(fieldName); // arrayIndex
+
+        const { type } = decl;
+
         // in case of typical postfix exp. like "element.postfix":
-        //      elementType => type defrived from the parameter or variable declaration or derived from another expr
+        //      elementType => type derived from the parameter or variable declaration or derived from another expr
         //      elementType.subType => original complex (structure) type
         // in case of something else, like ccall with postfix "float2(1.0, 2.0).yx":
         //      elementType => original system type
 
-        const scope = elementType.scope;
-        const { id, type, type: { padding, length }, semantic } =
-            // FIXME: remove 'logical OR' operation, always use subType
-            (elementType.subType || elementType).getField(fieldName); // arrayIndex
+        const fieldType = new VariableTypeInstruction({ 
+            scope: type.scope, 
+            sourceNode: type.sourceNode, 
+            type, 
+            readable: elementType.readable, 
+            writable: elementType.writable, 
+            /*aligment,*/
+            padding: type.padding });
+        
+        const fieldId = new IdInstruction({ scope: decl.scope, name: decl.id.name, sourceNode: decl.id.sourceNode });
 
+        const field = new VariableDeclInstruction({ 
+            scope: decl.scope, 
+            type: fieldType, 
+            sourceNode: decl.sourceNode, 
+            id: fieldId,
+            usageFlags: decl.usageFlags
+        });
 
-
-        // note: sourceNode for field is being used from the original complex structure.
-
-        // let arrayIndex: IExprInstruction = null;
-        // if (type.isNotBaseArray()) {
-        //     // using of length instead of arrayIndex because of lack of api functionality :/
-        //     assert(length != Instruction.UNDEFINE_LENGTH, "undefined behaviour found");
-        //     arrayIndex = new IntInstruction({ scope, value: String(length) });
-        // }
-
-        const fieldType = new VariableTypeInstruction({ type, scope, padding, sourceNode: type.sourceNode/*, arrayIndex*/ });
-        const fieldId = new IdInstruction({ scope, name: id.name, sourceNode: id.sourceNode });
-        const field = new VariableDeclInstruction({ scope, id: fieldId, type: fieldType, semantic, sourceNode: fieldId.sourceNode });
+        
 
         return Instruction.$withParent(field, elementType);
     }
@@ -2014,9 +2000,9 @@ export class Analyzer {
 
         const scope = program.currentScope;
         const name = sourceNode.value;                             // fiedl name
-        // const decl = this.createFieldDecl(elementType, name);   // field decl
-        const decl = elementType.getField(name);
-
+        const decl = this.createFieldDecl(elementType, name);       // field decl
+        // const decl = elementType.getField(name);
+        
         if (isNull(decl)) {
             return null;
         }
@@ -2431,7 +2417,7 @@ export class Analyzer {
         const leftType = <IVariableTypeInstruction>left.type;
         const rightType = <IVariableTypeInstruction>right.type;
 
-        let exprType: IVariableTypeInstruction = null;
+        let exprType = <ITypeInstruction>null;
 
         if (operator !== '=') {
             exprType = Analyzer.checkTwoOperandExprTypes(context, operator, leftType, rightType, left.sourceNode, right.sourceNode, sourceNode);
@@ -3882,17 +3868,18 @@ export class Analyzer {
     * Returns the type obtained as a result of application of the operator, or, if it is impossible to apply, null.
      *
      * @operator {string} One of the operators: + - * / % += -= *= /= %= = < > <= >= == != =
-     * @leftType {IVariableTypeInstruction} Type of the left side of the expression.
-     * @rightType {IVariableTypeInstruction} Type of the right side of the expression.
+     * @leftType {ITypeInstruction} Type of the left side of the expression.
+     * @rightType {ITypeInstruction} Type of the right side of the expression.
      */
     protected static checkTwoOperandExprTypes(
         context: Context,
         operator: string,
-        leftType: IVariableTypeInstruction,
-        rightType: IVariableTypeInstruction,
+        leftType: ITypeInstruction,
+        rightType: ITypeInstruction,
         leftSourceNode: IParseNode = null,
         rightSourceNode: IParseNode = null,
-        exprSourceNode: IParseNode = null): IVariableTypeInstruction {
+        exprSourceNode: IParseNode = null, 
+        { isInitializing = false } = {}): ITypeInstruction {
 
         if (!leftType || !rightType) {
             return null;
@@ -3905,19 +3892,22 @@ export class Analyzer {
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
         // const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
 
-        const boolType = <IVariableTypeInstruction>T_BOOL;
-        // const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
+        // const boolType = <IVariableTypeInstruction>T_BOOL;
+        const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
 
         if (isArray/* || isSampler*/) {
+            // TODO: allow expressions like: arr1 = arr2; ??
             return null;
         }
 
+        // TODO: remove this ????
         if (operator === '%' || operator === '%=') {
+            // TODO: emit error
             return null;
         }
 
         if (Analyzer.isAssignmentOperator(operator)) {
-            if (!leftType.writable) {
+            if (!leftType.writable && !isInitializing) {
                 context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
                 return null;
             }
@@ -3929,6 +3919,7 @@ export class Analyzer {
 
             if (operator !== '=' && !leftType.readable) {
                 context.error(leftSourceNode, EErrors.InvalidTypeForReading);
+                return null;
             }
         }
         else {
@@ -3949,7 +3940,7 @@ export class Analyzer {
             }
             // samplers and arrays can't be compared directly
             else if (Analyzer.isEqualityOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
-                return boolType;
+                return constBoolType;
             }
 
             // TODO: emit error (unsupported operation on complex values)
@@ -3961,19 +3952,13 @@ export class Analyzer {
         const rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
 
 
-        // TODO: remove this check?
-        if (leftType.isConst() && Analyzer.isAssignmentOperator(operator)) {
-            // TODO: emit proper error
-            return null;
-        }
-
         if (Analyzer.isBitwiseOperator(operator)) {
-            if (!leftType.isEqual(T_INT) && !leftType.isEqual(T_UINT)) {
+            if (!isIntegerType(leftType)) {
                 // TODO: emit error (cannot perfom bitwise op. on non-integers)
                 return null;
             }
 
-            if (!rightType.isEqual(T_INT) && !rightType.isEqual(T_UINT)) {
+            if (!isIntegerType(rightType)) {
                 // TODO: emit error (cannot perfom bitwise op. on non-integers)
                 return null;
             }
@@ -4001,15 +3986,15 @@ export class Analyzer {
             }
             else if (Analyzer.isRelationalOperator(operator)) {
                 if (isScalarType(leftType)) {
-                    return boolType;
+                    return constBoolType;
                 }
 
-                // TODO: allow vectors?
+                // TODO: allow vectors? for ex: vec3 < vec3 => bool3
                 // TODO: emit error (cannot perfome comparison with non-scalar)
                 return null;
             }
             else if (Analyzer.isEqualityOperator(operator)) {
-                return boolType;
+                return constBoolType;
             }
             else if (operator === '=') {
                 return leftBaseType;
@@ -4019,27 +4004,24 @@ export class Analyzer {
             return null;
         }
 
+        // TODO: remove this hack
         // temp workaround for INT/UINT comparison
         if (Analyzer.isRelationalOperator(operator)) {
-            if ((leftType.isEqual(T_UINT) && rightType.isEqual(T_INT)) ||
-                (leftType.isEqual(T_INT) && rightType.isEqual(T_UINT))) {
-                return boolType;
+            // int float should be compared as floats
+            // int uint should be compared as uints
+            if ((isIntegerType(leftType) || isFloatType(leftType)) && (isIntegerType(rightType) || isFloatType(rightType))) {
+                if (!leftType.isEqual(rightType)) {
+                    context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
+                        tooltip: `comparing values of different types: ${leftType.toCode()} ${operator} ${rightType.toCode()}`
+                    });
+                }
+                return constBoolType;
             }
         }
 
         // op: "+", "-", "*", "/"
         //     "+=", "-=", "*=", "/="
         if (Analyzer.isArithmeticalOperator(operator)) {
-
-            // op: "+=", "-=", "*=", "/="
-            if (Analyzer.isAssignmentOperator(operator)) {
-                if (!leftType.isEqual(rightType)) {
-                    // TODO: add support for imlicit conversions
-                    // TODO: emit error (operator cannot be used with a given lvalue)
-                    context.error(leftSourceNode, EErrors.OperatorCannotBeUsedWithGivenLValue, {});
-                    return null;
-                }
-            }
 
             // op: "+", "-", "*", "/"
 
@@ -4055,6 +4037,18 @@ export class Analyzer {
                 assert(false, `cannot determ result type for "${leftType.toCode()} ${operator} ${rightType.toCode()}"`);
                 return null;
             }
+
+
+            // op: "+=", "-=", "*=", "/="
+            if (Analyzer.isAssignmentOperator(operator)) {
+                if (!leftType.isEqual(resultType)) {
+                    // TODO: add support for imlicit conversions
+                    // TODO: emit error (operator cannot be used with a given lvalue)
+                    context.error(exprSourceNode, EErrors.OperatorCannotBeUsedWithGivenLValue, {});
+                    return null;
+                }
+            }
+
 
             if (resultType.length < leftType.length || resultType.length < rightType.length) {
                 context.warn(exprSourceNode, EWarnings.ImplicitTypeTruncation, {
@@ -4098,6 +4092,13 @@ export class Analyzer {
                     });
                     return leftType;
                 }
+
+                if (isIntegerType(leftType) && isIntegerType(rightType)) {
+                    context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
+                        tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${leftType.toCode()}`
+                    });
+                    return leftType;
+                }
             }
         }
 
@@ -4106,11 +4107,11 @@ export class Analyzer {
 
 
     /**
-     * Проверят возможность использования оператора к типу данных.
-     * Возращает тип получаемый в результате приминения опрератора, или, если применить его невозможно - null.
+     * Check the ability to use the operator to the data type.
+     * Returns the type obtained as a result of application of the operator, or, if it is impossible to apply, null.
      *
-     * @operator {string} Один из операторов: + - ! ++ --
-     * @leftType {IVariableTypeInstruction} Тип операнда
+     * @operator {string} One of the operators: + - ! ++ --
+     * @leftType {IVariableTypeInstruction} Operand type
      */
     protected static checkOneOperandExprType(context: Context, sourceNode: IParseNode, operator: string,
         type: IVariableTypeInstruction): IVariableTypeInstruction {

@@ -46,7 +46,7 @@ int Spawn()
     return 300;
 }
 
-void init(out Part part, int partId)
+void init(inout Part part, int partId)
 {
     part.pos = rndSphere(1.f, partId);//float3(0.f, float2(0.0).x, 0.0);
     part.size = 0.1;
@@ -65,7 +65,7 @@ bool update(inout Part part)
 }
 
 
-void prerender(inout Part part, out DefaultShaderInput input)
+void prerender(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos + part.dir * sin(part.timelife * 30.f) * 0.1f;
     input.size = part.size;

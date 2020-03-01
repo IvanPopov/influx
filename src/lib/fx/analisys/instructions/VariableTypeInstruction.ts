@@ -327,7 +327,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     getField(fieldName: string): IVariableDeclInstruction {
-        // TODO: propogate usages?
+        // TODO: propogate usages? atleast readable/writable
         return this.subType.getField(fieldName);
     }
 
@@ -360,11 +360,14 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
      * Helpers
      */
 
-
+    // TODO: move to type.ts
+    /** @deprecated */
     static wrap(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
         return new VariableTypeInstruction({ type, scope });
     }
 
+    // TODO: move to type.ts
+    /** @deprecated */
     static wrapAsConst(type: ITypeInstruction, scope: IScope): IVariableTypeInstruction {
         return new VariableTypeInstruction({ type, scope, writable: false, usages: ['const'] });
     }

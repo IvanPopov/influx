@@ -52,6 +52,11 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
+    get usageFlags(): number {
+        return this._usageFlags;
+    }
+
+
     get initExpr(): IInitExprInstruction {
         return this._initExpr;
     }

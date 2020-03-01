@@ -589,39 +589,39 @@ function addSystemTypeMatrix(): void {
     let bool4 = getSystemType("bool4");
 
     generateSystemType("float2x2", -1, float2, 2);
-    generateSystemType("float2x3", -1, float2, 3);
-    generateSystemType("float2x4", -1, float2, 4);
+    generateSystemType("float2x3", -1, float3, 2);
+    generateSystemType("float2x4", -1, float4, 2);
 
-    generateSystemType("float3x2", -1, float3, 2);
+    generateSystemType("float3x2", -1, float2, 3);
     generateSystemType("float3x3", -1, float3, 3);
-    generateSystemType("float3x4", -1, float3, 4);
+    generateSystemType("float3x4", -1, float4, 3);
 
-    generateSystemType("float4x2", -1, float4, 2);
-    generateSystemType("float4x3", -1, float4, 3);
+    generateSystemType("float4x2", -1, float2, 4);
+    generateSystemType("float4x3", -1, float3, 4);
     generateSystemType("float4x4", -1, float4, 4);
 
     generateSystemType("int2x2", -1, int2, 2);
-    generateSystemType("int2x3", -1, int2, 3);
-    generateSystemType("int2x4", -1, int2, 4);
+    generateSystemType("int2x3", -1, int3, 2);
+    generateSystemType("int2x4", -1, int4, 2);
 
-    generateSystemType("int3x2", -1, int3, 2);
+    generateSystemType("int3x2", -1, int2, 3);
     generateSystemType("int3x3", -1, int3, 3);
-    generateSystemType("int3x4", -1, int3, 4);
+    generateSystemType("int3x4", -1, int4, 3);
 
-    generateSystemType("int4x2", -1, int4, 2);
-    generateSystemType("int4x3", -1, int4, 3);
+    generateSystemType("int4x2", -1, int2, 4);
+    generateSystemType("int4x3", -1, int3, 4);
     generateSystemType("int4x4", -1, int4, 4);
 
     generateSystemType("bool2x2", -1, bool2, 2);
-    generateSystemType("bool2x3", -1, bool2, 3);
-    generateSystemType("bool2x4", -1, bool2, 4);
+    generateSystemType("bool2x3", -1, bool3, 2);
+    generateSystemType("bool2x4", -1, bool4, 2);
 
-    generateSystemType("bool3x2", -1, bool3, 2);
+    generateSystemType("bool3x2", -1, bool2, 3);
     generateSystemType("bool3x3", -1, bool3, 3);
-    generateSystemType("bool3x4", -1, bool3, 4);
+    generateSystemType("bool3x4", -1, bool4, 3);
 
-    generateSystemType("bool4x2", -1, bool4, 2);
-    generateSystemType("bool4x3", -1, bool4, 3);
+    generateSystemType("bool4x2", -1, bool2, 4);
+    generateSystemType("bool4x3", -1, bool3, 4);
     generateSystemType("bool4x4", -1, bool4, 4);
 }
 
@@ -828,6 +828,7 @@ function addSystemFunctions(): void {
     generateSystemFunction("ceil", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     // generateSystemFunction("fract", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("abs", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("abs", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
     generateSystemFunction("sign", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("sign", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
     generateSystemFunction("normalize", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
@@ -1114,7 +1115,7 @@ export const T_FLOAT2X3 = scope.findType("float2x3");
 export const T_FLOAT2X4 = scope.findType("float2x4");
 export const T_FLOAT3X2 = scope.findType("float3x2");
 export const T_FLOAT3X3 = scope.findType("float3x3");
-export const T_FLOAT3X4 = scope.findType("float3x3");
+export const T_FLOAT3X4 = scope.findType("float3x4");
 export const T_FLOAT4X2 = scope.findType("float4x2");
 export const T_FLOAT4X3 = scope.findType("float4x3");
 export const T_FLOAT4X4 = scope.findType("float4x4");
@@ -1232,6 +1233,11 @@ export function isHalfBasedType(type: ITypeInstruction): boolean {
  */
 export function isIntegerType(type: ITypeInstruction): boolean {
     return type.isEqual(T_INT) || type.isEqual(T_UINT);
+}
+
+
+export function isFloatType(type: ITypeInstruction): boolean {
+    return type.isEqual(T_FLOAT);
 }
 
 export function isIntBasedType(type: ITypeInstruction): boolean {

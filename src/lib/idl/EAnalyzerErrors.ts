@@ -70,7 +70,8 @@ export enum EAnalyzerErrors {
     InvalidTypeForWriting,
     InvalidTypeForReading,
     InvalidExprIsNotLValue,
-    InvalidVariableInitializing,
+    InvalidVariableInitializing,   // TODO: << remove (see desc below)
+    InvalidVariableInitializingEx, // TODO: << remove error in favor of custom errors
     UnsupportedStateIndex,
     InvalidSamplerTexture,
     CannotCalcPadding,

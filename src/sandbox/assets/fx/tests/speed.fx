@@ -47,7 +47,7 @@ int Spawn()
     return 300;
 }
 
-void init(out Part part, int partId)
+void init(inout Part part, int partId)
 {
     part.startTime = elapsedTimeLevel;
     part.pos = rndSphere(1.f, partId) * 0.2f;//float3(0.f, float2(0.0).x, 0.0);
@@ -67,7 +67,7 @@ bool update(inout Part part)
 }
 
 
-void prerender(inout Part part, out DefaultShaderInput input)
+void prerender(inout Part part, inout DefaultShaderInput input)
 {
     float dt = elapsedTimeLevel - part.startTime;
     input.pos.xyz = part.pos + part.speed * dt + float3(0.f, -1.f, 0.f) * dt * dt * 0.5f;
