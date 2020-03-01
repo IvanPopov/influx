@@ -20,8 +20,8 @@ export class CompileExprInstruction extends ExprInstruction implements ICompileE
     constructor({ operand, args = null, ...settings }: ICompileExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_CompileExpr, ...settings });
 
-        this._operand = Instruction.$withParent(operand, this);
-        this._args = (args || []).map(arg => Instruction.$withParent(arg, this));
+        this._operand = operand;//Instruction.$withParent(operand, this);
+        this._args = args;//(args || []).map(arg => Instruction.$withParent(arg, this));
     }
 
     

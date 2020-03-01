@@ -63,7 +63,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID, T_FLOAT, isFloatType } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isFloatType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -1971,11 +1971,14 @@ export class Analyzer {
             readable: elementType.readable, 
             writable: elementType.writable, 
             /*aligment,*/
-            padding: type.padding });
-        
+            padding: type.padding 
+        });
+
+
         const fieldId = new IdInstruction({ scope: decl.scope, name: decl.id.name, sourceNode: decl.id.sourceNode });
 
         const field = new VariableDeclInstruction({ 
+            semantic: decl.semantic,
             scope: decl.scope, 
             type: fieldType, 
             sourceNode: decl.sourceNode, 
