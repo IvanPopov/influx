@@ -8,7 +8,7 @@ import { EVariableUsageFlags, VariableDeclInstruction } from "@lib/fx/analisys/i
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
-import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction, IVariableUsage } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
 // TODO: use it
@@ -446,6 +446,7 @@ function addSystemTypeVector(): void {
 
 
     let float = getSystemType("float");
+    let half = getSystemType("half");
     let int = getSystemType("int");
     let uint = getSystemType("uint");
     let bool = getSystemType("bool");
@@ -454,10 +455,14 @@ function addSystemTypeVector(): void {
     let float3 = generateSystemType("float3", -1, float, 3);
     let float4 = generateSystemType("float4", -1, float, 4);
 
+    let half2 = generateSystemType("half2", -1, half, 2);
+    let half3 = generateSystemType("half3", -1, half, 3);
+    let half4 = generateSystemType("half4", -1, half, 4);
+
     // TODO: use dedicated types
-    defineTypeAlias('float2', 'half2');
-    defineTypeAlias('float3', 'half3');
-    defineTypeAlias('float4', 'half4');
+    // defineTypeAlias('float2', 'half2');
+    // defineTypeAlias('float3', 'half3');
+    // defineTypeAlias('float4', 'half4');
 
     let int2 = generateSystemType("int2", -1, int, 2);
     let int3 = generateSystemType("int3", -1, int, 3);
@@ -495,6 +500,32 @@ function addSystemTypeVector(): void {
         addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, "float");
         addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, "float");
         suf4f.forEach(field => float4.addField(field));
+    }
+
+    {
+        let suf2f: IVariableDeclInstruction[] = [];
+        // program.push(EScopeType.k_Struct);
+        addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf2f, STSuffix, "half");
+        // program.pop();
+        suf2f.forEach(field => half2.addField(field));
+    }
+
+    {
+        let suf3f: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, "half");
+        suf3f.forEach(field => half3.addField(field));
+    }
+
+    {
+        let suf4f: IVariableDeclInstruction[] = [];
+        addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, "half");
+        addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, "half");
+        suf4f.forEach(field => half4.addField(field));
     }
 
     {
@@ -658,23 +689,52 @@ function generateSuffixLiterals(literals: string[], output: IMap<boolean>, depth
 }
 
 
-function generateSystemFunctionInstance(type: ITypeInstruction, name: string, paramTypes: ITypeInstruction[], vertex: boolean, pixel: boolean) {
-    let paramList = paramTypes.map((type, n) => {
+function generateSystemFunctionInstance(retType: ITypeDesc, name: string, paramTypes: ITypeDesc[], vertex: boolean, pixel: boolean) {
+    const paramList = paramTypes.map((typeDesc, n) => {
         return new VariableDeclInstruction({
-            type: new VariableTypeInstruction({ type, scope }),
+            type: new VariableTypeInstruction({ 
+                type: typeDesc.type, 
+                usages: typeDesc.usages,
+                scope 
+            }),
             id: new IdInstruction({ name: `p${n}`, scope }),
             scope
         });
     });
 
-    let returnType = new VariableTypeInstruction({ type, scope });
-    let id = new IdInstruction({ scope, name });
-    let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-    let func = new SystemFunctionInstruction({ scope, definition, pixel, vertex });
+    const returnType = new VariableTypeInstruction({ 
+        type: retType.type,
+        usages: retType.usages, 
+        scope 
+    });
+
+    const id = new IdInstruction({ scope, name });
+    const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+    const func = new SystemFunctionInstruction({ scope, definition, pixel, vertex });
 
     scope.addFunction(func);
 }
 
+
+function parseType(typename: string, typevalue: string = null)
+{
+    assert(typevalue !== TEMPLATE_TYPE);
+    const usagesType = (typevalue ? typename.replace(TEMPLATE_TYPE, typevalue) : typename).split(' ');
+    const hash = usagesType.slice(-1)[0];
+    const type = getSystemType(hash);
+    const usages = <IVariableUsage[]>usagesType.slice(0, -1);
+
+    assert(type !== null);
+    usages.forEach(usage => assert(['in', 'out', 'inout'].indexOf(usage) !== -1));
+    
+    return { type, usages, hash };
+}
+
+type ITypeDesc = ReturnType<typeof parseType>;
+
+function isTemplate(typename: string): boolean {
+    return typename.split(' ').slice(-1)[0] === TEMPLATE_TYPE;
+}
 
 /**
  * Exampler:
@@ -693,20 +753,13 @@ function generateSystemFunction(
     if (!isNull(templateTypes)) {
         for (let i = 0; i < templateTypes.length; i++) {
             let funcHash = name + "(";
-            let returnType = (returnTypeName === TEMPLATE_TYPE) ?
-                getSystemType(templateTypes[i]) :
-                getSystemType(returnTypeName);
-            let paramTypes: ITypeInstruction[] = [];
+            let returnType = parseType(returnTypeName, templateTypes[i]);
+            let paramTypes = <ITypeDesc[]>[];
 
             for (let j = 0; j < paramTypeNames.length; j++) {
-                if (paramTypeNames[j] === TEMPLATE_TYPE) {
-                    paramTypes.push(getSystemType(templateTypes[i]));
-                    funcHash += templateTypes[i] + ",";
-                }
-                else {
-                    paramTypes.push(getSystemType(paramTypeNames[j]));
-                    funcHash += paramTypeNames[j] + ","
-                }
+                const typeDesc = parseType(paramTypeNames[j], templateTypes[i]);
+                paramTypes.push(typeDesc);
+                funcHash += typeDesc.hash + ",";
             }
 
             funcHash += ")";
@@ -720,21 +773,22 @@ function generateSystemFunction(
         }
     }
     else {
-        if (returnTypeName === TEMPLATE_TYPE) {
+        if (isTemplate(returnTypeName)) {
             _emitException("Bad return type(TEMPLATE_TYPE) for system function '" + name + "'.");
         }
 
         let funcHash = name + "(";
-        let returnType = getSystemType(returnTypeName);
-        let paramTypes: ITypeInstruction[] = [];
+        let returnType = parseType(returnTypeName);
+        let paramTypes = <ITypeDesc[]>[];
 
         for (let i = 0; i < paramTypeNames.length; i++) {
-            if (paramTypeNames[i] === TEMPLATE_TYPE) {
+            if (isTemplate(paramTypeNames[i])) {
                 _emitException("Bad argument type(TEMPLATE_TYPE) for system function '" + name + "'.");
             }
             else {
-                paramTypes.push(getSystemType(paramTypeNames[i]));
-                funcHash += paramTypeNames[i] + ",";
+                const typeDesc = parseType(paramTypeNames[i]);
+                paramTypes.push(typeDesc);
+                funcHash += typeDesc.hash + ",";
             }
         }
 
@@ -790,6 +844,14 @@ function generateSystemFunction(
 //     scope.addFunction(func);
 // }
 
+/*
+    // TODO: move all system functions to external file
+
+    template mul (template x, template y) | float, int
+    template mul (template x, float y   ) | float2, float3, float4, float2x2, float3x3, float4x4
+    float4   mul (  float4 x, template y) | float4x4, float4x3, float4x2
+
+*/
 
 // TODO: rework system function templates for better readability
 function addSystemFunctions(): void {
@@ -903,7 +965,7 @@ function addSystemFunctions(): void {
     generateSystemFunction("degrees", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("sin", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("cos", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    generateSystemFunction("sincos", "void", [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("sincos", "void", [TEMPLATE_TYPE, `out ${TEMPLATE_TYPE}`, `out ${TEMPLATE_TYPE}`], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("tan", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("asin", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("acos", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);

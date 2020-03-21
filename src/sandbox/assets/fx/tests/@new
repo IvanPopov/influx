@@ -11,45 +11,6 @@
 */
 
 
-
-float3x4 quatAsMatrix ( float4 q )
-{
-   float3x4 res = ( float3x4 ) 0 ;
-
-   const float s = 2 ;
-
-   float xs = q . x * s ;
-   float ys = q . y * s ;
-   float zs = q . z * s ;
-
-   float wx = q . w * xs ;
-   float wy = q . w * ys ;
-   float wz = q . w * zs ;
-
-   float xx = q . x * xs ;
-   float xy = q . x * ys ;
-   float xz = q . x * zs ;
-
-   float yy = q . y * ys ;
-   float yz = q . y * zs ;
-   float zz = q . z * zs ;
-
-   res [ 0 ] [ 0 ] = 1 - yy - zz ;
-   res [ 1 ] [ 0 ] = xy + wz ;
-   res [ 2 ] [ 0 ] = xz - wy ;
-
-   res [ 0 ] [ 1 ] = xy - wz ;
-   res [ 1 ] [ 1 ] = 1 - xx - zz ;
-   res [ 2 ] [ 1 ] = yz + wx ;
-
-   res [ 0 ] [ 2 ] = xz + wy ;
-   res [ 1 ] [ 2 ] = yz - wx ;
-   res [ 2 ] [ 2 ] = 1 - xx - yy ;
-
-   return res ;
-}
-
-/*
       bool any1i ( int v ) { return any ( v ) ; }
       bool any2i ( int2 v ) { return any ( v ) ; }
       bool any3i ( int3 v ) { return any ( v ) ; }
@@ -1130,5 +1091,3 @@ struct BASE_VS_OUTPUT
 
       struct _EMPTY_STRUCT3 { } ;
 
-
-*/
