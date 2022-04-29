@@ -8,7 +8,7 @@ import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
-import * as THREE from 'three';
+import { Vector3 } from 'three';
 
 import { IPass } from './IEmitter';
 import { Diagnostics } from '@lib/util/Diagnostics';
@@ -216,13 +216,13 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         const uavNonSorted = uav;
         const uavSorted = !sorting ? uavNonSorted : createUAVEx(slDocument, uavPrerenderedReflection, capacity);
 
-        function sort(targetPos: THREE.Vector3) {
+        function sort(targetPos: Vector3) {
             assert(sorting);
 
             // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
             //       I hate javascript for that :/
 
-            const v3 = new THREE.Vector3();
+            const v3 = new Vector3();
             const length = numRenderedParticles();
 
             const nStride = stride * instanceCount; // stride in floats

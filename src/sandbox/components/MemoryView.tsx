@@ -1,8 +1,7 @@
 import { CBUFFER0_REGISTER, ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
-import { IWithStyles } from '@sandbox/components';
 import * as React from 'react';
-import injectSheet from 'react-jss';
+import withStyles, { WithStylesProps } from 'react-jss'
 import { Popup, Table } from 'semantic-ui-react';
 
 export const styles = {
@@ -13,14 +12,13 @@ export const styles = {
     }
 };
 
-export interface IMemoryViewProps extends IWithStyles<typeof styles> {
+export interface IMemoryViewProps extends WithStylesProps<typeof styles> {
     program: ISubProgram;
 }
 
-@injectSheet(styles)
 class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
-    render(): JSX.Element {
+    render() {
         if (!this.props.program) {
             return null;
         }
@@ -135,5 +133,5 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
     }
 }
 
-export default MemoryView;
+export default withStyles(styles)(MemoryView);
 

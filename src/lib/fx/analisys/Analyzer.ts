@@ -1194,6 +1194,7 @@ export class Analyzer {
         context.endCbuffer();
 
         const aligment = T_FLOAT4.size; // float4 aligment!
+        const name = "FIXME";
         const type = new ComplexTypeInstruction({ scope, sourceNode, name, fields, aligment });
         return new CbufferInstruction({ id, type, sourceNode, semantic, annotation, scope });
     }

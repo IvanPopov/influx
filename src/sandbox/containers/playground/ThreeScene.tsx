@@ -12,7 +12,8 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
-import * as OrbitControls from 'three-orbitcontrols';
+import { OrbitControls } from '@three-ts/orbit-controls';
+
 import { IEmitter, IPass } from './IEmitter';
 
 const $vertexShader = `
@@ -194,7 +195,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         pass.instanceLayout.forEach(desc => {
             const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-            geometry.addAttribute(desc.attrName, interleavedAttr);
+            // geometry.addAttribute(desc.attrName, interleavedAttr);
+            geometry.setAttribute(desc.attrName, interleavedAttr);
         });
 
         //
@@ -252,13 +254,15 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         // Instanced data
         //
 
-        instancedBuffer.setDynamic(true);
+        // instancedBuffer.setDynamic(true);
+        instancedBuffer.setUsage(THREE.DynamicDrawUsage);
 
         // todo: remove hardcoded layout or check it's validity.
-        geometry.addAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
-        geometry.addAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
-        geometry.addAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
-        geometry.maxInstancedCount = pass.length();
+        geometry.setAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
+        geometry.setAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
+        geometry.setAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
+        // geometry.maxInstancedCount = pass.length();
+        geometry.instanceCount = pass.length();
 
 
         const material = new THREE.RawShaderMaterial({
@@ -404,7 +408,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             if (emitPass.geometry === EPartFxPassGeometry.k_Line) {
                 geometry.setDrawRange(0, emitPass.length());
             } else {
-                (geometry as THREE.InstancedBufferGeometry).maxInstancedCount = emitPass.length();
+                (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.length();
             }
         }
 

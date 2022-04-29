@@ -2,7 +2,9 @@ import { deepEqual } from "@lib/common";
 import { EParserFlags, EParserType, IParserParams } from "@lib/idl/parser/IParser";
 import { IParser } from "@lib/idl/parser/IParser"
 import { AbstractParser } from "@lib/parser/AbstractParser";
-import slGrammar from 'raw-loader!./HLSL.gr';
+
+// import slGrammar from 'raw-loader!./HLSL.gr';
+import { HLSL as slGrammar } from './HLSL';
 
 export class SLParser extends AbstractParser {
     protected init({ grammar = slGrammar, type = EParserType.k_LALR, flags = EParserFlags.k_Default }: IParserParams) {

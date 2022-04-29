@@ -99,7 +99,7 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
 }
 
 class FileListView extends React.Component<IFileListViewProps, {}> {
-    state: { root: IFolder };
+    declare state: { root: IFolder };
 
     constructor(props: IFileListViewProps) {
         super(props);
@@ -124,7 +124,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
 
         return (
             <List.Item key={ folder.path }>
-                <List.Icon name={ FileDirectoryIcon } />
+                <List.Icon className={ FileDirectoryIcon } />
                 <List.Content>
                     <List.Header onClick={ () => { folder.shown = !folder.shown; this.forceUpdate(); } }>
                         { path.basename(folder.path) }

@@ -7,7 +7,6 @@ import { deepEqual, isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { IWithStyles } from '@sandbox/components';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { getParser } from '@sandbox/reducers/parserParams';
 import { getFileState } from '@sandbox/reducers/sourceFile';
@@ -17,18 +16,19 @@ import * as Comlink from 'comlink';
 import * as monaco from 'monaco-editor';
 import { MonacoToProtocolConverter, ProtocolToMonacoConverter } from 'monaco-languageclient/lib/monaco-converter';
 import * as React from 'react';
-import injectSheet from 'react-jss';
+import withStyles, { WithStylesProps } from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
-import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
+// import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
+import { LanguageServiceWorker } from './LanguageServiceWorker'
 
 import { ILanguageServiceProvider } from './LanguageServiceProvider';
 import styles from './styles.jss';
 
-const m2p = new MonacoToProtocolConverter();
-const p2m = new ProtocolToMonacoConverter();
+const m2p = new MonacoToProtocolConverter(monaco as any); // FIXME
+const p2m = new ProtocolToMonacoConverter(monaco as any); // FIXME
 
 const provider = Comlink.wrap<ILanguageServiceProvider>(new LanguageServiceWorker());
 
@@ -82,7 +82,7 @@ registerLanguage({
 });
 
 
-const options: monaco.editor.IEditorConstructionOptions = {
+const options: monaco.editor.IStandaloneEditorConstructionOptions = {
     selectOnLineNumbers: true,
     fontSize: 12,
     renderWhitespace: 'none',
@@ -102,14 +102,13 @@ const options: monaco.editor.IEditorConstructionOptions = {
 
 
 
-export interface ISourceEditorProps extends IStoreState, IWithStyles<typeof styles> {
+export interface ISourceEditorProps extends IStoreState, Partial<WithStylesProps<typeof styles>> {
     name?: string;
     actions: typeof sourceActions;
 }
 
 
 
-@injectSheet(styles)
 class SourceEditor extends React.Component<ISourceEditorProps> {
 
     codeLensProvider: monaco.IDisposable = null;
@@ -123,7 +122,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     // cache for previously set decorations/breakpoints
     decorations: string[] = [];
 
-    pendingValidationRequests = new Map<string, number>();
+    pendingValidationRequests = new Map<string, NodeJS.Timeout>();
     deferredRequests: IDefer[] = [];
 
     // cache for params
@@ -297,9 +296,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
                     // validation should always be done before any other requests
                     await self.pendingValidations();
-
-                    const lenses = p2m.asCodeLenses(await provider.provideFxCodeLenses(self.asTextDocumentIdentifier()));
-                    return { lenses, dispose() { } };
+                    return p2m.asCodeLensList(await provider.provideFxCodeLenses(self.asTextDocumentIdentifier()));
                 }
             });
 
@@ -327,7 +324,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     return null;
                 },
 
-                resolveCompletionItem(model, position, item, token)
+                resolveCompletionItem(item, token)
                     : monaco.languages.CompletionItem | monaco.Thenable<monaco.languages.CompletionItem> {
                     // return jsonService.doResolve(m2p.asCompletionItem(item)).then(result => p2m.asCompletionItem(result, item.range));
                     console.log('resolveCompletionItem', m2p.asCompletionItem(item));
@@ -353,7 +350,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
                     const signatureHelp = await provider.provideSignatureHelp(
                         self.asTextDocumentIdentifier(), m2p.asPosition(position.lineNumber, position.column));
-                    return signatureHelp && { value: p2m.asSignatureHelp(signatureHelp), dispose() { } };
+                    return signatureHelp && p2m.asSignatureHelpResult(signatureHelp);
                 }
             }
         );
@@ -478,7 +475,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
 
     createDocument(model: monaco.editor.IReadOnlyModel, newContent?: string, newUri?: string) {
-        return TextDocument.create(newUri || this.getFile().uri, model.getModeId(), model.getVersionId(), newContent || model.getValue());
+        return TextDocument.create(newUri || this.getFile().uri, "0"/*model.getModeId()*/, model.getVersionId(), newContent || model.getValue());
     }
 
 
@@ -539,6 +536,6 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
     }
 }
 
-export default connect<{}, {}, ISourceEditorProps>(mapProps(getCommon), mapActions(sourceActions))(SourceEditor) as any;
+export default connect<{}, {}, ISourceEditorProps>(mapProps(getCommon), mapActions(sourceActions))(withStyles(styles)(SourceEditor)) as any;
 
 

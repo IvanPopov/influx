@@ -13,7 +13,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, List, Message } from 'semantic-ui-react';
+import { Button, List, Message, Icon } from 'semantic-ui-react';
 
 import ThreeScene from './ThreeScene';
 
@@ -32,6 +32,10 @@ const threeStylesHotfix: React.CSSProperties = {
     margin: '1em -20px -20px -20px'
 };
 
+
+const textAlignCenter: React.CSSProperties = {
+    textAlign: 'center'
+};
 
 class Playground extends React.Component<IPlaygroundProps> {
     $emitterName: string = null;
@@ -107,7 +111,7 @@ class Playground extends React.Component<IPlaygroundProps> {
         return (
             <div>
                 { !list.length &&
-                    <Message info textAlign='center'>
+                    <Message info style={ textAlignCenter }>
                         <Message.Content>
                             No effects found :/
                     </Message.Content>
@@ -118,6 +122,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                         <List bulleted horizontal>
                             { list.map(fx => (
                                 <List.Item
+                                    key={`li-${ fx.name }`}
                                     disabled={ !fx.isValid() }
                                     as={ (fx.name === active ? 'b' : 'a') }
                                     onClick={ () => this.pickEffect(fx.name) }
@@ -129,17 +134,17 @@ class Playground extends React.Component<IPlaygroundProps> {
                         <div>
                             <Button.Group compact >
                                 <Button
-                                    icon='playback pause'
+                                    icon={ <Icon className={ 'playback pause' } /> }
                                     color={ (emitter.isStopped() ? 'black' : null) }
                                     disabled={ emitter.isStopped() }
                                     onClick={ this.handlePauseClick }
                                 />
                                 <Button
-                                    icon='sync'
+                                    icon={ <Icon className={ 'sync' } /> }
                                     onClick={ this.handleResetClick }
                                 />
                                 <Button
-                                    icon='playback play'
+                                    icon={ <Icon className={ 'playback play' } /> }
                                     color={ (!emitter.isStopped() ? 'black' : null) }
                                     disabled={ !emitter.isStopped() }
                                     onClick={ this.handlePlayClick }

@@ -16,7 +16,6 @@
             "parameter",
             "member-variable-declaration",
             "property-declaration"
-            // "variable-declaration",
         ],
         "no-relative-imports": false,
         "use-named-parameter": false,
@@ -38,7 +37,7 @@
         "react-this-binding-issue": false,
         "prefer-method-signature": false,
         "function-name": [
-            false, // todo: turn it on
+            false, 
             {
                 "private-method-regex": "^_?[a-z][\\w\\d]+$"
             }

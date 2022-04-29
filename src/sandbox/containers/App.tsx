@@ -8,7 +8,7 @@ import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { ASTView, FileListView, IWithStyles, MemoryView, PPView, ProgramView } from '@sandbox/components';
+import { ASTView, FileListView, MemoryView, PPView, ProgramView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
 import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
@@ -20,9 +20,10 @@ import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
 import * as path from 'path';
 import * as React from 'react';
-import injectSheet from 'react-jss';
+import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
-import { matchPath, NavLink, Route, RouteComponentProps, Switch, withRouter } from 'react-router-dom';
+import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
+import { NavLink } from 'react-router-dom';
 import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
@@ -148,7 +149,7 @@ export const styles = {
 };
 
 // todo: remove the inheritance of the type of data
-export interface IAppProps extends IStoreState, IWithStyles<typeof styles>, RouteComponentProps<any> {
+export interface IAppProps extends IStoreState, Partial<WithStylesProps<typeof styles>>, RouteComponentProps<any> {
     actions: typeof sourceActions & typeof routerActions;
 }
 
@@ -159,7 +160,7 @@ const Version = (props) => {
             trigger={
                 <div>
                     <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
-                        { MODE !== 'production' && <Icon name={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+                        { MODE !== 'production' && <Icon className={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
                     </Message>
                 </div>
             }
@@ -171,7 +172,7 @@ const Version = (props) => {
     );
 };
 
-interface ISourceCodeMenuProps extends IWithStyles<typeof styles> {
+interface ISourceCodeMenuProps extends Partial<WithStylesProps<typeof styles>> {
     path: {
         fx?: string;
         name?: string;
@@ -181,8 +182,7 @@ interface ISourceCodeMenuProps extends IWithStyles<typeof styles> {
     };
 }
 
-@injectSheet(styles)
-class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
+class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
     state = {
         activeItem: 'vertexshader'
     };
@@ -261,13 +261,13 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
                     }
                 </Menu.Item>
                 <Menu.Menu position='right'>
-                    <Menu.Item color={ isEd ? 'yellow' : null } active={ isEd } header={ isEd } onClick={ !isEd && this.handleEditorClick }>
+                    <Menu.Item color={ isEd ? 'yellow' : null } active={ isEd } header={ isEd } onClick={ !isEd ? this.handleEditorClick : null }>
                         Editor
                     </Menu.Item>
-                    <Menu.Item color={ isPP ? 'yellow' : null } active={ isPP } header={ isPP } onClick={ !isPP && this.handlePreprocessedClick }>
+                    <Menu.Item color={ isPP ? 'yellow' : null } active={ isPP } header={ isPP } onClick={ !isPP ? this.handlePreprocessedClick : null }>
                         Preprocessed
                     </Menu.Item>
-                    <Menu.Item color={ isFormatted ? 'yellow' : null } active={ isFormatted } header={ isFormatted } onClick={ !isFormatted && this.handleFormattedClick }>
+                    <Menu.Item color={ isFormatted ? 'yellow' : null } active={ isFormatted } header={ isFormatted } onClick={ !isFormatted ? this.handleFormattedClick : null }>
                         Formatted
                     </Menu.Item>
                 </Menu.Menu>
@@ -276,13 +276,13 @@ class SourceCodeMenu extends React.Component<ISourceCodeMenuProps> {
     }
 }
 
+let SourceCodeMenu = withStyles(styles)(SourceCodeMenuRaw);
 
 
-@injectSheet(styles)
 @(withRouter as any) // << NOTE: known issue with TS decorators :/
 class App extends React.Component<IAppProps> {
 
-    state: {
+    declare state: {
         showFileBrowser: boolean;
         testProcessing: boolean;
     };
@@ -479,22 +479,21 @@ class App extends React.Component<IAppProps> {
         const analysisResults = [
             {
                 menuItem: {
-                    as: NavLink,
+                    as: 'a',
                     content: (<Menu.Header>Playground</Menu.Header>),
-                    to: `/${PLAYGROUND_VIEW}/${props.match.params.fx}`,
-                    // exact: true,
+                    href: `#/${PLAYGROUND_VIEW}/${props.match.params.fx}`,
                     key: PLAYGROUND_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PLAYGROUND_VIEW}` }>
+                    <Route path={ `/${PLAYGROUND_VIEW}` } key="route-analysis-result">
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
-                            <Dropdown item icon='gear' simple>
+                            <Dropdown item icon={<Icon className={ 'gear' as UnknownIcon } />} simple>
                                 <Dropdown.Menu>
                                     {
                                         this.buildShaderMenu().map(item => (
                                             <Dropdown.Item
-                                                as={ NavLink }
-                                                to={ item.link } >
+                                                key={`ddmi-${ item.name }`}
+                                                href={ `#${ item.link }` } >
                                                 { item.name }
                                             </Dropdown.Item>
                                         ))
@@ -515,14 +514,13 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: {
-                    as: NavLink,
+                    as: 'a',
                     content: (<Menu.Header>Bytecode<br />Debugger</Menu.Header>),
-                    to: `/${BYTECODE_VIEW}/${props.match.params.fx}`,
-                    // exact: true,
+                    href: `#/${BYTECODE_VIEW}/${props.match.params.fx}`,
                     key: BYTECODE_VIEW
                 },
                 pane: (
-                    <Route path={ `/${BYTECODE_VIEW}` }>
+                    <Route path={ `/${BYTECODE_VIEW}` } key="route-bytecode-view">
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
@@ -565,17 +563,17 @@ class App extends React.Component<IAppProps> {
                                             &nbsp;
                                             <Dropdown text='Options' pointing='left' >
                                                 <Dropdown.Menu>
-                                                    <Dropdown.Item>
+                                                    <Dropdown.Item key="ddmi-auto-compilation">
                                                         <Checkbox label='auto compilation' size='small'
                                                             checked={ $debugger.options.autocompile }
                                                             onMouseDown={
                                                                 e => this.setAutocompile(!$debugger.options.autocompile)
                                                             } />
                                                     </Dropdown.Item>
-                                                    <Dropdown.Item>
+                                                    <Dropdown.Item key="ddmi-no-opt">
                                                         <Checkbox disabled label='no optimisations' size='small' checked />
                                                     </Dropdown.Item>
-                                                    <Dropdown.Item>
+                                                    <Dropdown.Item key="ddmi-bytecode-colorization">
                                                         <Checkbox label='colorize' size='small'
                                                             checked={ $debugger.options.colorize }
                                                             onMouseDown={
@@ -602,14 +600,13 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: {
-                    as: NavLink,
+                    as: 'a',
                     content: <Menu.Header>Semantic<br />Analyzer</Menu.Header>,
-                    to: `/${PROGRAM_VIEW}/${props.match.params.fx}`,
-                    // exact: true,
+                    href: `#/${PROGRAM_VIEW}/${props.match.params.fx}`,
                     key: PROGRAM_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PROGRAM_VIEW}` }>
+                    <Route path={ `/${PROGRAM_VIEW}` } key="route-program-view">
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
@@ -629,17 +626,13 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: {
-                    as: NavLink,
+                    as: 'a',
                     content: <Menu.Header>Syntax<br />Analyzer</Menu.Header>,
-                    to: `/${AST_VIEW}/${props.match.params.fx}`,
-                    // exact: true,
+                    href: `#/${AST_VIEW}/${props.match.params.fx}`,
                     key: AST_VIEW
                 },
                 pane: (
-                    <Route path={ `/${AST_VIEW}` }>
-                        {/* <Header as='h5' textAlign='right' mini block attached={ 'top' } style={ { marginTop: 0 } }>
-                            Syntax Analysis
-                        </Header> */}
+                    <Route path={ `/${AST_VIEW}` } key="route-ast-view">
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
@@ -658,14 +651,13 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: {
-                    as: NavLink,
+                    as: 'a',
                     content: <Menu.Header>Pre<br />Processor</Menu.Header>,
-                    to: `/${PREPROCESSOR_VIEW}/${props.match.params.fx}`,
-                    // exact: true,
+                    href: `#/${PREPROCESSOR_VIEW}/${props.match.params.fx}`,
                     key: PREPROCESSOR_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PREPROCESSOR_VIEW}` }>
+                    <Route path={ `/${PREPROCESSOR_VIEW}` } key="route-preprocessor-view" >
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
@@ -673,7 +665,7 @@ class App extends React.Component<IAppProps> {
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='ast-view'>
+                        <Tab.Pane attached={ 'bottom' } key='preprocessor-view'>
                             <PPView
                             // onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
                             // onNodeOut={idx => this.highlightPNode(idx, null, false)}
@@ -686,7 +678,7 @@ class App extends React.Component<IAppProps> {
 
         const defaultActiveIndex = analysisResults.findIndex(pane => {
             return !!matchPath(window.location.pathname, {
-                path: pane.menuItem.to,
+                path: pane.menuItem.href,
                 exact: false
             });
         });
@@ -694,7 +686,7 @@ class App extends React.Component<IAppProps> {
         const panes = [
             {
                 menuItem: (
-                    <Menu.Item>
+                    <Menu.Item key="source-file-item">
                         Source File
                         <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
                             &nbsp;|&nbsp;{ path.basename(props.sourceFile.uri || '') }
@@ -770,7 +762,7 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: (
-                    <Menu.Item key='ver' position='right' inverted disabled color='red'>
+                    <Menu.Item key='ver' position='right' inverted="true" disabled color='red'>
                         <Version classes={ props.classes } />
                     </Menu.Item>),
                 render: () => null
@@ -811,7 +803,7 @@ class App extends React.Component<IAppProps> {
 
                 <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
                     <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
-                        <Icon name={ 'three bars' as UnknownIcon } />
+                        <Icon className={ 'three bars' as UnknownIcon } />
                         File Browser
                         </Menu.Item>
                 </Menu>
@@ -823,4 +815,4 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions }))(App) as any;
+export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions }))(withStyles(styles)(App)) as any;

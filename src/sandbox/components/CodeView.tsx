@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as monaco from "monaco-editor";
 import MonacoEditor from "react-monaco-editor";
 
 export interface ICodeViewProps {
@@ -6,7 +7,7 @@ export interface ICodeViewProps {
 }
 
 
-const monacoOptions: monaco.editor.IEditorConstructionOptions = {
+const monacoOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     selectOnLineNumbers: true,
     fontSize: 12,
     renderWhitespace: 'none',

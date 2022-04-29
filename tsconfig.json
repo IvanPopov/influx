@@ -44,13 +44,14 @@
     "moduleResolution": "node",
     "strict": false,
     // IP: currently this option is needed for correct work with 'monaco-languageclient'
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // "esModuleInterop": true
   },
   // "files": [
   //   "src/shell.ts",
   //   "src/sandbox/index.tsx"
   // ],
   "exclude": [
-    "node_modules"
+    "node_modules",
   ]
 }

@@ -14,11 +14,10 @@ import { mapProps } from '@sandbox/reducers';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
-import injectSheet from 'react-jss';
+import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { Icon, List, Message } from 'semantic-ui-react';
 
-import { IWithStyles } from '.';
 
 const styles = {
     parentIcon: {
@@ -57,7 +56,7 @@ function prettifyEName(econstName: string): string {
 }
 
 
-interface IPropertyProps extends IWithStyles<typeof styles> {
+interface IPropertyProps extends Partial<WithStylesProps<typeof styles>> {
     name?: any;
     value?: any;
     onMouseOver?: any;
@@ -100,7 +99,7 @@ const Property: PropertyComponent =
                 style={ { ...PropertyStyle({ selected, system }), ...(simpleProperty ? { fontSize: '85%' } : {}) } }
             >
                 { showIcon &&
-                    <List.Icon name={ iconName } />
+                    <List.Icon className={ iconName } />
                 }
                 <List.Content>
                     { isDefAndNotNull(name) &&
@@ -112,7 +111,7 @@ const Property: PropertyComponent =
                                         onMouseOver={ onParentMouseDown }
                                         onMouseOut={ onParentMouseUp }
                                     >
-                                        <Icon className={ classes.parentIcon } name={ `git pull request` as any } size='small' />
+                                        <Icon className={ `git pull request ${ classes.parentIcon }` }size='small' />
                                     </a>
                                 </span>
                             }
@@ -155,15 +154,14 @@ const SystemProperty: PropertyComponent = (props) => {
     );
 }
 
-export interface IProgramViewProps extends IFileState, IWithStyles<typeof styles> {
+export interface IProgramViewProps extends IFileState, WithStylesProps<typeof styles> {
     onNodeOut?: (instr: IInstruction) => void;
     onNodeOver?: (instr: IInstruction) => void;
     onNodeClick?: (instr: IInstruction) => void;
 }
 
-@injectSheet(styles)
 class ProgramView extends React.Component<IProgramViewProps, {}> {
-    state: {
+    declare state: {
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
     };
 
@@ -889,4 +887,4 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 }
 
-export default connect<{}, {}, IProgramViewProps>(mapProps(getFileState), {})(ProgramView) as any;
+export default connect<{}, {}, IProgramViewProps>(mapProps(getFileState), {})(withStyles(styles)(ProgramView)) as any;

@@ -174,7 +174,7 @@ export class CodeEmitter extends BaseEmitter {
 
     emitFunction(fn: IFunctionDeclInstruction) {
 
-        if (fn.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
+        if (!fn || fn.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
            return;
         }
 
@@ -313,7 +313,7 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitExpressionList(list: IExprInstruction[]) {
-        list.forEach((expr, i) => {
+        (list || []).forEach((expr, i) => {
             this.emitExpression(expr);
             (i != list.length - 1) && this.emitChar(',');
         })

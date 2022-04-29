@@ -21,7 +21,7 @@ export interface IParserProps extends IParserState {
 
 
 class ParserParameters extends React.Component<IParserProps, IParserState> {
-    state: IParserState;
+    declare state: IParserState;
 
     UNSAFE_componentWillMount(): void {
         this.setState(this.props);

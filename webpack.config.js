@@ -1,13 +1,13 @@
 'use strict';
-
-const path = require('path');
 const webpack = require('webpack');
+const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const TsConfigPathsPlugin = require('awesome-typescript-loader').TsConfigPathsPlugin;
-const { CheckerPlugin } = require('awesome-typescript-loader');
+// const TsConfigPathsPlugin = require('awesome-typescript-loader').TsConfigPathsPlugin;
+const TsConfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+// const { CheckerPlugin } = require('awesome-typescript-loader');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const GitRevisionPlugin = require('git-revision-webpack-plugin');
+const { GitRevisionPlugin } = require('git-revision-webpack-plugin');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 // const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
@@ -30,13 +30,13 @@ const DEVELOPMENT = mode == 'development';
 const PRODUCTION = mode == 'production';
 const ENABLE_PROFILING = false;             // turn it on to compile minified version with source map support enabled
 
-console.log({ outputPath, isWeb, mode });
-
 let optimization = {
+    nodeEnv: mode,
+    mangleExports: PRODUCTION,
     minimize: PRODUCTION,
     runtimeChunk: 'single',
-    namedModules: !PRODUCTION,
-    namedChunks: !PRODUCTION,
+    // namedModules: !PRODUCTION,
+    // namedChunks: !PRODUCTION,
     moduleIds: 'named',
     chunkIds: 'named',
     splitChunks: {
@@ -64,11 +64,9 @@ if (PRODUCTION && !ENABLE_PROFILING) {
         minimize: true,
         minimizer: [
             new TerserPlugin({
-                cache: true,
                 parallel: true,
                 terserOptions: {
-                    arguments: true,
-                    booleans_as_integers: true
+                    compress: true
                 }
             }),
             // new OptimizeCSSAssetsPlugin({
@@ -87,70 +85,91 @@ let options = {
     mode,
     optimization,
     target,
-    resolve: {
-        alias: {
-            '../../theme.config$': path.join(__dirname, 'theme.config')
-        },
-        extensions: ['.ts', '.tsx', '.js', '.jsx'],
-        plugins: [
-            new TsConfigPathsPlugin(),
-        ]
-    },
     devtool,
     module: {
         rules: [
             {
                 test: /\.pug$/,
-                loader: "pug-loader?pretty=true",
-                query: { pretty: true },
                 exclude: /(node_modules)/,
+                use: [{
+                    loader: "pug3-loader?pretty=true",
+                    options: {
+                        pretty: true
+                    }
+                }]
             },
+            // {
+            //     test: /\.tsx?$/,
+            //     exclude: [/node_modules/],
+            //     use: [{
+            //         loader: 'awesome-typescript-loader',
+            //         options: {
+            //             useCache: true,
+            //             forceIsolatedModules: true,
+            //             include: [/node_modules[\/\\]semantic-ui-react/]
+            //         }
+            //     }]
+            // },
+
+            // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
             {
                 test: /\.tsx?$/,
-                loader: 'awesome-typescript-loader',
-                exclude: [/node_modules/],
+                loader: "ts-loader",
+                exclude: /node_modules/,
                 options: {
-                    useCache: true,
-                    forceIsolatedModules: true,
-                    include: [/node_modules[\/\\]semantic-ui-react/]
+                    // useCache: true,
+                    // forceIsolatedModules: true,
+                    // include: [/node_modules[\/\\]semantic-ui-react/]
                 }
             },
+
             {
                 enforce: "pre",
                 test: /\.js$/,
-                loader: "source-map-loader"
+                use: [{
+                    loader: "source-map-loader"
+                }],
             },
             {
                 test: /[.]less$/,
                 use: [
                     MiniCssExtractPlugin.loader,
                     { loader: 'css-loader', options: { sourceMap: !PRODUCTION } },
-                    { loader: 'less-loader', options: { sourceMap: !PRODUCTION } }
+                    {
+                        loader: 'less-loader',
+                        options: {
+                            sourceMap: !PRODUCTION,
+                            lessOptions: {
+                                math: "always"
+                            },
+                        }
+                    }
                 ],
                 include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
             },
-            {
-                test: /\.(png|jpg|jpeg|gif|svg)$/,
-                use: {
-                    loader: 'url-loader',
-                    options: {
-                        limit: 10240,
-                        absolute: true,
-                        name: 'images/[name]-[hash:7].[ext]'
-                    }
-                },
-                include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
-            }, {
-                test: /\.(woff|woff2|ttf|svg|eot)$/,
-                use: {
-                    loader: 'url-loader',
-                    options: {
-                        limit: 10240,
-                        name: 'fonts/[name]-[hash:7].[ext]'
-                    }
-                },
-                include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
-            },
+            // {
+            //     test: /\.(png|jpg|jpeg|gif|svg)$/,
+            //     use: {
+            //         loader: 'url-loader',
+            //         options: {
+            //             limit: 10240,
+            //             absolute: true,
+            //             name: 'images/[name]-[hash:7].[ext]'
+            //         }
+            //     },
+            //     include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
+            // }, 
+            // {
+            //     test: /\.(woff|woff2|ttf|svg|eot)$/,
+            //     use: {
+            //         loader: 'url-loader',
+            //         options: {
+            //             limit: 10240,
+            //             name: 'fonts/[name]-[hash:7].[ext]'
+            //         }
+            //     },
+            //     include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
+            // },
             {
                 test: /\.css$/,
                 use: [
@@ -158,37 +177,56 @@ let options = {
                     { loader: 'css-loader' }
                 ]
             },
+            {
+                test: /\.gr/,
+                type: 'asset/source'
+            },
             // {
             //     loader: 'worker-loader',
             //     // options: { inline: true }
             // }
+            {
+                test: /\.(jpe?g|svg|png|gif|ico|eot|ttf|woff2?)(\?v=\d+\.\d+\.\d+)?$/i,
+                type: 'asset/resource',
+            },
         ]
     },
+    ignoreWarnings: [/Failed to parse source map/],
     devServer: {
-        contentBase: outputPath,
+        static: {
+            directory: outputPath
+        },
+        compress: PRODUCTION,
+        port: 8080
     },
     output,
-    entry: [`${sandboxPath}/index.tsx`, `${sandboxPath}/index-webpack.pug`],
+    entry: [`${sandboxPath}/index-webpack.pug`, `${sandboxPath}/index.tsx`/*, `${srcPath}/shell.ts`*/],
     plugins: [
-        new CopyPlugin([
-            {
-                context: `${sandboxPath}/assets/`,
-                from: `**/*`,
-                to: `${outputPath}/assets`
-            }
-        ]),
+        new webpack.ProvidePlugin({
+            process: 'process/browser',
+        }),
+        new CopyPlugin({
+            patterns: [
+                {
+                    context: `${sandboxPath}/assets/`,
+                    from: `**/*`,
+                    to: `${outputPath}/assets`
+                }
+            ]
+        }),
         new HtmlWebpackPlugin({
-            template: `!!pug-loader!${sandboxPath}/index-webpack.pug`,
+            template: `!!pug3-loader!${sandboxPath}/index-webpack.pug`,
             filename: `${outputPath}/${isWeb ? 'index' : 'index-electron'}.html`,
             title: `Influx ${isWeb ? 'Web' : 'Electron'} App | ver-${version}.${branch}`,
             minify: false
         }),
-        new webpack.HashedModuleIdsPlugin(),
-        new CheckerPlugin(),
+        new webpack.ids.HashedModuleIdsPlugin(),
+        // new CheckerPlugin(),
         new MiniCssExtractPlugin(),
         new GitRevisionPlugin(),
         gitRevisionPlugin,
         new webpack.DefinePlugin({
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
             'VERSION': JSON.stringify(version),
             'COMMITHASH': JSON.stringify(commithash),
             'BRANCH': JSON.stringify(branch),
@@ -201,9 +239,20 @@ let options = {
             languages: ['cpp', 'powershell']
         })
     ],
-    node: {
-        fs: 'empty'
-    }
+    resolve: {
+        fallback: {
+            fs: false
+        },
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        alias: {
+            '../../theme.config$': path.join(__dirname, 'theme.config'),
+        },
+        symlinks: false,
+        plugins: [
+            new TsConfigPathsPlugin(),
+        ]
+    },
+    // stats: 'verbose'
 };
 
 module.exports = options;

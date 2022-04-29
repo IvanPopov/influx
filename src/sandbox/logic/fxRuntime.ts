@@ -5,7 +5,6 @@ import { isNull, verbose } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
-import * as Pipeline from '@sandbox/containers/playground/Pipeline';
 import * as PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
 import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -58,9 +57,8 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
             if (!emitterPrev || !(await emitterPrev.shadowReload(list[i]))) {
                 emitterNext = await PipelineNEXT.createEmitter(list[i]);
-                // emitterNext = await Pipeline.createEmitter(list[i]);
                 if (emitterNext) {
-                    emitterNext.start();
+                    emitterNext.start(0);
                     verbose('next emitter has been created.');
                 }
             }

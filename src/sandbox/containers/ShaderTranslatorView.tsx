@@ -40,7 +40,7 @@ const diffOptions: monaco.editor.IDiffEditorConstructionOptions = {
     },
     automaticLayout: true,
     glyphMargin: false,
-    theme: 'vs-dark',
+    // theme: 'vs-dark',
     lineDecorationsWidth: 0,
     cursorSmoothCaretAnimation: false,
     fontLigatures: true,
@@ -48,7 +48,7 @@ const diffOptions: monaco.editor.IDiffEditorConstructionOptions = {
     // diff specific options
     occurrencesHighlight: false,
     renderLineHighlight: 'none',
-    renderIndentGuides: false,
+    // renderIndentGuides: false,
     readOnly: true,
     renderControlCharacters: false,
     ignoreTrimWhitespace: true

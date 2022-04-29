@@ -5,11 +5,9 @@ import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
-import injectSheet from 'react-jss';
+import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { Checkbox, List, Popup } from 'semantic-ui-react';
-
-import { IWithStyles } from '.';
 
 const styles = {
     checkboxTiny: {
@@ -22,13 +20,12 @@ const styles = {
     }
 };
 
-export interface IPPViewProps extends IStoreState, IWithStyles<typeof styles> {
+export interface IPPViewProps extends IStoreState, Partial<WithStylesProps<typeof styles>> {
 
 }
 
-@injectSheet(styles)
 class PPView extends React.Component<IPPViewProps, {}> {
-    state: {
+    declare state: {
         // nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
         showIncludes: boolean;
         showMacros: boolean;
@@ -255,4 +252,4 @@ class PPView extends React.Component<IPPViewProps, {}> {
     }
 }
 
-export default connect<{}, {}, IPPViewProps>(mapProps(getCommon), {})(PPView) as any;
+export default connect<{}, {}, IPPViewProps>(mapProps(getCommon), {})(withStyles(styles)(PPView)) as any;

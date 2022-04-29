@@ -1,4 +1,5 @@
 import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import { Vector3 } from 'three';
 
 
 export interface IAttribute {
@@ -23,7 +24,7 @@ export interface IPass {
 
     // num alive particles multipled by the prerendered instance count
     length(): number;
-    sort(pos: THREE.Vector3): void;
+    sort(pos: Vector3): void;
 }
 
 

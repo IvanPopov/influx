@@ -9,9 +9,9 @@ import IStoreState from '@sandbox/store/IStoreState';
 import { ConnectedRouter } from 'connected-react-router';
 import * as isElectron from 'is-electron-renderer';
 import * as React from 'react';
-import { render } from 'react-dom';
+import * as ReactDOM from 'react-dom'
 import { Provider } from 'react-redux';
-import { Route, Switch } from 'react-router-dom';
+import { Route, Switch } from 'react-router';
 import { applyMiddleware, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
@@ -58,7 +58,7 @@ const store = createStore<IStoreState, ActionTypes, any, any>(
 // const initialState: IStoreState = store.getState();
 // const defaultName = initialState.sourceFile.filename;
 
-render(
+ReactDOM.render(
     <Provider store={store}>
         <ConnectedRouter history={history}>
             <Switch>

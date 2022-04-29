@@ -137,7 +137,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 } }>
                     <Button.Content visible>Run</Button.Content>
                     <Button.Content hidden>
-                        <Icon name='rocket' />
+                        <Icon className='rocket' />
                     </Button.Content>
                 </Button>
             </div>

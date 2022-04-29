@@ -239,6 +239,11 @@ export class FxTranslator extends FxEmitter {
 
 
     emitSpawnShader(fx: IPartFxInstruction): ICSShaderReflection {
+        if (!fx.spawnRoutine)
+        {
+            return null;
+        }
+
         const spawnFn = fx.spawnRoutine.function;
         const elapsedTime = fx.scope.findVariable('elapsedTime');
 
@@ -571,6 +576,11 @@ export class FxTranslator extends FxEmitter {
     }
 
     emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
+        if (!fx.particle)
+        {
+            return null;
+        }
+
         const { name, capacity } = fx;
 
         const CSParticlesSpawnRoutine = this.emitSpawnShader(fx);

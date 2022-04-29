@@ -13,7 +13,7 @@ export interface IASTViewProps extends IStoreState {
 }
 
 class ASTView extends React.Component<IASTViewProps, {}> {
-    state: {
+    declare state: {
         nodeStats: IMap<{ opened: boolean; selected: boolean; }>;
     };
 

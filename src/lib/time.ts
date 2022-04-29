@@ -6,4 +6,4 @@ const t: number = Date.now();
  */
 export const time: () => number = isDef(window.performance) ?
     (): number => window.performance.now() :
-    (): number => Date.now() - t;;
+    (): number => Date.now() - t;
