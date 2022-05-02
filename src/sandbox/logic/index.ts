@@ -48,6 +48,7 @@ export const BYTECODE_VIEW = 'bytecode';
 export const PROGRAM_VIEW = 'program';
 export const AST_VIEW = 'ast';
 export const PREPROCESSOR_VIEW = 'preprocessor';
+export const GRAPH_VIEW = 'graph';
 
 export const RAW_KEYWORD = '@preprocessed';
 export const CODE_KEYWORD = '@formatted';

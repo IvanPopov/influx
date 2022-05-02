@@ -8,10 +8,10 @@ import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { ASTView, FileListView, MemoryView, PPView, ProgramView } from '@sandbox/components';
+import { ASTView, FileListView, MemoryView, PPView, ProgramView, GraphView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
+import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { history } from '@sandbox/reducers/router';
 import { filterPartFx, getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
@@ -710,7 +710,6 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={ `/${props.match.params.view}/:fx/${RAW_KEYWORD}` }>
                                             <CodeView content={ getRawContent(getFileState(this.props)) } />
                                         </Route>
-
                                         <Route path={ `/${PLAYGROUND_VIEW}/:fx/:name/:pass/(vertexshader|pixelshader)` }>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
@@ -732,7 +731,9 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={ `/${PREPROCESSOR_VIEW}/:fx` }>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-
+                                        <Route exact path={ `/${GRAPH_VIEW}/:fx` }>
+                                            <GraphView name='graph' />
+                                        </Route>
                                     </Switch>
                                 </Grid.Column>
                                 <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
