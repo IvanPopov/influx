@@ -13,7 +13,7 @@ function createWindow() {
         protocol: 'file:',
         slashes: true
     }));
-    // win.removeMenu();
+    win.removeMenu();
     
     win.on('closed', () => { win = null; });
 }

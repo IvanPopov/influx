@@ -12,42 +12,51 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import { LiteGraph, LGraph, LGraphCanvas } from 'litegraph.js'
 
 import 'litegraph.js/css/litegraph.css'
-// import backgroundImage from 'litegraph.js/';
-
+import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 
 LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
 LiteGraph.throw_errors = true;
 LiteGraph.allow_scripts = false; //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration); which could lead to exploits
-
+LiteGraph.NODE_TITLE_HEIGHT = 26;
+LiteGraph.NODE_TITLE_TEXT_Y = 18;
+LiteGraph.NODE_DEFAULT_COLOR = 'rgba(72, 201, 176, 0.5)';
+LiteGraph.NODE_DEFAULT_BGCOLOR = 'rgba(112, 123, 124, 0.5)';
+LiteGraph.NODE_DEFAULT_BOXCOLOR = 'rgba(255, 0, 0, 0.0)';
+// LiteGraph.NODE_TEXT_COLOR = 'rgba(255,255,255,0.75)';
+// LiteGraph.LINK_COLOR = 'red';
+// LiteGraph.EVENT_LINK_COLOR = 'red';
+// LiteGraph.CONNECTING_LINK_COLOR = 'red';
 
 // typescript bindding looks incomplete
 let LiteGraphA = LiteGraph as any;
-LiteGraphA.searchbox_extras = {}; //used to add extra features to the search box
-LiteGraphA.auto_sort_node_types = true; // [true!] If set to true; will automatically sort node types / categories in the context menus
-LiteGraphA.node_box_coloured_when_on = true; // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action); visual feedback
-LiteGraphA.node_box_coloured_by_mode = true; // [true!] nodebox based on node mode; visual feedback
-LiteGraphA.dialog_close_on_mouse_leave = true; // [false on mobile] better true if not touch device;
+LiteGraphA.searchbox_extras = {};                           //used to add extra features to the search box
+LiteGraphA.auto_sort_node_types = true;                     // [true!] If set to true; will automatically sort node types / categories in the context menus
+LiteGraphA.node_box_coloured_when_on = true;                // [true!] this make the nodes box (top left circle) coloured when triggered (execute/action); visual feedback
+LiteGraphA.node_box_coloured_by_mode = true;                // [true!] nodebox based on node mode; visual feedback
+LiteGraphA.dialog_close_on_mouse_leave = true;              // [false on mobile] better true if not touch device;
 LiteGraphA.dialog_close_on_mouse_leave_delay = 500;
-LiteGraphA.shift_click_do_break_link_from = false; // [false!] prefer false if results too easy to break links
-LiteGraphA.click_do_break_link_to = false; // [false!]prefer false; way too easy to break links
-LiteGraphA.search_hide_on_mouse_leave = true; // [false on mobile] better true if not touch device;
-LiteGraphA.search_filter_enabled = true; // [true!] enable filtering slots type in the search widget; !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
-LiteGraphA.search_show_all_on_open = true; // [true!] opens the results list when opening the search widget
+LiteGraphA.shift_click_do_break_link_from = false;          // [false!] prefer false if results too easy to break links
+LiteGraphA.click_do_break_link_to = false;                  // [false!]prefer false; way too easy to break links
+LiteGraphA.search_hide_on_mouse_leave = true;               // [false on mobile] better true if not touch device;
+LiteGraphA.search_filter_enabled = true;                    // [true!] enable filtering slots type in the search widget; !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
+LiteGraphA.search_show_all_on_open = true;                  // [true!] opens the results list when opening the search widget
 
-LiteGraphA.auto_load_slot_types = true; // [if want false; use true; run; get vars values to be statically set; than disable] nodes types and nodeclass association with node types need to be calculated; if dont want this; calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
-/*// set these values if not using auto_load_slot_types
-LiteGraphA.registered_slot_in_types = {}; // slot types for nodeclass
-LiteGraphA.registered_slot_out_types = {}; // slot types for nodeclass
-LiteGraphA.slot_types_in = []; // slot types IN
-LiteGraphA.slot_types_out = []; // slot types OUT*/
+LiteGraphA.auto_load_slot_types = true;                     // [if want false; use true; run; get vars values to be statically set; than disable] nodes types and nodeclass association with node types need to be calculated; if dont want this; calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
+/*
+// set these values if not using auto_load_slot_types
+LiteGraphA.registered_slot_in_types = {};                   // slot types for nodeclass
+LiteGraphA.registered_slot_out_types = {};                  // slot types for nodeclass
+LiteGraphA.slot_types_in = [];                              // slot types IN
+LiteGraphA.slot_types_out = [];                             // slot types OUT
+*/
 
-LiteGraphA.alt_drag_do_clone_nodes = true; // [true!] very handy; ALT click to clone and drag the new node
-LiteGraphA.do_add_triggers_slots = true; // [true!] will create and connect event slots when using action/events connections; !WILL CHANGE node mode when using onTrigger (enable mode colors); onExecuted does not need this
-LiteGraphA.allow_multi_output_for_events = false; // [false!] being events; it is strongly reccomended to use them sequentually; one by one
-LiteGraphA.middle_click_slot_add_default_node = true;  //[true!] allows to create and connect a ndoe clicking with the third button (wheel)
-LiteGraphA.release_link_on_empty_shows_menu = true; //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
-LiteGraphA.pointerevents_method = "mouse"; // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
+LiteGraphA.alt_drag_do_clone_nodes = true;                  // [true!] very handy; ALT click to clone and drag the new node
+LiteGraphA.do_add_triggers_slots = true;                    // [true!] will create and connect event slots when using action/events connections; !WILL CHANGE node mode when using onTrigger (enable mode colors); onExecuted does not need this
+LiteGraphA.allow_multi_output_for_events = false;           // [false!] being events; it is strongly reccomended to use them sequentually; one by one
+LiteGraphA.middle_click_slot_add_default_node = true;       // [true!] allows to create and connect a ndoe clicking with the third button (wheel)
+LiteGraphA.release_link_on_empty_shows_menu = true;         // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
+LiteGraphA.pointerevents_method = "mouse";                  // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
 
 
 
@@ -82,9 +91,22 @@ class GraphView extends React.Component<IGraphViewProps> {
     {
         this.graph = new LGraph();
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
+        this.canvas.show_info = true;
+        // this.canvas.use_gradients = true;
         this.canvas.allow_reconnect_links = true;
         this.canvas.links_render_mode = LiteGraph.LINEAR_LINK;
         this.canvas.round_radius = 4;
+        this.canvas.render_link_tooltip = false;
+        this.canvas.render_link_center = false;
+        this.canvas.over_link_center = null;
+        this.canvas.title_text_font = "13px 'Open Sans'";
+        this.canvas.inner_text_font = "13px 'Open Sans'";
+        this.canvas.node_title_color = 'rgba(255,255,255,0.75)';
+        this.canvas.title_shadow_blur = 4;
+        this.canvas.title_shadow_offset_x = 1;
+        this.canvas.title_shadow_offset_y = 1;
+        this.canvas.title_shadow_color = '#111';
+        // this.canvas.render_connection_arrows = true;
         // this.canvas.live_mode = true;
 
         // this.canvas.background_image = "imgs/grid.png";
@@ -128,13 +150,14 @@ class GraphView extends React.Component<IGraphViewProps> {
         return (
             <div
                 ref = {this.divRef} 
-                className={ this.props.classes.sizing } 
+                className={ `litegraph  ${this.props.classes.sizing}` } 
                 >
                 <canvas 
                     ref = {this.canvasRef}
                     id='node-graph-canvas' 
                 >
                 </canvas>
+                {/* <div className="litegraph dialog settings" id="node-panel"></div> */}
             </div>
         );
     }
