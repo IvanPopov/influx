@@ -68,6 +68,7 @@ import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolB
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
 
+export type IExprSubstCallback = (context: Context, program: ProgramScope, sourceNode: IParseNode) => IExprInstruction;
 
 // TODO: refactor it
 function findConstructor(type: ITypeInstruction, args: IExprInstruction[]): IVariableTypeInstruction {
@@ -96,7 +97,7 @@ const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
 
 // TODO: rework 'auto' api
 function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruction) {
-    if (type.subType.instructionType === EInstructionTypes.k_ProxyType) {
+    if (type.subType && type.subType.instructionType === EInstructionTypes.k_ProxyType) {
         const proxy = <ProxyTypeInstruction>type.subType;
         if (!proxy.isResolved()) {
             proxy.resolve(host);
@@ -105,7 +106,7 @@ function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruct
 }
 
 
-function parseUintLiteral(value: string) {
+export function parseUintLiteral(value: string) {
     const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)(u?)$/);
     assert(match, `cannot parse uint literal: ${value}`);
 
@@ -623,11 +624,15 @@ export class Context {
 
     renderStates: IMap<ERenderStateValues>;
 
-    constructor(uri: IFile) {
+    // graph needs extensions
+    expressions: IMap<IExprSubstCallback>;
+
+    constructor(uri: IFile, expressions: IMap<IExprSubstCallback> = {}) {
         this.diagnostics = new AnalyzerDiagnostics;
         this.uri = uri;
         this.moduleName = null;
         this.haveCurrentFunctionReturnOccur = false;
+        this.expressions = expressions || {};
     }
 
     beginCbuffer(): void { this.cbuffer = true; }
@@ -2457,6 +2462,20 @@ export class Analyzer {
     protected analyzeIdExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const scope = program.currentScope;
         const name = sourceNode.value;
+
+
+        // beginning-of-hack
+        // hack to support pseudo-dynamic expression
+        //
+
+        const exprSubst = context.expressions[name];
+        if (exprSubst)
+        {
+            return exprSubst(context, program, sourceNode);
+        }
+
+        // end-of-hack
+
         const decl = scope.findVariable(name);
 
         if (isNull(decl)) {
@@ -2970,9 +2989,10 @@ export class Analyzer {
                 return null;
             }
 
-            tryResolveProxyType(funcReturnType, expr.type);
-
-            if (!funcReturnType.isEqual(expr.type)) {
+            tryResolveProxyType(funcReturnType, expr.type); // auto foo() { return typedExpr; }
+            tryResolveProxyType(expr.type, funcReturnType); // typedFunc foo() { return auto; }
+            
+            if (!expr.type.isEqual(funcReturnType)) {
                 context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
                 return null;
             }
@@ -3793,8 +3813,8 @@ export class Analyzer {
     }
 
 
-    protected createContext(uri: IFile): Context {
-        return new Context(uri);
+    protected createContext(uri: IFile, expressions?: IMap<IExprSubstCallback>): Context {
+        return new Context(uri, expressions);
     }
 
     protected createProgram(document: ISLDocument = null): ProgramScope {
@@ -3820,6 +3840,38 @@ export class Analyzer {
 
         const program = this.createProgram(document);
         const context = this.createContext(uri);
+
+        let instructions: IInstruction[] = null;
+        try {
+            instructions = this.analyzeGlobals(context, program, slastDocument);
+        } catch (e) {
+            // critical errors were occured
+            // throw e;
+            console.error(e);
+        }
+
+        // console.timeEnd(`analyze(${uri})`);
+
+        const root = new InstructionCollector({ scope: program.globalScope, instructions });
+        this.validate(context, program, root);
+
+
+        const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
+        return { root, diagnosticReport, uri };
+    }
+
+    
+    parseSync(
+        slastDocument: ISLASTDocument, 
+        options: { 
+            document?: ISLDocument, 
+            expressions?: IMap<IExprSubstCallback>
+        } = {}): ISLDocument {
+        const uri = slastDocument.uri;
+        // console.time(`analyze(${uri})`);
+
+        const program = this.createProgram(options.document);
+        const context = this.createContext(uri, options.expressions);
 
         let instructions: IInstruction[] = null;
         try {

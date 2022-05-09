@@ -107,6 +107,14 @@ export async function createSLASTDocument(textDocument: ITextDocument, flags?: n
     console.time(timeLabel);
     await document.parse(textDocument, flags);
     console.timeEnd(timeLabel);
+    return document;
+}
 
+export function createSyncSLASTDocument(textDocument: ITextDocument, flags?: number): ISLASTDocument {
+    const document = new SLASTDocument();
+    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
+    console.time(timeLabel);
+    document.parse(textDocument, flags);
+    console.timeEnd(timeLabel);
     return document;
 }

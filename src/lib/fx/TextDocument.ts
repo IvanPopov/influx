@@ -6,3 +6,7 @@ export function createTextDocument(uri: string | StringRef, source: string, offs
     uri = StringRef.make(uri);
     return { uri, source, offset };
 }
+
+export function createSyncTextDocument(uri: string | StringRef, source: string, offset: IPosition = null): ITextDocument {
+    return createTextDocument(uri, source, offset);
+}

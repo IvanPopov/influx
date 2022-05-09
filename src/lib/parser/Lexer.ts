@@ -155,7 +155,7 @@ export class LexerEngine implements ILexerEngine {
 
 
     isIdentifierStart(ch: string): boolean {
-        if ((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
+        if ((ch === "_") || (ch === "$") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
             return true;
         }
         return false;
@@ -738,7 +738,7 @@ export class Lexer implements ILexer {
                 isGoodFinish = true;
                 break;
             }
-            if (!((ch === "_") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9"))) {
+            if (!((ch === "_") || (ch === "$") || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9"))) {
                 isGoodFinish = true;
                 break;
             }

@@ -2,14 +2,11 @@
 const webpack = require('webpack');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-// const TsConfigPathsPlugin = require('awesome-typescript-loader').TsConfigPathsPlugin;
 const TsConfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
-// const { CheckerPlugin } = require('awesome-typescript-loader');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const { GitRevisionPlugin } = require('git-revision-webpack-plugin');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
-// const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin()
@@ -98,19 +95,6 @@ let options = {
                     }
                 }]
             },
-            // {
-            //     test: /\.tsx?$/,
-            //     exclude: [/node_modules/],
-            //     use: [{
-            //         loader: 'awesome-typescript-loader',
-            //         options: {
-            //             useCache: true,
-            //             forceIsolatedModules: true,
-            //             include: [/node_modules[\/\\]semantic-ui-react/]
-            //         }
-            //     }]
-            // },
-
             // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
             {
                 test: /\.tsx?$/,
@@ -147,29 +131,6 @@ let options = {
                 ],
                 include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
             },
-            // {
-            //     test: /\.(png|jpg|jpeg|gif|svg)$/,
-            //     use: {
-            //         loader: 'url-loader',
-            //         options: {
-            //             limit: 10240,
-            //             absolute: true,
-            //             name: 'images/[name]-[hash:7].[ext]'
-            //         }
-            //     },
-            //     include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
-            // }, 
-            // {
-            //     test: /\.(woff|woff2|ttf|svg|eot)$/,
-            //     use: {
-            //         loader: 'url-loader',
-            //         options: {
-            //             limit: 10240,
-            //             name: 'fonts/[name]-[hash:7].[ext]'
-            //         }
-            //     },
-            //     include: [/[\/\\]node_modules[\/\\]semantic-ui-less[\/\\]/]
-            // },
             {
                 test: /\.css$/,
                 use: [
@@ -181,10 +142,10 @@ let options = {
                 test: /\.gr/,
                 type: 'asset/source'
             },
-            // {
-            //     loader: 'worker-loader',
-            //     // options: { inline: true }
-            // }
+            {
+                test: /\.hlsl/,
+                type: 'asset/source'
+            },
             {
                 test: /\.(jpe?g|svg|png|gif|ico|eot|ttf|woff2?)(\?v=\d+\.\d+\.\d+)?$/i,
                 type: 'asset/resource',
@@ -200,7 +161,10 @@ let options = {
         port: 8080
     },
     output,
-    entry: [`${sandboxPath}/index-webpack.pug`, `${sandboxPath}/index.tsx`/*, `${srcPath}/shell.ts`*/],
+    entry: [
+        `${sandboxPath}/index.tsx` 
+        /*, `${srcPath}/shell.ts`*/
+    ],
     plugins: [
         new webpack.ProvidePlugin({
             process: 'process/browser',
@@ -218,6 +182,11 @@ let options = {
             template: `!!pug3-loader!${sandboxPath}/index-webpack.pug`,
             filename: `${outputPath}/${isWeb ? 'index' : 'index-electron'}.html`,
             title: `Influx ${isWeb ? 'Web' : 'Electron'} App | ver-${version}.${branch}`,
+            minify: false
+        }),
+        new HtmlWebpackPlugin({
+            template: `!!pug3-loader!${sandboxPath}/../site/code-view.pug`,
+            filename: `${outputPath}/code-view.html`,
             minify: false
         }),
         new webpack.ids.HashedModuleIdsPlugin(),
@@ -253,6 +222,10 @@ let options = {
         ]
     },
     // stats: 'verbose'
+
+    experiments: {
+        topLevelAwait: true
+    },
 };
 
 module.exports = options;

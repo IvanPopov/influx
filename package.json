@@ -9,6 +9,7 @@
   "engineStrict": true,
   "devDependencies": {
     "@three-ts/orbit-controls": "^1.4.7",
+    "@types/css-font-loading-module": "^0.0.7",
     "@types/hoist-non-react-statics": "^3.3.1",
     "@types/jss": "^9.5.8",
     "@types/node": "^17.0.29",

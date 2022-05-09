@@ -52,10 +52,11 @@ export const GRAPH_VIEW = 'graph';
 
 export const RAW_KEYWORD = '@preprocessed';
 export const CODE_KEYWORD = '@formatted';
+export const GRAPH_KEYWORD = '@graph';
 
 export const ASSETS_PATH = './assets/fx/tests';
 
-export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW ];
+export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW, GRAPH_VIEW ];
 
 export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
 

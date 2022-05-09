@@ -9,10 +9,12 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
 import withStyles, { WithStylesProps } from 'react-jss';
-import { LiteGraph, LGraph, LGraphCanvas } from 'litegraph.js'
+import { LiteGraph, LGraph, LGraphCanvas, LGraphNode } from 'litegraph.js'
 
 import 'litegraph.js/css/litegraph.css'
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
+
+import './graph';
 
 LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
@@ -80,6 +82,8 @@ class GraphView extends React.Component<IGraphViewProps> {
     canvasRef: React.RefObject<HTMLCanvasElement>;
     divRef: React.RefObject<HTMLDivElement>;
 
+    spawnRoutine: LGraphNode;
+
     constructor(props: IGraphViewProps) {
         super(props);
 
@@ -87,9 +91,11 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.divRef = React.createRef();
     }
 
-    componentDidMount()
-    {
+    componentDidMount() {
         this.graph = new LGraph();
+        // this.graph.filter = "math";
+
+
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
         this.canvas.show_info = true;
         // this.canvas.use_gradients = true;
@@ -106,30 +112,71 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_x = 1;
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
-        // this.canvas.render_connection_arrows = true;
-        // this.canvas.live_mode = true;
 
-        // this.canvas.background_image = "imgs/grid.png";
-        // (this.graph as any).onAfterExecute = function() {
-        //     this.canvas.draw(true);
-        // };
+        this.load();
 
-	    // (this.canvas as any).onDropItem = this.onDropItem.bind(this);
+        // temp solution to re-execute graph on every change
+        // (this.canvas as any).onConnectionChange = () => this.execute();
+        // (this.canvas as any).setDirty = () => this.execute();
 
-        let nodeConst = LiteGraph.createNode("basic/const");
-        nodeConst.pos = [200,200];
-        this.graph.add(nodeConst);
-        nodeConst.setValue(4.5);
-
-        let nodeWatch = LiteGraph.createNode("basic/watch");
-        nodeWatch.pos = [700,200];
-        this.graph.add(nodeWatch);
-
-        nodeConst.connect(0, nodeWatch, 0 );
-
+        // execute graph on ctrl+enter
+        document.addEventListener('keypress', this.onKeypress);
+        
+        // draw graph of correct size
         window.addEventListener('resize', this.onWindowResize, false);
-
         this.onWindowResize();
+
+        // trick to force redraw when font is loaded
+        document.fonts.ready.then(() => {
+            if (document.fonts.check("13px 'Open Sans'")) {
+                this.canvas.draw(true, true);
+            }
+        });
+    }
+
+    @autobind
+    save()
+    {
+        localStorage.setItem("graph-unfinished-work", JSON.stringify(this.graph.serialize()));
+    }
+
+    @autobind
+    load()
+    {
+        this.graph.configure(JSON.parse(localStorage.getItem("graph-unfinished-work")));
+    }
+
+    // @autobind
+    // reload ()
+    // {
+    //     this.save();
+    //     this.graph.clear();
+    //     this.load();
+    // }
+
+    @autobind
+    execute() {
+        this.save();
+        this.graph.runStep(1);
+        this.canvas.draw();
+    }
+
+    @autobind
+    onKeypress(e: KeyboardEvent) {
+        // ctrl+enter
+        if (e.ctrlKey && e.keyCode == 10) {
+            e.preventDefault();
+            this.execute();
+        }
+
+        //alt+enter
+        // if (e.shiftKey && e.keyCode == 13) {
+        //     e.preventDefault();
+        //     console.log('swap!!!');
+        //     LiteGraph.unregisterNodeType("influx/spawn routine");
+        //     LiteGraph.registerNodeType("influx/spawn routine", SpawnRoutine2);
+        //     this.reload();
+        // }
     }
 
     @autobind
@@ -144,17 +191,18 @@ class GraphView extends React.Component<IGraphViewProps> {
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.onWindowResize, false);
+        document.removeEventListener('keypress', this.onKeypress);
     }
 
     render(): JSX.Element {
         return (
             <div
-                ref = {this.divRef} 
-                className={ `litegraph  ${this.props.classes.sizing}` } 
-                >
-                <canvas 
-                    ref = {this.canvasRef}
-                    id='node-graph-canvas' 
+                ref={this.divRef}
+                className={`litegraph  ${this.props.classes.sizing}`}
+            >
+                <canvas
+                    ref={this.canvasRef}
+                    id='node-graph-canvas'
                 >
                 </canvas>
                 {/* <div className="litegraph dialog settings" id="node-panel"></div> */}
@@ -163,5 +211,5 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 }
 
-export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), null) (withStyles(styles)(GraphView)) as any;
+export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), null)(withStyles(styles)(GraphView)) as any;
 

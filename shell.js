@@ -13,10 +13,11 @@ function createWindow() {
         protocol: 'file:',
         slashes: true
     }));
-    win.removeMenu();
-    
+    // win.removeMenu();
+
     win.on('closed', () => { win = null; });
 }
+
 electron_1.app.on('ready', createWindow);
 electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

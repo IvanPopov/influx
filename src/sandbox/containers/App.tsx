@@ -10,8 +10,9 @@ import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, MemoryView, PPView, ProgramView, GraphView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
+import GraphConfigView from '@sandbox/components/GraphConfigView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
+import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD, GRAPH_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { history } from '@sandbox/reducers/router';
 import { filterPartFx, getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
@@ -198,6 +199,14 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
         return this.props.path.name;
     }
 
+    @autobind
+    handleGraphClick() {
+        // view: "graph"
+        // fx: "macro.fx"
+        // name: "raw"
+        const { path } = this.props;
+        history.push(`/${path.view}/${path.fx}/${GRAPH_KEYWORD}`);
+    }
 
     @autobind
     handlePreprocessedClick() {
@@ -226,6 +235,7 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
         const isEd = !this.name;
         const isFormatted = this.name === CODE_KEYWORD;
         const isPP = this.name === RAW_KEYWORD;
+        const isGR = this.name === GRAPH_KEYWORD;
 
         return (
             <Menu size='mini' pointing secondary inverted attached className={ this.props.classes.mebFix }>
@@ -269,6 +279,9 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
                     </Menu.Item>
                     <Menu.Item color={ isFormatted ? 'yellow' : null } active={ isFormatted } header={ isFormatted } onClick={ !isFormatted ? this.handleFormattedClick : null }>
                         Formatted
+                    </Menu.Item>
+                    <Menu.Item color={ isGR ? 'yellow' : null } active={ isGR } header={ isGR } onClick={ !isGR ? this.handleGraphClick : null }>
+                        Graph
                     </Menu.Item>
                 </Menu.Menu>
             </Menu>
@@ -673,6 +686,28 @@ class App extends React.Component<IAppProps> {
                         </Tab.Pane>
                     </Route>
                 )
+            },
+            {
+                menuItem: {
+                    as: 'a',
+                    content: <Menu.Header>Graph</Menu.Header>,
+                    href: `#/${GRAPH_VIEW}/${props.match.params.fx}`,
+                    key: GRAPH_VIEW
+                },
+                pane: (
+                    <Route path={ `/${GRAPH_VIEW}` } key="route-graph-view" >
+                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                            <Menu.Menu position='right'>
+                                <div className='ui right aligned category search item'>
+                                    Particle Structure
+                                </div>
+                            </Menu.Menu>
+                        </Menu>
+                        <Tab.Pane attached={ 'bottom' } key='graph-view'>
+                            <GraphConfigView/>
+                        </Tab.Pane>
+                    </Route>
+                )
             }
         ];
 
@@ -701,6 +736,9 @@ class App extends React.Component<IAppProps> {
                                     <SourceCodeMenu path={ props.match.params } />
                                     <Switch>
                                         {/* TODO: sync all pathes with business logic */ }
+                                        <Route exact path={ `/${props.match.params.view}/:fx/${GRAPH_KEYWORD}` }>
+                                            <GraphView name='graph' />
+                                        </Route>
                                         <Route exact path={ `/${props.match.params.view}/:fx/${CODE_KEYWORD}` }>
                                             { props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
                                                 <CodeView content={
