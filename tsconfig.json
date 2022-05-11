@@ -11,7 +11,7 @@
       // "webworker.importscripts"
     ],
     "allowJs": false,
-    "allowSyntheticDefaultImports": false,
+    "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": true,
     "allowUnusedLabels": false,
     "baseUrl": "src",
@@ -29,6 +29,7 @@
     "preserveConstEnums": false,
     "pretty": true,
     "removeComments": false,
+    "resolveJsonModule": true,
     "rootDir": "src",
     "paths": {
       "@sandbox/*": [
@@ -45,7 +46,7 @@
     "strict": false,
     // IP: currently this option is needed for correct work with 'monaco-languageclient'
     "skipLibCheck": true,
-    // "esModuleInterop": true
+    "esModuleInterop": true
   },
   // "files": [
   //   "src/shell.ts",

@@ -17,6 +17,27 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
     type: evt.SOURCE_FILE_REQUEST,
     latest: true,
     async process({ getState, action }, dispatch, done) {
+        
+        //
+        // FIXME!!
+        // hack to skip content loading if grapg is open
+        //
+
+        const location = getState().router.location.pathname;
+        if (location == '/') return done();
+        const match = matchPath<PATH_PARAMS_TYPE>(location, { path: LOCATION_PATTERN, exact: false });
+        if (match) {
+            const { view, fx, name } = match.params;
+            if (name == GRAPH_KEYWORD)
+            {
+                return done();
+            }
+        }
+
+        //
+        // end-of-hack
+        //
+        
         try {
             const response = await readFile(action.payload.filename);
             if (response.status !== 200) {
@@ -73,7 +94,11 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
         if (location === '/') {
             // dispatch(push(`/playground/${DEFAULT_FILENAME}/`));
-            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/`);
+            // history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}`);
+            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/${GRAPH_KEYWORD}`);
+            //                                                  ^^^^^^^^^^^^^^^^^^^^^
+            //                                         FIXME: hack to show graph view by default 
+            //                                         -----------------------------------------
             return done();
         }
 

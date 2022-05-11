@@ -15,6 +15,8 @@ import * as FxEmitter from '@lib/fx/translators/FxEmitter';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import { extendSLDocument } from '@lib/fx/SLDocument';
 import { PART_STRUCTURE_SL_DOCUMENT } from './graph/autogen';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import * as isElectron from 'is-electron-renderer';
 
 import 'litegraph.js/css/litegraph.css'
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
@@ -30,6 +32,8 @@ import { parseUintLiteral } from '@lib/fx/analisys/Analyzer';
 import { IdInstruction } from '@lib/fx/analisys/instructions/IdInstruction';
 import { IdExprInstruction } from '@lib/fx/analisys/instructions/IdExprInstruction';
 import { extendFXSLDocument } from '@lib/fx/FXSLDocument';
+
+import SAMPLE_GRAPH_JSON from './graph/lib/example.json';
 
 
 LiteGraph.debug = true;
@@ -149,6 +153,10 @@ class GraphView extends React.Component<IGraphViewProps> {
                 this.canvas.draw(true, true);
             }
         });
+
+        // setTimeout(() => this.execute(), 1000);
+        console.log('----------------------');
+        this.execute();
     }
 
     @autobind
@@ -160,7 +168,8 @@ class GraphView extends React.Component<IGraphViewProps> {
     @autobind
     load()
     {
-        this.graph.configure(JSON.parse(localStorage.getItem("graph-unfinished-work")));
+        let tempSave = isElectron ? null : localStorage.getItem("graph-unfinished-work");
+        this.graph.configure(tempSave ? JSON.parse(tempSave) : SAMPLE_GRAPH_JSON);
     }
 
     // @autobind
@@ -174,7 +183,7 @@ class GraphView extends React.Component<IGraphViewProps> {
     @autobind
     async execute() {
         const { props } = this;
-        props.actions.reset();
+        // props.actions.reset();
         this.save();
         
 
@@ -196,14 +205,12 @@ class GraphView extends React.Component<IGraphViewProps> {
             }
         });
 
-        let fxString = Diagnostics.stringify(doc.diagnosticReport);
-        console.log(fxString);
+        let content = Diagnostics.stringify(doc.diagnosticReport);
+        console.log(content);
 
-        // props.actions.setContent(fxString);
-
-        (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } });
-
-        console.log(FxEmitter.translateDocument(doc));
+        props.actions.setContent(FxEmitter.translateDocument(doc));
+        // (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } }); // to run preprocessed document
+        // (props as any).$dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content: FxEmitter.translateDocument(doc) } }); // to update effect content
 
         this.canvas.draw();
     }

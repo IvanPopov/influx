@@ -394,21 +394,11 @@ function autogenFunctionalNodes(slDocument: ISLDocument)
 }
 
 
-function fread(uri: string)
-{
-    const request = new XMLHttpRequest();
-    request.open('GET', uri, false);
-    request.send(null);
+const readFile = fname => fetch(fname);
 
-    if (request.status !== 200) {
-        console.error(`cannot read file '${uri}'.`);
-    }
-
-    return request.responseText;
-}
-
-const libraryPath = "/assets/graph/lib.hlsl";
-export const LIB_TEXT_DOCUMENT = await createTextDocument(libraryPath, fread(libraryPath));
+const libraryPath = "./assets/graph/lib.hlsl";
+const response = await readFile(libraryPath);
+export const LIB_TEXT_DOCUMENT = await createTextDocument(libraryPath, await response.text());
 export const LIB_SLAST_DOCUMENT = await createSLASTDocument(LIB_TEXT_DOCUMENT);
 export const LIB_SL_DOCUMENT = await createSLDocument(LIB_SLAST_DOCUMENT);
 

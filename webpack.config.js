@@ -150,6 +150,10 @@ let options = {
                 test: /\.(jpe?g|svg|png|gif|ico|eot|ttf|woff2?)(\?v=\d+\.\d+\.\d+)?$/i,
                 type: 'asset/resource',
             },
+            // { 
+            //     test: /\.json$/, 
+            //     type: 'json' 
+            // }
         ]
     },
     ignoreWarnings: [/Failed to parse source map/],
