@@ -61,7 +61,7 @@ import { UnaryExprInstruction } from './instructions/UnaryExprInstruction';
 import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
-import { ProgramScope } from './ProgramScope';
+import { ProgramScope, ProgramScopeEx } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isFloatType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
@@ -627,7 +627,7 @@ export class Context {
     // graph needs extensions
     expressions: IMap<IExprSubstCallback>;
 
-    constructor(uri: IFile, expressions: IMap<IExprSubstCallback> = {}) {
+    constructor(uri: IFile, expressions?: IMap<IExprSubstCallback>) {
         this.diagnostics = new AnalyzerDiagnostics;
         this.uri = uri;
         this.moduleName = null;
@@ -3817,12 +3817,21 @@ export class Analyzer {
         return new Context(uri, expressions);
     }
 
+    // create new scope
     protected createProgram(document: ISLDocument = null): ProgramScope {
         let parent = <IScope>SystemScope.SCOPE;
         if (!isNull(document)) {
             parent = document.root.scope;
         }
         return new ProgramScope(parent);
+    }
+
+    // extends existing scoope
+    protected createProgramEx(document: ISLDocument = null): ProgramScope {
+        if (isNull(document)) {
+            return this.createProgram();
+        }
+        return new ProgramScopeEx(document.root.scope);
     }
 
     /**
@@ -3833,11 +3842,14 @@ export class Analyzer {
         program.validate();
     }
 
-
-    async parse(slastDocument: ISLASTDocument, document?: ISLDocument): Promise<ISLDocument> {
+    /**
+     * Create a new standalone document.
+     * @param slastDocument 
+     * @param document Context source. The scope of the parent document will be used when creating a new one.
+     * @returns 
+     */
+    parse(slastDocument: ISLASTDocument, document?: ISLDocument): ISLDocument {
         const uri = slastDocument.uri;
-        // console.time(`analyze(${uri})`);
-
         const program = this.createProgram(document);
         const context = this.createContext(uri);
 
@@ -3850,45 +3862,47 @@ export class Analyzer {
             console.error(e);
         }
 
-        // console.timeEnd(`analyze(${uri})`);
-
         const root = new InstructionCollector({ scope: program.globalScope, instructions });
         this.validate(context, program, root);
-
 
         const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
         return { root, diagnosticReport, uri };
     }
 
-    
-    parseSync(
-        slastDocument: ISLASTDocument, 
-        options: { 
-            document?: ISLDocument, 
-            expressions?: IMap<IExprSubstCallback>
-        } = {}): ISLDocument {
-        const uri = slastDocument.uri;
-        // console.time(`analyze(${uri})`);
+    /**
+     * Extend existing document. (Base document stay unchanged.)
+     * @param slastAddition Extension. (Can be null if just copy of base document is needed.)
+     * @param slBase Original document to be extneded.
+     * @param options 
+     * @returns 
+     */
+    extend(
+        slastAddition: ISLASTDocument, 
+        slBase: ISLDocument,
+        expressions?: IMap<IExprSubstCallback>
+        ): ISLDocument {
+        let uri = slBase.uri;
+        let program = this.createProgramEx(slBase); // create extended program
+        let context = this.createContext(uri, expressions);
+        let instructions = slBase.root.instructions;
+        let diagnosticReport = slBase.diagnosticReport;
 
-        const program = this.createProgram(options.document);
-        const context = this.createContext(uri, options.expressions);
+        if (slastAddition)
+        {
+            uri = slastAddition.uri;
+            try {
+                instructions = instructions.concat(this.analyzeGlobals(context, program, slastAddition));
+            } catch (e) {
+                // critical errors were occured
+                // throw e;
+                console.error(e);
+            }
 
-        let instructions: IInstruction[] = null;
-        try {
-            instructions = this.analyzeGlobals(context, program, slastDocument);
-        } catch (e) {
-            // critical errors were occured
-            // throw e;
-            console.error(e);
+            diagnosticReport = Diagnostics.mergeReports([diagnosticReport, slastAddition.diagnosticReport, context.diagnostics.resolve()]);
         }
-
-        // console.timeEnd(`analyze(${uri})`);
-
+        
         const root = new InstructionCollector({ scope: program.globalScope, instructions });
         this.validate(context, program, root);
-
-
-        const diagnosticReport = Diagnostics.mergeReports([slastDocument.diagnosticReport, context.diagnostics.resolve()]);
         return { root, diagnosticReport, uri };
     }
 

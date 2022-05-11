@@ -1,6 +1,7 @@
-import { assert } from "@lib/common";
+import { assert, isNull } from "@lib/common";
 import { EInstructionTypes, ICompileExprInstruction, IFunctionDeclInstruction, IInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
@@ -128,5 +129,17 @@ export function translate(instr: IInstruction): string {
     const emitter = new FxEmitter();
     emitter.emit(instr);
     return emitter.toString();
+}
+
+export function translateDocument(document: ISLDocument): string {
+    if (isNull(document)) {
+        return '';
+    }
+
+    if (isNull(document.root)) {
+        return '';
+    }
+
+    return translate(document.root);
 }
 

@@ -3,6 +3,7 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import fxRuntime from '@sandbox/logic/fxRuntime';
 import parsing from '@sandbox/logic/parsing';
+import graph from '@sandbox/logic/graph';
 import { history } from '@sandbox/reducers/router';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -143,5 +144,6 @@ export default createLogicMiddleware([
     navigationLogic,
     sourceFileNotFoundLogic,
     ...parsing,
-    ...fxRuntime
+    ...fxRuntime,
+    ...graph
 ]);

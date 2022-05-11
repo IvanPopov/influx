@@ -24,6 +24,6 @@ export class ExprStmtInstruction extends StmtInstruction implements IExprStmtIns
     }
 
     toCode(): string {
-        return this._expr.toCode() + ';';
+        return (this._expr ? this._expr.toCode() : '') + ';';
     }
 }

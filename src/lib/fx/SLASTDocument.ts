@@ -27,9 +27,8 @@ const PREDEFINED_TYPES = [
 export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected preprocessor: Preprocessor;
 
-
-    constructor({ parser = defaultSLParser() }: IASTConfig = {}) {
-        super({ parser, knownTypes: new Set(PREDEFINED_TYPES) });
+    constructor({ parser = defaultSLParser(), knownTypes = new Set(), ...settings }: IASTConfig = {}) {
+        super({ parser, knownTypes: new Set([...PREDEFINED_TYPES, ...knownTypes]), ...settings });
     }
 
 
@@ -101,20 +100,11 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 }
 
 
-export async function createSLASTDocument(textDocument: ITextDocument, flags?: number): Promise<ISLASTDocument> {
-    const document = new SLASTDocument();
+export async function createSLASTDocument(textDocument: ITextDocument, flags?: number, knownTypes?: string[]): Promise<ISLASTDocument> {
+    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]) });
     const timeLabel = `createSLASTDocument(${textDocument.uri})`;
     console.time(timeLabel);
     await document.parse(textDocument, flags);
-    console.timeEnd(timeLabel);
-    return document;
-}
-
-export function createSyncSLASTDocument(textDocument: ITextDocument, flags?: number): ISLASTDocument {
-    const document = new SLASTDocument();
-    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
-    console.time(timeLabel);
-    document.parse(textDocument, flags);
     console.timeEnd(timeLabel);
     return document;
 }

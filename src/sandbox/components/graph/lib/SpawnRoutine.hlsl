@@ -3,7 +3,7 @@
  * @desc Spawn routine.
  * @title Spawn routine.
  */
-float SpawnRoutine()
+int SpawnRoutine()
 {
     return $input0;
 }

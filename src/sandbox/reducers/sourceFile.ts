@@ -2,14 +2,13 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodePreprocessingComplete } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodePreprocessingComplete, IGraphReset } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
 const initialState: IFileState = {
     uri: null,
     content: '',
-    contentModified: null,
     error: null,
     markers: {},
     breakpoints: [],
@@ -27,11 +26,14 @@ const initialState: IFileState = {
     },
     emitter: null,
     // HACK: additional counter in order to call component's update in case of shadow pipeline reloading
-    $pipeline: 0
+    $pipeline: 0,
+
+    // temp
+    $graphTemp: null
 };
 
 
-export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IPlaygroundActions>({
+export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IPlaygroundActions /*| IGraphReset*/>({
     [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
         ({ ...state, uri: action.payload.filename }),
 
@@ -147,7 +149,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
     //
 
     [evt.PLAYGROUND_EMITER_UPDATE]: (state, action: IPlaygroundEmitterUpdate) =>
-        ({ ...state, emitter: action.payload.emitter, $pipeline: state.$pipeline + 1 })
+        ({ ...state, emitter: action.payload.emitter, $pipeline: state.$pipeline + 1 }),
+
 
 }, initialState);
 

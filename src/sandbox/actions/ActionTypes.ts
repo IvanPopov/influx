@@ -78,6 +78,18 @@ export type IParsingParamsChanged = IAction<typeof evt.PARSING_PARAMS_CHANGED, {
 export type IParserParamsActions = IGrammarContentSpecified | IParserParamsChanged |
     IParsingParamsChanged;
 
-export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions;
+//
+// graph api
+//
+
+export type IGraphReset = IAction<typeof evt.GRAPH_RESET, {}>;
+
+export type IGraphActions = IGraphReset;
+
+//
+//
+//
+
+export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions & IGraphActions;
 
 export default ActionTypes;

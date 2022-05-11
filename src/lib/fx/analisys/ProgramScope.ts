@@ -24,16 +24,39 @@ export class Scope implements IScope {
     readonly techniques: IMap<ITechniqueInstruction>;
     readonly typeTemplates: IMap<ITypeTemplate>;
 
-    constructor({ type = EScopeType.k_Default, parent = null, strictMode = false }: IScopeSettings) {
+    constructor(scope: Scope);
+    constructor(settings: IScopeSettings);
+    constructor(params) {
+        let type: EScopeType;
+        let strictMode: boolean;
+        let parent: IScope;
+
+        if (params instanceof Scope)
+        {
+            let scope = params as Scope;
+            ({ type = EScopeType.k_Default, parent = null, strictMode = false } = scope);
+
+            this.variables = { ...(scope.variables) };
+            this.types = { ...scope.types };
+            this.functions = { ...scope.functions };
+            this.techniques = { ...scope.techniques };
+            this.typeTemplates = { ...scope.typeTemplates };
+        } 
+        else 
+        {
+            let settings = params as IScopeSettings;
+            ({ type = EScopeType.k_Default, parent = null, strictMode = false } = settings);
+
+            this.variables = {};
+            this.types = {};
+            this.functions = {};
+            this.techniques = {};
+            this.typeTemplates = {};
+        }
+
         this.type = type;
         this.parent = parent;
         this.strictMode = strictMode;
-
-        this.variables = {};
-        this.types = {};
-        this.functions = {};
-        this.techniques = {};
-        this.typeTemplates = {};
     }
 
 
@@ -201,10 +224,12 @@ export class ProgramScope {
 
 
     constructor(parent: IScope) {
-        assert(parent !== null);
-        let type = EScopeType.k_Global;
-        this.globalScope = new Scope({ parent, type });
-        this.currentScope = this.globalScope;
+        if (!isNull(parent))
+        {
+            let type = EScopeType.k_Global;
+            this.globalScope = new Scope({ parent, type });
+            this.currentScope = this.globalScope;
+        }
     }
 
 
@@ -228,5 +253,14 @@ export class ProgramScope {
         assert(this.currentScope !== null);
         this.currentScope = this.currentScope.parent;
         assert(this.currentScope !== null);
+    }
+}
+
+
+export class ProgramScopeEx extends ProgramScope {
+    constructor(parent: IScope) {
+        super(null);
+        this.globalScope = new Scope(parent); // clone scope
+        this.currentScope = this.globalScope;
     }
 }

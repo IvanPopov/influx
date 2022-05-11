@@ -1,20 +1,36 @@
 /* tslint:disable:typedef */
 
 import { isNumber } from '@lib/common';
-import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
-import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
+import { mapActions, graph as graphActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { RouteComponentProps, withRouter } from 'react-router';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { LiteGraph, LGraph, LGraphCanvas, LGraphNode } from 'litegraph.js'
+import { ISLDocument } from '@lib/idl/ISLDocument';
+import * as FxEmitter from '@lib/fx/translators/FxEmitter';
+import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
+import { extendSLDocument } from '@lib/fx/SLDocument';
+import { PART_STRUCTURE_SL_DOCUMENT } from './graph/autogen';
 
 import 'litegraph.js/css/litegraph.css'
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 
 import './graph';
+import { EffectTemplateHLSL } from './graph/lib';
+import { IGraphASTFinalNode } from './graph/IGraph';
+import { Diagnostics } from '@lib/util/Diagnostics';
+import { createSyncTextDocument, createTextDocument } from '@lib/fx/TextDocument';
+import { IExprInstruction } from '@lib/idl/IInstruction';
+import { IntInstruction } from '@lib/fx/analisys/instructions/IntInstruction';
+import { parseUintLiteral } from '@lib/fx/analisys/Analyzer';
+import { IdInstruction } from '@lib/fx/analisys/instructions/IdInstruction';
+import { IdExprInstruction } from '@lib/fx/analisys/instructions/IdExprInstruction';
+import { extendFXSLDocument } from '@lib/fx/FXSLDocument';
+
 
 LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
@@ -70,8 +86,9 @@ const styles = {
     }
 };
 
-interface IGraphViewProps extends IStoreState, RouteComponentProps, Partial<WithStylesProps<typeof styles>> {
 
+interface IGraphViewProps extends IStoreState, RouteComponentProps, Partial<WithStylesProps<typeof styles>> {
+    actions: typeof graphActions & typeof sourceActions;
 }
 
 @(withRouter as any)
@@ -93,7 +110,7 @@ class GraphView extends React.Component<IGraphViewProps> {
 
     componentDidMount() {
         this.graph = new LGraph();
-        // this.graph.filter = "math";
+        // this.graph.filter = "influx";
 
 
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
@@ -155,9 +172,39 @@ class GraphView extends React.Component<IGraphViewProps> {
     // }
 
     @autobind
-    execute() {
+    async execute() {
+        const { props } = this;
+        props.actions.reset();
         this.save();
-        this.graph.runStep(1);
+        
+
+        const spawn = this.graph.findNodeByTitle("Spawn Routine") as IGraphASTFinalNode;
+        const init = this.graph.findNodeByTitle("Init Routine") as IGraphASTFinalNode;
+        const update = this.graph.findNodeByTitle("Update Routine") as IGraphASTFinalNode;
+
+        let doc = await extendSLDocument(null, PART_STRUCTURE_SL_DOCUMENT);
+        doc = await spawn.evaluate(doc);
+        doc = await init.evaluate(doc);
+        doc = await update.evaluate(doc);
+
+        doc = await extendFXSLDocument(createTextDocument("://fx-template", EffectTemplateHLSL), doc, {
+            $capacity: (context, program, sourceNode): IExprInstruction => {
+                console.log(arguments);
+                const scope = program.currentScope;
+                const { base, signed, heximal, exp } = parseUintLiteral('1000');
+                return new IntInstruction({ scope, sourceNode: null, base, exp, signed, heximal });
+            }
+        });
+
+        let fxString = Diagnostics.stringify(doc.diagnosticReport);
+        console.log(fxString);
+
+        // props.actions.setContent(fxString);
+
+        (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } });
+
+        console.log(FxEmitter.translateDocument(doc));
+
         this.canvas.draw();
     }
 
@@ -211,5 +258,5 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 }
 
-export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), null)(withStyles(styles)(GraphView)) as any;
-
+// export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), null)(withStyles(styles)(GraphView)) as any;
+export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), mapActions({ ...graphActions, ...sourceActions }))(withStyles(styles)(GraphView)) as any;

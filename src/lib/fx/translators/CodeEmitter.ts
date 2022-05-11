@@ -132,6 +132,11 @@ export class CodeEmitter extends BaseEmitter {
         src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
         src.semantic && this.emitSemantic(src.semantic);
         src.annotation && this.emitAnnotation(src.annotation);
+
+        if (src.isGlobal())
+        {
+            this.knownGlobals.push(name);
+        }
     }
 
 

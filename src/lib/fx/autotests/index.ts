@@ -4,7 +4,7 @@ import { ITextDocument } from "@lib/idl/ITextDocument";
 import { exractComments, parseComment } from "@lib/parser/helpers";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IRange } from "@lib/idl/parser/IParser";
-import { createSyncFXSLDocument } from "@lib/fx/FXSLDocument";
+import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 
 function nativeFromString(str) {
     switch(str.toLowerCase()) {
@@ -89,7 +89,7 @@ export interface IAutotests {
 
     exractComments(textDocument).forEach(parseComment(rules, epilogue, prologue));
 
-    const document = createSyncFXSLDocument(textDocument);
+    const document = await createFXSLDocument(textDocument);
     return { description, document, tests };
 }
 

@@ -23,7 +23,6 @@ export const parser = {
     }
 };
 
-
 export const sourceCode = {
     openFile(filename: string) {
         return { type: evt.SOURCE_FILE_REQUEST, payload: { filename } };
@@ -102,6 +101,12 @@ export const sourceCode = {
         return { type: evt.DEBUGGER_RESET };
     }
 };
+
+export const graph = {
+    reset() {
+        return { type: evt.GRAPH_RESET, payload: { } };
+    },
+}
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };
 export function mapActions(actions): mapDispatchToProps<typeof actions> {

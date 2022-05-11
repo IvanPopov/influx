@@ -35,7 +35,6 @@ export interface IFileState {
     uri: string;                    // source file's path
     content: string;                // source file's content
 
-    contentModified: string;
     error: Error;                   // source file loading's error
 
     slastDocument: ISLASTDocument;
@@ -47,7 +46,9 @@ export interface IFileState {
 
     debugger: IDebuggerState;
     emitter: IEmitter; // todo: add type.
-    $pipeline: number;
+    $pipeline: number;  // number of updates of emitter
+
+    $graphTemp: ISLDocument;
 }
 
 export interface IParserState extends IParserParams {
