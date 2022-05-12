@@ -166,8 +166,7 @@ let options = {
     },
     output,
     entry: [
-        `${sandboxPath}/index.tsx` 
-        /*, `${srcPath}/shell.ts`*/
+        `${sandboxPath}/index.tsx`
     ],
     plugins: [
         new webpack.ProvidePlugin({

@@ -16,7 +16,7 @@ import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import { extendSLDocument } from '@lib/fx/SLDocument';
 import { PART_STRUCTURE_SL_DOCUMENT } from './graph/autogen';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import * as isElectron from 'is-electron-renderer';
+import isElectron from 'is-electron';
 
 import 'litegraph.js/css/litegraph.css'
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
@@ -168,7 +168,7 @@ class GraphView extends React.Component<IGraphViewProps> {
     @autobind
     load()
     {
-        let tempSave = isElectron ? null : localStorage.getItem("graph-unfinished-work");
+        let tempSave = isElectron() ? null : localStorage.getItem("graph-unfinished-work");
         this.graph.configure(tempSave ? JSON.parse(tempSave) : SAMPLE_GRAPH_JSON);
     }
 

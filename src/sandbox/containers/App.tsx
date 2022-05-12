@@ -24,7 +24,6 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
-import { NavLink } from 'react-router-dom';
 import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
@@ -33,7 +32,8 @@ declare const BRANCH: string;
 declare const MODE: string;
 declare const TIMESTAMP: string;
 
-// const DEFAULT_FX_NAME = `./assets/fx/tests/new`;
+import isElectron from 'is-electron';
+const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 type UnknownIcon = any;
 
@@ -850,6 +850,11 @@ class App extends React.Component<IAppProps> {
         );
     }
 
+    componentDidMount()
+    {
+        // request to show window
+        ipcRenderer && ipcRenderer.send('app-ready', {});
+    }
 }
 
 

@@ -16,11 +16,6 @@ export { asNative, asNativeInner } from './native';
 export { createUAV } from './uav';
 
 
-
-
-// // import { remote } from 'electron';
-// import * as isElectron from 'is-electron-renderer';
-
 declare const MODE: string;
 
 type Chunk = Uint8Array;

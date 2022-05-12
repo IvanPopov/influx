@@ -49,7 +49,6 @@
     "esModuleInterop": true
   },
   // "files": [
-  //   "src/shell.ts",
   //   "src/sandbox/index.tsx"
   // ],
   "exclude": [

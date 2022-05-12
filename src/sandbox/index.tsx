@@ -7,7 +7,7 @@ import reducer from '@sandbox/reducers';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
 import { ConnectedRouter } from 'connected-react-router';
-import * as isElectron from 'is-electron-renderer';
+import isElectron from 'is-electron';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom'
 import { Provider } from 'react-redux';
@@ -26,8 +26,8 @@ declare const BRANCH: string;
 declare const MODE: string;
 declare const PRODUCTION: boolean;
 
-if (isElectron) {
-    require('electron-react-devtools').install();
+if (isElectron()) {
+    // require('electron-react-devtools').install();
 }
 
 const logger = createLogger({
@@ -79,6 +79,6 @@ ReactDOM.render(
 // make grammar available for editing
 store.dispatch(parser.setGrammar(defaultSLGrammar()));
 
-console.log(`%c Is this running in electron.js?: ${isElectron}`, 'background: #222; color: #bada55');
-console.log(`%c This is ${isElectron ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
+console.log(`%c Is this running in electron.js?: ${isElectron()}`, 'background: #222; color: #bada55');
+console.log(`%c This is ${isElectron() ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
 console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}`, 'background: #222; color: #bada55');

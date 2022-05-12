@@ -3,7 +3,7 @@
 import { isArray } from '@lib/common';
 import { ASSETS_PATH } from '@sandbox/logic';
 import * as fs1 from 'fs';
-import * as isElectron from 'is-electron-renderer';
+import isElectron from 'is-electron';
 import * as path from 'path';
 import * as React from 'react';
 import { List } from 'semantic-ui-react';
@@ -28,13 +28,13 @@ interface IFolder {
 
 
 const fs = {
-    stat: isElectron ?
+    stat: isElectron() ?
         promisify(fs1.lstat) :
         (dir) => ({
             isDirectory() { return false },
             isFile() { return false }
         }),
-    readdir: isElectron ?
+    readdir: isElectron() ?
         promisify(fs1.readdir) : null
 }
 
@@ -42,7 +42,7 @@ const fs = {
 // todo: remove "sync" calls
 
 async function scan($dir: string, node: IFolder, filters?: string[]) {
-    if (!isElectron) {
+    if (!isElectron()) {
         node.files = [
             'sphere.fx',
             'part.fx',
@@ -156,11 +156,6 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
     }
 
     render() {
-        // temp check in order to be compatible with browsers;
-        // if (!isElectron) {
-        //     return null;
-        // }
-
         const { root } = this.state;
         return (
             <List selection>
