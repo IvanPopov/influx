@@ -5,6 +5,8 @@ import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
 import { IGraphASTNode } from "./IGraph";
+import { store } from '@sandbox/store';
+import { graph } from '@sandbox/actions';
 
 
 class Float extends LGraphNode implements IGraphASTNode {
@@ -16,15 +18,21 @@ class Float extends LGraphNode implements IGraphASTNode {
         super("Float");
         this.addOutput("value", "float");
         this.addProperty<Number>("value", 0.0, "number");
-        this.widget = this.addWidget("number", "value", 0, "value");
+        this.widget = this.addWidget("number", "value", 0, "value", { precision: 2 });
         this.widgets_up = true; // draw number widget in the middle of node (by default it's placed under node)
-        this.size = [180, 30];
+        this.size = [160, 30];
     }
 
     evaluate(context: Context, program: ProgramScope): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
+    }
+
+    onPropertyChanged(name: string, value: number, prevValue: number): boolean
+    {
+        store.dispatch(graph.recompile(this.graph));
+        return true;
     }
 
     getTitle(): string {
@@ -39,4 +47,4 @@ class Float extends LGraphNode implements IGraphASTNode {
     }
 }
 
-LiteGraph.registerNodeType("influx/float", Float);
+LiteGraph.registerNodeType("constants/float", Float);

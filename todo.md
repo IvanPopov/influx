@@ -3,14 +3,14 @@
 
 ### General plan
 
-1. Generate the simplest working bytecode! 
-    1. No optimizations
-    2. No vectorization.
-    3. No math optimizations.
-    4. No anything.
-2. Implement test VM in typescript for testing. 
-3. Implement the simplest compute shader.
-4. Implement the simplest ui for node programming
+1. ~~Generate the simplest working bytecode!~~
+    1. ~~No optimizations~~
+    2. ~~No vectorization.~~
+    3. ~~No math optimizations.~~
+    4. ~~No anything.~~
+2. ~~Implement test VM in typescript for testing.~~
+3. ~~Implement the simplest compute shader.~~
+4. ~~Implement the simplest ui for node programming~~
 
 ### Editor
 1. ~~Accelerate text input (remove freezes).~~
@@ -22,12 +22,15 @@
 
 ### Other
 1. ~~Remove useless dependecies from package.json~~
-2. Add production config.
+2. ~~Add production config.~~
 3. Add version variable to bundle (with commit id).
 4. Use proper relative path in theme.config for site folder.
 5. Use react semantic ui loader instead of direct 'require'. 
 
 ***
+
+### Graph Issues ##
+ + Add ability to update playground on any change is occured
 
 ### Known Issues
 

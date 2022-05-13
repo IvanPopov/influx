@@ -7,6 +7,9 @@ import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawn
 import { CodeEmitter } from "./CodeEmitter";
 
 export class FxEmitter extends CodeEmitter {
+    static translateDocument(doc: ISLDocument): any {
+        throw new Error('Method not implemented.');
+    }
 
     protected emitRoutineProperty(name: string, routine: ICompileExprInstruction) {
         this.emitKeyword(name);

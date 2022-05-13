@@ -48,7 +48,7 @@ export interface IFileState {
     emitter: IEmitter; // todo: add type.
     $pipeline: number;  // number of updates of emitter
 
-    $graphTemp: ISLDocument;
+    $graph: number;
 }
 
 export interface IParserState extends IParserParams {

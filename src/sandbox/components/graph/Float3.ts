@@ -34,4 +34,4 @@ class Float3 extends LGraphNode implements IGraphASTNode {
     }
 }
 
-LiteGraph.registerNodeType("influx/float3", Float3);
+LiteGraph.registerNodeType("constructors/float3", Float3);

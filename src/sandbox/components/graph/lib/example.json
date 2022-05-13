@@ -4,7 +4,7 @@
     "nodes": [
         {
             "id": 20,
-            "type": "influx/partId",
+            "type": "fx/partId",
             "pos": {
                 "0": 272.999755859375,
                 "1": 459.399658203125,
@@ -42,7 +42,7 @@
         },
         {
             "id": 13,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 272.999755859375,
                 "1": 415.3990478515625,
@@ -82,7 +82,7 @@
         },
         {
             "id": 22,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 24.000017166137695,
                 "1": 306.3990478515625,
@@ -123,7 +123,7 @@
         },
         {
             "id": 23,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 25.000019073486328,
                 "1": 349.3990478515625,
@@ -163,7 +163,7 @@
         },
         {
             "id": 21,
-            "type": "influx/float3",
+            "type": "constructors/float3",
             "pos": {
                 "0": 209.00009155273438,
                 "1": 291.79913330078125,
@@ -217,7 +217,7 @@
         },
         {
             "id": 18,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 402.20001220703125,
                 "1": 487,
@@ -259,7 +259,7 @@
         },
         {
             "id": 34,
-            "type": "influx/float3",
+            "type": "constructors/float3",
             "pos": {
                 "0": 214.818115234375,
                 "1": 741.5325927734375,
@@ -312,7 +312,7 @@
         },
         {
             "id": 31,
-            "type": "influx/part.timelife",
+            "type": "fx/part.timelife",
             "pos": {
                 "0": 57.81792068481445,
                 "1": 740.5325927734375,
@@ -352,7 +352,7 @@
         },
         {
             "id": 32,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 56.81791687011719,
                 "1": 802.5325927734375,
@@ -394,7 +394,7 @@
         },
         {
             "id": 35,
-            "type": "influx/float3",
+            "type": "constructors/float3",
             "pos": {
                 "0": 198.81809997558594,
                 "1": 800.5325927734375,
@@ -447,7 +447,7 @@
         },
         {
             "id": 33,
-            "type": "influx/multiply '*' | float3",
+            "type": "operators/multiply '*' | float3",
             "pos": {
                 "0": 371.8191223144531,
                 "1": 723.5325927734375,
@@ -496,7 +496,7 @@
         },
         {
             "id": 30,
-            "type": "influx/part.speed",
+            "type": "fx/part.speed",
             "pos": {
                 "0": 205.81809997558594,
                 "1": 696.5325927734375,
@@ -534,7 +534,7 @@
         },
         {
             "id": 42,
-            "type": "influx/part.timelife",
+            "type": "fx/part.timelife",
             "pos": {
                 "0": 229.8181610107422,
                 "1": 921.5325927734375,
@@ -572,7 +572,7 @@
         },
         {
             "id": 27,
-            "type": "influx/part.timelife",
+            "type": "fx/part.timelife",
             "pos": {
                 "0": 116.81803131103516,
                 "1": 1019.5325317382812,
@@ -610,7 +610,7 @@
         },
         {
             "id": 26,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 144.8180389404297,
                 "1": 1070.53271484375,
@@ -650,7 +650,7 @@
         },
         {
             "id": 8,
-            "type": "influx/float3 RndVUnitConus(float3 vBaseNorm, float angle, int partId=int(0))",
+            "type": "functions/float3 RndVUnitConus(float3 vBaseNorm, float angle, int partId=int(0))",
             "pos": {
                 "0": 437.8992919921875,
                 "1": 342.9791259765625,
@@ -702,7 +702,7 @@
         },
         {
             "id": 17,
-            "type": "influx/float3",
+            "type": "constructors/float3",
             "pos": {
                 "0": 512,
                 "1": 487,
@@ -755,7 +755,7 @@
         },
         {
             "id": 11,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 515,
                 "1": 551,
@@ -795,7 +795,7 @@
         },
         {
             "id": 16,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 525,
                 "1": 596,
@@ -835,7 +835,7 @@
         },
         {
             "id": 47,
-            "type": "influx/Init Routine",
+            "type": "fx/Init Routine",
             "pos": {
                 "0": 776,
                 "1": 378,
@@ -883,7 +883,7 @@
         },
         {
             "id": 45,
-            "type": "influx/less '<'",
+            "type": "operators/less '<'",
             "pos": {
                 "0": 326.8188171386719,
                 "1": 996.5326538085938,
@@ -930,7 +930,7 @@
         },
         {
             "id": 43,
-            "type": "influx/summ '+' | float",
+            "type": "operators/summ '+' | float",
             "pos": {
                 "0": 416.8199157714844,
                 "1": 860.5325927734375,
@@ -979,7 +979,7 @@
         },
         {
             "id": 48,
-            "type": "influx/Update Routine",
+            "type": "fx/Update Routine",
             "pos": {
                 "0": 784.276123046875,
                 "1": 848.383544921875,
@@ -1032,7 +1032,7 @@
         },
         {
             "id": 36,
-            "type": "influx/multiply '*' | float3",
+            "type": "operators/multiply '*' | float3",
             "pos": {
                 "0": 499.2640686035156,
                 "1": 782.9681396484375,
@@ -1081,7 +1081,7 @@
         },
         {
             "id": 50,
-            "type": "influx/int",
+            "type": "constants/int",
             "pos": {
                 "0": 568,
                 "1": 136,
@@ -1121,7 +1121,7 @@
         },
         {
             "id": 49,
-            "type": "influx/Spawn Routine",
+            "type": "fx/Spawn Routine",
             "pos": {
                 "0": 768,
                 "1": 143,
@@ -1156,7 +1156,7 @@
         },
         {
             "id": 41,
-            "type": "influx/float",
+            "type": "constants/float",
             "pos": {
                 "0": 132,
                 "1": 897,
@@ -1196,7 +1196,7 @@
         },
         {
             "id": 39,
-            "type": "influx/elapsedTime (uniform)",
+            "type": "constants/elapsedTime (uniform)",
             "pos": {
                 "0": 56,
                 "1": 853,
@@ -1234,7 +1234,7 @@
         },
         {
             "id": 51,
-            "type": "influx/division '/' | float",
+            "type": "operators/division '/' | float",
             "pos": {
                 "0": 297,
                 "1": 869,

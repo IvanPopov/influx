@@ -30,3 +30,4 @@ export const PLAYGROUND_EMITER_UPDATE               = 'playground-emitter-update
 export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
 
 export const GRAPH_RESET                            = 'graph-reset';
+export const GRAPH_COMPILE                          = 'graph-compile';

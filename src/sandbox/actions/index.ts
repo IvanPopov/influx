@@ -1,6 +1,7 @@
 import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
 import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
+import { LGraph } from 'litegraph.js';
 import { bindActionCreators, Dispatch } from 'redux';
 
 import * as evt from './ActionTypeKeys';
@@ -106,6 +107,9 @@ export const graph = {
     reset() {
         return { type: evt.GRAPH_RESET, payload: { } };
     },
+    recompile(graph: LGraph) {
+        return { type: evt.GRAPH_COMPILE, payload: { graph } };
+    }
 }
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };

@@ -57,7 +57,7 @@ function autogenUniforms(slDocument: ISLDocument)
                 }
             }
         
-            LiteGraph.registerNodeType(`influx/${name} (uniform)`, Node);
+            LiteGraph.registerNodeType(`constants/${name} (uniform)`, Node);
         }
     }
 }
@@ -85,7 +85,7 @@ function autogenPartIdNode(slDocument: ISLDocument)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/partId`, Node);
+    LiteGraph.registerNodeType(`fx/partId`, Node);
 }
 
 function autogenPartPreviousNode(slDocument: ISLDocument)
@@ -148,7 +148,7 @@ function autogenPartPreviousNode(slDocument: ISLDocument)
             }
         }
 
-        LiteGraph.registerNodeType(`influx/${name}`, Node);
+        LiteGraph.registerNodeType(`fx/${name}`, Node);
     });
 
 
@@ -168,7 +168,7 @@ function autogenPartPreviousNode(slDocument: ISLDocument)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${name}`, Node);
+    LiteGraph.registerNodeType(`fx/${name}`, Node);
 }
 
 function autogenPartSpawnNode(slDocument: ISLASTDocument)
@@ -219,7 +219,7 @@ function autogenPartSpawnNode(slDocument: ISLASTDocument)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${desc}`, Node);
+    LiteGraph.registerNodeType(`fx/${desc}`, Node);
 }
 
 
@@ -264,7 +264,7 @@ function autogenPartInitNode(slDocument: ISLDocument)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${desc}`, Node);
+    LiteGraph.registerNodeType(`fx/${desc}`, Node);
 }
 
 
@@ -312,7 +312,7 @@ function autogenPartUpdateNode(slDocument: ISLDocument)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${desc}`, Node);
+    LiteGraph.registerNodeType(`fx/${desc}`, Node);
 
 }
 
@@ -385,7 +385,7 @@ function autogenNode(node: INodeDesc)
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${node.desc}`, Node);
+    LiteGraph.registerNodeType(`functions/${node.desc}`, Node);
 }
 
 function autogenFunctionalNodes(slDocument: ISLDocument)

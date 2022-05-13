@@ -6,6 +6,7 @@ import { EParserType } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
 import { ITextDocument } from '@lib/idl/ITextDocument';
+import { LGraph } from 'litegraph.js';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
@@ -83,8 +84,9 @@ export type IParserParamsActions = IGrammarContentSpecified | IParserParamsChang
 //
 
 export type IGraphReset = IAction<typeof evt.GRAPH_RESET, {}>;
+export type IGraphCompile = IAction<typeof evt.GRAPH_COMPILE, { graph: LGraph }>;
 
-export type IGraphActions = IGraphReset;
+export type IGraphActions = IGraphReset | IGraphCompile;
 
 //
 //

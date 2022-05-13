@@ -46,7 +46,7 @@ arithmetic.forEach(desc => {
         }
         
         
-        LiteGraph.registerNodeType(`influx/${desc.search} | ${typeName}`, Node);
+        LiteGraph.registerNodeType(`operators/${desc.search} | ${typeName}`, Node);
     });
 });
 
@@ -83,6 +83,6 @@ relations.forEach(desc => {
         }
     }
 
-    LiteGraph.registerNodeType(`influx/${desc.search}`, Node);
+    LiteGraph.registerNodeType(`operators/${desc.search}`, Node);
 });
 

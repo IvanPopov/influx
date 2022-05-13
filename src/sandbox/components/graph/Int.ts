@@ -1,12 +1,16 @@
 import { Context, parseUintLiteral } from "@lib/fx/analisys/Analyzer";
-import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
 import { IGraphASTNode } from "./IGraph";
+import { store } from '@sandbox/store';
+import { graph } from '@sandbox/actions';
 
+// notes:
+//  processNodeWidgets handles clicks and events
+//  drawNodeWidgets handles drawning
 
 class Int extends LGraphNode implements IGraphASTNode {
     static desc = "Int";
@@ -17,9 +21,9 @@ class Int extends LGraphNode implements IGraphASTNode {
         super("Int");
         this.addOutput("value", "int");
         this.addProperty<Number>("value", 0.0, "number");
-        this.widget = this.addWidget("number", "value", 0, "value");
+        this.widget = this.addWidget("number", "value", 0, "value", { precision: 0, step: 10 });
         this.widgets_up = true; // draw number widget in the middle of node (by default it's placed under node)
-        this.size = [180, 30];
+        this.size = [150, 30];
     }
 
     evaluate(context: Context, program: ProgramScope): IExprInstruction {
@@ -28,6 +32,12 @@ class Int extends LGraphNode implements IGraphASTNode {
         // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
         const { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
         return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+    }
+
+    onPropertyChanged(name: string, value: number, prevValue: number): boolean
+    {
+        store.dispatch(graph.recompile(this.graph));
+        return true;
     }
 
     getTitle(): string {
@@ -42,7 +52,7 @@ class Int extends LGraphNode implements IGraphASTNode {
     }
 }
 
-LiteGraph.registerNodeType("influx/int", Int);
+LiteGraph.registerNodeType("constants/int", Int);
 
 
 class Uint extends LGraphNode implements IGraphASTNode {
@@ -54,9 +64,9 @@ class Uint extends LGraphNode implements IGraphASTNode {
         super("Uint");
         this.addOutput("value", "uint");
         this.addProperty<Number>("value", 0.0, "number");
-        this.widget = this.addWidget("number", "value", 0, "value");
+        this.widget = this.addWidget("number", "value", 0, "value", { precision: 0, step: 10, min: 0 });
         this.widgets_up = true; // draw number widget in the middle of node (by default it's placed under node)
-        this.size = [180, 30];
+        this.size = [150, 30];
     }
 
     evaluate(context: Context, program: ProgramScope): IExprInstruction {
@@ -65,6 +75,12 @@ class Uint extends LGraphNode implements IGraphASTNode {
         let { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
         signed = false; // force "unsigned"
         return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+    }
+
+    onPropertyChanged(name: string, value: number, prevValue: number): boolean
+    {
+        store.dispatch(graph.recompile(this.graph));
+        return true;
     }
 
     getTitle(): string {
@@ -79,4 +95,4 @@ class Uint extends LGraphNode implements IGraphASTNode {
     }
 }
 
-LiteGraph.registerNodeType("influx/uint", Uint);
+LiteGraph.registerNodeType("constants/uint", Uint);

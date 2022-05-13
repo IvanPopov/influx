@@ -1,42 +1,24 @@
 /* tslint:disable:typedef */
 
-import { isNumber } from '@lib/common';
+import { graph as graphActions, mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
-import autobind from 'autobind-decorator';
-import * as React from 'react';
-import { connect } from 'react-redux';
-import { mapActions, graph as graphActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { RouteComponentProps, withRouter } from 'react-router';
-import withStyles, { WithStylesProps } from 'react-jss';
-import { LiteGraph, LGraph, LGraphCanvas, LGraphNode } from 'litegraph.js'
-import { ISLDocument } from '@lib/idl/ISLDocument';
-import * as FxEmitter from '@lib/fx/translators/FxEmitter';
-import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
-import { extendSLDocument } from '@lib/fx/SLDocument';
-import { PART_STRUCTURE_SL_DOCUMENT } from './graph/autogen';
-import * as evt from '@sandbox/actions/ActionTypeKeys';
-import isElectron from 'is-electron';
-
-import 'litegraph.js/css/litegraph.css'
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
-
-import './graph';
-import { EffectTemplateHLSL } from './graph/lib';
-import { IGraphASTFinalNode } from './graph/IGraph';
-import { Diagnostics } from '@lib/util/Diagnostics';
-import { createSyncTextDocument, createTextDocument } from '@lib/fx/TextDocument';
-import { IExprInstruction } from '@lib/idl/IInstruction';
-import { IntInstruction } from '@lib/fx/analisys/instructions/IntInstruction';
-import { parseUintLiteral } from '@lib/fx/analisys/Analyzer';
-import { IdInstruction } from '@lib/fx/analisys/instructions/IdInstruction';
-import { IdExprInstruction } from '@lib/fx/analisys/instructions/IdExprInstruction';
-import { extendFXSLDocument } from '@lib/fx/FXSLDocument';
-
+import autobind from 'autobind-decorator';
+import isElectron from 'is-electron';
+import { LGraph, LGraphCanvas, LGraphNode, LiteGraph } from 'litegraph.js';
+import 'litegraph.js/css/litegraph.css';
+import * as React from 'react';
+import withStyles, { WithStylesProps } from 'react-jss';
+import { connect } from 'react-redux';
+import { RouteComponentProps, withRouter } from 'react-router';
 import SAMPLE_GRAPH_JSON from './graph/lib/example.json';
+import './graph';
 
 
-LiteGraph.debug = true;
+
+
+// LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
 LiteGraph.throw_errors = true;
 LiteGraph.allow_scripts = false; //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration); which could lead to exploits
@@ -45,6 +27,9 @@ LiteGraph.NODE_TITLE_TEXT_Y = 18;
 LiteGraph.NODE_DEFAULT_COLOR = 'rgba(72, 201, 176, 0.5)';
 LiteGraph.NODE_DEFAULT_BGCOLOR = 'rgba(112, 123, 124, 0.5)';
 LiteGraph.NODE_DEFAULT_BOXCOLOR = 'rgba(255, 0, 0, 0.0)';
+
+
+
 // LiteGraph.NODE_TEXT_COLOR = 'rgba(255,255,255,0.75)';
 // LiteGraph.LINK_COLOR = 'red';
 // LiteGraph.EVENT_LINK_COLOR = 'red';
@@ -80,6 +65,7 @@ LiteGraphA.middle_click_slot_add_default_node = true;       // [true!] allows to
 LiteGraphA.release_link_on_empty_shows_menu = true;         // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
 LiteGraphA.pointerevents_method = "mouse";                  // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
 
+LiteGraphA.middle_click_canvas_dragging = true;
 
 
 const styles = {
@@ -105,6 +91,9 @@ class GraphView extends React.Component<IGraphViewProps> {
 
     spawnRoutine: LGraphNode;
 
+    // number of update of given graph; 
+    $graph: number;
+
     constructor(props: IGraphViewProps) {
         super(props);
 
@@ -115,7 +104,6 @@ class GraphView extends React.Component<IGraphViewProps> {
     componentDidMount() {
         this.graph = new LGraph();
         // this.graph.filter = "influx";
-
 
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
         this.canvas.show_info = true;
@@ -134,11 +122,17 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
 
-        this.load();
+        // (this.canvas as any).onAfterChange = () => { console.log('canvas change detected!'); }
+        // (this.graph as any).onAfterChange = () => { console.log('graph change detected!'); }
+        // (this.canvas as any).onNodeConnectionChange = () => { console.log('canvas connection change detected!'); }
+        // (this.graph as any).onNodeConnectionChange = () => { console.log('graph connection change detected!'); }
+        // (this.canvas as any).onBeforeChange = () => { console.log('canvas b change detected!'); }
+        // (this.graph as any).onBeforeChange = () => { console.log('graph b change detected!'); }
 
-        // temp solution to re-execute graph on every change
-        // (this.canvas as any).onConnectionChange = () => this.execute();
-        // (this.canvas as any).setDirty = () => this.execute();
+        // notify store that graph have to be update
+        (this.graph as any).onNodeConnectionChange = () => { this.props.actions.recompile(this.graph); }
+
+        this.load();
 
         // execute graph on ctrl+enter
         document.addEventListener('keypress', this.onKeypress);
@@ -153,16 +147,13 @@ class GraphView extends React.Component<IGraphViewProps> {
                 this.canvas.draw(true, true);
             }
         });
-
-        // setTimeout(() => this.execute(), 1000);
-        console.log('----------------------');
-        this.execute();
     }
 
     @autobind
     save()
     {
-        localStorage.setItem("graph-unfinished-work", JSON.stringify(this.graph.serialize()));
+        this.graph && localStorage.setItem("graph-unfinished-work", JSON.stringify(this.graph.serialize()));
+        console.log('graph autosave');
     }
 
     @autobind
@@ -172,71 +163,8 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.graph.configure(tempSave ? JSON.parse(tempSave) : SAMPLE_GRAPH_JSON);
     }
 
-    // @autobind
-    // reload ()
-    // {
-    //     this.save();
-    //     this.graph.clear();
-    //     this.load();
-    // }
-
     @autobind
-    async execute() {
-        const { props } = this;
-        // props.actions.reset();
-        this.save();
-        
-
-        const spawn = this.graph.findNodeByTitle("Spawn Routine") as IGraphASTFinalNode;
-        const init = this.graph.findNodeByTitle("Init Routine") as IGraphASTFinalNode;
-        const update = this.graph.findNodeByTitle("Update Routine") as IGraphASTFinalNode;
-
-        let doc = await extendSLDocument(null, PART_STRUCTURE_SL_DOCUMENT);
-        doc = await spawn.evaluate(doc);
-        doc = await init.evaluate(doc);
-        doc = await update.evaluate(doc);
-
-        doc = await extendFXSLDocument(createTextDocument("://fx-template", EffectTemplateHLSL), doc, {
-            $capacity: (context, program, sourceNode): IExprInstruction => {
-                console.log(arguments);
-                const scope = program.currentScope;
-                const { base, signed, heximal, exp } = parseUintLiteral('1000');
-                return new IntInstruction({ scope, sourceNode: null, base, exp, signed, heximal });
-            }
-        });
-
-        let content = Diagnostics.stringify(doc.diagnosticReport);
-        console.log(content);
-
-        props.actions.setContent(FxEmitter.translateDocument(doc));
-        // (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } }); // to run preprocessed document
-        // (props as any).$dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content: FxEmitter.translateDocument(doc) } }); // to update effect content
-
-        this.canvas.draw();
-    }
-
-    @autobind
-    onKeypress(e: KeyboardEvent) {
-        // ctrl+enter
-        if (e.ctrlKey && e.keyCode == 10) {
-            e.preventDefault();
-            this.execute();
-        }
-
-        //alt+enter
-        // if (e.shiftKey && e.keyCode == 13) {
-        //     e.preventDefault();
-        //     console.log('swap!!!');
-        //     LiteGraph.unregisterNodeType("influx/spawn routine");
-        //     LiteGraph.registerNodeType("influx/spawn routine", SpawnRoutine2);
-        //     this.reload();
-        // }
-    }
-
-    @autobind
-    onDropItem(e) {
-        console.log(e);
-    }
+    onKeypress(e: KeyboardEvent) {}
 
     @autobind
     onWindowResize() {
@@ -249,6 +177,14 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 
     render(): JSX.Element {
+
+        // hack to save graph on every change
+        if (this.props.sourceFile.$graph != this.$graph)
+        {
+            this.$graph = this.props.sourceFile.$graph;
+            this.save();
+        }
+
         return (
             <div
                 ref={this.divRef}

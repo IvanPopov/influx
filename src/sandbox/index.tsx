@@ -1,21 +1,16 @@
 import { defaultSLGrammar } from '@lib/fx/SLParser';
 import { parser } from '@sandbox/actions';
-import ActionTypes from '@sandbox/actions/ActionTypes';
 import { App } from '@sandbox/containers';
-import logic, { LOCATION_NOT_FOUND, LOCATION_PATTERN } from '@sandbox/logic';
-import reducer from '@sandbox/reducers';
+import { LOCATION_NOT_FOUND, LOCATION_PATTERN } from '@sandbox/logic';
 import { history } from '@sandbox/reducers/router';
-import IStoreState from '@sandbox/store/IStoreState';
 import { ConnectedRouter } from 'connected-react-router';
 import isElectron from 'is-electron';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom'
 import { Provider } from 'react-redux';
 import { Route, Switch } from 'react-router';
-import { applyMiddleware, createStore, Middleware } from 'redux';
-import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
-import { createLogger } from 'redux-logger';
 import { Header, Modal } from 'semantic-ui-react';
+import { store } from '@sandbox/store';
 
 require('semantic-ui-less/semantic.less');
 
@@ -29,34 +24,6 @@ declare const PRODUCTION: boolean;
 if (isElectron()) {
     // require('electron-react-devtools').install();
 }
-
-const logger = createLogger({
-    collapsed: true,
-    diff: false
-});
-
-
-const reduxImmutableState = reduxImmutableStateInvariant({
-    ignore: [
-        'sourceFile.slastDocument',
-        'sourceFile.slDocument',
-        'sourceFile.debugger.runtime',
-        'sourceFile.emitter'
-    ]
-} as any);
-
-// todo: add support for retail configuration
-const middleware: Middleware[] = !PRODUCTION ?
-    [/*thunk, */logic, logger, reduxImmutableState] :
-    [logic];
-
-const store = createStore<IStoreState, ActionTypes, any, any>(
-    reducer,
-    applyMiddleware(...middleware)
-);
-
-// const initialState: IStoreState = store.getState();
-// const defaultName = initialState.sourceFile.filename;
 
 ReactDOM.render(
     <Provider store={store}>
