@@ -1,0 +1,30 @@
+productName: "Influx"
+appId: "influx"
+
+# Package electron code into a asar archive. Set to false to debug issues.
+asar: true
+
+extraMetadata:
+  main: "shell.js"
+
+files:
+  - "dist/electron"
+  - "package.json"
+  - "shell.js"
+
+# Windows configuration
+win:
+  icon: "src/site/icon.ico"
+  target:
+    - "zip"
+    - "nsis"
+
+# Config for the windows installer
+nsis:
+  oneClick: true
+  perMachine: true
+
+directories:
+  buildResources: "dist/electron"
+  output: "release"
+

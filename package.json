@@ -30,6 +30,7 @@
     "cross-env": "^7.0.3",
     "css-loader": "^6.7.1",
     "css-minimizer-webpack-plugin": "latest",
+    "electron": "^18.2.3",
     "electron-react-devtools": "^0.5.3",
     "file-loader": "^6.2.0",
     "git-revision-webpack-plugin": "^5.0.0",
@@ -96,11 +97,11 @@
     "dev:web": "cross-env NODE_ENV=development APP_TARGET=web webpack",
     "dev-server:web": "cross-env NODE_ENV=development APP_TARGET=web webpack-dev-server",
     "dev-server:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack --watch",
-    "docs:web": "typedoc --out dist/web/docs src"
+    "docs:web": "typedoc --out dist/web/docs src",
+    "pack:electron": "npx electron-builder -c ./electron-builder.yml"
   },
   "dependencies": {
     "ajv": "^8.x",
-    "electron": "^18.x",
     "typedoc": "^0.22.15"
   }
 }
