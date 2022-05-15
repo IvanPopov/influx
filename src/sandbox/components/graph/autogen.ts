@@ -18,7 +18,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { INodeOutputSlot, LGraphNode, LiteGraph, LLink } from "litegraph.js";
+import { INodeInputSlot, INodeOutputSlot, LGraphNode, LiteGraph, LLink } from "litegraph.js";
 import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx } from "./IGraph";
 
 import { InitRoutineHLSL, UpdateRoutineHLSL, SpawnRoutineHLSL } from './lib';
@@ -51,6 +51,9 @@ function autogenDecomposer(slDocument: ISLDocument)
 {
     class Node extends LGraphNodeEx implements IGraphASTNode {
         static desc = 'Decomposer';
+
+        // expr: string = null;
+
         constructor() 
         {
             super('Decomposer');
@@ -85,6 +88,7 @@ function autogenDecomposer(slDocument: ISLDocument)
             let documentEx = extendSLDocumentSync(textDocument, PART_STRUCTURE_SL_DOCUMENT, {
                 $complexExpr: (context, program, sourceNode): IExprInstruction => {
                     const expr = outputNode.evaluate(context, program, outputIndex) as IExprInstruction;
+                    // this.expr = `(${expr.toCode()})`;
                     type = expr.type;
                     return expr;
                 }
@@ -113,7 +117,18 @@ function autogenDecomposer(slDocument: ISLDocument)
                     this.disconnectOutput(0);
                     this.removeOutput(0);
                 }
+
+                // this.expr = null;
             }
+        }
+
+        getTitle(): string {
+            let outs = this.outputs.filter(out => out.links?.length);
+            if (this.inputs.length && outs.length === 1)
+            {
+                return `*.${outs[0].name}`;
+            }
+            return this.title;
         }
     }
 
