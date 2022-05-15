@@ -1,7 +1,7 @@
 /*
- * @procedure {SpawnRoutine}
- * @desc Spawn routine.
- * @title Spawn routine.
+ * @node {SpawnRoutine}
+ * @desc Determines number of particles spawnd per second.
+ * @title Spawn routine
  */
 int SpawnRoutine()
 {

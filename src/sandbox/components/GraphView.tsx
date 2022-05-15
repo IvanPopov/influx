@@ -122,6 +122,31 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
 
+
+        const palette = { 
+            "Cadet Blue": "#51a3a3", 
+            "Steel Teal": "#5A8D92",
+            "Slate Gray": "#637681", 
+            "Old Lavender": "#6c5f70", 
+            "Eggplant": "#75485e", 
+            "Blast Off Bronze": "#a06c56",
+            "Persian Orange": "#cb904d", 
+            "Sunray": "#d5ae61", 
+            "Arylide Yellow": "#dfcc74", 
+            "Yellow Green Crayola": "#c3e991" 
+        };
+
+        (this.canvas as any).default_connection_color_byType = {
+            uint: palette["Cadet Blue"],
+            int: palette["Steel Teal"],
+            int2: palette["Slate Gray"],
+            bool: palette["Old Lavender"],
+            float: palette["Eggplant"],
+            float2: palette["Blast Off Bronze"],
+            float3: palette["Sunray"],
+            float4: palette["Arylide Yellow"]
+        };
+
         // (this.canvas as any).onAfterChange = () => { console.log('canvas change detected!'); }
         // (this.graph as any).onAfterChange = () => { console.log('graph change detected!'); }
         // (this.canvas as any).onNodeConnectionChange = () => { console.log('canvas connection change detected!'); }

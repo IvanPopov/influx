@@ -31,3 +31,6 @@ export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect'
 
 export const GRAPH_RESET                            = 'graph-reset';
 export const GRAPH_COMPILE                          = 'graph-compile';
+export const GRAPH_PART_STRUCTURE_SPECIFIED         = 'graph-part-structure-specified';
+export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';
+

@@ -1,36 +1,42 @@
 import { IMap } from "@lib/idl/IMap";
 import { IRange } from "@lib/idl/parser/IParser";
 import { CommentExtractor } from "@lib/parser/helpers";
+import { INodeDocs } from "./IGraph";
 
 export class LibLoader extends CommentExtractor
 {
-    expressions: IMap<string> = {};
-    routines: IMap<string> = {};
+    nodes: IMap<INodeDocs> = {};
+    node: INodeDocs = null;
 
     beginComment(content: string): void {
-        
+        this.node = { name: null };
     }
 
     applyRule(rule: string, parts: string[], loc: IRange): void {
         let value = parts.slice(1).join(' ');
         switch(rule)
         {
-            case '@expression':
+            case '@node':
             {
-                let expr = value.match(/\{([^\{\}]*)\}/)[1].trim();
-                this.expressions[expr] = expr;
+                this.node.name = value.match(/\{([^\{\}]*)\}/)[1].trim();
                 break;
             }
-            case '@procedure':
+            case '@desc':
             {
-                let routine = value.match(/\{([^\{\}]*)\}/)[1].trim();
-                this.routines[routine] = routine;
+                this.node.desc = value.trim();
+                break;
+            }
+            case '@title':
+            {
+                this.node.title = value.trim();
                 break;
             }
         }
     }
 
     endComment(): void {
-        
+        if (this.node.name) {
+            this.nodes[this.node.name] = this.node;
+        }
     }
 }

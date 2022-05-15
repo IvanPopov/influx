@@ -84,9 +84,12 @@ export type IParserParamsActions = IGrammarContentSpecified | IParserParamsChang
 //
 
 export type IGraphReset = IAction<typeof evt.GRAPH_RESET, {}>;
+// emits on any significant graph change
 export type IGraphCompile = IAction<typeof evt.GRAPH_COMPILE, { graph: LGraph }>;
+// emits on graph node selection if docs is presened
+export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 
-export type IGraphActions = IGraphReset | IGraphCompile;
+export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided;
 
 //
 //

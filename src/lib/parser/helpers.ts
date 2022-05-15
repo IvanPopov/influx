@@ -1,13 +1,14 @@
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { ETokenType, IRange, IToken } from "@lib/idl/parser/IParser";
 import { Lexer } from "./Lexer";
+import { createPPDocument } from "./Preprocessor";
 import { END_SYMBOL } from "./symbols";
 import { cloneRange } from "./util";
 
 /** @deprecated Use CommentExtractor instead. */
 export function exractComments(document: ITextDocument): IToken[] {
     const lexer = new Lexer({ skipComments: false });
-    lexer.setTextDocument(document);
+    lexer.setTextDocument(createPPDocument(document, { skipComments: false }));
 
     let comments = [];
     let token: IToken;

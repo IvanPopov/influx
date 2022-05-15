@@ -1,3 +1,8 @@
+/*
+ * @node {InitRoutine}
+ * @desc Determines initial state of each particle.
+ * @title Init routine
+ */
 void InitRoutine(out Part part, int partId)
 {
     part.speed = $input0;

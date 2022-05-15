@@ -66,7 +66,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
     protected init(config: IASTConfig) {
         super.init(config);
-        this.preprocessor = new Preprocessor(this.parser.lexerEngine, this.knownTypes);
+        const { knownTypes } = this;
+        this.preprocessor = new Preprocessor(this.parser.lexerEngine, { knownTypes });
 
         this.ruleFunctions.set('addType', this._addType.bind(this));
     }
@@ -105,6 +106,15 @@ export async function createSLASTDocument(textDocument: ITextDocument, flags?: n
     const timeLabel = `createSLASTDocument(${textDocument.uri})`;
     console.time(timeLabel);
     await document.parse(textDocument, flags);
+    console.timeEnd(timeLabel);
+    return document;
+}
+
+export function createSLASTDocumentSync(textDocument: ITextDocument, flags?: number, knownTypes?: string[]): ISLASTDocument {
+    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]) });
+    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
+    console.time(timeLabel);
+    document.parse(textDocument, flags);
     console.timeEnd(timeLabel);
     return document;
 }

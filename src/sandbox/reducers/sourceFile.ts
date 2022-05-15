@@ -2,7 +2,7 @@ import { assert } from '@lib/common';
 import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodePreprocessingComplete, IGraphReset, IGraphCompile, IGraphActions } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodePreprocessingComplete, IGraphReset, IGraphCompile, IGraphActions, IGraphNodeDocsProvided } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -25,6 +25,10 @@ const initialState: IFileState = {
         }
     },
     emitter: null,
+
+    // graph
+    nodeDocs: null,
+
     // HACK: additional counter in order to call component's update in case of shadow pipeline reloading
     $pipeline: 0,
     $graph: 0
@@ -154,7 +158,10 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
     //
 
     [evt.GRAPH_COMPILE]: (state, action: IGraphCompile) =>
-        ({ ...state, $graph: state.$graph + 1 })
+        ({ ...state, $graph: state.$graph + 1 }),
+
+    [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
+        ({ ...state, nodeDocs: action.payload.docs })
 
 }, initialState);
 

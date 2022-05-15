@@ -4,7 +4,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
-import { IGraphASTNode } from "./IGraph";
+import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
 import { store } from '@sandbox/store';
 import { graph } from '@sandbox/actions';
 
@@ -12,7 +12,7 @@ import { graph } from '@sandbox/actions';
 //  processNodeWidgets handles clicks and events
 //  drawNodeWidgets handles drawning
 
-class Int extends LGraphNode implements IGraphASTNode {
+class Int extends LGraphNodeEx implements IGraphASTNode {
     static desc = "Int";
 
     private widget: IWidget;
@@ -26,7 +26,7 @@ class Int extends LGraphNode implements IGraphASTNode {
         this.size = [150, 30];
     }
 
-    evaluate(context: Context, program: ProgramScope): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
@@ -55,7 +55,7 @@ class Int extends LGraphNode implements IGraphASTNode {
 LiteGraph.registerNodeType("constants/int", Int);
 
 
-class Uint extends LGraphNode implements IGraphASTNode {
+class Uint extends LGraphNodeEx implements IGraphASTNode {
     static desc = "Uint";
 
     private widget: IWidget;
@@ -69,7 +69,7 @@ class Uint extends LGraphNode implements IGraphASTNode {
         this.size = [150, 30];
     }
 
-    evaluate(context: Context, program: ProgramScope): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         let { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));

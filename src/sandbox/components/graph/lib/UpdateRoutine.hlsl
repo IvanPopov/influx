@@ -1,3 +1,8 @@
+/*
+ * @node {UpdateRoutine}
+ * @desc Determines state of particle after each update.
+ * @title Update routine
+ */
 bool UpdateRoutine(inout Part part)
 {
     part.speed = $input0;

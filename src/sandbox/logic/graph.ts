@@ -23,9 +23,9 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
 
         const { graph } = action.payload;
 
-        const spawn = graph.findNodeByTitle("Spawn Routine") as IGraphASTFinalNode;
-        const init = graph.findNodeByTitle("Init Routine") as IGraphASTFinalNode;
-        const update = graph.findNodeByTitle("Update Routine") as IGraphASTFinalNode;
+        const spawn = graph.findNodeByTitle("SpawnRoutine") as IGraphASTFinalNode;
+        const init = graph.findNodeByTitle("InitRoutine") as IGraphASTFinalNode;
+        const update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
 
         let doc = await extendSLDocument(null, PART_STRUCTURE_SL_DOCUMENT);
         doc = await spawn.evaluate(doc);

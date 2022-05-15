@@ -4,12 +4,12 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
-import { IGraphASTNode } from "./IGraph";
+import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
 import { store } from '@sandbox/store';
 import { graph } from '@sandbox/actions';
 
 
-class Float extends LGraphNode implements IGraphASTNode {
+class Float extends LGraphNodeEx implements IGraphASTNode {
     static desc = "Float";
 
     private widget: IWidget;
@@ -23,7 +23,7 @@ class Float extends LGraphNode implements IGraphASTNode {
         this.size = [160, 30];
     }
 
-    evaluate(context: Context, program: ProgramScope): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });

@@ -46,8 +46,14 @@ export interface IFileState {
 
     debugger: IDebuggerState;
     emitter: IEmitter; // todo: add type.
-    $pipeline: number;  // number of updates of emitter
 
+    // graph
+
+    nodeDocs: string;
+
+    //
+
+    $pipeline: number;  // number of updates of emitter
     $graph: number;
 }
 

@@ -39,6 +39,11 @@ float3 randVTang (in float3 norm, float seed)
     return normalize(tangentComponent(randDir, normalize(norm)));
 }
 
+/**
+ * @node {RndVUnitConus}
+ * @title Random unit conus
+ * @desc Generates random vectors within <angle> opening.
+ */
 float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
 {
     float3   vRand;

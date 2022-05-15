@@ -1,13 +1,13 @@
 {
-    "last_node_id": 51,
-    "last_link_id": 65,
+    "last_node_id": 72,
+    "last_link_id": 103,
     "nodes": [
         {
             "id": 20,
             "type": "fx/partId",
             "pos": {
-                "0": 272.999755859375,
-                "1": 459.399658203125,
+                "0": 633.9716796875,
+                "1": 450.8416748046875,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -41,11 +41,11 @@
             "properties": {}
         },
         {
-            "id": 13,
+            "id": 22,
             "type": "constants/float",
             "pos": {
-                "0": 272.999755859375,
-                "1": 415.3990478515625,
+                "0": 384.9714660644531,
+                "1": 297.841064453125,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -70,46 +70,6 @@
                     "name": "value",
                     "type": "float",
                     "links": [
-                        12
-                    ],
-                    "label": "45.00",
-                    "slot_index": 0
-                }
-            ],
-            "properties": {
-                "value": 45
-            }
-        },
-        {
-            "id": 22,
-            "type": "constants/float",
-            "pos": {
-                "0": 24.000017166137695,
-                "1": 306.3990478515625,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                30
-            ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 2,
-            "mode": 0,
-            "inputs": [],
-            "outputs": [
-                {
-                    "name": "value",
-                    "type": "float",
-                    "links": [
                         21,
                         22
                     ],
@@ -122,51 +82,11 @@
             }
         },
         {
-            "id": 23,
-            "type": "constants/float",
-            "pos": {
-                "0": 25.000019073486328,
-                "1": 349.3990478515625,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                30
-            ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 3,
-            "mode": 0,
-            "inputs": [],
-            "outputs": [
-                {
-                    "name": "value",
-                    "type": "float",
-                    "links": [
-                        23
-                    ],
-                    "label": "1.00",
-                    "slot_index": 0
-                }
-            ],
-            "properties": {
-                "value": 1
-            }
-        },
-        {
             "id": 21,
             "type": "constructors/float3",
             "pos": {
-                "0": 209.00009155273438,
-                "1": 291.79913330078125,
+                "0": 569.9716796875,
+                "1": 283.24114990234375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -183,7 +103,7 @@
             "flags": {
                 "collapsed": false
             },
-            "order": 16,
+            "order": 20,
             "mode": 0,
             "inputs": [
                 {
@@ -219,8 +139,8 @@
             "id": 18,
             "type": "constants/float",
             "pos": {
-                "0": 402.20001220703125,
-                "1": 487,
+                "0": 763.1724853515625,
+                "1": 478.4420166015625,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -237,7 +157,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 4,
+            "order": 2,
             "mode": 0,
             "inputs": [],
             "outputs": [
@@ -261,8 +181,8 @@
             "id": 34,
             "type": "constructors/float3",
             "pos": {
-                "0": 214.818115234375,
-                "1": 741.5325927734375,
+                "0": 505.6190185546875,
+                "1": 739.132568359375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -279,7 +199,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 18,
+            "order": 17,
             "mode": 0,
             "inputs": [
                 {
@@ -314,8 +234,8 @@
             "id": 31,
             "type": "fx/part.timelife",
             "pos": {
-                "0": 57.81792068481445,
-                "1": 740.5325927734375,
+                "0": 348.6185607910156,
+                "1": 738.132568359375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -332,7 +252,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 5,
+            "order": 3,
             "mode": 0,
             "inputs": [],
             "outputs": [
@@ -351,53 +271,11 @@
             "properties": {}
         },
         {
-            "id": 32,
-            "type": "constants/float",
-            "pos": {
-                "0": 56.81791687011719,
-                "1": 802.5325927734375,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                30
-            ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 6,
-            "mode": 0,
-            "inputs": [],
-            "outputs": [
-                {
-                    "name": "value",
-                    "type": "float",
-                    "links": [
-                        37,
-                        38,
-                        39
-                    ],
-                    "label": "3.00",
-                    "slot_index": 0
-                }
-            ],
-            "properties": {
-                "value": 3
-            }
-        },
-        {
             "id": 35,
             "type": "constructors/float3",
             "pos": {
-                "0": 198.81809997558594,
-                "1": 800.5325927734375,
+                "0": 489.6190185546875,
+                "1": 798.132568359375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -414,7 +292,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 19,
+            "order": 18,
             "mode": 0,
             "inputs": [
                 {
@@ -449,8 +327,8 @@
             "id": 33,
             "type": "operators/multiply '*' | float3",
             "pos": {
-                "0": 371.8191223144531,
-                "1": 723.5325927734375,
+                "0": 662.619140625,
+                "1": 721.132568359375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -467,7 +345,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 24,
+            "order": 23,
             "mode": 0,
             "inputs": [
                 {
@@ -498,8 +376,8 @@
             "id": 30,
             "type": "fx/part.speed",
             "pos": {
-                "0": 205.81809997558594,
-                "1": 696.5325927734375,
+                "0": 496.6189880371094,
+                "1": 694.132568359375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -516,7 +394,7 @@
             "flags": {
                 "collapsed": true
             },
-            "order": 7,
+            "order": 4,
             "mode": 0,
             "inputs": [],
             "outputs": [
@@ -533,11 +411,11 @@
             "properties": {}
         },
         {
-            "id": 42,
-            "type": "fx/part.timelife",
+            "id": 8,
+            "type": "functions/float3 RndVUnitConus(float3 vBaseNorm, float angle, int partId=int(0))",
             "pos": {
-                "0": 229.8181610107422,
-                "1": 921.5325927734375,
+                "0": 798.871826171875,
+                "1": 334.421142578125,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -549,7 +427,364 @@
             },
             "size": [
                 180,
-                25
+                75
+            ],
+            "flags": {},
+            "order": 25,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "vBaseNorm",
+                    "type": "float3",
+                    "link": 24
+                },
+                {
+                    "name": "angle",
+                    "type": "float",
+                    "link": 91
+                },
+                {
+                    "name": "partId",
+                    "type": "int",
+                    "link": 20
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "out",
+                    "type": "float3",
+                    "links": [
+                        52
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "RndVUnitConus",
+            "properties": {}
+        },
+        {
+            "id": 11,
+            "type": "constants/float",
+            "pos": {
+                "0": 875.97265625,
+                "1": 542.4420166015625,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                30
+            ],
+            "flags": {
+                "collapsed": true
+            },
+            "order": 5,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "float",
+                    "links": [
+                        54
+                    ],
+                    "label": "0.10",
+                    "slot_index": 0
+                }
+            ],
+            "properties": {
+                "value": 0.1
+            }
+        },
+        {
+            "id": 16,
+            "type": "constants/float",
+            "pos": {
+                "0": 885.97265625,
+                "1": 587.4420166015625,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                30
+            ],
+            "flags": {
+                "collapsed": true
+            },
+            "order": 6,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "float",
+                    "links": [
+                        55
+                    ],
+                    "label": "0.00",
+                    "slot_index": 0
+                }
+            ],
+            "properties": {
+                "value": 0
+            }
+        },
+        {
+            "id": 45,
+            "type": "operators/less '<'",
+            "pos": {
+                "0": 758.1988525390625,
+                "1": 989.5123901367188,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                50
+            ],
+            "flags": {},
+            "order": 26,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "a",
+                    "type": "float",
+                    "link": 103
+                },
+                {
+                    "name": "b",
+                    "type": "float",
+                    "link": 49
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "bool",
+                    "links": [
+                        58
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "Less",
+            "properties": {}
+        },
+        {
+            "id": 49,
+            "type": "fx/SpawnRoutine",
+            "pos": {
+                "0": 1122.6251220703125,
+                "1": 154.7681427001953,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                30
+            ],
+            "flags": {
+                "collapsed": false
+            },
+            "order": 22,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "count",
+                    "type": "float,int,uint",
+                    "link": 67
+                }
+            ],
+            "outputs": [],
+            "title": "SpawnRoutine",
+            "properties": {}
+        },
+        {
+            "id": 47,
+            "type": "fx/InitRoutine",
+            "pos": {
+                "0": 1136.972412109375,
+                "1": 369.4420166015625,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                100
+            ],
+            "flags": {},
+            "order": 28,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "speed",
+                    "type": "float3",
+                    "link": 52
+                },
+                {
+                    "name": "pos",
+                    "type": "float3",
+                    "link": 68
+                },
+                {
+                    "name": "size",
+                    "type": "float",
+                    "link": 54
+                },
+                {
+                    "name": "timelife",
+                    "type": "float",
+                    "link": 55
+                }
+            ],
+            "outputs": [],
+            "title": "InitRoutine",
+            "properties": {}
+        },
+        {
+            "id": 17,
+            "type": "constructors/float3",
+            "pos": {
+                "0": 903.97265625,
+                "1": 461.4420166015625,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                75
+            ],
+            "flags": {
+                "collapsed": true
+            },
+            "order": 16,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "x",
+                    "type": "float",
+                    "link": 17
+                },
+                {
+                    "name": "y",
+                    "type": "float",
+                    "link": 18
+                },
+                {
+                    "name": "z",
+                    "type": "float",
+                    "link": 19
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "out",
+                    "type": "float3",
+                    "links": [
+                        68
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "properties": {}
+        },
+        {
+            "id": 32,
+            "type": "constants/float",
+            "pos": {
+                "0": 347.8006591796875,
+                "1": 800.5999755859375,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                30
+            ],
+            "flags": {
+                "collapsed": true
+            },
+            "order": 7,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "float",
+                    "links": [
+                        37,
+                        38,
+                        39
+                    ],
+                    "label": "3.00",
+                    "slot_index": 0
+                }
+            ],
+            "properties": {
+                "value": 3
+            }
+        },
+        {
+            "id": 26,
+            "type": "constants/float",
+            "pos": {
+                "0": 435.8008728027344,
+                "1": 1068.60009765625,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                30
             ],
             "flags": {
                 "collapsed": true
@@ -559,23 +794,123 @@
             "inputs": [],
             "outputs": [
                 {
-                    "name": "part.timelife",
+                    "name": "value",
                     "type": "float",
                     "links": [
-                        45
+                        49
+                    ],
+                    "label": "1.00",
+                    "slot_index": 0
+                }
+            ],
+            "properties": {
+                "value": 1
+            }
+        },
+        {
+            "id": 43,
+            "type": "operators/summ '+' | float",
+            "pos": {
+                "0": 848.6998291015625,
+                "1": 853.39990234375,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                50
+            ],
+            "flags": {
+                "collapsed": false
+            },
+            "order": 24,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "a",
+                    "type": "float",
+                    "link": 75
+                },
+                {
+                    "name": "b",
+                    "type": "float",
+                    "link": 45
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "float",
+                    "links": [
+                        59
                     ],
                     "slot_index": 0
                 }
             ],
-            "title": "part.timelife",
+            "title": "Summ",
             "properties": {}
         },
         {
-            "id": 27,
-            "type": "fx/part.timelife",
+            "id": 51,
+            "type": "operators/division '/' | float",
             "pos": {
-                "0": 116.81803131103516,
-                "1": 1019.5325317382812,
+                "0": 546.8006591796875,
+                "1": 843.5999755859375,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                180,
+                50
+            ],
+            "flags": {
+                "collapsed": false
+            },
+            "order": 19,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "a",
+                    "type": "float",
+                    "link": 76
+                },
+                {
+                    "name": "b",
+                    "type": "float",
+                    "link": 64
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "value",
+                    "type": "float",
+                    "links": [
+                        75
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "Div",
+            "properties": {}
+        },
+        {
+            "id": 61,
+            "type": "constants/elapsedTime (uniform)",
+            "pos": {
+                "0": 368.80072021484375,
+                "1": 861.5999755859375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -597,23 +932,23 @@
             "inputs": [],
             "outputs": [
                 {
-                    "name": "part.timelife",
+                    "name": "out",
                     "type": "float",
                     "links": [
-                        48
+                        76
                     ],
                     "slot_index": 0
                 }
             ],
-            "title": "part.timelife",
+            "title": "elapsedTime",
             "properties": {}
         },
         {
-            "id": 26,
+            "id": 41,
             "type": "constants/float",
             "pos": {
-                "0": 144.8180389404297,
-                "1": 1070.53271484375,
+                "0": 365.8006896972656,
+                "1": 915.5999755859375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -638,22 +973,22 @@
                     "name": "value",
                     "type": "float",
                     "links": [
-                        49
+                        64
                     ],
-                    "label": "1.00",
+                    "label": "3.10",
                     "slot_index": 0
                 }
             ],
             "properties": {
-                "value": 1
+                "value": 3.1
             }
         },
         {
-            "id": 8,
-            "type": "functions/float3 RndVUnitConus(float3 vBaseNorm, float angle, int partId=int(0))",
+            "id": 42,
+            "type": "fx/part.timelife",
             "pos": {
-                "0": 437.8992919921875,
-                "1": 342.9791259765625,
+                "0": 525.80078125,
+                "1": 947.5999755859375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -665,112 +1000,7 @@
             },
             "size": [
                 180,
-                75
-            ],
-            "flags": {},
-            "order": 23,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "vBaseNorm",
-                    "type": "float3",
-                    "link": 24
-                },
-                {
-                    "name": "angle",
-                    "type": "float",
-                    "link": 12
-                },
-                {
-                    "name": "partId",
-                    "type": "int",
-                    "link": 20
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "out",
-                    "type": "float3",
-                    "links": [
-                        52
-                    ],
-                    "slot_index": 0
-                }
-            ],
-            "title": "RndVUnitConus",
-            "properties": {}
-        },
-        {
-            "id": 17,
-            "type": "constructors/float3",
-            "pos": {
-                "0": 512,
-                "1": 487,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                75
-            ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 17,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "x",
-                    "type": "float",
-                    "link": 17
-                },
-                {
-                    "name": "y",
-                    "type": "float",
-                    "link": 18
-                },
-                {
-                    "name": "z",
-                    "type": "float",
-                    "link": 19
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "out",
-                    "type": "float3",
-                    "links": [
-                        53
-                    ],
-                    "slot_index": 0
-                }
-            ],
-            "properties": {}
-        },
-        {
-            "id": 11,
-            "type": "constants/float",
-            "pos": {
-                "0": 515,
-                "1": 551,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                30
+                25
             ],
             "flags": {
                 "collapsed": true
@@ -780,25 +1010,23 @@
             "inputs": [],
             "outputs": [
                 {
-                    "name": "value",
+                    "name": "part.timelife",
                     "type": "float",
                     "links": [
-                        54
+                        45
                     ],
-                    "label": "0.10",
                     "slot_index": 0
                 }
             ],
-            "properties": {
-                "value": 0.1
-            }
+            "title": "part.timelife",
+            "properties": {}
         },
         {
-            "id": 16,
+            "id": 13,
             "type": "constants/float",
             "pos": {
-                "0": 525,
-                "1": 596,
+                "0": 633.971923828125,
+                "1": 406.4420166015625,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -823,22 +1051,22 @@
                     "name": "value",
                     "type": "float",
                     "links": [
-                        55
+                        91
                     ],
-                    "label": "0.00",
+                    "label": "45.00",
                     "slot_index": 0
                 }
             ],
             "properties": {
-                "value": 0
+                "value": 45
             }
         },
         {
-            "id": 47,
-            "type": "fx/Init Routine",
+            "id": 23,
+            "type": "constants/float",
             "pos": {
-                "0": 776,
-                "1": 378,
+                "0": 384.9714660644531,
+                "1": 340.4420166015625,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -850,192 +1078,35 @@
             },
             "size": [
                 180,
-                100
-            ],
-            "flags": {},
-            "order": 26,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "speed",
-                    "type": "float3",
-                    "link": 52
-                },
-                {
-                    "name": "pos",
-                    "type": "float3",
-                    "link": 53
-                },
-                {
-                    "name": "size",
-                    "type": "float",
-                    "link": 54
-                },
-                {
-                    "name": "timelife",
-                    "type": "float",
-                    "link": 55
-                }
-            ],
-            "outputs": [],
-            "title": "Init Routine",
-            "properties": {}
-        },
-        {
-            "id": 45,
-            "type": "operators/less '<'",
-            "pos": {
-                "0": 326.8188171386719,
-                "1": 996.5326538085938,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                50
-            ],
-            "flags": {},
-            "order": 20,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "a",
-                    "type": "float",
-                    "link": 48
-                },
-                {
-                    "name": "b",
-                    "type": "float",
-                    "link": 49
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "value",
-                    "type": "bool",
-                    "links": [
-                        58
-                    ],
-                    "slot_index": 0
-                }
-            ],
-            "title": "Less",
-            "properties": {}
-        },
-        {
-            "id": 43,
-            "type": "operators/summ '+' | float",
-            "pos": {
-                "0": 416.8199157714844,
-                "1": 860.5325927734375,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                50
+                30
             ],
             "flags": {
-                "collapsed": false
+                "collapsed": true
             },
-            "order": 25,
+            "order": 13,
             "mode": 0,
-            "inputs": [
-                {
-                    "name": "a",
-                    "type": "float",
-                    "link": 65
-                },
-                {
-                    "name": "b",
-                    "type": "float",
-                    "link": 45
-                }
-            ],
+            "inputs": [],
             "outputs": [
                 {
                     "name": "value",
                     "type": "float",
                     "links": [
-                        59
+                        23
                     ],
+                    "label": "1.00",
                     "slot_index": 0
                 }
             ],
-            "title": "Summ",
-            "properties": {}
-        },
-        {
-            "id": 48,
-            "type": "fx/Update Routine",
-            "pos": {
-                "0": 784.276123046875,
-                "1": 848.383544921875,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                125
-            ],
-            "flags": {},
-            "order": 28,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "speed",
-                    "type": "float3",
-                    "link": null
-                },
-                {
-                    "name": "pos",
-                    "type": "float3",
-                    "link": 60
-                },
-                {
-                    "name": "size",
-                    "type": "float",
-                    "link": null
-                },
-                {
-                    "name": "timelife",
-                    "type": "float",
-                    "link": 59
-                },
-                {
-                    "name": "is alive",
-                    "type": "bool",
-                    "link": 58
-                }
-            ],
-            "outputs": [],
-            "title": "Update Routine",
-            "properties": {}
+            "properties": {
+                "value": 1
+            }
         },
         {
             "id": 36,
             "type": "operators/multiply '*' | float3",
             "pos": {
-                "0": 499.2640686035156,
-                "1": 782.9681396484375,
+                "0": 928.799072265625,
+                "1": 775.5999755859375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -1071,7 +1142,7 @@
                     "name": "value",
                     "type": "float3",
                     "links": [
-                        60
+                        69
                     ],
                     "slot_index": 0
                 }
@@ -1080,11 +1151,11 @@
             "properties": {}
         },
         {
-            "id": 50,
-            "type": "constants/int",
+            "id": 48,
+            "type": "fx/UpdateRoutine",
             "pos": {
-                "0": 568,
-                "1": 136,
+                "0": 1109.7984619140625,
+                "1": 828.5999755859375,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -1096,35 +1167,86 @@
             },
             "size": [
                 180,
-                30
+                125
+            ],
+            "flags": {},
+            "order": 29,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "speed",
+                    "type": "float3",
+                    "link": null
+                },
+                {
+                    "name": "pos",
+                    "type": "float3",
+                    "link": 69
+                },
+                {
+                    "name": "size",
+                    "type": "float",
+                    "link": null
+                },
+                {
+                    "name": "timelife",
+                    "type": "float",
+                    "link": 59
+                },
+                {
+                    "name": "is alive",
+                    "type": "bool",
+                    "link": 58
+                }
+            ],
+            "outputs": [],
+            "title": "UpdateRoutine",
+            "properties": {}
+        },
+        {
+            "id": 72,
+            "type": "fx/part",
+            "pos": {
+                "0": 413,
+                "1": 994,
+                "2": 0,
+                "3": 0,
+                "4": 0,
+                "5": 0,
+                "6": 0,
+                "7": 0,
+                "8": 0,
+                "9": 0
+            },
+            "size": [
+                100,
+                25
             ],
             "flags": {
-                "collapsed": true
+                "collapsed": false
             },
-            "order": 13,
+            "order": 14,
             "mode": 0,
             "inputs": [],
             "outputs": [
                 {
-                    "name": "value",
-                    "type": "int",
+                    "name": "part",
+                    "type": "Part",
                     "links": [
-                        62
+                        102
                     ],
-                    "label": "50.00",
                     "slot_index": 0
                 }
             ],
-            "properties": {
-                "value": 50
-            }
+            "title": "part",
+            "properties": {}
         },
         {
-            "id": 49,
-            "type": "fx/Spawn Routine",
+            "id": 71,
+            "type": "helpers/decomposer",
             "pos": {
-                "0": 768,
-                "1": 143,
+                "0": 578,
+                "1": 1018,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -1135,8 +1257,8 @@
                 "9": 0
             },
             "size": [
-                180,
-                30
+                140,
+                86
             ],
             "flags": {
                 "collapsed": true
@@ -1145,21 +1267,45 @@
             "mode": 0,
             "inputs": [
                 {
-                    "name": "count",
-                    "type": "float,int,uint",
-                    "link": 62
+                    "name": "in",
+                    "type": 0,
+                    "link": 102
                 }
             ],
-            "outputs": [],
-            "title": "Spawn Routine",
+            "outputs": [
+                {
+                    "name": "speed",
+                    "type": "float3",
+                    "links": null
+                },
+                {
+                    "name": "pos",
+                    "type": "float3",
+                    "links": null
+                },
+                {
+                    "name": "size",
+                    "type": "float",
+                    "links": null
+                },
+                {
+                    "name": "timelife",
+                    "type": "float",
+                    "links": [
+                        103
+                    ],
+                    "slot_index": 3
+                }
+            ],
+            "title": "Decomposer",
             "properties": {}
         },
         {
-            "id": 41,
-            "type": "constants/float",
+            "id": 57,
+            "type": "constants/int",
             "pos": {
-                "0": 132,
-                "1": 897,
+                "0": 894.6259155273438,
+                "1": 149.76815795898438,
                 "2": 0,
                 "3": 0,
                 "4": 0,
@@ -1170,127 +1316,30 @@
                 "9": 0
             },
             "size": [
-                180,
+                150,
                 30
             ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 14,
-            "mode": 0,
-            "inputs": [],
-            "outputs": [
-                {
-                    "name": "value",
-                    "type": "float",
-                    "links": [
-                        64
-                    ],
-                    "label": "3.00",
-                    "slot_index": 0
-                }
-            ],
-            "properties": {
-                "value": 3
-            }
-        },
-        {
-            "id": 39,
-            "type": "constants/elapsedTime (uniform)",
-            "pos": {
-                "0": 56,
-                "1": 853,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                25
-            ],
-            "flags": {
-                "collapsed": true
-            },
+            "flags": {},
             "order": 15,
             "mode": 0,
             "inputs": [],
             "outputs": [
                 {
-                    "name": "out",
-                    "type": "float",
-                    "links": [
-                        63
-                    ],
-                    "slot_index": 0
-                }
-            ],
-            "title": "elapsedTime (uniform)",
-            "properties": {}
-        },
-        {
-            "id": 51,
-            "type": "operators/division '/' | float",
-            "pos": {
-                "0": 297,
-                "1": 869,
-                "2": 0,
-                "3": 0,
-                "4": 0,
-                "5": 0,
-                "6": 0,
-                "7": 0,
-                "8": 0,
-                "9": 0
-            },
-            "size": [
-                180,
-                50
-            ],
-            "flags": {
-                "collapsed": true
-            },
-            "order": 22,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "a",
-                    "type": "float",
-                    "link": 63
-                },
-                {
-                    "name": "b",
-                    "type": "float",
-                    "link": 64
-                }
-            ],
-            "outputs": [
-                {
                     "name": "value",
-                    "type": "float",
+                    "type": "int",
                     "links": [
-                        65
+                        67
                     ],
+                    "label": "23.00",
                     "slot_index": 0
                 }
             ],
-            "title": "Div",
-            "properties": {}
+            "properties": {
+                "value": 23
+            }
         }
     ],
     "links": [
-        [
-            12,
-            13,
-            0,
-            8,
-            1,
-            "float"
-        ],
         [
             17,
             18,
@@ -1436,14 +1485,6 @@
             "float"
         ],
         [
-            48,
-            27,
-            0,
-            45,
-            0,
-            "float"
-        ],
-        [
             49,
             26,
             0,
@@ -1457,14 +1498,6 @@
             0,
             47,
             0,
-            "float3"
-        ],
-        [
-            53,
-            17,
-            0,
-            47,
-            1,
             "float3"
         ],
         [
@@ -1500,36 +1533,12 @@
             "float"
         ],
         [
-            60,
-            36,
-            0,
-            48,
-            1,
-            "float3"
-        ],
-        [
             61,
             33,
             0,
             36,
             0,
             "float3"
-        ],
-        [
-            62,
-            50,
-            0,
-            49,
-            0,
-            "float,int,uint"
-        ],
-        [
-            63,
-            39,
-            0,
-            51,
-            0,
-            "float"
         ],
         [
             64,
@@ -1540,10 +1549,74 @@
             "float"
         ],
         [
-            65,
+            67,
+            57,
+            0,
+            49,
+            0,
+            "float,int,uint"
+        ],
+        [
+            68,
+            17,
+            0,
+            47,
+            1,
+            "float3"
+        ],
+        [
+            69,
+            36,
+            0,
+            48,
+            1,
+            "float3"
+        ],
+        [
+            75,
             51,
             0,
             43,
+            0,
+            "float"
+        ],
+        [
+            76,
+            61,
+            0,
+            51,
+            0,
+            "float"
+        ],
+        [
+            85,
+            62,
+            2,
+            8,
+            1,
+            "float"
+        ],
+        [
+            91,
+            13,
+            0,
+            8,
+            1,
+            "float"
+        ],
+        [
+            102,
+            72,
+            0,
+            71,
+            0,
+            "Part"
+        ],
+        [
+            103,
+            71,
+            3,
+            45,
             0,
             "float"
         ]
@@ -1552,18 +1625,18 @@
         {
             "title": "Update",
             "bounding": [
-                35,
-                655,
-                970,
-                560
+                326,
+                653,
+                1004,
+                529
             ],
             "color": "#A88"
         },
         {
             "title": "Init",
             "bounding": [
-                -6,
-                241,
+                355,
+                232,
                 987,
                 384
             ],
@@ -1572,8 +1645,8 @@
         {
             "title": "Spawn",
             "bounding": [
-                285,
-                66,
+                640,
+                78,
                 690,
                 136
             ],

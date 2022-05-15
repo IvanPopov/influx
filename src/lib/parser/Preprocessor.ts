@@ -204,9 +204,11 @@ export class Preprocessor {
 
     protected lexerReport: IDiagnosticReport;
 
+    protected lexerOptions: { skipComments: boolean; };
+
     document: ITextDocument;
 
-    constructor(lexerEngine: ILexerEngine, knownTypes: Set<string> = new Set, macros = new Macros, diag = new PreprocessorDiagnostics) {
+    constructor(lexerEngine: ILexerEngine, { knownTypes = new Set<string>(), macros = new Macros, diag = new PreprocessorDiagnostics, skipComments = true } = {}) {
         this.macros = macros;
 
         this.macroState = new MacroState;
@@ -220,6 +222,7 @@ export class Preprocessor {
 
         this.diagnostics = diag;
         this.lexerReport = null;
+        this.lexerOptions = { skipComments };
         // TODO: add initital document to includeList !!!
 
         this.stack = [];
@@ -1091,7 +1094,9 @@ export class Preprocessor {
             console.info('preprocess to string', value);
         }
 
-        const pp = new Preprocessor(this.lexerEngine, this.knownTypes, this.macros, this.diagnostics);
+        const { knownTypes, macros, diagnostics: diag } = this;
+
+        const pp = new Preprocessor(this.lexerEngine, { knownTypes, macros, diag });
         pp.setTextDocument(createTextDocument('://macro', value));
 
         let token = pp.readToken();
@@ -1173,7 +1178,8 @@ export class Preprocessor {
 
 
     protected documentToLexer(textDocument: ITextDocument): ILexer {
-        const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
+        const { lexerEngine: engine, knownTypes, lexerOptions: { skipComments } } = this;
+        const lexer = new Lexer({ engine, knownTypes, skipComments });
         lexer.setTextDocument(textDocument);
         return lexer;
     }
@@ -1218,11 +1224,12 @@ export class Preprocessor {
 }
 
 // create preprocessed document
-export function createPPDocument(textDocument: ITextDocument): ITextDocument {
+export function createPPDocument(textDocument: ITextDocument, options = { skipComments: true }): ITextDocument {
     // TODO: try to use default lexer: new LexerEngine()
 
     const parser = defaultSLParser();
-    const pp = new Preprocessor(parser.lexerEngine);
+    const { skipComments } = options;
+    const pp = new Preprocessor(parser.lexerEngine, { skipComments });
     pp.setTextDocument(textDocument);
 
     const newline = (from: number, to: number): string => Array(Math.min(to - from, 4)).fill('\n').join('');

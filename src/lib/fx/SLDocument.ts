@@ -5,7 +5,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 
 import { Analyzer, IExprSubstCallback } from "./analisys/Analyzer";
-import { createSLASTDocument } from "./SLASTDocument";
+import { createSLASTDocument, createSLASTDocumentSync } from "./SLASTDocument";
 
 export async function createSLDocument(textDocument: ITextDocument, flags?: number): Promise<ISLDocument>;
 export async function createSLDocument(slastDocument: ISLASTDocument): Promise<ISLDocument>;
@@ -42,6 +42,19 @@ export async function extendSLDocument(textAddition: ITextDocument, base: ISLDoc
     {
         let knownTypes = Object.keys(base.root.scope.types);
         addition = await createSLASTDocument(textAddition, flags, knownTypes);
+    }
+    const analyzer = new Analyzer;
+    const slDocument = analyzer.extend(addition, base, expressions);
+    return slDocument;
+}
+
+
+export function extendSLDocumentSync(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, flags?: number): ISLDocument {
+    let addition = null;
+    if (textAddition)
+    {
+        let knownTypes = Object.keys(base.root.scope.types);
+        addition = createSLASTDocumentSync(textAddition, flags, knownTypes);
     }
     const analyzer = new Analyzer;
     const slDocument = analyzer.extend(addition, base, expressions);

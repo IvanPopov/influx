@@ -1,5 +1,6 @@
 import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
+import { store } from '@sandbox/store';
 import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
 import { LGraph } from 'litegraph.js';
 import { bindActionCreators, Dispatch } from 'redux';
@@ -104,12 +105,30 @@ export const sourceCode = {
 };
 
 export const graph = {
+    // is not being used at the moment
     reset() {
         return { type: evt.GRAPH_RESET, payload: { } };
     },
+
+    // request full recompilation
     recompile(graph: LGraph) {
         return { type: evt.GRAPH_COMPILE, payload: { graph } };
+    },
+
+    // update per particle data
+    spicifyFxPartStructure(content: string) {
+        return { type: evt.GRAPH_PART_STRUCTURE_SPECIFIED, payload: { content } };
+    },
+
+    provideNodeDocs(docs: string) {
+        return { type: evt.GRAPH_NODE_DOCS_PROVIDED, payload: { docs } };
     }
+}
+
+// hack to avoid looped imports
+export function graphProvideNodeDocs(docs: string)
+{
+    store.dispatch(graph.provideNodeDocs(docs));
 }
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };
