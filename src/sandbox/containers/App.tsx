@@ -821,7 +821,7 @@ class App extends React.Component<IAppProps> {
                     >
                         <FileListView
                             path={ ASSETS_PATH }
-                            filters={ ['.fx'] }
+                            filters={ ['.fx', '.xfx'] }
                             onFileClick={ (file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); } } />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
