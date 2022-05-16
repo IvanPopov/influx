@@ -176,6 +176,9 @@ class GraphView extends React.Component<IGraphViewProps> {
                 this.canvas.draw(true, true);
             }
         });
+
+        // IP: fix of unknown problem with keydown event which doen't work without this magic.
+        this.canvasRef.current.setAttribute("tabindex", '0');
     }
 
     @autobind
