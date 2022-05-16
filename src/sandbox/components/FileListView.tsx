@@ -46,6 +46,7 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
         node.files = [
             'sphere.fx',
             'part.fx',
+            'part.xfx',
             'holographicTable.fx',
             'messy.fx',
             'speed.fx',
