@@ -81,11 +81,10 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
         const sourceFile = getFileState(getState());
 
         if (location === '/') {
-            // history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}`);
-            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/${GRAPH_KEYWORD}`);
-            //                                                  ^^^^^^^^^^^^^^^^^^^^^
-            //                                         FIXME: hack to show graph view by default 
-            //                                         -----------------------------------------
+            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}`);
+            // history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/${GRAPH_KEYWORD}`);
+            // //                                                  ^^^^^^^^^^^^^^^^^^^^^
+            // //                                         FIXME: hack to show graph view by default 
             // //                                         -----------------------------------------
             return done();
         }

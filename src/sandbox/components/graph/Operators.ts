@@ -4,8 +4,8 @@ import { RelationalExprInstruction, RelationOperator } from "@lib/fx/analisys/in
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IArithmeticOperator, IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
-import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
-import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
+import { LiteGraph } from "litegraph.js";
+import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
 
 let types = [ 'float', 'int', 'uint', 'float3' ];
 
@@ -19,7 +19,7 @@ let arithmetic = [
 
 arithmetic.forEach(desc => {
     types.forEach(typeName => {
-        class Node extends LGraphNodeEx implements IGraphASTNode {
+        class Node extends LGraphNodeAST {
             static desc = desc.name;
         
             constructor() {
@@ -30,12 +30,22 @@ arithmetic.forEach(desc => {
                 this.size = [100, 50];
             }
         
-            evaluate(context: Context, program: ProgramScope): IExprInstruction {
+            run(context: Context, program: ProgramScope): IExprInstruction {
                 const sourceNode = null as IParseNode;
                 const scope = program.currentScope;
                 const operator = desc.operator as IArithmeticOperator;
-                const left = (this.getInputNode(0) as IGraphASTNode).evaluate(context, program, this.link(0)) as IExprInstruction;
-                const right = (this.getInputNode(1) as IGraphASTNode).evaluate(context, program, this.link(1)) as IExprInstruction;
+
+                let leftNode = this.getInputNode(0) as IGraphASTNode;
+                let rightNode = this.getInputNode(1) as IGraphASTNode;
+
+                if (!leftNode || !rightNode)
+                {
+                    this.emitError(`All inputs must be conected.`);
+                    return null;
+                }
+
+                const left = leftNode.run(context, program, this.link(0)) as IExprInstruction;
+                const right = rightNode.run(context, program, this.link(1)) as IExprInstruction;
 
                 // IP: todo - calc proper type
                 const type = left.type;
@@ -45,6 +55,10 @@ arithmetic.forEach(desc => {
 
             getTitle(): string {
                 return `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+            }
+
+            getDocs(): string {
+                return `Operator '${desc.search}'.`
             }
         }
         
@@ -64,7 +78,7 @@ let relations = [
 
 // todo: add support of different types
 relations.forEach(desc => {
-    class Node extends LGraphNodeEx implements IGraphASTNode {
+    class Node extends LGraphNodeAST {
         static desc = desc.name;
 
         constructor() {
@@ -75,17 +89,31 @@ relations.forEach(desc => {
             this.size = [100, 50];
         }
 
-        evaluate(context: Context, program: ProgramScope): IExprInstruction {
+        run(context: Context, program: ProgramScope): IExprInstruction {
             const sourceNode = null as IParseNode;
             const scope = program.currentScope;
             const operator = desc.operator as RelationOperator;
-            const left = (this.getInputNode(0) as IGraphASTNode).evaluate(context, program, this.link(0)) as IExprInstruction;
-            const right = (this.getInputNode(1) as IGraphASTNode).evaluate(context, program, this.link(1)) as IExprInstruction;
+
+            let leftNode = this.getInputNode(0) as IGraphASTNode;
+            let rightNode = this.getInputNode(1) as IGraphASTNode;
+
+            if (!leftNode || !rightNode)
+            {
+                this.emitError(`All inputs must be conected.`);
+                return null;
+            }
+
+            const left = leftNode.run(context, program, this.link(0)) as IExprInstruction;
+            const right = rightNode.run(context, program, this.link(1)) as IExprInstruction;
             return new RelationalExprInstruction({ scope, sourceNode, left, right, operator });
         }
 
         getTitle(): string {
             return `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+        }
+
+        getDocs(): string {
+            return `Operator '${desc.search}'.`
         }
     }
 

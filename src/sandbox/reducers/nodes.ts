@@ -16,6 +16,6 @@ export default handleActions<INodePipeline, IGraphActions>({
         ({ ...state, $graph: state.$revision + 1 }),
 
     [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
-        ({ ...state, nodeDocs: action.payload.docs })
+        ({ ...state, docs: action.payload.docs })
 }, initialState);
 

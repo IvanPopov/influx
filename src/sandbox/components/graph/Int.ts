@@ -3,16 +3,14 @@ import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
-import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
-import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
-import { store } from '@sandbox/store';
-import { nodes } from '@sandbox/actions';
+import { IWidget, LiteGraph } from "litegraph.js";
+import { LGraphNodeAST } from "./IGraph";
 
 // notes:
 //  processNodeWidgets handles clicks and events
 //  drawNodeWidgets handles drawning
 
-class Int extends LGraphNodeEx implements IGraphASTNode {
+class Int extends LGraphNodeAST {
     static desc = "Int";
 
     private widget: IWidget;
@@ -26,7 +24,7 @@ class Int extends LGraphNodeEx implements IGraphASTNode {
         this.size = [150, 30];
     }
 
-    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
@@ -38,7 +36,7 @@ class Int extends LGraphNodeEx implements IGraphASTNode {
         if (this.flags.collapsed) {
             return this.properties.value.toFixed(0);
         }
-        return this.title;
+        return super.getTitle();
     }
 
     onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
@@ -49,7 +47,7 @@ class Int extends LGraphNodeEx implements IGraphASTNode {
 LiteGraph.registerNodeType("constants/int", Int);
 
 
-class Uint extends LGraphNodeEx implements IGraphASTNode {
+class Uint extends LGraphNodeAST {
     static desc = "Uint";
 
     private widget: IWidget;
@@ -63,7 +61,7 @@ class Uint extends LGraphNodeEx implements IGraphASTNode {
         this.size = [150, 30];
     }
 
-    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         let { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
@@ -75,7 +73,7 @@ class Uint extends LGraphNodeEx implements IGraphASTNode {
         if (this.flags.collapsed) {
             return this.properties.value.toFixed(0);
         }
-        return this.title;
+        return super.getTitle();
     }
 
     onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {

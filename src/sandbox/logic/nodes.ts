@@ -6,11 +6,10 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { nodes, sourceCode } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IGraphCompile, IGraphLoaded } from '@sandbox/actions/ActionTypes';
-import { PART_STRUCTURE_SL_DOCUMENT } from '@sandbox/components/graph/autogen';
+import { PART_STRUCTURE_SL_DOCUMENT } from '@sandbox/components/graph/common';
 import { IGraphASTFinalNode } from '@sandbox/components/graph/IGraph';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
-import { LGraph } from 'litegraph.js';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from '.';
@@ -78,9 +77,9 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         const update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
 
         let doc = await extendSLDocument(null, PART_STRUCTURE_SL_DOCUMENT);
-        doc = await spawn.evaluate(doc);
-        doc = await init.evaluate(doc);
-        doc = await update.evaluate(doc);
+        doc = await spawn.run(doc);
+        doc = await init.run(doc);
+        doc = await update.run(doc);
 
         doc = await extendFXSLDocument(createTextDocument("://fx-template", EffectTemplateHLSL), doc);
 

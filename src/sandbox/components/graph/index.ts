@@ -1,6 +1,16 @@
-import './autogen';
+import './FuncNodes';
+import './Uniforms';
 import './Int';
 import './Float';
-import './Float3';
-import './Arithmetic';
+import './BasicType';
+import './Operators';
+import './Decomposer';
+
+import './fx/PartId';
+import './fx/PartPrevious';
+import './fx/PartSpawn';
+import './fx/PartInit';
+import './fx/PartUpdate';
+
+import './docs';
 
