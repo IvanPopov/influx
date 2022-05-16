@@ -6,7 +6,7 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
 import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
 import { store } from '@sandbox/store';
-import { graph } from '@sandbox/actions';
+import { nodes } from '@sandbox/actions';
 
 // notes:
 //  processNodeWidgets handles clicks and events
@@ -32,12 +32,6 @@ class Int extends LGraphNodeEx implements IGraphASTNode {
         // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
         const { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
         return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
-    }
-
-    onPropertyChanged(name: string, value: number, prevValue: number): boolean
-    {
-        store.dispatch(graph.recompile(this.graph));
-        return true;
     }
 
     getTitle(): string {
@@ -75,12 +69,6 @@ class Uint extends LGraphNodeEx implements IGraphASTNode {
         let { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
         signed = false; // force "unsigned"
         return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
-    }
-
-    onPropertyChanged(name: string, value: number, prevValue: number): boolean
-    {
-        store.dispatch(graph.recompile(this.graph));
-        return true;
     }
 
     getTitle(): string {

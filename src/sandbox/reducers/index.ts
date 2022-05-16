@@ -6,6 +6,8 @@ import { combineReducers } from 'redux';
 import parserParams from './parserParams';
 import router from './router';
 import sourceFile from './sourceFile';
+import playground from './playground';
+import nodes from './nodes';
 
 /**
  * selectors
@@ -25,4 +27,4 @@ export function mapProps<T extends { (state: IStoreState): any; }>(selector: T):
     return (state) => selector(state);
 }
 
-export default combineReducers<IStoreState>({ sourceFile, parserParams, router });
+export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes });

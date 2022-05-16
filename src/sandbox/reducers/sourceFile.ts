@@ -1,8 +1,7 @@
 import { assert } from '@lib/common';
-import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import { IScope } from '@lib/idl/IInstruction';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IPlaygroundActions, IPlaygroundEmitterUpdate, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest, ISourceCodePreprocessingComplete, IGraphReset, IGraphCompile, IGraphActions, IGraphNodeDocsProvided } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -23,19 +22,11 @@ const initialState: IFileState = {
             disableOptimizations: true,
             autocompile: false
         }
-    },
-    emitter: null,
-
-    // graph
-    nodeDocs: null,
-
-    // HACK: additional counter in order to call component's update in case of shadow pipeline reloading
-    $pipeline: 0,
-    $graph: 0
+    }
 };
 
 
-export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IPlaygroundActions | IGraphActions>({
+export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>({
     [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
         ({ ...state, uri: action.payload.filename }),
 
@@ -145,24 +136,6 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
         // console.log(JSON.stringify(options, null, '\t'));
         return { ...state, debugger: $debugger };
     },
-
-    //
-    // playground
-    //
-
-    [evt.PLAYGROUND_EMITER_UPDATE]: (state, action: IPlaygroundEmitterUpdate) =>
-        ({ ...state, emitter: action.payload.emitter, $pipeline: state.$pipeline + 1 }),
-
-    //
-    // graph
-    //
-
-    [evt.GRAPH_COMPILE]: (state, action: IGraphCompile) =>
-        ({ ...state, $graph: state.$graph + 1 }),
-
-    [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
-        ({ ...state, nodeDocs: action.payload.docs })
-
 }, initialState);
 
 
@@ -172,16 +145,5 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 export const getFileState = (state: IStoreState): IFileState => state.sourceFile;
 export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(state).debugger;
 export const getScope = (file: IFileState): IScope => file.slDocument ? file.slDocument.root.scope : null;
-export const getEmitterName = (file: IFileState) => file.emitter ? file.emitter.name : null;
-export function filterPartFx(scope: IScope): IPartFxInstruction[] {
-    if (!scope) {
-        return [];
-    }
-
-    const map = scope.techniques;
-    return Object.keys(map)
-        .filter(name => map[name].type === ETechniqueType.k_PartFx)
-        .map(name => <IPartFxInstruction>map[name]);
-}
 
 export const getRawContent = (file: IFileState): string => file.rawDocument ? file.rawDocument.source : null;

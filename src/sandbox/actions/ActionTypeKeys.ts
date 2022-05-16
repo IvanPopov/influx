@@ -29,8 +29,8 @@ export const DEBUGGER_OPTIONS_CHANGED               = 'debugger-options-changed'
 export const PLAYGROUND_EMITER_UPDATE               = 'playground-emitter-update';
 export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
 
-export const GRAPH_RESET                            = 'graph-reset';
-export const GRAPH_COMPILE                          = 'graph-compile';
-export const GRAPH_PART_STRUCTURE_SPECIFIED         = 'graph-part-structure-specified';
-export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';
-
+export const GRAPH_LOADED                           = 'graph-loaded';                   // serialized content of graph has been provided
+export const GRAPH_RESET                            = 'graph-reset';                    // nothing 
+export const GRAPH_COMPILE                          = 'graph-compile';                  // requst to generate and recompile (via default pipline with source content) code from graph
+export const GRAPH_PART_STRUCTURE_SPECIFIED         = 'graph-part-structure-specified'; // 'Part' strcuture has been modified 
+export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';       // update floating docs of selected graph node

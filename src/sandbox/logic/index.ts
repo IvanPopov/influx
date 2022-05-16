@@ -3,13 +3,14 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import fxRuntime from '@sandbox/logic/fxRuntime';
 import parsing from '@sandbox/logic/parsing';
-import graph from '@sandbox/logic/graph';
+import graph from '@sandbox/logic/nodes';
 import { history } from '@sandbox/reducers/router';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
+import * as path from '@lib/path/path';
 
 const readFile = fname => fetch(fname);
 
@@ -24,9 +25,17 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
                 dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
                 dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { } });
             } else {
+                const uri = path.parse(action.payload.filename);
                 const content = await response.text();
                 dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
-                dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+
+                if (uri.ext === 'xfx')    
+                {
+                    dispatch({ type: evt.GRAPH_LOADED, payload: { content } });
+                }
+                else {
+                    dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+                }
             }
         } catch (error) {
             console.warn(`Could not find file ${action.payload.filename}.`);
@@ -77,6 +86,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
             //                                                  ^^^^^^^^^^^^^^^^^^^^^
             //                                         FIXME: hack to show graph view by default 
             //                                         -----------------------------------------
+            // //                                         -----------------------------------------
             return done();
         }
 
@@ -98,7 +108,9 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
                 const fxRequest = `${ASSETS_PATH}/${fx}`;
 
-                if (sourceFile.uri !== fxRequest) {
+                if (sourceFile.uri !== fxRequest 
+                    // && name !== GRAPH_KEYWORD
+                    ) {
                     dispatch(sourceActions.openFile(fxRequest));
                 }
             }

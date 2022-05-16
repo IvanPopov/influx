@@ -6,6 +6,7 @@ import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { IEmitter } from '@sandbox/containers/playground/IEmitter';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
+import { LGraph } from 'litegraph.js';
 
 export interface IMarker {
     range: IRange;
@@ -45,16 +46,17 @@ export interface IFileState {
     breakpoints: number[];
 
     debugger: IDebuggerState;
-    emitter: IEmitter; // todo: add type.
+}
 
-    // graph
+export interface INodePipeline {
+    docs: string;               // current info of selected node
+    graph: LGraph; 
+    $revision: number;          // number of updates of graph
+}
 
-    nodeDocs: string;
-
-    //
-
-    $pipeline: number;  // number of updates of emitter
-    $graph: number;
+export interface IPlaygroundState {
+    emitter: IEmitter;      // todo: add type.
+    $revision: number;      // number of updates of emitter
 }
 
 export interface IParserState extends IParserParams {
@@ -69,6 +71,8 @@ export interface IStoreState {
     readonly sourceFile: IFileState;
     readonly parserParams: IParserState;
     readonly router: RouterState;
+    readonly playground: IPlaygroundState;
+    readonly nodes: INodePipeline;
 }
 
 export default IStoreState;

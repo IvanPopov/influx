@@ -15,7 +15,7 @@ import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, Sourc
 import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD, GRAPH_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { history } from '@sandbox/reducers/router';
-import { filterPartFx, getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
+import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
@@ -33,6 +33,7 @@ declare const MODE: string;
 declare const TIMESTAMP: string;
 
 import isElectron from 'is-electron';
+import { filterPartFx } from '@sandbox/reducers/playground';
 const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 type UnknownIcon = any;

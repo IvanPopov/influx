@@ -4,21 +4,21 @@
 /* tslint:disable:newline-per-chained-call */
 
 
-import { ETechniqueType, IScope } from '@lib/idl/IInstruction';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
-import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { mapProps } from '@sandbox/reducers';
-import { filterPartFx, getEmitterName, getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import { IFileState } from '@sandbox/store/IStoreState';
+import { mapActions, playground as playgroundActions } from '@sandbox/actions';
+import { getCommon, mapProps } from '@sandbox/reducers';
+import { filterPartFx, getEmitterName, getPlaygroundState } from '@sandbox/reducers/playground';
+import { getScope } from '@sandbox/reducers/sourceFile';
+import IStoreState, { IPlaygroundState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, List, Message, Icon } from 'semantic-ui-react';
-
+import { Button, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 
-interface IPlaygroundProps extends IFileState {
-    actions: typeof sourceActions;
+
+interface IPlaygroundProps extends IStoreState {
+    actions: typeof playgroundActions;
 }
 
 
@@ -51,9 +51,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePlayClick() {
         const props = this.props;
-        if (props.emitter) {
-            if (props.emitter.isStopped()) {
-                props.emitter.start();
+        if (props.playground.emitter) {
+            if (props.playground.emitter.isStopped()) {
+                props.playground.emitter.start();
                 this.forceUpdate();
             }
         }
@@ -62,9 +62,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePauseClick() {
         const props = this.props;
-        if (props.emitter) {
-            if (!props.emitter.isStopped()) {
-                props.emitter.stop();
+        if (props.playground.emitter) {
+            if (!props.playground.emitter.isStopped()) {
+                props.playground.emitter.stop();
                 this.forceUpdate();
             }
         }
@@ -74,8 +74,8 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handleResetClick() {
         const props = this.props;
-        if (props.emitter) {
-            props.emitter.reset();
+        if (props.playground.emitter) {
+            props.playground.emitter.reset();
         }
     }
 
@@ -86,13 +86,13 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return nextProps.emitter !== this.props.emitter ||
-            (this.props.emitter && this.$emitterName !== this.props.emitter.name);
+        return nextProps.playground.emitter !== this.props.playground.emitter ||
+            (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.name);
     }
 
     componentDidUpdate() {
-        if (this.props.emitter) {
-            this.$emitterName = this.props.emitter.name;
+        if (this.props.playground.emitter) {
+            this.$emitterName = this.props.playground.emitter.name;
         } else {
             this.$emitterName = null;
         }
@@ -102,11 +102,11 @@ class Playground extends React.Component<IPlaygroundProps> {
     render() {
         // console.log('Playground:render()');
         const props = this.props;
-        const emitter = props.emitter;
-        const scope = getScope(props);
+        const emitter = props.playground.emitter;
+        const scope = getScope(props.sourceFile);
 
         const list: IPartFxInstruction[] = filterPartFx(scope);
-        const active = getEmitterName(props);
+        const active = getEmitterName(props.playground);
 
         return (
             <div>
@@ -162,4 +162,4 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 }
 
-export default connect<{}, {}, IPlaygroundProps>(mapProps(getFileState), mapActions(sourceActions))(Playground) as any;
+export default connect<{}, {}, IPlaygroundProps>(mapProps(getCommon), mapActions(playgroundActions))(Playground) as any;

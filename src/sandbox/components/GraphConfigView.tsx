@@ -7,7 +7,7 @@ import { connect } from 'react-redux';
 import withStyles, { WithStylesProps } from 'react-jss';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
-import { graph as graphActions } from '@sandbox/actions';
+import { nodes as nodesActions } from '@sandbox/actions';
 import { Segment } from 'semantic-ui-react';
 
 export const styles = {
@@ -31,7 +31,7 @@ const monacoOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
 };
 
 export interface IProps extends IStoreState, Partial<WithStylesProps<typeof styles>> {
-    actions: typeof graphActions;
+    actions: typeof nodesActions;
 }
 
 class GraphConfigView extends React.Component<IProps> {
@@ -42,7 +42,7 @@ class GraphConfigView extends React.Component<IProps> {
     }
 
     render() {
-        const docs = this.props.sourceFile.nodeDocs;
+        const docs = this.props.nodes.docs;
         return (
             <div>
                 <MonacoEditor
@@ -63,4 +63,4 @@ class GraphConfigView extends React.Component<IProps> {
     }
 }
 
-export default connect<{}, {}, IProps>(mapProps(getCommon), mapActions({ ...graphActions }))(withStyles(styles)(GraphConfigView)) as any;
+export default connect<{}, {}, IProps>(mapProps(getCommon), mapActions({ ...nodesActions }))(withStyles(styles)(GraphConfigView)) as any;

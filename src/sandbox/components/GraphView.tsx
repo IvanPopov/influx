@@ -1,21 +1,17 @@
 /* tslint:disable:typedef */
 
-import { graph as graphActions, mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { mapActions, nodes as nodesActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 import autobind from 'autobind-decorator';
-import isElectron from 'is-electron';
 import { LGraph, LGraphCanvas, LGraphNode, LiteGraph } from 'litegraph.js';
 import 'litegraph.js/css/litegraph.css';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import SAMPLE_GRAPH_JSON from './graph/lib/example.json';
 import './graph';
-
-
 
 
 // LiteGraph.debug = true;
@@ -27,7 +23,6 @@ LiteGraph.NODE_TITLE_TEXT_Y = 18;
 LiteGraph.NODE_DEFAULT_COLOR = 'rgba(72, 201, 176, 0.5)';
 LiteGraph.NODE_DEFAULT_BGCOLOR = 'rgba(112, 123, 124, 0.5)';
 LiteGraph.NODE_DEFAULT_BOXCOLOR = 'rgba(255, 0, 0, 0.0)';
-
 
 
 // LiteGraph.NODE_TEXT_COLOR = 'rgba(255,255,255,0.75)';
@@ -78,12 +73,11 @@ const styles = {
 
 
 interface IGraphViewProps extends IStoreState, RouteComponentProps, Partial<WithStylesProps<typeof styles>> {
-    actions: typeof graphActions & typeof sourceActions;
+    actions: typeof nodesActions & typeof sourceActions;
 }
 
 @(withRouter as any)
 class GraphView extends React.Component<IGraphViewProps> {
-    graph: LGraph;
     canvas: LGraphCanvas;
 
     canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -92,7 +86,11 @@ class GraphView extends React.Component<IGraphViewProps> {
     spawnRoutine: LGraphNode;
 
     // number of update of given graph; 
-    $graph: number;
+    $revision: number;
+
+    get graph(): LGraph {
+        return this.props.nodes.graph;
+    }
 
     constructor(props: IGraphViewProps) {
         super(props);
@@ -101,10 +99,7 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.divRef = React.createRef();
     }
 
-    componentDidMount() {
-        this.graph = new LGraph();
-        // this.graph.filter = "influx";
-
+    setupCanvas() {
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
         this.canvas.show_info = true;
         // this.canvas.use_gradients = true;
@@ -121,8 +116,10 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_x = 1;
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
+    }
 
 
+    setupTypesColoring() {
         const palette = { 
             "Cadet Blue": "#51a3a3", 
             "Steel Teal": "#5A8D92",
@@ -146,7 +143,9 @@ class GraphView extends React.Component<IGraphViewProps> {
             float3: palette["Sunray"],
             float4: palette["Arylide Yellow"]
         };
+    }
 
+    setupListeners() {
         // (this.canvas as any).onAfterChange = () => { console.log('canvas change detected!'); }
         // (this.graph as any).onAfterChange = () => { console.log('graph change detected!'); }
         // (this.canvas as any).onNodeConnectionChange = () => { console.log('canvas connection change detected!'); }
@@ -154,10 +153,15 @@ class GraphView extends React.Component<IGraphViewProps> {
         // (this.canvas as any).onBeforeChange = () => { console.log('canvas b change detected!'); }
         // (this.graph as any).onBeforeChange = () => { console.log('graph b change detected!'); }
 
+        // todo: move to redux logic
         // notify store that graph have to be update
-        (this.graph as any).onNodeConnectionChange = () => { this.props.actions.recompile(this.graph); }
+        (this.graph as any).onNodeConnectionChange = () => { this.execute(); }
+    }
 
-        this.load();
+    componentDidMount() {
+        this.setupCanvas();
+        this.setupTypesColoring();
+        this.setupListeners();
 
         // execute graph on ctrl+enter
         document.addEventListener('keypress', this.onKeypress);
@@ -175,21 +179,19 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 
     @autobind
-    save()
-    {
-        this.graph && localStorage.setItem("graph-unfinished-work", JSON.stringify(this.graph.serialize()));
-        console.log('graph autosave');
+    onKeypress(e: KeyboardEvent) {
+        // ctrl+enter
+        if (e.ctrlKey && e.keyCode == 10) {
+            e.preventDefault();
+            this.execute();
+        }
     }
 
     @autobind
-    load()
+    execute()
     {
-        let tempSave = isElectron() ? null : localStorage.getItem("graph-unfinished-work");
-        this.graph.configure(tempSave ? JSON.parse(tempSave) : SAMPLE_GRAPH_JSON);
+        this.props.actions.recompile();
     }
-
-    @autobind
-    onKeypress(e: KeyboardEvent) {}
 
     @autobind
     onWindowResize() {
@@ -202,14 +204,6 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 
     render(): JSX.Element {
-
-        // hack to save graph on every change
-        if (this.props.sourceFile.$graph != this.$graph)
-        {
-            this.$graph = this.props.sourceFile.$graph;
-            this.save();
-        }
-
         return (
             <div
                 ref={this.divRef}
@@ -226,5 +220,4 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 }
 
-// export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), null)(withStyles(styles)(GraphView)) as any;
-export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), mapActions({ ...graphActions, ...sourceActions }))(withStyles(styles)(GraphView)) as any;
+export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), mapActions({ ...nodesActions, ...sourceActions }))(withStyles(styles)(GraphView)) as any;

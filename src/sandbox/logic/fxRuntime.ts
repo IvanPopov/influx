@@ -6,7 +6,8 @@ import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 import * as PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
-import { filterPartFx, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
+import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
@@ -15,6 +16,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
+        const playground = getPlaygroundState(getState());
 
         if (!file.slDocument) {
             done();
@@ -32,7 +34,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const list: IPartFxInstruction[] = filterPartFx(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
-        let emitterPrev = file.emitter;
+        let emitterPrev = playground.emitter;
         let emitterNext = null;
 
         if (!isNull(emitterPrev) && isNull(active)) {

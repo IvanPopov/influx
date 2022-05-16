@@ -90,29 +90,30 @@ export const sourceCode = {
     //
     //
 
-    selectEffect(name: string) {
-        return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
-    },
-
-
-    //
-    //
-    //
-
     resetDebugger() {
         return { type: evt.DEBUGGER_RESET };
     }
 };
 
-export const graph = {
+export const playground = {
+    selectEffect(name: string) {
+        return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
+    }
+};
+
+export const nodes = {
     // is not being used at the moment
     reset() {
-        return { type: evt.GRAPH_RESET, payload: { } };
+        return { type: evt.GRAPH_RESET, payload: {} };
     },
 
-    // request full recompilation
-    recompile(graph: LGraph) {
-        return { type: evt.GRAPH_COMPILE, payload: { graph } };
+    // request full recompilationIGraph
+    recompile() {
+        return { type: evt.GRAPH_COMPILE, payload: {} };
+    },
+
+    load(content: string) {
+        return { type: evt.GRAPH_LOADED, payload: { content } };
     },
 
     // update per particle data
@@ -126,9 +127,13 @@ export const graph = {
 }
 
 // hack to avoid looped imports
-export function graphProvideNodeDocs(docs: string)
-{
-    store.dispatch(graph.provideNodeDocs(docs));
+export function nodesProvideDocs(docs: string) {
+    store.dispatch(nodes.provideNodeDocs(docs));
+}
+
+// hack to avoid looped imports
+export function nodesForceRecompile() {
+    store.dispatch(nodes.recompile());
 }
 
 export type mapDispatchToProps<T> = (dispatch: IDispatch) => { actions: any; $dispatch: IDispatch; $rowActions: T };

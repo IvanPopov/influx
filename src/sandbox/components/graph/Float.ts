@@ -6,7 +6,7 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphNode, LiteGraph } from "litegraph.js";
 import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
 import { store } from '@sandbox/store';
-import { graph } from '@sandbox/actions';
+import { nodes } from '@sandbox/actions';
 
 
 class Float extends LGraphNodeEx implements IGraphASTNode {
@@ -27,12 +27,6 @@ class Float extends LGraphNodeEx implements IGraphASTNode {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
-    }
-
-    onPropertyChanged(name: string, value: number, prevValue: number): boolean
-    {
-        store.dispatch(graph.recompile(this.graph));
-        return true;
     }
 
     getTitle(): string {

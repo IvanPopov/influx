@@ -3,7 +3,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { graphProvideNodeDocs } from "@sandbox/actions";
+import { nodesForceRecompile, nodesProvideDocs } from "@sandbox/actions";
 import { LGraphNode } from "litegraph.js";
 
 export interface IGraphASTNode extends LGraphNode
@@ -50,7 +50,7 @@ export class LGraphNodeEx extends LGraphNode
         const docs = this.getDocs();
         if (docs)
         {
-            graphProvideNodeDocs(this.getDocs());
+            nodesProvideDocs(this.getDocs());
         }
     }
 
@@ -59,8 +59,14 @@ export class LGraphNodeEx extends LGraphNode
         const docs = this.getDocs();
         if (docs)
         {
-            graphProvideNodeDocs(null);
+            nodesProvideDocs(null);
         }
+    }
+
+    onPropertyChanged(name: string, value: number, prevValue: number): boolean
+    {
+        nodesForceRecompile();
+        return true;
     }
 
     getTitle(): string {
