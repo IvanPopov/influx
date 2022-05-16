@@ -21,6 +21,8 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
         this.addInput("count", "int");
         this.addProperty(propName, 1, "number");
         this.size = [180, 30];
+
+        this.updateInputNames();
     }
 
     async run(document = LIB_SL_DOCUMENT): Promise<ISLDocument> {
