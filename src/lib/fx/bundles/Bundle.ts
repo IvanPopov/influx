@@ -11,9 +11,22 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
+// global defines from webpack's config;
+/// <reference path="../../webpack.d.ts" />
+function getFxBundleSignature(): IFxBundleSignature {
+    return {
+        version: VERSION,
+        commithash: COMMITHASH,
+        branch: BRANCH,
+        mode: MODE,
+        timestamp: TIMESTAMP
+    };
+}
+
+
 function createFxBundleHeader(name: string, type: FxBundleType): IFxBundle {
-    const version = getFxBundleVersion();
-    return { name, type, version };
+    const signature = getFxBundleSignature();
+    return { name, type, signature };
 }
 
 
@@ -31,19 +44,6 @@ function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPa
     const stride = instanceType.size >> 2;
 
     return { routines, geometry, sorting, instanceCount, stride, instance };
-}
-
-
-// global defines from webpack's config;
-/// <reference path="../../webpack.d.ts" />
-function getFxBundleVersion(): IFxBundleSignature {
-    return {
-        version: VERSION,
-        commithash: COMMITHASH,
-        branch: BRANCH,
-        mode: MODE,
-        timestamp: TIMESTAMP
-    };
 }
 
 
@@ -146,4 +146,18 @@ export function comparePartFxBundles(left: IPartFxBundle, right: IPartFxBundle):
         if (!compareFxTypeLayouts(left.renderPasses[i].instance, right.renderPasses[i].instance)) return false;
     }
     return true;
+}
+
+
+export function serializeBundlesToJSON(bundles: IFxBundle[])
+{
+    // quick fix: convert Uint8Array to native [];
+    bundles.forEach(bundle => {
+        if (bundle.type != 'part') return null;
+        const asNativeArray = (arr) => arr instanceof Uint8Array ? Array.from(arr) : arr;
+        const partBundle = bundle as IPartFxBundle;
+        partBundle.simulationRoutines.forEach(routine => routine.code = asNativeArray(routine.code));
+        partBundle.renderPasses.forEach(pass => pass.routines.forEach(routine => routine.code = asNativeArray(routine.code)));
+    });
+    return JSON.stringify(bundles, null, '\t');
 }

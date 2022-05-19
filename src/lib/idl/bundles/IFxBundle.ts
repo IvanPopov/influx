@@ -1,5 +1,6 @@
 import { TypeLayout } from "@lib/fx/bytecode/VM/native";
 
+
 // contains all necessary unpacked data to load and play effect
 export interface IFxBundleSignature {
     mode: string;
@@ -9,13 +10,9 @@ export interface IFxBundleSignature {
     timestamp: string;
 }
 
+
 export type FxBundleType = 'part';
 
-export interface IFxBundle {
-    version: IFxBundleSignature;
-    name: string;
-    type: FxBundleType;
-}
 
 export interface IFxUAVBundle {
     name: string;
@@ -24,12 +21,14 @@ export interface IFxUAVBundle {
     type: IFxTypeLayout;
 }
 
+
 export interface IFxRoutineBundle {
     type: 'bc' | 'glsl';
-    code: Uint8Array | string;
+    code: number[] | Uint8Array | string;
     resources?: { uavs: IFxUAVBundle[]; };
     numthreads?: number[];
 }
+
 
 export interface IFxGLSLAttribute
 {
@@ -38,12 +37,14 @@ export interface IFxGLSLAttribute
     attrName: string;
 }
 
+
 export interface IFxRoutineGLSLBundle extends IFxRoutineBundle
 {
     type: 'glsl';
     // vertex bundles also contain attribute description
     attributes?: IFxGLSLAttribute[];
 }
+
 
 export enum EPartFxSimRoutines {
     k_Reset,
@@ -53,12 +54,14 @@ export enum EPartFxSimRoutines {
     k_Last
 }
 
+
 export enum EPartFxRenderRoutines {
     k_Prerender,
     k_Vertex,
     k_Pixel,
     k_Last
 }
+
 
 export interface IPartFxRenderPass {
     routines: IFxRoutineBundle[];
@@ -69,7 +72,16 @@ export interface IPartFxRenderPass {
     instance: IFxTypeLayout;
 }
 
+
 export type IFxTypeLayout = TypeLayout;
+
+
+export interface IFxBundle {
+    signature: IFxBundleSignature;
+    name: string;
+    type: FxBundleType;
+}
+
 
 export interface IPartFxBundle extends IFxBundle {
     capacity: number;   // maximum number of particles allowed (limited by user manually in the sandbox)
