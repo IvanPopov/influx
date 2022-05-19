@@ -1,7 +1,7 @@
 import { assert } from "@lib/common";
 import { u8ArrayAsF32, u8ArrayAsI32 } from "@lib/fx/bytecode/common";
 import { CDL } from "@lib/fx/bytecode/DebugLayout";
-import { ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ITypeInstruction } from "@lib/idl/IInstruction";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
     const vector = [];
@@ -16,13 +16,58 @@ const asUint = u8a => (asInt(u8a) >>> 0);
 const asFloat = u8ArrayAsF32;
 const asBool = u8a => asInt(u8a) !== 0;
 
-type TypeLayout = ITypeInstruction;
+export interface TypeLayout
+{
+    fields?: { type: TypeLayout; name: string; size: number; padding: number; }[];
+    length?: number;
+    name: string;
+    size: number; // byte length
+}
 
-export function asNativeInner(result: Uint8Array, layout: TypeLayout): any {
-    // TODO: remove it?
-    while (layout !== layout.baseType) {
-        layout = layout.baseType;
+function typeLayoutArrayToBaseType({ fields, length, name, size }: TypeLayout)
+{
+    return { fields, name, size };
+}
+
+export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayout
+{
+    // is it needed?
+    while (type !== type.baseType) {
+        type = type.baseType;
     }
+
+    const isNotComplexOrSystem = (type: ITypeInstruction) => !type.isComplex() ||
+        type.instructionType == EInstructionTypes.k_SystemType;
+
+    let name = type.name;
+    let size = type.size;
+    let fields = undefined;
+    let length = undefined;
+
+    if (type.isArray())
+    {
+        length = type.length;
+    }
+
+    if (type.isNotBaseArray())
+    {
+        const elementType = typeAstToTypeLayout(type.arrayElementType);
+        fields = elementType.fields;
+    }
+    else if (!isNotComplexOrSystem(type))
+    {
+        fields = type.fields.map(({ name, type }) => ({ 
+            name, 
+            size: type.size, 
+            type: typeAstToTypeLayout(type), 
+            padding: type.padding 
+        }));
+    }
+
+    return { name, size, fields, length };
+}
+
+export function asNative(result: Uint8Array, layout: TypeLayout): any {
     switch (layout.name) {
         case 'bool':
             return asBool(result);
@@ -46,25 +91,31 @@ export function asNativeInner(result: Uint8Array, layout: TypeLayout): any {
             return asNativeVector(asFloat, result, layout.length, 4);
     }
 
-    if (layout.isComplex()) {
+    // parse as structure
+    if (layout.fields) {
         let complex = {};
         layout.fields.forEach(field => {
-            const { type, type: { padding, size } } = field;
-            complex[field.name] = asNativeInner(result.subarray(padding, padding + size), type);
+            const { padding, size, type } = field;
+            complex[field.name] = asNative(result.subarray(padding, padding + size), type);
         });
         return complex;
     }
 
-    if (layout.isNotBaseArray()) {
-        return asNativeVector(u8a => asNativeInner(u8a, layout.arrayElementType), result, layout.length, layout.arrayElementType.size);
+    // parse as array
+    if (layout.length) {
+        const elementType = typeLayoutArrayToBaseType(layout);
+        return asNativeVector(u8a => asNative(u8a, elementType), result, layout.length, elementType.size);
     }
 
-    assert(false, `not implemented: ${layout.toCode()}`);
+    assert(false, `not implemented`, layout);
     return null;
 }
 
-export function asNative(result: Uint8Array, cdl: CDL): any {
-    let layout = cdl.info.layout;
-    return asNativeInner(result, layout);
+export function asNativeViaAST(result: Uint8Array, type: ITypeInstruction): any {
+    return asNative(result, typeAstToTypeLayout(type));
+}
+
+export function asNativeViaCDL(result: Uint8Array, cdl: CDL): any {
+    return asNative(result, typeAstToTypeLayout(cdl.info.layout));
 }
 

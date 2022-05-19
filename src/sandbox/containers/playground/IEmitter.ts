@@ -11,7 +11,7 @@ export interface IAttribute {
 
 export interface IPass {
     instanceLayout: IAttribute[];
-    geometry: EPartFxPassGeometry;
+    geometry: string;
     data: Uint8Array;
     sorting: boolean;
 
@@ -40,5 +40,8 @@ export interface IEmitter {
     length(): number;
 
     reset(): void;
-    shadowReload(fx: IPartFxInstruction): Promise<boolean>;
+    // shadowReload(fx: IPartFxInstruction): Promise<boolean>;
+    shadowReload(fx: any): Promise<boolean>;
+    
+    dump(): void;
 }

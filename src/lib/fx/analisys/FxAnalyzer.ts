@@ -329,15 +329,22 @@ export class FxAnalyzer extends Analyzer {
                     fxStates.instanceCount = Number(value) || 1;
                     break;
                 case ('Geometry'.toUpperCase()):
-                    const types = [
-                        'Billboard',
-                        'Cylinder',
-                        'Box',
-                        'Sphere',
-                        'Line'
-                    ].map(type => type.toUpperCase());
+                    // const types = [
+                    //     'Billboard',
+                    //     'Cylinder',
+                    //     'Box',
+                    //     'Sphere',
+                    //     'Line'
+                    // ].map(type => type.toUpperCase());
 
-                    fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
+                    // fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
+                    value = value.toLowerCase();
+                    let i = Object.values(EPartFxPassGeometry as any).indexOf(value);
+                    if (i === -1) 
+                        fxStates.geometry = EPartFxPassGeometry.k_Undefined;
+                    else 
+                        fxStates.geometry = value as EPartFxPassGeometry;
+
                     break;
                 case ('Sorting'.toUpperCase()):
                     // TODO: use correct validation with diag error output

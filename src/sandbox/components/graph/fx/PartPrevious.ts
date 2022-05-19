@@ -51,7 +51,7 @@ type.fields.forEach(field => {
             this.size = [130, 25];
         }
 
-        run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+        evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
             const sourceNode = null as IParseNode;
             const scope = program.currentScope;
             const element = evaluatePartExpr(context, program);
@@ -78,7 +78,7 @@ class Node extends LGraphNodeAST {
         this.size = [100, 25];
     }
 
-    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         return evaluatePartExpr(context, program);
     }
 

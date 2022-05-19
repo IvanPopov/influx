@@ -149,7 +149,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         pass.instanceLayout.forEach(desc => {
             const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-            geometry.addAttribute(desc.attrName, interleavedAttr);
+            geometry.setAttribute(desc.attrName, interleavedAttr);
         });
 
 
@@ -159,8 +159,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             fragmentShader: pass.pixelShader,
             transparent: true,
             blending: THREE.NormalBlending,
-            depthTest: false
-            // linewidth: 5
+            depthTest: false,
+            // wireframeLinewidth: 5
         });
 
         // geometry.setIndex(Array(pass.capacity).fill(0).map((x, i) => i));
@@ -417,6 +417,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.frameId = requestAnimationFrame(this.animate);
 
         this.setState({ nParticles: emitter.length() });
+        // emitter.dump();
     }
 
     shouldComponentUpdate(nextProps: ITreeSceneProps, nexState) {

@@ -19,7 +19,18 @@ export interface ICSShaderReflection {
     uavs: IUavReflection[];
 }
 
-export interface IFxReflection {
+export interface IPartFxPassReflection
+{
+    instance: string;
+    sorting: boolean;
+    geometry: EPartFxPassGeometry;
+    instanceCount: number;
+    VSParticleShader: string;
+    PSParticleShader: string;
+    CSParticlesPrerenderRoutine: ICSShaderReflection;
+}
+
+export interface IPartFxReflection {
     name: string;
     capacity: number;
     particle: string; // << particle type name
@@ -28,15 +39,7 @@ export interface IFxReflection {
     CSParticlesInitRoutine: ICSShaderReflection;
     CSParticlesUpdateRoutine: ICSShaderReflection;
 
-    passes: {
-        instance: string;
-        sorting: boolean;
-        geometry: EPartFxPassGeometry;
-        instanceCount: number;
-        VSParticleShader: string;
-        PSParticleShader: string;
-        CSParticlesPrerenderRoutine: ICSShaderReflection;
-    }[];
+    passes: IPartFxPassReflection[];
 }
 
 export class FxTranslator extends FxEmitter {
@@ -575,7 +578,7 @@ export class FxTranslator extends FxEmitter {
         this.end(true);
     }
 
-    emitPartFxDecl(fx: IPartFxInstruction): IFxReflection {
+    emitPartFxDecl(fx: IPartFxInstruction): IPartFxReflection {
         if (!fx.particle)
         {
             return null;

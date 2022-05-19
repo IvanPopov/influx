@@ -21,7 +21,7 @@ class Float extends LGraphNodeAST {
         this.size = [160, 30];
     }
 
-    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });

@@ -3,11 +3,12 @@ import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IS
 // import { EPartFxInstructionTypes } from "./IPartFxInstruction";
 
 export enum EPartFxPassGeometry {
-    k_Billboard,
-    k_Cylinder,
-    k_Box,
-    k_Sphere,
-    k_Line
+    k_Billboard = "billboard",
+    k_Cylinder = "cylinder",
+    k_Box = "box",
+    k_Sphere = "sphere",
+    k_Line = "line",
+    k_Undefined = "undefined"
 }
 
 export interface IPartFxPassInstruction extends IPassInstruction {

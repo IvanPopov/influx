@@ -30,7 +30,7 @@ arithmetic.forEach(desc => {
                 this.size = [100, 50];
             }
         
-            run(context: Context, program: ProgramScope): IExprInstruction {
+            evaluate(context: Context, program: ProgramScope): IExprInstruction {
                 const sourceNode = null as IParseNode;
                 const scope = program.currentScope;
                 const operator = desc.operator as IArithmeticOperator;
@@ -89,7 +89,7 @@ relations.forEach(desc => {
             this.size = [100, 50];
         }
 
-        run(context: Context, program: ProgramScope): IExprInstruction {
+        evaluate(context: Context, program: ProgramScope): IExprInstruction {
             const sourceNode = null as IParseNode;
             const scope = program.currentScope;
             const operator = desc.operator as RelationOperator;

@@ -132,7 +132,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     }
                 </Table>
                 <Button animated onClick={ async () => {
-                    const result = VM.asNative(await VM.evaluate(code), cdl);
+                    const result = VM.asNativeViaCDL(await VM.evaluate(code), cdl);
                     alert(JSON.stringify(result, null, '   '));
                 } }>
                     <Button.Content visible>Run</Button.Content>

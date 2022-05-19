@@ -9,10 +9,10 @@ import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 
 import { IConstantReflection } from "../ConstantPool";
-import { asNative } from "./native";
+import { asNative, asNativeViaAST, asNativeViaCDL } from "./native";
 
 export { default as dispatch } from "./dispatch";
-export { asNative, asNativeInner } from './native';
+export { asNative, asNativeViaAST, asNativeViaCDL } from './native';
 export { createUAV } from './uav';
 
 
@@ -356,7 +356,7 @@ export function asNativeFunction(fn: IFunctionDeclInstruction): Function
     const bundle = load(code);
     return (...args: any[]) => {
         assert(!args || args.length === 0, 'arguments not supported');
-        return asNative(VM.play(bundle), cdl);
+        return asNativeViaCDL(VM.play(bundle), cdl);
     };
 }
 
@@ -400,7 +400,7 @@ export async function evaluate(param: string | Uint8Array, param2?: ISLDocument)
             return null;
         }
         const { code, cdl } = program;
-        return asNative(VM.play(load(code)), cdl);
+        return asNativeViaCDL(VM.play(load(code)), cdl);
     } else {
         code = arguments[0];
     }

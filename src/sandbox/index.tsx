@@ -14,13 +14,6 @@ import { store } from '@sandbox/store';
 
 require('semantic-ui-less/semantic.less');
 
-// global defines from webpack's config;
-declare const VERSION: string;
-declare const COMMITHASH: string;
-declare const BRANCH: string;
-declare const MODE: string;
-declare const PRODUCTION: boolean;
-
 if (isElectron()) {
     // require('electron-react-devtools').install();
 }
@@ -46,6 +39,7 @@ ReactDOM.render(
 // make grammar available for editing
 store.dispatch(parser.setGrammar(defaultSLGrammar()));
 
+/// <reference path="./webpack.d.ts" />
 console.log(`%c Is this running in electron.js?: ${isElectron()}`, 'background: #222; color: #bada55');
 console.log(`%c This is ${isElectron() ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
-console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}`, 'background: #222; color: #bada55');
+console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}, timestamp=${TIMESTAMP}`, 'background: #222; color: #bada55');

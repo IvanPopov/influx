@@ -23,7 +23,7 @@ for (let name in vars)
                 this.size = [ 180, 25 ];
             }
     
-            run(context: Context, program: ProgramScope, slot: number): IExprInstruction
+            evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction
             {
                 const scope = program.currentScope;
                 let sourceNode = null as IParseNode;

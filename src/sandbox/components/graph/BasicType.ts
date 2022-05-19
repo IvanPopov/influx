@@ -55,7 +55,7 @@ import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
             this.size = [180, 25 * count];
         }
     
-        run(context: Context, program: ProgramScope): IExprInstruction {
+        evaluate(context: Context, program: ProgramScope): IExprInstruction {
             const sourceNode = null as IParseNode;
             const scope = program.currentScope;
             const type = scope.findType(typeName);

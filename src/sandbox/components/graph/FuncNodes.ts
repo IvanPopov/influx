@@ -6,7 +6,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { LiteGraph } from "litegraph.js";
 import { LIB_SL_DOCUMENT } from "./common";
-import { IGraphASTNode, LGraphNodeEx } from "./IGraph";
+import { IGraphASTNode, LGraphNodeAST, LGraphNodeEx } from "./IGraph";
 
 interface INodeDesc {
     func: IFunctionDeclInstruction;
@@ -44,7 +44,7 @@ function loadLibrary(slDocument: ISLDocument) {
 }
 
 function autogenNode(node: INodeDesc) {
-    class Node extends LGraphNodeEx implements IGraphASTNode {
+    class Node extends LGraphNodeAST {
         static desc = node.desc;
         constructor() {
             super(node.name);
@@ -53,7 +53,7 @@ function autogenNode(node: INodeDesc) {
             this.size = [180, 25 * Math.max(node.inputs.length, node.outputs.length)];
         }
 
-        run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+        evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
             let func = node.func;
             let type = func.def.returnType;
             let sourceNode = null as IParseNode;

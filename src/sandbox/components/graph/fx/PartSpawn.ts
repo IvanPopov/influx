@@ -18,7 +18,7 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
 
     constructor() {
         super(name);
-        this.addInput("count", "int");
+        this.addInput(propName, "int");
         this.addProperty(propName, 1, "number");
         this.size = [180, 30];
 
@@ -50,7 +50,7 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
     updateInputNames()
     {
         const input = this.inputs[0];
-        input.name = !input.link ? `count = ${ this.properties[propName] }` : input.name;
+        input.name = !input.link ? `${propName} = ${ this.properties[propName] }` : propName;
     }
 
     onConnectionsChange(type: number, slotIndex: number, isConnected: boolean, link: LLink, ioSlot: INodeInputSlot | INodeOutputSlot): void {

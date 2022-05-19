@@ -204,7 +204,7 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         const dump = (): void => {
             verbose(`dump ${uav.readCounter()}/${capacity} prerendred particles: `);
             for (let iElement = 0; iElement < uav.readCounter(); ++iElement) {
-                verbose(VM.asNativeInner(uav.readElement(iElement), elementType));
+                verbose(VM.asNativeViaAST(uav.readElement(iElement), elementType));
             }
         };
 
@@ -319,7 +319,7 @@ async function load(fx: IPartFxInstruction, uavResources: IUAVResource[]) {
         uavStates.data.forEach((alive, iPart) => {
             if (alive) {
                 const partRaw = new Uint8Array(uavParticles.data.buffer, uavParticles.data.byteOffset + iPart * partSize, partSize);
-                verbose(iPart, VM.asNativeInner(partRaw, particle));
+                verbose(iPart, VM.asNativeViaAST(partRaw, particle));
             }
         });
     }
@@ -419,7 +419,8 @@ export async function createEmitter(fx: IPartFxInstruction) {
         passes,
 
         reset,
-        shadowReload
+        shadowReload,
+        dump
     };
 }
 

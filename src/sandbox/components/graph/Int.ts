@@ -24,7 +24,7 @@ class Int extends LGraphNodeAST {
         this.size = [150, 30];
     }
 
-    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
@@ -61,7 +61,7 @@ class Uint extends LGraphNodeAST {
         this.size = [150, 30];
     }
 
-    run(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+    evaluate(context: Context, program: ProgramScope, slot: number): IExprInstruction {
         let sourceNode = null as IParseNode;
         let scope = program.currentScope;
         let { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));

@@ -450,7 +450,9 @@ class Emitter implements IEmitter {
 
     reset(): void {
         // NOT implemented
-    }
+    } 
+
+    dump(): void {} 
 }
 
 

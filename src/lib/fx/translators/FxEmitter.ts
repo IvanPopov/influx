@@ -78,7 +78,7 @@ export class FxEmitter extends CodeEmitter {
         {
             pass.prerenderRoutine && this.emitRoutineProperty('PrerenderRoutine', pass.prerenderRoutine);
             pass.sorting && this.emitStringProperty('Sorting', String(pass.sorting));
-            this.emitStringProperty('Geometry', EPartFxPassGeometry[pass.geometry].substr(2));
+            this.emitStringProperty('Geometry', pass.geometry);
             pass.instanceCount !== 1 && this.emitStringProperty('InstanceCount', String(pass.instanceCount));
 
             super.emitPassBody(pass);
