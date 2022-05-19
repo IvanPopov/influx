@@ -3,7 +3,7 @@ import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
-import { IEmitter } from '@sandbox/containers/playground/IEmitter';
+import { IEmitter } from '@sandbox/containers/playground/idl/IEmitter';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { LGraph } from 'litegraph.js';

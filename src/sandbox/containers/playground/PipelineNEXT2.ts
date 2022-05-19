@@ -1,20 +1,12 @@
-import { assert, isDefAndNotNull, verbose } from '@lib/common';
-import { type } from '@lib/fx/analisys/helpers';
-import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import { assert, verbose } from '@lib/common';
+import { comparePartFxBundles } from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
-import { createSLDocument } from '@lib/fx/SLDocument';
-import { FxTranslator, ICSShaderReflection, IPartFxPassReflection, IUavReflection } from '@lib/fx/translators/FxTranslator';
-import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import { FxTranslator } from '@lib/fx/translators/FxTranslator';
+import { EPartFxRenderRoutines, EPartFxSimRoutines, IFxRoutineBundle, IFxRoutineGLSLBundle, IFxUAVBundle, IPartFxBundle } from '@lib/idl/bundles/IFxBundle';
 import { IMap } from '@lib/idl/IMap';
-import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import { Vector3 } from 'three';
+import { IPass } from './idl/IEmitter';
 
-import { IPass } from './IEmitter';
-import { Diagnostics } from '@lib/util/Diagnostics';
-import { createTextDocument } from '@lib/fx/TextDocument';
-import { EInstructionTypes, ITypeInstruction } from '@lib/idl/IInstruction';
-import { typeAstToTypeLayout, TypeLayout } from '@lib/fx/bytecode/VM/native';
 
 // TODO: use CDL instead of reflection
 
@@ -37,36 +29,7 @@ function createUAVsEx(bundles: IFxUAVBundle[], capacity: number, sharedUAVs: IUA
     });
 }
 
-function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSShaderReflection): IFxRoutineBundle {
-    const type = 'bytecode';
-    const entry = reflection.name;
-    const shader = document.root.scope.findFunction(entry, null);
-    assert(shader);
-
-    const numthreads = [ ...reflection.numthreads ];
-    const program = Bytecode.translate(shader);
-    const code = program.code;
-    const uavs = reflection.uavs.map(({ name, register: slot, elementType }): IFxUAVBundle => {
-        const typeInstr = document.root.scope.findType(elementType);
-        const stride = typeInstr.size; // in bytes
-        const type = typeAstToTypeLayout(typeInstr);
-        return { name, slot, stride, type };
-    });
-
-    return { type, code, resources: { uavs }, numthreads };
-}
-
-function createFxRoutineGLSLBundle(document: ISLDocument, routine: string, mode: 'vertex' | 'pixel'): IFxRoutineBundle {
-    const scope = document.root.scope;
-    // const func = scope.findFunction(routine, null);
-    // const entry = 'main';
-    const type = 'glsl';
-    const code = Glsl.translate(scope.findFunction(routine, null), { mode });;
-    return { type, code };
-}
-
-function loadVMBundle(code: Uint8Array)
-{
+function loadVMBundle(code: Uint8Array) {
     return VM.load(code);
 }
 
@@ -74,7 +37,7 @@ function setupFxRoutineBytecodeBundle(rountineBundle: IFxRoutineBundle, capacity
     const vmBundle = loadVMBundle(rountineBundle.code as Uint8Array);
     const uavs = createUAVsEx(rountineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = rountineBundle.numthreads;
-    
+
     // setup VM inputs
     uavs.forEach(uav => { vmBundle.input[uav.index] = uav.buffer; });
 
@@ -101,14 +64,6 @@ function setupFxRoutineBytecodeBundle(rountineBundle: IFxRoutineBundle, capacity
     };
 }
 
-
-// function fxHash(fx: IPartFxBundle) {
-//     const hashPart = fx.renderPasses
-//         .map(pass => `${type.signature(pass.instance)}:${pass.geometry}:${pass.sorting}:`) // +
-//         // `${crc32(Code.translate(pass.vertexShader))}:${crc32(Code.translate(pass.pixelShader))}`)
-//         .reduce((commonHash, passHash) => `${commonHash}:${passHash}`);
-//     return `${type.signature(fx.particle)}:${fx.capacity}:${hashPart}`;
-// }
 
 
 function createTimelime() {
@@ -167,182 +122,30 @@ interface IPassEx extends IPass {
     dump(): void;
 }
 
-// todo: rename
-// contains all necessary unpacked data to load and play effect
-interface IFxBundleSignature
-{
-    mode: string;
-    version: string;
-    commithash: string;
-    branch: string;
-    timestamp: string;
-}
-
-// global defines from webpack's config;
-/// <reference path="../../webpack.d.ts" />
-function getFxBundleVersion(): IFxBundleSignature
-{
-    return {
-        version: VERSION,
-        commithash: COMMITHASH,
-        branch: BRANCH,
-        mode: MODE,
-        timestamp: TIMESTAMP
-    };
-}
-
-type FxBundleType = 'part';
-
-interface IFxBundle
-{
-    version: IFxBundleSignature;
-    name: string;
-    type: FxBundleType;
-}
-
-interface IFxUAVBundle
-{
-    name: string;
-    slot: number;
-    stride: number;
-    type: IFxTypeLayout;
-}
-
-interface IFxRoutineBundle
-{
-    type: 'bytecode' | 'glsl';
-    code: Uint8Array | string;
-    resources?: { uavs: IFxUAVBundle[]; };
-    numthreads?: number[];
-}
-
-enum EPartFxSimRoutines {
-    k_Reset,
-    k_Spawn,
-    k_Init,
-    k_Update,
-    k_Last
-}
-
-enum EPartFxRenderRoutines
-{
-    k_Prerender,
-    k_Vertex,
-    k_Pixel,
-    k_Last
-}
-
-interface IPartFxRenderPass
-{
-    routines: IFxRoutineBundle[];
-    geometry: string;           // template name
-    sorting: boolean;
-    instanceCount: number;
-    stride: number;             // instance stride in 32bit (integers)
-    instance: IFxTypeLayout;
-}
-
-type IFxTypeLayout= TypeLayout;
-
-interface IPartFxBundle extends IFxBundle
-{
-    capacity: number;   // maximum number of particles allowed (limited by user manually in the sandbox)
-
-    simulationRoutines: IFxRoutineBundle[];
-    renderPasses: IPartFxRenderPass[];
-    particle: IFxTypeLayout;
-}
-
-
-function createFxBundleHeader(name: string, type: FxBundleType): IFxBundle
-{
-    const version = getFxBundleVersion();
-    return { name, type, version };
-}
-
-
-function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPassReflection): IPartFxRenderPass
-{
-    const scope = document.root.scope;
-    const { geometry, sorting, instanceCount, CSParticlesPrerenderRoutine } = reflection;
-    const prerender = createFxRoutineBytecodeBundle(document, CSParticlesPrerenderRoutine);
-    const vertex = createFxRoutineGLSLBundle(document, reflection.VSParticleShader, 'vertex');
-    const pixel = createFxRoutineGLSLBundle(document, reflection.PSParticleShader, 'pixel');
-    const routines = [ prerender, vertex, pixel ]; // must be aligned with EPartFxRenderRoutines
-   
-    // create GLSL attribute based instance layout
-    const partType = scope.findType(reflection.instance);
-    const instance = createFxTypeLayout(partType);
-    instance.fields.forEach(field => field.name = Glsl.GlslEmitter.$declToAttributeName(partType.getField(field.name)));
-
-    const instanceType = scope.findType(reflection.instance);
-    const stride = instanceType.size >> 2;
-
-    return { routines, geometry, sorting, instanceCount, stride, instance };
-}
-
-function createFxTypeLayout(type: ITypeInstruction): IFxTypeLayout
-{
-    return typeAstToTypeLayout(type);
-}
-
-export async function createPartFxBundle(fx: IPartFxInstruction): Promise<IPartFxBundle>
-{
-    const emitter = new FxTranslator();
-    const reflection = emitter.emitPartFxDecl(fx);
-    const { name, capacity } = reflection;
-
-    const textDocument = createTextDocument('://raw', emitter.toString());
-    const slDocument = await createSLDocument(textDocument);
-    const scope = slDocument.root.scope;
-
-    
-    if (slDocument.diagnosticReport.errors) {
-        console.error(Diagnostics.stringify(slDocument.diagnosticReport));
-        return null;
-    }
-    
-    const particle = createFxTypeLayout(scope.findType(reflection.particle));
-    const routines = Array<IFxRoutineBundle>(EPartFxSimRoutines.k_Last);
-
-    routines[EPartFxSimRoutines.k_Reset] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesResetRoutine);
-    routines[EPartFxSimRoutines.k_Spawn] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesSpawnRoutine);
-    routines[EPartFxSimRoutines.k_Init] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesInitRoutine);
-    routines[EPartFxSimRoutines.k_Update] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesUpdateRoutine);
-
-    const passes = reflection.passes.map(pass => createPartFxGLSLRenderPass(slDocument, pass));
-
-    return {
-        ...createFxBundleHeader(name, 'part'),
-        capacity,
-        particle,
-        simulationRoutines: routines,
-        renderPasses: passes
-    };
-}
-
 // tslint:disable-next-line:max-func-body-length
 async function loadFromBundle(bundle: IPartFxBundle, uavResources: IUAVResource[]) {
     const { name, capacity, particle } = bundle;
-    
+
     const resetBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Reset], capacity, uavResources);
     const initBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Init], capacity, uavResources);
     const updateBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Update], capacity, uavResources);
     const spawnBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Spawn], 4, uavResources);
-    
+
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
 
-    const passes = bundle.renderPasses.map(({ 
-        routines,
-        geometry,
-        sorting,
-        instanceCount,
-        instance,
-        stride
-    }, i): IPassEx => {
+    const passes = bundle.renderPasses.map((pass, i): IPassEx => {
+        const {
+            routines,
+            geometry,
+            sorting,
+            instanceCount,
+            instance,
+            stride
+        } = pass;
+        
         const UAV_PRERENDERED = `uavPrerendered${i}`;
 
         const prerender = routines[EPartFxRenderRoutines.k_Prerender];
@@ -352,18 +155,13 @@ async function loadFromBundle(bundle: IPartFxBundle, uavResources: IUAVResource[
         const vertexShader = routines[EPartFxRenderRoutines.k_Vertex].code as string;
         const pixelShader = routines[EPartFxRenderRoutines.k_Pixel].code as string;
 
-        const numRenderedParticles = () => numParticles() * instanceCount;
+        // note: only GLSL routines are supported!
+        const instanceLayout = (routines[EPartFxRenderRoutines.k_Vertex] as IFxRoutineGLSLBundle).attributes;
 
-        const instanceLayout = instance.fields.map(field => {
-            const size = field.size >> 2;
-            const offset = field.padding >> 2;
-            const attrName = field.name;
-            return { attrName, size, offset };
-        });
+        const numRenderedParticles = () => numParticles() * instanceCount;
 
         // tslint:disable-next-line:max-line-length
         const uavPrerenderedReflection = prerender.resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
-        // const elementType = scope.findType(uavPrerenderedReflection.elementType);
 
         // dump prerendered particles
         const dump = (): void => {
@@ -542,11 +340,9 @@ export async function createEmitterFromBundle(fx: IPartFxBundle) {
 
 
     async function shadowReload(fxNext: IPartFxBundle): Promise<boolean> {
-        // if (fxHash(fxNext) !== fxHash(fx)) 
-        // {
-        //     return false;
-        // }
-        return false;
+        if (!comparePartFxBundles(fxNext, fx)) {
+            return false;
+        }
 
         verbose('emitter reloaded from the shadow');
 
@@ -590,6 +386,5 @@ export async function createEmitterFromBundle(fx: IPartFxBundle) {
     };
 }
 
-
-// export type Emitter = ReturnType<typeof createEmitterFromBundle>;
-// export type Pass = IPass;
+export type Emitter = ReturnType<typeof createEmitterFromBundle>;
+export type Pass = IPass;

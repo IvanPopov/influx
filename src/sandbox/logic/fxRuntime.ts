@@ -5,12 +5,12 @@ import { isNull, verbose } from '@lib/common';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
-import * as PipelineNEXT from '@sandbox/containers/playground/PipelineNEXT';
 import * as PipelineNEXT2 from '@sandbox/containers/playground/PipelineNEXT2';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
+import * as FxBundle from '@lib/fx/bundles/Bundle';
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
     type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT ],
@@ -58,10 +58,8 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             const i = list.map(fx => fx.name)
                 .indexOf(active);
 
-            // if (!emitterPrev || !(await emitterPrev.shadowReload(list[i]))) {
-            if (!emitterPrev || !(await emitterPrev.shadowReload(await PipelineNEXT2.createPartFxBundle(list[i])))) {
-                // emitterNext = await PipelineNEXT.createEmitter(list[i]);
-                emitterNext = await PipelineNEXT2.createEmitterFromBundle(await PipelineNEXT2.createPartFxBundle(list[i]));
+            if (!emitterPrev || !(await emitterPrev.shadowReload(await FxBundle.createPartFxBundle(list[i])))) {
+                emitterNext = await PipelineNEXT2.createEmitterFromBundle(await FxBundle.createPartFxBundle(list[i]));
                 if (emitterNext) {
                     emitterNext.start(0);
                     verbose('next emitter has been created.');

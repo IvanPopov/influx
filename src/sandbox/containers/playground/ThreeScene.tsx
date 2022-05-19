@@ -14,7 +14,7 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OrbitControls } from '@three-ts/orbit-controls';
 
-import { IEmitter, IPass } from './IEmitter';
+import { IEmitter, IPass } from './idl/IEmitter';
 
 const $vertexShader = `
 precision highp float;
