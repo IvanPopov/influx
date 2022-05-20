@@ -1,8 +1,19 @@
 import { TypeLayout } from "@lib/fx/bytecode/VM/native";
 
+export interface ISerializable <T extends string>
+{
+    struct: T;
+}
+
+export interface IUnion <T extends string> {
+    type: T;
+    union: {
+        [key in T]: any; // any?
+    }
+}
 
 // contains all necessary unpacked data to load and play effect
-export interface IFxBundleSignature {
+export interface IFxBundleSignature extends ISerializable<'signature'> {
     mode: string;
     version: string;
     commithash: string;
@@ -11,10 +22,12 @@ export interface IFxBundleSignature {
 }
 
 
-export type FxBundleType = 'part';
+export interface IFxTypeLayout extends TypeLayout, ISerializable<'type-layout'> {
+
+}
 
 
-export interface IFxUAVBundle {
+export interface IFxUAVBundle extends ISerializable<'uav'> {
     name: string;
     slot: number;
     stride: number;
@@ -22,27 +35,38 @@ export interface IFxUAVBundle {
 }
 
 
-export interface IFxRoutineBundle {
-    type: 'bc' | 'glsl';
-    code: number[] | Uint8Array | string;
-    resources?: { uavs: IFxUAVBundle[]; };
-    numthreads?: number[];
+export interface IFxRoutineBundle extends IUnion<'bc' | 'glsl'>, ISerializable<'routine'> {
+    union: {
+        bc: IFxRoutineBytecodeBundle;
+        glsl: IFxRoutineGLSLBundle;
+    }
 }
 
 
-export interface IFxGLSLAttribute
+export interface IFxGLSLAttribute extends ISerializable<'GLSL-attribute'>
 {
     size: number;
     offset: number;
     attrName: string;
 }
 
-
-export interface IFxRoutineGLSLBundle extends IFxRoutineBundle
+export interface IFxRoutineBytecodeBundleResources extends ISerializable<'bytecode-routine-resources'>
 {
-    type: 'glsl';
+    uavs: IFxUAVBundle[];
+}
+
+export interface IFxRoutineBytecodeBundle extends ISerializable<'bytecode-routine'>
+{
+    code: Uint8Array;
+    resources: IFxRoutineBytecodeBundleResources;
+    numthreads: number[];
+}
+
+export interface IFxRoutineGLSLBundle extends ISerializable<'GLSL-routine'>
+{
+    code: string;
     // vertex bundles also contain attribute description
-    attributes?: IFxGLSLAttribute[];
+    attributes: IFxGLSLAttribute[];
 }
 
 
@@ -63,7 +87,7 @@ export enum EPartFxRenderRoutines {
 }
 
 
-export interface IPartFxRenderPass {
+export interface IPartFxRenderPass extends ISerializable<'part-fx-render-pass'> {
     routines: IFxRoutineBundle[];
     geometry: string;           // template name
     sorting: boolean;
@@ -73,21 +97,27 @@ export interface IPartFxRenderPass {
 }
 
 
-export type IFxTypeLayout = TypeLayout;
-
-
-export interface IFxBundle {
-    signature: IFxBundleSignature;
-    name: string;
-    type: FxBundleType;
-}
-
-
-export interface IPartFxBundle extends IFxBundle {
+export interface IPartFxBundle extends ISerializable<'part-fx-bundle'> {
     capacity: number;   // maximum number of particles allowed (limited by user manually in the sandbox)
-
     simulationRoutines: IFxRoutineBundle[];
     renderPasses: IPartFxRenderPass[];
     particle: IFxTypeLayout;
 }
 
+
+export interface IFxBundleContent extends IUnion<'part'>, ISerializable<'bundle-content'>  {
+    union: {
+        part: IPartFxBundle
+    };
+}
+
+export interface IFxBundle extends ISerializable<'bundle'> {
+    name: string;
+    signature: IFxBundleSignature;
+    content: IFxBundleContent;
+}
+
+export function serializable<T extends string>(struct: T): ISerializable<T>
+{
+    return { struct };
+}

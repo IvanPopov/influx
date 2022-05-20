@@ -42,7 +42,7 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayout
     let name = type.name;
     let size = type.size;
     let fields = undefined;
-    let length = undefined;
+    let length = -1;
 
     if (type.isArray())
     {
@@ -91,6 +91,12 @@ export function asNative(result: Uint8Array, layout: TypeLayout): any {
             return asNativeVector(asFloat, result, layout.length, 4);
     }
 
+    // parse as array
+    if (layout.length && layout.length >= 0) {
+        const elementType = typeLayoutArrayToBaseType(layout);
+        return asNativeVector(u8a => asNative(u8a, elementType), result, layout.length, elementType.size);
+    }
+
     // parse as structure
     if (layout.fields) {
         let complex = {};
@@ -99,12 +105,6 @@ export function asNative(result: Uint8Array, layout: TypeLayout): any {
             complex[field.name] = asNative(result.subarray(padding, padding + size), type);
         });
         return complex;
-    }
-
-    // parse as array
-    if (layout.length) {
-        const elementType = typeLayoutArrayToBaseType(layout);
-        return asNativeVector(u8a => asNative(u8a, elementType), result, layout.length, elementType.size);
     }
 
     assert(false, `not implemented`, layout);

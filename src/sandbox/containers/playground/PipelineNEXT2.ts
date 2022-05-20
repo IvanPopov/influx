@@ -2,7 +2,7 @@ import { assert, verbose } from '@lib/common';
 import { comparePartFxBundles } from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { EPartFxRenderRoutines, EPartFxSimRoutines, IFxRoutineBundle, IFxRoutineGLSLBundle, IFxUAVBundle, IPartFxBundle } from '@lib/idl/bundles/IFxBundle';
+import { EPartFxRenderRoutines, EPartFxSimRoutines, IFxBundle, IFxRoutineBytecodeBundle, IFxUAVBundle } from '@lib/idl/bundles/IFxBundle';
 import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
 import { IPass } from './idl/IEmitter';
@@ -33,7 +33,7 @@ function loadVMBundle(code: Uint8Array) {
     return VM.load(code);
 }
 
-function setupFxRoutineBytecodeBundle(rountineBundle: IFxRoutineBundle, capacity: number, sharedUAVs: IUAVResource[]) {
+function setupFxRoutineBytecodeBundle(rountineBundle: IFxRoutineBytecodeBundle, capacity: number, sharedUAVs: IUAVResource[]) {
     const vmBundle = loadVMBundle(rountineBundle.code as Uint8Array);
     const uavs = createUAVsEx(rountineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = rountineBundle.numthreads;
@@ -123,20 +123,20 @@ interface IPassEx extends IPass {
 }
 
 // tslint:disable-next-line:max-func-body-length
-async function loadFromBundle(bundle: IPartFxBundle, uavResources: IUAVResource[]) {
-    const { name, capacity, particle } = bundle;
+async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
+    const { name, content: { union: { part: { capacity, particle, simulationRoutines, renderPasses } } } } = bundle;
 
-    const resetBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Reset], capacity, uavResources);
-    const initBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Init], capacity, uavResources);
-    const updateBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Update], capacity, uavResources);
-    const spawnBundle = setupFxRoutineBytecodeBundle(bundle.simulationRoutines[EPartFxSimRoutines.k_Spawn], 4, uavResources);
+    const resetBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Reset].union.bc, capacity, uavResources);
+    const initBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Init].union.bc, capacity, uavResources);
+    const updateBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Update].union.bc, capacity, uavResources);
+    const spawnBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Spawn].union.bc, 4, uavResources);
 
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
 
-    const passes = bundle.renderPasses.map((pass, i): IPassEx => {
+    const passes = renderPasses.map((pass, i): IPassEx => {
         const {
             routines,
             geometry,
@@ -148,15 +148,15 @@ async function loadFromBundle(bundle: IPartFxBundle, uavResources: IUAVResource[
         
         const UAV_PRERENDERED = `uavPrerendered${i}`;
 
-        const prerender = routines[EPartFxRenderRoutines.k_Prerender];
+        const prerender = routines[EPartFxRenderRoutines.k_Prerender].union.bc;
         const bundle = setupFxRoutineBytecodeBundle(prerender, capacity * instanceCount, uavResources);
         const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
 
-        const vertexShader = routines[EPartFxRenderRoutines.k_Vertex].code as string;
-        const pixelShader = routines[EPartFxRenderRoutines.k_Pixel].code as string;
+        const vertexShader = routines[EPartFxRenderRoutines.k_Vertex].union.glsl.code;
+        const pixelShader = routines[EPartFxRenderRoutines.k_Pixel].union.glsl.code;
 
         // note: only GLSL routines are supported!
-        const instanceLayout = (routines[EPartFxRenderRoutines.k_Vertex] as IFxRoutineGLSLBundle).attributes;
+        const instanceLayout = (routines[EPartFxRenderRoutines.k_Vertex].union.glsl).attributes;
 
         const numRenderedParticles = () => numParticles() * instanceCount;
 
@@ -303,8 +303,7 @@ async function loadFromBundle(bundle: IPartFxBundle, uavResources: IUAVResource[
 
 
 // tslint:disable-next-line:max-func-body-length
-export async function createEmitterFromBundle(fx: IPartFxBundle) {
-
+export async function createEmitterFromBundle(fx: IFxBundle) {
     const uavResources: IUAVResource[] = []; // << shared UAV resources
     const timeline = createTimelime();
     const emitter = await loadFromBundle(fx, uavResources);
@@ -339,8 +338,8 @@ export async function createEmitterFromBundle(fx: IPartFxBundle) {
     }
 
 
-    async function shadowReload(fxNext: IPartFxBundle): Promise<boolean> {
-        if (!comparePartFxBundles(fxNext, fx)) {
+    async function shadowReload(fxNext: IFxBundle): Promise<boolean> {
+        if (!comparePartFxBundles(fxNext.content.union.part, fx.content.union.part)) {
             return false;
         }
 
