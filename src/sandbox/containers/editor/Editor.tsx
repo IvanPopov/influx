@@ -19,7 +19,7 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
-import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
+import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier, SignatureHelp } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 // import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
 import { LanguageServiceWorker } from './LanguageServiceWorker'
@@ -348,9 +348,9 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     // validation should always be done before any other requests
                     await self.pendingValidations();
 
-                    const signatureHelp = await provider.provideSignatureHelp(
+                    const signatureHelp: SignatureHelp = await provider.provideSignatureHelp(
                         self.asTextDocumentIdentifier(), m2p.asPosition(position.lineNumber, position.column));
-                    return signatureHelp && p2m.asSignatureHelpResult(signatureHelp);
+                    return signatureHelp && p2m.asSignatureHelpResult(signatureHelp as any); // TODO: fixme, wrong type?
                 }
             }
         );

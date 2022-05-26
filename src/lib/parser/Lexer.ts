@@ -3,10 +3,10 @@ import { EDiagnosticCategory, IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { ETokenType, ILexer, ILexerConfig, ILexerEngine, IPosition, IRange, IToken } from '@lib/idl/parser/IParser';
+import { END_SYMBOL, EOF, T_FLOAT, T_LINE_TERMINATOR, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from '@lib/parser/symbols';
 import * as util from '@lib/parser/util';
 import { Diagnostics } from '@lib/util/Diagnostics';
 
-import { END_SYMBOL, EOF, T_FLOAT, T_LINE_TERMINATOR, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_STRING, T_TYPE_ID, T_UINT, UNKNOWN_TOKEN } from './symbols';
 
 interface ILexerDiagDesc {
     file: string;

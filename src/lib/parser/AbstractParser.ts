@@ -1,14 +1,14 @@
 import bf from "@lib/bf";
 import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IDMap, IMap } from "@lib/idl/IMap";
-import { ENodeCreateMode as ENodeCreationMode, EOperationType, EParserFlags, EParserType, ExpectedSymbols, IAdditionalFuncInfo, IOperation, IOperationMap, IParser, IParserParams, IPosition, IProductions, IRange, IRule, IRuleFunctionDMap, IRuleMap, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { ENodeCreateMode as ENodeCreationMode, EOperationType, EParserFlags, EParserType, ExpectedSymbols, IAdditionalFuncInfo, IOperation, IOperationMap, IParser, IParserParams, IPosition, IProductions, IRange, IRule, IRuleFunctionDMap, IRuleMap, ISyntaxTable } from "@lib/idl/parser/IParser";
+import { Item } from "@lib/parser/Item";
+import { LexerEngine } from "@lib/parser/Lexer";
+import { State } from "@lib/parser/State";
+import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_EXPOSE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_SKIP_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL } from "@lib/parser/symbols";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-import { Item } from "./Item";
-import { LexerEngine } from "./Lexer";
-import { State } from "./State";
-import { END_POSITION, END_SYMBOL, FLAG_RULE_CREATE_NODE, FLAG_RULE_FUNCTION, FLAG_RULE_EXPOSE_NODE, INLINE_COMMENT_SYMBOL, LEXER_RULES, START_SYMBOL, T_EMPTY, UNUSED_SYMBOL, FLAG_RULE_SKIP_NODE } from "./symbols";
-import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 
 export enum EParserErrors {
     GrammarAddOperation = 2001,

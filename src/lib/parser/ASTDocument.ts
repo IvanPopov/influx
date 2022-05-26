@@ -3,13 +3,13 @@ import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { EDiagnosticCategory, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { IASTDocumentFlags as EASTParsingFlags, EOperationType, EParserCode, IASTConfig, IASTDocument, IFile, ILexer, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags as EASTParsingFlags, IFile, ILexer, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
+import { Lexer } from "@lib/parser/Lexer";
+import { ParseTree } from "@lib/parser/ParseTree";
+import { END_SYMBOL, ERROR, UNKNOWN_TOKEN } from "@lib/parser/symbols";
+import { extendRange } from "@lib/parser/util";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 
-import { Lexer } from "./Lexer";
-import { ParseTree } from "./ParseTree";
-import { END_SYMBOL, ERROR, UNKNOWN_TOKEN } from "./symbols";
-import { extendRange } from "./util";
 
 export enum EParsingErrors {
     SyntaxUnknownError = 2051,

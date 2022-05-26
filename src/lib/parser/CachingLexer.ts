@@ -3,7 +3,7 @@ import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { ILexer, ILexerConfig, IToken } from "@lib/idl/parser/IParser";
 
-import { END_SYMBOL } from "./symbols";
+import { END_SYMBOL } from "@lib/parser/symbols";
 
 export class CachingLexer implements ILexer {
     private tokens: IToken[];

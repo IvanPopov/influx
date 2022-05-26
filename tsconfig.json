@@ -47,7 +47,8 @@
     "strict": false,
     // IP: currently this option is needed for correct work with 'monaco-languageclient'
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "useDefineForClassFields": false
   },
   // "files": [
   //   "src/sandbox/index.tsx"

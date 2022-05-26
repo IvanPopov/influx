@@ -11,10 +11,10 @@ import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-import { CachingLexer } from "./CachingLexer";
-import { Lexer } from "./Lexer";
-import { Macros } from "./Macros";
-import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "./symbols";
+import { CachingLexer } from "@lib/parser/CachingLexer";
+import { Lexer } from "@lib/parser/Lexer";
+import { Macros } from "@lib/parser/Macros";
+import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "@lib/parser/symbols";
 
 let DEBUG_MACRO = false;
 

@@ -162,7 +162,11 @@ let options = {
             directory: outputPath
         },
         compress: PRODUCTION,
-        port: 8080
+        port: 8080,
+        client: {
+            progress: true,
+            reconnect: true
+        }
     },
     output,
     entry: [

@@ -1,9 +1,6 @@
-﻿import { assert, isDef, isDefAndNotNull } from "@lib/common";
-import { IMap } from "@lib/idl/IMap";
-import { EParserType, ExpectedSymbols, IRule } from "@lib/idl/parser/IParser";
+﻿import { EParserType, ExpectedSymbols, IRule } from "@lib/idl/parser/IParser";
+import { END_POSITION } from "@lib/parser/symbols";
 
-import { State } from "./State";
-import { END_POSITION, T_EMPTY } from "./symbols";
 
 export class Item {
     rule: IRule;

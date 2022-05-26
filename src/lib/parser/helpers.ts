@@ -1,9 +1,9 @@
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { ETokenType, IRange, IToken } from "@lib/idl/parser/IParser";
-import { Lexer } from "./Lexer";
-import { createPPDocument } from "./Preprocessor";
-import { END_SYMBOL } from "./symbols";
-import { cloneRange } from "./util";
+import { Lexer } from "@lib/parser/Lexer";
+import { createPPDocument } from "@lib/parser/Preprocessor";
+import { END_SYMBOL } from "@lib/parser/symbols";
+import { cloneRange } from "@lib/parser/util";
 
 /** @deprecated Use CommentExtractor instead. */
 export function exractComments(document: ITextDocument): IToken[] {
