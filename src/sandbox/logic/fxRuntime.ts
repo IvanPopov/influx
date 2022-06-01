@@ -35,16 +35,15 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const list: IPartFxInstruction[] = filterPartFx(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
-        let emitterPrev = playground.emitter;
-        let emitterNext = null;
-
-        if (!isNull(emitterPrev) && isNull(active)) {
+        let emitter = playground.emitter;
+        
+        if (!isNull(emitter) && isNull(active)) {
             if (list.map(fx => fx.name)
-                .indexOf(emitterPrev.name) !== -1) {
-                active = emitterPrev.name;
+            .indexOf(emitter.name) !== -1) {
+                active = emitter.name;
             }
         }
-
+        
         if (!active) {
             for (const fx of list) {
                 if (fx.isValid()) {
@@ -53,27 +52,30 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 }
             }
         }
+        
+        let rebuildRequired = false;
+        const i = list.map(fx => fx.name).indexOf(active);
 
         if (active) {
-            const i = list.map(fx => fx.name)
-                .indexOf(active);
+            if (!emitter || !(await emitter.shadowReload(await FxBundle.createPartFxBundle(list[i])))) {
+                rebuildRequired = true;
+            }
+        }
+        
+        if (rebuildRequired) {
+            if (emitter) {
+                emitter.destroy();
+                emitter = null;
+                verbose('previous emitter has been dropped.');
+            }
 
-            if (!emitterPrev || !(await emitterPrev.shadowReload(await FxBundle.createPartFxBundle(list[i])))) {
-                emitterNext = await PipelineNEXT2.createEmitterFromBundle(await FxBundle.createPartFxBundle(list[i]));
-                if (emitterNext) {
-                    emitterNext.start(0);
-                    verbose('next emitter has been created.');
-                }
+            emitter = await PipelineNEXT2.createEmitterFromBundle(await FxBundle.createPartFxBundle(list[i]));
+            if (emitter) {
+                emitter.start();
+                verbose('next emitter has been created.');
             }
         }
 
-        if (emitterNext && emitterPrev) {
-            emitterPrev.stop();
-            emitterPrev = null;
-            verbose('previous emitter has been dropped.');
-        }
-
-        const emitter = emitterNext || emitterPrev;
         dispatch({ type: evt.PLAYGROUND_EMITER_UPDATE, payload: { emitter } });
         done();
     }

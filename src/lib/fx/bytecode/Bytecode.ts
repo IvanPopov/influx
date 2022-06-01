@@ -1554,6 +1554,7 @@ export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
             return null;
         }
         res = translateProgram(ctx, entryFunc);
+        console.log(`${entryFunc.def.name} translated as ${res.code.byteLength} bytes`);
     } catch (e) {
         throw e;
         console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));

@@ -99,6 +99,10 @@ src/*.js.map
 src/*.js
 src/*/*.js
 
+#wasm
+*.wasm
+*.wasm.map
+
 #other
 /build/
 .DS_Store

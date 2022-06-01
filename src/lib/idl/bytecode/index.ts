@@ -14,9 +14,63 @@ export enum EChunkType {
     k_Code,
 };
 
-// export interface IMemoryRecord {
-//     range: number;
-//     value: number | string;
-//     type: 'f32' | 'i32' | 'uniform' | 'unknown';
-// }
+export interface Constant
+{
+    name: string;
+    size: number;
+    offset: number;
+    semantic: string;
+    type: string;
+}
 
+type error = 'error';
+
+export interface IMemory
+{
+    spec?: 'wasm' | 'js';
+    [index: number]: error;
+}
+
+export interface Numthreads
+{
+    x: number;
+    y: number;
+    z: number;
+};
+
+export interface Numgroups
+{
+    x: number;
+    y: number;
+    z: number;
+};
+
+
+export interface IUAV
+{
+    name: string;
+    // byte length of a single element
+    elementSize: number;
+    // number of elements
+    length: number;
+    // register specified in the shader
+    register: number;
+    // [ elements ]
+    data: IMemory;
+    // raw data [ counter, ...elements ]
+    buffer: IMemory
+    // input index for VM
+    index: number;                              // << todo: remove (index = register + internal_uav_offset)
+}
+
+export interface IBundle 
+{
+    play(): IMemory;
+    dispatch(numgroups: Numgroups, numthreads: Numthreads);
+
+    setInput(slot: number, input: IMemory): void;
+    getInput(slot: number): IMemory;
+    setConstant(name: string, value: number): boolean;
+
+    getLayout(): Constant[];
+}

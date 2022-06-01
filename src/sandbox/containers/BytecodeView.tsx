@@ -19,6 +19,9 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
 
+// todo: don't use TS specific bundle helpers
+import * as JSVM from '@lib/fx/bytecode/VM/ts/bundle';
+
 export interface IBytecodeViewProps extends IDebuggerState {
     actions: typeof sourceActions;
 }
@@ -105,8 +108,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             return null;
         }
 
-        const chunks = VM.decodeChunks(code);
-        const ilist = VM.decodeCodeChunk(chunks[EChunkType.k_Code]);
+        const chunks = JSVM.decodeChunks(code);
+        const ilist = JSVM.decodeCodeChunk(chunks[EChunkType.k_Code]);
 
         return (
             // fixed

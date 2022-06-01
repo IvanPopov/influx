@@ -44,4 +44,6 @@ export interface IEmitter {
     shadowReload(fx: any): Promise<boolean>;
     
     dump(): void;
+
+    destroy(): void;
 }

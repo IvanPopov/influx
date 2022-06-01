@@ -1,8 +1,8 @@
 import { CBUFFER0_REGISTER, ISubProgram } from '@lib/fx/bytecode/Bytecode';
-import * as VM from '@lib/fx/bytecode/VM';
 import * as React from 'react';
-import withStyles, { WithStylesProps } from 'react-jss'
+import withStyles, { WithStylesProps } from 'react-jss';
 import { Popup, Table } from 'semantic-ui-react';
+import * as VM from '@lib/fx/bytecode/VM';
 
 export const styles = {
     memoryVal: {
@@ -34,9 +34,9 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     renderContent(): JSX.Element[] {
         const { props } = this;
-        const bundle = VM.load(props.program.code);
-        const binaryData = bundle.input[CBUFFER0_REGISTER];
-        const layout = bundle.layout;
+        const bundle = VM.make(`[memory-view]`, props.program.code);
+        const binaryData = VM.memoryToU8Array(bundle.getInput(CBUFFER0_REGISTER));
+        const layout = bundle.getLayout();
 
         const WIDTH_MAX = 12;
         const u8view = new Uint8Array(binaryData.buffer, binaryData.byteOffset, binaryData.byteLength);

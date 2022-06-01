@@ -5,7 +5,8 @@ import { FxTranslator } from '@lib/fx/translators/FxTranslator';
 import { EPartFxRenderRoutines, EPartFxSimRoutines, IFxBundle, IFxRoutineBytecodeBundle, IFxUAVBundle } from '@lib/idl/bundles/IFxBundle';
 import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
-import { IPass } from './idl/IEmitter';
+import { IEmitter, IPass } from './idl/IEmitter';
+import * as Bundle from "@lib/idl/bytecode";
 
 
 // TODO: use CDL instead of reflection
@@ -18,7 +19,9 @@ type IUAVResource = ReturnType<typeof VM.createUAV>;
 
 
 function createUAVEx(bundle: IFxUAVBundle, capacity: number): IUAVResource {
-    return VM.createUAV(bundle.name, bundle.stride, capacity, bundle.slot);
+    const uav = VM.createUAV(bundle.name, bundle.stride, capacity, bundle.slot);
+    console.log(`UAV '${uav.name}' (counter value: ${UAV.readCounter(uav)}, size: ${uav.length}) has been created.`);
+    return uav;
 }
 
 // tslint:disable-next-line:max-line-length
@@ -29,30 +32,27 @@ function createUAVsEx(bundles: IFxUAVBundle[], capacity: number, sharedUAVs: IUA
     });
 }
 
-function loadVMBundle(code: Uint8Array) {
-    return VM.load(code);
-}
 
-function setupFxRoutineBytecodeBundle(rountineBundle: IFxRoutineBytecodeBundle, capacity: number, sharedUAVs: IUAVResource[]) {
-    const vmBundle = loadVMBundle(rountineBundle.code as Uint8Array);
+function setupFxRoutineBytecodeBundle(debugName: string, rountineBundle: IFxRoutineBytecodeBundle, capacity: number, sharedUAVs: IUAVResource[]) {
+    const vmBundle = VM.make(debugName, rountineBundle.code as Uint8Array);
     const uavs = createUAVsEx(rountineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = rountineBundle.numthreads;
 
     // setup VM inputs
-    uavs.forEach(uav => { vmBundle.input[uav.index] = uav.buffer; });
+    uavs.forEach(uav => { vmBundle.setInput(uav.index, uav.buffer); });
 
     // update shared uavs
     sharedUAVs.push(...uavs.filter(uav => sharedUAVs.indexOf(uav) === -1));
 
     function setConstants(constants: IMap<number>) {
         Object.keys(constants)
-            .forEach(name => VM.setConstant(vmBundle, name, constants[name]));
+            .forEach(name => vmBundle.setConstant(name, constants[name]));
     }
 
     assert(numthreads[0] >= 1 && numthreads[1] === 1 && numthreads[2] === 1);
 
     function run(numgroups: number) {
-        VM.dispatch(vmBundle, [numgroups, 1, 1], numthreads);
+        vmBundle.dispatch({ x: numgroups, y: 1, z: 1 }, { x: numthreads[0], y: numthreads[1], z: numthreads[2] });
     }
 
     return {
@@ -91,6 +91,7 @@ function createTimelime() {
         verbose('emitter started');
     }
 
+    let $n = 0;
     function tick() {
         if (!active) {
             return;
@@ -100,6 +101,10 @@ function createTimelime() {
         constants.elapsedTime = (dt - elapsedTimeLevel) / 1000;
         constants.elapsedTimeLevel = elapsedTimeLevel / 1000;
         elapsedTimeLevel = dt;
+
+        // if ($n == 10)
+        //     stop();
+        // else $n++;
     }
 
     function isStopped() {
@@ -122,14 +127,29 @@ interface IPassEx extends IPass {
     dump(): void;
 }
 
+const UAV = {
+    overwriteCounter(uav: Bundle.IUAV, value: number) {
+        VM.memoryToI32Array(uav.buffer)[0] = value;
+    },
+
+    readCounter(uav: Bundle.IUAV): number {
+        return VM.memoryToI32Array(uav.buffer)[0];
+    },
+
+    readElement({ data, elementSize }: Bundle.IUAV, iElement: number): Uint8Array {
+        const u8a = VM.memoryToU8Array(data);
+        return new Uint8Array(u8a.buffer, u8a.byteOffset + iElement * elementSize, elementSize);
+    }
+};
+
 // tslint:disable-next-line:max-func-body-length
 async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
     const { name, content: { union: { part: { capacity, particle, simulationRoutines, renderPasses } } } } = bundle;
 
-    const resetBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Reset].union.bc, capacity, uavResources);
-    const initBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Init].union.bc, capacity, uavResources);
-    const updateBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Update].union.bc, capacity, uavResources);
-    const spawnBundle = setupFxRoutineBytecodeBundle(simulationRoutines[EPartFxSimRoutines.k_Spawn].union.bc, 4, uavResources);
+    const resetBundle = setupFxRoutineBytecodeBundle(`${name}/reset`, simulationRoutines[EPartFxSimRoutines.k_Reset].union.bc, capacity, uavResources);
+    const initBundle = setupFxRoutineBytecodeBundle(`${name}/init`, simulationRoutines[EPartFxSimRoutines.k_Init].union.bc, capacity, uavResources);
+    const updateBundle = setupFxRoutineBytecodeBundle(`${name}/update`, simulationRoutines[EPartFxSimRoutines.k_Update].union.bc, capacity, uavResources);
+    const spawnBundle = setupFxRoutineBytecodeBundle(`${name}/spawn`, simulationRoutines[EPartFxSimRoutines.k_Spawn].union.bc, 4, uavResources);
 
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
@@ -149,7 +169,7 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         const UAV_PRERENDERED = `uavPrerendered${i}`;
 
         const prerender = routines[EPartFxRenderRoutines.k_Prerender].union.bc;
-        const bundle = setupFxRoutineBytecodeBundle(prerender, capacity * instanceCount, uavResources);
+        const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, prerender, capacity * instanceCount, uavResources);
         const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
 
         const vertexShader = routines[EPartFxRenderRoutines.k_Vertex].union.glsl.code;
@@ -161,13 +181,13 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         const numRenderedParticles = () => numParticles() * instanceCount;
 
         // tslint:disable-next-line:max-line-length
-        const uavPrerenderedReflection = prerender.resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
+        const uavPrerenderedReflection: IFxUAVBundle = prerender.resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
 
         // dump prerendered particles
         const dump = (): void => {
-            verbose(`dump ${uav.readCounter()}/${capacity} prerendred particles: `);
-            for (let iElement = 0; iElement < uav.readCounter(); ++iElement) {
-                verbose(VM.asNative(uav.readElement(iElement), instance));
+            verbose(`dump ${UAV.readCounter(uav)}/${capacity} prerendred particles: `);
+            for (let iElement = 0; iElement < UAV.readCounter(uav); ++iElement) {
+                verbose(VM.asNativeRaw(UAV.readElement(uav, iElement), instance));
             }
         };
 
@@ -177,7 +197,11 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         //
 
         const uavNonSorted = uav;
-        const uavSorted = !sorting ? uavNonSorted : createUAVEx(uavPrerenderedReflection, capacity);
+        const uavPrerenderedReflectionSorted = { ...uavPrerenderedReflection, name: `${uavPrerenderedReflection.name}Sorted` };
+        const uavSorted = !sorting ? uavNonSorted : createUAVsEx([uavPrerenderedReflectionSorted], capacity, uavResources)[0];
+
+        const uavNonSortedU8 = VM.memoryToU8Array(uavNonSorted.data);
+        const uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
 
         function sort(targetPos: Vector3) {
             assert(sorting);
@@ -190,10 +214,10 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
 
             const nStride = stride * instanceCount; // stride in floats
 
-            assert(uavSorted.data.byteLength >> 2 === nStride * capacity);
+            assert(uavSortedU8.byteLength >> 2 === nStride * capacity);
 
-            const src = new Float32Array(uavNonSorted.data.buffer, uavNonSorted.data.byteOffset, uavNonSorted.data.byteLength >> 2);
-            const dst = new Float32Array(uavSorted.data.buffer, uavSorted.data.byteOffset, uavSorted.data.byteLength >> 2);
+            const src = new Float32Array(uavNonSortedU8.buffer, uavNonSortedU8.byteOffset, uavNonSortedU8.byteLength >> 2);
+            const dst = new Float32Array(uavSortedU8.buffer, uavSortedU8.byteOffset, uavSortedU8.byteLength >> 2);
 
             const indicies = [];
 
@@ -218,7 +242,7 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
             }
         }
 
-        const data = new Uint8Array(uavSorted.data.buffer, uavSorted.data.byteOffset, uavSorted.data.byteLength);
+        const data = uavSortedU8;
         return {
             data,
             instanceLayout,
@@ -234,12 +258,12 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         };
     });
 
-    const numParticles = () => capacity - uavDeadIndices.readCounter();
+    const numParticles = () => capacity - UAV.readCounter(uavDeadIndices);
 
     function reset() {
         // reset all available particles
         resetBundle.run(Math.ceil(capacity / resetBundle.groupsizex));
-        uavDeadIndices.overwriteCounter(capacity);
+        UAV.overwriteCounter(uavDeadIndices, capacity);
     }
 
 
@@ -252,19 +276,28 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
     function prerender(timelime: ITimeline) {
         passes.forEach(({ bundle }, i) => {
             const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
-            uavPrerendered.overwriteCounter(0);
+            UAV.overwriteCounter(uavPrerendered, 0);
             bundle.setConstants(timelime.constants);
             bundle.run(Math.ceil(capacity / bundle.groupsizex));
         });
     }
 
 
+    function destroy()
+    {
+        uavResources.forEach(uav => {
+            VM.destroyUAV(uav);
+            verbose(`UAV '${uav.name}' has been destroyed.`);
+        });
+        verbose(`emitter '${name}' has been dropped.`);
+    }
+
     function emit(timeline: ITimeline) {
         initBundle.setConstants(timeline.constants);
         // console.log('emit >>', uavInitArguments.data[0],
         //     (new Float32Array(uavInitArguments.data.buffer, uavInitArguments.data.byteOffset))[3],
         //     (new Float32Array(uavInitArguments.data.buffer, uavInitArguments.data.byteOffset))[4]);
-        initBundle.run(uavInitArguments.data[0]);
+        initBundle.run(VM.memoryToI32Array(uavInitArguments.data)[0]);
 
         spawnBundle.setConstants(timeline.constants);
         spawnBundle.run(1);
@@ -277,12 +310,15 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         const npart = numParticles();
         const partSize = particle.size;
 
-        verbose(`particles total: ${npart} (${uavDeadIndices.readCounter()}/${capacity})`);
+        verbose(`particles total: ${npart} ( ${UAV.readCounter(uavDeadIndices)}/${capacity} )`);
 
-        uavStates.data.forEach((alive, iPart) => {
+        const uavStatesI32 = VM.memoryToI32Array(uavStates.data);
+        const uavParticlesU8 = VM.memoryToU8Array(uavParticles.data);
+
+        uavStatesI32.forEach((alive, iPart) => {
             if (alive) {
-                const partRaw = new Uint8Array(uavParticles.data.buffer, uavParticles.data.byteOffset + iPart * partSize, partSize);
-                verbose(iPart, VM.asNative(partRaw, particle));
+                const partRaw = new Uint8Array(uavParticlesU8.buffer, uavParticlesU8.byteOffset + iPart * partSize, partSize);
+                verbose(iPart, VM.asNativeRaw(partRaw, particle));
             }
         });
     }
@@ -297,7 +333,8 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         emit,
         update,
         prerender,
-        dump
+        dump,
+        destroy
     };
 }
 
@@ -321,7 +358,8 @@ export async function createEmitterFromBundle(fx: IFxBundle) {
         emit,
         update,
         prerender,
-        dump
+        dump,
+        destroy
     } = emitter;
 
     reset();
@@ -381,7 +419,11 @@ export async function createEmitterFromBundle(fx: IFxBundle) {
         passes,
 
         reset,
-        shadowReload
+        shadowReload,
+
+        dump,
+
+        destroy
     };
 }
 

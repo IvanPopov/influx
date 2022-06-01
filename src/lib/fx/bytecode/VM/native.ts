@@ -1,7 +1,10 @@
 import { assert } from "@lib/common";
 import { u8ArrayAsF32, u8ArrayAsI32 } from "@lib/fx/bytecode/common";
 import { CDL } from "@lib/fx/bytecode/DebugLayout";
-import { EInstructionTypes, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import * as Bytecode from '@lib/fx/bytecode';
+import * as VM from '@lib/fx/bytecode/VM';
+import * as Bundle from "@lib/idl/bytecode";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
     const vector = [];
@@ -67,7 +70,13 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayout
     return { name, size, fields, length };
 }
 
-export function asNative(result: Uint8Array, layout: TypeLayout): any {
+
+export function asNative(result: Bundle.IMemory, layout: TypeLayout)
+{
+    return asNativeRaw(VM.memoryToU8Array(result), layout);
+}
+
+export function asNativeRaw(result: Uint8Array, layout: TypeLayout): any {
     switch (layout.name) {
         case 'bool':
             return asBool(result);
@@ -94,7 +103,7 @@ export function asNative(result: Uint8Array, layout: TypeLayout): any {
     // parse as array
     if (layout.length && layout.length >= 0) {
         const elementType = typeLayoutArrayToBaseType(layout);
-        return asNativeVector(u8a => asNative(u8a, elementType), result, layout.length, elementType.size);
+        return asNativeVector(u8a => asNativeRaw(u8a, elementType), result, layout.length, elementType.size);
     }
 
     // parse as structure
@@ -102,7 +111,7 @@ export function asNative(result: Uint8Array, layout: TypeLayout): any {
         let complex = {};
         layout.fields.forEach(field => {
             const { padding, size, type } = field;
-            complex[field.name] = asNative(result.subarray(padding, padding + size), type);
+            complex[field.name] = asNativeRaw(result.subarray(padding, padding + size), type);
         });
         return complex;
     }
@@ -112,10 +121,19 @@ export function asNative(result: Uint8Array, layout: TypeLayout): any {
 }
 
 export function asNativeViaAST(result: Uint8Array, type: ITypeInstruction): any {
-    return asNative(result, typeAstToTypeLayout(type));
+    return asNativeRaw(result, typeAstToTypeLayout(type));
 }
 
-export function asNativeViaCDL(result: Uint8Array, cdl: CDL): any {
+export function asNativeViaCDL(result: Bundle.IMemory, cdl: CDL): any {
     return asNative(result, typeAstToTypeLayout(cdl.info.layout));
 }
 
+export function asNativeFunction(fn: IFunctionDeclInstruction): Function
+{
+    const { code, cdl } = Bytecode.translate(fn);
+    const bundle = VM.make(`[as-native-function]`, code);
+    return (...args: any[]) => {
+        assert(!args || args.length === 0, 'arguments not supported');
+        return asNativeViaCDL(bundle.play(), cdl);
+    };
+}
