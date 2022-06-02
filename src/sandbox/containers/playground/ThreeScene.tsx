@@ -384,8 +384,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         cancelAnimationFrame(this.frameId);
     }
 
-    $i = 0;
-
     animate = (time: number) => {
         const emitter = this.state.emitter;
 
@@ -393,11 +391,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
-        if (this.$i < 1)
-        {
-            // this.$i ++;
-            emitter.tick();
-        }
+        emitter.tick();
         
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];

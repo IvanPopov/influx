@@ -91,7 +91,7 @@ void prerender2(inout Part part, out DefaultShaderInput input)
 
 
 partFx project.awesome {
-    Capacity = 1024;
+    Capacity = 1000;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
@@ -104,7 +104,7 @@ partFx project.awesome {
 
 
 partFx some.example {
-    Capacity = 1024;
+    Capacity = 1000;
     SpawnRoutine = compile Spawn();
     InitRoutine = compile init();
     UpdateRoutine = compile update();

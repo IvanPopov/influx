@@ -20,7 +20,8 @@ const initialState: IFileState = {
         options: {
             colorize: true,
             disableOptimizations: true,
-            autocompile: false
+            autocompile: false,
+            wasm: true
         }
     }
 };

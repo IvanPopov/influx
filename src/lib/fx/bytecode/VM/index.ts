@@ -1,10 +1,10 @@
-import { isNull, isString } from "@lib/common";
+import { isDef, isNull, isString } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode';
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { asNativeViaCDL } from "./native";
 
-import * as VMBundle from "./cpp/bridge";
-// import * as VMBundle from "./ts/bridge";
+import * as WASMBundle from "./cpp/bridge";
+ import * as TSBundle from "./ts/bridge";
 import * as Bundle from "@lib/idl/bytecode";
 
 export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native';
@@ -13,32 +13,50 @@ export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native'
 /// Common API
 /////////////////////////////////////////////////////////////////////
 
+let useWASM = true;
+
+function VMBundle()
+{
+    return (useWASM ? WASMBundle : TSBundle);
+}
+
+export function isWASM()
+{
+    return useWASM;
+}
+
+export function switchRuntime(runtime?: 'wasm' | 'js')
+{
+    useWASM = isDef(runtime) ? runtime === 'wasm' : !useWASM;
+    console.log(`%c VM runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
+}
+
 export function make(debugName: string, code: Uint8Array): Bundle.IBundle {
-    return VMBundle.make(debugName, code);
+    return VMBundle().make(debugName, code);
 }
 
 export function memoryToU8Array(input: Bundle.IMemory): Uint8Array {
-    return VMBundle.memoryToU8Array(input);
+    return VMBundle().memoryToU8Array(input);
 }
 
 export function memoryToI32Array(input: Bundle.IMemory): Int32Array {
-    return VMBundle.memoryToI32Array(input);
+    return VMBundle().memoryToI32Array(input);
 }
 
 export function createUAV(name: string, elementSize: number, length: number, register: number) {
-    return VMBundle.createUAV(name, elementSize, length, register);
+    return VMBundle().createUAV(name, elementSize, length, register);
 }
 
 
 export function destroyUAV(uav: Bundle.IUAV)
 {
-    VMBundle.destroyUAV(uav);
+    VMBundle().destroyUAV(uav);
 }
 
 /////////////////////////////////////////////////////////////////////
 
 function debugResetRegisters() {
-    VMBundle.debugResetRegisters();
+    VMBundle().debugResetRegisters();
 }
 
 declare const MODE: string;

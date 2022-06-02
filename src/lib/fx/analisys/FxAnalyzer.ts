@@ -435,6 +435,10 @@ export class FxAnalyzer extends Analyzer {
                                     const snum = sourceNode.children[1].children[0].value;
                                     assert(isNumber(Number(snum)));
                                     capacity = Number(snum) || -1;
+                                    // capacity must be multiple of 64 because of group size is 64
+                                    // and we run thread for every alive particle
+                                    // todo: fix it usind condition in the beginning of the shader
+                                    capacity = Math.floor((capacity + 63) / 64) * 64;
                                     break;
                                 }
                             case ('SpawnRoutine'.toUpperCase()):

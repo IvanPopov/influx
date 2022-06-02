@@ -377,8 +377,6 @@ export class TSBundle implements Bundle.IBundle
     
         counter[0] = 0; // reset counter
     
-        // console.log(`Create new UAV [${name}, ${size}].`);
-
         return {
             name,
             // byte length of a single element

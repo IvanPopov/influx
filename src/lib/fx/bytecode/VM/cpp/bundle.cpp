@@ -30,7 +30,12 @@ struct u32_array_t
 
     uint32_t& operator [] (uint32_t i)
     {
-        return *((uint32_t*)ptr + i);
+        return *(((uint32_t*)ptr) + i);
+    }
+
+    const uint32_t& operator [] (uint32_t i) const
+    {
+        return *(((uint32_t*)ptr) + i);
     }
 };
 
@@ -101,8 +106,6 @@ void decodeChunks(uint8_t* data, uint32_t byteLength, map<int, u32_array_t>& chu
     uint32_t contentByteLength = *((uint32_t*)(data + 4)) << 2;
     uint8_t* content = data + 8;
 
-    // cout << (type == CODE ? "code" : (type == CONSTANTS ? "constants" : "layout")) << " | size: " << contentByteLength << " bytes" << endl;
-
     chunks[type] = { (uintptr_t)content, contentByteLength >> 2 };
 
     uint8_t* nextChunk = content + contentByteLength;
@@ -166,13 +169,12 @@ public:
 
         uint32_t* ilist = m_instructions.data();
         uint32_t length = m_instructions.size();
-        // cout << debugName << " => " << m_instructions.size() << endl;
 
         int32_t*  iregs = (int32_t*)regs.data();
         uint32_t* uregs = (uint32_t*)regs.data();
         float_t*  fregs = (float_t*)regs.data();
 
-        auto& iinput = m_inputs;
+        u32_array_t* iinput = m_inputs;
 
         int i5 = 0;                      // current instruction;
 
@@ -182,7 +184,7 @@ public:
             auto b = ilist[i5 + 2];
             auto c = ilist[i5 + 3];
             auto d = ilist[i5 + 4];
-            // cout << op << " " << a << " " << b << " " << c << " " << d << endl;
+            
             switch (op) {
                 // registers
                 case EOperation::k_I32SetConst:
@@ -379,7 +381,7 @@ public:
                     }
                     break;
                 default:
-                    cout << debugName << " :: unknown operation found: " << op << endl;
+                    cout << debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << endl;
             }
             i5 += STRIDE;
         }
@@ -450,13 +452,10 @@ public:
 
 
     bool setConstant(string name, float value) {
-        // cout << name << " = " << value << " ?" << endl;
-
         auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
         const auto& constants = m_inputs[CBUFFER0_REGISTER];
     
         if (reflectionIter == m_layout.end()) {
-            // cout << "no." << endl;
             return false;
         }
 
@@ -464,8 +463,6 @@ public:
 
         int offset = reflection.offset;
 
-        // cout << "yes. " << "offset: " << offset << ", semantics: " << reflection.semantic << endl;
-    
         if (reflection.type == "float") *((float_t*)(((uint8_t*)constants.ptr) + offset)) = (float_t)value;
         if (reflection.type == "int")   *((int32_t*)(((uint8_t*)constants.ptr) + offset)) = (int32_t)value;
         if (reflection.type == "uint")  *((uint32_t*)(((uint8_t*)constants.ptr) + offset)) = (uint32_t)value;
@@ -488,17 +485,14 @@ public:
         uint32_t counterSize = 4;                           // 4 bytes
         uint32_t size = counterSize + length * elementSize; // in bytes
         uint32_t index = UAV0_REGISTER + reg;
-    
-        uint32_t num = (size + 3) >> 2;
+        uint32_t n = (size + 3) >> 2;
 
-        u32_array_t memory = { (uintptr_t)(new uint32_t[num]), num };
-        u32_array_t data = { (uintptr_t)(((uint32_t*)memory.ptr) + 1), num - 1 };
+        u32_array_t memory = { (uintptr_t)(new uint32_t[n]), n };
+        u32_array_t data = { (uintptr_t)(((uint32_t*)memory.ptr) + 1), n - 1 };
         u32_array_t counter = { memory.ptr, 1 };
 
-        // *((uint32_t*)counter.ptr) = 0;
-        memset((void*)memory.ptr, 0, size);
-
-        // cout << "Create new UAV [" << name << ", " << size << "]." << endl;
+        *((uint32_t*)counter.ptr) = 0;
+        //memset((void*)memory.ptr, 0, size);
 
         return { name, elementSize, length, reg, data, memory, index };
     }
@@ -513,8 +507,6 @@ private:
     {
         map<int, u32_array_t> chunks;
         
-        // cout << "-------------------" << endl;
-        // cout << debugName << endl;
         decodeChunks((uint8_t*)data.ptr, /*byteLength (!)*/data.size << 2, chunks);
 
         u32_array_t codeChunk = chunks[CHUNK_TYPES::CODE];
@@ -522,12 +514,6 @@ private:
         u32_array_t layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
         
         decodeLayoutChunk((uint8_t*)layoutChunk.ptr, m_layout);
-
-        // cout << "--------------------" << endl;
-        // for (auto& entry : m_layout)
-        // {
-        //     cout << entry.name << " = " << entry.semantic << endl;
-        // }
 
         m_instructions.assign(begin(codeChunk), end(codeChunk));
 

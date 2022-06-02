@@ -11,9 +11,10 @@ import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
+import * as VM from '@lib/fx/bytecode/VM';
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
-    type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT ],
+    type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT, evt.PLAYGROUND_SWITCH_RUNTIME ],
 
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
@@ -38,8 +39,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         let emitter = playground.emitter;
         
         if (!isNull(emitter) && isNull(active)) {
-            if (list.map(fx => fx.name)
-            .indexOf(emitter.name) !== -1) {
+            if (list.map(fx => fx.name).indexOf(emitter.name) !== -1) {
                 active = emitter.name;
             }
         }
@@ -52,23 +52,19 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 }
             }
         }
-        
-        let rebuildRequired = false;
-        const i = list.map(fx => fx.name).indexOf(active);
 
-        if (active) {
-            if (!emitter || !(await emitter.shadowReload(await FxBundle.createPartFxBundle(list[i])))) {
-                rebuildRequired = true;
-            }
-        }
-        
-        if (rebuildRequired) {
+        async function destroy()
+        {
             if (emitter) {
                 emitter.destroy();
                 emitter = null;
                 verbose('previous emitter has been dropped.');
             }
+        }
 
+        async function create()
+        {
+            const i = list.map(fx => fx.name).indexOf(active);
             emitter = await PipelineNEXT2.createEmitterFromBundle(await FxBundle.createPartFxBundle(list[i]));
             if (emitter) {
                 emitter.start();
@@ -76,6 +72,41 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
+        async function forceReload()
+        {
+            await destroy();
+            await create();
+        }
+
+        async function switchRuntime()
+        {
+            await destroy();
+            VM.switchRuntime();
+            await create();
+        }
+
+        async function softReload()
+        {
+            const i = list.map(fx => fx.name).indexOf(active);
+            if (active) {
+                if (emitter && (await emitter.shadowReload(await FxBundle.createPartFxBundle(list[i])))) {
+                    // soft reload succeeded
+                    return;
+                }
+            }
+            
+            await forceReload();
+        }
+
+        switch (action.type)
+        {
+            case evt.PLAYGROUND_SWITCH_RUNTIME:
+                await switchRuntime();
+                break;
+            default:
+                await softReload();
+        }
+        
         dispatch({ type: evt.PLAYGROUND_EMITER_UPDATE, payload: { emitter } });
         done();
     }

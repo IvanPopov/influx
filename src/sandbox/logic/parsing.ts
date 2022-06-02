@@ -17,6 +17,7 @@ import IStoreState, { IDebuggerState, IFileState, IMarker } from '@sandbox/store
 import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
+import * as VM from '@lib/fx/bytecode/VM';
 
 import { LOCATION_PATTERN, PATH_PARAMS_TYPE, PLAYGROUND_VIEW, RAW_KEYWORD } from '.';
 
@@ -309,6 +310,10 @@ const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsCha
         } else {
             const markers = buildDebuggerSourceColorization(getDebugger(getState()), getFileState(getState()));
             emitMarkers(<IDispatch>dispatch, emitDebuggerColorization(markers));
+        }
+        if (action.payload.options.wasm != VM.isWASM())
+        {
+            dispatch({ type: evt.PLAYGROUND_SWITCH_RUNTIME });
         }
         done();
     }

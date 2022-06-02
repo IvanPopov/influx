@@ -24,7 +24,7 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
-import { Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Form, Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 declare const VERSION: string;
 declare const COMMITHASH: string;
@@ -376,6 +376,10 @@ class App extends React.Component<IAppProps> {
         this.props.actions.specifyOptions({ autocompile });
     }
 
+    setRuntime(useWASM: boolean) {
+        this.props.actions.specifyOptions({ wasm: useWASM });
+    }
+
     setBytecodeColorization(colorize: boolean) {
         this.props.actions.specifyOptions({ colorize });
     }
@@ -577,6 +581,15 @@ class App extends React.Component<IAppProps> {
                                             &nbsp;
                                             <Dropdown text='Options' pointing='left' >
                                                 <Dropdown.Menu>
+                                                    <Dropdown.Item key="ddmi-use-wasm">
+                                                        <Form>
+                                                            <Form.Checkbox error label='WASM runtime' size='small'
+                                                                checked={ $debugger.options.wasm }
+                                                                onMouseDown={
+                                                                    e => this.setRuntime(!$debugger.options.wasm)
+                                                                } />
+                                                        </Form>
+                                                    </Dropdown.Item>
                                                     <Dropdown.Item key="ddmi-auto-compilation">
                                                         <Checkbox label='auto compilation' size='small'
                                                             checked={ $debugger.options.autocompile }

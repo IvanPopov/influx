@@ -20,6 +20,7 @@ export interface IDebuggerState {
         colorize: boolean;
         disableOptimizations: boolean;
         autocompile: boolean;
+        wasm: boolean;
     };
 
     expression: string;

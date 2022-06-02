@@ -47,13 +47,14 @@ module.exports = async function (source) {
         "-s", "ENVIRONMENT=web", 
         "-s", "EXPORT_ES6=1", 
         "-s", "WASM=1", 
-        "-s", "TOTAL_MEMORY=32MB", 
-        // "-s", "EXPORT_NAME=MyMod",
-
-        // "-s", "EXPORT_ES6=1",
-        // "-s", "USE_ES6_IMPORT_META=0",
-
-        // "-s", "SINGLE_FILE",
+        "-s", "TOTAL_MEMORY=128MB", 
+        "-s", "ALLOW_MEMORY_GROWTH=1",
+        
+        // "-fsanitize=undefined",
+        // "-s", "SAFE_HEAP=1",
+        // "-s", "ASSERTIONS=1",
+        // "-s", "STACK_OVERFLOW_CHECK=1",
+        
         "--bind", 
     ];
 

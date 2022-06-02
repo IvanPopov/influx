@@ -58,6 +58,10 @@ class GraphConfigView extends React.Component<IProps> {
                         { docs }
                     </Segment>
                 }
+
+                <Segment secondary>
+                    Emitter's capacity is { (this.props.playground.emitter || {}).capacity }.
+                </Segment>
             </div>
         );
     }
