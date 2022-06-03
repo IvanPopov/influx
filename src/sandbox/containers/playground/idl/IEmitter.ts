@@ -5,7 +5,7 @@ import { Vector3 } from 'three';
 export interface IAttribute {
     size: number;
     offset: number;
-    attrName: string;
+    name: string;
 }
 
 

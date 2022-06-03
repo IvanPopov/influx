@@ -1,0 +1,106 @@
+namespace Fx;
+
+table BundleSignature 
+{
+    mode: string;
+    version: string;
+    commithash: string;
+    branch: string;
+    timestamp: string;
+}
+
+table TypeField 
+{
+    type: TypeLayout;
+    name: string; 
+    size: uint; 
+    padding: uint;
+}
+
+table TypeLayout 
+{
+    fields: [ TypeField ];
+    length: int;
+    name: string;
+    size: uint;                 // byte length
+}
+
+table UAVBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}
+
+union RoutineBundle { RoutineBytecodeBundle, RoutineGLSLBundle }
+
+table GLSLAttribute 
+{
+    size: uint;
+    offset: uint;
+    name: string;
+}
+
+table RoutineBytecodeBundleResources
+{
+    uavs: [ UAVBundle ];
+}
+
+table RoutineBytecodeBundle
+{
+    code: string; // [ ubyte ]
+    resources: RoutineBytecodeBundleResources;
+    numthreads: [ uint ];
+}
+
+table RoutineGLSLBundle
+{
+    code: string;
+    // vertex bundles also contain attribute description
+    attributes: [ GLSLAttribute ];
+}
+
+enum EPartSimRoutines : short
+{
+    k_Reset,
+    k_Spawn,
+    k_Init,
+    k_Update,
+    k_Last
+}
+
+enum EPartRenderRoutines : short
+{
+    k_Prerender,
+    k_Vertex,
+    k_Pixel,
+    k_Last
+}
+
+table PartRenderPass
+{
+    routines: [ RoutineBundle ];
+    geometry: string;                       // template name
+    sorting: bool;
+    instanceCount: uint;
+    stride: uint;                           // instance stride in 32bit (integers)
+    instance: TypeLayout;
+}
+
+table PartBundle
+{
+    capacity: uint;                         // maximum number of particles allowed (limited by user manually in the sandbox)
+    simulationRoutines: [ RoutineBundle ];
+    renderPasses: [ PartRenderPass ];
+    particle: TypeLayout;
+}
+
+union BundleContent { PartBundle }
+
+table Bundle 
+{
+    name: string;
+    signature: BundleSignature;
+    content: BundleContent;
+}

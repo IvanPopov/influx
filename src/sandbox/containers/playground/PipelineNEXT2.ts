@@ -2,11 +2,17 @@ import { assert, verbose } from '@lib/common';
 import { comparePartFxBundles } from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { EPartFxRenderRoutines, EPartFxSimRoutines, IFxBundle, IFxRoutineBytecodeBundle, IFxUAVBundle } from '@lib/idl/bundles/IFxBundle';
 import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
 import { IEmitter, IPass } from './idl/IEmitter';
 import * as Bundle from "@lib/idl/bytecode";
+import { EPartSimRoutines } from '@lib/idl/bundles/fx/e-part-sim-routines';
+import { BundleT } from '@lib/idl/bundles/fx/bundle';
+import { EPartRenderRoutines } from '@lib/idl/bundles/fx/e-part-render-routines';
+import { UAVBundleT } from '@lib/idl/bundles/fx/u-a-v-bundle';
+import { PartRenderPassT } from '@lib/idl/bundles/fx/part-render-pass';
+import { RoutineBytecodeBundleT } from '@lib/idl/bundles/fx/routine-bytecode-bundle';
+import { RoutineGLSLBundleT } from '@lib/idl/bundles/fx/routine-g-l-s-l-bundle';
 
 
 // TODO: use CDL instead of reflection
@@ -18,14 +24,14 @@ import * as Bundle from "@lib/idl/bytecode";
 type IUAVResource = ReturnType<typeof VM.createUAV>;
 
 
-function createUAVEx(bundle: IFxUAVBundle, capacity: number): IUAVResource {
-    const uav = VM.createUAV(bundle.name, bundle.stride, capacity, bundle.slot);
+function createUAVEx(bundle: UAVBundleT, capacity: number): IUAVResource {
+    const uav = VM.createUAV(<string>bundle.name, bundle.stride, capacity, bundle.slot);
     console.log(`UAV '${uav.name}' (counter value: ${UAV.readCounter(uav)}, size: ${uav.length}) has been created.`);
     return uav;
 }
 
 // tslint:disable-next-line:max-line-length
-function createUAVsEx(bundles: IFxUAVBundle[], capacity: number, sharedUAVs: IUAVResource[] = []): IUAVResource[] {
+function createUAVsEx(bundles: UAVBundleT[], capacity: number, sharedUAVs: IUAVResource[] = []): IUAVResource[] {
     return bundles.map(uavBundle => {
         const shraredUAV = sharedUAVs.find(uav => uav.name === uavBundle.name);
         return shraredUAV || createUAVEx(uavBundle, capacity);
@@ -33,7 +39,7 @@ function createUAVsEx(bundles: IFxUAVBundle[], capacity: number, sharedUAVs: IUA
 }
 
 
-function setupFxRoutineBytecodeBundle(debugName: string, rountineBundle: IFxRoutineBytecodeBundle, capacity: number, sharedUAVs: IUAVResource[]) {
+function setupFxRoutineBytecodeBundle(debugName: string, rountineBundle: RoutineBytecodeBundleT, capacity: number, sharedUAVs: IUAVResource[]) {
     const vmBundle = VM.make(debugName, rountineBundle.code as Uint8Array);
     const uavs = createUAVsEx(rountineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = rountineBundle.numthreads;
@@ -143,13 +149,13 @@ const UAV = {
 };
 
 // tslint:disable-next-line:max-func-body-length
-async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
-    const { name, content: { union: { part: { capacity, particle, simulationRoutines, renderPasses } } } } = bundle;
+async function loadFromBundle(bundle: BundleT, uavResources: IUAVResource[]) {
+    const { name, content: { capacity, particle, simulationRoutines, renderPasses } } = bundle;
 
-    const resetBundle = setupFxRoutineBytecodeBundle(`${name}/reset`, simulationRoutines[EPartFxSimRoutines.k_Reset].union.bc, capacity, uavResources);
-    const initBundle = setupFxRoutineBytecodeBundle(`${name}/init`, simulationRoutines[EPartFxSimRoutines.k_Init].union.bc, capacity, uavResources);
-    const updateBundle = setupFxRoutineBytecodeBundle(`${name}/update`, simulationRoutines[EPartFxSimRoutines.k_Update].union.bc, capacity, uavResources);
-    const spawnBundle = setupFxRoutineBytecodeBundle(`${name}/spawn`, simulationRoutines[EPartFxSimRoutines.k_Spawn].union.bc, 4, uavResources);
+    const resetBundle = setupFxRoutineBytecodeBundle(`${name}/reset`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Reset], capacity, uavResources);
+    const initBundle = setupFxRoutineBytecodeBundle(`${name}/init`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Init], capacity, uavResources);
+    const updateBundle = setupFxRoutineBytecodeBundle(`${name}/update`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Update], capacity, uavResources);
+    const spawnBundle = setupFxRoutineBytecodeBundle(`${name}/spawn`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Spawn], 4, uavResources);
 
     const uavDeadIndices = uavResources.find(uav => uav.name === FxTranslator.UAV_DEAD_INDICES);
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
@@ -168,20 +174,20 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         
         const UAV_PRERENDERED = `uavPrerendered${i}`;
 
-        const prerender = routines[EPartFxRenderRoutines.k_Prerender].union.bc;
-        const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, prerender, capacity * instanceCount, uavResources);
+        const prerender = routines[EPartRenderRoutines.k_Prerender];
+        const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, <RoutineBytecodeBundleT>prerender, capacity * instanceCount, uavResources);
         const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
 
-        const vertexShader = routines[EPartFxRenderRoutines.k_Vertex].union.glsl.code;
-        const pixelShader = routines[EPartFxRenderRoutines.k_Pixel].union.glsl.code;
+        const vertexShader = <string>routines[EPartRenderRoutines.k_Vertex].code;
+        const pixelShader = <string>routines[EPartRenderRoutines.k_Pixel].code;
 
         // note: only GLSL routines are supported!
-        const instanceLayout = (routines[EPartFxRenderRoutines.k_Vertex].union.glsl).attributes;
+        const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
 
         const numRenderedParticles = () => numParticles() * instanceCount;
 
         // tslint:disable-next-line:max-line-length
-        const uavPrerenderedReflection: IFxUAVBundle = prerender.resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
+        const uavPrerendReflect: UAVBundleT = (<RoutineBytecodeBundleT>prerender).resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
 
         // dump prerendered particles
         const dump = (): void => {
@@ -191,14 +197,13 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
             }
         };
 
-
         //
         // Sorting
         //
 
         const uavNonSorted = uav;
-        const uavPrerenderedReflectionSorted = { ...uavPrerenderedReflection, name: `${uavPrerenderedReflection.name}Sorted` };
-        const uavSorted = !sorting ? uavNonSorted : createUAVsEx([uavPrerenderedReflectionSorted], capacity, uavResources)[0];
+        const uavPrerendReflectSorted = new UAVBundleT(`${uavPrerendReflect.name}Sorted`, uavPrerendReflect.slot, uavPrerendReflect.stride, uavPrerendReflect.type);
+        const uavSorted = !sorting ? uavNonSorted : createUAVsEx([uavPrerendReflectSorted], capacity, uavResources)[0];
 
         const uavNonSortedU8 = VM.memoryToU8Array(uavNonSorted.data);
         const uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
@@ -245,13 +250,13 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
         const data = uavSortedU8;
         return {
             data,
-            instanceLayout,
+            instanceLayout: instanceLayout.map(({ name, offset, size }) => ({ name: <string>name, offset, size })), // FIXME
             stride,
-            geometry,
+            geometry: <string>geometry,                                                                             // FIXME
             sorting,
             vertexShader,
             pixelShader,
-            length: numRenderedParticles,
+            length: numRenderedParticles,                                                                           // FIXME
             sort,
             bundle,
             dump
@@ -340,7 +345,7 @@ async function loadFromBundle(bundle: IFxBundle, uavResources: IUAVResource[]) {
 
 
 // tslint:disable-next-line:max-func-body-length
-export async function createEmitterFromBundle(fx: IFxBundle) {
+export async function createEmitterFromBundle(fx: BundleT) {
     const uavResources: IUAVResource[] = []; // << shared UAV resources
     const timeline = createTimelime();
     const emitter = await loadFromBundle(fx, uavResources);
@@ -376,8 +381,8 @@ export async function createEmitterFromBundle(fx: IFxBundle) {
     }
 
 
-    async function shadowReload(fxNext: IFxBundle): Promise<boolean> {
-        if (!comparePartFxBundles(fxNext.content.union.part, fx.content.union.part)) {
+    async function shadowReload(fxNext: BundleT): Promise<boolean> {
+        if (!comparePartFxBundles(fxNext.content, fx.content)) {
             return false;
         }
 
@@ -405,8 +410,8 @@ export async function createEmitterFromBundle(fx: IFxBundle) {
     }
 
     return {
-        get name() {
-            return name;
+        get name(): string {
+            return <string>name;
         },
 
         capacity,

@@ -5,6 +5,7 @@ import { EInstructionTypes, IFunctionDeclInstruction, ITypeInstruction } from "@
 import * as Bytecode from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Bundle from "@lib/idl/bytecode";
+import { TypeLayoutT } from "@lib/idl/bundles/fx/type-layout";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
     const vector = [];
@@ -19,20 +20,13 @@ const asUint = u8a => (asInt(u8a) >>> 0);
 const asFloat = u8ArrayAsF32;
 const asBool = u8a => asInt(u8a) !== 0;
 
-export interface TypeLayout
+
+function typeLayoutArrayToBaseType({ fields, length, name, size }: TypeLayoutT): TypeLayoutT
 {
-    fields?: { type: TypeLayout; name: string; size: number; padding: number; }[];
-    length?: number;
-    name: string;
-    size: number; // byte length
+    return new TypeLayoutT(fields, undefined, name, size);
 }
 
-function typeLayoutArrayToBaseType({ fields, length, name, size }: TypeLayout)
-{
-    return { fields, name, size };
-}
-
-export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayout
+export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayoutT
 {
     // is it needed?
     while (type !== type.baseType) {
@@ -67,16 +61,16 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayout
         }));
     }
 
-    return { name, size, fields, length };
+    return new TypeLayoutT( fields, length, <string>name, size );
 }
 
 
-export function asNative(result: Bundle.IMemory, layout: TypeLayout)
+export function asNative(result: Bundle.IMemory, layout: TypeLayoutT)
 {
     return asNativeRaw(VM.memoryToU8Array(result), layout);
 }
 
-export function asNativeRaw(result: Uint8Array, layout: TypeLayout): any {
+export function asNativeRaw(result: Uint8Array, layout: TypeLayoutT): any {
     switch (layout.name) {
         case 'bool':
             return asBool(result);
@@ -111,7 +105,7 @@ export function asNativeRaw(result: Uint8Array, layout: TypeLayout): any {
         let complex = {};
         layout.fields.forEach(field => {
             const { padding, size, type } = field;
-            complex[field.name] = asNativeRaw(result.subarray(padding, padding + size), type);
+            complex[<string>field.name] = asNativeRaw(result.subarray(padding, padding + size), type);
         });
         return complex;
     }

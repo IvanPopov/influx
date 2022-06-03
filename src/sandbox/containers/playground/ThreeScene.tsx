@@ -149,7 +149,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         pass.instanceLayout.forEach(desc => {
             const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-            geometry.setAttribute(desc.attrName, interleavedAttr);
+            geometry.setAttribute(desc.name, interleavedAttr);
         });
 
 
@@ -196,7 +196,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         pass.instanceLayout.forEach(desc => {
             const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
             // geometry.addAttribute(desc.attrName, interleavedAttr);
-            geometry.setAttribute(desc.attrName, interleavedAttr);
+            geometry.setAttribute(desc.name, interleavedAttr);
         });
 
         //

@@ -17,8 +17,6 @@ import { Button, Grid, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as Path from '@lib/path/path';
-import * as Uri from '@lib/uri/uri';
-import * as HuskyInterop from '@lib/fx/bundles/HuskyInterop';
 
 
 
@@ -26,16 +24,15 @@ interface IPlaygroundProps extends IStoreState {
     actions: typeof playgroundActions;
 }
 
-
-function downloadObjectAs(content: string, name: string, type: 'json' | 'plain') {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(content);
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href",     dataStr);
-    downloadAnchorNode.setAttribute("download", name + (type == 'json' ? ".json" : ''));
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  }
+// function downloadObjectAs(content: string, name: string, type: 'json' | 'plain') {
+//     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(content);
+//     const downloadAnchorNode = document.createElement('a');
+//     downloadAnchorNode.setAttribute("href",     dataStr);
+//     downloadAnchorNode.setAttribute("download", name + (type == 'json' ? ".json" : ''));
+//     document.body.appendChild(downloadAnchorNode); // required for firefox
+//     downloadAnchorNode.click();
+//     downloadAnchorNode.remove();
+// }
 
 // TODO: remove it
 const threeStylesHotfix: React.CSSProperties = {
@@ -101,18 +98,8 @@ class Playground extends React.Component<IPlaygroundProps> {
         const list = filterPartFx(scope);
         const bundles = await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx)));
         const exportName = Path.parse(this.props.sourceFile.uri).basename;
-        downloadObjectAs(FxBundle.serializeBundlesToJSON(bundles), exportName, 'json');
+        // downloadObjectAs(FxBundle.serializeBundlesToJSON(bundles), exportName, 'json');
         // const jsonBundle = JSON.stringify(list.map(async fx => await FxBundle.createPartFxBundle(fx)), null, '\t');
-    }
-
-    @autobind
-    async handleDownloadLoaderClick() {
-        const file = getFileState(this.props);
-        const scope = getScope(file);
-        const list = filterPartFx(scope);
-        const bundles = await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx)));
-        const exportName = Path.parse(this.props.sourceFile.uri).basename;
-        downloadObjectAs(HuskyInterop.reader(bundles), 'auto_ifx_bundle_loader.h', 'plain');
     }
 
     pickEffect(active) {
@@ -196,10 +183,6 @@ class Playground extends React.Component<IPlaygroundProps> {
                                         <Button
                                             icon={<Icon className={'cloud download'} />}
                                             onClick={this.handleDownloadDataClick}
-                                        />
-                                        <Button
-                                            icon={<Icon className={'arrow down'} />}
-                                            onClick={this.handleDownloadLoaderClick}
                                         />
                                     </Button.Group>
                                 </Grid.Column>

@@ -1,54 +1,47 @@
 import { assert } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import { typeAstToTypeLayout, TypeLayout } from "@lib/fx/bytecode/VM/native";
+import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, ICSShaderReflection, IPartFxPassReflection } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { EPartFxSimRoutines, IFxBundle, IFxBundleSignature, IFxRoutineBundle, IFxRoutineBytecodeBundle, IFxRoutineGLSLBundle, IFxTypeLayout, IFxUAVBundle, IPartFxBundle, IPartFxRenderPass, serializable } from "@lib/idl/bundles/IFxBundle";
+
+import { BundleT } from '@lib/idl/bundles/fx/bundle';
+import { BundleContent } from "@lib/idl/bundles/fx/bundle-content";
+import { BundleSignatureT } from '@lib/idl/bundles/fx/bundle-signature';
+import { EPartSimRoutines } from "@lib/idl/bundles/fx/e-part-sim-routines";
+import { GLSLAttributeT } from "@lib/idl/bundles/fx/g-l-s-l-attribute";
+import { PartBundleT } from '@lib/idl/bundles/fx/part-bundle';
+import { PartRenderPassT } from "@lib/idl/bundles/fx/part-render-pass";
+import { RoutineBundle } from "@lib/idl/bundles/fx/routine-bundle";
+import { RoutineBytecodeBundleT } from "@lib/idl/bundles/fx/routine-bytecode-bundle";
+import { RoutineBytecodeBundleResourcesT } from "@lib/idl/bundles/fx/routine-bytecode-bundle-resources";
+import { RoutineGLSLBundleT } from "@lib/idl/bundles/fx/routine-g-l-s-l-bundle";
+import { TypeLayoutT } from "@lib/idl/bundles/fx/type-layout";
+import { UAVBundleT } from "@lib/idl/bundles/fx/u-a-v-bundle";
+
 import { ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
+
+
 // global defines from webpack's config;
 /// <reference path="../../webpack.d.ts" />
-function getFxBundleSignature(): IFxBundleSignature {
-    return {
-        ...serializable('signature'),
-        version: VERSION,
-        commithash: COMMITHASH,
-        branch: BRANCH,
-        mode: MODE,
-        timestamp: TIMESTAMP
-    };
+function getFxBundleSignature(): BundleSignatureT {
+    return new BundleSignatureT( VERSION, COMMITHASH, BRANCH, MODE, TIMESTAMP );
 }
 
 
-function createFxBundle(name: string, type: 'part', data: IPartFxBundle): IFxBundle {
+function createFxBundle(name: string, type: 'part', data: PartBundleT): BundleT {
     const signature = getFxBundleSignature();
-    const part = data as IPartFxBundle;
-    return { ...serializable('bundle'), name, signature, content: { ...serializable('bundle-content'), type, union: { part } } };
+    return new BundleT(name, signature, BundleContent.PartBundle, data);
 }
 
-function createFxRoutineBundle(type: 'glsl' | 'bc', data: IFxRoutineGLSLBundle | IFxRoutineBytecodeBundle): IFxRoutineBundle
-{
-    let glsl = null;
-    let bc = null;
-    switch (type)
-    {
-        case 'bc': 
-            bc = data as IFxRoutineBytecodeBundle;
-            break;
-        case 'glsl': 
-            glsl = data as IFxRoutineGLSLBundle;
-            break;
-    }
 
-    return { ...serializable('routine'), type, union: { bc, glsl } };
-}
 
-function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPassReflection): IPartFxRenderPass {
+function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPassReflection): PartRenderPassT {
     const scope = document.root.scope;
     const { geometry, sorting, instanceCount, CSParticlesPrerenderRoutine } = reflection;
     const prerender = createFxRoutineBytecodeBundle(document, CSParticlesPrerenderRoutine);
@@ -57,30 +50,21 @@ function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPa
     const instance = createFxTypeLayout(partType);
     const vertex = createFxRoutineGLSLBundle(document, reflection.instance, reflection.VSParticleShader, 'vertex');
     const pixel = createFxRoutineGLSLBundle(document, null, reflection.PSParticleShader, 'pixel');
-    const routines = [ createFxRoutineBundle('bc', prerender), createFxRoutineBundle('glsl', vertex), createFxRoutineBundle('glsl', pixel) ]; // must be aligned with EPartFxRenderRoutines
+    const routineTypes = [ RoutineBundle.RoutineBytecodeBundle, RoutineBundle.RoutineGLSLBundle, RoutineBundle.RoutineGLSLBundle ];
+    const routines = [ prerender, vertex, pixel ]; // must be aligned with EPartFxRenderRoutines
     const instanceType = scope.findType(reflection.instance);
     const stride = instanceType.size >> 2;
 
-    return { ...serializable('part-fx-render-pass'), routines, geometry, sorting, instanceCount, stride, instance };
-}
-
-function patchFxTypeLayout(raw: TypeLayout): IFxTypeLayout
-{
-    let layout = { ...serializable('type-layout'), ...raw };
-    if (layout.fields)
-    {
-        layout.fields = layout.fields.map(field => ({ ...serializable('type-layout-field'), ...field, type: patchFxTypeLayout(field.type) }));
-    }
-    return layout;
-}
-
-function createFxTypeLayout(type: ITypeInstruction): IFxTypeLayout {
-    const layout = typeAstToTypeLayout(type);
-    return patchFxTypeLayout(layout);
+    return new PartRenderPassT(routineTypes, routines, geometry, sorting, instanceCount, stride, instance);
 }
 
 
-function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSShaderReflection): IFxRoutineBytecodeBundle {
+function createFxTypeLayout(type: ITypeInstruction): TypeLayoutT {
+    return typeAstToTypeLayout(type);
+}
+
+
+function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSShaderReflection): RoutineBytecodeBundleT {
     const entry = reflection.name;
     const shader = document.root.scope.findFunction(entry, null);
     assert(shader);
@@ -88,18 +72,18 @@ function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSSha
     const numthreads = [...reflection.numthreads];
     const program = Bytecode.translate(shader);
     const code = program.code;
-    const uavs = reflection.uavs.map(({ name, register: slot, elementType }): IFxUAVBundle => {
+    const uavs = reflection.uavs.map(({ name, register: slot, elementType }) => {
         const typeInstr = document.root.scope.findType(elementType);
         const stride = typeInstr.size; // in bytes
         const type = createFxTypeLayout(typeInstr);
-        return { ...serializable('uav'), name, slot, stride, type };
+        return new UAVBundleT(name, slot, stride, type);
     });
 
-    return { ...serializable('bytecode-routine'), code, resources: { ...serializable('bytecode-routine-resources'), uavs }, numthreads };
+    return new RoutineBytecodeBundleT(code, new RoutineBytecodeBundleResourcesT(uavs), numthreads);
 }
 
 
-function createFxRoutineGLSLBundle(document: ISLDocument, interpolatorsType: string, routine: string, mode: 'vertex' | 'pixel'): IFxRoutineGLSLBundle {
+function createFxRoutineGLSLBundle(document: ISLDocument, interpolatorsType: string, routine: string, mode: 'vertex' | 'pixel'): RoutineGLSLBundleT {
     const scope = document.root.scope;
 
     let code = Glsl.translate(scope.findFunction(routine, null), { mode });
@@ -113,21 +97,21 @@ function createFxRoutineGLSLBundle(document: ISLDocument, interpolatorsType: str
         attributes = instance.fields.map(field => {
             let size = field.size >> 2;
             let offset = field.padding >> 2;
-            let attrName = Glsl.GlslEmitter.$declToAttributeName(partType.getField(field.name));
-            return { ...serializable('GLSL-attribute'), attrName, size, offset };
+            let attrName = Glsl.GlslEmitter.$declToAttributeName(partType.getField(<string>field.name));
+            return new GLSLAttributeT(size, offset, attrName);
         });
     }
 
-    return { ...serializable('GLSL-routine'), code, attributes };
+    return new RoutineGLSLBundleT(code, attributes);
 }
 
 
-function compareFxTypeLayouts(left: IFxTypeLayout, right: IFxTypeLayout) {
+function compareFxTypeLayouts(left: TypeLayoutT, right: TypeLayoutT) {
     return JSON.stringify(left) == JSON.stringify(right);
 }
 
 
-export async function createPartFxBundle(fx: IPartFxInstruction): Promise<IFxBundle> {
+export async function createPartFxBundle(fx: IPartFxInstruction): Promise<BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
@@ -143,28 +127,29 @@ export async function createPartFxBundle(fx: IPartFxInstruction): Promise<IFxBun
     }
 
     const particle = createFxTypeLayout(scope.findType(reflection.particle));
-    const routines = Array<IFxRoutineBundle>(EPartFxSimRoutines.k_Last);
+    const routines = Array<RoutineGLSLBundleT | RoutineBytecodeBundleT>(EPartSimRoutines.k_Last);
+    const routineTypes = Array<RoutineBundle>(EPartSimRoutines.k_Last);
 
-    routines[EPartFxSimRoutines.k_Reset] = createFxRoutineBundle('bc', createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesResetRoutine));
-    routines[EPartFxSimRoutines.k_Spawn] = createFxRoutineBundle('bc', createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesSpawnRoutine));
-    routines[EPartFxSimRoutines.k_Init] = createFxRoutineBundle('bc', createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesInitRoutine));
-    routines[EPartFxSimRoutines.k_Update] = createFxRoutineBundle('bc', createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesUpdateRoutine));
+    routineTypes[EPartSimRoutines.k_Reset] = RoutineBundle.RoutineBytecodeBundle;
+    routines[EPartSimRoutines.k_Reset] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesResetRoutine);
+
+    routineTypes[EPartSimRoutines.k_Spawn] = RoutineBundle.RoutineBytecodeBundle;
+    routines[EPartSimRoutines.k_Spawn] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesSpawnRoutine);
+
+    routineTypes[EPartSimRoutines.k_Init] = RoutineBundle.RoutineBytecodeBundle;
+    routines[EPartSimRoutines.k_Init] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesInitRoutine);
+
+    routineTypes[EPartSimRoutines.k_Update] = RoutineBundle.RoutineBytecodeBundle;
+    routines[EPartSimRoutines.k_Update] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesUpdateRoutine);
 
     const passes = reflection.passes.map(pass => createPartFxGLSLRenderPass(slDocument, pass));
-
-    const part: IPartFxBundle = {
-        ...serializable('part-fx-bundle'), 
-        capacity,
-        particle,
-        simulationRoutines: routines,
-        renderPasses: passes
-    };
+    const part = new PartBundleT(capacity, routineTypes, routines, passes, particle);
 
     return createFxBundle(name, 'part', part);
 }
 
 // todo: rework comparisson to be more readable and compact
-export function comparePartFxBundles(left: IPartFxBundle, right: IPartFxBundle): boolean {
+export function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
     if (left.capacity != right.capacity) return false;
     if (left.renderPasses.length != right.renderPasses.length) return false;
     if (!compareFxTypeLayouts(left.particle, right.particle)) return false;
@@ -174,18 +159,4 @@ export function comparePartFxBundles(left: IPartFxBundle, right: IPartFxBundle):
         if (!compareFxTypeLayouts(left.renderPasses[i].instance, right.renderPasses[i].instance)) return false;
     }
     return true;
-}
-
-
-export function serializeBundlesToJSON(bundles: IFxBundle[])
-{
-    // quick fix: convert Uint8Array to native [];
-    bundles.forEach(bundle => {
-        if (bundle.content.type != 'part') return null;
-        const asNativeArray = (arr) => arr instanceof Uint8Array ? Array.from(arr) : arr;
-        const partBundle = bundle.content.union.part;
-        partBundle.simulationRoutines.forEach(routine => routine.union.bc.code = asNativeArray(routine.union.bc.code));
-        partBundle.renderPasses.forEach(pass => pass.routines.forEach(routine => (routine.union.bc ? routine.union.bc.code = asNativeArray(routine.union.bc.code) : null, routine)));
-    });
-    return JSON.stringify(bundles, null, '\t');
 }
