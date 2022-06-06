@@ -6,6 +6,13 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+// Ensure the included flatbuffers.h is the same version as when this file was
+// generated, otherwise it may not be compatible.
+static_assert(FLATBUFFERS_VERSION_MAJOR == 2 &&
+              FLATBUFFERS_VERSION_MINOR == 0 &&
+              FLATBUFFERS_VERSION_REVISION == 6,
+             "Non-compatible flatbuffers version included");
+
 namespace Fx {
 
 struct BundleSignature;
@@ -52,6 +59,10 @@ struct Bundle;
 struct BundleBuilder;
 struct BundleT;
 
+struct BundleCollection;
+struct BundleCollectionBuilder;
+struct BundleCollectionT;
+
 enum RoutineBundle : uint8_t {
   RoutineBundle_NONE = 0,
   RoutineBundle_RoutineBytecodeBundle = 1,
@@ -97,6 +108,18 @@ template<> struct RoutineBundleTraits<Fx::RoutineGLSLBundle> {
   static const RoutineBundle enum_value = RoutineBundle_RoutineGLSLBundle;
 };
 
+template<typename T> struct RoutineBundleUnionTraits {
+  static const RoutineBundle enum_value = RoutineBundle_NONE;
+};
+
+template<> struct RoutineBundleUnionTraits<Fx::RoutineBytecodeBundleT> {
+  static const RoutineBundle enum_value = RoutineBundle_RoutineBytecodeBundle;
+};
+
+template<> struct RoutineBundleUnionTraits<Fx::RoutineGLSLBundleT> {
+  static const RoutineBundle enum_value = RoutineBundle_RoutineGLSLBundle;
+};
+
 struct RoutineBundleUnion {
   RoutineBundle type;
   void *value;
@@ -114,17 +137,15 @@ struct RoutineBundleUnion {
 
   void Reset();
 
-#ifndef FLATBUFFERS_CPP98_STL
   template <typename T>
   void Set(T&& val) {
-    using RT = typename std::remove_reference<T>::type;
+    typedef typename std::remove_reference<T>::type RT;
     Reset();
-    type = RoutineBundleTraits<typename RT::TableType>::enum_value;
+    type = RoutineBundleUnionTraits<RT>::enum_value;
     if (type != RoutineBundle_NONE) {
       value = new RT(std::forward<T>(val));
     }
   }
-#endif  // FLATBUFFERS_CPP98_STL
 
   static void *UnPack(const void *obj, RoutineBundle type, const flatbuffers::resolver_function_t *resolver);
   flatbuffers::Offset<void> Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher = nullptr) const;
@@ -263,6 +284,14 @@ template<> struct BundleContentTraits<Fx::PartBundle> {
   static const BundleContent enum_value = BundleContent_PartBundle;
 };
 
+template<typename T> struct BundleContentUnionTraits {
+  static const BundleContent enum_value = BundleContent_NONE;
+};
+
+template<> struct BundleContentUnionTraits<Fx::PartBundleT> {
+  static const BundleContent enum_value = BundleContent_PartBundle;
+};
+
 struct BundleContentUnion {
   BundleContent type;
   void *value;
@@ -280,17 +309,15 @@ struct BundleContentUnion {
 
   void Reset();
 
-#ifndef FLATBUFFERS_CPP98_STL
   template <typename T>
   void Set(T&& val) {
-    using RT = typename std::remove_reference<T>::type;
+    typedef typename std::remove_reference<T>::type RT;
     Reset();
-    type = BundleContentTraits<typename RT::TableType>::enum_value;
+    type = BundleContentUnionTraits<RT>::enum_value;
     if (type != BundleContent_NONE) {
       value = new RT(std::forward<T>(val));
     }
   }
-#endif  // FLATBUFFERS_CPP98_STL
 
   static void *UnPack(const void *obj, BundleContent type, const flatbuffers::resolver_function_t *resolver);
   flatbuffers::Offset<void> Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher = nullptr) const;
@@ -436,6 +463,10 @@ struct TypeFieldT : public flatbuffers::NativeTable {
   std::string name{};
   uint32_t size = 0;
   uint32_t padding = 0;
+  TypeFieldT() = default;
+  TypeFieldT(const TypeFieldT &o);
+  TypeFieldT(TypeFieldT&&) FLATBUFFERS_NOEXCEPT = default;
+  TypeFieldT &operator=(TypeFieldT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct TypeField FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -465,8 +496,8 @@ struct TypeField FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyTable(type()) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
-           VerifyField<uint32_t>(verifier, VT_SIZE) &&
-           VerifyField<uint32_t>(verifier, VT_PADDING) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
+           VerifyField<uint32_t>(verifier, VT_PADDING, 4) &&
            verifier.EndTable();
   }
   TypeFieldT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -538,6 +569,10 @@ struct TypeLayoutT : public flatbuffers::NativeTable {
   int32_t length = 0;
   std::string name{};
   uint32_t size = 0;
+  TypeLayoutT() = default;
+  TypeLayoutT(const TypeLayoutT &o);
+  TypeLayoutT(TypeLayoutT&&) FLATBUFFERS_NOEXCEPT = default;
+  TypeLayoutT &operator=(TypeLayoutT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct TypeLayout FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -566,10 +601,10 @@ struct TypeLayout FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_FIELDS) &&
            verifier.VerifyVector(fields()) &&
            verifier.VerifyVectorOfTables(fields()) &&
-           VerifyField<int32_t>(verifier, VT_LENGTH) &&
+           VerifyField<int32_t>(verifier, VT_LENGTH, 4) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
-           VerifyField<uint32_t>(verifier, VT_SIZE) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
            verifier.EndTable();
   }
   TypeLayoutT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -642,6 +677,10 @@ struct UAVBundleT : public flatbuffers::NativeTable {
   uint32_t slot = 0;
   uint32_t stride = 0;
   std::unique_ptr<Fx::TypeLayoutT> type{};
+  UAVBundleT() = default;
+  UAVBundleT(const UAVBundleT &o);
+  UAVBundleT(UAVBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  UAVBundleT &operator=(UAVBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct UAVBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -669,8 +708,8 @@ struct UAVBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
-           VerifyField<uint32_t>(verifier, VT_SLOT) &&
-           VerifyField<uint32_t>(verifier, VT_STRIDE) &&
+           VerifyField<uint32_t>(verifier, VT_SLOT, 4) &&
+           VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_TYPE) &&
            verifier.VerifyTable(type()) &&
            verifier.EndTable();
@@ -764,8 +803,8 @@ struct GLSLAttribute FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_SIZE) &&
-           VerifyField<uint32_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
+           VerifyField<uint32_t>(verifier, VT_OFFSET, 4) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
            verifier.EndTable();
@@ -829,6 +868,10 @@ flatbuffers::Offset<GLSLAttribute> CreateGLSLAttribute(flatbuffers::FlatBufferBu
 struct RoutineBytecodeBundleResourcesT : public flatbuffers::NativeTable {
   typedef RoutineBytecodeBundleResources TableType;
   std::vector<std::unique_ptr<Fx::UAVBundleT>> uavs{};
+  RoutineBytecodeBundleResourcesT() = default;
+  RoutineBytecodeBundleResourcesT(const RoutineBytecodeBundleResourcesT &o);
+  RoutineBytecodeBundleResourcesT(RoutineBytecodeBundleResourcesT&&) FLATBUFFERS_NOEXCEPT = default;
+  RoutineBytecodeBundleResourcesT &operator=(RoutineBytecodeBundleResourcesT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct RoutineBytecodeBundleResources FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -894,6 +937,10 @@ struct RoutineBytecodeBundleT : public flatbuffers::NativeTable {
   std::vector<uint8_t> code{};
   std::unique_ptr<Fx::RoutineBytecodeBundleResourcesT> resources{};
   std::vector<uint32_t> numthreads{};
+  RoutineBytecodeBundleT() = default;
+  RoutineBytecodeBundleT(const RoutineBytecodeBundleT &o);
+  RoutineBytecodeBundleT(RoutineBytecodeBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  RoutineBytecodeBundleT &operator=(RoutineBytecodeBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct RoutineBytecodeBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -984,6 +1031,10 @@ struct RoutineGLSLBundleT : public flatbuffers::NativeTable {
   typedef RoutineGLSLBundle TableType;
   std::string code{};
   std::vector<std::unique_ptr<Fx::GLSLAttributeT>> attributes{};
+  RoutineGLSLBundleT() = default;
+  RoutineGLSLBundleT(const RoutineGLSLBundleT &o);
+  RoutineGLSLBundleT(RoutineGLSLBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  RoutineGLSLBundleT &operator=(RoutineGLSLBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct RoutineGLSLBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1066,6 +1117,10 @@ struct PartRenderPassT : public flatbuffers::NativeTable {
   uint32_t instanceCount = 0;
   uint32_t stride = 0;
   std::unique_ptr<Fx::TypeLayoutT> instance{};
+  PartRenderPassT() = default;
+  PartRenderPassT(const PartRenderPassT &o);
+  PartRenderPassT(PartRenderPassT&&) FLATBUFFERS_NOEXCEPT = default;
+  PartRenderPassT &operator=(PartRenderPassT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct PartRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1110,9 +1165,9 @@ struct PartRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyRoutineBundleVector(verifier, routines(), routines_type()) &&
            VerifyOffset(verifier, VT_GEOMETRY) &&
            verifier.VerifyString(geometry()) &&
-           VerifyField<uint8_t>(verifier, VT_SORTING) &&
-           VerifyField<uint32_t>(verifier, VT_INSTANCECOUNT) &&
-           VerifyField<uint32_t>(verifier, VT_STRIDE) &&
+           VerifyField<uint8_t>(verifier, VT_SORTING, 1) &&
+           VerifyField<uint32_t>(verifier, VT_INSTANCECOUNT, 4) &&
+           VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_INSTANCE) &&
            verifier.VerifyTable(instance()) &&
            verifier.EndTable();
@@ -1208,7 +1263,11 @@ struct PartBundleT : public flatbuffers::NativeTable {
   uint32_t capacity = 0;
   std::vector<Fx::RoutineBundleUnion> simulationRoutines{};
   std::vector<std::unique_ptr<Fx::PartRenderPassT>> renderPasses{};
-  std::vector<std::unique_ptr<Fx::TypeLayoutT>> particle{};
+  std::unique_ptr<Fx::TypeLayoutT> particle{};
+  PartBundleT() = default;
+  PartBundleT(const PartBundleT &o);
+  PartBundleT(PartBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  PartBundleT &operator=(PartBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct PartBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1233,12 +1292,12 @@ struct PartBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<flatbuffers::Offset<Fx::PartRenderPass>> *renderPasses() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::PartRenderPass>> *>(VT_RENDERPASSES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<Fx::TypeLayout>> *particle() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::TypeLayout>> *>(VT_PARTICLE);
+  const Fx::TypeLayout *particle() const {
+    return GetPointer<const Fx::TypeLayout *>(VT_PARTICLE);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_CAPACITY) &&
+           VerifyField<uint32_t>(verifier, VT_CAPACITY, 4) &&
            VerifyOffset(verifier, VT_SIMULATIONROUTINES_TYPE) &&
            verifier.VerifyVector(simulationRoutines_type()) &&
            VerifyOffset(verifier, VT_SIMULATIONROUTINES) &&
@@ -1248,8 +1307,7 @@ struct PartBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVector(renderPasses()) &&
            verifier.VerifyVectorOfTables(renderPasses()) &&
            VerifyOffset(verifier, VT_PARTICLE) &&
-           verifier.VerifyVector(particle()) &&
-           verifier.VerifyVectorOfTables(particle()) &&
+           verifier.VerifyTable(particle()) &&
            verifier.EndTable();
   }
   PartBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1273,7 +1331,7 @@ struct PartBundleBuilder {
   void add_renderPasses(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::PartRenderPass>>> renderPasses) {
     fbb_.AddOffset(PartBundle::VT_RENDERPASSES, renderPasses);
   }
-  void add_particle(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::TypeLayout>>> particle) {
+  void add_particle(flatbuffers::Offset<Fx::TypeLayout> particle) {
     fbb_.AddOffset(PartBundle::VT_PARTICLE, particle);
   }
   explicit PartBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
@@ -1293,7 +1351,7 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> simulationRoutines_type = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> simulationRoutines = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::PartRenderPass>>> renderPasses = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::TypeLayout>>> particle = 0) {
+    flatbuffers::Offset<Fx::TypeLayout> particle = 0) {
   PartBundleBuilder builder_(_fbb);
   builder_.add_particle(particle);
   builder_.add_renderPasses(renderPasses);
@@ -1309,18 +1367,17 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundleDirect(
     const std::vector<uint8_t> *simulationRoutines_type = nullptr,
     const std::vector<flatbuffers::Offset<void>> *simulationRoutines = nullptr,
     const std::vector<flatbuffers::Offset<Fx::PartRenderPass>> *renderPasses = nullptr,
-    const std::vector<flatbuffers::Offset<Fx::TypeLayout>> *particle = nullptr) {
+    flatbuffers::Offset<Fx::TypeLayout> particle = 0) {
   auto simulationRoutines_type__ = simulationRoutines_type ? _fbb.CreateVector<uint8_t>(*simulationRoutines_type) : 0;
   auto simulationRoutines__ = simulationRoutines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*simulationRoutines) : 0;
   auto renderPasses__ = renderPasses ? _fbb.CreateVector<flatbuffers::Offset<Fx::PartRenderPass>>(*renderPasses) : 0;
-  auto particle__ = particle ? _fbb.CreateVector<flatbuffers::Offset<Fx::TypeLayout>>(*particle) : 0;
   return Fx::CreatePartBundle(
       _fbb,
       capacity,
       simulationRoutines_type__,
       simulationRoutines__,
       renderPasses__,
-      particle__);
+      particle);
 }
 
 flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferBuilder &_fbb, const PartBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -1330,6 +1387,10 @@ struct BundleT : public flatbuffers::NativeTable {
   std::string name{};
   std::unique_ptr<Fx::BundleSignatureT> signature{};
   Fx::BundleContentUnion content{};
+  BundleT() = default;
+  BundleT(const BundleT &o);
+  BundleT(BundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  BundleT &operator=(BundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1363,7 +1424,7 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_SIGNATURE) &&
            verifier.VerifyTable(signature()) &&
-           VerifyField<uint8_t>(verifier, VT_CONTENT_TYPE) &&
+           VerifyField<uint8_t>(verifier, VT_CONTENT_TYPE, 1) &&
            VerifyOffset(verifier, VT_CONTENT) &&
            VerifyBundleContent(verifier, content(), content_type()) &&
            verifier.EndTable();
@@ -1435,6 +1496,73 @@ inline flatbuffers::Offset<Bundle> CreateBundleDirect(
 
 flatbuffers::Offset<Bundle> CreateBundle(flatbuffers::FlatBufferBuilder &_fbb, const BundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct BundleCollectionT : public flatbuffers::NativeTable {
+  typedef BundleCollection TableType;
+  std::vector<std::unique_ptr<Fx::BundleT>> content{};
+  BundleCollectionT() = default;
+  BundleCollectionT(const BundleCollectionT &o);
+  BundleCollectionT(BundleCollectionT&&) FLATBUFFERS_NOEXCEPT = default;
+  BundleCollectionT &operator=(BundleCollectionT o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct BundleCollection FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BundleCollectionT NativeTableType;
+  typedef BundleCollectionBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CONTENT = 4
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::Bundle>> *content() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::Bundle>> *>(VT_CONTENT);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_CONTENT) &&
+           verifier.VerifyVector(content()) &&
+           verifier.VerifyVectorOfTables(content()) &&
+           verifier.EndTable();
+  }
+  BundleCollectionT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(BundleCollectionT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<BundleCollection> Pack(flatbuffers::FlatBufferBuilder &_fbb, const BundleCollectionT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct BundleCollectionBuilder {
+  typedef BundleCollection Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_content(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::Bundle>>> content) {
+    fbb_.AddOffset(BundleCollection::VT_CONTENT, content);
+  }
+  explicit BundleCollectionBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<BundleCollection> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<BundleCollection>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<BundleCollection> CreateBundleCollection(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::Bundle>>> content = 0) {
+  BundleCollectionBuilder builder_(_fbb);
+  builder_.add_content(content);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<BundleCollection> CreateBundleCollectionDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<Fx::Bundle>> *content = nullptr) {
+  auto content__ = content ? _fbb.CreateVector<flatbuffers::Offset<Fx::Bundle>>(*content) : 0;
+  return Fx::CreateBundleCollection(
+      _fbb,
+      content__);
+}
+
+flatbuffers::Offset<BundleCollection> CreateBundleCollection(flatbuffers::FlatBufferBuilder &_fbb, const BundleCollectionT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 inline BundleSignatureT *BundleSignature::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<BundleSignatureT>(new BundleSignatureT());
   UnPackTo(_o.get(), _resolver);
@@ -1473,6 +1601,21 @@ inline flatbuffers::Offset<BundleSignature> CreateBundleSignature(flatbuffers::F
       _timestamp);
 }
 
+inline TypeFieldT::TypeFieldT(const TypeFieldT &o)
+      : type((o.type) ? new Fx::TypeLayoutT(*o.type) : nullptr),
+        name(o.name),
+        size(o.size),
+        padding(o.padding) {
+}
+
+inline TypeFieldT &TypeFieldT::operator=(TypeFieldT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(type, o.type);
+  std::swap(name, o.name);
+  std::swap(size, o.size);
+  std::swap(padding, o.padding);
+  return *this;
+}
+
 inline TypeFieldT *TypeField::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<TypeFieldT>(new TypeFieldT());
   UnPackTo(_o.get(), _resolver);
@@ -1482,7 +1625,7 @@ inline TypeFieldT *TypeField::UnPack(const flatbuffers::resolver_function_t *_re
 inline void TypeField::UnPackTo(TypeFieldT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = type(); if (_e) _o->type = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); }
+  { auto _e = type(); if (_e) { if(_o->type) { _e->UnPackTo(_o->type.get(), _resolver); } else { _o->type = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = size(); _o->size = _e; }
   { auto _e = padding(); _o->padding = _e; }
@@ -1508,6 +1651,22 @@ inline flatbuffers::Offset<TypeField> CreateTypeField(flatbuffers::FlatBufferBui
       _padding);
 }
 
+inline TypeLayoutT::TypeLayoutT(const TypeLayoutT &o)
+      : length(o.length),
+        name(o.name),
+        size(o.size) {
+  fields.reserve(o.fields.size());
+  for (const auto &fields_ : o.fields) { fields.emplace_back((fields_) ? new Fx::TypeFieldT(*fields_) : nullptr); }
+}
+
+inline TypeLayoutT &TypeLayoutT::operator=(TypeLayoutT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(fields, o.fields);
+  std::swap(length, o.length);
+  std::swap(name, o.name);
+  std::swap(size, o.size);
+  return *this;
+}
+
 inline TypeLayoutT *TypeLayout::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<TypeLayoutT>(new TypeLayoutT());
   UnPackTo(_o.get(), _resolver);
@@ -1517,7 +1676,7 @@ inline TypeLayoutT *TypeLayout::UnPack(const flatbuffers::resolver_function_t *_
 inline void TypeLayout::UnPackTo(TypeLayoutT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = fields(); if (_e) { _o->fields.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->fields[_i] = std::unique_ptr<Fx::TypeFieldT>(_e->Get(_i)->UnPack(_resolver)); } } }
+  { auto _e = fields(); if (_e) { _o->fields.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fields[_i]) { _e->Get(_i)->UnPackTo(_o->fields[_i].get(), _resolver); } else { _o->fields[_i] = std::unique_ptr<Fx::TypeFieldT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
   { auto _e = length(); _o->length = _e; }
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = size(); _o->size = _e; }
@@ -1543,6 +1702,21 @@ inline flatbuffers::Offset<TypeLayout> CreateTypeLayout(flatbuffers::FlatBufferB
       _size);
 }
 
+inline UAVBundleT::UAVBundleT(const UAVBundleT &o)
+      : name(o.name),
+        slot(o.slot),
+        stride(o.stride),
+        type((o.type) ? new Fx::TypeLayoutT(*o.type) : nullptr) {
+}
+
+inline UAVBundleT &UAVBundleT::operator=(UAVBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(slot, o.slot);
+  std::swap(stride, o.stride);
+  std::swap(type, o.type);
+  return *this;
+}
+
 inline UAVBundleT *UAVBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<UAVBundleT>(new UAVBundleT());
   UnPackTo(_o.get(), _resolver);
@@ -1555,7 +1729,7 @@ inline void UAVBundle::UnPackTo(UAVBundleT *_o, const flatbuffers::resolver_func
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = slot(); _o->slot = _e; }
   { auto _e = stride(); _o->stride = _e; }
-  { auto _e = type(); if (_e) _o->type = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); }
+  { auto _e = type(); if (_e) { if(_o->type) { _e->UnPackTo(_o->type.get(), _resolver); } else { _o->type = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
 }
 
 inline flatbuffers::Offset<UAVBundle> UAVBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UAVBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -1610,6 +1784,16 @@ inline flatbuffers::Offset<GLSLAttribute> CreateGLSLAttribute(flatbuffers::FlatB
       _name);
 }
 
+inline RoutineBytecodeBundleResourcesT::RoutineBytecodeBundleResourcesT(const RoutineBytecodeBundleResourcesT &o) {
+  uavs.reserve(o.uavs.size());
+  for (const auto &uavs_ : o.uavs) { uavs.emplace_back((uavs_) ? new Fx::UAVBundleT(*uavs_) : nullptr); }
+}
+
+inline RoutineBytecodeBundleResourcesT &RoutineBytecodeBundleResourcesT::operator=(RoutineBytecodeBundleResourcesT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(uavs, o.uavs);
+  return *this;
+}
+
 inline RoutineBytecodeBundleResourcesT *RoutineBytecodeBundleResources::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<RoutineBytecodeBundleResourcesT>(new RoutineBytecodeBundleResourcesT());
   UnPackTo(_o.get(), _resolver);
@@ -1619,7 +1803,7 @@ inline RoutineBytecodeBundleResourcesT *RoutineBytecodeBundleResources::UnPack(c
 inline void RoutineBytecodeBundleResources::UnPackTo(RoutineBytecodeBundleResourcesT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
-  { auto _e = uavs(); if (_e) { _o->uavs.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->uavs[_i] = std::unique_ptr<Fx::UAVBundleT>(_e->Get(_i)->UnPack(_resolver)); } } }
+  { auto _e = uavs(); if (_e) { _o->uavs.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->uavs[_i]) { _e->Get(_i)->UnPackTo(_o->uavs[_i].get(), _resolver); } else { _o->uavs[_i] = std::unique_ptr<Fx::UAVBundleT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<RoutineBytecodeBundleResources> RoutineBytecodeBundleResources::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineBytecodeBundleResourcesT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -1636,6 +1820,19 @@ inline flatbuffers::Offset<RoutineBytecodeBundleResources> CreateRoutineBytecode
       _uavs);
 }
 
+inline RoutineBytecodeBundleT::RoutineBytecodeBundleT(const RoutineBytecodeBundleT &o)
+      : code(o.code),
+        resources((o.resources) ? new Fx::RoutineBytecodeBundleResourcesT(*o.resources) : nullptr),
+        numthreads(o.numthreads) {
+}
+
+inline RoutineBytecodeBundleT &RoutineBytecodeBundleT::operator=(RoutineBytecodeBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(code, o.code);
+  std::swap(resources, o.resources);
+  std::swap(numthreads, o.numthreads);
+  return *this;
+}
+
 inline RoutineBytecodeBundleT *RoutineBytecodeBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<RoutineBytecodeBundleT>(new RoutineBytecodeBundleT());
   UnPackTo(_o.get(), _resolver);
@@ -1646,7 +1843,7 @@ inline void RoutineBytecodeBundle::UnPackTo(RoutineBytecodeBundleT *_o, const fl
   (void)_o;
   (void)_resolver;
   { auto _e = code(); if (_e) { _o->code.resize(_e->size()); std::copy(_e->begin(), _e->end(), _o->code.begin()); } }
-  { auto _e = resources(); if (_e) _o->resources = std::unique_ptr<Fx::RoutineBytecodeBundleResourcesT>(_e->UnPack(_resolver)); }
+  { auto _e = resources(); if (_e) { if(_o->resources) { _e->UnPackTo(_o->resources.get(), _resolver); } else { _o->resources = std::unique_ptr<Fx::RoutineBytecodeBundleResourcesT>(_e->UnPack(_resolver)); } } }
   { auto _e = numthreads(); if (_e) { _o->numthreads.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->numthreads[_i] = _e->Get(_i); } } }
 }
 
@@ -1668,6 +1865,18 @@ inline flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundle(fl
       _numthreads);
 }
 
+inline RoutineGLSLBundleT::RoutineGLSLBundleT(const RoutineGLSLBundleT &o)
+      : code(o.code) {
+  attributes.reserve(o.attributes.size());
+  for (const auto &attributes_ : o.attributes) { attributes.emplace_back((attributes_) ? new Fx::GLSLAttributeT(*attributes_) : nullptr); }
+}
+
+inline RoutineGLSLBundleT &RoutineGLSLBundleT::operator=(RoutineGLSLBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(code, o.code);
+  std::swap(attributes, o.attributes);
+  return *this;
+}
+
 inline RoutineGLSLBundleT *RoutineGLSLBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<RoutineGLSLBundleT>(new RoutineGLSLBundleT());
   UnPackTo(_o.get(), _resolver);
@@ -1678,7 +1887,7 @@ inline void RoutineGLSLBundle::UnPackTo(RoutineGLSLBundleT *_o, const flatbuffer
   (void)_o;
   (void)_resolver;
   { auto _e = code(); if (_e) _o->code = _e->str(); }
-  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->attributes[_i] = std::unique_ptr<Fx::GLSLAttributeT>(_e->Get(_i)->UnPack(_resolver)); } } }
+  { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = std::unique_ptr<Fx::GLSLAttributeT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<RoutineGLSLBundle> RoutineGLSLBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -1697,6 +1906,25 @@ inline flatbuffers::Offset<RoutineGLSLBundle> CreateRoutineGLSLBundle(flatbuffer
       _attributes);
 }
 
+inline PartRenderPassT::PartRenderPassT(const PartRenderPassT &o)
+      : routines(o.routines),
+        geometry(o.geometry),
+        sorting(o.sorting),
+        instanceCount(o.instanceCount),
+        stride(o.stride),
+        instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr) {
+}
+
+inline PartRenderPassT &PartRenderPassT::operator=(PartRenderPassT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(routines, o.routines);
+  std::swap(geometry, o.geometry);
+  std::swap(sorting, o.sorting);
+  std::swap(instanceCount, o.instanceCount);
+  std::swap(stride, o.stride);
+  std::swap(instance, o.instance);
+  return *this;
+}
+
 inline PartRenderPassT *PartRenderPass::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<PartRenderPassT>(new PartRenderPassT());
   UnPackTo(_o.get(), _resolver);
@@ -1712,7 +1940,7 @@ inline void PartRenderPass::UnPackTo(PartRenderPassT *_o, const flatbuffers::res
   { auto _e = sorting(); _o->sorting = _e; }
   { auto _e = instanceCount(); _o->instanceCount = _e; }
   { auto _e = stride(); _o->stride = _e; }
-  { auto _e = instance(); if (_e) _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); }
+  { auto _e = instance(); if (_e) { if(_o->instance) { _e->UnPackTo(_o->instance.get(), _resolver); } else { _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
 }
 
 inline flatbuffers::Offset<PartRenderPass> PartRenderPass::Pack(flatbuffers::FlatBufferBuilder &_fbb, const PartRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -1741,6 +1969,22 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPass(flatbuffers::Fla
       _instance);
 }
 
+inline PartBundleT::PartBundleT(const PartBundleT &o)
+      : capacity(o.capacity),
+        simulationRoutines(o.simulationRoutines),
+        particle((o.particle) ? new Fx::TypeLayoutT(*o.particle) : nullptr) {
+  renderPasses.reserve(o.renderPasses.size());
+  for (const auto &renderPasses_ : o.renderPasses) { renderPasses.emplace_back((renderPasses_) ? new Fx::PartRenderPassT(*renderPasses_) : nullptr); }
+}
+
+inline PartBundleT &PartBundleT::operator=(PartBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(capacity, o.capacity);
+  std::swap(simulationRoutines, o.simulationRoutines);
+  std::swap(renderPasses, o.renderPasses);
+  std::swap(particle, o.particle);
+  return *this;
+}
+
 inline PartBundleT *PartBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<PartBundleT>(new PartBundleT());
   UnPackTo(_o.get(), _resolver);
@@ -1753,8 +1997,8 @@ inline void PartBundle::UnPackTo(PartBundleT *_o, const flatbuffers::resolver_fu
   { auto _e = capacity(); _o->capacity = _e; }
   { auto _e = simulationRoutines_type(); if (_e) { _o->simulationRoutines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->simulationRoutines[_i].type = static_cast<Fx::RoutineBundle>(_e->Get(_i)); } } }
   { auto _e = simulationRoutines(); if (_e) { _o->simulationRoutines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->simulationRoutines[_i].value = Fx::RoutineBundleUnion::UnPack(_e->Get(_i), simulationRoutines_type()->GetEnum<RoutineBundle>(_i), _resolver); } } }
-  { auto _e = renderPasses(); if (_e) { _o->renderPasses.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->renderPasses[_i] = std::unique_ptr<Fx::PartRenderPassT>(_e->Get(_i)->UnPack(_resolver)); } } }
-  { auto _e = particle(); if (_e) { _o->particle.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->particle[_i] = std::unique_ptr<Fx::TypeLayoutT>(_e->Get(_i)->UnPack(_resolver)); } } }
+  { auto _e = renderPasses(); if (_e) { _o->renderPasses.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->renderPasses[_i]) { _e->Get(_i)->UnPackTo(_o->renderPasses[_i].get(), _resolver); } else { _o->renderPasses[_i] = std::unique_ptr<Fx::PartRenderPassT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
+  { auto _e = particle(); if (_e) { if(_o->particle) { _e->UnPackTo(_o->particle.get(), _resolver); } else { _o->particle = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
 }
 
 inline flatbuffers::Offset<PartBundle> PartBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const PartBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -1769,7 +2013,7 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
   auto _simulationRoutines_type = _o->simulationRoutines.size() ? _fbb.CreateVector<uint8_t>(_o->simulationRoutines.size(), [](size_t i, _VectorArgs *__va) { return static_cast<uint8_t>(__va->__o->simulationRoutines[i].type); }, &_va) : 0;
   auto _simulationRoutines = _o->simulationRoutines.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->simulationRoutines.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->simulationRoutines[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
   auto _renderPasses = _o->renderPasses.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::PartRenderPass>> (_o->renderPasses.size(), [](size_t i, _VectorArgs *__va) { return CreatePartRenderPass(*__va->__fbb, __va->__o->renderPasses[i].get(), __va->__rehasher); }, &_va ) : 0;
-  auto _particle = _o->particle.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::TypeLayout>> (_o->particle.size(), [](size_t i, _VectorArgs *__va) { return CreateTypeLayout(*__va->__fbb, __va->__o->particle[i].get(), __va->__rehasher); }, &_va ) : 0;
+  auto _particle = _o->particle ? CreateTypeLayout(_fbb, _o->particle.get(), _rehasher) : 0;
   return Fx::CreatePartBundle(
       _fbb,
       _capacity,
@@ -1777,6 +2021,19 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
       _simulationRoutines,
       _renderPasses,
       _particle);
+}
+
+inline BundleT::BundleT(const BundleT &o)
+      : name(o.name),
+        signature((o.signature) ? new Fx::BundleSignatureT(*o.signature) : nullptr),
+        content(o.content) {
+}
+
+inline BundleT &BundleT::operator=(BundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(signature, o.signature);
+  std::swap(content, o.content);
+  return *this;
 }
 
 inline BundleT *Bundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
@@ -1789,7 +2046,7 @@ inline void Bundle::UnPackTo(BundleT *_o, const flatbuffers::resolver_function_t
   (void)_o;
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
-  { auto _e = signature(); if (_e) _o->signature = std::unique_ptr<Fx::BundleSignatureT>(_e->UnPack(_resolver)); }
+  { auto _e = signature(); if (_e) { if(_o->signature) { _e->UnPackTo(_o->signature.get(), _resolver); } else { _o->signature = std::unique_ptr<Fx::BundleSignatureT>(_e->UnPack(_resolver)); } } }
   { auto _e = content_type(); _o->content.type = _e; }
   { auto _e = content(); if (_e) _o->content.value = Fx::BundleContentUnion::UnPack(_e, content_type(), _resolver); }
 }
@@ -1811,6 +2068,42 @@ inline flatbuffers::Offset<Bundle> CreateBundle(flatbuffers::FlatBufferBuilder &
       _name,
       _signature,
       _content_type,
+      _content);
+}
+
+inline BundleCollectionT::BundleCollectionT(const BundleCollectionT &o) {
+  content.reserve(o.content.size());
+  for (const auto &content_ : o.content) { content.emplace_back((content_) ? new Fx::BundleT(*content_) : nullptr); }
+}
+
+inline BundleCollectionT &BundleCollectionT::operator=(BundleCollectionT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(content, o.content);
+  return *this;
+}
+
+inline BundleCollectionT *BundleCollection::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<BundleCollectionT>(new BundleCollectionT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void BundleCollection::UnPackTo(BundleCollectionT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = content(); if (_e) { _o->content.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->content[_i]) { _e->Get(_i)->UnPackTo(_o->content[_i].get(), _resolver); } else { _o->content[_i] = std::unique_ptr<Fx::BundleT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
+}
+
+inline flatbuffers::Offset<BundleCollection> BundleCollection::Pack(flatbuffers::FlatBufferBuilder &_fbb, const BundleCollectionT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateBundleCollection(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<BundleCollection> CreateBundleCollection(flatbuffers::FlatBufferBuilder &_fbb, const BundleCollectionT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const BundleCollectionT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _content = _o->content.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::Bundle>> (_o->content.size(), [](size_t i, _VectorArgs *__va) { return CreateBundle(*__va->__fbb, __va->__o->content[i].get(), __va->__rehasher); }, &_va ) : 0;
+  return Fx::CreateBundleCollection(
+      _fbb,
       _content);
 }
 
@@ -1844,6 +2137,7 @@ inline bool VerifyRoutineBundleVector(flatbuffers::Verifier &verifier, const fla
 }
 
 inline void *RoutineBundleUnion::UnPack(const void *obj, RoutineBundle type, const flatbuffers::resolver_function_t *resolver) {
+  (void)resolver;
   switch (type) {
     case RoutineBundle_RoutineBytecodeBundle: {
       auto ptr = reinterpret_cast<const Fx::RoutineBytecodeBundle *>(obj);
@@ -1858,6 +2152,7 @@ inline void *RoutineBundleUnion::UnPack(const void *obj, RoutineBundle type, con
 }
 
 inline flatbuffers::Offset<void> RoutineBundleUnion::Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher) const {
+  (void)_rehasher;
   switch (type) {
     case RoutineBundle_RoutineBytecodeBundle: {
       auto ptr = reinterpret_cast<const Fx::RoutineBytecodeBundleT *>(value);
@@ -1874,11 +2169,11 @@ inline flatbuffers::Offset<void> RoutineBundleUnion::Pack(flatbuffers::FlatBuffe
 inline RoutineBundleUnion::RoutineBundleUnion(const RoutineBundleUnion &u) : type(u.type), value(nullptr) {
   switch (type) {
     case RoutineBundle_RoutineBytecodeBundle: {
-      FLATBUFFERS_ASSERT(false);  // Fx::RoutineBytecodeBundleT not copyable.
+      value = new Fx::RoutineBytecodeBundleT(*reinterpret_cast<Fx::RoutineBytecodeBundleT *>(u.value));
       break;
     }
     case RoutineBundle_RoutineGLSLBundle: {
-      FLATBUFFERS_ASSERT(false);  // Fx::RoutineGLSLBundleT not copyable.
+      value = new Fx::RoutineGLSLBundleT(*reinterpret_cast<Fx::RoutineGLSLBundleT *>(u.value));
       break;
     }
     default:
@@ -1930,6 +2225,7 @@ inline bool VerifyBundleContentVector(flatbuffers::Verifier &verifier, const fla
 }
 
 inline void *BundleContentUnion::UnPack(const void *obj, BundleContent type, const flatbuffers::resolver_function_t *resolver) {
+  (void)resolver;
   switch (type) {
     case BundleContent_PartBundle: {
       auto ptr = reinterpret_cast<const Fx::PartBundle *>(obj);
@@ -1940,6 +2236,7 @@ inline void *BundleContentUnion::UnPack(const void *obj, BundleContent type, con
 }
 
 inline flatbuffers::Offset<void> BundleContentUnion::Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher) const {
+  (void)_rehasher;
   switch (type) {
     case BundleContent_PartBundle: {
       auto ptr = reinterpret_cast<const Fx::PartBundleT *>(value);
@@ -1952,7 +2249,7 @@ inline flatbuffers::Offset<void> BundleContentUnion::Pack(flatbuffers::FlatBuffe
 inline BundleContentUnion::BundleContentUnion(const BundleContentUnion &u) : type(u.type), value(nullptr) {
   switch (type) {
     case BundleContent_PartBundle: {
-      FLATBUFFERS_ASSERT(false);  // Fx::PartBundleT not copyable.
+      value = new Fx::PartBundleT(*reinterpret_cast<Fx::PartBundleT *>(u.value));
       break;
     }
     default:
@@ -1971,6 +2268,48 @@ inline void BundleContentUnion::Reset() {
   }
   value = nullptr;
   type = BundleContent_NONE;
+}
+
+inline const Fx::Bundle *GetBundle(const void *buf) {
+  return flatbuffers::GetRoot<Fx::Bundle>(buf);
+}
+
+inline const Fx::Bundle *GetSizePrefixedBundle(const void *buf) {
+  return flatbuffers::GetSizePrefixedRoot<Fx::Bundle>(buf);
+}
+
+inline bool VerifyBundleBuffer(
+    flatbuffers::Verifier &verifier) {
+  return verifier.VerifyBuffer<Fx::Bundle>(nullptr);
+}
+
+inline bool VerifySizePrefixedBundleBuffer(
+    flatbuffers::Verifier &verifier) {
+  return verifier.VerifySizePrefixedBuffer<Fx::Bundle>(nullptr);
+}
+
+inline void FinishBundleBuffer(
+    flatbuffers::FlatBufferBuilder &fbb,
+    flatbuffers::Offset<Fx::Bundle> root) {
+  fbb.Finish(root);
+}
+
+inline void FinishSizePrefixedBundleBuffer(
+    flatbuffers::FlatBufferBuilder &fbb,
+    flatbuffers::Offset<Fx::Bundle> root) {
+  fbb.FinishSizePrefixed(root);
+}
+
+inline std::unique_ptr<Fx::BundleT> UnPackBundle(
+    const void *buf,
+    const flatbuffers::resolver_function_t *res = nullptr) {
+  return std::unique_ptr<Fx::BundleT>(GetBundle(buf)->UnPack(res));
+}
+
+inline std::unique_ptr<Fx::BundleT> UnPackSizePrefixedBundle(
+    const void *buf,
+    const flatbuffers::resolver_function_t *res = nullptr) {
+  return std::unique_ptr<Fx::BundleT>(GetSizePrefixedBundle(buf)->UnPack(res));
 }
 
 }  // namespace Fx

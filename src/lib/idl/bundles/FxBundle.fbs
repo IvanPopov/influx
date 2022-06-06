@@ -49,7 +49,7 @@ table RoutineBytecodeBundleResources
 
 table RoutineBytecodeBundle
 {
-    code: string; // [ ubyte ]
+    code: [ ubyte ];
     resources: RoutineBytecodeBundleResources;
     numthreads: [ uint ];
 }
@@ -104,3 +104,12 @@ table Bundle
     signature: BundleSignature;
     content: BundleContent;
 }
+
+table BundleCollection
+{
+    content: [ Bundle ];
+}
+
+
+root_type BundleCollection;
+root_type Bundle;
