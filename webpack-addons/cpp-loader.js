@@ -32,14 +32,16 @@ module.exports = async function (source) {
     const wasmBuildName = createBuildWasmName(this.resourcePath, source, outputPath);
 
     const defaults = { sourceMaps: false, debug: false };
-    const { sourceMaps, debug } = { ...defaults, ...options };
+    const { sourceMaps, debug, additionalFlags } = { ...defaults, ...options };
     
     const wasmFile = wasmBuildName;
     const wasmMapFile = wasmBuildName.replace('.wasm', '.wasm.map');
 	const indexFile = wasmBuildName.replace('.wasm', '.js');
     
     //  emcc -o example.js example.cpp -gsource-map -O0  -s MODULARIZE=1 -s ENVIRONMENT=web -s EXPORT_ES6=1 --bind -s WASM=1
-    let wasmFlags = [this.resourcePath, 
+    let wasmFlags = [
+        ...additionalFlags,
+        this.resourcePath, 
         sourceMaps ? "-gsource-map" : "", 
         debug ? "-O0" : "-O3", 
         "-std=c++17",

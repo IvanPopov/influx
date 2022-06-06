@@ -156,7 +156,11 @@ let options = {
                     loader: path.resolve(__dirname, 'webpack-addons/cpp-loader.js'),
                     options: {
                         sourceMaps: !PRODUCTION,
-                        debug: !PRODUCTION
+                        debug: !PRODUCTION,
+                        additionalFlags: [ 
+                            `-I${__dirname}\\src\\`,
+                            `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
+                         ].map(f => f.replace(/\\/g, '/'))
                     }
                 }
             }
