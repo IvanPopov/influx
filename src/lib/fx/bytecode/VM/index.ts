@@ -31,8 +31,8 @@ export function switchRuntime(runtime?: 'wasm' | 'js')
     console.log(`%c VM runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
 
-export function make(debugName: string, code: Uint8Array): Bundle.IBundle {
-    return VMBundle().make(debugName, code);
+export function make(debugName: string, code: number[] | Uint8Array): Bundle.IBundle {
+    return VMBundle().make(debugName, new Uint8Array(code));
 }
 
 export function memoryToU8Array(input: Bundle.IMemory): Uint8Array {

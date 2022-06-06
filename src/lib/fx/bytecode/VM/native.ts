@@ -5,7 +5,7 @@ import { EInstructionTypes, IFunctionDeclInstruction, ITypeInstruction } from "@
 import * as Bytecode from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Bundle from "@lib/idl/bytecode";
-import { TypeLayoutT } from "@lib/idl/bundles/fx/type-layout";
+import { TypeLayoutT, TypeFieldT } from "@lib/idl/bundles/FxBundle_generated";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
     const vector = [];
@@ -38,7 +38,7 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayoutT
 
     let name = type.name;
     let size = type.size;
-    let fields = undefined;
+    let fields: TypeFieldT[] = undefined;
     let length = -1;
 
     if (type.isArray())
@@ -53,12 +53,7 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayoutT
     }
     else if (!isNotComplexOrSystem(type))
     {
-        fields = type.fields.map(({ name, type }) => ({ 
-            name, 
-            size: type.size, 
-            type: typeAstToTypeLayout(type), 
-            padding: type.padding 
-        }));
+        fields = type.fields.map(({ name, type }) => new TypeFieldT( typeAstToTypeLayout(type), name, type.size, type.padding ));
     }
 
     return new TypeLayoutT( fields, length, <string>name, size );

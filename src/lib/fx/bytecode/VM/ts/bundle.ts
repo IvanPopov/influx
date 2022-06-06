@@ -408,7 +408,13 @@ export function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
     const view = new DataView(code.buffer, code.byteOffset, code.byteLength);
     const type = view.getUint32(0, true);
     const byteLength = view.getUint32(4, true) << 2;
-    const content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
+    let content: Uint8Array = null;
+    try {
+        content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
+    } catch (e)
+    {
+        console.log(e);
+    }
 
     chunks[type] = content;
 

@@ -17,6 +17,7 @@ import { Button, Grid, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as Path from '@lib/path/path';
+import * as flatbuffers from 'flatbuffers';
 
 
 
@@ -24,15 +25,27 @@ interface IPlaygroundProps extends IStoreState {
     actions: typeof playgroundActions;
 }
 
-// function downloadObjectAs(content: string, name: string, type: 'json' | 'plain') {
-//     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(content);
-//     const downloadAnchorNode = document.createElement('a');
-//     downloadAnchorNode.setAttribute("href",     dataStr);
-//     downloadAnchorNode.setAttribute("download", name + (type == 'json' ? ".json" : ''));
-//     document.body.appendChild(downloadAnchorNode); // required for firefox
-//     downloadAnchorNode.click();
-//     downloadAnchorNode.remove();
-// }
+function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
+    downloadBlob(new Blob([data], { type: mimeType }), fileName);
+};
+
+function downloadBlob(blob: Blob, fileName: string) {
+    let url;
+    url = window.URL.createObjectURL(blob);
+    downloadURL(url, fileName);
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+};
+
+function downloadURL(data: string, fileName: string) {
+    let a;
+    a = document.createElement('a');
+    a.href = data;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.style = 'display: none';
+    a.click();
+    a.remove();
+};
 
 // TODO: remove it
 const threeStylesHotfix: React.CSSProperties = {
@@ -96,10 +109,43 @@ class Playground extends React.Component<IPlaygroundProps> {
         const file = getFileState(this.props);
         const scope = getScope(file);
         const list = filterPartFx(scope);
-        const bundles = await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx)));
-        const exportName = Path.parse(this.props.sourceFile.uri).basename;
-        // downloadObjectAs(FxBundle.serializeBundlesToJSON(bundles), exportName, 'json');
-        // const jsonBundle = JSON.stringify(list.map(async fx => await FxBundle.createPartFxBundle(fx)), null, '\t');
+        const playground = getPlaygroundState(this.props);
+        const emitter = playground.emitter;
+
+        const exportName = Path.parse(this.props.sourceFile.uri);
+        exportName.ext = "bfx"; // binary fx
+
+        // download packed version
+        // -----------------------------------
+
+        // todo: download collection!
+        // let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.name)));
+        // downloadByteBuffer(data, exportName.basename, 'application/octet-stream');
+
+        // download unpacked version
+        // -----------------------------------
+
+        // const bundles = new BundleCollectionT(await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx))));
+        // let fbb = new flatbuffers.Builder(1);
+        // let size = bundles.pack(fbb);
+
+        // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');
+        
+        // -----------------------------------
+
+        // hack to get global webgl/three.js canvas (from ThreeScene.ts)
+        const canvas = document.getElementById('playground-main-canvas') as HTMLCanvasElement;
+        exportName.ext = "jpeg";
+        
+        // const resizedCanvas = document.createElement("canvas") as HTMLCanvasElement;
+        // const resizedContext = resizedCanvas.getContext("2d");
+        
+        // resizedCanvas.height = 512;
+        // resizedCanvas.width = 512;
+        
+        // resizedContext.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
+        // downloadURL(resizedCanvas.toDataURL('image/jpeg'), exportName.basename);
+        downloadURL(canvas.toDataURL('image/jpeg'), exportName.basename);
     }
 
     pickEffect(active) {

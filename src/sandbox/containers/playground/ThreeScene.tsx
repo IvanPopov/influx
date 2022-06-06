@@ -338,12 +338,13 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
 
     createRenderer(width, height) {
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true /* to be able to save screenshots */ });
         // this.renderer.setClearColor('#000000');
         this.renderer.setSize(width, height - 3);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.mount.appendChild(this.renderer.domElement);
 
+        this.renderer.domElement.id = "playground-main-canvas";
         // FIXME: remove this ui hack
         this.renderer.domElement.style.borderBottomLeftRadius = '3px';
         this.renderer.domElement.style.borderBottomRightRadius = '3px';

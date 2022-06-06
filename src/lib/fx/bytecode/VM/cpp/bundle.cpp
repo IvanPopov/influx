@@ -1,103 +1,18 @@
+#pragma once
+
 #include <stdio.h>
-#include <vector>
-#include <map>
 #include <iostream>
 #include <emscripten/bind.h>
 #include <algorithm>
 
+#include "bundle.h"
 
 // @lib/idl/bytecode
 #define export // hack to include enum from ts
 #include "../../../../idl/bytecode/EOperations.ts"
 
-using namespace emscripten;
+using namespace emscripten; 
 using namespace std;
-
-int main(void)
-{
-    cout << "Emscriptent \"Bundle\" module........................[ LOADED ]" <<endl;
-    return 0;
-}
-
-const int CBUFFER0_REGISTER = 0;
-const int INPUT0_REGISTER = 1;
-const int UAV0_REGISTER = 17;
-
-struct u32_array_t
-{
-    uintptr_t ptr = 0;
-    uint32_t size = 0;
-
-    uint32_t& operator [] (uint32_t i)
-    {
-        return *(((uint32_t*)ptr) + i);
-    }
-
-    const uint32_t& operator [] (uint32_t i) const
-    {
-        return *(((uint32_t*)ptr) + i);
-    }
-};
-
-enum CHUNK_TYPES {
-    CONSTANTS,
-    LAYOUT,
-    CODE,
-};
-
-struct BUNDLE_NUMGROUPS
-{
-    int x;
-    int y;
-    int z;
-};
-
-struct BUNDLE_NUMTHREADS
-{
-    int x;
-    int y;
-    int z;
-};
-
-struct BUNDLE_CONSTANT 
-{
-    string name;
-    uint32_t size;
-    uint32_t offset;
-    string semantic;
-    string type;
-};
-
-struct BUNDLE_UAV
-{
-    string name;
-    uint32_t elementSize;   // byte length of a single element
-    uint32_t length;        // number of elements
-    uint32_t reg;           // register specified in the shader
-    u32_array_t data;       // [ elements ]
-    u32_array_t buffer;     // raw data [ counter, ...elements ]
-    uint32_t index;         // input index for VM         // << todo: remove (index = register + internal_uav_offset)
-
-    u32_array_t readElement(uint32_t i)
-    {
-        return { (uintptr_t)((uint8_t*)data.ptr + i * elementSize), (elementSize + 3) >> 2 };
-    }
-
-    uint32_t readCounter()
-    {
-        return *((uint32_t*)buffer.ptr);
-    }
-
-    void overwriteCounter(uint32_t value)
-    {
-        *((uint32_t*)buffer.ptr) = value;
-    }
-};
-
-
-
-uint32_t* begin(u32_array_t arr) { return (uint32_t*)arr.ptr; }
-uint32_t* end(u32_array_t arr) { return ((uint32_t*)arr.ptr) + arr.size; }
 
 
 void decodeChunks(uint8_t* data, uint32_t byteLength, map<int, u32_array_t>& chunks) 
@@ -145,382 +60,370 @@ void decodeLayoutChunk(uint8_t* layoutChunk, vector<BUNDLE_CONSTANT>& layout) {
 
 static vector<uint32_t> regs(512 * 4 * 4, 0);
 
-class BUNDLE
+
+BUNDLE::BUNDLE(string debugName, u32_array_t data): m_debugName(debugName)
 {
+    load(data);
+}
 
-private:
-    vector<BUNDLE_CONSTANT> m_layout {};
-    vector<uint32_t> m_instructions {};
-    vector<uint32_t> m_constants {};
-    u32_array_t m_inputs[64] {};
-    
-    // debug name
-    string debugName;
+BUNDLE::BUNDLE() {}
 
-public:
-    BUNDLE(string debugName, u32_array_t data): debugName(debugName)
-    {
-        load(data);
-    }
+u32_array_t BUNDLE::play()
+{
+    constexpr int STRIDE = 5;
 
-    u32_array_t play()
-    {
-        constexpr int STRIDE = 5;
+    uint32_t* ilist = m_instructions.data();
+    uint32_t length = m_instructions.size();
 
-        uint32_t* ilist = m_instructions.data();
-        uint32_t length = m_instructions.size();
+    int32_t*  iregs = (int32_t*)regs.data();
+    uint32_t* uregs = (uint32_t*)regs.data();
+    float_t*  fregs = (float_t*)regs.data();
 
-        int32_t*  iregs = (int32_t*)regs.data();
-        uint32_t* uregs = (uint32_t*)regs.data();
-        float_t*  fregs = (float_t*)regs.data();
+    u32_array_t* iinput = m_inputs;
 
-        u32_array_t* iinput = m_inputs;
+    int i5 = 0;                      // current instruction;
 
-        int i5 = 0;                      // current instruction;
+    while (i5 < length) {
+        auto op = ilist[i5];
+        auto a = ilist[i5 + 1];
+        auto b = ilist[i5 + 2];
+        auto c = ilist[i5 + 3];
+        auto d = ilist[i5 + 4];
+        
+        switch (op) {
+            // registers
+            case EOperation::k_I32SetConst:
+                iregs[a] =  *((int*)&b);
+                break;
+            case EOperation::k_I32LoadRegister:
+                iregs[a] = iregs[b];
+                break;
+            // inputs
+            case EOperation::k_I32LoadInput:
+                iregs[b] = iinput[a][c];
+                break;
+            case EOperation::k_I32StoreInput:
+                iinput[a][b] = iregs[c];
+                break;
+            // registers pointers    
+            // a => dest
+            // b => source pointer
+            // c => offset
+            case EOperation::k_I32LoadRegistersPointer:
+                iregs[a] = iregs[iregs[b] + c];
+                break;
+            case EOperation::k_I32StoreRegisterPointer:
+                iregs[iregs[a] + c] = iregs[b];
+                break;
+            // input pointers
+            // a => input index
+            // b => dest
+            // c => source pointer
+            // d => offset
+            case EOperation::k_I32LoadInputPointer:
+                iregs[b] = iinput[a][iregs[c] + d];
+                break;
+            case EOperation::k_I32StoreInputPointer:
+                iinput[a][iregs[b] + d] = iregs[c];
+                break;
 
-        while (i5 < length) {
-            auto op = ilist[i5];
-            auto a = ilist[i5 + 1];
-            auto b = ilist[i5 + 2];
-            auto c = ilist[i5 + 3];
-            auto d = ilist[i5 + 4];
+            //
+            // Arithmetic operations
+            //
+
+            case EOperation::k_I32Add:
+                iregs[a] = iregs[b] + iregs[c];
+                break;
+            case EOperation::k_I32Sub:
+                iregs[a] = iregs[b] - iregs[c];
+                break;
+            case EOperation::k_I32Mul:
+                iregs[a] = iregs[b] * iregs[c];
+                break;
+            case EOperation::k_I32Div:
+                iregs[a] = iregs[b] / iregs[c];
+                break;
+
+            case EOperation::k_I32Mad:
+                iregs[a] = iregs[b] + iregs[c] * iregs[d];
+                break;
             
-            switch (op) {
-                // registers
-                case EOperation::k_I32SetConst:
-                    iregs[a] =  *((int*)&b);
-                    break;
-                case EOperation::k_I32LoadRegister:
-                    iregs[a] = iregs[b];
-                    break;
-                // inputs
-                case EOperation::k_I32LoadInput:
-                    iregs[b] = iinput[a][c];
-                    break;
-                case EOperation::k_I32StoreInput:
-                    iinput[a][b] = iregs[c];
-                    break;
-                // registers pointers    
-                // a => dest
-                // b => source pointer
-                // c => offset
-                case EOperation::k_I32LoadRegistersPointer:
-                    iregs[a] = iregs[iregs[b] + c];
-                    break;
-                case EOperation::k_I32StoreRegisterPointer:
-                    iregs[iregs[a] + c] = iregs[b];
-                    break;
-                // input pointers
-                // a => input index
-                // b => dest
-                // c => source pointer
-                // d => offset
-                case EOperation::k_I32LoadInputPointer:
-                    iregs[b] = iinput[a][iregs[c] + d];
-                    break;
-                case EOperation::k_I32StoreInputPointer:
-                    iinput[a][iregs[b] + d] = iregs[c];
-                    break;
+            case EOperation::k_I32Min:
+                iregs[a] = min(iregs[b], iregs[c]);
+                break;
+            case EOperation::k_I32Max:
+                iregs[a] = max(iregs[b], iregs[c]);
+                break;
 
-                //
-                // Arithmetic operations
-                //
-
-                case EOperation::k_I32Add:
-                    iregs[a] = iregs[b] + iregs[c];
-                    break;
-                case EOperation::k_I32Sub:
-                    iregs[a] = iregs[b] - iregs[c];
-                    break;
-                case EOperation::k_I32Mul:
-                    iregs[a] = iregs[b] * iregs[c];
-                    break;
-                case EOperation::k_I32Div:
-                    iregs[a] = iregs[b] / iregs[c];
-                    break;
-
-                case EOperation::k_I32Mad:
-                    iregs[a] = iregs[b] + iregs[c] * iregs[d];
-                    break;
-                
-                case EOperation::k_I32Min:
-                    iregs[a] = min(iregs[b], iregs[c]);
-                    break;
-                case EOperation::k_I32Max:
-                    iregs[a] = max(iregs[b], iregs[c]);
-                    break;
-
-                case EOperation::k_F32Add:
-                    fregs[a] = fregs[b] + fregs[c];
-                    break;
-                case EOperation::k_F32Sub:
-                    fregs[a] = fregs[b] - fregs[c];
-                    break;
-                case EOperation::k_F32Mul:
-                    fregs[a] = fregs[b] * fregs[c];
-                    break;
-                case EOperation::k_F32Div:
-                    fregs[a] = fregs[b] / fregs[c];
-                    break;
+            case EOperation::k_F32Add:
+                fregs[a] = fregs[b] + fregs[c];
+                break;
+            case EOperation::k_F32Sub:
+                fregs[a] = fregs[b] - fregs[c];
+                break;
+            case EOperation::k_F32Mul:
+                fregs[a] = fregs[b] * fregs[c];
+                break;
+            case EOperation::k_F32Div:
+                fregs[a] = fregs[b] / fregs[c];
+                break;
 
 
-                //
-                // Relational operations
-                //
+            //
+            // Relational operations
+            //
 
-                case EOperation::k_U32LessThan:
-                    iregs[a] = +(uregs[b] < uregs[c]);
-                    break;
-                case EOperation::k_U32GreaterThanEqual:
-                    iregs[a] = +(uregs[b] >= uregs[c]);
-                    break;
-                case EOperation::k_I32LessThan:
-                    iregs[a] = +(iregs[b] < iregs[c]);
-                    break;
-                case EOperation::k_I32GreaterThanEqual:
-                    iregs[a] = +(iregs[b] >= iregs[c]);
-                    break;
-                case EOperation::k_I32Equal:
-                    iregs[a] = +(iregs[b] == iregs[c]);
-                    break;
-                case EOperation::k_I32NotEqual:
-                    iregs[a] = +(iregs[b] != iregs[c]);
-                    break;
-                case EOperation::k_I32Not:
-                    iregs[a] = +(!iregs[b]);
-                    break;
+            case EOperation::k_U32LessThan:
+                iregs[a] = +(uregs[b] < uregs[c]);
+                break;
+            case EOperation::k_U32GreaterThanEqual:
+                iregs[a] = +(uregs[b] >= uregs[c]);
+                break;
+            case EOperation::k_I32LessThan:
+                iregs[a] = +(iregs[b] < iregs[c]);
+                break;
+            case EOperation::k_I32GreaterThanEqual:
+                iregs[a] = +(iregs[b] >= iregs[c]);
+                break;
+            case EOperation::k_I32Equal:
+                iregs[a] = +(iregs[b] == iregs[c]);
+                break;
+            case EOperation::k_I32NotEqual:
+                iregs[a] = +(iregs[b] != iregs[c]);
+                break;
+            case EOperation::k_I32Not:
+                iregs[a] = +(!iregs[b]);
+                break;
 
-                case EOperation::k_F32LessThan:
-                    fregs[a] = +(fregs[b] < fregs[c]);
-                    break;
-                case EOperation::k_F32GreaterThanEqual:
-                    fregs[a] = +(fregs[b] >= fregs[c]);
-                    break;
+            case EOperation::k_F32LessThan:
+                fregs[a] = +(fregs[b] < fregs[c]);
+                break;
+            case EOperation::k_F32GreaterThanEqual:
+                fregs[a] = +(fregs[b] >= fregs[c]);
+                break;
 
-                //
-                // Logical operations
-                //
-
-
-                case EOperation::k_I32LogicalOr:
-                    iregs[a] = +(iregs[b] || iregs[c]);
-                    break;
-                case EOperation::k_I32LogicalAnd:
-                    iregs[a] = +(iregs[b] && iregs[c]);
-                    break;
-
-                //
-                // intrinsics
-                //
-
-                case EOperation::k_F32Frac:
-                    // same as frac() in HLSL
-                    fregs[a] = fregs[b] - floor(fregs[b]);
-                    break;
-                case EOperation::k_F32Floor:
-                    fregs[a] = floor(fregs[b]);
-                    break;
-                case EOperation::k_F32Ceil:
-                    fregs[a] = ceil(fregs[b]);
-                    break;
-
-                case EOperation::k_F32Sin:
-                    fregs[a] = sin(fregs[b]);
-                    break;
-                case EOperation::k_F32Cos:
-                    fregs[a] = cos(fregs[b]);
-                    break;
-
-                case EOperation::k_F32Abs:
-                    fregs[a] = abs(fregs[b]);
-                    break;
-                case EOperation::k_F32Sqrt:
-                    fregs[a] = sqrt(fregs[b]);
-                    break;
-                case EOperation::k_F32Min:
-                    fregs[a] = min(fregs[b], fregs[c]);
-                    break;
-                case EOperation::k_F32Max:
-                    fregs[a] = max(fregs[b], fregs[c]);
-                    break;
-
-                //
-                // Cast
-                //
+            //
+            // Logical operations
+            //
 
 
-                case EOperation::k_U32ToF32:
-                    fregs[a] = (float_t)uregs[b];
-                    break;
-                case EOperation::k_I32ToF32:
-                    fregs[a] = (float_t)iregs[b];
-                    break;
-                case EOperation::k_F32ToU32:
-                    uregs[a] = (uint32_t)fregs[b];
-                    break;
-                case EOperation::k_F32ToI32:
-                    iregs[a] = (int32_t)fregs[b];
-                    break;
+            case EOperation::k_I32LogicalOr:
+                iregs[a] = +(iregs[b] || iregs[c]);
+                break;
+            case EOperation::k_I32LogicalAnd:
+                iregs[a] = +(iregs[b] && iregs[c]);
+                break;
 
-                //
-                // Flow controls
-                //
+            //
+            // intrinsics
+            //
 
-                case EOperation::k_Jump:
-                    // TODO: don't use multiplication here
-                    i5 = a;
-                    continue;
-                case EOperation::k_JumpIf:
-                    i5 = iregs[a] != 0
-                        ? i5 + STRIDE                   /* skip one instruction */
-                        : i5;                           /* do nothing (cause next instruction must always be Jump) */
-                    break;
-                case EOperation::k_Ret:
-                    {
-                        goto end;
-                    }
-                    break;
-                default:
-                    cout << debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << endl;
-            }
-            i5 += STRIDE;
+            case EOperation::k_F32Frac:
+                // same as frac() in HLSL
+                fregs[a] = fregs[b] - floor(fregs[b]);
+                break;
+            case EOperation::k_F32Floor:
+                fregs[a] = floor(fregs[b]);
+                break;
+            case EOperation::k_F32Ceil:
+                fregs[a] = ceil(fregs[b]);
+                break;
+
+            case EOperation::k_F32Sin:
+                fregs[a] = sin(fregs[b]);
+                break;
+            case EOperation::k_F32Cos:
+                fregs[a] = cos(fregs[b]);
+                break;
+
+            case EOperation::k_F32Abs:
+                fregs[a] = abs(fregs[b]);
+                break;
+            case EOperation::k_F32Sqrt:
+                fregs[a] = sqrt(fregs[b]);
+                break;
+            case EOperation::k_F32Min:
+                fregs[a] = min(fregs[b], fregs[c]);
+                break;
+            case EOperation::k_F32Max:
+                fregs[a] = max(fregs[b], fregs[c]);
+                break;
+
+            //
+            // Cast
+            //
+
+
+            case EOperation::k_U32ToF32:
+                fregs[a] = (float_t)uregs[b];
+                break;
+            case EOperation::k_I32ToF32:
+                fregs[a] = (float_t)iregs[b];
+                break;
+            case EOperation::k_F32ToU32:
+                uregs[a] = (uint32_t)fregs[b];
+                break;
+            case EOperation::k_F32ToI32:
+                iregs[a] = (int32_t)fregs[b];
+                break;
+
+            //
+            // Flow controls
+            //
+
+            case EOperation::k_Jump:
+                // TODO: don't use multiplication here
+                i5 = a;
+                continue;
+            case EOperation::k_JumpIf:
+                i5 = iregs[a] != 0
+                    ? i5 + STRIDE                   /* skip one instruction */
+                    : i5;                           /* do nothing (cause next instruction must always be Jump) */
+                break;
+            case EOperation::k_Ret:
+                {
+                    goto end;
+                }
+                break;
+            default:
+                cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << endl;
         }
-        end:
-        return { (uintptr_t)regs.data(), regs.size() };
+        i5 += STRIDE;
     }
+    end:
+    return { (uintptr_t)regs.data(), regs.size() };
+}
 
 
-    void dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads) 
-    {
-        const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
-        const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
+void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads) 
+{
+    const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
+    const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
 
-        static vector<int> Gid  (3, 0);     // uint3 Gid: SV_GroupID    
-        static vector<int> Gi   (1, 0);      // uint GI: SV_GroupIndex
-        static vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
-        static vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
+    static vector<int> Gid  (3, 0);     // uint3 Gid: SV_GroupID    
+    static vector<int> Gi   (1, 0);      // uint GI: SV_GroupIndex
+    static vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
+    static vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
 
-        // TODO: get order from bundle
-        const auto SV_GroupID = INPUT0_REGISTER + 0;
-        const auto SV_GroupIndex = INPUT0_REGISTER + 1;
-        const auto SV_GroupThreadID = INPUT0_REGISTER + 2;
-        const auto SV_DispatchThreadID = INPUT0_REGISTER + 3;
+    // TODO: get order from bundle
+    const auto SV_GroupID = INPUT0_REGISTER + 0;
+    const auto SV_GroupIndex = INPUT0_REGISTER + 1;
+    const auto SV_GroupThreadID = INPUT0_REGISTER + 2;
+    const auto SV_DispatchThreadID = INPUT0_REGISTER + 3;
 
-        m_inputs[SV_GroupID] = { (uintptr_t)Gid.data(), (uint32_t)Gid.size() } ;
-        m_inputs[SV_GroupIndex] = { (uintptr_t)Gi.data(), (uint32_t)Gi.size() } ;;
-        m_inputs[SV_GroupThreadID] = { (uintptr_t)GTid.data(), (uint32_t)GTid.size() } ;
-        m_inputs[SV_DispatchThreadID] = { (uintptr_t)DTid.data(), (uint32_t)DTid.size() } ;
+    m_inputs[SV_GroupID] = { (uintptr_t)Gid.data(), (uint32_t)Gid.size() } ;
+    m_inputs[SV_GroupIndex] = { (uintptr_t)Gi.data(), (uint32_t)Gi.size() } ;;
+    m_inputs[SV_GroupThreadID] = { (uintptr_t)GTid.data(), (uint32_t)GTid.size() } ;
+    m_inputs[SV_DispatchThreadID] = { (uintptr_t)DTid.data(), (uint32_t)DTid.size() } ;
 
-        for (int iGroupZ = 0; iGroupZ < nGroupZ; ++iGroupZ) {
-            for (int iGroupY = 0; iGroupY < nGroupY; ++iGroupY) {
-                for (int iGroupX = 0; iGroupX < nGroupX; ++iGroupX) {
-                    Gid[0] = iGroupX;
-                    Gid[1] = iGroupY;
-                    Gid[2] = iGroupZ;
+    for (int iGroupZ = 0; iGroupZ < nGroupZ; ++iGroupZ) {
+        for (int iGroupY = 0; iGroupY < nGroupY; ++iGroupY) {
+            for (int iGroupX = 0; iGroupX < nGroupX; ++iGroupX) {
+                Gid[0] = iGroupX;
+                Gid[1] = iGroupY;
+                Gid[2] = iGroupZ;
 
-                    for (int iThreadZ = 0; iThreadZ < nThreadZ; ++iThreadZ) {
-                        for (int iThreadY = 0; iThreadY < nThreadY; ++iThreadY) {
-                            for (int iThreadX = 0; iThreadX < nThreadX; ++iThreadX) {
-                                GTid[0] = iThreadX;
-                                GTid[1] = iThreadY;
-                                GTid[2] = iThreadZ;
+                for (int iThreadZ = 0; iThreadZ < nThreadZ; ++iThreadZ) {
+                    for (int iThreadY = 0; iThreadY < nThreadY; ++iThreadY) {
+                        for (int iThreadX = 0; iThreadX < nThreadX; ++iThreadX) {
+                            GTid[0] = iThreadX;
+                            GTid[1] = iThreadY;
+                            GTid[2] = iThreadZ;
 
-                                DTid[0] = iGroupX * nThreadX + iThreadX;
-                                DTid[1] = iGroupY * nThreadY + iThreadY;
-                                DTid[2] = iGroupZ * nThreadZ + iThreadZ;
+                            DTid[0] = iGroupX * nThreadX + iThreadX;
+                            DTid[1] = iGroupY * nThreadY + iThreadY;
+                            DTid[2] = iGroupZ * nThreadZ + iThreadZ;
 
-                                Gi[0] = iThreadZ * nThreadX * nThreadY + iThreadY * nThreadX + iThreadX;
+                            Gi[0] = iThreadZ * nThreadX * nThreadY + iThreadY * nThreadX + iThreadX;
 
-                                play();
-                            }
+                            play();
                         }
                     }
                 }
             }
         }
     }
+}
     
 
-    void setInput(int slot, u32_array_t input) {
-        m_inputs[slot] = input;
+void BUNDLE::setInput(int slot, u32_array_t input) {
+    m_inputs[slot] = input;
+}
+
+u32_array_t BUNDLE::getInput(int slot)
+{
+    return m_inputs[slot];
+}
+
+bool BUNDLE::setConstant(string name, float value) {
+    auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
+    const auto& constants = m_inputs[CBUFFER0_REGISTER];
+
+    if (reflectionIter == m_layout.end()) {
+        return false;
     }
 
-    u32_array_t getInput(int slot)
-    {
-        return m_inputs[slot];
-    }
+    const BUNDLE_CONSTANT& reflection = *reflectionIter;
 
+    int offset = reflection.offset;
 
-    bool setConstant(string name, float value) {
-        auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
-        const auto& constants = m_inputs[CBUFFER0_REGISTER];
+    if (reflection.type == "float") *((float_t*)(((uint8_t*)constants.ptr) + offset)) = (float_t)value;
+    if (reflection.type == "int")   *((int32_t*)(((uint8_t*)constants.ptr) + offset)) = (int32_t)value;
+    if (reflection.type == "uint")  *((uint32_t*)(((uint8_t*)constants.ptr) + offset)) = (uint32_t)value;
     
-        if (reflectionIter == m_layout.end()) {
-            return false;
-        }
+    return true;
+}
 
-        const BUNDLE_CONSTANT& reflection = *reflectionIter;
+const vector<BUNDLE_CONSTANT>& BUNDLE::getLayout() 
+{
+    return m_layout;
+}
 
-        int offset = reflection.offset;
+void BUNDLE::resetRegisters()
+{
+    memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
+}
 
-        if (reflection.type == "float") *((float_t*)(((uint8_t*)constants.ptr) + offset)) = (float_t)value;
-        if (reflection.type == "int")   *((int32_t*)(((uint8_t*)constants.ptr) + offset)) = (int32_t)value;
-        if (reflection.type == "uint")  *((uint32_t*)(((uint8_t*)constants.ptr) + offset)) = (uint32_t)value;
-        
-        return true;
-    }
+BUNDLE_UAV BUNDLE::createUAV(string name, uint32_t elementSize, uint32_t length, uint32_t reg)
+{
+    uint32_t counterSize = 4;                           // 4 bytes
+    uint32_t size = counterSize + length * elementSize; // in bytes
+    uint32_t index = UAV0_REGISTER + reg;
+    uint32_t n = (size + 3) >> 2;
 
-    const vector<BUNDLE_CONSTANT>& getLayout() 
-    {
-        return m_layout;
-    }
+    u32_array_t memory = { (uintptr_t)(new uint32_t[n]), n };
+    u32_array_t data = { (uintptr_t)(((uint32_t*)memory.ptr) + 1), n - 1 };
+    u32_array_t counter = { memory.ptr, 1 };
 
-    static void resetRegisters()
-    {
-        memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
-    }
+    *((uint32_t*)counter.ptr) = 0;
+    //memset((void*)memory.ptr, 0, size);
 
-    static BUNDLE_UAV createUAV(string name, uint32_t elementSize, uint32_t length, uint32_t reg)
-    {
-        uint32_t counterSize = 4;                           // 4 bytes
-        uint32_t size = counterSize + length * elementSize; // in bytes
-        uint32_t index = UAV0_REGISTER + reg;
-        uint32_t n = (size + 3) >> 2;
+    return { name, elementSize, length, reg, data, memory, index };
+}
 
-        u32_array_t memory = { (uintptr_t)(new uint32_t[n]), n };
-        u32_array_t data = { (uintptr_t)(((uint32_t*)memory.ptr) + 1), n - 1 };
-        u32_array_t counter = { memory.ptr, 1 };
+void BUNDLE::destroyUAV(BUNDLE_UAV uav)
+{
+    delete[] ((uint32_t*)uav.buffer.ptr);
+}
 
-        *((uint32_t*)counter.ptr) = 0;
-        //memset((void*)memory.ptr, 0, size);
 
-        return { name, elementSize, length, reg, data, memory, index };
-    }
+void BUNDLE::load(u32_array_t data)
+{
+    map<int, u32_array_t> chunks;
+    
+    decodeChunks((uint8_t*)data.ptr, /*byteLength (!)*/data.size << 2, chunks);
 
-    static void destroyUAV(BUNDLE_UAV uav)
-    {
-        delete[] ((uint32_t*)uav.buffer.ptr);
-    }
+    u32_array_t codeChunk = chunks[CHUNK_TYPES::CODE];
+    u32_array_t constChunk = chunks[CHUNK_TYPES::CONSTANTS];
+    u32_array_t layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
+    
+    decodeLayoutChunk((uint8_t*)layoutChunk.ptr, m_layout);
 
-private:
-    void load(u32_array_t data)
-    {
-        map<int, u32_array_t> chunks;
-        
-        decodeChunks((uint8_t*)data.ptr, /*byteLength (!)*/data.size << 2, chunks);
+    m_instructions.assign(begin(codeChunk), end(codeChunk));
 
-        u32_array_t codeChunk = chunks[CHUNK_TYPES::CODE];
-        u32_array_t constChunk = chunks[CHUNK_TYPES::CONSTANTS];
-        u32_array_t layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
-        
-        decodeLayoutChunk((uint8_t*)layoutChunk.ptr, m_layout);
-
-        m_instructions.assign(begin(codeChunk), end(codeChunk));
-
-        m_constants.assign(begin(constChunk), end(constChunk));
-        m_inputs[CBUFFER0_REGISTER] = { (uintptr_t)m_constants.data(), (uint32_t)m_constants.size() };
-    }
-}; 
+    m_constants.assign(begin(constChunk), end(constChunk));
+    m_inputs[CBUFFER0_REGISTER] = { (uintptr_t)m_constants.data(), (uint32_t)m_constants.size() };
+}
  
 
 EMSCRIPTEN_BINDINGS(bundle)

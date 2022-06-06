@@ -5,32 +5,20 @@ import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, ICSShaderReflection, IPartFxPassReflection } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-
-import { BundleT } from '@lib/idl/bundles/fx/bundle';
-import { BundleContent } from "@lib/idl/bundles/fx/bundle-content";
-import { BundleSignatureT } from '@lib/idl/bundles/fx/bundle-signature';
-import { EPartSimRoutines } from "@lib/idl/bundles/fx/e-part-sim-routines";
-import { GLSLAttributeT } from "@lib/idl/bundles/fx/g-l-s-l-attribute";
-import { PartBundleT } from '@lib/idl/bundles/fx/part-bundle';
-import { PartRenderPassT } from "@lib/idl/bundles/fx/part-render-pass";
-import { RoutineBundle } from "@lib/idl/bundles/fx/routine-bundle";
-import { RoutineBytecodeBundleT } from "@lib/idl/bundles/fx/routine-bytecode-bundle";
-import { RoutineBytecodeBundleResourcesT } from "@lib/idl/bundles/fx/routine-bytecode-bundle-resources";
-import { RoutineGLSLBundleT } from "@lib/idl/bundles/fx/routine-g-l-s-l-bundle";
-import { TypeLayoutT } from "@lib/idl/bundles/fx/type-layout";
-import { UAVBundleT } from "@lib/idl/bundles/fx/u-a-v-bundle";
-
+import { Bundle, BundleContent, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, PartBundleT, PartRenderPassT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from "@lib/idl/bundles/FxBundle_generated";
 import { ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
+import * as flatbuffers from 'flatbuffers';
 
+export const PACKED = true;
 
 
 // global defines from webpack's config;
 /// <reference path="../../webpack.d.ts" />
 function getFxBundleSignature(): BundleSignatureT {
-    return new BundleSignatureT( VERSION, COMMITHASH, BRANCH, MODE, TIMESTAMP );
+    return new BundleSignatureT( MODE, VERSION, COMMITHASH, BRANCH, TIMESTAMP );
 }
 
 
@@ -79,7 +67,7 @@ function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSSha
         return new UAVBundleT(name, slot, stride, type);
     });
 
-    return new RoutineBytecodeBundleT(code, new RoutineBytecodeBundleResourcesT(uavs), numthreads);
+    return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs), numthreads);
 }
 
 
@@ -111,7 +99,7 @@ function compareFxTypeLayouts(left: TypeLayoutT, right: TypeLayoutT) {
 }
 
 
-export async function createPartFxBundle(fx: IPartFxInstruction): Promise<BundleT> {
+export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean = PACKED): Promise<Uint8Array | BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
@@ -145,7 +133,21 @@ export async function createPartFxBundle(fx: IPartFxInstruction): Promise<Bundle
     const passes = reflection.passes.map(pass => createPartFxGLSLRenderPass(slDocument, pass));
     const part = new PartBundleT(capacity, routineTypes, routines, passes, particle);
 
-    return createFxBundle(name, 'part', part);
+    const bundle = createFxBundle(name, 'part', part);
+    // get unpacked version
+    // --------------------------------
+
+    if (!PACKED)
+        return bundle;
+
+    // get packed version
+    // --------------------------------
+
+    let fbb = new flatbuffers.Builder();
+    let end = bundle.pack(fbb);
+    fbb.finish(end);
+
+    return fbb.asUint8Array();
 }
 
 // todo: rework comparisson to be more readable and compact

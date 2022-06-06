@@ -1,19 +1,14 @@
 import { assert, verbose } from '@lib/common';
-import { comparePartFxBundles } from '@lib/fx/bundles/Bundle';
+import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
+import { Bundle, BundleT, EPartRenderRoutines, EPartSimRoutines, RoutineBytecodeBundleT, RoutineGLSLBundleT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import * as Bytecode from "@lib/idl/bytecode";
 import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
+import * as PipelineCpp from './cpp/bridge';
 import { IEmitter, IPass } from './idl/IEmitter';
-import * as Bundle from "@lib/idl/bytecode";
-import { EPartSimRoutines } from '@lib/idl/bundles/fx/e-part-sim-routines';
-import { BundleT } from '@lib/idl/bundles/fx/bundle';
-import { EPartRenderRoutines } from '@lib/idl/bundles/fx/e-part-render-routines';
-import { UAVBundleT } from '@lib/idl/bundles/fx/u-a-v-bundle';
-import { PartRenderPassT } from '@lib/idl/bundles/fx/part-render-pass';
-import { RoutineBytecodeBundleT } from '@lib/idl/bundles/fx/routine-bytecode-bundle';
-import { RoutineGLSLBundleT } from '@lib/idl/bundles/fx/routine-g-l-s-l-bundle';
-
+import * as flatbuffers from 'flatbuffers';
 
 // TODO: use CDL instead of reflection
 
@@ -40,7 +35,7 @@ function createUAVsEx(bundles: UAVBundleT[], capacity: number, sharedUAVs: IUAVR
 
 
 function setupFxRoutineBytecodeBundle(debugName: string, rountineBundle: RoutineBytecodeBundleT, capacity: number, sharedUAVs: IUAVResource[]) {
-    const vmBundle = VM.make(debugName, rountineBundle.code as Uint8Array);
+    const vmBundle = VM.make(debugName, rountineBundle.code);
     const uavs = createUAVsEx(rountineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = rountineBundle.numthreads;
 
@@ -134,15 +129,15 @@ interface IPassEx extends IPass {
 }
 
 const UAV = {
-    overwriteCounter(uav: Bundle.IUAV, value: number) {
+    overwriteCounter(uav: Bytecode.IUAV, value: number) {
         VM.memoryToI32Array(uav.buffer)[0] = value;
     },
 
-    readCounter(uav: Bundle.IUAV): number {
+    readCounter(uav: Bytecode.IUAV): number {
         return VM.memoryToI32Array(uav.buffer)[0];
     },
 
-    readElement({ data, elementSize }: Bundle.IUAV, iElement: number): Uint8Array {
+    readElement({ data, elementSize }: Bytecode.IUAV, iElement: number): Uint8Array {
         const u8a = VM.memoryToU8Array(data);
         return new Uint8Array(u8a.buffer, u8a.byteOffset + iElement * elementSize, elementSize);
     }
@@ -344,8 +339,23 @@ async function loadFromBundle(bundle: BundleT, uavResources: IUAVResource[]) {
 }
 
 
-// tslint:disable-next-line:max-func-body-length
-export async function createEmitterFromBundle(fx: BundleT) {
+// tslint:disable-next-line:max-func-body-length 
+export async function createEmitterFromBundle(data: Uint8Array | BundleT): Promise<IEmitter> {
+    let fx: BundleT = null;
+
+    // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
+    if (data instanceof Uint8Array)
+    {
+        fx = new BundleT(); 
+        let buf = new flatbuffers.ByteBuffer(data);
+        Bundle.getRootAsBundle(buf).unpackTo(fx);
+
+        PipelineCpp.make(data);
+
+    } else {
+        fx = <BundleT>data;
+    }
+
     const uavResources: IUAVResource[] = []; // << shared UAV resources
     const timeline = createTimelime();
     const emitter = await loadFromBundle(fx, uavResources);
@@ -382,7 +392,7 @@ export async function createEmitterFromBundle(fx: BundleT) {
 
 
     async function shadowReload(fxNext: BundleT): Promise<boolean> {
-        if (!comparePartFxBundles(fxNext.content, fx.content)) {
+        if (!FxBundle.comparePartFxBundles(fxNext.content, fx.content)) {
             return false;
         }
 
@@ -432,5 +442,3 @@ export async function createEmitterFromBundle(fx: BundleT) {
     };
 }
 
-export type Emitter = ReturnType<typeof createEmitterFromBundle>;
-export type Pass = IPass;
