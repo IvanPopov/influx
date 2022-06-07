@@ -22,7 +22,10 @@ struct u32_array_t
     {
         return { (uintptr_t)v.data(), v.size() * sizeof(T) / sizeof(uint32_t) };
     }
+
+    uint32_t byteLength() const { return size * sizeof(uint32_t); }
 };
 
 uint32_t* begin(u32_array_t arr) { return (uint32_t*)arr.ptr; }
 uint32_t* end(u32_array_t arr) { return ((uint32_t*)arr.ptr) + arr.size; }
+

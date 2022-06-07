@@ -20,16 +20,16 @@ enum CHUNK_TYPES {
 
 struct BUNDLE_NUMGROUPS
 {
-    int x;
-    int y;
-    int z;
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
 };
 
 struct BUNDLE_NUMTHREADS
 {
-    int x;
-    int y;
-    int z;
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
 };
 
 

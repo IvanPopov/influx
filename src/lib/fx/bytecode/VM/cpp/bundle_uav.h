@@ -12,12 +12,12 @@ struct BUNDLE_UAV
     u32_array_t buffer;     // raw data [ counter, ...elements ]
     uint32_t index;         // input index for VM         // << todo: remove (index = register + internal_uav_offset)
 
-    u32_array_t readElement(uint32_t i)
+    u32_array_t readElement(uint32_t i) const
     {
         return { (uintptr_t)((uint8_t*)data.ptr + i * elementSize), (elementSize + 3) >> 2 };
     }
 
-    uint32_t readCounter()
+    uint32_t readCounter() const
     {
         return *((uint32_t*)buffer.ptr);
     }
