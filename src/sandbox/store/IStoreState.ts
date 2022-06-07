@@ -7,6 +7,7 @@ import { IEmitter } from '@sandbox/containers/playground/idl/IEmitter';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { LGraph } from 'litegraph.js';
+import { ITimeline } from '@sandbox/containers/playground/timelime';
 
 export interface IMarker {
     range: IRange;
@@ -57,6 +58,7 @@ export interface INodePipeline {
 
 export interface IPlaygroundState {
     emitter: IEmitter;      // todo: add type.
+    timeline: ITimeline;
     $revision: number;      // number of updates of emitter
 }
 

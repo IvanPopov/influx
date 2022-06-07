@@ -76,8 +76,8 @@ class Playground extends React.Component<IPlaygroundProps> {
     handlePlayClick() {
         const props = this.props;
         if (props.playground.emitter) {
-            if (props.playground.emitter.isStopped()) {
-                props.playground.emitter.start();
+            if (props.playground.timeline.isStopped()) {
+                props.playground.timeline.start();
                 this.forceUpdate();
             }
         }
@@ -87,8 +87,8 @@ class Playground extends React.Component<IPlaygroundProps> {
     handlePauseClick() {
         const props = this.props;
         if (props.playground.emitter) {
-            if (!props.playground.emitter.isStopped()) {
-                props.playground.emitter.stop();
+            if (!props.playground.timeline.isStopped()) {
+                props.playground.timeline.stop();
                 this.forceUpdate();
             }
         }
@@ -155,12 +155,12 @@ class Playground extends React.Component<IPlaygroundProps> {
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
         return nextProps.playground.emitter !== this.props.playground.emitter ||
-            (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.name);
+            (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.getName());
     }
 
     componentDidUpdate() {
         if (this.props.playground.emitter) {
-            this.$emitterName = this.props.playground.emitter.name;
+            this.$emitterName = this.props.playground.emitter.getName();
         } else {
             this.$emitterName = null;
         }
@@ -171,6 +171,7 @@ class Playground extends React.Component<IPlaygroundProps> {
         // console.log('Playground:render()');
         const props = this.props;
         const emitter = props.playground.emitter;
+        const timeline = props.playground.timeline;
         const scope = getScope(props.sourceFile);
 
         const list: IPartFxInstruction[] = filterPartFx(scope);
@@ -205,8 +206,8 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     <Button.Group compact >
                                         <Button
                                             icon={<Icon className={'playback pause'} />}
-                                            color={(emitter.isStopped() ? 'black' : null)}
-                                            disabled={emitter.isStopped()}
+                                            color={(timeline.isStopped() ? 'black' : null)}
+                                            disabled={timeline.isStopped()}
                                             onClick={this.handlePauseClick}
                                         />
                                         <Button
@@ -215,8 +216,8 @@ class Playground extends React.Component<IPlaygroundProps> {
                                         />
                                         <Button
                                             icon={<Icon className={'playback play'} />}
-                                            color={(!emitter.isStopped() ? 'black' : null)}
-                                            disabled={!emitter.isStopped()}
+                                            color={(!timeline.isStopped() ? 'black' : null)}
+                                            disabled={!timeline.isStopped()}
                                             onClick={this.handlePlayClick}
                                         />
                                     </Button.Group>
@@ -236,6 +237,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             <ThreeScene
                                 style={threeStylesHotfix}
                                 emitter={emitter}
+                                timeline={timeline}
                             />
                         </div>
                     </div>

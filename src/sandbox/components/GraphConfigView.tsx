@@ -60,7 +60,7 @@ class GraphConfigView extends React.Component<IProps> {
                 }
 
                 <Segment secondary>
-                    Emitter's capacity is { (this.props.playground.emitter || {}).capacity }.
+                    Emitter's capacity is { (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() }.
                 </Segment>
             </div>
         );

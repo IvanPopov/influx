@@ -46,7 +46,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slASTDocument: null,
             slDocument: null,
             emitter: null,
-            $pipeline: 0
+            $revision: 0
         }),
 
     [evt.SOURCE_FILE_DROP_STATE]: (state, action: ISourceFileDropState) =>
@@ -59,7 +59,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slASTDocument: null,
             slDocument: null,
             emitter: null,
-            $pipeline: 0
+            $revision: 0
         }),
 
     [evt.SOURCE_CODE_MODIFED]: (state, action: ISourceCodeModified) =>

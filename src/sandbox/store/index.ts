@@ -20,6 +20,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.slDocument',
         'sourceFile.debugger.runtime',
         'playground.emitter',
+        'playground.timeline',
         'nodes.graph'
     ]
 } as any);

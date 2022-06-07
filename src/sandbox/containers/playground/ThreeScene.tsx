@@ -14,7 +14,8 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OrbitControls } from '@three-ts/orbit-controls';
 
-import { IEmitter, IPass } from './idl/IEmitter';
+import { IEmitter, IEmitterPass } from './idl/IEmitter';
+import { ITimeline } from './timelime';
 
 const $vertexShader = `
 precision highp float;
@@ -47,7 +48,8 @@ void main() {
 
 interface ITreeSceneProps {
     style: React.CSSProperties;
-    emitter?: IEmitter;
+    emitter: IEmitter;
+    timeline: ITimeline;
 }
 
 interface IThreeSceneState {
@@ -139,33 +141,32 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         return this.renderer.domElement;
     }
 
-    addPassLine(pass: IPass) {
+    addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
-        const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
-
+        const instanceData = pass.getData();
+        const desc = pass.getDesc();
+        const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
         //
         // Instance data
         //
 
-        pass.instanceLayout.forEach(desc => {
-            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-            geometry.setAttribute(desc.name, interleavedAttr);
+        desc.instanceLayout.forEach(attr => {
+            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset);
+            geometry.setAttribute(attr.name, interleavedAttr);
         });
 
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
-            vertexShader: pass.vertexShader,
-            fragmentShader: pass.pixelShader,
+            vertexShader: desc.vertexShader,
+            fragmentShader: desc.pixelShader,
             transparent: true,
             blending: THREE.NormalBlending,
             depthTest: false,
             // wireframeLinewidth: 5
         });
 
-        // geometry.setIndex(Array(pass.capacity).fill(0).map((x, i) => i));
-        geometry.setDrawRange(0, pass.length());
-        // geometry.index = new THREE.Uint16BufferAttribute(Array(pass.length).fill(0).map((x, i) => i), 1);
+        geometry.setDrawRange(0, pass.getNumRenderedParticles());
 
         const mesh = new THREE.LineSegments(geometry, material);
 
@@ -176,9 +177,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
 
-    addPass(pass: IPass) {
-
-        if (pass.geometry === EPartFxPassGeometry.k_Line) {
+    addPass(pass: IEmitterPass) {
+        const desc = pass.getDesc();
+        const instanceData = pass.getData();
+        if (desc.geometry === EPartFxPassGeometry.k_Line) {
             this.addPassLine(pass);
             return;
         }
@@ -187,16 +189,15 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
 
         // tslint:disable-next-line:max-line-length
-        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
 
         //
         // Instance data
         //
 
-        pass.instanceLayout.forEach(desc => {
-            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, desc.size, desc.offset);
-            // geometry.addAttribute(desc.attrName, interleavedAttr);
-            geometry.setAttribute(desc.name, interleavedAttr);
+        desc.instanceLayout.forEach(attr => {
+            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset);
+            geometry.setAttribute(attr.name, interleavedAttr);
         });
 
         //
@@ -217,8 +218,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
-            vertexShader: pass.vertexShader,
-            fragmentShader: pass.pixelShader,
+            vertexShader: desc.vertexShader,
+            fragmentShader: desc.pixelShader,
             transparent: true,
             blending: THREE.NormalBlending,
             depthTest: false,
@@ -232,14 +233,16 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
         verbose('emitter added.');
-    }
+    } 
 
 
-    addPassDefaultMat(pass: IPass) {
+    addPassDefaultMat(pass: IEmitterPass) {
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
+        const instanceData = pass.getData();
+        const desc = pass.getDesc();
         // tslint:disable-next-line:max-line-length
-        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(pass.data.buffer, pass.data.byteOffset), pass.stride);
+        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
 
         //
         // Geometry
@@ -262,7 +265,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         geometry.setAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
         geometry.setAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
         // geometry.maxInstancedCount = pass.length();
-        geometry.instanceCount = pass.length();
+        geometry.instanceCount = pass.getNumRenderedParticles();
 
 
         const material = new THREE.RawShaderMaterial({
@@ -282,9 +285,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         verbose('emitter added.');
     }
 
-    createInstinceGeometry(pass: IPass): THREE.BufferGeometry {
+    createInstinceGeometry(pass: IEmitterPass): THREE.BufferGeometry {
+        const desc = pass.getDesc();
         let instanceGeometry: THREE.BufferGeometry = null;
-        switch (pass.geometry) {
+        switch (desc.geometry) {
             case EPartFxPassGeometry.k_Box:
                 instanceGeometry = new THREE.BoxBufferGeometry();
                 break;
@@ -313,13 +317,17 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         }
 
         // tslint:disable-next-line:max-func-body-length
-        emitter.passes.forEach((pass, i) => {
-            if (pass.vertexShader && pass.pixelShader) {
-               this.addPass(pass);
-            } else {
-                this.addPassDefaultMat(pass);
-            }
-        });
+        let nPass = emitter.getPassCount();
+        for (let i = 0; i < nPass; ++i)
+        {
+            let pass = emitter.getPass(i);
+            let desc = pass.getDesc();
+            if (desc.vertexShader && desc.pixelShader) {
+                this.addPass(pass);
+             } else {
+                 this.addPassDefaultMat(pass);
+             }
+        }
     }
 
 
@@ -387,28 +395,34 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     animate = (time: number) => {
         const emitter = this.state.emitter;
+        const timeline = this.props.timeline;
 
         if (!emitter) {
             return;
         }
 
-        emitter.tick();
+        
+        if (!timeline.isStopped()) {
+            emitter.tick(timeline.getConstants());
+            timeline.tick();
+        }
         
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];
-            const emitPass = emitter.passes[iPass];
+            const emitPass = emitter.getPass(iPass);
+            const passDesc = emitPass.getDesc();
 
-            if (emitPass.sorting) {
+            if (passDesc.sorting) {
                 emitPass.sort(this.camera.position);
             }
 
             const geometry = rendPass.mesh.geometry as THREE.BufferGeometry;
 
             rendPass.instancedBuffer.needsUpdate = true;
-            if (emitPass.geometry === EPartFxPassGeometry.k_Line) {
-                geometry.setDrawRange(0, emitPass.length());
+            if (passDesc.geometry === EPartFxPassGeometry.k_Line) {
+                geometry.setDrawRange(0, emitPass.getNumRenderedParticles());
             } else {
-                (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.length();
+                (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.getNumRenderedParticles();
             }
         }
 
@@ -416,7 +430,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.renderer.render(this.scene, this.camera);
         this.frameId = requestAnimationFrame(this.animate);
 
-        this.setState({ nParticles: emitter.length() });
+        this.setState({ nParticles: emitter.getNumParticles() });
         // emitter.dump();
     }
 
@@ -437,16 +451,20 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         if (prevState.emitter === this.state.emitter) {
             const emitter = this.props.emitter;
 
-            emitter.passes.forEach((pass, i) => {
+            let nPass = emitter.getPassCount();
+            for (let i = 0; i < nPass; ++ i)
+            {
+                let pass = emitter.getPass(i);
+                let desc = pass.getDesc();
                 let { mesh } = this.passes[i];
                 let material = mesh.material as THREE.RawShaderMaterial;
                 // let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
 
-                if (!pass.vertexShader || !pass.pixelShader) {
+                if (!desc.vertexShader || !desc.pixelShader) {
                     return;
                 }
 
-                const { vertexShader, pixelShader: fragmentShader } = pass;
+                const { vertexShader, pixelShader: fragmentShader } = desc;
 
                 if (material.vertexShader !== vertexShader ||
                     material.fragmentShader !== fragmentShader) {
@@ -467,8 +485,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
                     // mesh = new THREE.Mesh(geometry, material);
                 }
-            });
-            return;
+            };
         }
 
         this.passes.forEach(pass => {
@@ -491,7 +508,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             >
                 <Progress
                     value={ this.state.nParticles }
-                    total={ this.state.emitter.capacity }
+                    total={ this.state.emitter.getCapacity() }
                     attached='top'
                     size='medium'
                     indicating

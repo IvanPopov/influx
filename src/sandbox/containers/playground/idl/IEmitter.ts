@@ -1,4 +1,5 @@
-import { EPartFxPassGeometry, IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
 
 
@@ -8,42 +9,45 @@ export interface IAttribute {
     name: string;
 }
 
+// temp solution
+export type Uniforms = IMap<number>;
 
-export interface IPass {
+
+export interface IEmitterPassDesc
+{
     instanceLayout: IAttribute[];
     geometry: string;
-    data: Uint8Array;
     sorting: boolean;
-
-    // number of float elements in the prerendered particle (src)
-    stride: number;
+    stride: number; // number of float elements in the prerendered particle (src)
 
     // GLSL shader's sources
     vertexShader: string;
     pixelShader: string;
+}
 
-    // num alive particles multipled by the prerendered instance count
-    length(): number;
+export interface IEmitterPass {
+    getDesc(): IEmitterPassDesc;
+    getData(): Uint8Array;
+    getNumRenderedParticles(): number; // num alive particles multipled by the prerendered instance count
     sort(pos: Vector3): void;
+    prerender(uniforms: Uniforms);
+    dump(): void;
 }
 
 
 export interface IEmitter {
-    name: string;
-    capacity: number;
-    passes: IPass[];
+    getName(): string;
+    getCapacity(): number;
+    getPassCount(): number;
+    getPass(i: number): IEmitterPass;
 
-    start(): void;
-    stop(): void;
-    tick(): void;
-    isStopped(): boolean;
-    length(): number;
+    getNumParticles(): number;
 
+    // public:
+    prerender(uniforms: Uniforms): void;
+    tick(uniforms: Uniforms): void;
     reset(): void;
-    // shadowReload(fx: IPartFxInstruction): Promise<boolean>;
-    shadowReload(fx: any): Promise<boolean>;
-    
     dump(): void;
-
     destroy(): void;
 }
+
