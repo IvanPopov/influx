@@ -16,6 +16,7 @@ import * as flatbuffers from 'flatbuffers';
 import { loadEmiterFromBundle } from '@sandbox/containers/playground/ts/emitter';
 import { IUAV } from '@lib/idl/bytecode';
 import { IEmitter } from '@sandbox/containers/playground/idl/IEmitter';
+import * as PipelineCpp from '@sandbox/containers/playground/cpp/bridge';
 
 /////////////////////////////////////////////////////////////////////
 
@@ -26,7 +27,7 @@ function decodeBundleData(data: Uint8Array | BundleT): BundleT {
         let buf = new flatbuffers.ByteBuffer(data);
         Bundle.getRootAsBundle(buf).unpackTo(fx);
 
-        // PipelineCpp.make(data);
+        PipelineCpp.make(data);
         return fx;
     }
 
