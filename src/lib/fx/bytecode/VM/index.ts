@@ -4,8 +4,8 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { asNativeViaCDL } from "./native";
 
 import * as WASMBundle from "./cpp/bridge";
- import * as TSBundle from "./ts/bridge";
-import * as Bundle from "@lib/idl/bytecode";
+import * as TSBundle from "./ts/bridge";
+import { IBundle, IMemory, IUAV } from "@lib/idl/bytecode";
 
 export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native';
 
@@ -31,16 +31,20 @@ export function switchRuntime(runtime?: 'wasm' | 'js')
     console.log(`%c VM runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
 
-export function make(debugName: string, code: number[] | Uint8Array): Bundle.IBundle {
+export function make(debugName: string, code: number[] | Uint8Array): IBundle {
     return VMBundle().make(debugName, new Uint8Array(code));
 }
 
-export function memoryToU8Array(input: Bundle.IMemory): Uint8Array {
+export function memoryToU8Array(input: IMemory): Uint8Array {
     return VMBundle().memoryToU8Array(input);
 }
 
-export function memoryToI32Array(input: Bundle.IMemory): Int32Array {
+export function memoryToI32Array(input: IMemory): Int32Array {
     return VMBundle().memoryToI32Array(input);
+}
+
+export function memoryToF32Array(input: IMemory): Float32Array {
+    return VMBundle().memoryToF32Array(input);
 }
 
 export function createUAV(name: string, elementSize: number, length: number, register: number) {
@@ -48,7 +52,7 @@ export function createUAV(name: string, elementSize: number, length: number, reg
 }
 
 
-export function destroyUAV(uav: Bundle.IUAV)
+export function destroyUAV(uav: IUAV)
 {
     VMBundle().destroyUAV(uav);
 }

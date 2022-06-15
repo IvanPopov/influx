@@ -3,8 +3,10 @@ import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
 import { BundleT, EPartRenderRoutines, EPartSimRoutines, RoutineBytecodeBundleT, RoutineGLSLBundleT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
-import { IAttribute, Uniforms, IEmitter, IEmitterPass } from '@sandbox/containers/playground/idl/IEmitter';
+import {  Uniforms, IEmitter, IEmitterPass } from '@sandbox/containers/playground/idl/IEmitter';
 import { Vector3 } from 'three';
+import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
+import * as FxBundle from '@lib/fx/bundles/Bundle';
 
 
 type IUAVResource = ReturnType<typeof VM.createUAV>;
@@ -72,8 +74,14 @@ const UAV = {
     }
 };
 
+export interface ITSEmitter extends IEmitter
+{
+    uavResources: IUAVResource[];
+    reskin(bundle: BundleT): IEmitter;
+}
+
 // tslint:disable-next-line:max-func-body-length
-export function loadEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): IEmitter {
+function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): IEmitter {
     const { name, content: { capacity, particle, simulationRoutines, renderPasses } } = bundle;
 
     const resetBundle = setupFxRoutineBytecodeBundle(`${name}/reset`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Reset], capacity, uavResources);
@@ -107,7 +115,7 @@ export function loadEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource
 
         // note: only GLSL routines are supported!
         const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
-
+        console.log(instanceLayout, instanceCount);
         const getNumRenderedParticles = () => getNumParticles() * instanceCount;
 
         // tslint:disable-next-line:max-line-length
@@ -171,7 +179,7 @@ export function loadEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource
             }
         }
 
-        function getData() { return uavSortedU8; }
+        function getData() { return asBundleMemory(uavSortedU8); }
         function getDesc() {
             return {
                 stride,
@@ -267,6 +275,7 @@ export function loadEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource
     }
 
     return {
+        // abstract interface
         getName,
         getCapacity,
         getPassCount,
@@ -274,10 +283,31 @@ export function loadEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource
         getNumParticles,
         
         reset,
-        prerender,
         tick,
         
         dump,
         destroy
     };
+}
+
+
+export function loadEmitterFromBundle(bundle: BundleT): ITSEmitter
+{
+    let tsEmitter: ITSEmitter = null;
+    function reskin(bundleNext: BundleT): ITSEmitter
+    {
+        if (FxBundle.comparePartFxBundles(bundleNext.content, bundle.content)) 
+        {
+            let { uavResources } = tsEmitter;
+            let reskinned = createEmiterFromBundle(bundleNext, uavResources);
+            return { reskin, uavResources, ...reskinned };
+        }
+        return null;
+    }
+
+    let uavResources: Bytecode.IUAV[] = [];
+    let newly = createEmiterFromBundle(bundle, uavResources);
+    tsEmitter = { reskin, uavResources, ...newly };
+
+    return tsEmitter;
 }

@@ -5,6 +5,7 @@
 
 
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterPartFx, getEmitterName, getPlaygroundState } from '@sandbox/reducers/playground';
@@ -15,9 +16,6 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Grid, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
-import * as FxBundle from '@lib/fx/bundles/Bundle';
-import * as Path from '@lib/path/path';
-import * as flatbuffers from 'flatbuffers';
 
 
 

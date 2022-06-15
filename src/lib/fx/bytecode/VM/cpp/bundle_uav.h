@@ -27,3 +27,26 @@ struct BUNDLE_UAV
         *((uint32_t*)buffer.ptr) = value;
     }
 };
+
+
+// emscripten::val getBUAVData(const BUNDLE_UAV& self) 
+// {
+//     return emscripten::val(
+//         emscripten::typed_memory_view(self.data.byteLength(), (uint8_t*)self.data.ptr));
+// }
+
+// void setBUAVData(const BUNDLE_UAV& self, emscripten::val val) 
+// {
+//     assert(false);
+// }
+
+// emscripten::val getBUAVBuffer(const BUNDLE_UAV& self) 
+// {
+//     return emscripten::val(
+//         emscripten::typed_memory_view(self.buffer.byteLength(), (uint8_t*)self.buffer.ptr));
+// }
+
+// void setBUAVBuffer(const BUNDLE_UAV& self, emscripten::val val) 
+// {
+//     assert(false);
+// }

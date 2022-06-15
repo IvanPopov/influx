@@ -16,7 +16,6 @@
 #include "emitter.h" 
 
 using namespace emscripten;
-using namespace std;
 using namespace glm;
 using namespace std::chrono;
 
@@ -33,7 +32,7 @@ namespace FxTranslator
 }
 
 
-string uavPrerendered(uint32_t i)
+std::string uavPrerendered(uint32_t i)
 {
     std::ostringstream s;
     s << FxTranslator::UAV_PRERENDERED << i;
@@ -41,7 +40,7 @@ string uavPrerendered(uint32_t i)
 }
 
 
-string uavPrerenderedSorted(uint32_t i)
+std::string uavPrerenderedSorted(uint32_t i)
 {
     std::ostringstream s;
     s << FxTranslator::UAV_PRERENDERED << i << "Sorted";
@@ -55,9 +54,9 @@ BUNDLE_UAV createUAVEx(const Fx::UAVBundleT &bundle, int capacity)
 }
 
 
-vector<BUNDLE_UAV> createUAVsEx(const vector<unique_ptr<Fx::UAVBundleT>> &bundles, int capacity, vector<BUNDLE_UAV> &sharedUAVs)
+std::vector<BUNDLE_UAV> createUAVsEx(const std::vector<std::unique_ptr<Fx::UAVBundleT>> &bundles, int capacity, std::vector<BUNDLE_UAV> &sharedUAVs)
 {
-    vector<BUNDLE_UAV> uavs;
+    std::vector<BUNDLE_UAV> uavs;
     for (auto &uavBundle : bundles)
     {
         auto sharedUAV = find_if(begin(sharedUAVs), end(sharedUAVs),
@@ -78,10 +77,10 @@ vector<BUNDLE_UAV> createUAVsEx(const vector<unique_ptr<Fx::UAVBundleT>> &bundle
 
 
 BYTECODE_BUNDLE setupFxRoutineBytecodeBundle(
-    string debugName,
+    std::string debugName,
     const Fx::RoutineBytecodeBundleT &routineBundle,
     int capacity,
-    vector<BUNDLE_UAV> &sharedUAVs)
+    std::vector<BUNDLE_UAV> &sharedUAVs)
 {
     BUNDLE vmBundle(debugName, u32_array_t::fromVector(routineBundle.code));
     auto uavs = createUAVsEx(routineBundle.resources->uavs, capacity, sharedUAVs);
@@ -100,9 +99,16 @@ BYTECODE_BUNDLE setupFxRoutineBytecodeBundle(
 }
 
 
-EMITTER_PASS::EMITTER_PASS (const std::shared_ptr<EMITTER>& parent, uint32_t id)
-    : m_parent(parent)
+EMITTER_PASS::EMITTER_PASS (
+    const EMITTER* pParent, 
+    uint32_t id, 
+    const EMITTER_DESC& desc, 
+    const BYTECODE_BUNDLE& bundle
+)
+    : m_parent(pParent)
     , m_id(id)
+    , m_desc(desc)
+    , m_prerenderBundle(bundle)
 {
 
 }
@@ -116,34 +122,40 @@ const BUNDLE_UAV* EMITTER_PASS::uavNonSorted() const { return parent().uav(uavPr
 
 const EMITTER& EMITTER_PASS::parent() const
 {
-    return *(m_parent.lock());
+    return *m_parent;
 }
 
 
-uint32_t EMITTER_PASS::numRenderedParticles() const
+uint32_t EMITTER_PASS::getNumRenderedParticles() const
 { 
-    return parent().numParticles() * m_instanceCount; 
+    return parent().getNumParticles() * m_desc.instanceCount; 
 }
 
 
-void EMITTER_PASS::sort(vec3 targetPos) 
+u32_array_t EMITTER_PASS::getData() const
 {
-    assert(m_sorting);
+    return (!m_desc.sorting ? uavNonSorted() : uavSorted())->data;
+}
+
+
+void EMITTER_PASS::sort(vec3 targetPos)
+{
+    assert(m_desc.sorting);
 
     // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
     //       I hate javascript for that :/
 
     vec3 v3;
-    uint32_t length = numRenderedParticles();
+    uint32_t length = getNumRenderedParticles();
 
-    uint32_t nStride = m_stride * m_instanceCount; // stride in floats
+    uint32_t nStride = m_desc.stride * m_desc.instanceCount; // stride in floats
 
-    assert(uavSorted()->data.size == nStride * parent().m_capacity);
+    assert(uavSorted()->data.size == nStride * parent().getCapacity());
 
     float* src = (float_t*)uavNonSorted()->data.ptr;
     float* dst = (float_t*)uavSorted()->data.ptr;
 
-    vector<pair<uint32_t, float_t>> indicies;
+    std::vector<std::pair<uint32_t, float_t>> indicies;
 
      // NOTE: sort using only first instance's postion
     for (uint32_t iPart = 0; iPart < length; ++iPart) 
@@ -154,7 +166,7 @@ void EMITTER_PASS::sort(vec3 targetPos)
     }
 
     std::sort(begin(indicies), end(indicies), 
-        [](const pair<uint32_t, float32_t>& a, const pair<uint32_t, float32_t>& b) {
+        [](const std::pair<uint32_t, float32_t>& a, const std::pair<uint32_t, float32_t>& b) {
             return a.second > b.second; // b < a ?
         });
 
@@ -165,6 +177,21 @@ void EMITTER_PASS::sort(vec3 targetPos)
         memcpy(dst + iTo, src + iFrom, nStride * sizeof(float_t));
     }
 }
+
+
+
+void EMITTER_PASS::prerender(const UNIFORMS& uniforms) 
+{
+    auto& bundle = m_prerenderBundle;
+    assert(parent().getCapacity() % bundle.numthreads.x == 0);
+
+    auto uav = find_if(begin(bundle.uavs), end(bundle.uavs), 
+        [&](const BUNDLE_UAV& uav) { return uav.name == uavPrerendered(m_id); });
+    uav->overwriteCounter(0);
+    bundle.setConstants(uniforms);
+    bundle.run(parent().getCapacity() / bundle.numthreads.x);
+}
+
 
 
 void EMITTER_PASS::dump() const 
@@ -182,7 +209,7 @@ EMITTER::EMITTER(const Fx::BundleT& bundle)
 }
 
 
-BUNDLE_UAV* EMITTER::uav(const string& name)
+BUNDLE_UAV* EMITTER::uav(const std::string& name)
 {
     auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
         [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
@@ -190,9 +217,11 @@ BUNDLE_UAV* EMITTER::uav(const string& name)
 }
 
 
-const BUNDLE_UAV* EMITTER::uav(const string& name) const 
+const BUNDLE_UAV* EMITTER::uav(const std::string& name) const 
 { 
-    return const_cast<const BUNDLE_UAV*>(uav(name)); 
+    auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
+        [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
+    return it == end(m_sharedUAVs) ? nullptr : &(*it);
 }
 
 
@@ -208,7 +237,7 @@ const BUNDLE_UAV* EMITTER::uavStates() const { return uav(FxTranslator::UAV_STAT
 const BUNDLE_UAV* EMITTER::uavInitArguments() const { return uav(FxTranslator::UAV_SPAWN_DISPATCH_ARGUMENTS); }
 
 
-uint32_t EMITTER::numParticles() const
+uint32_t EMITTER::getNumParticles() const
 {
     return m_capacity - uavDeadIndices()->readCounter();
 }
@@ -223,37 +252,39 @@ void EMITTER::reset()
 }
 
 
-void EMITTER::emit(const TIMELINE& timeline)
+void EMITTER::emit(const UNIFORMS& uniforms)
 {
-    m_initBundle.setConstants(timeline.m_constants);
+    // std::cout << uniforms.at("elapsedTime") << ", " << uniforms.at("elapsedTimeLevel") << ", " << uavInitArguments()->readCounter() << std::endl;
+    m_initBundle.setConstants(uniforms);
     m_initBundle.run(uavInitArguments()->readCounter());
-    m_spawnBundle.setConstants(timeline.m_constants);
+    m_spawnBundle.setConstants(uniforms);
     m_spawnBundle.run(1);
 }
 
 
-void EMITTER::update(const TIMELINE& timeline)
+void EMITTER::update(const UNIFORMS& uniforms)
 {
     assert(m_capacity % m_updateBundle.numthreads.x == 0);
-    m_updateBundle.setConstants(timeline.m_constants);
+    m_updateBundle.setConstants(uniforms);
     m_updateBundle.run(m_capacity / m_updateBundle.numthreads.x);
 }
 
 
-void EMITTER::prerender(const TIMELINE& timeline) 
+void EMITTER::prerender(const UNIFORMS& uniforms) 
 {
     for (int i = 0; i < m_passes.size(); ++ i)
     {
-        auto& bundle = m_passes[i].m_prerenderBundle;
-
-        assert(m_capacity % bundle.numthreads.x == 0);
-
-        auto uav = find_if(begin(bundle.uavs), end(bundle.uavs), 
-            [i](const BUNDLE_UAV& uav) { return uav.name == uavPrerendered(i); });
-        uav->overwriteCounter(0);
-        bundle.setConstants(timeline.m_constants);
-        bundle.run(m_capacity / bundle.numthreads.x);
+        m_passes[i].prerender(uniforms);
     }
+}
+
+
+void EMITTER::tick(const UNIFORMS& uniforms)
+{
+    update(uniforms);
+    emit(uniforms);
+    prerender(uniforms);
+    std::cout << getNumParticles() << std::endl;
 }
 
 
@@ -262,18 +293,18 @@ void EMITTER::destroy()
     for (auto& uav : m_sharedUAVs)
     {
         BUNDLE::destroyUAV(uav);
-        cout << "UAV '" << uav.name << " has been destroyed." << endl;
+        std::cout << "UAV '" << uav.name << " has been destroyed." << std::endl;
     }
-    cout << "emitter '" << m_name << "' has been dropped." << endl;
+    std::cout << "emitter '" << m_name << "' has been dropped." << std::endl;
 }
 
 
 void EMITTER::dump()
 {
-    auto npart = numParticles();
+    auto npart = getNumParticles();
     auto partSize = m_particle.size;
 
-    cout << "particles total: " << npart << " ( " << uavDeadIndices()->readCounter() / m_capacity << " )" << endl;
+    std::cout << "particles total: " << npart << " ( " << uavDeadIndices()->readCounter() / m_capacity << " )" << std::endl;
 
     for (int iPart = 0; iPart < uavStates()->data.size; ++ iPart)
     {
@@ -322,7 +353,7 @@ void EMITTER::load(const Fx::BundleT &fx)
         4,
         sharedUAVs);
 
-    return;
+   
     auto& passes = m_passes;
     for (int i = 0; i < renderPasses.size(); ++i)
     {
@@ -339,34 +370,43 @@ void EMITTER::load(const Fx::BundleT &fx)
         auto uav = find_if(begin(bundle.uavs), end(bundle.uavs), [&](const BUNDLE_UAV &uav)
                             { return uav.name == uavPrerendered(i); });
 
-        string vertexShader = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->code;
-        string pixelShader = routines[Fx::EPartRenderRoutines_k_Pixel].AsRoutineGLSLBundle()->code;
+        std::string vertexShader = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->code;
+        std::string pixelShader = routines[Fx::EPartRenderRoutines_k_Pixel].AsRoutineGLSLBundle()->code;
 
         // note: only GLSL routines are supported!
-        auto &instanceLayout = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->attributes;
+        std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->attributes;
 
-        // const numRenderedParticles = () => numParticles() * instanceCount;
+        // const getNumRenderedParticles = () => getNumParticles() * instanceCount;
 
         auto &prerenderUAVs = prerender.resources->uavs;
-        auto uavPrerendReflect = find_if(begin(prerenderUAVs), end(prerenderUAVs), [&](const unique_ptr<Fx::UAVBundleT> &uav)
+        auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
                                             { return uav->name == uavPrerendered(i); });
 
         if (sorting)
         {
-            vector<unique_ptr<Fx::UAVBundleT>> bundles;
-            bundles.push_back(make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
+            std::vector<std::unique_ptr<Fx::UAVBundleT>> bundles;
+            bundles.push_back(std::make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
             bundles.back()->name = uavPrerenderedSorted(i);
 
             createUAVsEx(bundles, capacity, sharedUAVs)[0];
         }
 
         {
-            EMITTER_PASS pass(shared_from_this(), i);
-            pass.m_geometry         = geometry;
-            pass.m_sorting          = sorting;
-            pass.m_prerenderBundle  = bundle;
-            pass.m_stride           = stride;
-            passes.push_back(pass);
+            EMITTER_DESC desc;
+            desc.geometry = geometry;
+            desc.sorting = sorting;
+            desc.stride = stride;
+            desc.instanceCount = instanceCount;
+
+            for (auto& attr : attrs)
+            {
+                desc.instanceLayout.push_back({ attr->size, attr->offset, attr->name });
+            }
+            
+            desc.vertexShader = vertexShader;
+            desc.pixelShader = pixelShader;
+
+            passes.emplace_back(this, i, desc, bundle);
         }
     }
 }

@@ -22,9 +22,9 @@ function transferI32ToU32Heap(module: EmscriptenModule, i32Array: Int32Array): W
 ///////////////////////////////////
 
 import loadBundleWASM from './bundle.cpp';
-import * as Bundle from '@lib/idl/bytecode';
+import * as Bytecode from '@lib/idl/bytecode';
 
-type IBundle = Bundle.IBundle;
+type IBundle = Bytecode.IBundle;
 
 const BundleModule = await loadBundleWASM();
 const WASMBundle = BundleModule.Bundle;
@@ -38,37 +38,37 @@ export function make(name:string, code: Uint8Array): IBundle
     } finally {
         BundleModule._free(mem.heap);
     }  
-    
-    // hack to pack stl vector to js array
-    // todo: remove this hack and leave bundle as cpp only 
-    let gl = bundleWasm.getLayout;  
-    bundleWasm.getLayout = () => {
-        const layout = gl.bind(bundleWasm)();
-        return Array(layout.size()).fill(null).map((v ,i) => layout.get(i));
-    }
 
     return bundleWasm;
 }
 
-interface WASMMemory extends Bundle.IMemory
+interface WASMMemory extends Bytecode.IMemory
 {
     heap: number; // in bytes 
     size: number; // in uint32 (byteSize = 4 x size)
 }
 
 
-export function memoryToU8Array(input: Bundle.IMemory)
+export function memoryToU8Array(input: Bytecode.IMemory)
 {
     const { heap, size } = input as WASMMemory;
     return BundleModule.HEAPU8.subarray(heap, (heap + (size << 2)));
 }
 
 
-export function memoryToI32Array(input: Bundle.IMemory): Int32Array
+export function memoryToI32Array(input: Bytecode.IMemory): Int32Array
 {
     const { heap, size } = <WASMMemory>input;
     console.assert(heap %4 == 0, "unsupported heap address!");
     return BundleModule.HEAP32.subarray(heap >> 2, ((heap >> 2) + size));
+}
+
+
+export function memoryToF32Array(input: Bytecode.IMemory): Float32Array
+{
+    const { heap, size } = <WASMMemory>input;
+    console.assert(heap %4 == 0, "unsupported heap address!");
+    return BundleModule.HEAPF32.subarray(heap >> 2, ((heap >> 2) + size));
 }
 
 
@@ -78,7 +78,7 @@ export function createUAV(name: string, elementSize: number, length: number, reg
 }
 
 
-export function destroyUAV(uav: Bundle.IUAV)
+export function destroyUAV(uav: Bytecode.IUAV)
 {
     WASMBundle.destroyUAV(uav);
 }

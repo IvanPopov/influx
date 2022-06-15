@@ -1,6 +1,6 @@
 /// <reference path="@types/emscripten" />
 
-// import * as Bundle from "@lib/idl/bytecode";
+import { IEmitter } from '../idl/IEmitter';
 
 interface WASMMemory
 {
@@ -8,16 +8,10 @@ interface WASMMemory
     size: number;
 }
 
-interface IPipeline {
-    
-}
-
-interface WASMPipelineFactory {
-    new(data: WASMMemory): IPipeline;
-}
 
 interface Module extends EmscriptenModule {
-    Pipeline: WASMPipelineFactory;
+    loadFromBundle(data: WASMMemory): IEmitter;
+    destroyEmitter(rawptr: IEmitter): void;
 }
 
 export interface IEMScriptModule {

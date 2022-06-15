@@ -1,4 +1,4 @@
-import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { IMemory } from '@lib/idl/bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { Vector3 } from 'three';
 
@@ -27,7 +27,7 @@ export interface IEmitterPassDesc
 
 export interface IEmitterPass {
     getDesc(): IEmitterPassDesc;
-    getData(): Uint8Array;
+    getData(): IMemory;
     getNumRenderedParticles(): number; // num alive particles multipled by the prerendered instance count
     sort(pos: Vector3): void;
     prerender(uniforms: Uniforms);
@@ -40,11 +40,9 @@ export interface IEmitter {
     getCapacity(): number;
     getPassCount(): number;
     getPass(i: number): IEmitterPass;
-
     getNumParticles(): number;
 
     // public:
-    prerender(uniforms: Uniforms): void;
     tick(uniforms: Uniforms): void;
     reset(): void;
     dump(): void;

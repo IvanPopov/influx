@@ -9,9 +9,22 @@ import sizeof from "@lib/fx/bytecode/sizeof";
 
 let { EChunkType, EOperation } = Bundle;
 
-export interface TSBundleMemory extends Bundle.IMemory
+interface TSBundleMemory extends Bundle.IMemory
 {
     buffer: Int32Array;
+}
+
+export function asBundleMemory(data: Uint8Array | Uint32Array | Int32Array | Float32Array): TSBundleMemory
+{
+    const buffer = data instanceof Int32Array 
+        ? data 
+        : new Int32Array(data.buffer, data.byteOffset, data.byteLength >> 2);
+    return { buffer  };
+}
+
+export function fromBundleMemory(mem: Bundle.IMemory)
+{
+    return (<TSBundleMemory>mem).buffer;
 }
 
 export class TSBundle implements Bundle.IBundle
@@ -266,7 +279,7 @@ export class TSBundle implements Bundle.IBundle
             i5 += InstructionList.STRIDE;
         }
 
-        return { buffer: TSBundle.iregs, spec: 'js' };
+        return asBundleMemory(TSBundle.iregs);
     }
 
 
@@ -321,7 +334,7 @@ export class TSBundle implements Bundle.IBundle
     }
 
     getInput(slot: number): TSBundleMemory {
-        return { buffer: this.inputs[slot], spec: 'js' };
+        return asBundleMemory(this.inputs[slot]);
     }
 
 
@@ -370,8 +383,8 @@ export class TSBundle implements Bundle.IBundle
     
         const index = Bytecode.UAV0_REGISTER + register;
     
-        const memory = <TSBundleMemory>{ buffer: new Int32Array((size + 3) >> 2), spec: 'js' };
-        const data = <TSBundleMemory>{ buffer: memory.buffer.subarray(counterSize >> 2), spec: 'js' };
+        const memory = asBundleMemory(new Int32Array((size + 3) >> 2));
+        const data = asBundleMemory(memory.buffer.subarray(counterSize >> 2));
         
         const counter = memory.buffer.subarray(0, 1);
     

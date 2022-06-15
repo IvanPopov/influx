@@ -12,10 +12,8 @@
 #include "../../../../idl/bytecode/EOperations.ts"
 
 using namespace emscripten; 
-using namespace std;
 
-
-void decodeChunks(uint8_t* data, uint32_t byteLength, map<int, u32_array_t>& chunks) 
+void decodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, u32_array_t>& chunks) 
 {
     int type = *((uint32_t*)data);
     uint32_t contentByteLength = *((uint32_t*)(data + 4)) << 2;
@@ -29,24 +27,24 @@ void decodeChunks(uint8_t* data, uint32_t byteLength, map<int, u32_array_t>& chu
     }
 }
 
-void decodeLayoutChunk(uint8_t* layoutChunk, vector<BUNDLE_CONSTANT>& layout) {
+void decodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layout) {
     uint32_t count = *((uint32_t*)layoutChunk);
     layoutChunk += 4;
 
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t nameLength = *((uint32_t*)layoutChunk);
         layoutChunk += 4;
-        string name((const char*)layoutChunk, nameLength);
+        std::string name((const char*)layoutChunk, nameLength);
         layoutChunk += nameLength;
 
         uint32_t typeLength = *((uint32_t*)layoutChunk);
         layoutChunk += 4;
-        string type((const char*)layoutChunk, typeLength);
+        std::string type((const char*)layoutChunk, typeLength);
         layoutChunk += typeLength;
 
         uint32_t semanticLength = *((uint32_t*)layoutChunk);
         layoutChunk += 4;
-        string semantic((const char*)layoutChunk, semanticLength);
+        std::string semantic((const char*)layoutChunk, semanticLength);
         layoutChunk += semanticLength;
 
         uint32_t offset = *((uint32_t*)layoutChunk);
@@ -58,10 +56,10 @@ void decodeLayoutChunk(uint8_t* layoutChunk, vector<BUNDLE_CONSTANT>& layout) {
     }
 } 
 
-static vector<uint32_t> regs(512 * 4 * 4, 0);
+static std::vector<uint32_t> regs(512 * 4 * 4, 0);
 
 
-BUNDLE::BUNDLE(string debugName, u32_array_t data): m_debugName(debugName)
+BUNDLE::BUNDLE(std::string debugName, u32_array_t data): m_debugName(debugName)
 {
     load(data);
 }
@@ -149,10 +147,10 @@ u32_array_t BUNDLE::play()
                 break;
             
             case EOperation::k_I32Min:
-                iregs[a] = min(iregs[b], iregs[c]);
+                iregs[a] = std::min(iregs[b], iregs[c]);
                 break;
             case EOperation::k_I32Max:
-                iregs[a] = max(iregs[b], iregs[c]);
+                iregs[a] = std::max(iregs[b], iregs[c]);
                 break;
 
             case EOperation::k_F32Add:
@@ -220,33 +218,33 @@ u32_array_t BUNDLE::play()
 
             case EOperation::k_F32Frac:
                 // same as frac() in HLSL
-                fregs[a] = fregs[b] - floor(fregs[b]);
+                fregs[a] = fregs[b] - std::floor(fregs[b]);
                 break;
             case EOperation::k_F32Floor:
-                fregs[a] = floor(fregs[b]);
+                fregs[a] = std::floor(fregs[b]);
                 break;
             case EOperation::k_F32Ceil:
-                fregs[a] = ceil(fregs[b]);
+                fregs[a] = std::ceil(fregs[b]);
                 break;
 
             case EOperation::k_F32Sin:
-                fregs[a] = sin(fregs[b]);
+                fregs[a] = std::sin(fregs[b]);
                 break;
             case EOperation::k_F32Cos:
-                fregs[a] = cos(fregs[b]);
+                fregs[a] = std::cos(fregs[b]);
                 break;
 
             case EOperation::k_F32Abs:
-                fregs[a] = abs(fregs[b]);
+                fregs[a] = std::abs(fregs[b]);
                 break;
             case EOperation::k_F32Sqrt:
-                fregs[a] = sqrt(fregs[b]);
+                fregs[a] = std::sqrt(fregs[b]);
                 break;
             case EOperation::k_F32Min:
-                fregs[a] = min(fregs[b], fregs[c]);
+                fregs[a] = std::min(fregs[b], fregs[c]);
                 break;
             case EOperation::k_F32Max:
-                fregs[a] = max(fregs[b], fregs[c]);
+                fregs[a] = std::max(fregs[b], fregs[c]);
                 break;
 
             //
@@ -286,7 +284,7 @@ u32_array_t BUNDLE::play()
                 }
                 break;
             default:
-                cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << endl;
+                std::cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << std::endl;
         }
         i5 += STRIDE;
     }
@@ -295,15 +293,29 @@ u32_array_t BUNDLE::play()
 }
 
 
+// template <typename T>
+// std::vector<T> vecFromJSArray(const emscripten::val &v)
+// {
+//     std::vector<T> rv;
+
+//     const auto l = v["length"].as<unsigned>();
+//     rv.resize(l);
+
+//     emscripten::val memoryView{ emscripten::typed_memory_view(l, rv.data()) };
+//     memoryView.call<void>("set", v);
+
+//     return rv;
+// }  
+
 void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads) 
 {
     const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
     const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
 
-    static vector<int> Gid  (3, 0);     // uint3 Gid: SV_GroupID    
-    static vector<int> Gi   (1, 0);      // uint GI: SV_GroupIndex
-    static vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
-    static vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
+    static std::vector<int> Gid  (3, 0);     // uint3 Gid: SV_GroupID    
+    static std::vector<int> Gi   (1, 0);      // uint GI: SV_GroupIndex
+    static std::vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
+    static std::vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
 
     // TODO: get order from bundle
     const auto SV_GroupID = INPUT0_REGISTER + 0;
@@ -355,7 +367,7 @@ u32_array_t BUNDLE::getInput(int slot)
     return m_inputs[slot];
 }
 
-bool BUNDLE::setConstant(string name, float value) {
+bool BUNDLE::setConstant(std::string name, float value) {
     auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
     const auto& constants = m_inputs[CBUFFER0_REGISTER];
 
@@ -374,7 +386,7 @@ bool BUNDLE::setConstant(string name, float value) {
     return true;
 }
 
-const vector<BUNDLE_CONSTANT>& BUNDLE::getLayout() 
+const std::vector<BUNDLE_CONSTANT>& BUNDLE::getLayout() const
 {
     return m_layout;
 }
@@ -384,7 +396,7 @@ void BUNDLE::resetRegisters()
     memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
 }
 
-BUNDLE_UAV BUNDLE::createUAV(string name, uint32_t elementSize, uint32_t length, uint32_t reg)
+BUNDLE_UAV BUNDLE::createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {
     uint32_t counterSize = 4;                           // 4 bytes
     uint32_t size = counterSize + length * elementSize; // in bytes
@@ -398,6 +410,8 @@ BUNDLE_UAV BUNDLE::createUAV(string name, uint32_t elementSize, uint32_t length,
     *((uint32_t*)counter.ptr) = 0;
     //memset((void*)memory.ptr, 0, size);
 
+    std::cout << "UAV '" << name << "' of " << (n * 4) << " bytes has been created." << std::endl;
+
     return { name, elementSize, length, reg, data, memory, index };
 }
 
@@ -409,7 +423,7 @@ void BUNDLE::destroyUAV(BUNDLE_UAV uav)
 
 void BUNDLE::load(u32_array_t data)
 {
-    map<int, u32_array_t> chunks;
+    std::map<int, u32_array_t> chunks;
     
     decodeChunks((uint8_t*)data.ptr, /*byteLength (!)*/data.size << 2, chunks);
 
@@ -453,8 +467,11 @@ EMSCRIPTEN_BINDINGS(bundle)
         .field("data", &BUNDLE_UAV::data)
         .field("buffer", &BUNDLE_UAV::buffer)
         .field("index", &BUNDLE_UAV::index);
+
+    register_vector<BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
+
     class_<BUNDLE>("Bundle")
-        .constructor<string, u32_array_t>()
+        .constructor<std::string, u32_array_t>()
         // .function("play", optional_override([](BUNDLE& self) {
         //     u32_array_t result = self.BUNDLE::play();
         //     return emscripten::val(emscripten::typed_memory_view(result.size * 4, (char*)result.ptr));
@@ -464,10 +481,11 @@ EMSCRIPTEN_BINDINGS(bundle)
         .function("getInput", &BUNDLE::getInput)
         .function("setConstant", &BUNDLE::setConstant)
         .function("setInput", &BUNDLE::setInput)
-        .function("getLayout", &BUNDLE::getLayout)
+        // .function("getLayout", &BUNDLE::getLayout)
+        .function("getLayout", optional_override([](BUNDLE& self) {
+            return emscripten::val::array(self.BUNDLE::getLayout());
+          }))
         .class_function("createUAV", &BUNDLE::createUAV)
         .class_function("destroyUAV", &BUNDLE::destroyUAV)
         .class_function("resetRegisters", &BUNDLE::resetRegisters);
-
-    register_vector<BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
 }

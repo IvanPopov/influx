@@ -25,9 +25,9 @@ export interface Constant
 
 type error = 'error';
 
+// abstract interface represents arbitrary memory region based on chosen VM backend
 export interface IMemory
 {
-    spec?: 'wasm' | 'js';
     [index: number]: error;
 }
 

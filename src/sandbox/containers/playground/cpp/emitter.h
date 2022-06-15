@@ -13,45 +13,66 @@
 #include "lib/fx/bytecode/VM/cpp/bundle_uav.h"
 #include "lib/fx/bytecode/VM/cpp/bundle.h"
 
-#include "timeline.h"
+#include "uniforms.h"
 #include "bytecode_bundle.h"
 
 struct EMITTER;
 struct EMITTER_PASS;
 
-struct EMITTER_PASS
+struct SHADER_ATTR
 {
-    EMITTER_PASS (const std::shared_ptr<EMITTER>& parent, uint32_t id);
+    uint32_t size;
+    uint32_t offset;
+    std::string name;
+};
 
-    std::weak_ptr<EMITTER> m_parent;
+struct EMITTER_DESC
+{
+    uint32_t stride;                             // number of float elements in the prerendered particle
+    std::string geometry;
+    bool sorting;
+    uint32_t instanceCount;                     // number of instances prerendered per one simulated particle
+    
+    // GLSL shader's sources
+    std::string vertexShader;
+    std::string pixelShader;
+    std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection                    
+};
+
+class EMITTER_PASS
+{
+public:
+    EMITTER_PASS (
+        const EMITTER* pParent, 
+        uint32_t id, 
+        const EMITTER_DESC& desc,
+        const BYTECODE_BUNDLE& prerenderBundle
+    );
+
+    uint32_t     getNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
+    void         sort(glm::vec3 pos);
+    void         dump() const;
+    void         prerender(const UNIFORMS& uniforms);
+    u32_array_t  getData() const;
+    const EMITTER_DESC& getDesc() const { return m_desc; }
+
+private:
+    const EMITTER* m_parent;
     uint32_t m_id;
 
-    std::string     m_geometry;
-    u32_array_t     m_data;
-    bool            m_sorting;
+    EMITTER_DESC m_desc;
     BYTECODE_BUNDLE m_prerenderBundle;
-    uint32_t        m_stride;           // number of float elements in the prerendered particle (src)
-    uint32_t        m_instanceCount;
 
-    // GLSL shader's sources
-    // std::vector<Fx::GLSLAttributeT> instanceLayout;
-    // std::string vertexShader;
-    // std::string pixelShader;
-
+    // parent shortcuts
     BUNDLE_UAV* uavSorted();
     BUNDLE_UAV* uavNonSorted();
     const BUNDLE_UAV* uavSorted() const;
     const BUNDLE_UAV* uavNonSorted() const;
-    
     const EMITTER& parent() const;
-
-    uint32_t numRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
-    void     sort(glm::vec3 pos);
-    void     dump() const;
 };
 
 
-class EMITTER : public std::enable_shared_from_this<EMITTER>
+class EMITTER
 {
     friend class EMITTER_PASS;
 private:
@@ -82,20 +103,31 @@ private:
     const BUNDLE_UAV* uavStates() const;
     const BUNDLE_UAV* uavInitArguments() const;
 
+    void emit(const UNIFORMS& uniforms);
+    void update(const UNIFORMS& uniforms);
+    void prerender(const UNIFORMS& uniforms);
+
     void load(const Fx::BundleT& fx);
 public:
     EMITTER(const Fx::BundleT&);
 
-    uint32_t numParticles() const;
+    std::string     getName() const { return m_name; }
+    uint32_t        getCapacity() const { return m_capacity; }
+    uint32_t        getPassCount() const { return m_passes.size(); }
+    EMITTER_PASS*   getPass(uint32_t i) { return &(m_passes[i]); }
+    uint32_t        getNumParticles() const;
 
+    void tick(const UNIFORMS& uniforms);
     void reset();
-    void emit(const TIMELINE& timeline);
-    void update(const TIMELINE& timeline);
-    void prerender(const TIMELINE& timeline);
-    void destroy();
     void dump();
+    void destroy();
 
-    // test
-    std::string name() const { return m_name; }
+    void test(const UNIFORMS& uniforms)
+    {
+        for (auto const& [key, val] : uniforms)
+        {
+            std::cout << key << " - " << val << std::endl;
+        }
+    }
 };
 

@@ -62,7 +62,7 @@ public:
     void setInput(int slot, u32_array_t input);
     u32_array_t getInput(int slot);
     bool setConstant(std::string name, float value);
-    const std::vector<BUNDLE_CONSTANT>& getLayout();
+    const std::vector<BUNDLE_CONSTANT>& getLayout() const;
 
     static void resetRegisters();
     static BUNDLE_UAV createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
