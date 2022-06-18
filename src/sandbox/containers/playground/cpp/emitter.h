@@ -9,7 +9,7 @@
 #include <glm/vec3.hpp> 
 
 #include "lib/idl/bundles/FxBundle_generated.h"
-#include "lib/fx/bytecode/VM/cpp/u32_array.h"
+#include "lib/fx/bytecode/VM/cpp/memory_view.h"
 #include "lib/fx/bytecode/VM/cpp/bundle_uav.h"
 #include "lib/fx/bytecode/VM/cpp/bundle.h"
 
@@ -42,6 +42,8 @@ struct EMITTER_DESC
 class EMITTER_PASS
 {
 public:
+    EMITTER_PASS(const EMITTER* pParent, uint32_t id): m_parent(pParent), m_id(id) {}
+
     EMITTER_PASS (
         const EMITTER* pParent, 
         uint32_t id, 
@@ -53,7 +55,7 @@ public:
     void         sort(glm::vec3 pos);
     void         dump() const;
     void         prerender(const UNIFORMS& uniforms);
-    u32_array_t  getData() const;
+    memory_view  getData() const;
     const EMITTER_DESC& getDesc() const { return m_desc; }
 
 private:
@@ -97,11 +99,13 @@ private:
     BUNDLE_UAV* uavParticles();
     BUNDLE_UAV* uavStates();
     BUNDLE_UAV* uavInitArguments();
+    BUNDLE_UAV* uavCreationRequests();
 
     const BUNDLE_UAV* uavDeadIndices() const;
     const BUNDLE_UAV* uavParticles() const;
     const BUNDLE_UAV* uavStates() const;
     const BUNDLE_UAV* uavInitArguments() const;
+    const BUNDLE_UAV* uavCreationRequests() const;
 
     void emit(const UNIFORMS& uniforms);
     void update(const UNIFORMS& uniforms);
@@ -121,13 +125,5 @@ public:
     void reset();
     void dump();
     void destroy();
-
-    void test(const UNIFORMS& uniforms)
-    {
-        for (auto const& [key, val] : uniforms)
-        {
-            std::cout << key << " - " << val << std::endl;
-        }
-    }
 };
 

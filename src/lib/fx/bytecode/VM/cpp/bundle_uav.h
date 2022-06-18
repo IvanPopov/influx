@@ -1,6 +1,8 @@
 #pragma once
+#include <cstdio>
 #include <string>
-#include "u32_array.h"
+#include <algorithm>
+#include "memory_view.h"
 
 struct BUNDLE_UAV
 {
@@ -8,45 +10,56 @@ struct BUNDLE_UAV
     uint32_t elementSize;   // byte length of a single element
     uint32_t length;        // number of elements
     uint32_t reg;           // register specified in the shader
-    u32_array_t data;       // [ elements ]
-    u32_array_t buffer;     // raw data [ counter, ...elements ]
+    memory_view data;       // [ elements ]
+    memory_view buffer;     // raw data [ counter, ...elements ]
     uint32_t index;         // input index for VM         // << todo: remove (index = register + internal_uav_offset)
 
-    u32_array_t readElement(uint32_t i) const
+    memory_view at(uint32_t i) const
     {
-        return { (uintptr_t)((uint8_t*)data.ptr + i * elementSize), (elementSize + 3) >> 2 };
+        return memory_view((uintptr_t)(data.as<uint8_t>() + i * elementSize), (elementSize + 3) >> 2);
+    }
+    
+    //
+    // parity with UAV api at emitter.ts
+    //
+
+    memory_view readElement(uint32_t i) const
+    {
+        return at(i);
     }
 
     uint32_t readCounter() const
     {
-        return *((uint32_t*)buffer.ptr);
+        return *(buffer.as<uint32_t>());
     }
 
     void overwriteCounter(uint32_t value)
     {
-        *((uint32_t*)buffer.ptr) = value;
+        *(buffer.as<uint32_t>()) = value;
+    }
+
+    //
+    // auxilary
+    //
+
+    void minidump() const
+    {
+        std::cout 
+            << "uav " 
+            << name << "[" 
+            << length << "x" << elementSize << ":"
+            << "r" << reg << ":"
+            << "cnt(" << readCounter() << ")" 
+            << "]" << std::endl;
+        
+        uint32_t n = std::min(64u, length * elementSize);
+        char temp[512]{};
+        int l = 0;
+        for (uint32_t i = 0; i < n; ++ i)
+        {
+            l += sprintf(temp + l, "%X ", (uint32_t)(data.as<uint8_t>()[i]));
+        }
+        std::cout << temp << "..." << std::endl;
     }
 };
 
-
-// emscripten::val getBUAVData(const BUNDLE_UAV& self) 
-// {
-//     return emscripten::val(
-//         emscripten::typed_memory_view(self.data.byteLength(), (uint8_t*)self.data.ptr));
-// }
-
-// void setBUAVData(const BUNDLE_UAV& self, emscripten::val val) 
-// {
-//     assert(false);
-// }
-
-// emscripten::val getBUAVBuffer(const BUNDLE_UAV& self) 
-// {
-//     return emscripten::val(
-//         emscripten::typed_memory_view(self.buffer.byteLength(), (uint8_t*)self.buffer.ptr));
-// }
-
-// void setBUAVBuffer(const BUNDLE_UAV& self, emscripten::val val) 
-// {
-//     assert(false);
-// }

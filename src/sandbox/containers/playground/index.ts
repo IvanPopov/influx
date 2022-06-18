@@ -4,6 +4,7 @@ import * as Bytecode from '@lib/idl/bytecode';
 
 import * as WASMPipe from "./cpp/bridge";
 import * as TSPipe from "./ts/bridge";
+import { isDef } from '@lib/common';
 
 let useWASM = true;
 
@@ -12,6 +13,16 @@ function Pipe()
     return useWASM ? WASMPipe : TSPipe;
 }
 
+export function isWASM()
+{
+    return useWASM;
+}
+
+export function switchRuntime(runtime?: 'wasm' | 'js')
+{
+    useWASM = isDef(runtime) ? runtime === 'wasm' : !useWASM;
+    console.log(`%c Emitter runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
+}
 
 export function load(data: Uint8Array | BundleT): IEmitter
 {

@@ -1,5 +1,6 @@
 import { assert } from '@lib/common';
-import { isWASM } from '@lib/fx/bytecode/VM';
+import * as Bytecode from '@lib/fx/bytecode/VM';
+import * as Sandbox from '@sandbox/containers/playground';
 import { IScope } from '@lib/idl/IInstruction';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
@@ -22,7 +23,7 @@ const initialState: IFileState = {
             colorize: true,
             disableOptimizations: true,
             autocompile: false,
-            wasm: isWASM()
+            wasm: Bytecode.isWASM()
         }
     }
 };
@@ -46,7 +47,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slASTDocument: null,
             slDocument: null,
             emitter: null,
-            $revision: 0
+            $revision: 0,
+            wasm: Sandbox.isWASM()
         }),
 
     [evt.SOURCE_FILE_DROP_STATE]: (state, action: ISourceFileDropState) =>
@@ -59,7 +61,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slASTDocument: null,
             slDocument: null,
             emitter: null,
-            $revision: 0
+            $revision: 0,
+            wasm: Sandbox.isWASM()
         }),
 
     [evt.SOURCE_CODE_MODIFED]: (state, action: ISourceCodeModified) =>

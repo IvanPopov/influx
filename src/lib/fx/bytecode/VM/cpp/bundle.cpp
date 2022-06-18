@@ -11,20 +11,20 @@
 #define export // hack to include enum from ts
 #include "../../../../idl/bytecode/EOperations.ts"
 
-using namespace emscripten; 
+namespace em = emscripten;
 
-void decodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, u32_array_t>& chunks) 
+void decodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>& chunks) 
 {
     int type = *((uint32_t*)data);
     uint32_t contentByteLength = *((uint32_t*)(data + 4)) << 2;
     uint8_t* content = data + 8;
 
-    chunks[type] = { (uintptr_t)content, contentByteLength >> 2 };
+    chunks[type] = memory_view((uintptr_t)content, contentByteLength >> 2);
 
     uint8_t* nextChunk = content + contentByteLength;
     if (contentByteLength < byteLength - 8) {
         decodeChunks(nextChunk, byteLength - 8 - contentByteLength, chunks);
-    }
+    } 
 }
 
 void decodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layout) {
@@ -59,17 +59,17 @@ void decodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layou
 static std::vector<uint32_t> regs(512 * 4 * 4, 0);
 
 
-BUNDLE::BUNDLE(std::string debugName, u32_array_t data): m_debugName(debugName)
+BUNDLE::BUNDLE(std::string debugName, memory_view data): m_debugName(debugName)
 {
     load(data);
 }
 
-BUNDLE::BUNDLE() {}
+BUNDLE::BUNDLE() {} 
 
-u32_array_t BUNDLE::play()
+memory_view BUNDLE::play()
 {
     constexpr int STRIDE = 5;
-
+ 
     uint32_t* ilist = m_instructions.data();
     uint32_t length = m_instructions.size();
 
@@ -77,10 +77,11 @@ u32_array_t BUNDLE::play()
     uint32_t* uregs = (uint32_t*)regs.data();
     float_t*  fregs = (float_t*)regs.data();
 
-    u32_array_t* iinput = m_inputs;
+    assert(m_inputs[CBUFFER0_REGISTER].ptr == (uintptr_t)m_constants.data());
+
+    memory_view* iinput = m_inputs;
 
     int i5 = 0;                      // current instruction;
-
     while (i5 < length) {
         auto op = ilist[i5];
         auto a = ilist[i5 + 1];
@@ -88,6 +89,7 @@ u32_array_t BUNDLE::play()
         auto c = ilist[i5 + 3];
         auto d = ilist[i5 + 4];
         
+
         switch (op) {
             // registers
             case EOperation::k_I32SetConst:
@@ -119,9 +121,11 @@ u32_array_t BUNDLE::play()
             // c => source pointer
             // d => offset
             case EOperation::k_I32LoadInputPointer:
+                assert(iinput[a].size > (iregs[c] + d));
                 iregs[b] = iinput[a][iregs[c] + d];
                 break;
             case EOperation::k_I32StoreInputPointer:
+                assert(iinput[a].size > (iregs[b] + d));
                 iinput[a][iregs[b] + d] = iregs[c];
                 break;
 
@@ -289,19 +293,19 @@ u32_array_t BUNDLE::play()
         i5 += STRIDE;
     }
     end:
-    return { (uintptr_t)regs.data(), regs.size() };
+    return memory_view((uintptr_t)regs.data(), regs.size());
 }
 
 
 // template <typename T>
-// std::vector<T> vecFromJSArray(const emscripten::val &v)
+// std::vector<T> vecFromJSArray(const em::val &v)
 // {
 //     std::vector<T> rv;
 
 //     const auto l = v["length"].as<unsigned>();
 //     rv.resize(l);
 
-//     emscripten::val memoryView{ emscripten::typed_memory_view(l, rv.data()) };
+//     em::val memoryView{ em::typed_memory_view(l, rv.data()) };
 //     memoryView.call<void>("set", v);
 
 //     return rv;
@@ -312,8 +316,8 @@ void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
     const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
     const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
 
-    static std::vector<int> Gid  (3, 0);     // uint3 Gid: SV_GroupID    
-    static std::vector<int> Gi   (1, 0);      // uint GI: SV_GroupIndex
+    static std::vector<int> Gid  (3, 0);    // uint3 Gid: SV_GroupID    
+    static std::vector<int> Gi   (1, 0);    // uint GI: SV_GroupIndex
     static std::vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
     static std::vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
 
@@ -323,10 +327,10 @@ void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
     const auto SV_GroupThreadID = INPUT0_REGISTER + 2;
     const auto SV_DispatchThreadID = INPUT0_REGISTER + 3;
 
-    m_inputs[SV_GroupID] = { (uintptr_t)Gid.data(), (uint32_t)Gid.size() } ;
-    m_inputs[SV_GroupIndex] = { (uintptr_t)Gi.data(), (uint32_t)Gi.size() } ;;
-    m_inputs[SV_GroupThreadID] = { (uintptr_t)GTid.data(), (uint32_t)GTid.size() } ;
-    m_inputs[SV_DispatchThreadID] = { (uintptr_t)DTid.data(), (uint32_t)DTid.size() } ;
+    m_inputs[SV_GroupID] = memory_view((uintptr_t)Gid.data(), (uint32_t)Gid.size());
+    m_inputs[SV_GroupIndex] = memory_view((uintptr_t)Gi.data(), (uint32_t)Gi.size());
+    m_inputs[SV_GroupThreadID] = memory_view((uintptr_t)GTid.data(), (uint32_t)GTid.size());
+    m_inputs[SV_DispatchThreadID] = memory_view((uintptr_t)DTid.data(), (uint32_t)DTid.size());
 
     for (int iGroupZ = 0; iGroupZ < nGroupZ; ++iGroupZ) {
         for (int iGroupY = 0; iGroupY < nGroupY; ++iGroupY) {
@@ -358,11 +362,11 @@ void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
 }
     
 
-void BUNDLE::setInput(int slot, u32_array_t input) {
+void BUNDLE::setInput(int slot, memory_view input) {
     m_inputs[slot] = input;
 }
 
-u32_array_t BUNDLE::getInput(int slot)
+memory_view BUNDLE::getInput(int slot) 
 {
     return m_inputs[slot];
 }
@@ -370,19 +374,17 @@ u32_array_t BUNDLE::getInput(int slot)
 bool BUNDLE::setConstant(std::string name, float value) {
     auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
     const auto& constants = m_inputs[CBUFFER0_REGISTER];
-
     if (reflectionIter == m_layout.end()) {
         return false;
     }
 
     const BUNDLE_CONSTANT& reflection = *reflectionIter;
-
     int offset = reflection.offset;
-
-    if (reflection.type == "float") *((float_t*)(((uint8_t*)constants.ptr) + offset)) = (float_t)value;
-    if (reflection.type == "int")   *((int32_t*)(((uint8_t*)constants.ptr) + offset)) = (int32_t)value;
-    if (reflection.type == "uint")  *((uint32_t*)(((uint8_t*)constants.ptr) + offset)) = (uint32_t)value;
-    
+    // only float is supported for now
+    assert(reflection.type == "float");
+    if (reflection.type == "float") *((float_t*)(constants.as<uint8_t>() + offset)) = (float_t)value;
+    if (reflection.type == "int")   *((int32_t*)(constants.as<uint8_t>() + offset)) = (int32_t)value;
+    if (reflection.type == "uint")  *((uint32_t*)(constants.as<uint8_t>() + offset)) = (uint32_t)value;
     return true;
 }
 
@@ -395,86 +397,82 @@ void BUNDLE::resetRegisters()
 {
     memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
 }
-
+ 
 BUNDLE_UAV BUNDLE::createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {
     uint32_t counterSize = 4;                           // 4 bytes
     uint32_t size = counterSize + length * elementSize; // in bytes
     uint32_t index = UAV0_REGISTER + reg;
-    uint32_t n = (size + 3) >> 2;
-
-    u32_array_t memory = { (uintptr_t)(new uint32_t[n]), n };
-    u32_array_t data = { (uintptr_t)(((uint32_t*)memory.ptr) + 1), n - 1 };
-    u32_array_t counter = { memory.ptr, 1 };
-
-    *((uint32_t*)counter.ptr) = 0;
-    //memset((void*)memory.ptr, 0, size);
-
-    std::cout << "UAV '" << name << "' of " << (n * 4) << " bytes has been created." << std::endl;
-
-    return { name, elementSize, length, reg, data, memory, index };
+    
+    assert((size % 4) == 0);
+    uint32_t n = size >> 2;
+    uint32_t* range = new uint32_t[n](); // zeroed
+    memory_view buffer = memory_view((uintptr_t)range, n);
+    memory_view data = memory_view((uintptr_t)(range + 1), n - 1);
+    memory_view counter = memory_view((uintptr_t)range, 1);
+    BUNDLE_UAV uav { name, elementSize, length, reg, data, buffer, index };
+    // uav.minidump();
+    return uav;
 }
 
 void BUNDLE::destroyUAV(BUNDLE_UAV uav)
 {
-    delete[] ((uint32_t*)uav.buffer.ptr);
+    delete[] uav.buffer.as<uint32_t>();
 }
 
-
-void BUNDLE::load(u32_array_t data)
+void BUNDLE::load(memory_view data)
 {
-    std::map<int, u32_array_t> chunks;
+    std::map<int, memory_view> chunks;
     
-    decodeChunks((uint8_t*)data.ptr, /*byteLength (!)*/data.size << 2, chunks);
+    decodeChunks(data.as<uint8_t>(), data.byteLength(), chunks);
 
-    u32_array_t codeChunk = chunks[CHUNK_TYPES::CODE];
-    u32_array_t constChunk = chunks[CHUNK_TYPES::CONSTANTS];
-    u32_array_t layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
+    memory_view codeChunk = chunks[CHUNK_TYPES::CODE];
+    memory_view constChunk = chunks[CHUNK_TYPES::CONSTANTS];
+    memory_view layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
     
-    decodeLayoutChunk((uint8_t*)layoutChunk.ptr, m_layout);
+    decodeLayoutChunk(layoutChunk.as<uint8_t>(), m_layout);
 
-    m_instructions.assign(begin(codeChunk), end(codeChunk));
-
-    m_constants.assign(begin(constChunk), end(constChunk));
-    m_inputs[CBUFFER0_REGISTER] = { (uintptr_t)m_constants.data(), (uint32_t)m_constants.size() };
+    m_instructions.assign(codeChunk.begin<uint32_t>(), codeChunk.end<uint32_t>());
+    m_constants.assign(constChunk.begin<uint32_t>(), constChunk.end<uint32_t>());
+    m_inputs[CBUFFER0_REGISTER] = memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size());
 }
  
 
 EMSCRIPTEN_BINDINGS(bundle)
 { 
-    value_object<u32_array_t>("Memory")
-        .field("heap", &u32_array_t::ptr)
-        .field("size", &u32_array_t::size);
-    value_object<BUNDLE_NUMGROUPS>("Numgroups")
+    em::value_object<memory_view>("Memory")
+        .field("heap", &memory_view::ptr) 
+        .field("size", &memory_view::size);
+    em::value_object<BUNDLE_NUMGROUPS>("Numgroups")
         .field("x", &BUNDLE_NUMGROUPS::x)
         .field("y", &BUNDLE_NUMGROUPS::y)
         .field("z", &BUNDLE_NUMGROUPS::z);
-    value_object<BUNDLE_NUMTHREADS>("Numthreads")
+    em::value_object<BUNDLE_NUMTHREADS>("Numthreads")
         .field("x", &BUNDLE_NUMTHREADS::x)
         .field("y", &BUNDLE_NUMTHREADS::y)
         .field("z", &BUNDLE_NUMTHREADS::z);
-    value_object<BUNDLE_CONSTANT>("Constant")
+    em::value_object<BUNDLE_CONSTANT>("Constant")
         .field("name", &BUNDLE_CONSTANT::name)
         .field("size", &BUNDLE_CONSTANT::size)
-        .field("offset", &BUNDLE_CONSTANT::offset)
+        .field("offset", &BUNDLE_CONSTANT::offset) 
         .field("semantic", &BUNDLE_CONSTANT::semantic)
         .field("type", &BUNDLE_CONSTANT::type);
-    value_object<BUNDLE_UAV>("Uav")
-        .field("name", &BUNDLE_UAV::name)
-        .field("elementSize", &BUNDLE_UAV::elementSize)
+    em::value_object<BUNDLE_UAV>("Uav")
+        .field("name", &BUNDLE_UAV::name) 
+        .field("elementSize", &BUNDLE_UAV::elementSize) 
         .field("length", &BUNDLE_UAV::length)
         .field("register", &BUNDLE_UAV::reg)
         .field("data", &BUNDLE_UAV::data)
         .field("buffer", &BUNDLE_UAV::buffer)
         .field("index", &BUNDLE_UAV::index);
 
-    register_vector<BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
+    em::register_vector<BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
 
-    class_<BUNDLE>("Bundle")
-        .constructor<std::string, u32_array_t>()
+    em::class_<BUNDLE>("Bundle")
+        .constructor<std::string, memory_view>()
         // .function("play", optional_override([](BUNDLE& self) {
-        //     u32_array_t result = self.BUNDLE::play();
-        //     return emscripten::val(emscripten::typed_memory_view(result.size * 4, (char*)result.ptr));
+        //     memory_view result = self.BUNDLE::play();
+        //     return em::val(em::typed_memory_view(result.size * 4, (char*)result.ptr));
         // }))
         .function("play", &BUNDLE::play)
         .function("dispatch", &BUNDLE::dispatch)
@@ -482,10 +480,10 @@ EMSCRIPTEN_BINDINGS(bundle)
         .function("setConstant", &BUNDLE::setConstant)
         .function("setInput", &BUNDLE::setInput)
         // .function("getLayout", &BUNDLE::getLayout)
-        .function("getLayout", optional_override([](BUNDLE& self) {
-            return emscripten::val::array(self.BUNDLE::getLayout());
+        .function("getLayout", em::optional_override([](BUNDLE& self) {
+            return em::val::array(self.BUNDLE::getLayout());
           }))
         .class_function("createUAV", &BUNDLE::createUAV)
-        .class_function("destroyUAV", &BUNDLE::destroyUAV)
+        .class_function("destroyUAV", &BUNDLE::destroyUAV) 
         .class_function("resetRegisters", &BUNDLE::resetRegisters);
 }

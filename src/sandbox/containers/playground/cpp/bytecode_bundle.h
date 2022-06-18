@@ -3,9 +3,11 @@
 #include <vector>
 #include <map>
 
-#include "lib/fx/bytecode/VM/cpp/u32_array.h"
+#include "lib/fx/bytecode/VM/cpp/memory_view.h"
 #include "lib/fx/bytecode/VM/cpp/bundle_uav.h"
 #include "lib/fx/bytecode/VM/cpp/bundle.h"
+
+#include "uniforms.h"
 
 struct BYTECODE_BUNDLE
 {
@@ -14,5 +16,5 @@ struct BYTECODE_BUNDLE
     BUNDLE_NUMTHREADS numthreads;
 
     void run(uint32_t count);
-    void setConstants(std::map<std::string, float> data);
+    void setConstants(const UNIFORMS& uniforms);
 };

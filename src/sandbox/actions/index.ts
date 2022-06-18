@@ -98,7 +98,11 @@ export const sourceCode = {
 export const playground = {
     selectEffect(name: string) {
         return { type: evt.PLAYGROUND_SELECT_EFFECT, payload: { name } };
-    }
+    },
+
+    switchRuntime() {
+        return { type: evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME };
+    },
 };
 
 export const nodes = {

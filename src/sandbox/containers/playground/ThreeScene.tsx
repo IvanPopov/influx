@@ -426,6 +426,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             } else {
                 (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.getNumRenderedParticles();
             }
+            // emitPass.dump();
         }
 
         this.controls.update();

@@ -8,9 +8,9 @@ void BYTECODE_BUNDLE::run(uint32_t count)
     vmBundle.dispatch(numgroups, numthreads);
 }
 
-void BYTECODE_BUNDLE::setConstants(std::map<std::string, float> data)
+void BYTECODE_BUNDLE::setConstants(const UNIFORMS& unis)
 {
-    for (const auto &[name, value] : data)
+    for (const auto &[name, value] : unis)
     {
         vmBundle.setConstant(name, value);
     }

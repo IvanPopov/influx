@@ -313,7 +313,7 @@ const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsCha
         }
         if (action.payload.options.wasm != VM.isWASM())
         {
-            dispatch({ type: evt.PLAYGROUND_SWITCH_RUNTIME });
+            dispatch({ type: evt.PLAYGROUND_SWITCH_VM_RUNTIME });
         }
         done();
     }

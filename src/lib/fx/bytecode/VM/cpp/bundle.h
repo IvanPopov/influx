@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include "u32_array.h"
+#include "memory_view.h"
 #include "bundle_uav.h"
 
 const int CBUFFER0_REGISTER = 0;
@@ -45,22 +45,21 @@ struct BUNDLE_CONSTANT
 
 class BUNDLE
 {
-
 private:
     std::vector<BUNDLE_CONSTANT> m_layout {};
     std::vector<uint32_t> m_instructions {};
     std::vector<uint32_t> m_constants {};
-    u32_array_t m_inputs[64] {};
+    memory_view m_inputs[64] {};
     
     std::string m_debugName = "[noname]";
 public:
-    BUNDLE(std::string debugName, u32_array_t data);
+    BUNDLE(std::string debugName, memory_view data);
     BUNDLE();
 
-    u32_array_t play();
+    memory_view play();
     void dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
-    void setInput(int slot, u32_array_t input);
-    u32_array_t getInput(int slot);
+    void setInput(int slot, memory_view input);
+    memory_view getInput(int slot);
     bool setConstant(std::string name, float value);
     const std::vector<BUNDLE_CONSTANT>& getLayout() const;
 
@@ -68,5 +67,5 @@ public:
     static BUNDLE_UAV createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
     static void destroyUAV(BUNDLE_UAV uav);
 
-    void load(u32_array_t data);
+    void load(memory_view data);
 }; 

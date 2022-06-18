@@ -14,7 +14,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, Grid, Icon, List, Message } from 'semantic-ui-react';
+import { Button, Checkbox, Form, Grid, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 
 

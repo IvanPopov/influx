@@ -28,7 +28,8 @@ export const DEBUGGER_OPTIONS_CHANGED               = 'debugger-options-changed'
 
 export const PLAYGROUND_EMITTER_UPDATE              = 'playground-emitter-update';
 export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
-export const PLAYGROUND_SWITCH_RUNTIME              = 'playground-force-destroy-and-switch-runtime';
+export const PLAYGROUND_SWITCH_EMITTER_RUNTIME      = 'playground-force-destroy-and-switch-emitter-runtime-type';
+export const PLAYGROUND_SWITCH_VM_RUNTIME           = 'playground-force-destroy-and-switch-vm-runtime';
 
 export const GRAPH_LOADED                           = 'graph-loaded';                   // serialized content of graph has been provided
 export const GRAPH_RESET                            = 'graph-reset';                    // nothing 

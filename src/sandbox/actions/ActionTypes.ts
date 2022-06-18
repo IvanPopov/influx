@@ -65,8 +65,9 @@ export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStar
 
 export type IPlaygroundEmitterUpdate = IAction<typeof evt.PLAYGROUND_EMITTER_UPDATE, { emitter: any }>;
 export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { name: string }>;
-export type IPlaygroundSwitchRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_RUNTIME, { }>;
-export type IPlaygroundActions = IPlaygroundEmitterUpdate | IPlaygroundSelectEffect | IPlaygroundSwitchRuntime;
+export type IPlaygroundSwitchVMRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_VM_RUNTIME, { }>;
+export type IPlaygroundSwitchEmitterRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME, { }>;
+export type IPlaygroundActions = IPlaygroundEmitterUpdate | IPlaygroundSelectEffect | IPlaygroundSwitchVMRuntime | IPlaygroundSwitchEmitterRuntime;
 
 //
 // grammar api (simplified)

@@ -7,7 +7,7 @@ import { createTextDocument } from '@lib/fx/TextDocument';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
-import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { mapActions, sourceCode as sourceActions, playground as playgroundActions } from '@sandbox/actions';
 import { ASTView, FileListView, MemoryView, PPView, ProgramView, GraphView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
 import GraphConfigView from '@sandbox/components/GraphConfigView';
@@ -152,7 +152,7 @@ export const styles = {
 
 // todo: remove the inheritance of the type of data
 export interface IAppProps extends IStoreState, Partial<WithStylesProps<typeof styles>>, RouteComponentProps<any> {
-    actions: typeof sourceActions & typeof routerActions;
+    actions: typeof sourceActions & typeof routerActions & typeof playgroundActions;
 }
 
 
@@ -376,8 +376,12 @@ class App extends React.Component<IAppProps> {
         this.props.actions.specifyOptions({ autocompile });
     }
 
-    setRuntime(useWASM: boolean) {
-        this.props.actions.specifyOptions({ wasm: useWASM });
+    switchVMRuntime() {
+        this.props.actions.specifyOptions({ wasm: !this.props.sourceFile.debugger.options.wasm });
+    }
+
+    switchEmitterRuntime() {
+        this.props.actions.switchRuntime();
     }
 
     setBytecodeColorization(colorize: boolean) {
@@ -486,6 +490,7 @@ class App extends React.Component<IAppProps> {
     render() {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
+        const $pg = props.playground;
 
         // console.log(props.match.params);
         // console.log(`/${props.match.params.view}/${props.match.params.fx}`);
@@ -520,7 +525,12 @@ class App extends React.Component<IAppProps> {
                             </Dropdown>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
-                                    Playground
+                                    <Checkbox toggle label='WASM runtime'
+                                        checked={ $pg.wasm }
+                                        onMouseDown={
+                                            e => this.switchEmitterRuntime()
+                                        }
+                                    />
                                 </div>
                             </Menu.Menu>
                         </Menu>
@@ -586,7 +596,7 @@ class App extends React.Component<IAppProps> {
                                                             <Form.Checkbox error label='WASM runtime' size='small'
                                                                 checked={ $debugger.options.wasm }
                                                                 onMouseDown={
-                                                                    e => this.setRuntime(!$debugger.options.wasm)
+                                                                    e => this.switchVMRuntime()
                                                                 } />
                                                         </Form>
                                                     </Dropdown.Item>
@@ -873,4 +883,4 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions }))(withStyles(styles)(App)) as any;
+export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions, ...playgroundActions }))(withStyles(styles)(App)) as any;

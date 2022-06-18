@@ -8,6 +8,7 @@ import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
 import * as pipeline from '@sandbox/containers/playground';
+import * as Sandbox from '@sandbox/containers/playground';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -15,7 +16,12 @@ import { createLogic } from 'redux-logic';
 
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
-    type: [ evt.SOURCE_CODE_ANALYSIS_COMPLETE, evt.PLAYGROUND_SELECT_EFFECT, evt.PLAYGROUND_SWITCH_RUNTIME ],
+    type: [ 
+        evt.SOURCE_CODE_ANALYSIS_COMPLETE, 
+        evt.PLAYGROUND_SELECT_EFFECT, 
+        evt.PLAYGROUND_SWITCH_VM_RUNTIME, 
+        evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME 
+    ],
 
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
@@ -80,10 +86,17 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             await create();
         }
 
-        async function switchRuntime()
+        async function switchVMRuntime()
         {
             await destroy();
             VM.switchRuntime();
+            await create();
+        }
+
+        async function switchEmitterRuntime()
+        {
+            await destroy();
+            Sandbox.switchRuntime();
             await create();
         }
 
@@ -105,9 +118,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
         switch (action.type)
         {
-            case evt.PLAYGROUND_SWITCH_RUNTIME:
-                await switchRuntime();
+            case evt.PLAYGROUND_SWITCH_VM_RUNTIME:
+                await switchVMRuntime();
                 break;
+            case evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME:
+                    await switchEmitterRuntime();
+                    break;
             default:
                 await softReload();
         }

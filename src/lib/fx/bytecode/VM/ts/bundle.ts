@@ -83,16 +83,23 @@ export class TSBundle implements Bundle.IBundle
             switch (op) {
                 // registers
                 case EOperation.k_I32SetConst:
+                    assert(iregs.length > a);
                     iregs[a] = b;
                     break;
                 case EOperation.k_I32LoadRegister:
+                    assert(iregs.length > b);
+                    assert(iregs.length > a);
                     iregs[a] = iregs[b];
                     break;
                 // inputs
                 case EOperation.k_I32LoadInput:
+                    assert(iinput[a].length > c);
+                    assert(iregs.length > b);
                     iregs[b] = iinput[a][c];
                     break;
                 case EOperation.k_I32StoreInput:
+                    assert(iinput[a].length > b);
+                    assert(iregs.length > c);
                     iinput[a][b] = iregs[c];
                     break;
                 // registers pointers    
@@ -100,9 +107,13 @@ export class TSBundle implements Bundle.IBundle
                 // b => source pointer
                 // c => offset
                 case EOperation.k_I32LoadRegistersPointer:
+                    assert(iregs.length > (iregs[b] + c));
+                    assert(iregs.length > a);
                     iregs[a] = iregs[iregs[b] + c];
                     break;
                 case EOperation.k_I32StoreRegisterPointer:
+                    assert(iregs.length > (iregs[a] + c));
+                    assert(iregs.length > b);
                     iregs[iregs[a] + c] = iregs[b];
                     break;
                 // input pointers
@@ -111,9 +122,13 @@ export class TSBundle implements Bundle.IBundle
                 // c => source pointer
                 // d => offset
                 case EOperation.k_I32LoadInputPointer:
+                    assert(iinput[a].length > (iregs[c] + d));
+                    assert(iregs.length > b);
                     iregs[b] = iinput[a][iregs[c] + d];
                     break;
                 case EOperation.k_I32StoreInputPointer:
+                    assert(iinput[a].length > (iregs[b] + d));
+                    assert(iregs.length > c);
                     iinput[a][iregs[b] + d] = iregs[c];
                     break;
 
@@ -383,7 +398,7 @@ export class TSBundle implements Bundle.IBundle
     
         const index = Bytecode.UAV0_REGISTER + register;
     
-        const memory = asBundleMemory(new Int32Array((size + 3) >> 2));
+        const memory = asBundleMemory(new Int32Array(size >> 2));
         const data = asBundleMemory(memory.buffer.subarray(counterSize >> 2));
         
         const counter = memory.buffer.subarray(0, 1);

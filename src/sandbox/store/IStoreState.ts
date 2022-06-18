@@ -60,6 +60,7 @@ export interface IPlaygroundState {
     emitter: IEmitter;      // todo: add type.
     timeline: ITimeline;
     $revision: number;      // number of updates of emitter
+    wasm: boolean;
 }
 
 export interface IParserState extends IParserParams {

@@ -13,7 +13,7 @@ type IUAVResource = ReturnType<typeof VM.createUAV>;
 
 function createUAVEx(bundle: UAVBundleT, capacity: number): IUAVResource {
     const uav = VM.createUAV(<string>bundle.name, bundle.stride, capacity, bundle.slot);
-    console.log(`UAV '${uav.name}' (counter value: ${UAV.readCounter(uav)}, size: ${uav.length}) has been created.`);
+    // console.log(`UAV '${uav.name}' (counter value: ${UAV.readCounter(uav)}, size: ${uav.length}) has been created.`);
     return uav;
 }
 
@@ -71,6 +71,24 @@ const UAV = {
     readElement({ data, elementSize }: Bytecode.IUAV, iElement: number): Uint8Array {
         const u8a = VM.memoryToU8Array(data);
         return new Uint8Array(u8a.buffer, u8a.byteOffset + iElement * elementSize, elementSize);
+    },
+
+    minidump(uav: Bytecode.IUAV): void
+    {
+        const { name, length, elementSize, register, data } = uav;
+        // std::cout << "--------------------------------------" << std::endl;
+        console.log(` uav ${name}[${length}x${elementSize}:r${register}:cnt(${UAV.readCounter(uav)})]`);
+        
+        const u8a = VM.memoryToU8Array(data);
+        let n = Math.min(64, length * elementSize);
+        let sout = '';
+        for (let i = 0; i < n; ++ i)
+        {
+            sout += `${u8a[i].toString(16)} `;
+        }
+        sout += '...';
+        console.log(sout);
+        // std::cout << "--------------------------------------" << std::endl;
     }
 };
 
@@ -93,6 +111,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const uavParticles = uavResources.find(uav => uav.name === FxTranslator.UAV_PARTICLES);
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
+    const uavCreationRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
 
     const passes = renderPasses.map((pass, i): IEmitterPass => {
         const {
@@ -115,7 +134,6 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         // note: only GLSL routines are supported!
         const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
-        console.log(instanceLayout, instanceCount);
         const getNumRenderedParticles = () => getNumParticles() * instanceCount;
 
         // tslint:disable-next-line:max-line-length
