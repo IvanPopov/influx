@@ -197,30 +197,24 @@ void EMITTER_PASS::prerender(const UNIFORMS& uniforms)
 }
 
 
-struct DefaultShaderInput {
-    vec3 pos;
-    vec4 color;
-    float size;
-};
+// struct DefaultShaderInput {
+//     vec3 pos;
+//     vec4 color;
+//     float size;
+// };
 
 void EMITTER_PASS::dump() const 
 {
-    // verbose(`dump ${UAV.readCounter(uav)}/${capacity} prerendred particles: `);
-    // for (let iElement = 0; iElement < UAV.readCounter(uav); ++iElement) {
-    //     verbose(VM.asNativeRaw(UAV.readElement(uav, iElement), instance));
-    // }
-
-    auto npart = getNumRenderedParticles();
- 
+    auto npart = getNumRenderedParticles(); 
     std::cout << "particles rendered total: " << npart << std::endl;
 
     for (int iPart = 0; iPart < npart; ++ iPart)
     {
-        auto& part = uavNonSorted()->data.as<DefaultShaderInput>()[iPart];
-        std::cout << "part(" << iPart 
-        << ") = { size: " << part.size 
-        << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
-        << " } " << std::endl;
+        // auto& part = uavNonSorted()->data.as<DefaultShaderInput>()[iPart];
+        // std::cout << "part(" << iPart 
+        // << ") = { size: " << part.size 
+        // << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
+        // << " } " << std::endl;
     }
 }
 
