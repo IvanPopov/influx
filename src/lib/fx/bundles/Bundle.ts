@@ -94,11 +94,6 @@ function createFxRoutineGLSLBundle(document: ISLDocument, interpolatorsType: str
 }
 
 
-function compareFxTypeLayouts(left: TypeLayoutT, right: TypeLayoutT) {
-    return JSON.stringify(left) == JSON.stringify(right);
-}
-
-
 export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean = PACKED): Promise<Uint8Array | BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
@@ -148,17 +143,4 @@ export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean
     fbb.finish(end);
 
     return fbb.asUint8Array();
-}
-
-// todo: rework comparisson to be more readable and compact
-export function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
-    if (left.capacity != right.capacity) return false;
-    if (left.renderPasses.length != right.renderPasses.length) return false;
-    if (!compareFxTypeLayouts(left.particle, right.particle)) return false;
-    for (let i = 0; i < left.renderPasses.length; ++i) {
-        if (left.renderPasses[i].geometry != right.renderPasses[i].geometry) return false;
-        if (left.renderPasses[i].sorting != right.renderPasses[i].sorting) return false;
-        if (!compareFxTypeLayouts(left.renderPasses[i].instance, right.renderPasses[i].instance)) return false;
-    }
-    return true;
 }

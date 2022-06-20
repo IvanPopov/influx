@@ -1,9 +1,9 @@
 import { fromBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import { Bundle, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
-import { IEmitter } from '@sandbox/containers/playground/idl/IEmitter';
-import { ITSEmitter, loadEmitterFromBundle } from '@sandbox/containers/playground/ts/emitter';
+import { IEmitter } from '@lib/idl/emitter';
 import * as flatbuffers from 'flatbuffers';
+import { copyTsEmitter, createTsEmitter, destroyTsEmitter } from './emitter';
 
 function decodeBundleData(data: Uint8Array | BundleT): BundleT {
     // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
@@ -17,26 +17,22 @@ function decodeBundleData(data: Uint8Array | BundleT): BundleT {
     return <BundleT>data;
 }
 
-let uavResources: Bytecode.IUAV[] = null;
-let fx: BundleT = null;
-
-export function load(data: Uint8Array | BundleT): IEmitter
+export function createEmitter(data: Uint8Array | BundleT): IEmitter
 {
-    uavResources = [];
-    fx = decodeBundleData(data);
-    const emitter = loadEmitterFromBundle(fx);
+    const emitter = createTsEmitter(decodeBundleData(data));
     emitter.reset();
     return emitter;
 }
 
-export function unload(emitter: IEmitter): void
+export function destroyEmitter(emitter: IEmitter): void
 {
-    console.log('unload TS emitter - nothing todo!');
+    destroyTsEmitter(emitter);
 }
 
-export function reskin(emitter: IEmitter, data: Uint8Array | BundleT): IEmitter
+
+export function copyEmitter(dst: IEmitter, src: IEmitter): boolean
 {
-    return emitter ? (<ITSEmitter>emitter).reskin(decodeBundleData(data)) : null;
+    return copyTsEmitter(dst, src);
 }
 
 //

@@ -372,8 +372,11 @@ memory_view BUNDLE::getInput(int slot)
 }
 
 bool BUNDLE::setConstant(std::string name, float value) {
+    // hidden way to set constants memory
+    setInput(CBUFFER0_REGISTER, memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size()));
+
     auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
-    const auto& constants = m_inputs[CBUFFER0_REGISTER];
+    const auto& constants = getInput(CBUFFER0_REGISTER);
     if (reflectionIter == m_layout.end()) {
         return false;
     }
@@ -434,7 +437,6 @@ void BUNDLE::load(memory_view data)
 
     m_instructions.assign(codeChunk.begin<uint32_t>(), codeChunk.end<uint32_t>());
     m_constants.assign(constChunk.begin<uint32_t>(), constChunk.end<uint32_t>());
-    m_inputs[CBUFFER0_REGISTER] = memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size());
 }
  
 

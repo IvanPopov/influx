@@ -1,5 +1,5 @@
 import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
-import { IEmitter } from './idl/IEmitter';
+import { IEmitter } from '../../idl/emitter/IEmitter';
 import * as Bytecode from '@lib/idl/bytecode';
 
 import * as WASMPipe from "./cpp/bridge";
@@ -24,22 +24,21 @@ export function switchRuntime(runtime?: 'wasm' | 'js')
     console.log(`%c Emitter runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
 
-export function load(data: Uint8Array | BundleT): IEmitter
+export function create(data: Uint8Array | BundleT): IEmitter
 {
-   return Pipe().load(data);
+   return Pipe().createEmitter(data);
 }
 
 
-export function unload(emitter: IEmitter): void
+export function destroy(emitter: IEmitter): void
 {
-    Pipe().unload(emitter);
+    Pipe().destroyEmitter(emitter);
 }
 
 
-export function reskin(emitter: IEmitter, data: Uint8Array | BundleT): IEmitter
-{    
-    console.assert(!useWASM, "reskin is unsupported under wasm pipeline");
-    return TSPipe.reskin(emitter, data);
+export function copy(dst: IEmitter, src: IEmitter): boolean
+{
+    return Pipe().copyEmitter(dst, src);
 }
 
 //

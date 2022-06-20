@@ -1,6 +1,6 @@
 /// <reference path="@types/emscripten" />
 
-import { IEmitter } from '../idl/IEmitter';
+import { IEmitter } from '../../../idl/emitter/IEmitter';
 
 interface WASMMemory
 {
@@ -10,8 +10,9 @@ interface WASMMemory
 
 
 interface Module extends EmscriptenModule {
-    loadFromBundle(data: WASMMemory): IEmitter;
-    destroyEmitter(rawptr: IEmitter): void;
+    createFromBundle(data: WASMMemory): IEmitter;
+    destroyEmitter(ptr: IEmitter): void;
+    copyEmitter(dst: IEmitter, src: IEmitter): boolean;
 }
 
 export interface IEMScriptModule {

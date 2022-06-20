@@ -308,10 +308,62 @@ void EMITTER::destroy()
     for (auto& uav : m_sharedUAVs)
     {
         BUNDLE::destroyUAV(uav);
-        std::cout << "UAV '" << uav.name << " has been destroyed." << std::endl;
+        // std::cout << "UAV '" << uav.name << " has been destroyed." << std::endl;
     }
     std::cout << "emitter '" << m_name << "' has been dropped." << std::endl;
 }
+
+//
+// hack to allow hot reload for similar emitters
+//
+
+bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs);
+bool compareTypeField(const Fx::TypeFieldT& lhs, const Fx::TypeFieldT& rhs)
+{
+    if (lhs.name != rhs.name || lhs.padding != rhs.padding || lhs.size != rhs.size) 
+        return false;
+    return compareTypeLayout(*lhs.type, *rhs.type);
+}
+
+bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs)
+{
+    if (lhs.name != rhs.name || lhs.length != rhs.length || lhs.size != rhs.size) 
+        return false;
+    for (int i = 0; i < lhs.fields.size(); ++i)
+    {
+        if (!compareTypeField(*lhs.fields[i], *rhs.fields[i]))
+            return false;
+    }
+    return true;
+}
+
+bool EMITTER::copy(const EMITTER& src)
+{
+    if (!(operator == (src))) return false; 
+    for (auto& uav : m_sharedUAVs)
+    {
+        memcpy(uav.buffer.as<void>(), src.uav(uav.name)->buffer.as<void>(), uav.buffer.byteLength());
+    }
+    return true;
+}
+
+bool EMITTER::operator ==(const EMITTER& rhs) const
+{
+    if (m_capacity != rhs.m_capacity ||
+        m_passes.size() != rhs.m_passes.size() ||
+        !compareTypeLayout(m_particle, rhs.m_particle)) return false;
+    for (int i = 0; i < m_passes.size(); ++i) {
+        auto& lp = m_passes[i].getDesc();
+        auto& rp = rhs.m_passes[i].getDesc();
+        if (lp.geometry != rp.geometry || lp.sorting != rp.sorting) return false;
+        if (!compareTypeLayout(lp.m_renderInstance, rp.m_renderInstance)) return false;
+    }
+    return true;
+}
+
+//
+// -- end of hack
+//
 
 // struct Part
 // {
@@ -351,7 +403,7 @@ void EMITTER::load(const Fx::BundleT &fx)
 
     m_name = name;
     m_capacity = capacity;
-    m_particle = *particle;
+    m_particle = Fx::TypeLayoutT(*particle); // create new copy of type layout
     
     auto& sharedUAVs = m_sharedUAVs;
     m_resetBundle = setupFxRoutineBytecodeBundle(
@@ -416,6 +468,7 @@ void EMITTER::load(const Fx::BundleT &fx)
             desc.sorting = sorting;
             desc.stride = stride;
             desc.instanceCount = instanceCount;
+            desc.m_renderInstance = Fx::TypeLayoutT(*instance);
 
             for (auto& attr : attrs)
             {

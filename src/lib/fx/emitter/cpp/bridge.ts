@@ -1,5 +1,5 @@
-import { IEmitter } from '../idl/IEmitter';
-import loadPipelineWASM from './pipeline.cpp';
+import { IEmitter } from '../../../idl/emitter/IEmitter';
+import loadWASM from './pipeline.cpp';
 import * as Bytecode from '@lib/idl/bytecode';
 import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
 
@@ -9,8 +9,8 @@ interface WASMMemory extends Bytecode.IMemory
     size: number; // in uint32 (byteSize = 4 x size)
 }
 
-const PipelineModule = await loadPipelineWASM();
-window['PipelineModule'] = PipelineModule;
+const Module = await loadWASM();
+
 function transferU8ToU32Heap(module: EmscriptenModule, u8Array: Uint8Array): WASMMemory {
     const heap = module._malloc(u8Array.length * u8Array.BYTES_PER_ELEMENT);
     const size = u8Array.length >> 2;
@@ -21,24 +21,24 @@ function transferU8ToU32Heap(module: EmscriptenModule, u8Array: Uint8Array): WAS
 function createFromBundle(content: Uint8Array): IEmitter
 {
     let pipelineWasm = null;
-    let mem = transferU8ToU32Heap(PipelineModule, content);
+    let mem = transferU8ToU32Heap(Module, content);
     try {
-        pipelineWasm = PipelineModule.loadFromBundle(mem);
+        pipelineWasm = Module.createFromBundle(mem);
     } finally {
-        PipelineModule._free(mem.heap);
+        Module._free(mem.heap);
     }  
 
     return pipelineWasm;
 }
 
 
-export function unload(emitter: IEmitter)
+export function destroyEmitter(emitter: IEmitter)
 {
-    PipelineModule.destroyEmitter(emitter);
+    Module.destroyEmitter(emitter);
 }
 
 
-export function load(data: Uint8Array | BundleT): IEmitter
+export function createEmitter(data: Uint8Array | BundleT): IEmitter
 {
     console.assert(data instanceof Uint8Array, "only packed bundle are supported");
     const emitter = createFromBundle(<Uint8Array>data);
@@ -46,10 +46,17 @@ export function load(data: Uint8Array | BundleT): IEmitter
     return emitter;
 }
 
+
+export function copyEmitter(dst: IEmitter, src: IEmitter): boolean
+{
+    return Module.copyEmitter(dst, src);
+}
+
+
 export function memoryToU8Array(input: Bytecode.IMemory)
 {
     const { heap, size } = input as WASMMemory;
-    return PipelineModule.HEAPU8.subarray(heap, (heap + (size << 2)));
+    return Module.HEAPU8.subarray(heap, (heap + (size << 2)));
 }
 
 
@@ -57,7 +64,7 @@ export function memoryToI32Array(input: Bytecode.IMemory): Int32Array
 {
     const { heap, size } = <WASMMemory>input;
     console.assert(heap %4 == 0, "unsupported heap address!");
-    return PipelineModule.HEAP32.subarray(heap >> 2, ((heap >> 2) + size));
+    return Module.HEAP32.subarray(heap >> 2, ((heap >> 2) + size));
 }
 
 
@@ -65,5 +72,5 @@ export function memoryToF32Array(input: Bytecode.IMemory): Float32Array
 {
     const { heap, size } = <WASMMemory>input;
     console.assert(heap %4 == 0, "unsupported heap address!");
-    return PipelineModule.HEAPF32.subarray(heap >> 2, ((heap >> 2) + size));
+    return Module.HEAPF32.subarray(heap >> 2, ((heap >> 2) + size));
 }

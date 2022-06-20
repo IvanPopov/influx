@@ -1,5 +1,5 @@
 import { verbose } from '@lib/common';
-import { Uniforms } from './idl/IEmitter';
+import { Uniforms } from '@lib/idl/emitter';
 
 
 export function make() {

@@ -2,8 +2,8 @@ import { ETechniqueType, IScope } from "@lib/idl/IInstruction";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundActions, IPlaygroundEmitterUpdate, IPlaygroundSwitchEmitterRuntime } from "@sandbox/actions/ActionTypes";
-import * as Sandbox from '@sandbox/containers/playground';
-import * as Timeline from '@sandbox/containers/playground/timelime';
+import * as Emitter from '@lib/fx/emitter';
+import * as Timeline from '@lib/idl/emitter/timelime';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import IStoreState, { IPlaygroundState } from "@sandbox/store/IStoreState";
 
@@ -11,7 +11,7 @@ const initialState: IPlaygroundState = {
     emitter: null,
     timeline: Timeline.make(),
     $revision: 0,
-    wasm: Sandbox.isWASM()
+    wasm: Emitter.isWASM()
 };
 
 

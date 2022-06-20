@@ -14,10 +14,10 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OrbitControls } from '@three-ts/orbit-controls';
 
-import { IEmitter, IEmitterPass } from './idl/IEmitter';
-import { ITimeline } from './timelime';
+import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
+import { ITimeline } from '../../../lib/idl/emitter/timelime';
 
-import * as Pipe from '@sandbox/containers/playground';
+import * as Emitter from '@lib/fx/emitter';
 
 const $vertexShader = `
 precision highp float;
@@ -145,7 +145,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
-        const instanceData = Pipe.memoryToF32Array(pass.getData());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
         const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
         //
@@ -175,13 +175,13 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        verbose('emitter added.');
+        // verbose('emitter added.');
     }
 
 
     addPass(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const instanceData = Pipe.memoryToF32Array(pass.getData());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         if (desc.geometry === EPartFxPassGeometry.k_Line) {
             this.addPassLine(pass);
             return;
@@ -241,7 +241,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     addPassDefaultMat(pass: IEmitterPass) {
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
-        const instanceData = Pipe.memoryToF32Array(pass.getData());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
@@ -494,7 +494,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         this.passes.forEach(pass => {
             this.scene.remove(pass.mesh);
-            verbose('emitter removed.');
+            // verbose('emitter removed.');
         });
 
         if (this.props.emitter) {

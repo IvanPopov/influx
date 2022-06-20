@@ -1,9 +1,9 @@
 import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, RoutineBytecodeBundleT, RoutineGLSLBundleT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
-import {  Uniforms, IEmitter, IEmitterPass } from '@sandbox/containers/playground/idl/IEmitter';
+import {  Uniforms, IEmitter, IEmitterPass } from '@lib/idl/emitter';
 import { Vector3 } from 'three';
 import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
@@ -92,11 +92,6 @@ const UAV = {
     }
 };
 
-export interface ITSEmitter extends IEmitter
-{
-    uavResources: IUAVResource[];
-    reskin(bundle: BundleT): IEmitter;
-}
 
 // tslint:disable-next-line:max-func-body-length
 function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): IEmitter {
@@ -252,14 +247,6 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     }
 
 
-    function destroy() {
-        uavResources.forEach(uav => {
-            VM.destroyUAV(uav);
-            verbose(`UAV '${uav.name}' has been destroyed.`);
-        });
-        verbose(`emitter '${name}' has been dropped.`);
-    }
-
     function emit(uniforms: Uniforms) {
         initBundle.setConstants(uniforms);
         initBundle.run(VM.memoryToI32Array(uavInitArguments.data)[0]);
@@ -303,29 +290,53 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         reset,
         tick,
         
-        dump,
-        destroy
+        dump
     };
 }
 
+type TSEmitter = ReturnType<typeof createTsEmitter>;
 
-export function loadEmitterFromBundle(bundle: BundleT): ITSEmitter
-{
-    let tsEmitter: ITSEmitter = null;
-    function reskin(bundleNext: BundleT): ITSEmitter
-    {
-        if (FxBundle.comparePartFxBundles(bundleNext.content, bundle.content)) 
-        {
-            let { uavResources } = tsEmitter;
-            let reskinned = createEmiterFromBundle(bundleNext, uavResources);
-            return { reskin, uavResources, ...reskinned };
-        }
-        return null;
+function compareFxTypeLayouts(left: TypeLayoutT, right: TypeLayoutT) {
+    return JSON.stringify(left) == JSON.stringify(right);
+}
+
+// todo: rework comparisson to be more readable and compact
+function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
+    if (left.capacity != right.capacity) return false;
+    if (left.renderPasses.length != right.renderPasses.length) return false;
+    if (!compareFxTypeLayouts(left.particle, right.particle)) return false;
+    for (let i = 0; i < left.renderPasses.length; ++i) {
+        if (left.renderPasses[i].geometry != right.renderPasses[i].geometry) return false;
+        if (left.renderPasses[i].sorting != right.renderPasses[i].sorting) return false;
+        if (!compareFxTypeLayouts(left.renderPasses[i].instance, right.renderPasses[i].instance)) return false;
     }
+    return true;
+}
 
+export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean
+{
+    if (comparePartFxBundles((<TSEmitter>dst).bundle.content, (<TSEmitter>src).bundle.content)) 
+    {
+        (<TSEmitter>dst).uavResources.forEach((uav, i) =>
+            VM.memoryToU8Array(uav.buffer).set(VM.memoryToU8Array((<TSEmitter>src).uavResources[i].buffer)));
+        return true;
+    }
+    return false;
+}
+
+export function destroyTsEmitter(emitter: IEmitter): void 
+{
+    let { uavResources } = <TSEmitter>emitter;
+    uavResources.forEach(uav => {
+        VM.destroyUAV(uav);
+        // verbose(`UAV '${uav.name}' has been destroyed.`);
+    });
+    verbose(`emitter '${name}' has been dropped.`);
+}
+
+export function createTsEmitter(bundle: BundleT)
+{
     let uavResources: Bytecode.IUAV[] = [];
     let newly = createEmiterFromBundle(bundle, uavResources);
-    tsEmitter = { reskin, uavResources, ...newly };
-
-    return tsEmitter;
+    return { bundle, uavResources, ...newly };
 }

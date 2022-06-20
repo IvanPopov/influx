@@ -36,7 +36,9 @@ struct EMITTER_DESC
     // GLSL shader's sources
     std::string vertexShader;
     std::string pixelShader;
-    std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection                    
+    std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection            
+
+    Fx::TypeLayoutT m_renderInstance;        
 };
 
 class EMITTER_PASS
@@ -125,5 +127,8 @@ public:
     void reset();
     void dump();
     void destroy();
+    
+    bool copy(const EMITTER& src);
+    bool operator == (const EMITTER& emit) const;
 };
 

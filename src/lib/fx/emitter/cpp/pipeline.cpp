@@ -19,11 +19,10 @@
 #include "uniforms.cpp"
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp"
-
+  
 using namespace glm;
-using namespace std::chrono;
-
-namespace em = emscripten; 
+using namespace std::chrono; 
+namespace em = emscripten;    
 
 int main(void)
 {
@@ -32,7 +31,7 @@ int main(void)
 }
 
  
-EMITTER* loadFromBundle(memory_view data) 
+EMITTER* createFromBundle(memory_view data) 
 { 
     Fx::BundleT bundle;
     const Fx::Bundle *pBundle = Fx::GetBundle(&data[0]);
@@ -45,11 +44,19 @@ EMITTER* loadFromBundle(memory_view data)
 
     return new EMITTER(bundle);  
 }
-
+     
+bool copyEmitter(EMITTER* dst, EMITTER* src)  
+{
+    return dst->copy(*src); 
+}
  
 void destroyEmitter(EMITTER* pEmitter)
 { 
-    delete pEmitter;   
+    if (pEmitter)
+    { 
+        pEmitter->destroy();
+        delete pEmitter;   
+    }
 }
 
 glm::vec3 vec3FromJSObject(const em::val &v)
@@ -59,7 +66,7 @@ glm::vec3 vec3FromJSObject(const em::val &v)
     v3.y = v["y"].as<float>();
     v3.z = v["z"].as<float>();
     return v3;    
-} 
+}   
 
 UNIFORMS uniformsFromJSObject(const em::val &v)
 {
@@ -130,7 +137,8 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("dump", &EMITTER::dump)
          .function("destroy", &EMITTER::destroy);
  
-    em::function("loadFromBundle", &loadFromBundle, em::allow_raw_pointers());
+    em::function("createFromBundle", &createFromBundle, em::allow_raw_pointers());
     em::function("destroyEmitter", &destroyEmitter, em::allow_raw_pointers());
+    em::function("copyEmitter", &copyEmitter, em::allow_raw_pointers());
 }
       

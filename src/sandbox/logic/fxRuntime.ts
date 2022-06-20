@@ -7,8 +7,8 @@ import * as VM from '@lib/fx/bytecode/VM';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
-import * as pipeline from '@sandbox/containers/playground';
-import * as Sandbox from '@sandbox/containers/playground';
+import * as Emitter from '@lib/fx/emitter';
+import { IEmitter } from '@lib/idl/emitter';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
@@ -61,11 +61,10 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
-        async function destroy()
+        async function destroy(emitter: IEmitter)
         {
             if (emitter) {
-                emitter.destroy();
-                emitter = null;
+                Emitter.destroy(emitter);
                 verbose('previous emitter has been dropped.');
             }
         }
@@ -73,47 +72,48 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         async function create()
         {
             const i = list.map(fx => fx.name).indexOf(active);
-            emitter = pipeline.load(await FxBundle.createPartFxBundle(list[i]));
+            const emitter = Emitter.create(await FxBundle.createPartFxBundle(list[i]));
             if (emitter) {
                 timeline.start();
                 verbose('next emitter has been created.');
             }
+            return emitter;
         }
 
         async function forceReload()
         {
-            await destroy();
-            await create();
+            await destroy(emitter);
+            emitter = await create();
         }
 
         async function switchVMRuntime()
         {
-            await destroy();
+            await destroy(emitter);
             VM.switchRuntime();
-            await create();
+            emitter = await create();
         }
 
         async function switchEmitterRuntime()
         {
-            await destroy();
-            Sandbox.switchRuntime();
-            await create();
+            await destroy(emitter);
+            Emitter.switchRuntime();
+            emitter = await create();
         }
 
         async function softReload()
         {
-            const i = list.map(fx => fx.name).indexOf(active);
-            if (active && emitter) {
-                const reskinned = pipeline.reskin(emitter, await FxBundle.createPartFxBundle(list[i]));
-                if (reskinned)
-                {
-                    emitter = reskinned;
-                    // soft reload succeeded
-                    return;
-                }
+            if (!emitter)
+            {
+                await forceReload();
+                return;
             }
-            
-            await forceReload();
+
+            let next = await create();
+            let prev = emitter;
+
+            Emitter.copy(next, prev);
+            await destroy(prev);
+            emitter = next;
         }
 
         switch (action.type)

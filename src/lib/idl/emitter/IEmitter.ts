@@ -41,11 +41,8 @@ export interface IEmitter {
     getPassCount(): number;
     getPass(i: number): IEmitterPass;
     getNumParticles(): number;
-
-    // public:
     tick(uniforms: Uniforms): void;
     reset(): void;
     dump(): void;
-    destroy(): void;
 }
 
