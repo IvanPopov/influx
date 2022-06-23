@@ -1,6 +1,6 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { BaseEmitter } from "./BaseEmitter";
@@ -217,6 +217,11 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitTypeDecl(instr: ITypeDeclInstruction) {
+        this.resolveType(instr.type);
+    }
+
+
     emitExpression(expr: IExprInstruction) {
         if (!expr) {
             return;
@@ -265,6 +270,8 @@ export class CodeEmitter extends BaseEmitter {
                 return this.emitCast(expr as ICastExprInstruction);
             case EInstructionTypes.k_BitwiseExpr:
                 return this.emitBitwise(expr as IBitwiseExprInstruction);
+            case EInstructionTypes.k_PostfixIndexExpr:
+                return this.emitPostfixIndex(expr as IPostfixIndexInstruction);
             default:
                 assert(false, `unsupported instruction found: ${expr.instructionName}`);
         }
@@ -315,6 +322,15 @@ export class CodeEmitter extends BaseEmitter {
     emitPostfixArithmetic(par: IPostfixArithmeticInstruction) {
         this.emitExpression(par.expr);
         this.emitChar(par.operator);
+    }
+
+    emitPostfixIndex(pfidx: IPostfixIndexInstruction)
+    {
+        this.emitExpression(pfidx.element);
+        this.emitChar('[');
+        this.emitNoSpace();
+        this.emitExpression(pfidx.index);
+        this.emitChar(']');
     }
 
     emitExpressionList(list: IExprInstruction[]) {
@@ -482,6 +498,7 @@ export class CodeEmitter extends BaseEmitter {
 
     emitReturnStmt(stmt: IReturnStmtInstruction) {
         this.emitKeyword('return');
+        this.emitSpace();
         this.emitExpression(stmt.expr);
         this.emitChar(';');
     }
@@ -617,6 +634,9 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_Collector:
                 this.emitCollector(instr as IInstructionCollector);
+                break;
+            case EInstructionTypes.k_TypeDecl:
+                this.emitTypeDecl(instr as ITypeDeclInstruction);
                 break;
             default:
                 assert(false, `unsupported instruction found: ${instr.instructionName}`);

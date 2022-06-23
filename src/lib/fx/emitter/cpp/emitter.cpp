@@ -18,6 +18,8 @@
 using namespace glm;
 using namespace std::chrono;
 
+namespace IFX
+{
 
 namespace FxTranslator
 {
@@ -141,8 +143,9 @@ memory_view EMITTER_PASS::getData() const
 }
 
 
-void EMITTER_PASS::sort(vec3 targetPos)
+void EMITTER_PASS::sort(VECTOR3 p)
 {
+    glm::vec3 targetPos(p.x, p.y, p.z);
     assert(m_desc.sorting);
 
     // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
@@ -219,185 +222,17 @@ void EMITTER_PASS::dump() const
 }
 
 
-EMITTER::EMITTER(const Fx::BundleT& bundle)
+EMITTER::EMITTER(void* buf)
 {
-    load(bundle);
-}
+    Fx::BundleT fx;
+    const Fx::Bundle *pBundle = Fx::GetBundle(buf);
+    pBundle->UnPackTo(&fx);
+ 
+    // std::cout << "==========================================" << std::endl;
+    // std::cout << "   bundle name: " << bundle.name << std::endl;
+    // std::cout << "bundle version: " << bundle.signature->version << std::endl;
+    // std::cout << "==========================================" << std::endl;
 
-
-BUNDLE_UAV* EMITTER::uav(const std::string& name)
-{
-    auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
-        [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
-    return it == end(m_sharedUAVs) ? nullptr : &(*it);
-}
-
-
-const BUNDLE_UAV* EMITTER::uav(const std::string& name) const 
-{ 
-    auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
-        [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
-    return it == end(m_sharedUAVs) ? nullptr : &(*it);
-}
-
-
-BUNDLE_UAV* EMITTER::uavDeadIndices() { return uav(FxTranslator::UAV_DEAD_INDICES); }
-BUNDLE_UAV* EMITTER::uavParticles() { return uav(FxTranslator::UAV_PARTICLES); }
-BUNDLE_UAV* EMITTER::uavStates() { return uav(FxTranslator::UAV_STATES); }
-BUNDLE_UAV* EMITTER::uavInitArguments() { return uav(FxTranslator::UAV_SPAWN_DISPATCH_ARGUMENTS); }
-BUNDLE_UAV* EMITTER::uavCreationRequests() { return uav(FxTranslator::UAV_CREATION_REQUESTS); }
-
-const BUNDLE_UAV* EMITTER::uavDeadIndices() const { return uav(FxTranslator::UAV_DEAD_INDICES); }
-const BUNDLE_UAV* EMITTER::uavParticles() const { return uav(FxTranslator::UAV_PARTICLES); }
-const BUNDLE_UAV* EMITTER::uavStates() const { return uav(FxTranslator::UAV_STATES); }
-const BUNDLE_UAV* EMITTER::uavInitArguments() const { return uav(FxTranslator::UAV_SPAWN_DISPATCH_ARGUMENTS); }
-const BUNDLE_UAV* EMITTER::uavCreationRequests() const { return uav(FxTranslator::UAV_CREATION_REQUESTS); }
-
-uint32_t EMITTER::getNumParticles() const
-{
-    return m_capacity - uavDeadIndices()->readCounter();
-}
-
-void EMITTER::reset()
-{
-    assert(m_capacity % m_resetBundle.numthreads.x == 0);
-    // reset all available particles
-    m_resetBundle.run(m_capacity / m_resetBundle.numthreads.x);
-    uavDeadIndices()->overwriteCounter(m_capacity);
-}
-
-
-void EMITTER::emit(const UNIFORMS& uniforms)
-{
-    m_initBundle.setConstants(uniforms);
-    m_initBundle.run(uavInitArguments()->data.as<int>()[0]);
-
-    m_spawnBundle.setConstants(uniforms);
-    m_spawnBundle.run(1);
-}
-
-
-void EMITTER::update(const UNIFORMS& uniforms)
-{
-    assert(m_capacity % m_updateBundle.numthreads.x == 0);
-    m_updateBundle.setConstants(uniforms);
-    m_updateBundle.run(m_capacity / m_updateBundle.numthreads.x);
-}
-
-
-void EMITTER::prerender(const UNIFORMS& uniforms) 
-{
-    for (int i = 0; i < m_passes.size(); ++ i)
-    {
-        m_passes[i].prerender(uniforms);
-    }
-}
-
-
-void EMITTER::tick(const UNIFORMS& uniforms)
-{
-    update(uniforms);
-    emit(uniforms);
-    prerender(uniforms);
-    // dump();
-}
-
-
-void EMITTER::destroy()
-{
-    for (auto& uav : m_sharedUAVs)
-    {
-        BUNDLE::destroyUAV(uav);
-        // std::cout << "UAV '" << uav.name << " has been destroyed." << std::endl;
-    }
-    std::cout << "emitter '" << m_name << "' has been dropped." << std::endl;
-}
-
-//
-// hack to allow hot reload for similar emitters
-//
-
-bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs);
-bool compareTypeField(const Fx::TypeFieldT& lhs, const Fx::TypeFieldT& rhs)
-{
-    if (lhs.name != rhs.name || lhs.padding != rhs.padding || lhs.size != rhs.size) 
-        return false;
-    return compareTypeLayout(*lhs.type, *rhs.type);
-}
-
-bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs)
-{
-    if (lhs.name != rhs.name || lhs.length != rhs.length || lhs.size != rhs.size) 
-        return false;
-    for (int i = 0; i < lhs.fields.size(); ++i)
-    {
-        if (!compareTypeField(*lhs.fields[i], *rhs.fields[i]))
-            return false;
-    }
-    return true;
-}
-
-bool EMITTER::copy(const EMITTER& src)
-{
-    if (!(operator == (src))) return false; 
-    for (auto& uav : m_sharedUAVs)
-    {
-        memcpy(uav.buffer.as<void>(), src.uav(uav.name)->buffer.as<void>(), uav.buffer.byteLength());
-    }
-    return true;
-}
-
-bool EMITTER::operator ==(const EMITTER& rhs) const
-{
-    if (m_capacity != rhs.m_capacity ||
-        m_passes.size() != rhs.m_passes.size() ||
-        !compareTypeLayout(m_particle, rhs.m_particle)) return false;
-    for (int i = 0; i < m_passes.size(); ++i) {
-        auto& lp = m_passes[i].getDesc();
-        auto& rp = rhs.m_passes[i].getDesc();
-        if (lp.geometry != rp.geometry || lp.sorting != rp.sorting) return false;
-        if (!compareTypeLayout(lp.m_renderInstance, rp.m_renderInstance)) return false;
-    }
-    return true;
-}
-
-//
-// -- end of hack
-//
-
-// struct Part
-// {
-// 	vec3 speed;
-// 	vec3 pos;
-// 	float size;
-// 	float timelife;
-// };
-
-void EMITTER::dump()
-{
-    auto npart = getNumParticles();
-    auto partSize = m_particle.size;
-
-    std::cout << "particles total: " << npart << " ( " << uavDeadIndices()->readCounter() / m_capacity << " )" << std::endl;
-
-    for (int iPart = 0; iPart < uavStates()->data.size; ++ iPart)
-    {
-        auto alive = !!uavStates()->data[iPart];
-        if (alive)
-        {
-            // auto& part = uavParticles()->data.as<Part>()[iPart];
-            // std::cout << "part(" << iPart 
-            // << ") = { size: " << part.size 
-            // << ", timelife: " << part.timelife 
-            // << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
-            // << " } " << std::endl;
-        }
-    }
-}
-
-
-void EMITTER::load(const Fx::BundleT &fx)
-{
     auto [name, signature, content] = fx;
     auto [capacity, simulationRoutines, renderPasses, particle] = *content.AsPartBundle();
 
@@ -484,4 +319,177 @@ void EMITTER::load(const Fx::BundleT &fx)
 }
 
 
+EMITTER::~EMITTER()
+{
+    for (auto& uav : m_sharedUAVs)
+    {
+        BUNDLE::destroyUAV(uav);
+        // std::cout << "UAV '" << uav.name << " has been destroyed." << std::endl;
+    }
+    std::cout << "emitter '" << m_name << "' has been dropped." << std::endl;
+}
+
+
+BUNDLE_UAV* EMITTER::uav(const std::string& name)
+{
+    auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
+        [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
+    return it == end(m_sharedUAVs) ? nullptr : &(*it);
+}
+
+
+const BUNDLE_UAV* EMITTER::uav(const std::string& name) const 
+{ 
+    auto it = find_if(begin(m_sharedUAVs), end(m_sharedUAVs), 
+        [&name](const BUNDLE_UAV &uav) { return uav.name == name; });
+    return it == end(m_sharedUAVs) ? nullptr : &(*it);
+}
+
+
+BUNDLE_UAV* EMITTER::uavDeadIndices() { return uav(FxTranslator::UAV_DEAD_INDICES); }
+BUNDLE_UAV* EMITTER::uavParticles() { return uav(FxTranslator::UAV_PARTICLES); }
+BUNDLE_UAV* EMITTER::uavStates() { return uav(FxTranslator::UAV_STATES); }
+BUNDLE_UAV* EMITTER::uavInitArguments() { return uav(FxTranslator::UAV_SPAWN_DISPATCH_ARGUMENTS); }
+BUNDLE_UAV* EMITTER::uavCreationRequests() { return uav(FxTranslator::UAV_CREATION_REQUESTS); }
+
+const BUNDLE_UAV* EMITTER::uavDeadIndices() const { return uav(FxTranslator::UAV_DEAD_INDICES); }
+const BUNDLE_UAV* EMITTER::uavParticles() const { return uav(FxTranslator::UAV_PARTICLES); }
+const BUNDLE_UAV* EMITTER::uavStates() const { return uav(FxTranslator::UAV_STATES); }
+const BUNDLE_UAV* EMITTER::uavInitArguments() const { return uav(FxTranslator::UAV_SPAWN_DISPATCH_ARGUMENTS); }
+const BUNDLE_UAV* EMITTER::uavCreationRequests() const { return uav(FxTranslator::UAV_CREATION_REQUESTS); }
+
+uint32_t EMITTER::getNumParticles() const
+{
+    return m_capacity - uavDeadIndices()->readCounter();
+}
+
+void EMITTER::reset()
+{
+    assert(m_capacity % m_resetBundle.numthreads.x == 0);
+    // reset all available particles
+    m_resetBundle.run(m_capacity / m_resetBundle.numthreads.x);
+    uavDeadIndices()->overwriteCounter(m_capacity);
+}
+
+
+void EMITTER::emit(const UNIFORMS& uniforms)
+{
+    m_initBundle.setConstants(uniforms);
+    m_initBundle.run(uavInitArguments()->data.as<int>()[0]);
+
+    m_spawnBundle.setConstants(uniforms);
+    m_spawnBundle.run(1);
+}
+
+
+void EMITTER::update(const UNIFORMS& uniforms)
+{
+    assert(m_capacity % m_updateBundle.numthreads.x == 0);
+    m_updateBundle.setConstants(uniforms);
+    m_updateBundle.run(m_capacity / m_updateBundle.numthreads.x);
+}
+
+
+void EMITTER::prerender(const UNIFORMS& uniforms) 
+{
+    for (int i = 0; i < m_passes.size(); ++ i)
+    {
+        m_passes[i].prerender(uniforms);
+    }
+}
+
+
+void EMITTER::tick(const UNIFORMS& uniforms)
+{
+    update(uniforms);
+    emit(uniforms);
+    prerender(uniforms);
+    // dump();
+}
+
+
+//
+// hack to allow hot reload for similar emitters
+//
+
+bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs);
+bool compareTypeField(const Fx::TypeFieldT& lhs, const Fx::TypeFieldT& rhs)
+{
+    if (lhs.name != rhs.name || lhs.padding != rhs.padding || lhs.size != rhs.size) 
+        return false;
+    return compareTypeLayout(*lhs.type, *rhs.type);
+}
+
+bool compareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs)
+{
+    if (lhs.name != rhs.name || lhs.length != rhs.length || lhs.size != rhs.size) 
+        return false;
+    for (int i = 0; i < lhs.fields.size(); ++i)
+    {
+        if (!compareTypeField(*lhs.fields[i], *rhs.fields[i]))
+            return false;
+    }
+    return true;
+}
+
+bool EMITTER::copy(const EMITTER& src)
+{
+    if (!(operator == (src))) return false; 
+    for (auto& uav : m_sharedUAVs)
+    {
+        memcpy(uav.buffer.as<void>(), src.uav(uav.name)->buffer.as<void>(), uav.buffer.byteLength());
+    }
+    return true;
+}
+
+bool EMITTER::operator ==(const EMITTER& rhs) const
+{
+    if (m_capacity != rhs.m_capacity ||
+        m_passes.size() != rhs.m_passes.size() ||
+        !compareTypeLayout(m_particle, rhs.m_particle)) return false;
+    for (int i = 0; i < m_passes.size(); ++i) {
+        auto& lp = m_passes[i].getDesc();
+        auto& rp = rhs.m_passes[i].getDesc();
+        if (lp.geometry != rp.geometry || lp.sorting != rp.sorting) return false;
+        if (!compareTypeLayout(lp.m_renderInstance, rp.m_renderInstance)) return false;
+    }
+    return true;
+}
+
+//
+// -- end of hack
+//
+
+// struct Part
+// {
+// 	vec3 speed;
+// 	vec3 pos;
+// 	float size;
+// 	float timelife;
+// };
+
+void EMITTER::dump()
+{
+    auto npart = getNumParticles();
+    auto partSize = m_particle.size;
+
+    std::cout << "particles total: " << npart << " ( " << uavDeadIndices()->readCounter() / m_capacity << " )" << std::endl;
+
+    for (int iPart = 0; iPart < uavStates()->data.size; ++ iPart)
+    {
+        auto alive = !!uavStates()->data[iPart];
+        if (alive)
+        {
+            // auto& part = uavParticles()->data.as<Part>()[iPart];
+            // std::cout << "part(" << iPart 
+            // << ") = { size: " << part.size 
+            // << ", timelife: " << part.timelife 
+            // << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
+            // << " } " << std::endl;
+        }
+    }
+}
+
+
+}
 

@@ -5,6 +5,7 @@ import * as Autotests from '@lib/fx/autotests';
 import * as Bytecode from '@lib/fx/bytecode';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
+import * as Fxmitter from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import { mapActions, sourceCode as sourceActions, playground as playgroundActions } from '@sandbox/actions';
@@ -766,7 +767,7 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={ `/${props.match.params.view}/:fx/${CODE_KEYWORD}` }>
                                             { props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
                                                 <CodeView content={
-                                                    CodeEmitter.translateDocument(getFileState(this.props).slDocument) } />
+                                                    Fxmitter.translateDocument(getFileState(this.props).slDocument) } />
                                             }
                                         </Route>
                                         <Route exact path={ `/${props.match.params.view}/:fx/${RAW_KEYWORD}` }>

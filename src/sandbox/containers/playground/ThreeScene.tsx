@@ -18,35 +18,9 @@ import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 import { ITimeline } from '../../../lib/idl/emitter/timelime';
 
 import * as Emitter from '@lib/fx/emitter';
+import * as GLSL from './shaders';
 
-const $vertexShader = `
-precision highp float;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-
-attribute vec3 position;
-attribute vec4 color;
-attribute float size;
-attribute vec3 offset;
-
-varying vec4 vColor;
-
-void main() {
-    vColor = color;
-    vec4 viewPos = modelViewMatrix * vec4(offset, 1.0) + vec4(position * size, 0.0);
-    gl_Position = projectionMatrix * viewPos;
-}
-`;
-
-const $fragmentShader = `
-precision highp float;
-
-varying vec4 vColor;
-
-void main() {
-    gl_FragColor = vColor;
-}
-`;
+const Shaders = (id: string) => GLSL[id];
 
 interface ITreeSceneProps {
     style: React.CSSProperties;
@@ -135,8 +109,19 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.canvas.addEventListener('mouseout', e => { this.controls.enabled = false; });
         // this.canvas.addEventListener('keydown', e => { if (this.controls.enabled) e.stopPropagation() });
         // this.canvas.addEventListener('keyup', e => { if (this.controls.enabled) e.stopPropagation() });
+        document.addEventListener("visibilitychange", this.handleVisibilityChange, false);
+    }
 
-        // console.log('ThreeScene::componentDidMount()');
+    @autobind
+    handleVisibilityChange() {
+        const timeline = this.props.timeline;
+        if (document["hidden"]) {
+            timeline.pause();
+            verbose('pause timeline');
+        } else {
+            timeline.unpause();
+            verbose('unpause timeline');
+        }
     }
 
     get canvas(): HTMLCanvasElement {
@@ -234,9 +219,66 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        verbose('emitter added.');
-    } 
+        // verbose('emitter added.');
+    }
 
+
+    addPassLWI(pass: IEmitterPass) {
+        const desc = pass.getDesc();
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
+        const geometry = new THREE.InstancedBufferGeometry();
+        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
+
+        // tslint:disable-next-line:max-line-length
+        const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
+
+        //
+        // Geometry
+        //
+
+        geometry.index = instanceGeometry.index;
+        geometry.attributes.position = instanceGeometry.attributes.position;
+        geometry.attributes.normal = instanceGeometry.attributes.normal;
+        geometry.attributes.uv = instanceGeometry.attributes.uv;
+
+        //
+        // Instanced data
+        //
+
+        // instancedBuffer.setDynamic(true);
+        instancedBuffer.setUsage(THREE.DynamicDrawUsage);
+
+        const lwiAttributes = [
+            { name: 'a_worldMat_0', size: 4, offset: 8 },
+            { name: 'a_worldMat_1', size: 4, offset: 12 },
+            { name: 'a_worldMat_2', size: 4, offset: 16 },
+        ];
+
+        lwiAttributes.forEach(attr => {
+            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset);
+            geometry.setAttribute(attr.name, interleavedAttr);
+        });
+
+        geometry.instanceCount = pass.getNumRenderedParticles();
+
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {},
+            vertexShader: Shaders('lwiMatVS'),
+            fragmentShader: Shaders('lwiMatFS'),
+            transparent: true,
+            blending: THREE.NormalBlending,
+            depthTest: false,
+            // TODO: do not use for billboards
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+
+        mesh.name = 'emitter';
+        this.scene.add(mesh);
+        this.passes.push({ mesh, instancedBuffer });
+        // verbose('emitter added.');
+    }
 
     addPassDefaultMat(pass: IEmitterPass) {
         const geometry = new THREE.InstancedBufferGeometry();
@@ -266,14 +308,15 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         geometry.setAttribute('offset', new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0));
         geometry.setAttribute('color', new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3));
         geometry.setAttribute('size', new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7));
+        
         // geometry.maxInstancedCount = pass.length();
         geometry.instanceCount = pass.getNumRenderedParticles();
 
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
-            vertexShader: $vertexShader,
-            fragmentShader: $fragmentShader,
+            vertexShader: Shaders('defMatVS'),
+            fragmentShader: Shaders('defMatFS'),
             transparent: true,
             blending: THREE.NormalBlending,
             depthTest: false
@@ -320,15 +363,16 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         // tslint:disable-next-line:max-func-body-length
         let nPass = emitter.getPassCount();
-        for (let i = 0; i < nPass; ++i)
-        {
+        for (let i = 0; i < nPass; ++i) {
             let pass = emitter.getPass(i);
             let desc = pass.getDesc();
             if (desc.vertexShader && desc.pixelShader) {
                 this.addPass(pass);
-             } else {
-                 this.addPassDefaultMat(pass);
-             }
+            } else if (desc.stride == 8) {
+                this.addPassDefaultMat(pass);
+            } else if (desc.stride == 32) {
+                this.addPassLWI(pass);
+            }
         }
     }
 
@@ -381,6 +425,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.stop();
         window.removeEventListener('resize', this.onWindowResize, false);
         this.mount.removeChild(this.renderer.domElement);
+
+        document.removeEventListener("visibilitychange", this.handleVisibilityChange, false);
     }
 
 
@@ -403,12 +449,12 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
-        
+
         if (!timeline.isStopped()) {
             emitter.tick(timeline.getConstants());
             timeline.tick();
         }
-        
+
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];
             const emitPass = emitter.getPass(iPass);
@@ -455,8 +501,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             const emitter = this.props.emitter;
 
             let nPass = emitter.getPassCount();
-            for (let i = 0; i < nPass; ++ i)
-            {
+            for (let i = 0; i < nPass; ++i) {
                 let pass = emitter.getPass(i);
                 let desc = pass.getDesc();
                 let { mesh } = this.passes[i];
@@ -507,19 +552,19 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         // console.log('ThreeScene::render()');
         return (
             <div
-                style={ this.props.style }
-                ref={ (mount) => { this.mount = mount; } }
+                style={this.props.style}
+                ref={(mount) => { this.mount = mount; }}
             >
                 <Progress
-                    value={ this.state.nParticles }
-                    total={ this.state.emitter.getCapacity() }
+                    value={this.state.nParticles}
+                    total={this.state.emitter.getCapacity()}
                     attached='top'
                     size='medium'
                     indicating
-                    style={ progressStyleFix }
+                    style={progressStyleFix}
                 />
-                <div style={ statsStyleFix }>
-                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: { this.state.nParticles }</span>
+                <div style={statsStyleFix}>
+                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: {this.state.nParticles}</span>
                     <br />
                     <span>simulation: CPU</span>
                 </div>

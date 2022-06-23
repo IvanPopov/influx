@@ -1,12 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-
 #include <vector>
-#include <map>
-#include <chrono>
-
-#include <glm/vec3.hpp> 
+#include <string>
 
 #include "lib/idl/bundles/FxBundle_generated.h"
 #include "lib/fx/bytecode/VM/cpp/memory_view.h"
@@ -15,6 +10,16 @@
 
 #include "uniforms.h"
 #include "bytecode_bundle.h"
+
+namespace IFX
+{
+
+struct VECTOR3
+{
+    float x;
+    float y;
+    float z;
+};
 
 struct EMITTER;
 struct EMITTER_PASS;
@@ -54,7 +59,7 @@ public:
     );
 
     uint32_t     getNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
-    void         sort(glm::vec3 pos);
+    void         sort(VECTOR3 pos);
     void         dump() const;
     void         prerender(const UNIFORMS& uniforms);
     memory_view  getData() const;
@@ -112,10 +117,9 @@ private:
     void emit(const UNIFORMS& uniforms);
     void update(const UNIFORMS& uniforms);
     void prerender(const UNIFORMS& uniforms);
-
-    void load(const Fx::BundleT& fx);
 public:
-    EMITTER(const Fx::BundleT&);
+    EMITTER(void* buf);
+    ~EMITTER();
 
     std::string     getName() const { return m_name; }
     uint32_t        getCapacity() const { return m_capacity; }
@@ -126,9 +130,9 @@ public:
     void tick(const UNIFORMS& uniforms);
     void reset();
     void dump();
-    void destroy();
     
     bool copy(const EMITTER& src);
     bool operator == (const EMITTER& emit) const;
 };
 
+}

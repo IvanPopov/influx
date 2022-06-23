@@ -140,8 +140,12 @@ export namespace type {
                 postfix = `[${vtype.length}]`;
             }
         }
-
-        return `${prefix}${signature(vtype.subType)}${postfix}`;
+        // skip all variable type wrappers
+        // is it safe?
+        let subType = vtype.subType;
+        while (subType.instructionType == EInstructionTypes.k_VariableType)
+            subType = (<IVariableTypeInstruction>subType).subType;
+        return `${prefix}${signature(subType)}${postfix}`;
     }
 
 

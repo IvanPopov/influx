@@ -44,6 +44,7 @@ const fs = {
 async function scan($dir: string, node: IFolder, filters?: string[]) {
     if (!isElectron()) {
         node.files = [
+            'lwi.fx',
             'sphere.fx',
             'part.fx',
             'part.xfx',

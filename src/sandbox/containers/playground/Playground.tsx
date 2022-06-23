@@ -4,6 +4,7 @@
 /* tslint:disable:newline-per-chained-call */
 
 
+import * as FxBundle from '@lib/fx/bundles/Bundle';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
@@ -14,9 +15,8 @@ import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Form, Grid, Icon, List, Message } from 'semantic-ui-react';
+import { Button, Checkbox, Grid, Icon, List, Message } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
-
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -103,7 +103,7 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     @autobind
-    async handleDownloadDataClick() {
+    async handleDownloadDataClick(savePackedData: boolean = true, saveScreenshot: boolean = true) {
         const file = getFileState(this.props);
         const scope = getScope(file);
         const list = filterPartFx(scope);
@@ -113,37 +113,40 @@ class Playground extends React.Component<IPlaygroundProps> {
         const exportName = Path.parse(this.props.sourceFile.uri);
         exportName.ext = "bfx"; // binary fx
 
-        // download packed version
-        // -----------------------------------
+        if (savePackedData)
+        {
+            // download packed version of single (! active only !) emitter
+            // -----------------------------------
 
-        // todo: download collection!
-        // let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.name)));
-        // downloadByteBuffer(data, exportName.basename, 'application/octet-stream');
+            let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.getName())), true) as Uint8Array;
+            downloadByteBuffer(data, exportName.basename, 'application/octet-stream');
 
-        // download unpacked version
-        // -----------------------------------
+            // download unpacked version
+            // -----------------------------------
 
-        // const bundles = new BundleCollectionT(await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx))));
-        // let fbb = new flatbuffers.Builder(1);
-        // let size = bundles.pack(fbb);
+            // const bundles = new BundleCollectionT(await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx))));
+            // let fbb = new flatbuffers.Builder(1);
+            // let size = bundles.pack(fbb);
 
-        // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');
-        
-        // -----------------------------------
+            // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');    
+        }
 
-        // hack to get global webgl/three.js canvas (from ThreeScene.ts)
-        const canvas = document.getElementById('playground-main-canvas') as HTMLCanvasElement;
-        exportName.ext = "jpeg";
-        
-        // const resizedCanvas = document.createElement("canvas") as HTMLCanvasElement;
-        // const resizedContext = resizedCanvas.getContext("2d");
-        
-        // resizedCanvas.height = 512;
-        // resizedCanvas.width = 512;
-        
-        // resizedContext.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
-        // downloadURL(resizedCanvas.toDataURL('image/jpeg'), exportName.basename);
-        downloadURL(canvas.toDataURL('image/jpeg'), exportName.basename);
+        if (saveScreenshot)
+        {
+            // hack to get global webgl/three.js canvas (from ThreeScene.ts)
+            const canvas = document.getElementById('playground-main-canvas') as HTMLCanvasElement;
+            exportName.ext = "jpeg";
+            
+            // const resizedCanvas = document.createElement("canvas") as HTMLCanvasElement;
+            // const resizedContext = resizedCanvas.getContext("2d");
+            
+            // resizedCanvas.height = 512;
+            // resizedCanvas.width = 512;
+            
+            // resizedContext.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
+            // downloadURL(resizedCanvas.toDataURL('image/jpeg'), exportName.basename);
+            downloadURL(canvas.toDataURL('image/jpeg'), exportName.basename);
+        }
     }
 
     pickEffect(active) {
@@ -227,7 +230,13 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     <Button.Group compact >
                                         <Button
                                             icon={<Icon className={'cloud download'} />}
-                                            onClick={this.handleDownloadDataClick}
+                                            // save packed version only
+                                            onClick={this.handleDownloadDataClick.bind(this, true, false)}
+                                        />
+                                        <Button
+                                            icon={<Icon className={'image arrow down'} />}
+                                            // save screenshot only
+                                            onClick={this.handleDownloadDataClick.bind(this, false, true)} 
                                         />
                                     </Button.Group>
                                 </Grid.Column>

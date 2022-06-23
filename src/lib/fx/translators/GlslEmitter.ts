@@ -10,7 +10,8 @@ const GlslTypeNames = {
     'float2': 'vec2',
     'float3': 'vec3',
     'float4': 'vec4',
-    'float4x4': 'mat4'
+    'float4x4': 'mat4',
+    'float3x4': 'mat3x4'
 }
  
 
@@ -58,6 +59,7 @@ export class GlslEmitter extends CodeEmitter {
     protected emitPrologue(def: IFunctionDefInstruction): void {
         this.begin();
         {
+            // this.emitLine(`#version 150`);
             this.emitLine(`precision highp float;`);
             this.emitLine(`precision highp int;`);
         }

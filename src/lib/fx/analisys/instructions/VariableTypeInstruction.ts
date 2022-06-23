@@ -90,7 +90,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return false;
         }
 
-        if ((this.isArray() && !this.isBase()) || this.isUniform()) {
+        if (/*(this.isArray() && !this.isBase()) || */this.isUniform()) {
             return false;
         }
 
@@ -215,7 +215,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         code += this.subType.toCode();
-
         return code;
     }
 

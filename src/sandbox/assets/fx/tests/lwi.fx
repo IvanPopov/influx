@@ -44,14 +44,13 @@ struct Part {
     float timelife;
 };
 
-/* Example of default shader input. */
 // Warning: Do not change layout of this structure!
-struct DefaultShaderInput {
-    //float3 pos : POSITION;
-    float3 pos;
-    float4 color : COLOR0;
-    float  size : SIZE;
+struct LwiInstance {
+    float4 dynData[2]: META;
+    float3x4 worldMatr: TRANSFORM0;
+    float3x4 worldMatrPrev: TRANSFORM1;
 };
+
 
 int Spawn()
 {
@@ -74,19 +73,20 @@ bool update(inout Part part)
     return part.timelife < 1.0f;
 }
 
-void prerender(inout Part part, out DefaultShaderInput input)
+void packLwiTransform(in float3 pos, in float3 speed, in float size, out float3x4 matr)
 {
-    input.pos.xyz = part.pos.xyz;
-    input.size = part.size;
-    input.color = float4(abs(part.speed), 1.0f - part.timelife);
+    matr[0] = float4(size, 0, 0, pos.x);
+    matr[1] = float4(0, size, 0, pos.y);
+    matr[2] = float4(0, 0, size, pos.z);
 }
 
-
-void prerender2(inout Part part, out DefaultShaderInput input)
+void prerender(inout Part part, out LwiInstance input)
 {
-    input.pos.xyz = part.pos.xyz;
-    input.size = part.size;
-    input.color = float4(float3(1.0f, 0.f, 0.f), 1.0f - part.timelife);
+    packLwiTransform(part.pos, part.speed, part.size, input.worldMatr);
+
+    input.worldMatrPrev[0] = input.worldMatr[0];
+    input.worldMatrPrev[1] = input.worldMatr[1];
+    input.worldMatrPrev[2] = input.worldMatr[2];
 }
 
 
@@ -98,19 +98,9 @@ partFx project.awesome {
 
     pass P0 {
         Sorting = TRUE;
+        Geometry = Sphere;
         PrerenderRoutine = compile prerender();
     }
 }
 
 
-partFx some.example {
-    Capacity = 1000;
-    SpawnRoutine = compile Spawn();
-    InitRoutine = compile init();
-    UpdateRoutine = compile update();
-
-    pass P0 {
-        Sorting = TRUE;
-        PrerenderRoutine = compile prerender2();
-    }
-}

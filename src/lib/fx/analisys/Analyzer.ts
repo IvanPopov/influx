@@ -1745,7 +1745,7 @@ export class Analyzer {
 
 
         if (isNull(func)) {
-            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName });
+            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => type.signature(arg.type)) });
             return null;
         }
 
@@ -1803,9 +1803,10 @@ export class Analyzer {
             }
         }
 
-
-        const type = VariableTypeInstruction.wrap(func.def.returnType, scope); // TODO: remove wrap?
-        return new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode, callee })
+        {
+            const type = VariableTypeInstruction.wrap(func.def.returnType, scope); // TODO: remove wrap?
+            return new FunctionCallInstruction({ scope, type, decl: func, args, sourceNode, callee });
+        }
     }
 
 

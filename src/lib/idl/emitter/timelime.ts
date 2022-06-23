@@ -3,9 +3,12 @@ import { Uniforms } from '@lib/idl/emitter';
 
 
 export function make() {
+    let pauseTime: number;
+    let pauseDelay: number;
     let startTime: number;
     let elapsedTimeLevel: number;
     let active: boolean;
+    let paused: boolean;
 
     const constants = {
         elapsedTime: 0,
@@ -14,6 +17,7 @@ export function make() {
 
     function stop() {
         active = false;
+        paused = false;
         verbose('timeline stopped');
     }
 
@@ -21,6 +25,9 @@ export function make() {
         constants.elapsedTime = 0;
         constants.elapsedTimeLevel = 0;
 
+        paused = false;
+        pauseDelay = 0;
+        pauseTime = 0;
         startTime = Date.now();
         elapsedTimeLevel = 0;
         active = true;
@@ -28,11 +35,11 @@ export function make() {
     }
 
     function tick() {
-        if (!active) {
+        if (paused || !active) {
             return;
         }
 
-        const dt = Date.now() - startTime;
+        const dt = Date.now() - startTime - pauseDelay;
         constants.elapsedTime = (dt - elapsedTimeLevel) / 1000;
         constants.elapsedTimeLevel = elapsedTimeLevel / 1000;
         elapsedTimeLevel = dt;
@@ -40,6 +47,24 @@ export function make() {
 
     function isStopped() {
         return !active;
+    }
+
+    function pause()
+    {
+        if (paused || !active)
+            return;
+        
+        paused = true;
+        pauseTime = Date.now();
+    }
+
+    function unpause()
+    {
+        if (!paused || !active)
+            return;
+        
+        pauseDelay += Date.now() - pauseTime;
+        paused = false;
     }
 
     function getConstants(): Uniforms
@@ -52,7 +77,10 @@ export function make() {
         start,
         stop,
         tick,
-        isStopped
+        isStopped,
+
+        pause,
+        unpause
     };
 }
 

@@ -9,9 +9,6 @@
 #include <utility>
 
 #include <emscripten/bind.h>
-#include <glm/glm.hpp>    
-
-#include "lib/idl/bundles/FxBundle_generated.h"
 #include "lib/fx/bytecode/VM/cpp/memory_view.h"
 
 // fixme: hack to emulate unity build       
@@ -20,48 +17,37 @@
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp"
   
-using namespace glm;
-using namespace std::chrono; 
+using namespace glm; 
 namespace em = emscripten;    
 
-int main(void)
+int main(void)  
 {
     std::cout << "Emscriptent \"Pipeline\" module........................[ LOADED ]" << std::endl;
     return 0;
 }
 
  
-EMITTER* createFromBundle(memory_view data) 
+IFX::EMITTER* createFromBundle(memory_view data) 
 { 
-    Fx::BundleT bundle;
-    const Fx::Bundle *pBundle = Fx::GetBundle(&data[0]);
-    pBundle->UnPackTo(&bundle);
- 
-    // std::cout << "==========================================" << std::endl;
-    // std::cout << "   bundle name: " << bundle.name << std::endl;
-    // std::cout << "bundle version: " << bundle.signature->version << std::endl;
-    // std::cout << "==========================================" << std::endl;
-
-    return new EMITTER(bundle);  
+    return new IFX::EMITTER(data.as<void>());     
 }
      
-bool copyEmitter(EMITTER* dst, EMITTER* src)  
+bool copyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)  
 {
     return dst->copy(*src); 
 }
  
-void destroyEmitter(EMITTER* pEmitter)
+void destroyEmitter(IFX::EMITTER* pEmitter)
 { 
     if (pEmitter)
-    { 
-        pEmitter->destroy();
+    {  
         delete pEmitter;   
     }
 }
 
-glm::vec3 vec3FromJSObject(const em::val &v)
+IFX::VECTOR3 vec3FromJSObject(const em::val &v)
 { 
-    glm::vec3 v3;
+    IFX::VECTOR3 v3;
     v3.x = v["x"].as<float>();
     v3.y = v["y"].as<float>();
     v3.z = v["z"].as<float>();
@@ -95,14 +81,14 @@ EMSCRIPTEN_BINDINGS(pipeline)
     // @sandbox/containers/playground/idl/IEmitter.ts
     //
 
-    em::value_object<SHADER_ATTR>("ShaderAttr") 
-        .field("size", &SHADER_ATTR::size)
-        .field("offset", &SHADER_ATTR::offset)
-        .field("name", &SHADER_ATTR::name);  
+    em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
+        .field("size", &IFX::SHADER_ATTR::size)
+        .field("offset", &IFX::SHADER_ATTR::offset)
+        .field("name", &IFX::SHADER_ATTR::name);  
 
-    em::class_<EMITTER_PASS>("EmitterPass")   
-         .function("getData", &EMITTER_PASS::getData)
-         .function("getDesc", em::optional_override([](EMITTER_PASS& self) {
+    em::class_<IFX::EMITTER_PASS>("EmitterPass")   
+         .function("getData", &IFX::EMITTER_PASS::getData)
+         .function("getDesc", em::optional_override([](IFX::EMITTER_PASS& self) {
             auto& desc = self.EMITTER_PASS::getDesc();
             em::val jsDesc = em::val::object();
             jsDesc.set("stride", desc.stride);
@@ -114,28 +100,27 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout));
             return jsDesc; 
           }))
-         .function("getNumRenderedParticles", &EMITTER_PASS::getNumRenderedParticles)
-         .function("sort", em::optional_override([](EMITTER_PASS& self, em::val val) {
+         .function("getNumRenderedParticles", &IFX::EMITTER_PASS::getNumRenderedParticles)
+         .function("sort", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::sort(vec3FromJSObject(val));  
           }))
-         .function("prerender", em::optional_override([](EMITTER_PASS& self, em::val val) {
+         .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::prerender(uniformsFromJSObject(val));
           }))
-         .function("dump", &EMITTER_PASS::dump);
+         .function("dump", &IFX::EMITTER_PASS::dump);
  
-    em::class_<EMITTER>("Emitter") 
-         .function("getName", &EMITTER::getName) 
-         .function("getCapacity", &EMITTER::getCapacity)
-         .function("getPassCount", &EMITTER::getPassCount)
-         .function("getPass", &EMITTER::getPass, em::allow_raw_pointers())
-         .function("getNumParticles", &EMITTER::getNumParticles)  
+    em::class_<IFX::EMITTER>("Emitter") 
+         .function("getName", &IFX::EMITTER::getName) 
+         .function("getCapacity", &IFX::EMITTER::getCapacity)
+         .function("getPassCount", &IFX::EMITTER::getPassCount)
+         .function("getPass", &IFX::EMITTER::getPass, em::allow_raw_pointers())
+         .function("getNumParticles", &IFX::EMITTER::getNumParticles)  
 
-         .function("tick", em::optional_override([](EMITTER& self, em::val val) {
+         .function("tick", em::optional_override([](IFX::EMITTER& self, em::val val) {
             return self.EMITTER::tick(uniformsFromJSObject(val)); 
           }))
-         .function("reset", &EMITTER::reset) 
-         .function("dump", &EMITTER::dump)
-         .function("destroy", &EMITTER::destroy);
+         .function("reset", &IFX::EMITTER::reset) 
+         .function("dump", &IFX::EMITTER::dump);
  
     em::function("createFromBundle", &createFromBundle, em::allow_raw_pointers());
     em::function("destroyEmitter", &destroyEmitter, em::allow_raw_pointers());
