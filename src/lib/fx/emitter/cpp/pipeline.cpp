@@ -17,7 +17,7 @@
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp"
   
-using namespace glm; 
+using namespace glm;  
 namespace em = emscripten;    
 
 int main(void)  

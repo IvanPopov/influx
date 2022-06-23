@@ -59,10 +59,11 @@ int Spawn()
 
 void init(out Part part, int partId)
 {
+    float s = (sin((float)partId) + 1.f) * 0.1;
     part.pos = float3(0.f, float2(0.0).x, 0.0);
-    part.size = 0.1;
+    part.size = s;
     part.timelife = 0.0;
-    part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
+    part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId) * (1.f - s * 2.f);
 }
 
 /** Return false if you want to kill particle. */

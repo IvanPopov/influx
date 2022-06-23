@@ -173,7 +173,7 @@ void EMITTER_PASS::sort(VECTOR3 p)
 
     std::sort(begin(indicies), end(indicies), 
         [](const std::pair<uint32_t, float32_t>& a, const std::pair<uint32_t, float32_t>& b) {
-            return a.second > b.second; // b < a ?
+            return a.second < b.second; 
         });
 
 

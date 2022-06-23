@@ -249,9 +249,14 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         instancedBuffer.setUsage(THREE.DynamicDrawUsage);
 
         const lwiAttributes = [
+            { name: 'a_dynData_0', size: 4, offset: 0 },
+            { name: 'a_dynData_1', size: 4, offset: 4 },
             { name: 'a_worldMat_0', size: 4, offset: 8 },
             { name: 'a_worldMat_1', size: 4, offset: 12 },
             { name: 'a_worldMat_2', size: 4, offset: 16 },
+            { name: 'a_worldMatPrev_0', size: 4, offset: 20 },
+            { name: 'a_worldMatPrev_1', size: 4, offset: 24 },
+            { name: 'a_worldMatPrev_2', size: 4, offset: 28 },
         ];
 
         lwiAttributes.forEach(attr => {

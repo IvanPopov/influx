@@ -9,9 +9,28 @@ attribute vec3 position;
 attribute vec3 normal;
 attribute vec2 uv;
 
+/*
+
+struct LwiInstance {
+    float4 dynData[2]: META;
+    float3x4 worldMatr: TRANSFORM0;
+    float3x4 worldMatrPrev: TRANSFORM1;
+};
+
+webgl doesn't support non-squared matrices or arrays in attributes (!)
+
+*/
+
+attribute vec4 a_dynData_0;
+attribute vec4 a_dynData_1;
+
 attribute vec4 a_worldMat_0;
 attribute vec4 a_worldMat_1;
 attribute vec4 a_worldMat_2;
+
+attribute vec4 a_worldMatPrev_0;
+attribute vec4 a_worldMatPrev_1;
+attribute vec4 a_worldMatPrev_2;
 
 varying vec4 vColor;
 
