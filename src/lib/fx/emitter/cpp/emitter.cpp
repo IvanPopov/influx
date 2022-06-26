@@ -147,6 +147,10 @@ VM::memory_view EMITTER_PASS::GetData() const
     return (!m_desc.sorting ? UavNonSorted() : UavSorted())->data;
 }
 
+VM::memory_view EMITTER_PASS::GetDataUnsorted() const
+{
+   return UavNonSorted()->data;
+}
 
 void EMITTER_PASS::Sort(VECTOR3 p)
 {
