@@ -1,20 +1,19 @@
 
+#include "auxiliary/noise.fx"
+
+
 uniform float elapsedTime: ELAPSED_TIME;
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
 
-float random (float2 uv)
+
+float3 randUnitCircle(uint partId) 
 {
-    return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
+    float2 seed = float2(elapsedTimeLevel, (float)partId * elapsedTime);
+    float alpha = random(seed) * 3.14f * 2.f;
+    float dist = random(seed * 2.f);
+    return float3(sin(alpha), 0.f, cos(alpha)) * dist;
 }
 
-float3 randVUnit (float seed)
-{
-   float3 v;
-   v.x =  random(float2(seed, 0.f)) - 0.5f; 
-   v.y =  random(float2(seed, 1.f)) - 0.5f;
-   v.z =  random(float2(seed, 2.f)) - 0.5f; 
-   return normalize(v);
-}
 
 float deg2rad(float deg) 
 {
@@ -40,7 +39,7 @@ float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
 struct Part {
     float3 speed;
     float3 pos : POSITION;
-    float size;
+    float3 size;
     float timelife;
 };
 
@@ -52,33 +51,47 @@ struct LwiInstance {
 };
 
 
+/////////////////////////////////////////////////////////////////////
+// Spawn Routine
+/////////////////////////////////////////////////////////////////////
 int Spawn()
 {
-    return 50;
+    return 256;
 }
 
-void init(out Part part, int partId)
+float3 sizeFromPos(float3 pos) {
+    return float3(1.f, noise(pos.xz * 1.3f + float2(elapsedTimeLevel * 1.f, 0.f)) / 0.06f, 1.f) * 0.03f;
+}
+
+/////////////////////////////////////////////////////////////////////
+// Init Routine
+/////////////////////////////////////////////////////////////////////
+void Init(inout Part part, uint partId)
 {
-    float s = (sin((float)partId) + 1.f) * 0.1;
-    part.pos = float3(0.f, float2(0.0).x, 0.0);
-    part.size = s;
+    
+    part.pos = randUnitCircle(partId);
+    //float h = random(float2(elapsedTime, (float)partId)) * 20.f;
+    part.size = sizeFromPos(part.pos);
     part.timelife = 0.0;
-    part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId) * (1.f - s * 2.f);
+    part.speed = float3(0.f);
 }
 
-/** Return false if you want to kill particle. */
-bool update(inout Part part)
+/////////////////////////////////////////////////////////////////////
+// Update Routine
+/////////////////////////////////////////////////////////////////////
+bool Update(inout Part part)
 {
-    part.pos = part.speed * part.timelife * 3.0f;
+    //part.pos = part.pos + part.speed * elapsedTime;
+    part.size = sizeFromPos(part.pos);
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     return part.timelife < 1.0f;
 }
 
-void packLwiTransform(in float3 pos, in float3 speed, in float size, out float3x4 matr)
+void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3x4 matr)
 {
-    matr[0] = float4(size, 0, 0, pos.x);
-    matr[1] = float4(0, size, 0, pos.y);
-    matr[2] = float4(0, 0, size, pos.z);
+    matr[0] = float4(size.x, 0, 0, pos.x);
+    matr[1] = float4(0, size.y, 0, pos.y);
+    matr[2] = float4(0, 0, size.z, pos.z);
 }
 
 void prerender(inout Part part, out LwiInstance input)
@@ -92,14 +105,14 @@ void prerender(inout Part part, out LwiInstance input)
 
 
 partFx project.awesome {
-    Capacity = 1000;
+    Capacity = 4096;
     SpawnRoutine = compile Spawn();
-    InitRoutine = compile init();
-    UpdateRoutine = compile update();
+    InitRoutine = compile Init();
+    UpdateRoutine = compile Update();
 
     pass P0 {
         Sorting = TRUE;
-        Geometry = Sphere;
+        Geometry = Cylinder;
         PrerenderRoutine = compile prerender();
     }
 }
