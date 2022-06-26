@@ -3,10 +3,10 @@
 #include <vector>
 #include <string>
 
-#include "lib/idl/bundles/FxBundle_generated.h"
-#include "lib/fx/bytecode/VM/cpp/memory_view.h"
-#include "lib/fx/bytecode/VM/cpp/bundle_uav.h"
-#include "lib/fx/bytecode/VM/cpp/bundle.h"
+#include "../../../idl/bundles/FxBundle_generated.h"
+#include "../../bytecode/VM/cpp/memory_view.h"
+#include "../../bytecode/VM/cpp/bundle_uav.h"
+#include "../../bytecode/VM/cpp/bundle.h"
 
 #include "uniforms.h"
 #include "bytecode_bundle.h"
@@ -21,8 +21,8 @@ struct VECTOR3
     float z;
 };
 
-struct EMITTER;
-struct EMITTER_PASS;
+class EMITTER;
+class EMITTER_PASS;
 
 struct SHADER_ATTR
 {
@@ -58,12 +58,12 @@ public:
         const BYTECODE_BUNDLE& prerenderBundle
     );
 
-    uint32_t     getNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
-    void         sort(VECTOR3 pos);
-    void         dump() const;
-    void         prerender(const UNIFORMS& uniforms);
-    memory_view  getData() const;
-    const EMITTER_DESC& getDesc() const { return m_desc; }
+    uint32_t     GetNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
+    void         Sort(VECTOR3 pos);
+    void         Dump() const;
+    void         Prerender(const UNIFORMS& uniforms);
+    VM::memory_view  GetData() const;
+    const EMITTER_DESC& GetDesc() const { return m_desc; }
 
 private:
     const EMITTER* m_parent;
@@ -73,11 +73,11 @@ private:
     BYTECODE_BUNDLE m_prerenderBundle;
 
     // parent shortcuts
-    BUNDLE_UAV* uavSorted();
-    BUNDLE_UAV* uavNonSorted();
-    const BUNDLE_UAV* uavSorted() const;
-    const BUNDLE_UAV* uavNonSorted() const;
-    const EMITTER& parent() const;
+    VM::BUNDLE_UAV* UavSorted();
+    VM::BUNDLE_UAV* UavNonSorted();
+    const VM::BUNDLE_UAV* UavSorted() const;
+    const VM::BUNDLE_UAV* UavNonSorted() const;
+    const EMITTER& Parent() const;
 };
 
 
@@ -94,44 +94,45 @@ private:
     BYTECODE_BUNDLE             m_spawnBundle;
     BYTECODE_BUNDLE             m_updateBundle;
 
-    std::vector<BUNDLE_UAV>     m_sharedUAVs;
+    std::vector<VM::BUNDLE_UAV> m_sharedUAVs;
 
     Fx::TypeLayoutT             m_particle;
 
 private:
-    BUNDLE_UAV* uav(const std::string& name);
-    const BUNDLE_UAV* uav(const std::string& name) const;
+    VM::BUNDLE_UAV* Uav(const std::string& name);
+    const VM::BUNDLE_UAV* Uav(const std::string& name) const;
 
-    BUNDLE_UAV* uavDeadIndices();
-    BUNDLE_UAV* uavParticles();
-    BUNDLE_UAV* uavStates();
-    BUNDLE_UAV* uavInitArguments();
-    BUNDLE_UAV* uavCreationRequests();
+    VM::BUNDLE_UAV* UavDeadIndices();
+    VM::BUNDLE_UAV* UavParticles();
+    VM::BUNDLE_UAV* UavStates();
+    VM::BUNDLE_UAV* UavInitArguments();
+    VM::BUNDLE_UAV* UavCreationRequests();
 
-    const BUNDLE_UAV* uavDeadIndices() const;
-    const BUNDLE_UAV* uavParticles() const;
-    const BUNDLE_UAV* uavStates() const;
-    const BUNDLE_UAV* uavInitArguments() const;
-    const BUNDLE_UAV* uavCreationRequests() const;
+    const VM::BUNDLE_UAV* UavDeadIndices() const;
+    const VM::BUNDLE_UAV* UavParticles() const;
+    const VM::BUNDLE_UAV* UavStates() const;
+    const VM::BUNDLE_UAV* UavInitArguments() const;
+    const VM::BUNDLE_UAV* UavCreationRequests() const;
 
-    void emit(const UNIFORMS& uniforms);
-    void update(const UNIFORMS& uniforms);
-    void prerender(const UNIFORMS& uniforms);
+    void Emit(const UNIFORMS& uniforms);
+    void Update(const UNIFORMS& uniforms);
+    void Prerender(const UNIFORMS& uniforms);
 public:
     EMITTER(void* buf);
     ~EMITTER();
 
-    std::string     getName() const { return m_name; }
-    uint32_t        getCapacity() const { return m_capacity; }
-    uint32_t        getPassCount() const { return m_passes.size(); }
-    EMITTER_PASS*   getPass(uint32_t i) { return &(m_passes[i]); }
-    uint32_t        getNumParticles() const;
+    std::string         GetName() const { return m_name; }
+    uint32_t            GetCapacity() const { return m_capacity; }
+    uint32_t            GetPassCount() const { return m_passes.size(); }
+    EMITTER_PASS*       GetPass(uint32_t i) { return &(m_passes[i]); }
+    const EMITTER_PASS* GetPass(uint32_t i) const { return &(m_passes[i]); }
+    uint32_t            GetNumParticles() const;
 
-    void tick(const UNIFORMS& uniforms);
-    void reset();
-    void dump();
+    void Tick(const UNIFORMS& uniforms);
+    void Reset();
+    void Dump();
     
-    bool copy(const EMITTER& src);
+    bool Copy(const EMITTER& src);
     bool operator == (const EMITTER& emit) const;
 };
 

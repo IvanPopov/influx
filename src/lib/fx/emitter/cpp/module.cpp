@@ -1,43 +1,35 @@
-#include <stdio.h> 
-
-#include <cassert>
-#include <vector>
-#include <iostream>
-#include <algorithm>
-#include <sstream>
-#include <memory>
-#include <utility>
-
+#ifdef EMCC_ENV    
 #include <emscripten/bind.h>
-#include "lib/fx/bytecode/VM/cpp/memory_view.h"
+#include "../../bytecode/VM/cpp/memory_view.h"
 
 // fixme: hack to emulate unity build       
-#include "lib/fx/bytecode/VM/cpp/bundle.cpp"
-#include "uniforms.cpp"
+#include "../../bytecode/VM/cpp/bundle.cpp"
+#include "../../bytecode/VM/cpp/bundle_uav.cpp"
+#include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp"
   
-using namespace glm;  
+using namespace glm;   
 namespace em = emscripten;    
 
 int main(void)  
 {
     std::cout << "Emscriptent \"Pipeline\" module........................[ LOADED ]" << std::endl;
     return 0;
-}
+} 
 
  
-IFX::EMITTER* createFromBundle(memory_view data) 
+IFX::EMITTER* CreateFromBundle(VM::memory_view data) 
 { 
-    return new IFX::EMITTER(data.as<void>());     
+    return new IFX::EMITTER(data.As<void>());     
 }
      
-bool copyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)  
+bool CopyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)  
 {
-    return dst->copy(*src); 
+    return dst->Copy(*src); 
 }
  
-void destroyEmitter(IFX::EMITTER* pEmitter)
+void DestroyEmitter(IFX::EMITTER* pEmitter)
 { 
     if (pEmitter)
     {  
@@ -45,16 +37,16 @@ void destroyEmitter(IFX::EMITTER* pEmitter)
     }
 }
 
-IFX::VECTOR3 vec3FromJSObject(const em::val &v)
+IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
 { 
     IFX::VECTOR3 v3;
     v3.x = v["x"].as<float>();
     v3.y = v["y"].as<float>();
     v3.z = v["z"].as<float>();
     return v3;    
-}   
-
-UNIFORMS uniformsFromJSObject(const em::val &v)
+}     
+ 
+UNIFORMS UniformsFromJSObject(const em::val &v)
 {
     UNIFORMS unis;       
     em::val keys = em::val::global("Object").call<em::val>("keys", v);
@@ -66,13 +58,12 @@ UNIFORMS uniformsFromJSObject(const em::val &v)
     }
     return unis; 
 } 
-           
+            
 EMSCRIPTEN_BINDINGS(pipeline) 
 {  
-    // memory view is already exported in bundle.cpp
-    // value_object<memory_view>("Memory") 
-    //     .field("size", &memory_view::size);
-    //     .field("heap", &memory_view::ptr)      
+    em::value_object<VM::memory_view>("Memory") 
+        .field("size", &VM::memory_view::size)
+        .field("heap", &VM::memory_view::ptr);     
 
     em::register_map<std::string, float>("Uniforms");  
     
@@ -87,9 +78,9 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("name", &IFX::SHADER_ATTR::name);  
 
     em::class_<IFX::EMITTER_PASS>("EmitterPass")   
-         .function("getData", &IFX::EMITTER_PASS::getData)
+         .function("getData", &IFX::EMITTER_PASS::GetData)
          .function("getDesc", em::optional_override([](IFX::EMITTER_PASS& self) {
-            auto& desc = self.EMITTER_PASS::getDesc();
+            auto& desc = self.EMITTER_PASS::GetDesc();
             em::val jsDesc = em::val::object();
             jsDesc.set("stride", desc.stride);
             jsDesc.set("sorting", desc.sorting);
@@ -100,30 +91,30 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout));
             return jsDesc; 
           }))
-         .function("getNumRenderedParticles", &IFX::EMITTER_PASS::getNumRenderedParticles)
+         .function("getNumRenderedParticles", &IFX::EMITTER_PASS::GetNumRenderedParticles)
          .function("sort", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
-            return self.EMITTER_PASS::sort(vec3FromJSObject(val));  
+            return self.EMITTER_PASS::Sort(Vec3FromJSObject(val));  
           }))
          .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
-            return self.EMITTER_PASS::prerender(uniformsFromJSObject(val));
+            return self.EMITTER_PASS::Prerender(UniformsFromJSObject(val));
           }))
-         .function("dump", &IFX::EMITTER_PASS::dump);
- 
-    em::class_<IFX::EMITTER>("Emitter") 
-         .function("getName", &IFX::EMITTER::getName) 
-         .function("getCapacity", &IFX::EMITTER::getCapacity)
-         .function("getPassCount", &IFX::EMITTER::getPassCount)
-         .function("getPass", &IFX::EMITTER::getPass, em::allow_raw_pointers())
-         .function("getNumParticles", &IFX::EMITTER::getNumParticles)  
+         .function("dump", &IFX::EMITTER_PASS::Dump);
+   
+    em::class_<IFX::EMITTER>("Emitter")
+         .function("getName", &IFX::EMITTER::GetName)
+         .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
+         .function("getCapacity", &IFX::EMITTER::GetCapacity)
+         .function("getPassCount", &IFX::EMITTER::GetPassCount)
+         .function("getNumParticles", &IFX::EMITTER::GetNumParticles)
 
          .function("tick", em::optional_override([](IFX::EMITTER& self, em::val val) {
-            return self.EMITTER::tick(uniformsFromJSObject(val)); 
+            return self.EMITTER::Tick(UniformsFromJSObject(val)); 
           }))
-         .function("reset", &IFX::EMITTER::reset) 
-         .function("dump", &IFX::EMITTER::dump);
+         .function("reset", &IFX::EMITTER::Reset) 
+         .function("dump", &IFX::EMITTER::Dump);
  
-    em::function("createFromBundle", &createFromBundle, em::allow_raw_pointers());
-    em::function("destroyEmitter", &destroyEmitter, em::allow_raw_pointers());
-    em::function("copyEmitter", &copyEmitter, em::allow_raw_pointers());
-}
-      
+    em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers());
+    em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
+    em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());
+}      
+#endif

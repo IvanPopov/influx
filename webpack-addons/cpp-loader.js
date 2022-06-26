@@ -32,7 +32,7 @@ module.exports = async function (source) {
     const wasmBuildName = createBuildWasmName(this.resourcePath, source, outputPath);
 
     const defaults = { sourceMaps: false, debug: false };
-    const { sourceMaps, debug, additionalFlags } = { ...defaults, ...options };
+    const { sourceMaps, debug, additionalFlags, defines } = { ...defaults, ...options };
     
     const wasmFile = wasmBuildName;
     const wasmMapFile = wasmBuildName.replace('.wasm', '.wasm.map');
@@ -61,8 +61,12 @@ module.exports = async function (source) {
     ];
 
     console.log(wasmFlags.concat(['-o', indexFile]).join(' '));
+    console.log('EMCC_CFLAGS:', Object.keys(defines).map(key => `-D ${key}=${defines[key]}`).join(' '));
     try{
-        await execFile('em++.bat', wasmFlags.concat(['-o', indexFile]), { cwd: this.context });
+        await execFile('em++.bat', wasmFlags.concat(['-o', indexFile]), 
+        { cwd: this.context, env: { ...process.env, 
+            EMCC_CFLAGS: Object.keys(defines).map(key => `-D ${key}=${defines[key]}`).join(' ') } 
+        });
         const mapFileName = basename(wasmMapFile);
     
         if (sourceMaps) {

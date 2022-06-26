@@ -6,10 +6,8 @@
 #include "memory_view.h"
 #include "bundle_uav.h"
 
-const int CBUFFER0_REGISTER = 0;
-const int INPUT0_REGISTER = 1;
-const int UAV0_REGISTER = 17;
-
+namespace VM
+{
 
 enum CHUNK_TYPES {
     CONSTANTS,
@@ -56,16 +54,18 @@ public:
     BUNDLE(std::string debugName, memory_view data);
     BUNDLE();
 
-    memory_view play();
-    void dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
-    void setInput(int slot, memory_view input);
-    memory_view getInput(int slot);
-    bool setConstant(std::string name, float value);
-    const std::vector<BUNDLE_CONSTANT>& getLayout() const;
+    memory_view Play();
+    void Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
+    void SetInput(int slot, memory_view input);
+    memory_view GetInput(int slot);
+    bool SetConstant(std::string name, float value);
+    const std::vector<BUNDLE_CONSTANT>& GetLayout() const;
 
-    static void resetRegisters();
-    static BUNDLE_UAV createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
-    static void destroyUAV(BUNDLE_UAV uav);
+    static void ResetRegisters();
+    static BUNDLE_UAV CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
+    static void DestroyUAV(BUNDLE_UAV uav);
 
-    void load(memory_view data);
+    void Load(memory_view data);
 }; 
+
+}

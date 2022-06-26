@@ -21,7 +21,7 @@ function transferI32ToU32Heap(module: EmscriptenModule, i32Array: Int32Array): W
 ///////////////////////////////////
 ///////////////////////////////////
 
-import loadBundleWASM from './bundle.cpp';
+import loadBundleWASM from './module.cpp';
 import * as Bytecode from '@lib/idl/bytecode';
 
 type IBundle = Bytecode.IBundle;

@@ -1,8 +1,10 @@
 #pragma once
+
 #include <cstdio>
-#include <string>
-#include <algorithm>
 #include "memory_view.h"
+
+namespace VM
+{
 
 struct BUNDLE_UAV
 {
@@ -14,52 +16,35 @@ struct BUNDLE_UAV
     memory_view buffer;     // raw data [ counter, ...elements ]
     uint32_t index;         // input index for VM         // << todo: remove (index = register + internal_uav_offset)
 
-    memory_view at(uint32_t i) const
+    memory_view At(uint32_t i) const
     {
-        return memory_view((uintptr_t)(data.as<uint8_t>() + i * elementSize), (elementSize + 3) >> 2);
+        return memory_view((uintptr_t)(data.As<uint8_t>() + i * elementSize), (elementSize + 3) >> 2);
     }
     
     //
     // parity with UAV api at emitter.ts
     //
 
-    memory_view readElement(uint32_t i) const
+    memory_view ReadElement(uint32_t i) const
     {
-        return at(i);
+        return At(i);
     }
 
-    uint32_t readCounter() const
+    uint32_t ReadCounter() const
     {
-        return *(buffer.as<uint32_t>());
+        return *(buffer.As<uint32_t>());
     }
 
-    void overwriteCounter(uint32_t value)
+    void OverwriteCounter(uint32_t value)
     {
-        *(buffer.as<uint32_t>()) = value;
+        *(buffer.As<uint32_t>()) = value;
     }
 
     //
     // auxilary
     //
 
-    void minidump() const
-    {
-        std::cout 
-            << "uav " 
-            << name << "[" 
-            << length << "x" << elementSize << ":"
-            << "r" << reg << ":"
-            << "cnt(" << readCounter() << ")" 
-            << "]" << std::endl;
-        
-        uint32_t n = std::min(64u, length * elementSize);
-        char temp[512]{};
-        int l = 0;
-        for (uint32_t i = 0; i < n; ++ i)
-        {
-            l += sprintf(temp + l, "%X ", (uint32_t)(data.as<uint8_t>()[i]));
-        }
-        std::cout << temp << "..." << std::endl;
-    }
+    void Minidump() const;
 };
 
+}

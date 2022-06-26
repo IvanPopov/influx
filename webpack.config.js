@@ -162,9 +162,9 @@ let options = {
                         sourceMaps: !PRODUCTION,
                         debug: !PRODUCTION,
                         additionalFlags: [ 
-                            `-I${__dirname}\\src\\`,
-                            `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
-                         ].map(f => f.replace(/\\/g, '/'))
+                             `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
+                         ].map(f => f.replace(/\\/g, '/')),
+                        defines: { EMCC_ENV: 1 } // to indicate that we are inside of emcc enviroment
                     }
                 }
             }

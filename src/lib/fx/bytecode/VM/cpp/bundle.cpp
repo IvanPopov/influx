@@ -1,19 +1,23 @@
-#pragma once
-
 #include <stdio.h>
 #include <iostream>
-#include <emscripten/bind.h>
 #include <algorithm>
 
 #include "bundle.h"
+
+#pragma warning(disable:4244)
 
 // @lib/idl/bytecode
 #define export // hack to include enum from ts
 #include "../../../../idl/bytecode/EOperations.ts"
 
-namespace em = emscripten;
+namespace VM
+{
 
-void decodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>& chunks) 
+const int CBUFFER0_REGISTER = 0;
+const int INPUT0_REGISTER = 1;
+const int UAV0_REGISTER = 17;
+
+void DecodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>& chunks) 
 {
     int type = *((uint32_t*)data);
     uint32_t contentByteLength = *((uint32_t*)(data + 4)) << 2;
@@ -23,11 +27,11 @@ void decodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>
 
     uint8_t* nextChunk = content + contentByteLength;
     if (contentByteLength < byteLength - 8) {
-        decodeChunks(nextChunk, byteLength - 8 - contentByteLength, chunks);
+        DecodeChunks(nextChunk, byteLength - 8 - contentByteLength, chunks);
     } 
 }
 
-void decodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layout) {
+void DecodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layout) {
     uint32_t count = *((uint32_t*)layoutChunk);
     layoutChunk += 4;
 
@@ -61,12 +65,12 @@ static std::vector<uint32_t> regs(512 * 4 * 4, 0);
 
 BUNDLE::BUNDLE(std::string debugName, memory_view data): m_debugName(debugName)
 {
-    load(data);
+    Load(data);
 }
 
 BUNDLE::BUNDLE() {} 
 
-memory_view BUNDLE::play()
+memory_view BUNDLE::Play()
 {
     constexpr int STRIDE = 5;
  
@@ -296,22 +300,9 @@ memory_view BUNDLE::play()
     return memory_view((uintptr_t)regs.data(), regs.size());
 }
 
+ 
 
-// template <typename T>
-// std::vector<T> vecFromJSArray(const em::val &v)
-// {
-//     std::vector<T> rv;
-
-//     const auto l = v["length"].as<unsigned>();
-//     rv.resize(l);
-
-//     em::val memoryView{ em::typed_memory_view(l, rv.data()) };
-//     memoryView.call<void>("set", v);
-
-//     return rv;
-// }  
-
-void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads) 
+void BUNDLE::Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads) 
 {
     const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
     const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
@@ -352,7 +343,7 @@ void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
 
                             Gi[0] = iThreadZ * nThreadX * nThreadY + iThreadY * nThreadX + iThreadX;
 
-                            play();
+                            Play();
                         }
                     }
                 }
@@ -362,21 +353,21 @@ void BUNDLE::dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
 }
     
 
-void BUNDLE::setInput(int slot, memory_view input) {
+void BUNDLE::SetInput(int slot, memory_view input) {
     m_inputs[slot] = input;
 }
 
-memory_view BUNDLE::getInput(int slot) 
+memory_view BUNDLE::GetInput(int slot) 
 {
     return m_inputs[slot];
 }
 
-bool BUNDLE::setConstant(std::string name, float value) {
+bool BUNDLE::SetConstant(std::string name, float value) {
     // hidden way to set constants memory
-    setInput(CBUFFER0_REGISTER, memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size()));
+    SetInput(CBUFFER0_REGISTER, memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size()));
 
     auto reflectionIter = find_if(begin(m_layout), end(m_layout), [&name](const BUNDLE_CONSTANT& x) { return x.name == name;});
-    const auto& constants = getInput(CBUFFER0_REGISTER);
+    const auto& constants = GetInput(CBUFFER0_REGISTER);
     if (reflectionIter == m_layout.end()) {
         return false;
     }
@@ -385,23 +376,23 @@ bool BUNDLE::setConstant(std::string name, float value) {
     int offset = reflection.offset;
     // only float is supported for now
     assert(reflection.type == "float");
-    if (reflection.type == "float") *((float_t*)(constants.as<uint8_t>() + offset)) = (float_t)value;
-    if (reflection.type == "int")   *((int32_t*)(constants.as<uint8_t>() + offset)) = (int32_t)value;
-    if (reflection.type == "uint")  *((uint32_t*)(constants.as<uint8_t>() + offset)) = (uint32_t)value;
+    if (reflection.type == "float") *((float_t*)(constants.As<uint8_t>() + offset)) = (float_t)value;
+    if (reflection.type == "int")   *((int32_t*)(constants.As<uint8_t>() + offset)) = (int32_t)value;
+    if (reflection.type == "uint")  *((uint32_t*)(constants.As<uint8_t>() + offset)) = (uint32_t)value;
     return true;
 }
 
-const std::vector<BUNDLE_CONSTANT>& BUNDLE::getLayout() const
+const std::vector<BUNDLE_CONSTANT>& BUNDLE::GetLayout() const
 {
     return m_layout;
 }
 
-void BUNDLE::resetRegisters()
+void BUNDLE::ResetRegisters()
 {
     memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
 }
  
-BUNDLE_UAV BUNDLE::createUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
+BUNDLE_UAV BUNDLE::CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {
     uint32_t counterSize = 4;                           // 4 bytes
     uint32_t size = counterSize + length * elementSize; // in bytes
@@ -418,74 +409,25 @@ BUNDLE_UAV BUNDLE::createUAV(std::string name, uint32_t elementSize, uint32_t le
     return uav;
 }
 
-void BUNDLE::destroyUAV(BUNDLE_UAV uav)
+void BUNDLE::DestroyUAV(BUNDLE_UAV uav)
 {
-    delete[] uav.buffer.as<uint32_t>();
+    delete[] uav.buffer.As<uint32_t>();
 }
 
-void BUNDLE::load(memory_view data)
+void BUNDLE::Load(memory_view data)
 {
     std::map<int, memory_view> chunks;
     
-    decodeChunks(data.as<uint8_t>(), data.byteLength(), chunks);
+    DecodeChunks(data.As<uint8_t>(), data.ByteLength(), chunks);
 
     memory_view codeChunk = chunks[CHUNK_TYPES::CODE];
     memory_view constChunk = chunks[CHUNK_TYPES::CONSTANTS];
     memory_view layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
     
-    decodeLayoutChunk(layoutChunk.as<uint8_t>(), m_layout);
+    DecodeLayoutChunk(layoutChunk.As<uint8_t>(), m_layout);
 
-    m_instructions.assign(codeChunk.begin<uint32_t>(), codeChunk.end<uint32_t>());
-    m_constants.assign(constChunk.begin<uint32_t>(), constChunk.end<uint32_t>());
+    m_instructions.assign(codeChunk.Begin<uint32_t>(), codeChunk.End<uint32_t>());
+    m_constants.assign(constChunk.Begin<uint32_t>(), constChunk.End<uint32_t>());
 }
- 
 
-EMSCRIPTEN_BINDINGS(bundle)
-{ 
-    em::value_object<memory_view>("Memory")
-        .field("heap", &memory_view::ptr) 
-        .field("size", &memory_view::size);
-    em::value_object<BUNDLE_NUMGROUPS>("Numgroups")
-        .field("x", &BUNDLE_NUMGROUPS::x)
-        .field("y", &BUNDLE_NUMGROUPS::y)
-        .field("z", &BUNDLE_NUMGROUPS::z);
-    em::value_object<BUNDLE_NUMTHREADS>("Numthreads")
-        .field("x", &BUNDLE_NUMTHREADS::x)
-        .field("y", &BUNDLE_NUMTHREADS::y)
-        .field("z", &BUNDLE_NUMTHREADS::z);
-    em::value_object<BUNDLE_CONSTANT>("Constant")
-        .field("name", &BUNDLE_CONSTANT::name)
-        .field("size", &BUNDLE_CONSTANT::size)
-        .field("offset", &BUNDLE_CONSTANT::offset) 
-        .field("semantic", &BUNDLE_CONSTANT::semantic)
-        .field("type", &BUNDLE_CONSTANT::type);
-    em::value_object<BUNDLE_UAV>("Uav")
-        .field("name", &BUNDLE_UAV::name) 
-        .field("elementSize", &BUNDLE_UAV::elementSize) 
-        .field("length", &BUNDLE_UAV::length)
-        .field("register", &BUNDLE_UAV::reg)
-        .field("data", &BUNDLE_UAV::data)
-        .field("buffer", &BUNDLE_UAV::buffer)
-        .field("index", &BUNDLE_UAV::index);
-
-    em::register_vector<BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
-
-    em::class_<BUNDLE>("Bundle")
-        .constructor<std::string, memory_view>()
-        // .function("play", optional_override([](BUNDLE& self) {
-        //     memory_view result = self.BUNDLE::play();
-        //     return em::val(em::typed_memory_view(result.size * 4, (char*)result.ptr));
-        // }))
-        .function("play", &BUNDLE::play)
-        .function("dispatch", &BUNDLE::dispatch)
-        .function("getInput", &BUNDLE::getInput)
-        .function("setConstant", &BUNDLE::setConstant)
-        .function("setInput", &BUNDLE::setInput)
-        // .function("getLayout", &BUNDLE::getLayout)
-        .function("getLayout", em::optional_override([](BUNDLE& self) {
-            return em::val::array(self.BUNDLE::getLayout());
-          }))
-        .class_function("createUAV", &BUNDLE::createUAV)
-        .class_function("destroyUAV", &BUNDLE::destroyUAV) 
-        .class_function("resetRegisters", &BUNDLE::resetRegisters);
 }

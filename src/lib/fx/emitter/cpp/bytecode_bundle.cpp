@@ -2,16 +2,21 @@
 
 #include "bytecode_bundle.h"
 
-void BYTECODE_BUNDLE::run(uint32_t count)
+namespace IFX
 {
-    BUNDLE_NUMGROUPS numgroups{count, 1u, 1u};
-    vmBundle.dispatch(numgroups, numthreads);
+
+void BYTECODE_BUNDLE::Run(uint32_t count)
+{
+    VM::BUNDLE_NUMGROUPS numgroups{count, 1u, 1u};
+    vmBundle.Dispatch(numgroups, numthreads);
 }
 
-void BYTECODE_BUNDLE::setConstants(const UNIFORMS& unis)
+void BYTECODE_BUNDLE::SetConstants(const UNIFORMS& unis)
 {
     for (const auto &[name, value] : unis)
     {
-        vmBundle.setConstant(name, value);
+        vmBundle.SetConstant(name, value);
     }
+}
+
 }

@@ -1,5 +1,5 @@
 import { IEmitter } from '../../../idl/emitter/IEmitter';
-import loadWASM from './pipeline.cpp';
+import loadWASM from './module.cpp';
 import * as Bytecode from '@lib/idl/bytecode';
 import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
 
