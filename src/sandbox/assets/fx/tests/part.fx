@@ -74,19 +74,23 @@ bool update(inout Part part)
     return part.timelife < 1.0f;
 }
 
-void prerender(inout Part part, out DefaultShaderInput input)
+uniform float3 cameraPosition: CAMERA_POSITION;
+
+int prerender(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos.xyz;
     input.size = part.size;
     input.color = float4(abs(part.speed), 1.0f - part.timelife);
+    return asint(distance(part.pos, cameraPosition));
 }
 
 
-void prerender2(inout Part part, out DefaultShaderInput input)
+int prerender2(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos.xyz;
     input.size = part.size;
     input.color = float4(float3(1.0f, 0.f, 0.f), 1.0f - part.timelife);
+    return asint(distance(part.pos, cameraPosition));
 }
 
 

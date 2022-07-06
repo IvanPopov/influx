@@ -321,7 +321,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
             <Property { ...this.bindProps(instr) }>
                 <Property name='name' value={ instr.name } />
                 <Property name='size' value={ instr.type.size } />
-                <Property name='register' value={ instr.register } />
+                <Property name='register' value={ `${instr.register.type}${instr.register.index}` } />
                 {/* annotation */}
                 <PropertyOpt { ...this.bindProps(instr) } name='fields'>
                     { instr.type.fields.map((field) => this.Unknown(field)) }

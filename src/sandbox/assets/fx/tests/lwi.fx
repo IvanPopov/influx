@@ -4,7 +4,8 @@
 
 uniform float elapsedTime: ELAPSED_TIME;
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
-
+uniform float3 parentPosition: PARENT_POSITION;
+uniform float3 cameraPosition: CAMERA_POSITION;
 
 float3 randUnitCircle(uint partId) 
 {
@@ -41,6 +42,7 @@ struct Part {
     float3 pos : POSITION;
     float3 size;
     float timelife;
+    uint templateIndex;
 };
 
 // Warning: Do not change layout of this structure!
@@ -69,11 +71,12 @@ float3 sizeFromPos(float3 pos) {
 void Init(inout Part part, uint partId)
 {
     
-    part.pos = randUnitCircle(partId);
+    part.pos = parentPosition + randUnitCircle(partId);
     //float h = random(float2(elapsedTime, (float)partId)) * 20.f;
     part.size = sizeFromPos(part.pos);
     part.timelife = 0.0;
     part.speed = float3(0.f);
+    part.templateIndex = 0;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -94,15 +97,18 @@ void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3
     matr[2] = float4(0, 0, size.z, pos.z);
 }
 
-void prerender(inout Part part, out LwiInstance input)
+int prerender(inout Part part, inout LwiInstance input)
 {
-    packLwiTransform(part.pos, part.speed, part.size, input.worldMatr);
-
+    // IP: todo: add support of direct matrix assigment
+    // input.worldMatrPrev = input.worldMatr;
     input.worldMatrPrev[0] = input.worldMatr[0];
     input.worldMatrPrev[1] = input.worldMatr[1];
     input.worldMatrPrev[2] = input.worldMatr[2];
-}
 
+    packLwiTransform(part.pos, part.speed, part.size, input.worldMatr);
+    // sorting(part.templateIndex);
+    return asint(distance(part.pos, cameraPosition));
+}
 
 partFx project.awesome {
     Capacity = 4096;
@@ -111,7 +117,7 @@ partFx project.awesome {
     UpdateRoutine = compile Update();
 
     pass P0 {
-        Sorting = TRUE;
+        Sorting = TRUE; 
         Geometry = Cylinder;
         PrerenderRoutine = compile prerender();
     }

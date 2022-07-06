@@ -27,11 +27,8 @@ import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { Form, Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
-declare const VERSION: string;
-declare const COMMITHASH: string;
-declare const BRANCH: string;
-declare const MODE: string;
-declare const TIMESTAMP: string;
+// global defines from webpack's config;
+/// <reference path="../webpack.d.ts" />
 
 import isElectron from 'is-electron';
 import { filterPartFx } from '@sandbox/reducers/playground';

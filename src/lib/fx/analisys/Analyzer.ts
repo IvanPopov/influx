@@ -3,13 +3,12 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, ISamplerStateInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IFile, IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from '@lib/util/Diagnostics';
-
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
 import { expression, instruction, type } from './helpers';
@@ -49,8 +48,6 @@ import { ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
-// import { SamplerStateInstruction } from './instructions/SamplerStateBlockInstruction';
-import { SamplerStateInstruction } from "./instructions/SamplerStateInstruction";
 import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
 import { StringInstruction } from './instructions/StringInstruction';
@@ -63,7 +60,8 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope, ProgramScopeEx } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatBasedType, isFloatType, isIntBasedType, isIntegerType, isMatrixType, isScalarType, isUintBasedType, isVectorType, T_BOOL, T_FLOAT, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+
 
 type IErrorInfo = IMap<any>;
 type IWarningInfo = IMap<any>;
@@ -1478,6 +1476,12 @@ export class Analyzer {
 
                 func = program.globalScope.findFunction(shaderFuncName, args);
                 if (func) {
+                    // skip function if validator is not suitable
+                    if (validator.ret && !validator.ret.isEqual(func.def.returnType))
+                    {
+                        // skip this function
+                        continue;
+                    }
                     break;
                 }
             }
@@ -1492,6 +1496,7 @@ export class Analyzer {
         }
 
         if (retType) {
+            // show error if we found some variant of function but return type mismath
             if (!func.def.returnType.isEqual(retType)) {
                 context.error(sourceNode, EErrors.InvalidCompileFunctionNotValid, {
                     funcName: shaderFuncName,

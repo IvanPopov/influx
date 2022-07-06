@@ -10,7 +10,7 @@ export interface IAttribute {
 }
 
 // temp solution
-export type Uniforms = IMap<number>;
+export type Uniforms = IMap<Uint8Array>;
 
 
 export interface IEmitterPassDesc
@@ -27,10 +27,9 @@ export interface IEmitterPassDesc
 
 export interface IEmitterPass {
     getDesc(): IEmitterPassDesc;
-    getData(): IMemory;
+    getRenderBuffer(): IMemory;
     getNumRenderedParticles(): number; // num alive particles multipled by the prerendered instance count
-    sort(pos: Vector3): void;
-    prerender(uniforms: Uniforms);
+    fillRenderBuffer(): void;
     dump(): void;
 }
 

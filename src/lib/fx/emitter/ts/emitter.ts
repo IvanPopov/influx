@@ -93,6 +93,7 @@ const UAV = {
 };
 
 
+
 // tslint:disable-next-line:max-func-body-length
 function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): IEmitter {
     const { name, content: { capacity, particle, simulationRoutines, renderPasses } } = bundle;
@@ -108,7 +109,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
     const uavCreationRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
 
-    const passes = renderPasses.map((pass, i): IEmitterPass => {
+    const passes = renderPasses.map((pass, i) => {
         const {
             routines,
             geometry,
@@ -118,11 +119,14 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             stride
         } = pass;
 
-        const UAV_PRERENDERED = `uavPrerendered${i}`;
+        const UAV_PRERENDERED = `${FxTranslator.UAV_PRERENDERED}${i}`;
+        const UAV_SERIALS = `${FxTranslator.UAV_SERIALS}${i}`;
 
         const prerenderBundle = routines[EPartRenderRoutines.k_Prerender];
         const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, <RoutineBytecodeBundleT>prerenderBundle, capacity * instanceCount, uavResources);
-        const uav = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
+        
+        const uavPrerendered = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
+        const uavSerials = bundle.uavs.find(uav => uav.name === UAV_SERIALS);
 
         const vertexShader = <string>routines[EPartRenderRoutines.k_Vertex].code;
         const pixelShader = <string>routines[EPartRenderRoutines.k_Pixel].code;
@@ -136,9 +140,9 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         // dump prerendered particles
         const dump = (): void => {
-            verbose(`dump ${UAV.readCounter(uav)}/${capacity} prerendred particles: `);
-            for (let iElement = 0; iElement < UAV.readCounter(uav); ++iElement) {
-                verbose(VM.asNativeRaw(UAV.readElement(uav, iElement), instance));
+            verbose(`dump ${UAV.readCounter(uavPrerendered)}/${capacity} prerendred particles: `);
+            for (let iElement = 0; iElement < UAV.readCounter(uavPrerendered); ++iElement) {
+                verbose(VM.asNativeRaw(UAV.readElement(uavPrerendered, iElement), instance));
             }
         };
 
@@ -146,53 +150,74 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         // Sorting
         //
 
-        const uavNonSorted = uav;
+        const uavNonSorted = uavPrerendered;
         const uavPrerendReflectSorted = new UAVBundleT(`${uavPrerendReflect.name}Sorted`, uavPrerendReflect.slot, uavPrerendReflect.stride, uavPrerendReflect.type);
-        const uavSorted = !sorting ? uavNonSorted : createUAVsEx([uavPrerendReflectSorted], capacity, uavResources)[0];
+        const uavSorted = createUAVsEx([uavPrerendReflectSorted], capacity * instanceCount, uavResources)[0];
 
         const uavNonSortedU8 = VM.memoryToU8Array(uavNonSorted.data);
         const uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
+        
+        const uavStatesI32 = VM.memoryToI32Array(uavStates.data);
+        const uavSerialsI32 = sorting ? VM.memoryToI32Array(uavSerials.data) : null;
+        // const uavSerialsF32 = VM.memoryToF32Array(uavSerials.data);
 
-        function sort(targetPos: Vector3) {
-            assert(sorting);
+        function fillRenderBuffer() {
 
             // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
             //       I hate javascript for that :/
 
             const v3 = new Vector3();
-            const length = getNumRenderedParticles();
+            const length = getNumParticles();
 
-            const nStride = stride * instanceCount; // stride in floats
+            const nStrideF32 = stride * instanceCount; // stride in floats
 
-            assert(uavSortedU8.byteLength >> 2 === nStride * capacity);
+            assert(uavSortedU8.byteLength >> 2 === nStrideF32 * capacity);
 
-            const src = new Float32Array(uavNonSortedU8.buffer, uavNonSortedU8.byteOffset, uavNonSortedU8.byteLength >> 2);
-            const dst = new Float32Array(uavSortedU8.buffer, uavSortedU8.byteOffset, uavSortedU8.byteLength >> 2);
+            const srcF32 = new Float32Array(uavNonSortedU8.buffer, uavNonSortedU8.byteOffset, uavNonSortedU8.byteLength >> 2);
+            const dstF32 = new Float32Array(uavSortedU8.buffer, uavSortedU8.byteOffset, uavSortedU8.byteLength >> 2);
 
             const indicies = [];
 
-            // NOTE: sort using only first instance's postion
-            for (let iPart = 0; iPart < length; ++iPart) {
-                const offset = iPart * nStride;
-                const dist = v3
-                    .fromArray(src, offset/* add offset of POSTION semantic */)
-                    .distanceTo(targetPos);
-                indicies.push([iPart, dist]);
-            }
+            let iPrerendered = 0;
+            for (let iPart = 0; iPart < uavStatesI32.length; ++iPart) 
+            {
+                const alive = uavStatesI32[iPart];
+                if (alive) {
+                    const iFrom = iPart * nStrideF32;
+                    const iTo = iPrerendered * nStrideF32;
+                    const from = srcF32.subarray(iFrom, iFrom + nStrideF32);
+                    const copyTo = dstF32.subarray(iTo, iTo + nStrideF32);
+                    copyTo.set(from);
+                    
+                    if (sorting)
+                    {
+                        indicies.push([ iPrerendered, uavSerialsI32[iPart] ]);
+                    }
+                    
+                    iPrerendered ++;
+                }
+            };
 
-            indicies.sort((a, b) => -a[1] + b[1]);
+            if (sorting)
+            {
+                (dstF32 as any).$shadowCopy = (dstF32 as any).$shadowCopy || new Float32Array(dstF32.length);
 
-            for (let i = 0; i < indicies.length; ++i) {
-                const iFrom = indicies[i][0] * nStride;
-                const iTo = i * nStride;
+                indicies.sort((a, b) => -a[1] + b[1]);
 
-                const from = src.subarray(iFrom, iFrom + nStride);
-                const copyTo = dst.subarray(iTo, iTo + nStride);
-                copyTo.set(from);
+                for (let i = 0; i < indicies.length; ++i) {
+                    const iFrom = indicies[i][0] * nStrideF32;
+                    const iTo = i * nStrideF32;
+
+                    const from = dstF32.subarray(iFrom, iFrom + nStrideF32);
+                    const copyTo = (dstF32 as any).$shadowCopy.subarray(iTo, iTo + nStrideF32);
+                    copyTo.set(from);
+                }
+
+                dstF32.set((dstF32 as any).$shadowCopy);
             }
         }
 
-        function getData() { return asBundleMemory(uavSortedU8); }
+        function getRenderBuffer() { return asBundleMemory(uavSortedU8); }
         function getDesc() {
             return {
                 stride,
@@ -214,10 +239,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         }
 
         return {
-            getData,
             getDesc,
             getNumRenderedParticles,                                                                           // FIXME
-            sort,
+            getRenderBuffer,
+            fillRenderBuffer,
             prerender,
             dump
         };

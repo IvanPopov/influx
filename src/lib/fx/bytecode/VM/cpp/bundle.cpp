@@ -362,7 +362,7 @@ memory_view BUNDLE::GetInput(int slot)
     return m_inputs[slot];
 }
 
-bool BUNDLE::SetConstant(std::string name, float value) {
+bool BUNDLE::SetConstant(std::string name, memory_view value) {
     // hidden way to set constants memory
     SetInput(CBUFFER0_REGISTER, memory_view((uintptr_t)m_constants.data(), (uint32_t)m_constants.size()));
 
@@ -375,10 +375,17 @@ bool BUNDLE::SetConstant(std::string name, float value) {
     const BUNDLE_CONSTANT& reflection = *reflectionIter;
     int offset = reflection.offset;
     // only float is supported for now
-    assert(reflection.type == "float");
-    if (reflection.type == "float") *((float_t*)(constants.As<uint8_t>() + offset)) = (float_t)value;
-    if (reflection.type == "int")   *((int32_t*)(constants.As<uint8_t>() + offset)) = (int32_t)value;
-    if (reflection.type == "uint")  *((uint32_t*)(constants.As<uint8_t>() + offset)) = (uint32_t)value;
+    if (reflection.type == "float") *((float_t*)(constants.As<uint8_t>() + offset)) = *value.As<float>();
+    if (reflection.type == "int")   *((int32_t*)(constants.As<uint8_t>() + offset)) = *value.As<int32_t>();
+    if (reflection.type == "uint")  *((uint32_t*)(constants.As<uint8_t>() + offset)) = *value.As<uint32_t>();
+
+    if (reflection.type == "float3") 
+    {
+        auto* dst = constants.As<uint8_t>() + offset;
+        auto* src = value.As<uint8_t>();
+        std::memcpy((void*)dst, (void*)src, sizeof(float) * 3);
+    }
+
     return true;
 }
 

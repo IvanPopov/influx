@@ -152,10 +152,16 @@ export class FxAnalyzer extends Analyzer {
 
         const fxStates = this.analyzePartFxStateBlock(context, program, children[0]);
 
-        const sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
+        let sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
         const prerenderRoutine = fxStates.prerenderRoutine || null;
         const geometry = fxStates.geometry || EPartFxPassGeometry.k_Billboard;
         const instanceCount = fxStates.instanceCount || 1;
+
+        if (sorting && prerenderRoutine && type.equals(prerenderRoutine.function.def.returnType, T_VOID))
+        {
+            context.warn(sourceNode, EWarnings.SortingCannotBeApplied);
+            context.warn(prerenderRoutine.function.def.sourceNode, EWarnings.SortingCannotBeApplied);
+        }
 
         //
         // Validation of the shader input
@@ -193,6 +199,9 @@ export class FxAnalyzer extends Analyzer {
             // }
         }
 
+        //
+        // Rest
+        //
 
         let id: IIdInstruction = null;
         for (let i = 0; i < children.length; ++i) {
@@ -357,10 +366,14 @@ export class FxAnalyzer extends Analyzer {
                         * Prerender routine expected as 'void prerender(Part part, out DefaultShaderInput input)'.
                         */
                         let validators: ICompileValidator[] = [
-                            /* prerender(Part part, PartInstance instance) */
+                            /* void prerender(in Part part, inout PartInstance instance) */
                             { ret: T_VOID, args: [context.particleCore, null] },
-                            /* prerender(Part part, PartInstance instance, int instanceId) */
+                            /* void prerender(in Part part, inout PartInstance instance, int instanceId) */
                             { ret: T_VOID, args: [context.particleCore, null, SystemScope.T_INT] },
+                            /* int prerender(in Part part, inout PartInstance instance) */
+                            { ret: T_INT, args: [context.particleCore, null] },
+                            /* int prerender(in Part part, inout PartInstance instance, int instanceId) */
+                            { ret: T_INT, args: [context.particleCore, null, SystemScope.T_INT] },
                         ];
 
                         //

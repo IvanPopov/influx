@@ -15,7 +15,8 @@ void BYTECODE_BUNDLE::SetConstants(const UNIFORMS& unis)
 {
     for (const auto &[name, value] : unis)
     {
-        vmBundle.SetConstant(name, value);
+        auto mem = VM::memory_view::FromVector<uint8_t>(value);
+        vmBundle.SetConstant(name, mem);
     }
 }
 

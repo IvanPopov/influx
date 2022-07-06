@@ -6,7 +6,7 @@ import * as WASMPipe from "./cpp/bridge";
 import * as TSPipe from "./ts/bridge";
 import { isDef } from '@lib/common';
 
-let useWASM = true;
+let useWASM = false;
 
 function Pipe()
 {

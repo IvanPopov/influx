@@ -300,6 +300,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
+        distancef(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
+            let temp = alloca(left.size);
+            intrinsics.subf(temp, left, right);
+            intrinsics.lengthf(dest, temp);
+            return dest;
+        },
+
         /** dest = a + b * c */
         madi(dest: PromisedAddress, a: PromisedAddress, b: PromisedAddress, c: PromisedAddress): PromisedAddress {
             iop4(EOperation.k_I32Mad, dest, a, b, c);
@@ -531,6 +538,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'ceil':
                 assert(fdef.params.length === 1);
                 return intrinsics.ceilf(dest, args[0]);
+            case 'distance':
+                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
+                return intrinsics.distancef(dest, args[0], args[1]);
             case 'min':
                 // TODO: separate INT/FLOAT intrisics
                 if (SystemScope.isFloatBasedType(fdef.params[0].type)) {

@@ -1,13 +1,27 @@
-#ifdef EMCC_ENV // guard to exclude this file fron FBB build
+// #ifdef EMCC_ENV // guard to exclude this file fron FBB build
  
 #include <emscripten/bind.h>    
 #include "bundle.h"
 
 #include "bundle.cpp"
-#include "bundle_uav.cpp"
+#include "bundle_uav.cpp"   
  
 namespace em = emscripten;
  
+template <typename T> 
+std::vector<T> vecFromJSArray(const em::val &v)
+{
+    std::vector<T> rv;
+
+    const auto l = v["length"].as<unsigned>();
+    rv.resize(l);
+
+    em::val memoryView{em::typed_memory_view(l, rv.data())};
+    memoryView.call<void>("set", v);
+
+    return rv;
+}
+
 EMSCRIPTEN_BINDINGS(bundle)
 { 
     em::value_object<VM::memory_view>("Memory")
@@ -47,7 +61,11 @@ EMSCRIPTEN_BINDINGS(bundle)
         .function("play", &VM::BUNDLE::Play)
         .function("dispatch", &VM::BUNDLE::Dispatch)
         .function("getInput", &VM::BUNDLE::GetInput)
-        .function("setConstant", &VM::BUNDLE::SetConstant)
+        // .function("setConstant", &VM::BUNDLE::SetConstant)
+        .function("setConstant", em::optional_override([](VM::BUNDLE& self, std::string name, em::val val) {
+            std::vector<uint8_t> data = vecFromJSArray<uint8_t>(val);
+            return self.BUNDLE::SetConstant(name, VM::memory_view::FromVector(data));
+        }))
         .function("setInput", &VM::BUNDLE::SetInput)
         // .function("getLayout", &VM::BUNDLE::getLayout)
         .function("getLayout", em::optional_override([](VM::BUNDLE& self) {
@@ -57,4 +75,5 @@ EMSCRIPTEN_BINDINGS(bundle)
         .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV) 
         .class_function("resetRegisters", &VM::BUNDLE::ResetRegisters);
 }
-#endif
+// #endif
+ 

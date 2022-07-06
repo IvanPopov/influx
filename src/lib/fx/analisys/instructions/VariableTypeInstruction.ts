@@ -64,19 +64,17 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         this._aligment = 1;
 
         if (arrayIndex) {
-            //TODO: add support for v[][10]
-            this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ scope: this.scope, type: this.subType, usages: this._usageList }), this);
+            // todo: add support for v[][10]
+            // todo: move elements construction to analyzer, don't make it implicitly
+            this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ readable, writable, scope: this.scope, type: this.subType, usages: this._usageList }), this);
             this._arrayIndexExpr = Instruction.$withParent(arrayIndex, this);
-        }
+        } 
+        // todo: array element type must be constructed with proper usages and read/write flags!
+        // else if (this.isArray()) {
+        //     this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ readable, writable, scope: this.scope, type: type.arrayElementType, usages: this._usageList }), this);
+        // }
 
         usages.forEach(usage => this.addUsage(usage));
-
-        // todo: construct arrayElementType here! with proper usages!
-        // if (this.isArray()) {
-        //     if (isNull(this._arrayElementType)) {
-        //         this._arrayElementType = Instruction.$withParent(new VariableTypeInstruction({ scope: this.scope, type: this.subType.arrayElementType, usages: this.usageList }), this);
-        //     }
-        // }
     }
 
 
@@ -146,19 +144,23 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
 
     get length(): number {
-        if (!this.isNotBaseArray()) {
+        if (!this.isNotBaseArray()) { // not a user defined array like arr[10]
+            // for ex. if type is float3x4 then length is 3
             return this.subType.length;
         }
 
+        // IP: arrays like float[]?
         if (this.isNotBaseArray() && isNull(this._arrayElementType)) {
             return this.subType.length;
         }
 
+        // arrays like float[10]
         const expr = this._arrayIndexExpr;
         if (instruction.isLiteral(expr)) {
             return Number((<ILiteralInstruction<number>>expr).value);
         }
 
+        // arrays like float[N];
         // TODO: try to evaluate this._arrayIndexExpr
         return instruction.UNDEFINE_LENGTH;
     }
@@ -228,7 +230,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return this.subType.toDeclString();
     }
 
-    // todo: add explanation!
+    // base type is the same as system types like: float, bool, float2x2
     isBase(): boolean {
         return this.subType.isBase() && isNull(this._arrayElementType);
     }

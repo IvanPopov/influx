@@ -70,7 +70,7 @@ export interface IBundle
 
     setInput(slot: number, input: IMemory): void;
     getInput(slot: number): IMemory;
-    setConstant(name: string, value: number): boolean;
+    setConstant(name: string, value: Uint8Array): boolean;
 
     getLayout(): Constant[];
 }

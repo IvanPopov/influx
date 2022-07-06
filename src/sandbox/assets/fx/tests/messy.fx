@@ -1,6 +1,7 @@
 
 uniform float elapsedTime;
 uniform float elapsedTimeLevel;
+uniform float3 cameraPosition;
 
 float random (float2 uv)
 {
@@ -65,11 +66,12 @@ bool update(inout Part part)
 }
 
 
-void prerender(inout Part part, inout DefaultShaderInput input)
+int prerender(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos + part.dir * sin(part.timelife * 1.f) * 0.1f;
     input.size = part.size;
     input.color = float4(float3((length(input.pos) * abs(input.pos) - 1.0f) * 1.f) * 0.5, sin(part.timelife * 3.14));
+    return asint(distance(part.pos, cameraPosition));
 }
 
 

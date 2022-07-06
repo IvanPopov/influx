@@ -7,6 +7,8 @@ export enum EAnalyzerWarnings {
     InvalidCbufferRegister,
 
     ImplicitTypeConversion,
-    ImplicitTypeTruncation
+    ImplicitTypeTruncation,
+
     // part fx
+    SortingCannotBeApplied
 }

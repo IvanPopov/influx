@@ -85,7 +85,8 @@ bool update(inout Part part, int partId)
     return part.timelife < 1.0f;
 }
 
-void prerender(inout Part part, out DefaultShaderInput input)
+uniform float3 cameraPosition: CAMERA_POSITION;
+int prerender(inout Part part, inout DefaultShaderInput input)
 {
     float am = 1.f;
     if (part.timelife > 0.8f) {
@@ -100,6 +101,7 @@ void prerender(inout Part part, out DefaultShaderInput input)
         input.color = float4(0.f, 0.7f, 0.f, 0.3f);
         input.size = part.size * 3.f * am;
     }   
+    return asint(distance(part.pos, cameraPosition));
 }
 
 partFx project.awesome {

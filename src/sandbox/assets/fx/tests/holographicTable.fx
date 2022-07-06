@@ -2,6 +2,7 @@
 
 uniform float elapsedTime;
 uniform float elapsedTimeLevel;
+uniform float3 cameraPosition: CAMERA_POSITION;
 
 float3 randUnitCircle(uint partId) 
 {
@@ -83,11 +84,12 @@ bool Update(inout Part part)
 /////////////////////////////////////////////////////////////////////
 // Prerender Routine
 /////////////////////////////////////////////////////////////////////
-void PrerenderCylinders(inout Part part, out PartInstance instance)
+int PrerenderCylinders(inout Part part, inout PartInstance instance)
 {
     instance.pos.xyz = part.pos.xyz + float3(part.size) * 0.5f;
     instance.size = float3(part.size);
     instance.color = ColorOverAge(part);
+    return asint(distance(instance.pos.xyz, cameraPosition));
 }
 
 

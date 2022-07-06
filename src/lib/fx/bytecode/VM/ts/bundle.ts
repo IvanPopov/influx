@@ -353,7 +353,7 @@ export class TSBundle implements Bundle.IBundle
     }
 
 
-    setConstant(name: string, value: number): boolean {
+    setConstant(name: string, value: Uint8Array): boolean {
         const layout = this.layout;
         const reflection = layout.find(entry => entry.name === name);
         const constants = this.inputs[CBUFFER0_REGISTER];
@@ -362,18 +362,24 @@ export class TSBundle implements Bundle.IBundle
             return false;
         }
     
-        const view = new DataView(constants.buffer, constants.byteOffset + reflection.offset);
+        const dst = new DataView(constants.buffer, constants.byteOffset + reflection.offset);
+        const src = new DataView(value.buffer, value.byteOffset);
     
         // TODO: validate layout / constant type in memory / size
         switch (reflection.type) {
             case 'float':
-                view.setFloat32(0, <number>value, true);
+                dst.setFloat32(0, src.getFloat32(0, true), true);
                 break;
             case 'int':
-                view.setInt32(0, <number>value, true);
+                dst.setInt32(0, src.getFloat32(0, true), true);
                 break;
             case 'uint':
-                view.setUint32(0, <number>value, true);
+                dst.setUint32(0, src.getFloat32(0, true), true);
+                break;
+            case 'float3':
+                dst.setFloat32(0, src.getFloat32(0, true), true);
+                dst.setFloat32(4, src.getFloat32(4, true), true);
+                dst.setFloat32(8, src.getFloat32(8, true), true);
                 break;
             default:
                 assert(false, 'unsupported');

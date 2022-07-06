@@ -1,6 +1,4 @@
 import { verbose } from '@lib/common';
-import { Uniforms } from '@lib/idl/emitter';
-
 
 export function make() {
     let pauseTime: number;
@@ -67,7 +65,7 @@ export function make() {
         paused = false;
     }
 
-    function getConstants(): Uniforms
+    function getConstants()
     {
         return constants;
     }

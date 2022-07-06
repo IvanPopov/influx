@@ -1,5 +1,6 @@
 import { assert, isUint } from "@lib/common";
-import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4 } from "@lib/fx/analisys/SystemScope";
+import { type } from "@lib/fx/analisys/helpers";
+import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
@@ -48,12 +49,14 @@ export class FxTranslator extends FxEmitter {
     static UAV_DEAD_INDICES = 'uavDeadIndices';
     static UAV_CREATION_REQUESTS = 'uavCreationRequests';
     static UAV_PRERENDERED = 'uavPrerendered';
+    static UAV_SERIALS = 'uavSerials';
     static UAV_SPAWN_DISPATCH_ARGUMENTS = 'uavSpawnDispatchArguments';
 
     private static UAV_PARTICLES_DESCRIPTION = `The buffer contains user-defined particle data.`;
     private static UAV_STATES_DESCRIPTION = `The buffer contains the state of the particles, Alive or dead.`;
     private static UAV_DEAD_INDICES_DESCRIPTION = `The buffer contains indicies of dead particles.`;
     private static UAV_CREATION_REQUESTS_DESCRIPTION = 'The buffer contatins information about the number and type of particles to be created';
+    private static UAV_SERIALS_DESCRIPTION = 'The buffer contains hashes are required for correct sorting during render buffer filling.';
     private static UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION = '[no description added :/]';
 
     private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op';
@@ -506,25 +509,61 @@ export class FxTranslator extends FxEmitter {
 
                 const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
 
-                uavs.push(this.emitUav(`AppendStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
+                uavs.push(this.emitUav(`RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
 
+                if (pass.sorting)
+                {
+                    uavs.push(this.emitUav(`RWStructuredBuffer<int>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
+                }
+
+                let strInstanceArg = ', InstanceId';
                 if (pass.instanceCount > 1) {
                     this.emitLine(`for(int InstanceId = 0; InstanceId < ${pass.instanceCount}; InstanceId++)`);
                     this.emitChar('{');
                     this.push();
                 }
+                else if (prerenderFn.def.params.length > 2)
+                {
+                    this.emitLine(`int InstanceId = 0;`);
+                }
+                else{
+                    strInstanceArg = '';
+                }
 
                 {
-                    this.emitLine(`${prerenderedType} Prerendered;`);
-                    if (prerenderFn.def.params.length == 3) {
-                        if (pass.instanceCount === 1) {
-                            this.emitLine(`int InstanceId = 0;`);
-                        }
-                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered, InstanceId);`);
-                    } else {
-                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered);`);
+                    if (pass.instanceCount > 1)
+                    {
+                        this.emitLine(`int PrerenderId = ${pass.instanceCount} * PartId + InstanceId;`);
+                        this.emitLine(`${prerenderedType} Prerendered = ${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId];`);
                     }
-                    this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}.Append(Prerendered);`);
+                    else
+                    {
+                        this.emitLine(`${prerenderedType} Prerendered = ${FxTranslator.UAV_PRERENDERED}${i}[PartId];`);
+                    }
+
+                    if (type.equals(prerenderFn.def.returnType, T_VOID))
+                    {
+                        this.emitLine(`int SerialId = 0;`);
+                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered${strInstanceArg});`);
+                    }
+                    else
+                    {
+                        this.emitLine(`int SerialId = ${prerenderFn.name}(Particle, Prerendered${strInstanceArg});`);
+                    }
+                    if (pass.sorting)
+                    {
+                        this.emitLine(`${FxTranslator.UAV_SERIALS}${i}[PartId] = SerialId;`);
+                    }
+
+                    if (pass.instanceCount > 1)
+                    {
+                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId] = Prerendered;`);
+                    }
+                    else
+                    {
+                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PartId] = Prerendered;`);
+                    }
+                    
                 }
 
                 if (pass.instanceCount > 1) {

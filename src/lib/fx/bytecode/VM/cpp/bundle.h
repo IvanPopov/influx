@@ -58,7 +58,7 @@ public:
     void Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
     void SetInput(int slot, memory_view input);
     memory_view GetInput(int slot);
-    bool SetConstant(std::string name, float value);
+    bool SetConstant(std::string name, memory_view value);
     const std::vector<BUNDLE_CONSTANT>& GetLayout() const;
 
     static void ResetRegisters();

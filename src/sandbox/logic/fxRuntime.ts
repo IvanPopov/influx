@@ -72,6 +72,10 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         async function create()
         {
             const i = list.map(fx => fx.name).indexOf(active);
+            if (i == -1)
+            {
+                return null;
+            }
             const emitter = Emitter.create(await FxBundle.createPartFxBundle(list[i]));
             if (emitter) {
                 timeline.start();

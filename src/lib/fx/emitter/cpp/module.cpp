@@ -1,4 +1,4 @@
-#ifdef EMCC_ENV    
+// #ifdef EMCC_ENV    
 #include <emscripten/bind.h>
 #include "../../bytecode/VM/cpp/memory_view.h"
 
@@ -45,7 +45,21 @@ IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
     v3.z = v["z"].as<float>();
     return v3;    
 }     
- 
+  
+template <typename T> 
+std::vector<T> vecFromJSArray(const em::val &v)
+{
+    std::vector<T> rv;
+
+    const auto l = v["length"].as<unsigned>();
+    rv.resize(l);
+
+    em::val memoryView{em::typed_memory_view(l, rv.data())};
+    memoryView.call<void>("set", v);
+
+    return rv;
+}
+
 UNIFORMS UniformsFromJSObject(const em::val &v)
 {
     UNIFORMS unis;       
@@ -54,7 +68,7 @@ UNIFORMS UniformsFromJSObject(const em::val &v)
     for (int i = 0; i < length; ++i) 
     {
         const auto& key = keys[i].as<std::string>();
-        unis[key] = v[key.c_str()].as<float>();
+        unis[key] = vecFromJSArray<uint8_t>(v[key.c_str()]);
     }
     return unis; 
 } 
@@ -117,4 +131,4 @@ EMSCRIPTEN_BINDINGS(pipeline)
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
     em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());
 }      
-#endif
+// #endif
