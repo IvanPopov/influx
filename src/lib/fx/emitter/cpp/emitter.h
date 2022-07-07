@@ -62,6 +62,7 @@ public:
     void         Sort(VECTOR3 pos);
     void         Dump() const;
     void         Prerender(const UNIFORMS& uniforms);
+    void         Serialize();
     // returns sorted data if sorting is on and unsorted otherwise 
     VM::memory_view  GetData() const;
     // returns data right after prerender routine
@@ -80,6 +81,9 @@ private:
     VM::BUNDLE_UAV* UavNonSorted();
     const VM::BUNDLE_UAV* UavSorted() const;
     const VM::BUNDLE_UAV* UavNonSorted() const;
+    const VM::BUNDLE_UAV* UavSerials() const;
+    const VM::BUNDLE_UAV* UavStates() const;
+
     const EMITTER& Parent() const;
 };
 
@@ -119,7 +123,7 @@ private:
 
     void Emit(const UNIFORMS& uniforms);
     void Update(const UNIFORMS& uniforms);
-    void Prerender(const UNIFORMS& uniforms);
+   
 public:
     EMITTER(void* buf);
     ~EMITTER();
@@ -131,7 +135,10 @@ public:
     const EMITTER_PASS* GetPass(uint32_t i) const { return &(m_passes[i]); }
     uint32_t            GetNumParticles() const;
 
-    void Tick(const UNIFORMS& uniforms);
+    void Simulate(const UNIFORMS& uniforms);
+    void Prerender(const UNIFORMS& uniforms);
+    void Serialize();
+
     void Reset();
     void Dump();
     

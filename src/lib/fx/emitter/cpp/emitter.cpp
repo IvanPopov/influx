@@ -34,9 +34,16 @@ namespace FxTranslator
     static std::string UAV_DEAD_INDICES = "uavDeadIndices";
     static std::string UAV_CREATION_REQUESTS = "uavCreationRequests";
     static std::string UAV_PRERENDERED = "uavPrerendered";
+    static std::string UAV_SERIALS = "uavSerials";
     static std::string UAV_SPAWN_DISPATCH_ARGUMENTS = "uavSpawnDispatchArguments";
 }
 
+std::string UavSerials(uint32_t i)
+{
+    std::ostringstream s;
+    s << FxTranslator::UAV_SERIALS << i;
+    return s.str();
+}
 
 std::string UavPrerendered(uint32_t i)
 {
@@ -130,6 +137,9 @@ VM::BUNDLE_UAV* EMITTER_PASS::UavSorted() { return const_cast<VM::BUNDLE_UAV*>(P
 const VM::BUNDLE_UAV* EMITTER_PASS::UavNonSorted() const { return Parent().Uav(UavPrerendered(m_id)); }
 const VM::BUNDLE_UAV* EMITTER_PASS::UavSorted() const { return Parent().Uav(UavPrerenderedSorted(m_id)); }
 
+const VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() const { return Parent().Uav(IFX::UavSerials(m_id)); }
+const VM::BUNDLE_UAV* EMITTER_PASS::UavStates() const { return Parent().Uav(FxTranslator::UAV_STATES); }
+
 const EMITTER& EMITTER_PASS::Parent() const
 {
     return *m_parent;
@@ -152,38 +162,39 @@ VM::memory_view EMITTER_PASS::GetDataUnsorted() const
    return UavNonSorted()->data;
 }
 
-void EMITTER_PASS::Sort(VECTOR3 p)
+void EMITTER_PASS::Serialize()
 {
-    VEC3_T targetPos{ p.x, p.y, p.z };
-    assert(m_desc.sorting);
-
     // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
     //       I hate javascript for that :/
-
-    uint32_t length = GetNumRenderedParticles();
 
     uint32_t nStride = m_desc.stride * m_desc.instanceCount; // stride in floats
 
     assert(UavSorted()->data.size == nStride * Parent().GetCapacity());
 
-    float* src = (float_t*)UavNonSorted()->data.ptr;
-    float* dst = (float_t*)UavSorted()->data.ptr;
+    auto* src = UavNonSorted()->data.As<float_t>();
+    auto* dst = UavSorted()->data.As<float_t>();
 
-    std::vector<std::pair<uint32_t, float_t>> indicies;
+    auto* states = UavStates()->data.As<int32_t>();
+    auto* serials = UavSerials()->data.As<int32_t>();
 
-     // NOTE: sort using only first instance's postion
-    for (uint32_t iPart = 0; iPart < length; ++iPart) 
+    std::vector<std::pair<uint32_t, int32_t>> indicies;
+
+    for (uint32_t iPart = 0; iPart < UavStates()->length; ++iPart) 
     {
-        uint32_t offset = iPart * nStride;                                  // offset in floats
-        float dist = DIST_FN(*((VEC3_T*)(src + offset)), targetPos);    /* add offset of POSTION semantic */
-        indicies.push_back({ iPart, dist });
+        bool alive = states[iPart];
+        if (alive)
+        {
+            indicies.push_back({ iPart, GetDesc().sorting ? serials[iPart] : 0 });
+        }
     }
-
-    std::sort(begin(indicies), end(indicies), 
-        [](const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b) {
-            return a.second > b.second; 
-        });
-
+ 
+    if (GetDesc().sorting)
+    {
+        std::sort(begin(indicies), end(indicies), 
+            [](const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b) {
+                return a.second > b.second; 
+            });
+    }
 
     for (uint32_t i = 0; i < indicies.size(); ++i) {
         uint32_t iFrom = indicies[i].first * nStride;
@@ -296,13 +307,12 @@ EMITTER::EMITTER(void* buf)
         auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
                                             { return uav->name == UavPrerendered(i); });
 
-        if (sorting)
         {
             std::vector<std::unique_ptr<Fx::UAVBundleT>> bundles;
             bundles.push_back(std::make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
             bundles.back()->name = UavPrerenderedSorted(i);
 
-            CreateUAVsEx(bundles, capacity, sharedUAVs)[0];
+            CreateUAVsEx(bundles, capacity * instanceCount, sharedUAVs)[0];
         }
 
         {
@@ -407,11 +417,18 @@ void EMITTER::Prerender(const UNIFORMS& uniforms)
 }
 
 
-void EMITTER::Tick(const UNIFORMS& uniforms)
+void EMITTER::Serialize() 
+{
+    for (int i = 0; i < m_passes.size(); ++ i)
+    {
+        m_passes[i].Serialize();
+    }
+}
+
+void EMITTER::Simulate(const UNIFORMS& uniforms)
 {
     Update(uniforms);
     Emit(uniforms);
-    Prerender(uniforms);
     // dump();
 }
 

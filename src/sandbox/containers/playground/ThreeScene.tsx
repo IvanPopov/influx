@@ -131,7 +131,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
-        const instanceData = Emitter.memoryToF32Array(pass.getRenderBuffer());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
         const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
         //
@@ -167,7 +167,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     addPass(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const instanceData = Emitter.memoryToF32Array(pass.getRenderBuffer());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         if (desc.geometry === EPartFxPassGeometry.k_Line) {
             this.addPassLine(pass);
             return;
@@ -226,7 +226,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     addPassLWI(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const instanceData = Emitter.memoryToF32Array(pass.getRenderBuffer());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
 
@@ -278,7 +278,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     addPassDefaultMat(pass: IEmitterPass) {
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(pass);
-        const instanceData = Emitter.memoryToF32Array(pass.getRenderBuffer());
+        const instanceData = Emitter.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
@@ -444,26 +444,27 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
 
+        let constants = timeline.getConstants();
+        let helper = UniformHelper();
+        helper.set('elapsedTime').float(constants.elapsedTime);
+        helper.set('elapsedTimeLevel').float(constants.elapsedTimeLevel);
+        helper.set('parentPosition').float3(0, 0, 0);
+        helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
+        let uniforms = helper.finish();
 
         if (!timeline.isStopped()) {
-            let constants = timeline.getConstants();
-
-            let helper = UniformHelper();
-            helper.set('elapsedTime').float(constants.elapsedTime);
-            helper.set('elapsedTimeLevel').float(constants.elapsedTimeLevel);
-            helper.set('parentPosition').float3(0, 0, 0);
-            helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
-
-            emitter.tick(helper.finish());
             timeline.tick();
+            emitter.simulate(uniforms);
         }
+        
+        emitter.prerender(uniforms);
+        emitter.serialize(); // feed render buffer with instance data
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];
             const emitPass = emitter.getPass(iPass);
             const passDesc = emitPass.getDesc();
 
-            emitPass.fillRenderBuffer();
             const geometry = rendPass.mesh.geometry as THREE.BufferGeometry;
 
             rendPass.instancedBuffer.needsUpdate = true;

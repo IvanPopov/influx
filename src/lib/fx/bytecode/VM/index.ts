@@ -13,7 +13,7 @@ export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native'
 /// Common API
 /////////////////////////////////////////////////////////////////////
 
-let useWASM = false;
+let useWASM = true;
 
 function VMBundle()
 {

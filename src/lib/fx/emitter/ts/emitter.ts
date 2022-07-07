@@ -161,7 +161,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const uavSerialsI32 = sorting ? VM.memoryToI32Array(uavSerials.data) : null;
         // const uavSerialsF32 = VM.memoryToF32Array(uavSerials.data);
 
-        function fillRenderBuffer() {
+        function serialize() {
 
             // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
             //       I hate javascript for that :/
@@ -178,46 +178,30 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
             const indicies = [];
 
-            let iPrerendered = 0;
             for (let iPart = 0; iPart < uavStatesI32.length; ++iPart) 
             {
                 const alive = uavStatesI32[iPart];
                 if (alive) {
-                    const iFrom = iPart * nStrideF32;
-                    const iTo = iPrerendered * nStrideF32;
-                    const from = srcF32.subarray(iFrom, iFrom + nStrideF32);
-                    const copyTo = dstF32.subarray(iTo, iTo + nStrideF32);
-                    copyTo.set(from);
-                    
-                    if (sorting)
-                    {
-                        indicies.push([ iPrerendered, uavSerialsI32[iPart] ]);
-                    }
-                    
-                    iPrerendered ++;
+                    indicies.push([ iPart, sorting ? uavSerialsI32[iPart] : 0 ]);
                 }
             };
 
             if (sorting)
             {
-                (dstF32 as any).$shadowCopy = (dstF32 as any).$shadowCopy || new Float32Array(dstF32.length);
-
                 indicies.sort((a, b) => -a[1] + b[1]);
+            }
 
-                for (let i = 0; i < indicies.length; ++i) {
-                    const iFrom = indicies[i][0] * nStrideF32;
-                    const iTo = i * nStrideF32;
+            for (let i = 0; i < indicies.length; ++i) {
+                const iFrom = indicies[i][0] * nStrideF32;
+                const iTo = i * nStrideF32;
 
-                    const from = dstF32.subarray(iFrom, iFrom + nStrideF32);
-                    const copyTo = (dstF32 as any).$shadowCopy.subarray(iTo, iTo + nStrideF32);
-                    copyTo.set(from);
-                }
-
-                dstF32.set((dstF32 as any).$shadowCopy);
+                const from = srcF32.subarray(iFrom, iFrom + nStrideF32);
+                const copyTo = dstF32.subarray(iTo, iTo + nStrideF32);
+                copyTo.set(from);
             }
         }
 
-        function getRenderBuffer() { return asBundleMemory(uavSortedU8); }
+        function getData() { return asBundleMemory(uavSortedU8); }
         function getDesc() {
             return {
                 stride,
@@ -241,8 +225,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         return {
             getDesc,
             getNumRenderedParticles,                                                                           // FIXME
-            getRenderBuffer,
-            fillRenderBuffer,
+            getData,
+            serialize,
             prerender,
             dump
         };
@@ -271,6 +255,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         passes.forEach(pass => pass.prerender(uniforms));
     }
 
+    function serialize() {
+        passes.forEach(pass => pass.serialize());
+    }
+
 
     function emit(uniforms: Uniforms) {
         initBundle.setConstants(uniforms);
@@ -280,11 +268,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         spawnBundle.run(1);
     }
 
-    function tick(uniforms: Uniforms)
+    function simulate(uniforms: Uniforms)
     {
         update(uniforms);
         emit(uniforms);
-        prerender(uniforms);
     }
 
     function dump() {
@@ -313,7 +300,9 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         getNumParticles,
         
         reset,
-        tick,
+        simulate,
+        prerender,
+        serialize,
         
         dump
     };

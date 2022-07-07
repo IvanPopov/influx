@@ -39,7 +39,7 @@ void DestroyEmitter(IFX::EMITTER* pEmitter)
 
 IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
 { 
-    IFX::VECTOR3 v3;
+    IFX::VECTOR3 v3; 
     v3.x = v["x"].as<float>();
     v3.y = v["y"].as<float>();
     v3.z = v["z"].as<float>();
@@ -106,9 +106,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
             return jsDesc; 
           }))
          .function("getNumRenderedParticles", &IFX::EMITTER_PASS::GetNumRenderedParticles)
-         .function("sort", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
-            return self.EMITTER_PASS::Sort(Vec3FromJSObject(val));  
-          }))
+         .function("serialize", &IFX::EMITTER_PASS::Serialize)
          .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::Prerender(UniformsFromJSObject(val));
           }))
@@ -116,14 +114,18 @@ EMSCRIPTEN_BINDINGS(pipeline)
    
     em::class_<IFX::EMITTER>("Emitter")
          .function("getName", &IFX::EMITTER::GetName)
-         .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
          .function("getCapacity", &IFX::EMITTER::GetCapacity)
          .function("getPassCount", &IFX::EMITTER::GetPassCount)
+         .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
          .function("getNumParticles", &IFX::EMITTER::GetNumParticles)
 
-         .function("tick", em::optional_override([](IFX::EMITTER& self, em::val val) {
-            return self.EMITTER::Tick(UniformsFromJSObject(val)); 
+         .function("simulate", em::optional_override([](IFX::EMITTER& self, em::val val) {
+            return self.EMITTER::Simulate(UniformsFromJSObject(val)); 
           }))
+        .function("prerender", em::optional_override([](IFX::EMITTER& self, em::val val) {
+            return self.EMITTER::Prerender(UniformsFromJSObject(val)); 
+          }))
+         .function("serialize", &IFX::EMITTER::Serialize)
          .function("reset", &IFX::EMITTER::Reset) 
          .function("dump", &IFX::EMITTER::Dump);
  

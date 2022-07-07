@@ -27,9 +27,11 @@ export interface IEmitterPassDesc
 
 export interface IEmitterPass {
     getDesc(): IEmitterPassDesc;
-    getRenderBuffer(): IMemory;
-    getNumRenderedParticles(): number; // num alive particles multipled by the prerendered instance count
-    fillRenderBuffer(): void;
+    getData(): IMemory;
+    getNumRenderedParticles(): number;  // num alive particles multipled by the prerendered instance count
+    serialize(): void;                  // fill render buffer with instance data, including sorting if needed
+    prerender(uniforms: Uniforms);      // update materials data per instance
+
     dump(): void;
 }
 
@@ -40,8 +42,12 @@ export interface IEmitter {
     getPassCount(): number;
     getPass(i: number): IEmitterPass;
     getNumParticles(): number;
-    tick(uniforms: Uniforms): void;
+    
+    simulate(uniforms: Uniforms): void;
+    prerender(uniforms: Uniforms): void;    // alias for all pass prerender ((pass of passes) pass.prerender())
+    serialize(): void;                      // alias for all pass serialization ((pass of passes) pass.serialize())
     reset(): void;
+    
     dump(): void;
 }
 
