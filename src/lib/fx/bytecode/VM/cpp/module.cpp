@@ -1,5 +1,3 @@
-// #ifdef EMCC_ENV // guard to exclude this file fron FBB build
- 
 #include <emscripten/bind.h>    
 #include "bundle.h"
 
@@ -75,5 +73,5 @@ EMSCRIPTEN_BINDINGS(bundle)
         .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV) 
         .class_function("resetRegisters", &VM::BUNDLE::ResetRegisters);
 }
-// #endif
+
  

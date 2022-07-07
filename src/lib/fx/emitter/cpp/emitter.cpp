@@ -10,17 +10,6 @@
 #include <memory>
 #include <utility>
 
-// IP: temp hack for Husky compartibility
-#ifdef EMCC_ENV
-#include "../../../glm/glm.hpp"
-#define VEC3_T glm::vec3
-#define DIST_FN glm::distance
-#else
-#include "m3d.h"
-#define VEC3_T m3dV
-#define DIST_FN m3dDist
-#endif
-
 #include "emitter.h" 
 
 namespace IFX

@@ -1,4 +1,3 @@
-// #ifdef EMCC_ENV    
 #include <emscripten/bind.h>
 #include "../../bytecode/VM/cpp/memory_view.h"
 
@@ -8,8 +7,7 @@
 #include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp"
-  
-using namespace glm;   
+   
 namespace em = emscripten;    
 
 int main(void)  
@@ -133,4 +131,3 @@ EMSCRIPTEN_BINDINGS(pipeline)
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
     em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());
 }      
-// #endif
