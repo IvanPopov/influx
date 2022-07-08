@@ -1,6 +1,7 @@
 
 uniform float elapsedTime: ELAPSED_TIME;
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
+uniform float3 parentPosition: PARENT_POSITION;
 
 float random (float2 uv)
 {
@@ -73,10 +74,10 @@ int Spawn()
 
 void init(out Part part, int partId)
 {
-    part.pos = float3(0.f, float2(0.0).x, 0.0);
-    part.size = 0.1;
+    part.pos = parentPosition + float3(0.f, float2(0.0).x, 0.0);
+    part.size = 0.1; 
     part.timelife = 0.0;
-    part.child = false;
+    part.child = false; 
     part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
 }
 
@@ -95,7 +96,7 @@ bool update(inout Part part)
     
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     if (part.child == false) {
-        part.pos = part.speed * part.timelife * 3.0f;
+        part.pos = parentPosition + part.speed * part.timelife * 3.0f;
         spawn(1) initChild(part.pos);
     } else {
         part.size = (part.timelife - 0.8) / 0.2 * 0.1;
@@ -122,6 +123,35 @@ int prerender2(inout Part part, inout DefaultShaderInput input)
     return asint(distance(part.pos, cameraPosition));
 }
 
+// Warning: Do not change layout of this structure!
+struct LwiInstance {
+    float4 dynData[2]: META;
+    float3x4 worldMatr: TRANSFORM0;
+    float3x4 worldMatrPrev: TRANSFORM1;
+};
+
+void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3x4 matr)
+{
+    matr[0] = float4(size.x, 0, 0, pos.x);
+    matr[1] = float4(0, size.y, 0, pos.y);
+    matr[2] = float4(0, 0, size.z, pos.z);
+}
+
+
+int prerender3(inout Part part, inout LwiInstance input)
+{
+    // IP: todo: add support of direct matrix assigment
+    // input.worldMatrPrev = input.worldMatr;
+    input.worldMatrPrev[0] = input.worldMatr[0];
+    input.worldMatrPrev[1] = input.worldMatr[1];
+    input.worldMatrPrev[2] = input.worldMatr[2];
+
+    packLwiTransform(part.pos, part.speed, float3(part.size), input.worldMatr);
+    // sorting(part.templateIndex);
+    return asint(distance(part.pos, cameraPosition));
+}
+
+
 
 partFx project.awesome {
     Capacity = 1000;
@@ -145,5 +175,19 @@ partFx some.example {
     pass P0 {
         Sorting = TRUE;
         PrerenderRoutine = compile prerender2();
+    }
+}
+
+
+partFx lwi {
+    Capacity = 1000;
+    SpawnRoutine = compile Spawn();
+    InitRoutine = compile init();
+    UpdateRoutine = compile update();
+
+    pass P0 {
+        Sorting = TRUE;
+        PrerenderRoutine = compile prerender3();
+        Geometry = Sphere;
     }
 }
