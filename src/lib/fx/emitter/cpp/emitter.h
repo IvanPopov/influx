@@ -65,8 +65,6 @@ public:
     void         Serialize();
     // returns sorted data if sorting is on and unsorted otherwise 
     VM::memory_view  GetData() const;
-    // returns data right after prerender routine
-    VM::memory_view  GetDataUnsorted() const;
     const EMITTER_DESC& GetDesc() const { return m_desc; }
 
 private:
