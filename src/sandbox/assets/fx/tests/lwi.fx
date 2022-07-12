@@ -6,6 +6,7 @@ uniform float elapsedTime: ELAPSED_TIME;
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
 uniform float3 parentPosition: PARENT_POSITION;
 uniform float3 cameraPosition: CAMERA_POSITION;
+uniform uint   instanceTotal: INSTANCE_TOTAL; // number of difference lwi instances
 
 float3 randUnitCircle(uint partId) 
 {
@@ -76,7 +77,7 @@ void Init(inout Part part, uint partId)
     part.size = sizeFromPos(part.pos);
     part.timelife = 0.0;
     part.speed = float3(0.f);
-    part.templateIndex = 0;
+    part.templateIndex = partId % instanceTotal;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -106,8 +107,7 @@ int prerender(inout Part part, inout LwiInstance input)
     input.worldMatrPrev[2] = input.worldMatr[2];
 
     packLwiTransform(part.pos, part.speed, part.size, input.worldMatr);
-    // sorting(part.templateIndex);
-    return asint(distance(part.pos, cameraPosition));
+    return asint(part.templateIndex);//asint(distance(part.pos, cameraPosition));
 }
 
 partFx project.awesome {
@@ -118,7 +118,7 @@ partFx project.awesome {
 
     pass P0 {
         Sorting = TRUE; 
-        Geometry = Cylinder;
+        Geometry = "sfx_leaves";
         PrerenderRoutine = compile prerender();
     }
 }

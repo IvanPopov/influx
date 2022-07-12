@@ -21,11 +21,13 @@ export enum EOperation {
     k_I32Sub,
     k_I32Mul,
     k_I32Div,
+    k_I32Mod,
 
     k_F32Add,
     k_F32Sub,
     k_F32Mul,
     k_F32Div,
+    k_F32Mod,
 
     //
     // Relational operations

@@ -2,7 +2,7 @@ import { assert, isUint } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { FxEmitter } from "./FxEmitter";
 
@@ -24,7 +24,7 @@ export interface IPartFxPassReflection
 {
     instance: string;
     sorting: boolean;
-    geometry: EPartFxPassGeometry;
+    geometry: string;
     instanceCount: number;
     VSParticleShader: string;
     PSParticleShader: string;

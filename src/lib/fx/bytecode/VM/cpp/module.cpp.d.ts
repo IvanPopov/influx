@@ -13,9 +13,6 @@ interface WASMBundleFactory
     new(name: string, data: WASMMemory): Bundle.IBundle;
     createUAV(name: string, elementSize: number, length: number, register: number): Bundle.IUAV;
     destroyUAV(uav: Bundle.IUAV): void;
-
-    // debug functionality
-    resetRegisters(): void;
 }
 
 interface Module extends EmscriptenModule {

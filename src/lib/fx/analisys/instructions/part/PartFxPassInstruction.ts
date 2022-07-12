@@ -1,12 +1,12 @@
 import { isNull } from "@lib/common";
 import { IPassInstructionSettings, PassInstruction } from "@lib/fx/analisys/instructions/PassInstruction";
 import { EInstructionTypes, ICompileExprInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { EPartFxPassGeometry, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 export interface IPartFxPassInstructionSettings extends IPassInstructionSettings {
     sorting?: boolean;
     prerenderRoutine: ICompileExprInstruction;
-    geometry: EPartFxPassGeometry;
+    geometry: string;
     instanceCount?: number;
 }
 
@@ -14,7 +14,7 @@ export interface IPartFxPassInstructionSettings extends IPassInstructionSettings
 export class PartFxPassInstruction extends PassInstruction implements IPartFxPassInstruction {
     readonly sorting: boolean;
     readonly prerenderRoutine: ICompileExprInstruction;
-    readonly geometry: EPartFxPassGeometry;
+    readonly geometry: string;
     readonly instanceCount: number;
 
     constructor({ sorting = false, instanceCount = 1, prerenderRoutine, geometry, ...settings }: IPartFxPassInstructionSettings) {

@@ -3976,12 +3976,6 @@ export class Analyzer {
             return null;
         }
 
-        // TODO: remove this ????
-        if (operator === '%' || operator === '%=') {
-            // TODO: emit error
-            return null;
-        }
-
         if (Analyzer.isAssignmentOperator(operator)) {
             if (!leftType.writable && !isInitializing) {
                 context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
@@ -4096,10 +4090,10 @@ export class Analyzer {
         }
 
         // op: "+", "-", "*", "/"
-        //     "+=", "-=", "*=", "/="
+        //     "+=", "-=", "*=", "/=", "%="
         if (Analyzer.isArithmeticalOperator(operator)) {
 
-            // op: "+", "-", "*", "/"
+            // op: "+", "-", "*", "/", "%"
 
             const length =
                 isScalarType(leftType) ? rightType.length :
@@ -4115,7 +4109,7 @@ export class Analyzer {
             }
 
 
-            // op: "+=", "-=", "*=", "/="
+            // op: "+=", "-=", "*=", "/=", "%="
             if (Analyzer.isAssignmentOperator(operator)) {
                 if (!leftType.isEqual(resultType)) {
                     // TODO: add support for imlicit conversions
@@ -4255,7 +4249,8 @@ export class Analyzer {
         return operator === '+' || operator === '+=' ||
             operator === '-' || operator === '-=' ||
             operator === '*' || operator === '*=' ||
-            operator === '/' || operator === '/=';
+            operator === '/' || operator === '/=' ||
+            operator === '%' || operator === '%=';
     }
 
 

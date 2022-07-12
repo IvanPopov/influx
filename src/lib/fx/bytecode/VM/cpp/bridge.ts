@@ -86,5 +86,5 @@ export function destroyUAV(uav: Bytecode.IUAV)
 // cleanup shared registers memory
 export function debugResetRegisters()
 {
-    WASMBundle.resetRegisters();
+    // unsupported
 }

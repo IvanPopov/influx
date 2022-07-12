@@ -70,8 +70,7 @@ EMSCRIPTEN_BINDINGS(bundle)
             return em::val::array(self.BUNDLE::GetLayout());
           }))
         .class_function("createUAV", &VM::BUNDLE::CreateUAV)
-        .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV) 
-        .class_function("resetRegisters", &VM::BUNDLE::ResetRegisters);
+        .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV);  
 }
 
  

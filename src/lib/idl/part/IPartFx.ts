@@ -2,20 +2,11 @@ import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IS
 
 // import { EPartFxInstructionTypes } from "./IPartFxInstruction";
 
-export enum EPartFxPassGeometry {
-    k_Billboard = "billboard",
-    k_Cylinder = "cylinder",
-    k_Box = "box",
-    k_Sphere = "sphere",
-    k_Line = "line",
-    k_Undefined = "undefined"
-}
-
 export interface IPartFxPassInstruction extends IPassInstruction {
     readonly sorting: boolean;
     readonly prerenderRoutine: ICompileExprInstruction;
     readonly particleInstance: ITypeInstruction;
-    readonly geometry: EPartFxPassGeometry;
+    readonly geometry: string;
     readonly instanceCount: number;
 
     /** check if the pass is ready for runtime */

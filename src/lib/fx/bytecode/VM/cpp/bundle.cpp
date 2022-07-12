@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <algorithm>
+#include <cmath>
+#include <map>
 
 #include "bundle.h"
 
@@ -60,8 +62,6 @@ void DecodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layou
     }
 } 
 
-static std::vector<uint32_t> regs(512 * 4 * 4, 0);
-
 
 BUNDLE::BUNDLE(std::string debugName, memory_view data): m_debugName(debugName)
 {
@@ -73,13 +73,15 @@ BUNDLE::BUNDLE() {}
 memory_view BUNDLE::Play()
 {
     constexpr int STRIDE = 5;
+
+    uint32_t regs[8192]; // {}
  
     uint32_t* ilist = m_instructions.data();
     uint32_t length = m_instructions.size();
 
-    int32_t*  iregs = (int32_t*)regs.data();
-    uint32_t* uregs = (uint32_t*)regs.data();
-    float_t*  fregs = (float_t*)regs.data();
+    int32_t*  iregs = (int32_t*)regs;
+    uint32_t* uregs = (uint32_t*)regs;
+    float_t*  fregs = (float_t*)regs;
 
     assert(m_inputs[CBUFFER0_REGISTER].ptr == (uintptr_t)m_constants.data());
 
@@ -149,7 +151,11 @@ memory_view BUNDLE::Play()
             case EOperation::k_I32Div:
                 iregs[a] = iregs[b] / iregs[c];
                 break;
-
+            case EOperation::k_I32Mod:
+                // IP: temp hack to avoid runtine error
+                iregs[a] = iregs[c] != 0 ? iregs[b] % iregs[c] : 0;
+                break;
+            
             case EOperation::k_I32Mad:
                 iregs[a] = iregs[b] + iregs[c] * iregs[d];
                 break;
@@ -172,6 +178,9 @@ memory_view BUNDLE::Play()
                 break;
             case EOperation::k_F32Div:
                 fregs[a] = fregs[b] / fregs[c];
+                break;
+            case EOperation::k_F32Mod:
+                fregs[a] = std::fmod(fregs[b], fregs[c]);
                 break;
 
 
@@ -297,7 +306,7 @@ memory_view BUNDLE::Play()
         i5 += STRIDE;
     }
     end:
-    return memory_view((uintptr_t)regs.data(), regs.size());
+    return memory_view((uintptr_t)regs, sizeof(regs) / sizeof(regs[0]));
 }
 
  
@@ -307,10 +316,10 @@ void BUNDLE::Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
     const auto [ nGroupX, nGroupY, nGroupZ ] = numgroups;
     const auto [ nThreadX, nThreadY, nThreadZ ] = numthreads;
 
-    static std::vector<int> Gid  (3, 0);    // uint3 Gid: SV_GroupID    
-    static std::vector<int> Gi   (1, 0);    // uint GI: SV_GroupIndex
-    static std::vector<int> GTid (3, 0);    // uint3 GTid: SV_GroupThreadID
-    static std::vector<int> DTid (3, 0);    // uint3 DTid: SV_DispatchThreadID
+    int Gid[3]  = { 0, 0, 0 };   // uint3 Gid: SV_GroupID   
+    int Gi[1]   = { 0 };         // uint GI: SV_GroupIndex
+    int GTid[3] = { 0, 0, 0 };   // uint3 GTid: SV_GroupThreadID
+    int DTid[3] = { 0, 0, 0 };   // uint3 DTid: SV_DispatchThreadID
 
     // TODO: get order from bundle
     const auto SV_GroupID = INPUT0_REGISTER + 0;
@@ -318,10 +327,10 @@ void BUNDLE::Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
     const auto SV_GroupThreadID = INPUT0_REGISTER + 2;
     const auto SV_DispatchThreadID = INPUT0_REGISTER + 3;
 
-    m_inputs[SV_GroupID] = memory_view((uintptr_t)Gid.data(), (uint32_t)Gid.size());
-    m_inputs[SV_GroupIndex] = memory_view((uintptr_t)Gi.data(), (uint32_t)Gi.size());
-    m_inputs[SV_GroupThreadID] = memory_view((uintptr_t)GTid.data(), (uint32_t)GTid.size());
-    m_inputs[SV_DispatchThreadID] = memory_view((uintptr_t)DTid.data(), (uint32_t)DTid.size());
+    m_inputs[SV_GroupID]            = memory_view((uintptr_t)Gid,  3);
+    m_inputs[SV_GroupIndex]         = memory_view((uintptr_t)Gi,   1);
+    m_inputs[SV_GroupThreadID]      = memory_view((uintptr_t)GTid, 3);
+    m_inputs[SV_DispatchThreadID]   = memory_view((uintptr_t)DTid, 3);
 
     for (int iGroupZ = 0; iGroupZ < nGroupZ; ++iGroupZ) {
         for (int iGroupY = 0; iGroupY < nGroupY; ++iGroupY) {
@@ -394,10 +403,7 @@ const std::vector<BUNDLE_CONSTANT>& BUNDLE::GetLayout() const
     return m_layout;
 }
 
-void BUNDLE::ResetRegisters()
-{
-    memset(regs.data(), 0, regs.size() * sizeof(decltype(regs)::value_type));
-}
+
  
 BUNDLE_UAV BUNDLE::CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {

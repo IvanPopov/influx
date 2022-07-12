@@ -58,9 +58,9 @@ std::vector<T> vecFromJSArray(const em::val &v)
     return rv;
 }
 
-UNIFORMS UniformsFromJSObject(const em::val &v)
+IFX::UNIFORMS UniformsFromJSObject(const em::val &v)   
 {
-    UNIFORMS unis;       
+    IFX::UNIFORMS unis;       
     em::val keys = em::val::global("Object").call<em::val>("keys", v);
     int length = keys["length"].as<int>();
     for (int i = 0; i < length; ++i) 
@@ -100,8 +100,9 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("instanceCount", desc.instanceCount);
             jsDesc.set("vertexShader", desc.vertexShader);
             jsDesc.set("pixelShader", desc.pixelShader);
-            jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout));
-            return jsDesc; 
+            jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout)); 
+            jsDesc.set("instanceName", desc.renderInstance.name);
+            return jsDesc;  
           }))
          .function("getNumRenderedParticles", &IFX::EMITTER_PASS::GetNumRenderedParticles)
          .function("serialize", &IFX::EMITTER_PASS::Serialize)

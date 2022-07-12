@@ -344,6 +344,7 @@ DwordExprSeq : DwordExpr ',' DwordExprSeq
 
 PassStateExpr : DwordExpr --add
 PassStateExpr : ComplexExpr
+PassStateExpr : String
 PassStateExpr : '{' DwordExprSeq '}'
 
 StateExpr : DwordExpr --add

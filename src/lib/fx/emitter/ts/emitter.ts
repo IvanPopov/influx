@@ -138,14 +138,6 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         // tslint:disable-next-line:max-line-length
         const uavPrerendReflect: UAVBundleT = (<RoutineBytecodeBundleT>prerenderBundle).resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
 
-        // dump prerendered particles
-        const dump = (): void => {
-            verbose(`dump ${UAV.readCounter(uavPrerendered)}/${capacity} prerendred particles: `);
-            for (let iElement = 0; iElement < UAV.readCounter(uavPrerendered); ++iElement) {
-                verbose(VM.asNativeRaw(UAV.readElement(uavPrerendered, iElement), instance));
-            }
-        };
-
         //
         // Sorting
         //
@@ -161,13 +153,19 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const uavSerialsI32 = sorting ? VM.memoryToI32Array(uavSerials.data) : null;
         // const uavSerialsF32 = VM.memoryToF32Array(uavSerials.data);
 
+        // dump prerendered particles
+        const dump = (): void => {
+            let nPart = getNumRenderedParticles();
+            verbose(`dump ${nPart}/${capacity} prerendred particles: `);
+            for (let iElement = 0; iElement < nPart; ++iElement) {
+                verbose(VM.asNativeRaw(UAV.readElement(uavSorted, iElement), instance));
+            }
+        };
+
         function serialize() {
 
             // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
             //       I hate javascript for that :/
-
-            const v3 = new Vector3();
-            const length = getNumParticles();
 
             const nStrideF32 = stride * instanceCount; // stride in floats
 
@@ -178,11 +176,11 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
             const indicies = [];
 
-            for (let iPart = 0; iPart < uavStatesI32.length; ++iPart) 
+            for (let iPart = 0; iPart < capacity; ++iPart) 
             {
                 const alive = uavStatesI32[iPart];
                 if (alive) {
-                    indicies.push([ iPart, sorting ? uavSerialsI32[iPart] : 0 ]);
+                    indicies.push([ iPart, sorting ? uavSerialsI32[iPart * instanceCount] : 0 ]);
                 }
             };
 
@@ -204,8 +202,9 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         function getData() { return asBundleMemory(uavSortedU8); }
         function getDesc() {
             return {
-                stride,
+                instanceName: instance.name as string,
                 instanceLayout: instanceLayout.map(({ name, offset, size }) => ({ name: <string>name, offset, size })), // FIXME
+                stride,
                 geometry: <string>geometry,                                                                             // FIXME
                 sorting,
                 vertexShader,

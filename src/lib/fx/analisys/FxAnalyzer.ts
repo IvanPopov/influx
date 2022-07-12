@@ -4,7 +4,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IFile, IParseNode } from "@lib/idl/parser/IParser";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
@@ -154,7 +154,7 @@ export class FxAnalyzer extends Analyzer {
 
         let sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
         const prerenderRoutine = fxStates.prerenderRoutine || null;
-        const geometry = fxStates.geometry || EPartFxPassGeometry.k_Billboard;
+        const geometry = fxStates.geometry || null;
         const instanceCount = fxStates.instanceCount || 1;
 
         if (sorting && prerenderRoutine && type.equals(prerenderRoutine.function.def.returnType, T_VOID))
@@ -338,22 +338,17 @@ export class FxAnalyzer extends Analyzer {
                     fxStates.instanceCount = Number(value) || 1;
                     break;
                 case ('Geometry'.toUpperCase()):
-                    // const types = [
-                    //     'Billboard',
-                    //     'Cylinder',
-                    //     'Box',
-                    //     'Sphere',
-                    //     'Line'
-                    // ].map(type => type.toUpperCase());
-
-                    // fxStates.geometry = Math.max(0, types.indexOf(value)) as EPartFxPassGeometry;
-                    value = value.toLowerCase();
-                    let i = Object.values(EPartFxPassGeometry as any).indexOf(value);
-                    if (i === -1) 
-                        fxStates.geometry = EPartFxPassGeometry.k_Undefined;
-                    else 
-                        fxStates.geometry = value as EPartFxPassGeometry;
-
+                    // Geometry = "sfx_leaves";
+                    if (exprNode.name == "T_STRING")
+                    {
+                        value = value.replace(/^"(.+)"$/,'$1');
+                    }
+                    // Geometry = Sphere;
+                    else
+                    {
+                        console.assert(exprNode.name === 'T_NON_TYPE_ID');
+                    }
+                    fxStates.geometry = value.toLowerCase();
                     break;
                 case ('Sorting'.toUpperCase()):
                     // TODO: use correct validation with diag error output

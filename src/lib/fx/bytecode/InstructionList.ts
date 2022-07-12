@@ -84,10 +84,12 @@ class InstructionList {
             case EOperation.k_I32Sub:
             case EOperation.k_I32Mul:
             case EOperation.k_I32Div:
+            case EOperation.k_I32Mod:
             case EOperation.k_F32Add:
             case EOperation.k_F32Sub:
             case EOperation.k_F32Mul:
             case EOperation.k_F32Div:
+            case EOperation.k_F32Mod:
 
             case EOperation.k_U32LessThan:
             case EOperation.k_U32GreaterThanEqual:

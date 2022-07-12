@@ -36,8 +36,16 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
             console.assert(offset < storage.byteLength);
             return self;
         }
+
+        function int(x)
+        {
+            (new DataView(storage.buffer, storage.byteOffset)).setInt32(offset, x, true);
+            offset += 4;
+            console.assert(offset < storage.byteLength);
+            return self;
+        }
     
-        return { float3, float };
+        return { float3, float, int };
     }
 
     return self;

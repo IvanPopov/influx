@@ -148,6 +148,9 @@ export class TSBundle implements Bundle.IBundle
                 case EOperation.k_I32Div:
                     iregs[a] = iregs[b] / iregs[c];
                     break;
+                case EOperation.k_I32Mod:
+                    iregs[a] = iregs[b] % iregs[c];
+                    break;
 
                 case EOperation.k_I32Mad:
                     iregs[a] = iregs[b] + iregs[c] * iregs[d];
@@ -171,6 +174,9 @@ export class TSBundle implements Bundle.IBundle
                     break;
                 case EOperation.k_F32Div:
                     fregs[a] = fregs[b] / fregs[c];
+                    break;
+                case EOperation.k_F32Mod:
+                    fregs[a] = fregs[b] % fregs[c];
                     break;
 
 

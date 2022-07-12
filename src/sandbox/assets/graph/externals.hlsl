@@ -13,5 +13,9 @@ uniform float elapsedTime: ELAPSED_TIME;
  */
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
 
+uniform float3 parentPosition: PARENT_POSITION;
+
+uniform float3 cameraPosition: CAMERA_POSITION;
+
 #endif
 

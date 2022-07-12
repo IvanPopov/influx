@@ -164,19 +164,19 @@ void EMITTER_PASS::Serialize()
 
     std::vector<std::pair<uint32_t, int32_t>> indicies;
 
-    for (uint32_t iPart = 0; iPart < UavStates()->length; ++iPart) 
+    for (uint32_t iPart = 0; iPart < Parent().GetCapacity(); ++iPart) 
     {
-        bool alive = states[iPart];
+        bool alive = UavStates()->data.As<int32_t>()[iPart];
         if (alive)
         {
-            indicies.push_back({ iPart, GetDesc().sorting ? serials[iPart] : 0 });
+            indicies.push_back({ iPart, GetDesc().sorting ? UavSerials()->data.As<int32_t>()[iPart * GetDesc().instanceCount] : 0 });
         }
     }
  
     if (GetDesc().sorting)
     {
         std::sort(begin(indicies), end(indicies), 
-            [](const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b) {
+            [](const std::pair<uint32_t, uint32_t>& a, const std::pair<uint32_t, uint32_t>& b) {
                 return a.second > b.second; 
             });
     }
@@ -306,7 +306,7 @@ EMITTER::EMITTER(void* buf)
             desc.sorting = sorting;
             desc.stride = stride;
             desc.instanceCount = instanceCount;
-            desc.m_renderInstance = Fx::TypeLayoutT(*instance);
+            desc.renderInstance = Fx::TypeLayoutT(*instance);
 
             for (auto& attr : attrs)
             {
@@ -461,7 +461,7 @@ bool EMITTER::operator ==(const EMITTER& rhs) const
         auto& lp = m_passes[i].GetDesc();
         auto& rp = rhs.m_passes[i].GetDesc();
         if (lp.geometry != rp.geometry || lp.sorting != rp.sorting) return false;
-        if (!CompareTypeLayout(lp.m_renderInstance, rp.m_renderInstance)) return false;
+        if (!CompareTypeLayout(lp.renderInstance, rp.renderInstance)) return false;
     }
     return true;
 }

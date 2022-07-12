@@ -228,7 +228,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 '+': EOperation.k_F32Add,
                 '-': EOperation.k_F32Sub,
                 '*': EOperation.k_F32Mul,
-                '/': EOperation.k_F32Div
+                '/': EOperation.k_F32Div,
+                '%': EOperation.k_F32Mod
             };
 
             const op: EOperation = opFloatMap[opName];
@@ -261,7 +262,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 '+': EOperation.k_I32Add,
                 '-': EOperation.k_I32Sub,
                 '*': EOperation.k_I32Mul,
-                '/': EOperation.k_I32Div
+                '/': EOperation.k_I32Div,
+                '%': EOperation.k_I32Mod
             }
 
             const op: EOperation = opIntMap[opName];
@@ -278,11 +280,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         divf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('/', dest, left, right),
         addf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('+', dest, left, right),
         subf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('-', dest, left, right),
+        modf: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithf('%', dest, left, right),
 
         muli: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('*', dest, left, right),
         divi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('/', dest, left, right),
         addi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('+', dest, left, right),
         subi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('-', dest, left, right),
+        modi: (dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) => intrinsics.arithi('%', dest, left, right),
 
         dotf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
             let temp = alloca(Math.max(left.size, right.size));

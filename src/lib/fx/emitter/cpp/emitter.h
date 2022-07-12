@@ -43,7 +43,7 @@ struct EMITTER_DESC
     std::string pixelShader;
     std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection            
 
-    Fx::TypeLayoutT m_renderInstance;        
+    Fx::TypeLayoutT renderInstance;        
 };
 
 class EMITTER_PASS
@@ -59,13 +59,19 @@ public:
     );
 
     uint32_t     GetNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
-    void         Sort(VECTOR3 pos);
     void         Dump() const;
     void         Prerender(const UNIFORMS& uniforms);
     void         Serialize();
     // returns sorted data if sorting is on and unsorted otherwise 
     VM::memory_view  GetData() const;
     const EMITTER_DESC& GetDesc() const { return m_desc; }
+
+    const EMITTER& Parent() const;
+    
+    const VM::BUNDLE_UAV* UavSorted() const;
+    const VM::BUNDLE_UAV* UavNonSorted() const;
+    const VM::BUNDLE_UAV* UavSerials() const;
+    const VM::BUNDLE_UAV* UavStates() const;
 
 private:
     const EMITTER* m_parent;
@@ -77,12 +83,6 @@ private:
     // parent shortcuts
     VM::BUNDLE_UAV* UavSorted();
     VM::BUNDLE_UAV* UavNonSorted();
-    const VM::BUNDLE_UAV* UavSorted() const;
-    const VM::BUNDLE_UAV* UavNonSorted() const;
-    const VM::BUNDLE_UAV* UavSerials() const;
-    const VM::BUNDLE_UAV* UavStates() const;
-
-    const EMITTER& Parent() const;
 };
 
 

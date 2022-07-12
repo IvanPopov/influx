@@ -2,7 +2,7 @@ import { assert, isNull } from "@lib/common";
 import { EInstructionTypes, ICompileExprInstruction, IFunctionDeclInstruction, IInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { EPartFxPassGeometry, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 

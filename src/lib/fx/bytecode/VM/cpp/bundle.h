@@ -61,7 +61,6 @@ public:
     bool SetConstant(std::string name, memory_view value);
     const std::vector<BUNDLE_CONSTANT>& GetLayout() const;
 
-    static void ResetRegisters();
     static BUNDLE_UAV CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
     static void DestroyUAV(BUNDLE_UAV uav);
 

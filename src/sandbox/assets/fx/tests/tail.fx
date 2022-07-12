@@ -188,6 +188,6 @@ partFx lwi {
     pass P0 {
         Sorting = TRUE;
         PrerenderRoutine = compile prerender3();
-        Geometry = Sphere;
+        Geometry = "sfx_leaves";
     }
 }

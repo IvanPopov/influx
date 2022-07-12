@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "bundle_uav.h"
 #include "memory_view.h"
 
 namespace VM

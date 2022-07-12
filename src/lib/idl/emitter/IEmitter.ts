@@ -15,7 +15,9 @@ export type Uniforms = IMap<Uint8Array>;
 
 export interface IEmitterPassDesc
 {
+    instanceName: string;
     instanceLayout: IAttribute[];
+    
     geometry: string;
     sorting: boolean;
     stride: number; // number of float elements in the prerendered particle (src)
