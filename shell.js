@@ -17,7 +17,8 @@ function createWindow() {
         show: false, width: 800, height: 600, webPreferences: {
             experimentalFeatures: true,
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false,
+            webSecurity: false
         }
     });
     sandboxWin.loadURL(url.format({
@@ -46,12 +47,15 @@ electron.app.on('activate', () => {
     }
 });
 
-electron.ipcMain.on('app-ready', (event, arg) => {
+function onReady()
+{
     if (!logoWin?.isDestroyed() && logoWin?.isFocusable())
         logoWin.close();
     if (!sandboxWin?.isVisible())
         sandboxWin.maximize() && sandboxWin.show();
-});
+}
+
+electron.ipcMain.on('app-ready', onReady);
 
 electron.ipcMain.on('process-save-file-silent', (event, arg) => {
     console.log(`Request to silent save file for '${arg.name}...'`);
