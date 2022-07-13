@@ -2,7 +2,6 @@ import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
 import { store } from '@sandbox/store';
 import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
-import { LGraph } from 'litegraph.js';
 import { bindActionCreators, Dispatch } from 'redux';
 
 import * as evt from './ActionTypeKeys';
@@ -33,7 +32,6 @@ export const sourceCode = {
     setContent(content: string, filename?: string) {
         return { type: evt.SOURCE_CODE_MODIFED, payload: { content, filename } };
     },
-
 
     // setContent (content): IActionCreator {
     //     return async (dispatch: IDispatch, getState) => {
@@ -103,6 +101,14 @@ export const playground = {
     switchRuntime() {
         return { type: evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME };
     },
+
+    saveFileAs() {
+        return { type: evt.PLAYGROUND_EFFECT_SAVE_REQUEST, payload: {} };
+    },
+
+    setAutosave(enabled: boolean) {
+        return { type: evt.PLAYGROUND_SET_OPTION_AUTOSAVE, payload: { enabled } };
+    }
 };
 
 export const nodes = {

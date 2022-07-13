@@ -1,12 +1,11 @@
 const electron = require("electron");
 const path = require("path");
 const url = require("url");
+const fs = require("fs");
 
 let logoWin;
-function createImageWindow()
-{
-    const { BrowserWindow } = require('electron')
-    logoWin = new BrowserWindow({ show: false, width: 350, height: 350, frame: false });
+function createImageWindow() {
+    logoWin = new electron.BrowserWindow({ show: false, width: 350, height: 350, frame: false });
     logoWin.loadURL(logoUrl);
     logoWin.webContents.on('did-finish-load', function () { logoWin.show(); });
     logoWin.on('closed', () => { logoWin = null; });
@@ -14,7 +13,13 @@ function createImageWindow()
 
 let sandboxWin;
 function createWindow() {
-    sandboxWin = new electron.BrowserWindow({ show: false, width: 800, height: 600, webPreferences: { experimentalFeatures: true, nodeIntegration: true, contextIsolation: false } });
+    sandboxWin = new electron.BrowserWindow({
+        show: false, width: 800, height: 600, webPreferences: {
+            experimentalFeatures: true,
+            nodeIntegration: true,
+            contextIsolation: false
+        }
+    });
     sandboxWin.loadURL(url.format({
         pathname: path.join(__dirname, 'dist/electron/index-electron.html'),
         protocol: 'file:',
@@ -46,6 +51,38 @@ electron.ipcMain.on('app-ready', (event, arg) => {
         logoWin.close();
     if (!sandboxWin?.isVisible())
         sandboxWin.maximize() && sandboxWin.show();
+});
+
+electron.ipcMain.on('process-save-file-silent', (event, arg) => {
+    console.log(`Request to silent save file for '${arg.name}...'`);
+    const filename = arg.name;
+    if (fs.existsSync(filename))
+    {
+        fs.writeFileSync(filename, arg.data);
+        console.log(`File '${filename} has been saved.'`);
+    }
+
+    event.returnValue = filename;
+});
+
+electron.ipcMain.on('process-save-file-dialog', (event, arg) => {
+    console.log(`Request to process save file dialog for '${arg.name}...'`);
+    let options = {
+        title: "Save binary FX",
+        defaultPath: arg.name,
+        buttonLabel: "Save",
+        filters: [
+            { name: 'Binary FX', extensions: ['bfx'] },
+        ]
+    }
+    const filename = electron.dialog.showSaveDialogSync(options) || null;
+    if (filename)
+    {
+        fs.writeFileSync(filename, arg.data);
+        console.log(`File '${filename} has been saved.'`);
+    }
+
+    event.returnValue = filename;
 });
 
 // black hole sun logo

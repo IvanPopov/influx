@@ -15,9 +15,10 @@ import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Grid, Icon, List, Message } from 'semantic-ui-react';
+import { Button, Checkbox, Grid, Icon, List, Message, Popup, Segment, Table } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 
+import isElectron from 'is-electron';
 
 interface IPlaygroundProps extends IStoreState {
     actions: typeof playgroundActions;
@@ -101,48 +102,29 @@ class Playground extends React.Component<IPlaygroundProps> {
         }
     }
 
+    @autobind
+    async handleAutosaveClick() {
+        this.props.actions.setAutosave(!this.props.playground.autosave);
+    }
 
     @autobind
     async handleDownloadDataClick(savePackedData: boolean = true, saveScreenshot: boolean = true) {
-        const file = getFileState(this.props);
-        const scope = getScope(file);
-        const list = filterPartFx(scope);
-        const playground = getPlaygroundState(this.props);
-        const emitter = playground.emitter;
-
-        const exportName = Path.parse(this.props.sourceFile.uri);
-        exportName.ext = "bfx"; // binary fx
-
-        if (savePackedData)
-        {
-            // download packed version of single (! active only !) emitter
-            // -----------------------------------
-
-            let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.getName())), true) as Uint8Array;
-            downloadByteBuffer(data, exportName.basename, 'application/octet-stream');
-
-            // download unpacked version
-            // -----------------------------------
-
-            // const bundles = new BundleCollectionT(await Promise.all(list.map(async fx => await FxBundle.createPartFxBundle(fx))));
-            // let fbb = new flatbuffers.Builder(1);
-            // let size = bundles.pack(fbb);
-
-            // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');    
+        if (savePackedData) {
+            this.props.actions.saveFileAs();
         }
 
-        if (saveScreenshot)
-        {
+        if (saveScreenshot) {
             // hack to get global webgl/three.js canvas (from ThreeScene.ts)
             const canvas = document.getElementById('playground-main-canvas') as HTMLCanvasElement;
+            const exportName = Path.parse(this.props.sourceFile.uri);
             exportName.ext = "jpeg";
-            
+
             // const resizedCanvas = document.createElement("canvas") as HTMLCanvasElement;
             // const resizedContext = resizedCanvas.getContext("2d");
-            
+
             // resizedCanvas.height = 512;
             // resizedCanvas.width = 512;
-            
+
             // resizedContext.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
             // downloadURL(resizedCanvas.toDataURL('image/jpeg'), exportName.basename);
             downloadURL(canvas.toDataURL('image/jpeg'), exportName.basename);
@@ -155,7 +137,9 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return nextProps.playground.emitter !== this.props.playground.emitter ||
+        return nextProps.playground.filename !== this.props.playground.filename || 
+            nextProps.playground.autosave !== this.props.playground.autosave || 
+            nextProps.playground.emitter !== this.props.playground.emitter ||
             (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.getName());
     }
 
@@ -169,14 +153,14 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     render() {
-        // console.log('Playground:render()');
         const props = this.props;
-        const emitter = props.playground.emitter;
-        const timeline = props.playground.timeline;
+        const playground = props.playground;
+        const emitter = playground.emitter;
+        const timeline = playground.timeline;
         const scope = getScope(props.sourceFile);
 
         const list: IPartFxInstruction[] = filterPartFx(scope);
-        const active = getEmitterName(props.playground);
+        const active = getEmitterName(playground);
 
         return (
             <div>
@@ -202,7 +186,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             ))}
                         </List>
                         <div>
-                            <Grid>
+                            <Grid verticalAlign="middle">
                                 <Grid.Column width={6}>
                                     <Button.Group compact >
                                         <Button
@@ -223,22 +207,42 @@ class Playground extends React.Component<IPlaygroundProps> {
                                         />
                                     </Button.Group>
                                 </Grid.Column>
-                                <Grid.Column width={7}>
+                                <Grid.Column width={3}>
 
                                 </Grid.Column>
-                                <Grid.Column width={3}>
-                                    <Button.Group compact >
-                                        <Button
-                                            icon={<Icon className={'cloud download'} />}
-                                            // save packed version only
-                                            onClick={this.handleDownloadDataClick.bind(this, true, false)}
-                                        />
-                                        <Button
-                                            icon={<Icon className={'image arrow down'} />}
-                                            // save screenshot only
-                                            onClick={this.handleDownloadDataClick.bind(this, false, true)} 
-                                        />
-                                    </Button.Group>
+                                <Grid.Column width={7}>
+                                    <Table unstackable>
+                                        <Table.Body>
+                                            <Table.Row>
+                                                <Table.Cell collapsing>
+                                                    <Popup
+                                                        content={ playground.filename || '[save file manually for the first time]' }
+                                                        trigger={ 
+                                                            <Checkbox 
+                                                                label={ `autosave` }
+                                                                checked={ playground.autosave } 
+                                                                disabled={ !isElectron() || !playground.filename } 
+                                                                onClick={ this.handleAutosaveClick } 
+                                                            /> 
+                                                        } />
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    <Button.Group compact >
+                                                        <Button
+                                                            icon={<Icon className={'cloud download'} />}
+                                                            // save packed version only
+                                                            onClick={this.handleDownloadDataClick.bind(this, true, false)}
+                                                        />
+                                                        <Button
+                                                            icon={<Icon className={'image arrow down'} />}
+                                                            // save screenshot only
+                                                            onClick={this.handleDownloadDataClick.bind(this, false, true)}
+                                                        />
+                                                    </Button.Group>
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        </Table.Body>
+                                    </Table>
                                 </Grid.Column>
                             </Grid>
                             <ThreeScene

@@ -32,12 +32,19 @@ import { Form, Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader,
 
 import isElectron from 'is-electron';
 import { filterPartFx } from '@sandbox/reducers/playground';
+import { SemanticToastContainer } from 'react-semantic-toasts';
 const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 type UnknownIcon = any;
 
 
 export const styles = {
+    toastFontFix: {
+        '& .icon:before': {
+            fontFamily: `'Icons' !important`,
+            fontSize: '200%'
+        }
+    },
     sidebarLeftHotfix: {
         width: `79px !important`,
         backgroundColor: '#1e1e1e !important'
@@ -868,6 +875,8 @@ class App extends React.Component<IAppProps> {
                         File Browser
                         </Menu.Item>
                 </Menu>
+
+                <SemanticToastContainer position='bottom-right' animation='fade down' className={ props.classes.toastFontFix }/>
             </div>
         );
     }

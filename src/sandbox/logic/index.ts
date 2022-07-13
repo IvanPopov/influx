@@ -11,6 +11,8 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
 import * as path from '@lib/path/path';
+import { toast } from 'react-semantic-toasts';
+import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
 const readFile = fname => fetch(fname);
 
@@ -18,6 +20,9 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
     type: evt.SOURCE_FILE_REQUEST,
     latest: true,
     async process({ getState, action }, dispatch, done) {
+        // drop autosave params
+        dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename: null } });
+
         try {
             const response = await readFile(action.payload.filename);
             if (response.status !== 200) {
@@ -64,12 +69,14 @@ export const RAW_KEYWORD = '@preprocessed';
 export const CODE_KEYWORD = '@formatted';
 export const GRAPH_KEYWORD = '@graph';
 
+export const LOCAL_SESSION_ID = 'last-session-id';
+export const LOCAL_SESSION_AUTOSAVE = 'local-session-autosave';
+
 export const ASSETS_PATH = './assets/fx/tests';
 
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW, GRAPH_VIEW ];
 
 export type PATH_PARAMS_TYPE = { view: string; fx?: string; name?: string; pass?: string; property?: string };
-
 
 const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']>({
     type: LOCATION_CHANGE,
@@ -79,9 +86,21 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
     async process({ getState, action }, dispatch, done) {
         const location = action.payload.location.pathname;
         const sourceFile = getFileState(getState());
-
+        const defaultFilename = localStorage.getItem(LOCAL_SESSION_ID) || DEFAULT_FILENAME;
+        
         if (location === '/') {
-            history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}`);
+            if (defaultFilename !== DEFAULT_FILENAME)
+                setTimeout(() => {
+                    toast({
+                        type: 'warning',
+                        title: `Last session`,
+                        description: `Last session has been loaded.`,
+                        animation: 'fade up',
+                        time: 2000
+                    });
+                }, 2000);
+                
+            history.push(`/${PLAYGROUND_VIEW}/${defaultFilename}`);
             // history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/${GRAPH_KEYWORD}`);
             // //                                                  ^^^^^^^^^^^^^^^^^^^^^
             // //                                         FIXME: hack to show graph view by default 
@@ -140,10 +159,11 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
 
         if (match) {
             const { view, fx } = match.params;
-            // if (fx !== DEFAULT_FILENAME) {
             if (!fx) {
+                // something went wrong
                 history.push(`/${view}/${DEFAULT_FILENAME}`);
             } else {
+                // show special page if request fx is not found
                 history.push(LOCATION_NOT_FOUND);
             }
         }

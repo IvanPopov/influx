@@ -11,7 +11,7 @@ import { ITimeline } from '@lib/idl/emitter/timelime';
 
 export interface IMarker {
     range: IRange;
-    type: 'warning' | 'error'| 'marker' | 'line' | 'unreachable-code';
+    type: 'warning' | 'error' | 'marker' | 'line' | 'unreachable-code';
     tooltip?: string;
     payload?: Object;
 }
@@ -52,7 +52,7 @@ export interface IFileState {
 
 export interface INodePipeline {
     docs: string;               // current info of selected node
-    graph: LGraph; 
+    graph: LGraph;
     $revision: number;          // number of updates of graph
 }
 
@@ -61,6 +61,9 @@ export interface IPlaygroundState {
     timeline: ITimeline;
     $revision: number;      // number of updates of emitter
     wasm: boolean;
+
+    filename: string;       // path on user disk (last 'save as' path)
+    autosave: boolean;      // save file to disk on every change
 }
 
 export interface IParserState extends IParserParams {
@@ -71,12 +74,18 @@ export interface IParserState extends IParserParams {
     parsingFlags: number;
 }
 
+// export interface INotificationsState
+// {
+
+// }
+
 export interface IStoreState {
     readonly sourceFile: IFileState;
     readonly parserParams: IParserState;
     readonly router: RouterState;
     readonly playground: IPlaygroundState;
     readonly nodes: INodePipeline;
+    // readonly notifications: INotificationsState;
 }
 
 export default IStoreState;

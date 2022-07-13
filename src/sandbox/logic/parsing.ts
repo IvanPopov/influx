@@ -1,6 +1,6 @@
 /* tslint:disable:typedef */
 
-import { isNull } from '@lib/common';
+import { isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
@@ -18,8 +18,10 @@ import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 import * as VM from '@lib/fx/bytecode/VM';
+import { toast } from 'react-semantic-toasts';
+import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
-import { LOCATION_PATTERN, PATH_PARAMS_TYPE, PLAYGROUND_VIEW, RAW_KEYWORD } from '.';
+import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, PLAYGROUND_VIEW, RAW_KEYWORD } from '.';
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 
@@ -162,6 +164,26 @@ const updateSourceContentLogic = createLogic<IStoreState>({
             if (fx && name === RAW_KEYWORD) {
                 await processRaw(getState(), dispatch);
             }
+
+            // Is new file loaded?
+            if (action.type === evt.SOURCE_FILE_LOADED)
+            {
+                if (localStorage.getItem(LOCAL_SESSION_ID) !== fx)
+                {
+                    localStorage.setItem(LOCAL_SESSION_ID, fx); 
+                    verbose(`Last sesstion data has been updated. (${localStorage.getItem(LOCAL_SESSION_ID)})`);
+
+                    toast({
+                        type: 'info',
+                        title: 'Session update.',
+                        description: `Last sesstion data has been updated.`,
+                        animation: 'fade up',
+                        size: 'tiny',
+                        time: 2000
+                    });
+                }
+            }
+
         }
 
         done();

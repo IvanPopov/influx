@@ -30,6 +30,10 @@ export const PLAYGROUND_EMITTER_UPDATE              = 'playground-emitter-update
 export const PLAYGROUND_SELECT_EFFECT               = 'playground-select-effect';
 export const PLAYGROUND_SWITCH_EMITTER_RUNTIME      = 'playground-force-destroy-and-switch-emitter-runtime-type';
 export const PLAYGROUND_SWITCH_VM_RUNTIME           = 'playground-force-destroy-and-switch-vm-runtime';
+export const PLAYGROUND_EFFECT_SAVE_REQUEST         = 'playground-effect-save-request';
+export const PLAYGROUND_EFFECT_AUTOSAVE_REQUEST     = 'playground-effect-autosave-request';
+export const PLAYGROUND_EFFECT_HAS_BEEN_SAVED       = 'playground-effect-has-been-saved';
+export const PLAYGROUND_SET_OPTION_AUTOSAVE         = 'playground-set-option-autosave';
 
 export const GRAPH_LOADED                           = 'graph-loaded';                   // serialized content of graph has been provided
 export const GRAPH_RESET                            = 'graph-reset';                    // nothing 
