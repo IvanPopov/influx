@@ -55,6 +55,7 @@ struct Part {
     float size;
     float timelife;
     bool child;
+    int templateIndex;
 };
 
 /* Example of default shader input. */
@@ -79,6 +80,7 @@ void init(out Part part, int partId)
     part.timelife = 0.0;
     part.child = false; 
     part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
+    part.templateIndex = 0;
 }
 
 void initChild(out Part part, int partId, float3 pos)
@@ -88,6 +90,7 @@ void initChild(out Part part, int partId, float3 pos)
     part.timelife = 0.8;
     part.child = true;
     part.speed = float3(0.f);
+    part.templateIndex = 1;
 }
 
 /** Return false if you want to kill particle. */
@@ -137,6 +140,8 @@ void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3
     matr[2] = float4(0, 0, size.z, pos.z);
 }
 
+// instanceTotal avaialable in prerender pass for known TPL
+uniform uint   instanceTotal: INSTANCE_TOTAL; // number of difference lwi instances
 
 int prerender3(inout Part part, inout LwiInstance input)
 {
@@ -148,7 +153,7 @@ int prerender3(inout Part part, inout LwiInstance input)
 
     packLwiTransform(part.pos, part.speed, float3(part.size), input.worldMatr);
     // sorting(part.templateIndex);
-    return asint(distance(part.pos, cameraPosition));
+    return part.templateIndex % instanceTotal;
 }
 
 

@@ -94,14 +94,41 @@ void prerender(inout Part part, inout PartLight input)
 {
     input.pos.xyz = part.pos.xyz;
     input.radius = part.size;
-    input.color = abs(part.color);
-    input.attenuation = 3.f;
+    input.color = abs(part.color) * 100.f;
+    input.attenuation = 2.f;
     input.viewZ = 0.f;
     input.camIdx = 0x0;
     input.isFpView = false;
     input.isAdaptiveIntensity = true;
 }
 
+
+
+// Warning: Do not change layout of this structure!
+struct LwiInstance {
+    float4 dynData[2]: META;
+    float3x4 worldMatr: TRANSFORM0;
+    float3x4 worldMatrPrev: TRANSFORM1;
+};
+
+
+void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3x4 matr)
+{
+    matr[0] = float4(size.x, 0, 0, pos.x);
+    matr[1] = float4(0, size.y, 0, pos.y);
+    matr[2] = float4(0, 0, size.z, pos.z);
+}
+
+void prerender2(inout Part part, inout LwiInstance input)
+{
+    // IP: todo: add support of direct matrix assigment
+    // input.worldMatrPrev = input.worldMatr;
+    input.worldMatrPrev[0] = input.worldMatr[0];
+    input.worldMatrPrev[1] = input.worldMatr[1];
+    input.worldMatrPrev[2] = input.worldMatr[2];
+
+    packLwiTransform(part.pos, part.speed, float3(part.size, part.size, part.size) * 0.1f, input.worldMatr);
+}
 
 
 partFx light {
@@ -113,6 +140,12 @@ partFx light {
     pass P0 {
         Sorting = FALSE;
         PrerenderRoutine = compile prerender();
+    }
+
+    pass P1 {
+        Sorting = FALSE;
+        PrerenderRoutine = compile prerender2();
+        Geometry = "barrel_03";
     }
 }
 
