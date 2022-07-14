@@ -8,6 +8,7 @@ import router from './router';
 import sourceFile from './sourceFile';
 import playground from './playground';
 import nodes from './nodes';
+import s3d from './s3d';
 
 /**
  * selectors
@@ -27,4 +28,4 @@ export function mapProps<T extends { (state: IStoreState): any; }>(selector: T):
     return (state) => selector(state);
 }
 
-export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes });
+export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes, s3d });

@@ -235,7 +235,10 @@ let options = {
     ],
     resolve: {
         fallback: {
-            fs: false
+            fs: false,
+            os: false,
+            child_process: false,
+            buffer: false
         },
         extensions: ['.ts', '.tsx', '.js', '.jsx'],
         alias: {

@@ -1,5 +1,5 @@
 import { defaultSLGrammar } from '@lib/fx/SLParser';
-import { parser } from '@sandbox/actions';
+import { parser, s3d } from '@sandbox/actions';
 import { App } from '@sandbox/containers';
 import { LOCATION_NOT_FOUND, LOCATION_PATTERN } from '@sandbox/logic';
 import { history } from '@sandbox/reducers/router';
@@ -17,6 +17,9 @@ require('semantic-ui-less/semantic.less');
 if (isElectron()) {
     // require('electron-react-devtools').install();
 }
+
+
+
 
 ReactDOM.render(
     <Provider store={store}>
@@ -38,6 +41,14 @@ ReactDOM.render(
 
 // make grammar available for editing
 store.dispatch(parser.setGrammar(defaultSLGrammar()));
+
+if (isElectron()) {
+    const ipc = require('electron').ipcRenderer;
+    const argv = ipc.sendSync('argv', {});
+    const projectRoot = argv['project'] as string;
+    store.dispatch(s3d.initEnv(projectRoot));
+}
+
 
 /// <reference path="./webpack.d.ts" />
 console.log(`%c Is this running in electron.js?: ${isElectron()}`, 'background: #222; color: #bada55');

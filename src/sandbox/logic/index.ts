@@ -3,6 +3,7 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import fxRuntime from '@sandbox/logic/fxRuntime';
 import parsing from '@sandbox/logic/parsing';
+import s3d from '@sandbox/logic/s3d';
 import graph from '@sandbox/logic/nodes';
 import { history } from '@sandbox/reducers/router';
 import { getFileState } from '@sandbox/reducers/sourceFile';
@@ -85,7 +86,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
     async process({ getState, action }, dispatch, done) {
         const location = action.payload.location.pathname;
-        const sourceFile = getFileState(getState());
+        const { s3d, sourceFile } = getState()
         const defaultFilename = localStorage.getItem(LOCAL_SESSION_ID) || DEFAULT_FILENAME;
         
         if (location === '/') {
@@ -123,8 +124,14 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                     history.push(`/${view}/${DEFAULT_FILENAME}`);
                     return done();
                 }
-
-                const fxRequest = `${ASSETS_PATH}/${fx}`;
+                
+                let fxRequest: string = null;
+                if (!s3d.env)
+                {
+                    fxRequest = `${ASSETS_PATH}/${fx}`;
+                } else {
+                    fxRequest = path.normalize(`${s3d.env.Get('project-assets-dir')}/ssl/sfx/next/${fx}`);
+                }
 
                 if (sourceFile.uri !== fxRequest 
                     // && name !== GRAPH_KEYWORD
@@ -179,5 +186,6 @@ export default createLogicMiddleware([
     sourceFileNotFoundLogic,
     ...parsing,
     ...fxRuntime,
-    ...graph
+    ...graph,
+    ...s3d
 ]);

@@ -4,35 +4,33 @@ import * as Autotests from '@lib/fx/autotests';
 /* tslint:disable:no-single-line-block-comment */
 import * as Bytecode from '@lib/fx/bytecode';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import * as Fxmitter from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
-import { mapActions, sourceCode as sourceActions, playground as playgroundActions } from '@sandbox/actions';
-import { ASTView, FileListView, MemoryView, PPView, ProgramView, GraphView } from '@sandbox/components';
+import { mapActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { ASTView, FileListView, GraphView, MemoryView, PPView, ProgramView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
 import GraphConfigView from '@sandbox/components/GraphConfigView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD, GRAPH_KEYWORD } from '@sandbox/logic';
+import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
+import { filterPartFx } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState from '@sandbox/store/IStoreState';
+import IStoreState, { IP4Info } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
+// global defines from webpack's config;
+/// <reference path="../webpack.d.ts" />
+import isElectron from 'is-electron';
 import * as path from 'path';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
-import { Form, Button, Checkbox, Container, Dropdown, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
-
-// global defines from webpack's config;
-/// <reference path="../webpack.d.ts" />
-
-import isElectron from 'is-electron';
-import { filterPartFx } from '@sandbox/reducers/playground';
 import { SemanticToastContainer } from 'react-semantic-toasts';
+import { Button, Checkbox, Container, Dropdown, Form, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+
 const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 type UnknownIcon = any;
@@ -174,6 +172,37 @@ const Version = (props) => {
             // position='left center'
             size='small'
             content={ TIMESTAMP }
+            inverted
+        />
+    );
+};
+
+const S3DStatus = (props) => (
+    <Message size='tiny' compact className={ props.classes.versionFix }>
+        Saber / { props.gameName }
+    </Message>
+)
+
+const P4Status = ({ info, classes }: { info: IP4Info } & Partial<WithStylesProps<typeof styles>>) => {
+    return (
+        <Popup
+            trigger={
+                <div>
+                    <Message size='tiny' error={!info} success={!!info} compact className={classes.versionFix}>
+                        {info ? 'p4 is connected' : 'p4 is disconnected'}
+                    </Message>
+                </div>
+            }
+            // position='left center'
+            size='small'
+            content={ 
+                 info && 
+                    <div>
+                        server: { info['Proxy address'] }
+                        <br />
+                        client: { info['Client name'] }
+                    </div> 
+            }
             inverted
         />
     );
@@ -468,6 +497,12 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    @autobind
+    openFile(file: string) {
+        history.push(`/${this.props.match.params.view}/${path.basename(file)}`);
+    }
+
+
     buildShaderMenu(): { name: string; link: string }[] {
         const props = this.props;
         const file = getFileState(props);
@@ -496,6 +531,7 @@ class App extends React.Component<IAppProps> {
         const { props, state, props: { sourceFile } } = this;
         const $debugger = sourceFile.debugger;
         const $pg = props.playground;
+        const env = props.s3d.env;
 
         // console.log(props.match.params);
         // console.log(`/${props.match.params.view}/${props.match.params.fx}`);
@@ -753,7 +789,12 @@ class App extends React.Component<IAppProps> {
                     <Menu.Item key="source-file-item">
                         Source File
                         <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
-                            &nbsp;|&nbsp;{ path.basename(props.sourceFile.uri || '') }
+                            &nbsp;|&nbsp;
+                            <Popup
+                                trigger={ <span>{ path.basename(props.sourceFile.uri || '') }</span> }
+                                content={ props.sourceFile.uri }
+                                basic
+                            />
                         </span>
                     </Menu.Item>
                 ),
@@ -831,6 +872,20 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key='ver' position='right' inverted="true" disabled color='red'>
+                        { props.s3d.env && 
+                            <P4Status classes={ props.classes } info={ props.s3d.p4 } />
+                        }
+                        &nbsp;
+                        &nbsp;
+                        &nbsp;
+                        &nbsp;
+                        { props.s3d.env && 
+                            <S3DStatus classes={ props.classes } gameName={ props.s3d.env.Get('game-name') } />
+                        }
+                        &nbsp;
+                        &nbsp;
+                        &nbsp;
+                        &nbsp;
                         <Version classes={ props.classes } />
                     </Menu.Item>),
                 render: () => null
@@ -847,10 +902,24 @@ class App extends React.Component<IAppProps> {
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarFix }
                     >
-                        <FileListView
-                            path={ ASSETS_PATH }
-                            filters={ ['.fx', '.xfx'] }
-                            onFileClick={ (file) => { history.push(`/${props.match.params.view}/${path.basename(file)}`); } } />
+                        { env &&
+                            <FileListView  
+                                path={ path.join(env.Get('project-assets-dir'), 'ssl', 'sfx') }  
+                                filters={ ['.fx', '.xfx'] }
+                                onFileClick={ this.openFile }
+                                desc={ env.Get('game-name') }
+                                expanded={true}
+                            />
+                        }
+                        { !env &&
+                            <FileListView
+                                path={ ASSETS_PATH }
+                                filters={ ['.fx', '.xfx'] }
+                                onFileClick={ this.openFile } 
+                                desc={ 'Development' }
+                                expanded={true}
+                            /> 
+                        }
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
                         {
@@ -881,12 +950,18 @@ class App extends React.Component<IAppProps> {
         );
     }
 
-    componentDidMount()
+    async componentDidMount()
     {
-        // request to show window
-        ipcRenderer && ipcRenderer.send('app-ready', {});
+        if (ipcRenderer)
+        {
+            // custom request to hide prevew window and show main when it's completely ready
+            ipcRenderer.send('app-ready', {});
+        }
     }
 }
+
+
+
 
 
 

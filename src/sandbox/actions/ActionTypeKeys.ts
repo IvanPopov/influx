@@ -40,3 +40,10 @@ export const GRAPH_RESET                            = 'graph-reset';            
 export const GRAPH_COMPILE                          = 'graph-compile';                  // requst to generate and recompile (via default pipline with source content) code from graph
 export const GRAPH_PART_STRUCTURE_SPECIFIED         = 'graph-part-structure-specified'; // 'Part' strcuture has been modified 
 export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';       // update floating docs of selected graph node
+
+export const S3D_INIT_ENV                           = 's3d-init-env';
+export const S3D_INIT_ENV_SUCCESSED                 = 's3d-init-env-successed';
+export const S3D_INIT_ENV_FAILED                    = 's3d-init-env-failed';
+export const S3D_CONNECT_P4                         = 's3d-connect-p4';
+export const S3D_CONNECT_P4_SUCCESSED               = 's3d-connect-p4-successed';
+

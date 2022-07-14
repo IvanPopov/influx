@@ -13,7 +13,7 @@ const initialState: IPlaygroundState = {
     $revision: 0,
     wasm: Emitter.isWASM(),
 
-    filename: null, // LOCAL_SESSION_AUTOSAVE
+    exportName: null, // LOCAL_SESSION_AUTOSAVE
     autosave: true
 };
 
@@ -25,7 +25,7 @@ export default handleActions<IPlaygroundState, IPlaygroundActions>({
     [evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME]: (state, action: IPlaygroundSwitchEmitterRuntime) =>
         ({ ...state, wasm: !state.wasm }),
     [evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED]: (state, action: IPlaygroundEffectHasBeenSaved) =>
-        ({ ...state, filename: action.payload.filename }),
+        ({ ...state, exportName: action.payload.filename }),
     [evt.PLAYGROUND_SET_OPTION_AUTOSAVE]: (state, action: IPlaygroundSetOptionAutosave) =>
         ({ ...state, autosave: action.payload.enabled }),
 }, initialState);

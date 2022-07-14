@@ -137,7 +137,7 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return nextProps.playground.filename !== this.props.playground.filename || 
+        return nextProps.playground.exportName !== this.props.playground.exportName || 
             nextProps.playground.autosave !== this.props.playground.autosave || 
             nextProps.playground.emitter !== this.props.playground.emitter ||
             (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.getName());
@@ -216,12 +216,12 @@ class Playground extends React.Component<IPlaygroundProps> {
                                             <Table.Row>
                                                 <Table.Cell collapsing>
                                                     <Popup
-                                                        content={ playground.filename || '[save file manually for the first time]' }
+                                                        content={ playground.exportName || '[save file manually for the first time]' }
                                                         trigger={ 
                                                             <Checkbox 
-                                                                label={ `autosave` }
+                                                                label={ `auto export` }
                                                                 checked={ playground.autosave } 
-                                                                disabled={ !isElectron() || !playground.filename } 
+                                                                disabled={ !isElectron() || !playground.exportName } 
                                                                 onClick={ this.handleAutosaveClick } 
                                                             /> 
                                                         } />

@@ -6,13 +6,15 @@ import * as fs1 from 'fs';
 import isElectron from 'is-electron';
 import * as path from 'path';
 import * as React from 'react';
-import { List } from 'semantic-ui-react';
-import { promisify } from 'util';
+import { Header, Icon, List, Message } from 'semantic-ui-react';
+// import { promisify } from 'util';
 
 interface IFileListViewProps {
     path: string;
     onFileClick: (file: string) => void;
     filters?: string[];
+    expanded?: boolean;
+    desc?: string;
 }
 
 const FileDirectoryIcon: any = 'file directory';
@@ -26,22 +28,17 @@ interface IFolder {
     totalFiles: number;
 }
 
+const FS_NO_STATS = {
+    isDirectory() { return false },
+    isFile() { return false }
+};
 
-const fs = {
-    stat: isElectron() ?
-        promisify(fs1.lstat) :
-        (dir) => ({
-            isDirectory() { return false },
-            isFile() { return false }
-        }),
-    readdir: isElectron() ?
-        promisify(fs1.readdir) : null
-}
+const fs = isElectron() 
+    ? fs1
+    : { statSync: (dir) => FS_NO_STATS, readdirSync: null };
 
 
-// todo: remove "sync" calls
-
-async function scan($dir: string, node: IFolder, filters?: string[]) {
+function scan($dir: string, node: IFolder, filters?: string[], shown?: boolean) {
     if (!isElectron()) {
         node.files = [
             'lwi.fx',
@@ -66,23 +63,24 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
     try {
         node.path = $dir;
 
-        const dir = path.join(path.dirname(window.location.pathname.substr(1)), $dir);
+        const dir = path.isAbsolute($dir)? $dir : path.join(path.dirname(window.location.pathname.substr(1)), $dir);
 
-        let stats = await fs.stat(dir);
+        let stats = fs.statSync(dir);    
         if (!stats.isDirectory()) {
             return;
         }
 
-        (await fs.readdir(dir)).forEach(async filename => {
+        fs.readdirSync(dir).forEach(async filename => {
             let $filepath = path.join($dir, filename);
             let filepath = path.join(dir, filename);
-            let filestats = await fs.stat(filepath);
+            let filestats = fs.statSync(filepath);
 
             if (filestats.isFile()) {
                 if (!filters || filters.indexOf(path.extname(filename)) != -1) {
                     node.files = node.files || [];
                     node.files.push($filepath);
                     node.totalFiles++;
+                    node.shown = !!shown; // ??
                 }
             }
 
@@ -90,7 +88,7 @@ async function scan($dir: string, node: IFolder, filters?: string[]) {
                 node.folders = node.folders || [];
 
                 let subfolder = { path: $filepath, totalFiles: 0 };
-                scan($filepath, subfolder, filters);
+                scan($filepath, subfolder, filters, shown);
 
                 node.folders.push(subfolder);
                 node.totalFiles += subfolder.totalFiles;
@@ -106,7 +104,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
 
     constructor(props: IFileListViewProps) {
         super(props);
-        this.state = { root: { path: null, shown: true, totalFiles: 0 } };
+        this.state = { root: { path: null, shown: !!props.expanded, totalFiles: 0 } };
     }
 
     UNSAFE_componentWillUpdate(nextProps: IFileListViewProps, nextState) {
@@ -116,7 +114,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
             return;
         }
 
-        scan(nextProps.path, state.root, nextProps.filters);
+        scan(nextProps.path, state.root, nextProps.filters, nextProps.expanded);
     }
 
 
@@ -149,7 +147,7 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
         }
 
         return (
-            <List.Item onClick={ () => this.props.onFileClick(file) } key={ file }>
+            <List.Item as='a' onClick={ () => this.props.onFileClick(file) } key={ file }>
                 <List.Icon name={ FileCodeIcon } />
                 <List.Content>
                     <List.Header>{ path.basename(file) }</List.Header>
@@ -159,11 +157,21 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
     }
 
     render() {
+        const props = this.props;
         const { root } = this.state;
         return (
-            <List selection>
-                { this.renderFolder(root) }
-            </List>
+            <div>
+                 
+                { props.desc &&
+                    <Header as='h4' block>
+                        <Icon name='inbox' />
+                        <Header.Content>{ props.desc }</Header.Content>
+                    </Header>   
+                }
+                <List divided celled>
+                    { this.renderFolder(root) }
+                </List>
+            </div>
         );
     }
 }

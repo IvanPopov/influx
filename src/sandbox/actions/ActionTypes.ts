@@ -4,8 +4,9 @@ import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerState, IMarker } from '@sandbox/store/IStoreState';
+import { IDebuggerState, IMarker, IP4Info } from '@sandbox/store/IStoreState';
 import { ITextDocument } from '@lib/idl/ITextDocument';
+import * as S3D from '@lib/util/s3d/prjenv';
 
 export interface IBaseAction<T extends String> {
     readonly type: T;
@@ -102,6 +103,17 @@ export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided
 //
 //
 
-export type ActionTypes = ISourceFileActions & IParserParamsActions & IDebuggerActions & IPlaygroundActions & IGraphActions;
+export type IS3DInitEnv = IAction<typeof evt.S3D_INIT_ENV, { projectRoot: string }>;
+export type IS3DInitEnvSuccess = IAction<typeof evt.S3D_INIT_ENV_SUCCESSED, { env: S3D.ProjectEnv }>;
+export type IS3DInitEnvFailed = IAction<typeof evt.S3D_INIT_ENV_FAILED, { reason?: string }>;
+export type IS3DConnectP4Success = IAction<typeof evt.S3D_CONNECT_P4_SUCCESSED, { info: IP4Info }>;
+export type IS3DActions = IS3DInitEnv | IS3DInitEnvSuccess | IS3DInitEnvFailed | IS3DConnectP4Success;
+
+//
+//
+//
+
+export type ActionTypes = ISourceFileActions & IParserParamsActions & 
+    IDebuggerActions & IPlaygroundActions & IGraphActions & IS3DActions;
 
 export default ActionTypes;

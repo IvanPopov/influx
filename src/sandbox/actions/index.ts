@@ -136,6 +136,12 @@ export const nodes = {
     }
 }
 
+export const s3d = {
+    initEnv(projectRoot) {
+        return { type: evt.S3D_INIT_ENV, payload: { projectRoot } };
+    }
+}
+
 // hack to avoid looped imports
 export function nodesProvideDocs(docs: string) {
     store.dispatch(nodes.provideNodeDocs(docs));

@@ -55,18 +55,6 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const playground = getPlaygroundState(getState());
         const timeline = playground.timeline;
 
-        if (!file.slDocument) {
-            done();
-            return;
-        }
-
-        if (file.slDocument.diagnosticReport.errors > 0) {
-            done();
-            return;
-        }
-
-        verbose('playground has been updated.');
-
         const scope = getScope(file);
         const list: IPartFxInstruction[] = filterPartFx(scope);
 
@@ -108,6 +96,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             return emitter;
         }
 
+        async function drop()
+        {
+            await destroy(emitter);
+            emitter = null;
+        }
+
         async function forceReload() {
             await destroy(emitter);
             emitter = await create();
@@ -147,7 +141,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 await switchEmitterRuntime();
                 break;
             default:
-                await softReload();
+                if (!file.slDocument || file.slDocument.diagnosticReport.errors > 0) {
+                    await drop();
+                }
+                else {
+                    await softReload();
+                }
         }
 
         dispatch({ type: evt.PLAYGROUND_EMITTER_UPDATE, payload: { emitter } });
@@ -163,8 +162,6 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
 
 import isElectron from 'is-electron';
-import { matchPath } from 'react-router-dom';
-import { LOCATION_PATTERN, PATH_PARAMS_TYPE } from '.';
 const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 
@@ -203,7 +200,7 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
             // reqest to make silent auto save using known local file path
             if (action.payload.silent)
             {
-                filename = ipcRenderer.sendSync('process-save-file-silent', { name: playground.filename, data });
+                filename = ipcRenderer.sendSync('process-save-file-silent', { name: playground.exportName, data });
             } 
             else {
                 filename = ipcRenderer.sendSync('process-save-file-dialog', { name: exportName.basename, data });
@@ -212,12 +209,12 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
             if (filename)
             {
                 dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename } });
-                verbose(`Effect '${filename}' has been saved successfully.`);
+                verbose(`Effect '${filename}' has been exported successfully.`);
                 
                 toast({
                     type: 'info',
-                    title: `${action.payload.silent ? 'Autosave' : 'Save'} complete`,
-                    description: `Effect '${filename}' has been saved successfully.`,
+                    title: `${action.payload.silent ? 'Autoexport' : 'Export'} complete`,
+                    description: `Effect '${filename}' has been exported successfully.`,
                     animation: 'bounce',
                     time: 2000
                 });
@@ -249,7 +246,7 @@ const playgroundEmitterUpdateLogic = createLogic<IStoreState>({
 
     async process({ getState, action }, dispatch, done) {
         const playground = getPlaygroundState(getState());
-        if (playground.filename && playground.emitter)
+        if (playground.exportName && playground.emitter)
         {
             dispatch({ type: evt.PLAYGROUND_EFFECT_SAVE_REQUEST, payload: { silent: true } });
         }

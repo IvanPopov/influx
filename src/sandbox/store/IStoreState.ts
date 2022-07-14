@@ -8,6 +8,7 @@ import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { LGraph } from 'litegraph.js';
 import { ITimeline } from '@lib/idl/emitter/timelime';
+import * as S3D from '@lib/util/s3d/prjenv';
 
 export interface IMarker {
     range: IRange;
@@ -62,7 +63,7 @@ export interface IPlaygroundState {
     $revision: number;      // number of updates of emitter
     wasm: boolean;
 
-    filename: string;       // path on user disk (last 'save as' path)
+    exportName: string;       // path on user disk (last 'save as' path)
     autosave: boolean;      // save file to disk on every change
 }
 
@@ -74,10 +75,50 @@ export interface IParserState extends IParserParams {
     parsingFlags: number;
 }
 
-// export interface INotificationsState
-// {
+/*
+Case Handling: " insensitive\r"
+Client address: " 192.168.41.74\r"
+Client host: " ipopov\r"
+Client name: " ipopov_\r"
+Client root: " C"
+Client stream: " //dev/main_ProgrammerNoArt\r"
+Current directory: " c"
+Peer address: " 172.16.166.10"
+Proxy address: " p4.saber3d.net"
+Proxy version: " P4P/LINUX26X86_64/2020.2/2179691 (2021/09/02)\r"
+Server date: " 2022/07/14 23"
+Server license: " Licensed\r"
+Server services: " standard\r"
+Server version: " P4D/LINUX26X86_64/2020.2/2179691 (2021/09/02)\r"
+ServerID: " p4_main_commit\r"
+User name: " ivan.popov\r"
+*/
 
-// }
+export interface IP4Info
+{
+    "Case Handling": string;
+    "Client address": string;
+    "Client host": string;
+    "Client name": string;
+    "Client root": string;
+    "Client stream": string;
+    "Current directory": string;
+    "Peer address": string;
+    "Proxy address": string;
+    "Proxy version": string;
+    "Server date": string;
+    "Server license": string;
+    "Server services": string;
+    "Server version": string;
+    "ServerID": string;
+    "User name": string;
+}
+
+export interface IS3DState
+{
+    env: S3D.ProjectEnv,
+    p4: IP4Info
+}
 
 export interface IStoreState {
     readonly sourceFile: IFileState;
@@ -85,7 +126,7 @@ export interface IStoreState {
     readonly router: RouterState;
     readonly playground: IPlaygroundState;
     readonly nodes: INodePipeline;
-    // readonly notifications: INotificationsState;
+    readonly s3d: IS3DState;
 }
 
 export default IStoreState;

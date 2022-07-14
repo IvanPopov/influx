@@ -1,6 +1,6 @@
 {
   "name": "influx",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "UNLICENSED",
   "private": false,
   "engines": {
@@ -40,6 +40,7 @@
     "html-webpack-plugin": "^5.5.0",
     "is-electron": "^2.2.1",
     "is-electron-renderer": "^2.0.1",
+    "js-yaml": "^4.1.0",
     "jss-nested": "^6.0.1",
     "less": "^4.1.2",
     "less-loader": "^10.2.0",
@@ -57,6 +58,7 @@
     "monaco-languageclient": "^0.18.1",
     "monaco-languages": "^2.11.1",
     "net": "^1.0.2",
+    "node-perforce": "0.0.18",
     "path": "^0.12.7",
     "pug": "^3.0.2",
     "pug3-loader": "^2.4.3",
