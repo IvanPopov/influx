@@ -18,11 +18,11 @@ class URI {
     }
 
     get url(): string {
-        return (this._scheme ? this._scheme : "") + this.authority;
+        return (this._scheme ? this._scheme + '//' : "") + this.authority;
     }
 
     get authority(): string {
-        return (this._host ? '//' + (this._userinfo ? this._userinfo + '@' : "") +
+        return (this._host ? (this._userinfo ? this._userinfo + '@' : "") +
             this._host + (this._port ? ':' + this._port : "") : "");
     }
 

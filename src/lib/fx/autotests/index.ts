@@ -87,7 +87,7 @@ export interface IAutotests {
         }
     };
 
-    exractComments(textDocument).forEach(parseComment(rules, epilogue, prologue));
+    (await exractComments(textDocument)).forEach(parseComment(rules, epilogue, prologue));
 
     const document = await createFXSLDocument(textDocument);
     return { description, document, tests };

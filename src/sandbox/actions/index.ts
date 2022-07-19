@@ -142,6 +142,12 @@ export const s3d = {
     }
 }
 
+export const depot = {
+    update() {
+        return { type: evt.DEPOT_UPDATE_REQUEST, payload: { } };
+    }
+}
+
 // hack to avoid looped imports
 export function nodesProvideDocs(docs: string) {
     store.dispatch(nodes.provideNodeDocs(docs));

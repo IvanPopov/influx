@@ -1,7 +1,7 @@
 import { createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { ILanguageService } from '@lib/idl/ILanguageService';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IASTDocumentFlags } from '@lib/idl/parser/IParser';
+import { IASTDocumentFlags, IncludeResolver } from '@lib/idl/parser/IParser';
 import { Color, ColorInformation, ColorPresentation, CompletionItem, CompletionList, FoldingRange, FormattingOptions, Hover, Position, Range, SymbolInformation, TextDocument, TextEdit } from 'vscode-languageserver-types';
 
 import { FXCodeLenses } from './services/fx/codeLenses';
@@ -16,7 +16,7 @@ import { createTextDocument } from '@lib/fx/TextDocument';
 type SelectionRange = Range;
 
 
-export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
+export function getLanguageService(opts: { flags: IASTDocumentFlags, includeResolver?: IncludeResolver }): ILanguageService {
     const signatureHelp = new SLSignatureHelp();
 
     //
@@ -29,7 +29,7 @@ export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
         async $parseSLASTDocument(textDocument: TextDocument): Promise<ISLASTDocument> {
             const uri = textDocument.uri;
             const source = textDocument.getText();
-            const slastDocument = await createSLASTDocument(createTextDocument(uri, source), flags);
+            const slastDocument = await createSLASTDocument(await createTextDocument(uri, source), opts);
             return slastDocument;
         },
 
@@ -41,7 +41,7 @@ export function getLanguageService(flags: IASTDocumentFlags): ILanguageService {
         async parseDocument(textDocument: TextDocument): Promise<ISLDocument> { 
             const uri = textDocument.uri;
             const source = textDocument.getText();
-            return await createFXSLDocument(createTextDocument(uri, source), flags);
+            return await createFXSLDocument(await createTextDocument(uri, source), opts);
         },
 
         doResolve(item: CompletionItem): Thenable<CompletionItem> { return null; },

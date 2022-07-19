@@ -30,7 +30,7 @@ export class SLValidation {
         const uri = textDocument.uri;
         const source = textDocument.getText();
 
-        const fxslDocument = await createFXSLDocument(createTextDocument(uri, source));
+        const fxslDocument = await createFXSLDocument(await createTextDocument(uri, source));
         return fxslDocument.diagnosticReport.messages.map(asDiagnostic);
     }
 }

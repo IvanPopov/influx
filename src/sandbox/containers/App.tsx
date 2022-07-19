@@ -12,7 +12,7 @@ import { ASTView, FileListView, GraphView, MemoryView, PPView, ProgramView } fro
 import CodeView from '@sandbox/components/CodeView';
 import GraphConfigView from '@sandbox/components/GraphConfigView';
 import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { ASSETS_PATH, AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
+import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterPartFx } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
@@ -165,7 +165,7 @@ const Version = (props) => {
             trigger={
                 <div>
                     <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
-                        { MODE !== 'production' && <Icon className={ 'issue opened' as UnknownIcon } /> }{ MODE } | { BRANCH }-{ VERSION }
+                        { MODE } | { BRANCH }-{ VERSION }
                     </Message>
                 </div>
             }
@@ -178,13 +178,15 @@ const Version = (props) => {
 };
 
 const S3DStatus = (props) => (
+    props.env &&
     <Message size='tiny' compact className={ props.classes.versionFix }>
-        Saber / { props.gameName }
+        Saber / { props.env.Get('game-name') }
     </Message>
 )
 
 const P4Status = ({ info, classes }: { info: IP4Info } & Partial<WithStylesProps<typeof styles>>) => {
     return (
+        info &&
         <Popup
             trigger={
                 <div>
@@ -371,7 +373,7 @@ class App extends React.Component<IAppProps> {
         // timeout for playing animation in UI
         setTimeout(async () => {
             const { content: source, uri } = getFileState(this.props);
-            const textDocument = createTextDocument(uri, source);
+            const textDocument = await createTextDocument(uri, source);
             const autotests = await Autotests.parse(textDocument);
 
             await Autotests.run(autotests);
@@ -872,18 +874,10 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key='ver' position='right' inverted="true" disabled color='red'>
-                        { props.s3d.env && 
-                            <P4Status classes={ props.classes } info={ props.s3d.p4 } />
-                        }
+                        <P4Status classes={ props.classes } info={ props.s3d.p4 } />
                         &nbsp;
                         &nbsp;
-                        &nbsp;
-                        &nbsp;
-                        { props.s3d.env && 
-                            <S3DStatus classes={ props.classes } gameName={ props.s3d.env.Get('game-name') } />
-                        }
-                        &nbsp;
-                        &nbsp;
+                        <S3DStatus classes={ props.classes } env={ props.s3d.env } />
                         &nbsp;
                         &nbsp;
                         <Version classes={ props.classes } />
@@ -902,24 +896,12 @@ class App extends React.Component<IAppProps> {
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarFix }
                     >
-                        { env &&
-                            <FileListView  
-                                path={ path.join(env.Get('project-assets-dir'), 'ssl', 'sfx') }  
-                                filters={ ['.fx', '.xfx'] }
-                                onFileClick={ this.openFile }
-                                desc={ env.Get('game-name') }
-                                expanded={true}
-                            />
-                        }
-                        { !env &&
-                            <FileListView
-                                path={ ASSETS_PATH }
-                                filters={ ['.fx', '.xfx'] }
-                                onFileClick={ this.openFile } 
-                                desc={ 'Development' }
-                                expanded={true}
-                            /> 
-                        }
+                    <FileListView  
+                        root={ this.props.depot.root }  
+                        onFileClick={ this.openFile }
+                        desc={ env?.Get('game-name') || 'Development' }
+                        expanded={true}
+                    />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
                         {

@@ -1,14 +1,14 @@
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { ETokenType, IRange, IToken } from "@lib/idl/parser/IParser";
+import { ETokenType, IncludeResolver, IRange, IToken } from "@lib/idl/parser/IParser";
 import { Lexer } from "@lib/parser/Lexer";
 import { createPPDocument } from "@lib/parser/Preprocessor";
 import { END_SYMBOL } from "@lib/parser/symbols";
 import { cloneRange } from "@lib/parser/util";
 
 /** @deprecated Use CommentExtractor instead. */
-export function exractComments(document: ITextDocument): IToken[] {
+export async function exractComments(document: ITextDocument, includeResolver?: IncludeResolver): Promise<IToken[]> {
     const lexer = new Lexer({ skipComments: false });
-    lexer.setTextDocument(createPPDocument(document, { skipComments: false }));
+    lexer.setTextDocument(await createPPDocument(document, { skipComments: false, includeResolver }));
 
     let comments = [];
     let token: IToken;
@@ -84,9 +84,9 @@ export function parseComment(handlers: { [name: string]: (parts: string[], name:
 // TODO: temp helper
 export class CommentExtractor
 {
-    parse(document: ITextDocument)
+    async parse(document: ITextDocument, includeResolver?: IncludeResolver)
     {
-        exractComments(document).forEach((commentToken: IToken) => {
+        (await exractComments(document, includeResolver)).forEach((commentToken: IToken) => {
             let comment = commentToken.value.slice(2, -2);
             let list = comment
                 .split('\n')

@@ -182,11 +182,13 @@ export interface ILexer {
     getNextLine(): IToken;
 }
 
+export type IncludeResolver = (filename: string) => Promise<string>;
 
 export interface IASTConfig {
     parser?: IParser;
     knownTypes?: Set<string>;
     ruleFunctions?: Map<string, IRuleFunction>;
+    includeResolver?: IncludeResolver
 }
 
 

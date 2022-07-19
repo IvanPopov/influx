@@ -6,7 +6,7 @@ import { EDiagnosticCategory, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IMap } from "@lib/idl/IMap";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IMacro } from "@lib/idl/parser/IMacro";
-import { ETokenType, IFile, ILexer, ILexerConfig, ILexerEngine, IPosition, IRange, IToken } from "@lib/idl/parser/IParser";
+import { ETokenType, IFile, ILexer, ILexerConfig, ILexerEngine, IncludeResolver, IPosition, IRange, IToken } from "@lib/idl/parser/IParser";
 import * as util from '@lib/parser/util';
 import * as URI from "@lib/uri/uri";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -180,7 +180,6 @@ enum EPPDocumentFlags {
     k_Include = 0x02
 }
 
-
 export class Preprocessor {
     protected stack: {
         lexer: ILexer;
@@ -191,6 +190,7 @@ export class Preprocessor {
     protected includes: number[];
 
     protected diagnostics: PreprocessorDiagnostics;
+    protected includeResolver: IncludeResolver;
 
     /* protected */ macros: Macros;
     /* protected */ macroState: MacroState;
@@ -208,7 +208,15 @@ export class Preprocessor {
 
     document: ITextDocument;
 
-    constructor(lexerEngine: ILexerEngine, { knownTypes = new Set<string>(), macros = new Macros, diag = new PreprocessorDiagnostics, skipComments = true } = {}) {
+    constructor(lexerEngine: ILexerEngine, 
+        { 
+            knownTypes = new Set<string>(), 
+            macros = new Macros, 
+            diag = new PreprocessorDiagnostics, 
+            skipComments = true,
+            includeResolver = null
+        } = {}) {
+
         this.macros = macros;
 
         this.macroState = new MacroState;
@@ -221,6 +229,7 @@ export class Preprocessor {
         this.lexerEngine = lexerEngine;
 
         this.diagnostics = diag;
+        this.includeResolver = includeResolver;
         this.lexerReport = null;
         this.lexerOptions = { skipComments };
         // TODO: add initital document to includeList !!!
@@ -336,7 +345,7 @@ export class Preprocessor {
     }
 
 
-    readToken(allowMacro: boolean = true, allowStateChanging = true): IToken {
+    async readToken(allowMacro: boolean = true, allowStateChanging = true): Promise<IToken> {
         const token = this.popToken() || this.lexer.getNextToken();
 
         switch (token.name) {
@@ -367,7 +376,7 @@ export class Preprocessor {
         return token;
     }
 
-    protected readMacro(token: IToken): IToken {
+    protected async readMacro(token: IToken): Promise<IToken> {
         switch (token.value) {
             case '#define': return this.processDefineMacro(token);
             case '#ifdef': return this.processIfdefMacro(token);
@@ -389,8 +398,8 @@ export class Preprocessor {
     }
 
 
-    protected processDefineMacro(token: IToken): IToken {
-        const name = this.readToken(false);
+    protected async processDefineMacro(token: IToken): Promise<IToken> {
+        const name = await this.readToken(false);
         const text = this.readLine();
 
         if (name.name !== T_NON_TYPE_ID) {
@@ -404,7 +413,7 @@ export class Preprocessor {
             this.emitMacroWarning(`macro redefinition found: ${name.value}`, name.loc);
         }
 
-        const macro = this.processMacro(name, text);
+        const macro = await this.processMacro(name, text);
         if (macro) {
             const unresolvedMacro = this.unresolvedMacros.find(macro => macro.name === name.value);
             if (unresolvedMacro) {
@@ -420,7 +429,7 @@ export class Preprocessor {
     }
 
 
-    protected processMacro(name: IToken, lineToken: IToken): IMacro {
+    protected async processMacro(name: IToken, lineToken: IToken): Promise<IMacro> {
         let bFunction = false;
         let bRegionExpr = false;
         let params: string[] = null;
@@ -432,7 +441,7 @@ export class Preprocessor {
             // process macro params
             //
 
-            const lexer = this.tokenToLexer(lineToken);
+            const lexer = await this.tokenToLexer(lineToken);
 
             let token = lexer.getNextToken();
 
@@ -491,8 +500,8 @@ export class Preprocessor {
     }
 
 
-    protected processIfdefMacro(token: IToken): IToken {
-        const exprValue = this.resolveDefMacro(this.lineToLexer(this.readLine()));
+    protected async processIfdefMacro(token: IToken): Promise<IToken> {
+        const exprValue = this.resolveDefMacro(await this.lineToLexer(this.readLine()));
 
         if (exprValue) {
             this.macroState.push(EMacroState.k_ForbidElse);
@@ -504,8 +513,8 @@ export class Preprocessor {
     }
 
 
-    protected processIfndefMacro(token: IToken): IToken {
-        const exprValue = this.resolveDefMacro(this.lineToLexer(this.readLine()));
+    protected async processIfndefMacro(token: IToken): Promise<IToken> {
+        const exprValue = this.resolveDefMacro(await this.lineToLexer(this.readLine()));
 
         if (exprValue) {
             this.macroState.push(EMacroState.k_AllowElse);
@@ -517,8 +526,8 @@ export class Preprocessor {
     }
 
 
-    protected processIfMacro(token: IToken): IToken {
-        if (this.resolveMacroInner(this.lineToLexer(this.readLine()))) {
+    protected async processIfMacro(token: IToken): Promise<IToken> {
+        if (this.resolveMacroInner(await this.lineToLexer(this.readLine()))) {
             this.macroState.push(EMacroState.k_ForbidElse);
             return this.readToken();
         }
@@ -528,14 +537,14 @@ export class Preprocessor {
     }
 
 
-    protected processElifMacro(token: IToken): IToken {
+    protected async processElifMacro(token: IToken): Promise<IToken> {
         if (!this.macroState.is(EMacroState.k_AllowElse) && !this.macroState.is(EMacroState.k_ForbidElse)) {
             this.emitMacroError(`inappropriate control instruction found`, token.loc);
             return this.readToken();
         }
 
         if (this.macroState.is(EMacroState.k_AllowElse)) {
-            if (this.resolveMacroInner(this.lineToLexer(this.readLine()))) {
+            if (this.resolveMacroInner(await this.lineToLexer(this.readLine()))) {
                 this.macroState.replace(EMacroState.k_ForbidElse);
                 return this.readToken();
             }
@@ -545,7 +554,7 @@ export class Preprocessor {
     }
 
 
-    protected processElseMacro(token: IToken): IToken {
+    protected async processElseMacro(token: IToken): Promise<IToken> {
         if (!this.macroState.is(EMacroState.k_AllowElse) && !this.macroState.is(EMacroState.k_ForbidElse)) {
             this.emitMacroError(`inappropriate control instruction found`, token.loc);
             return this.readToken();
@@ -560,7 +569,7 @@ export class Preprocessor {
     }
 
 
-    protected processEndifMacro(token: IToken): IToken {
+    protected async processEndifMacro(token: IToken): Promise<IToken> {
         if (!this.macroState.is(EMacroState.k_AllowElse) && !this.macroState.is(EMacroState.k_ForbidElse)) {
             this.emitMacroError(`inappropriate control instruction found`, token.loc);
             return this.readToken();
@@ -851,7 +860,7 @@ export class Preprocessor {
     }
 
 
-    protected processErrorMacro(token: IToken): IToken {
+    protected async processErrorMacro(token: IToken): Promise<IToken> {
         const text = this.readLine();
         const msg = text.value.trim();
         this.emitMacroError(`erroneous macro reached: "${msg}"`, util.commonRange(token.loc, text.loc));
@@ -859,8 +868,8 @@ export class Preprocessor {
     }
 
 
-    protected skipUnreachableCode(startToken: IToken): IToken {
-        let token = this.readToken(false);
+    protected async skipUnreachableCode(startToken: IToken): Promise<IToken> {
+        let token = await this.readToken(false);
         let nesting = 0;
 
         while (token.name !== END_SYMBOL) {
@@ -894,7 +903,7 @@ export class Preprocessor {
                 }
             }
 
-            token = this.readToken(false);
+            token = await this.readToken(false);
         }
 
         // TODO: highlight open tag
@@ -916,7 +925,7 @@ export class Preprocessor {
     }
 
 
-    protected processIncludeMacro(token: IToken): IToken {
+    protected async processIncludeMacro(token: IToken): Promise<IToken> {
         const file = this.readLine();
         //cuttin qoutes
         const includeURL = file.value.trim().slice(1, -1);
@@ -934,33 +943,13 @@ export class Preprocessor {
             // return this.readToken();
         }
 
-        try {
-
-            const request = new XMLHttpRequest();
-            request.open('GET', uri, false);
-            request.send(null);
-
-            if (request.status !== 200) {
-                this.emitFileNotFound(uri, loc);
-                return this.readToken();
-            }
-
-            const source = request.responseText;
-
-            // const response = fetch(uri);
-            // if (!response.ok) {
-            //     this.emitFileNotFound(uri, loc);
-            //     return this.readToken();
-            // }
-
-            // const source = response.text();
-
-            // TODO: use precise location (trimmed)
-            const textDocument = createTextDocument(uri, source);
+        const source = await this.includeResolver(uri);
+        if (!source)
+        {
+            this.emitFileNotFound(uri, loc);
+        } else {
+            const textDocument = await createTextDocument(uri, source);
             this.pushDocument(this.documentToLexer(textDocument), loc, EPPDocumentFlags.k_Include);
-        } catch (e) {
-            console.error(e);
-            this.emitFileNotFound(file.value, loc);
         }
 
         return this.readToken();
@@ -982,7 +971,7 @@ export class Preprocessor {
     }
 
 
-    protected applyMacro(token: IToken): IMacro {
+    protected async applyMacro(token: IToken): Promise<IMacro> {
         const macros = this.macros;
         const macro = macros.get(token.value);
 
@@ -995,7 +984,7 @@ export class Preprocessor {
             const $lexer = this.lexer;
             const pos = this.lexer.getPosition();
 
-            const nextToken = this.readToken();
+            const nextToken = await this.readToken();
             if (nextToken.value !== '(') {
                 this.emitMacroWarning(`for macro '${macro.name} function call signature is expected'`, token.loc);
 
@@ -1007,7 +996,7 @@ export class Preprocessor {
             let readTokens = [nextToken];
             let argRanges = <number[]>[];
 
-            let argToken = this.readToken();
+            let argToken = await this.readToken();
             let bracketDepth = 0;
 
             let startPos = 1;
@@ -1035,7 +1024,7 @@ export class Preprocessor {
                 }
 
                 endPos++;
-                argToken = this.readToken();
+                argToken = await this.readToken();
                 readTokens.push(argToken);
             }
 
@@ -1089,21 +1078,21 @@ export class Preprocessor {
         return macro;
     }
 
-    protected preprocessToString(value: string): string {
+    protected async preprocessToString(value: string, includeResolver: IncludeResolver): Promise<string> {
         if (DEBUG_MACRO) {
             console.info('preprocess to string', value);
         }
 
         const { knownTypes, macros, diagnostics: diag } = this;
 
-        const pp = new Preprocessor(this.lexerEngine, { knownTypes, macros, diag });
-        pp.setTextDocument(createTextDocument('://macro', value));
+        const pp = new Preprocessor(this.lexerEngine, { knownTypes, macros, diag, includeResolver });
+        pp.setTextDocument(await createTextDocument('://macro', value));
 
-        let token = pp.readToken();
+        let token = await pp.readToken();
         let raw = null;
         while (token.name !== END_SYMBOL) {
             raw = (raw ? raw + ' ' : '') + token.value;
-            token = pp.readToken();
+            token = await pp.readToken();
         }
 
         if (DEBUG_MACRO) {
@@ -1115,18 +1104,18 @@ export class Preprocessor {
 
 
     // apply "left'##'right" operator to value and next token
-    protected applyConcatMacro(left: IToken): IToken {
+    protected async applyConcatMacro(left: IToken): Promise<IToken> {
         assert(!this.macros.get(left.value) || !this.macros.get(left.value).bFunction);
 
-        const right = this.readToken(false, false);
+        const right = await this.readToken(false, false);
         assert(right.name !== END_SYMBOL);
 
         if (DEBUG_MACRO) {
             console.info(`concat strings: "${left.value}##${right.value}"`);
         }
 
-        const leftRaw = this.preprocessToString(left.value);
-        const rightRaw = this.preprocessToString(right.value);
+        const leftRaw = this.preprocessToString(left.value, this.includeResolver);
+        const rightRaw = this.preprocessToString(right.value, this.includeResolver);
         const raw = `${leftRaw}${rightRaw}`;
 
         if (DEBUG_MACRO) {
@@ -1136,7 +1125,7 @@ export class Preprocessor {
         const loc = { start: left.loc.start, end: right.loc.end };
 
         // multiple concatenation processing: A ## B ## C ##  etc.
-        const nextToken = this.readToken(false, false);
+        const nextToken = await this.readToken(false, false);
         if (nextToken.name === T_MACRO_CONCAT) {
             return this.applyConcatMacro(createMacroToken(raw, loc));
         }
@@ -1145,17 +1134,17 @@ export class Preprocessor {
 
         // we handle it as text document, because all possible macros inside are already resolved
         const pos = left.loc.start;
-        const textDocument = createTextDocument(pos.file, raw, pos);
+        const textDocument = await createTextDocument(pos.file, raw, pos);
         this.pushDocument(this.documentToLexer(textDocument), loc, EPPDocumentFlags.k_None);
         return this.readToken();
     }
 
 
-    protected examMacro(token: IToken): IToken {
+    protected async examMacro(token: IToken): Promise<IToken> {
         const macroProcessing = this.stack[this.stack.length - 1].flags & EPPDocumentFlags.k_Macro;
 
         if (macroProcessing) {
-            const nextToken = this.readToken(false, false);
+            const nextToken = await this.readToken(false, false);
             if (nextToken.name === T_MACRO_CONCAT) {
                 return this.applyConcatMacro(token);
             }
@@ -1163,7 +1152,7 @@ export class Preprocessor {
         }
 
         if (token.name === T_NON_TYPE_ID || token.name === T_TYPE_ID) {
-            const macro = this.applyMacro(token);
+            const macro: IMacro = await this.applyMacro(token);
             if (macro) {
                 return this.readToken();
             }
@@ -1195,18 +1184,18 @@ export class Preprocessor {
     }
 
 
-    protected tokenToLexer(token: IToken): ILexer {
+    protected async tokenToLexer(token: IToken): Promise<ILexer> {
         const lexer = new Lexer({ engine: this.lexerEngine, knownTypes: this.knownTypes });
         const uri = token.loc.start.file;
         const source = token.value;
         const offset = token.loc.start;
-        lexer.setTextDocument(createTextDocument(uri, source, offset));
+        lexer.setTextDocument(await createTextDocument(uri, source, offset));
         return lexer;
     }
 
 
-    protected lineToTokens(lineToken: IToken): IToken[] {
-        const lexer = this.tokenToLexer(lineToken);
+    protected async lineToTokens(lineToken: IToken): Promise<IToken[]> {
+        const lexer = await this.tokenToLexer(lineToken);
         let tokens = [];
         let tk = lexer.getNextToken();
         while (tk.name !== END_SYMBOL) {
@@ -1217,26 +1206,27 @@ export class Preprocessor {
     }
 
 
-    protected lineToLexer(lineToken: IToken) {
-        return this.tokensToLexer(this.lineToTokens(lineToken));
+    protected async lineToLexer(lineToken: IToken): Promise<ILexer> {
+        return this.tokensToLexer(await this.lineToTokens(lineToken));
     }
 
 }
 
 // create preprocessed document
-export function createPPDocument(textDocument: ITextDocument, options = { skipComments: true }): ITextDocument {
+export async function createPPDocument(textDocument: ITextDocument, 
+        options: { skipComments?: boolean, includeResolver?: IncludeResolver } = {}): Promise<ITextDocument> {
     // TODO: try to use default lexer: new LexerEngine()
 
     const parser = defaultSLParser();
-    const { skipComments } = options;
-    const pp = new Preprocessor(parser.lexerEngine, { skipComments });
+    const { skipComments = true, includeResolver } = options;
+    const pp = new Preprocessor(parser.lexerEngine, { skipComments, includeResolver });
     pp.setTextDocument(textDocument);
 
     const newline = (from: number, to: number): string => Array(Math.min(to - from, 4)).fill('\n').join('');
     const padding = (length: number): string => Array(length).fill(' ').join('');
 
     let content = '';
-    let tokenThis = pp.readToken();
+    let tokenThis = await pp.readToken();
     while (tokenThis.name !== END_SYMBOL) {
         const doPadding = !content || content.substr(-1) === '\n';
         const locThis = pp.macroLocation() || tokenThis.loc;
@@ -1251,7 +1241,7 @@ export function createPPDocument(textDocument: ITextDocument, options = { skipCo
         // place content
         content = `${content}${!doPadding ? ' ' : ''}${tokenThis.value}`;
 
-        const tokenNext = pp.readToken();
+        const tokenNext = await pp.readToken();
         const locNext = pp.macroLocation() || tokenNext.loc;
 
         // newline if new file

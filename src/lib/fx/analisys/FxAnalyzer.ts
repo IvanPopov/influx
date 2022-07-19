@@ -152,7 +152,7 @@ export class FxAnalyzer extends Analyzer {
 
         const fxStates = this.analyzePartFxStateBlock(context, program, children[0]);
 
-        let sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : true;
+        let sorting = isBoolean(fxStates.sorting) ? fxStates.sorting : false;
         const prerenderRoutine = fxStates.prerenderRoutine || null;
         const geometry = fxStates.geometry || null;
         const instanceCount = fxStates.instanceCount || 1;

@@ -19,6 +19,7 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import MonacoEditor from 'react-monaco-editor';
 import { connect } from 'react-redux';
+import * as Depot from '@sandbox/reducers/depot';
 import { Diagnostic, DiagnosticSeverity, TextDocument, TextDocumentIdentifier, SignatureHelp } from 'vscode-languageserver-types';
 // tslint:disable-next-line:no-submodule-imports
 // import LanguageServiceWorker from 'worker-loader!./LanguageServiceProvider';
@@ -26,6 +27,7 @@ import { LanguageServiceWorker } from './LanguageServiceWorker'
 
 import { ILanguageServiceProvider } from './LanguageServiceProvider';
 import styles from './styles.jss';
+import { getDepot } from '@sandbox/reducers/depot';
 
 const m2p = new MonacoToProtocolConverter(monaco as any); // FIXME
 const p2m = new ProtocolToMonacoConverter(monaco as any); // FIXME
@@ -106,7 +108,6 @@ export interface ISourceEditorProps extends IStoreState, Partial<WithStylesProps
     name?: string;
     actions: typeof sourceActions;
 }
-
 
 
 class SourceEditor extends React.Component<ISourceEditorProps> {
@@ -230,9 +231,11 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
             parserProps.forEach(propName => this.parserParamsCache[propName] = parserStateNext[propName]);
 
             const { grammar, flags, type, parsingFlags } = parserStateNext;
-
             if (grammar) {
-                provider.init({ grammar, flags, type }, parsingFlags);
+                provider.init({ grammar, flags, type }, parsingFlags, Comlink.proxy((name: string) => {
+                    // IP: don't use closure here?
+                    return Depot.makeResolver(getDepot(this.props))(name);
+                }));
             }
         }
     }

@@ -1,7 +1,7 @@
 import { parseUintLiteral } from "@lib/fx/analisys/Analyzer";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { extendSLDocument } from "@lib/fx/SLDocument";
-import { createSyncTextDocument } from "@lib/fx/TextDocument";
+import { createTextDocument } from "@lib/fx/TextDocument";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js";
@@ -31,8 +31,8 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
         const link = this.graph.links[inputInfo.link];
 
         // analyse inside of virtual enviroment for subsequent mixing with the full context
-        let textDocument = createSyncTextDocument("://SpawnRoutine.hlsl", SpawnRoutineHLSL);
-        const slDocument = extendSLDocument(textDocument, document, {
+        let textDocument = await createTextDocument("://SpawnRoutine.hlsl", SpawnRoutineHLSL);
+        return extendSLDocument(textDocument, document, {
             '$input0': (context, program, sourceNode): IExprInstruction => {
                 const scope = program.currentScope;
                 if (!inputNode)
@@ -43,8 +43,6 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
                 return (inputNode as IGraphASTNode).run(context, program, link.origin_slot) as IExprInstruction;
             }
         });
-
-        return slDocument;
     }
 
     updateInputNames()

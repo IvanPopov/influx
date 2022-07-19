@@ -44,7 +44,7 @@ interface IPartLight
     attenuation: number;
 }
 
-const textDocument = createTextDocument('://raw', desc);
+const textDocument = await createTextDocument('://raw', desc);
 const slDocument = await createSLDocument(textDocument);
 const PartLightT = typeAstToTypeLayout(slDocument.root.scope.findType('PartLight'));
 

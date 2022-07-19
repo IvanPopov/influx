@@ -81,7 +81,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         doc = await init.run(doc);
         doc = await update.run(doc);
 
-        doc = await extendFXSLDocument(createTextDocument("://fx-template", EffectTemplateHLSL), doc);
+        doc = await extendFXSLDocument(await createTextDocument("://fx-template", EffectTemplateHLSL), doc);
 
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);

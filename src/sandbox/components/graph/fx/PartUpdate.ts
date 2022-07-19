@@ -2,7 +2,7 @@ import { Context } from "@lib/fx/analisys/Analyzer";
 import { ComplexTypeInstruction } from "@lib/fx/analisys/instructions/ComplexTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { extendSLDocument } from "@lib/fx/SLDocument";
-import { createSyncTextDocument } from "@lib/fx/TextDocument";
+import { createTextDocument } from "@lib/fx/TextDocument";
 import { IExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { LiteGraph } from "litegraph.js";
@@ -31,8 +31,8 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
 
 
     async run(document = LIB_SL_DOCUMENT): Promise<ISLDocument> {
-        const textDocument = createSyncTextDocument("://UpdateRoutine.hlsl", UpdateRoutineHLSL);
-        const slDocument = await extendSLDocument(textDocument, document, {
+        const textDocument = await createTextDocument("://UpdateRoutine.hlsl", UpdateRoutineHLSL);
+        return extendSLDocument(textDocument, document, {
             '$input0': (context, program, sourceNode): IExprInstruction => {
                 return (this.getInputNode(0) as IGraphASTNode || NullNode).run(context, program, this.link(0)) as IExprInstruction;
             },
@@ -50,8 +50,6 @@ class Node extends LGraphNodeEx implements IGraphASTFinalNode {
                 return (this.getInputNode(4) as IGraphASTNode || NullNode).run(context, program, this.link(4)) as IExprInstruction;
             }
         });
-
-        return slDocument;
     }
 }
 

@@ -20,6 +20,7 @@ import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { createLogic } from 'redux-logic';
 import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from '.';
+import * as Depot from '@sandbox/reducers/depot';
 
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
@@ -63,8 +64,7 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
-    const { content: source, uri } = state.sourceFile;
-    const { parsingFlags: flags } = state.parserParams;
+    const { depot, parserParams: { parsingFlags: flags }, sourceFile: { content: source, uri } } = state;
 
     // if (matchLocation(state).params.view !== PLAYGROUND_VIEW) {
     //     return;
@@ -73,9 +73,9 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
     if (!source) {
         return;
     }
-
-    const textDocument = createTextDocument(uri, source);
-    const slastDocument = await createSLASTDocument(textDocument, flags);
+    const includeResolver = Depot.makeResolver(depot);
+    const textDocument = await createTextDocument(uri, source);
+    const slastDocument = await createSLASTDocument(textDocument, { flags, includeResolver });
 
     const unreachableCode = slastDocument.unreachableCode.filter(loc => String(loc.start.file) === String(slastDocument.uri));
 
@@ -165,11 +165,9 @@ const updateSourceContentLogic = createLogic<IStoreState>({
             }
 
             // Is new file loaded?
-            if (action.type === evt.SOURCE_FILE_LOADED)
-            {
-                if (localStorage.getItem(LOCAL_SESSION_ID) !== fx)
-                {
-                    localStorage.setItem(LOCAL_SESSION_ID, fx); 
+            if (action.type === evt.SOURCE_FILE_LOADED) {
+                if (localStorage.getItem(LOCAL_SESSION_ID) !== fx) {
+                    localStorage.setItem(LOCAL_SESSION_ID, fx);
                     verbose(`Last sesstion data has been updated. (${localStorage.getItem(LOCAL_SESSION_ID)})`);
 
                     toast({
@@ -262,7 +260,7 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 
 async function processRaw(state: IStoreState, dispatch): Promise<void> {
     const file = getFileState(state);
-    const document = await createPPDocument(createTextDocument(file.uri, file.content));
+    const document = await createPPDocument(await createTextDocument(file.uri, file.content));
 
     dispatch({ type: evt.SOURCE_CODE_PREPROCESSING_COMPLETE, payload: { document } });
 }
@@ -332,8 +330,7 @@ const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsCha
             const markers = buildDebuggerSourceColorization(getDebugger(getState()), getFileState(getState()));
             emitMarkers(<IDispatch>dispatch, emitDebuggerColorization(markers));
         }
-        if (action.payload.options.wasm != VM.isWASM())
-        {
+        if (action.payload.options.wasm != VM.isWASM()) {
             dispatch({ type: evt.PLAYGROUND_SWITCH_VM_RUNTIME });
         }
         done();

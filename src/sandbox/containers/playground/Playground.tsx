@@ -4,21 +4,20 @@
 /* tslint:disable:newline-per-chained-call */
 
 
-import * as FxBundle from '@lib/fx/bundles/Bundle';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
-import { filterPartFx, getEmitterName, getPlaygroundState } from '@sandbox/reducers/playground';
-import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { filterPartFx, getEmitterName } from '@sandbox/reducers/playground';
+import { getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
+import isElectron from 'is-electron';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Grid, Icon, List, Message, Popup, Segment, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
 import ThreeScene from './ThreeScene';
 
-import isElectron from 'is-electron';
 
 interface IPlaygroundProps extends IStoreState {
     actions: typeof playgroundActions;

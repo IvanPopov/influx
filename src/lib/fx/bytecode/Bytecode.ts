@@ -1587,7 +1587,7 @@ export async function translateExpression(expr: string, document?: ISLDocument):
     const uri = `://expression`;
     const anonymousFuncName = `anonymous`;
     const source = `auto ${anonymousFuncName}() { return (${expr}); }`;
-    const textDocument = createTextDocument(uri, source);
+    const textDocument = await createTextDocument(uri, source);
     const documentEx = await createFXSLDocument(textDocument, undefined, document);
     if (!documentEx.diagnosticReport.errors) {
         return translate(documentEx.root.scope.findFunction(anonymousFuncName, null));

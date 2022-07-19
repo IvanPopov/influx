@@ -9,6 +9,7 @@ import sourceFile from './sourceFile';
 import playground from './playground';
 import nodes from './nodes';
 import s3d from './s3d';
+import depot from './depot';
 
 /**
  * selectors
@@ -28,4 +29,4 @@ export function mapProps<T extends { (state: IStoreState): any; }>(selector: T):
     return (state) => selector(state);
 }
 
-export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes, s3d });
+export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes, s3d, depot });

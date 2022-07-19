@@ -3,7 +3,7 @@ import { EDiagnosticCategory, IDiagnosticMessage } from '@lib/idl/IDiagnostics';
 import { ILanguageService } from '@lib/idl/ILanguageService';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { IParserParams, IRange } from '@lib/idl/parser/IParser';
+import { IncludeResolver, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
 import * as Comlink from 'comlink';
 import { CodeLens, Diagnostic, DiagnosticSeverity, Position, Range, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
@@ -53,15 +53,18 @@ function resolveLocation(src: IRange, slastDocument: ISLASTDocument): IRange {
     return dst;
 }
 
+
+interface IDocumentCacheEntry {
+    textDocument: TextDocument;
+    slastDocument: ISLASTDocument;
+    slDocument: ISLDocument;
+}
+
 class LanguageServiceProvider {
     private service: ILanguageService;
-    private documents: Map<string, {
-        textDocument: TextDocument;
-        slastDocument: ISLASTDocument;
-        slDocument: ISLDocument;
-    }> = new Map();
+    private documents: Map<string, IDocumentCacheEntry> = new Map();
 
-    init(parserParams: IParserParams, parsingFlags: number) {
+    init(parserParams: IParserParams, parsingFlags: number, includeResolver: IncludeResolver) {
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
         try {
             createDefaultSLParser(parserParams);
@@ -71,7 +74,7 @@ class LanguageServiceProvider {
             return null;
         }
 
-        this.service = getLanguageService(parsingFlags);
+        this.service = getLanguageService({ flags: parsingFlags, includeResolver });
     }
 
     async validate(rawDocument): Promise<Diagnostic[]> {
@@ -127,7 +130,7 @@ class LanguageServiceProvider {
     //     return [];
     // }
 
-    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): { textDocument: TextDocument; slastDocument: ISLASTDocument; slDocument: ISLDocument } {
+    private getDocument(textDocumentIdentifier: TextDocumentIdentifier): IDocumentCacheEntry {
         if (!this.documents.has(textDocumentIdentifier.uri)) {
             console.warn('could not find document', textDocumentIdentifier.uri);
             return { textDocument: null, slastDocument: null, slDocument: null };

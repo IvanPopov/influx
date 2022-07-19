@@ -2,7 +2,7 @@ import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
+import { EParserType, IncludeResolver, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { IEmitter } from '@lib/idl/emitter';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
@@ -55,6 +55,8 @@ export interface INodePipeline {
     docs: string;               // current info of selected node
     graph: LGraph;
     $revision: number;          // number of updates of graph
+
+
 }
 
 export interface IPlaygroundState {
@@ -120,6 +122,26 @@ export interface IS3DState
     p4: IP4Info
 }
 
+//
+//
+//
+
+export interface IDepotFolder {
+    path: string;
+    folders?: IDepotFolder[];
+    files?: string[];
+    totalFiles: number;
+}
+
+export interface IDepot
+{
+    root: IDepotFolder;
+}
+
+//
+//
+//
+
 export interface IStoreState {
     readonly sourceFile: IFileState;
     readonly parserParams: IParserState;
@@ -127,6 +149,7 @@ export interface IStoreState {
     readonly playground: IPlaygroundState;
     readonly nodes: INodePipeline;
     readonly s3d: IS3DState;
+    readonly depot: IDepot;
 }
 
 export default IStoreState;

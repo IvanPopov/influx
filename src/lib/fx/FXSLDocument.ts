@@ -3,38 +3,36 @@ import { IMap } from "@lib/idl/IMap";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
+import { IncludeResolver } from "@lib/idl/parser/IParser";
 import { IExprSubstCallback } from "./analisys/Analyzer";
 
 import { FxAnalyzer } from "./analisys/FxAnalyzer";
 import { createSLASTDocument } from "./SLASTDocument";
 
-export async function createFXSLDocument(textDocument: ITextDocument, flags?: number, document?: ISLDocument): Promise<ISLDocument>;
-export async function createFXSLDocument(slastDocument: ISLASTDocument, document?: ISLDocument): Promise<ISLDocument>;
-export async function createFXSLDocument(param1: ISLASTDocument | ITextDocument, param2?: number | ISLDocument, param3?: ISLDocument): Promise<ISLDocument> {
+type Opts = { flags?: number, includeResolver?: IncludeResolver };
+
+export async function createFXSLDocument(document: ISLASTDocument | ITextDocument, opts: Opts = {}, parent: ISLDocument = null): Promise<ISLDocument> {
     let textDocument: ITextDocument;
     let slastDocument: ISLASTDocument;
-    let slDocument: ISLDocument;
 
-    if (isString(arguments[0].source)) {    
-        const flags = isNumber(arguments[1]) ? <number>arguments[1] : undefined;
-        textDocument = <ITextDocument>arguments[0];
-        slastDocument = await createSLASTDocument(textDocument, flags);
-        slDocument = arguments[2];
+    if (isString((document as ITextDocument).source)) {    
+        textDocument = <ITextDocument>document;
+        slastDocument = await createSLASTDocument(textDocument, opts);
     } else {
-        slastDocument = <ISLASTDocument>arguments[0];
-        slDocument = arguments[1];
+        slastDocument = <ISLASTDocument>document;
     }
     
     const analyzer = new FxAnalyzer;
-    return await analyzer.parse(slastDocument, slDocument);
+    return await analyzer.parse(slastDocument, parent);
 }
 
-export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, flags?: number): Promise<ISLDocument> {
+export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, opts: Opts = {}): Promise<ISLDocument> {
     let addition = null;
     if (textAddition)
     {
-        let knownTypes = Object.keys(base.root.scope.types);
-        addition = await createSLASTDocument(textAddition, flags, knownTypes);
+        const knownTypes = Object.keys(base.root.scope.types);
+        const { flags, includeResolver } = opts;
+        addition = await createSLASTDocument(textAddition, { flags, knownTypes, includeResolver });
     }
     const analyzer = new FxAnalyzer;
     const slDocument = analyzer.extend(addition, base, expressions);

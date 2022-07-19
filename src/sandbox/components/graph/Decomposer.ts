@@ -3,12 +3,12 @@ import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstructi
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { PostfixPointInstruction } from "@lib/fx/analisys/instructions/PostfixPointInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
-import { extendSLDocumentSync } from "@lib/fx/SLDocument";
+import { extendSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { EInstructionTypes, IExprInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { INodeOutputSlot, LiteGraph } from "litegraph.js";
+import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js";
 import { PART_LOCAL_NAME, PART_STRUCTURE_SL_DOCUMENT, PART_TYPE } from "./common";
 import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
 
@@ -42,53 +42,83 @@ class Node extends LGraphNodeAST {
 
     onConnectInput(inputIndex: number, outputType: string | -1, outputSlot: INodeOutputSlot, outputNode: IGraphASTNode, outputIndex: number): boolean 
     {
-        // part argument has been added in order to handle corner case related to 'fx' pipeline
-        const source = `auto anonymous(${PART_TYPE} ${PART_LOCAL_NAME}) { return ($complexExpr); }`;
-        const textDocument = createTextDocument(`://decompose-node`, source);
+        const self = this;
+        async function wrapper () {
+            // part argument has been added in order to handle corner case related to 'fx' pipeline
+            const source = `auto anonymous(${PART_TYPE} ${PART_LOCAL_NAME}) { return ($complexExpr); }`;
+            const textDocument = await createTextDocument(`://decompose-node`, source);
 
-        let type: IVariableTypeInstruction = null;
-        
-        // quick analisys inside of virtual enviroment in order to compute on fly expression type
-        let documentEx = extendSLDocumentSync(textDocument, PART_STRUCTURE_SL_DOCUMENT, {
-            $complexExpr: (context, program, sourceNode): IExprInstruction => {
-                const expr = (outputNode as LGraphNodeAST).evaluate(context, program, outputIndex) as IExprInstruction;
-                console.log(`(${expr.toCode()})`);
-                type = expr.type;
-                return expr;
-            }
-        });
-
-        if (documentEx.diagnosticReport.errors) {
-            console.error(Diagnostics.stringify(documentEx.diagnosticReport));
+            let type: IVariableTypeInstruction = null;
             
-        }
-        if (type.isComplex()) {
-            type.fields.forEach(field => this.addOutput(field.name, field.type.name));
-            return true;
-        }
+            // quick analisys inside of virtual enviroment in order to compute on fly expression type
+            let documentEx = await extendSLDocument(textDocument, PART_STRUCTURE_SL_DOCUMENT, {
+                $complexExpr: (context, program, sourceNode): IExprInstruction => {
+                    const expr = (outputNode as LGraphNodeAST).evaluate(context, program, outputIndex) as IExprInstruction;
+                    console.log(`(${expr.toCode()})`);
+                    type = expr.type;
+                    return expr;
+                }
+            });
 
-        // corner case for system types    
-        if (type.instructionType === EInstructionTypes.k_SystemType)
-        {
-            const match = type.name.match(/(float|half|bool|uint|int)(2|3|4)/);
-            if (match)
-            {
-                [...'xyzw'].slice(0, Number(match[2])).forEach(name => this.addOutput(name, match[1]));
+            if (documentEx.diagnosticReport.errors) {
+                console.error(Diagnostics.stringify(documentEx.diagnosticReport));
+                
+            }
+            if (type.isComplex()) {
+                type.fields.forEach(field => self.addOutput(field.name, field.type.name));
                 return true;
-            }            
+            }
+
+            // corner case for system types    
+            if (type.instructionType === EInstructionTypes.k_SystemType)
+            {
+                const match = type.name.match(/(float|half|bool|uint|int)(2|3|4)/);
+                if (match)
+                {
+                    [...'xyzw'].slice(0, Number(match[2])).forEach(name => self.addOutput(name, match[1]));
+                    return true;
+                }            
+            }
+
+            console.error(`unsupported type for decomposition '${type.name}'`);
+            self.dropInput();
+            return false;
         }
 
-        console.error(`unsupported type for decomposition '${type.name}'`);
-        return false;
+        wrapper();
+        return true;
     }
 
-    onBeforeConnectInput(inputIndex: number): number
+    dropInput()
+    {
+        this.disconnectInput(0);
+    }
+
+    dropOutputs()
     {
         while (this.outputs.length)
         {
             this.disconnectOutput(0);
             this.removeOutput(0);
+        } 
+    }
+
+    onConnectionsChange( 
+        type: number,
+        slotIndex: number,
+        isConnected: boolean,
+        link: LLink,
+        ioSlot: (INodeOutputSlot | INodeInputSlot))
+    {
+        if (type == LiteGraph.INPUT && !isConnected)
+        {
+            this.dropOutputs();
         }
+    }
+
+    onBeforeConnectInput(inputIndex: number): number
+    {
+        this.dropOutputs();
         return inputIndex;
     }
 

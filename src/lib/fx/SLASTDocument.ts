@@ -2,7 +2,7 @@ import { IDiagnosticReport } from '@lib/idl/IDiagnostics';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { IMacro } from '@lib/idl/parser/IMacro';
-import { EOperationType, IASTConfig, IFile, IRange, IToken } from '@lib/idl/parser/IParser';
+import { EOperationType, IASTConfig, IFile, IncludeResolver, IRange, IToken } from '@lib/idl/parser/IParser';
 import { ASTDocument } from "@lib/parser/ASTDocument";
 import { Preprocessor } from '@lib/parser/Preprocessor';
 import { Diagnostics } from '@lib/util/Diagnostics';
@@ -67,7 +67,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected init(config: IASTConfig) {
         super.init(config);
         const { knownTypes } = this;
-        this.preprocessor = new Preprocessor(this.parser.lexerEngine, { knownTypes });
+        const { includeResolver } = config;
+        this.preprocessor = new Preprocessor(this.parser.lexerEngine, { knownTypes, includeResolver });
 
         this.ruleFunctions.set('addType', this._addType.bind(this));
     }
@@ -87,8 +88,8 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     }
 
 
-    protected readToken(): IToken {
-        const token = this.preprocessor.readToken();
+    protected async readToken(): Promise<IToken> {
+        const token = await this.preprocessor.readToken();
         
         // replacement of the original token location with the macro location
         const macroLoc = this.preprocessor.macroLocation();
@@ -101,20 +102,13 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 }
 
 
-export async function createSLASTDocument(textDocument: ITextDocument, flags?: number, knownTypes?: string[]): Promise<ISLASTDocument> {
-    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]) });
+export async function createSLASTDocument(textDocument: ITextDocument, 
+    opts : { flags?: number, knownTypes?: string[], includeResolver?: IncludeResolver } = {}): Promise<ISLASTDocument> {
+    const { flags, knownTypes, includeResolver } = opts;
+    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]), includeResolver });
     const timeLabel = `createSLASTDocument(${textDocument.uri})`;
     console.time(timeLabel);
     await document.parse(textDocument, flags);
-    console.timeEnd(timeLabel);
-    return document;
-}
-
-export function createSLASTDocumentSync(textDocument: ITextDocument, flags?: number, knownTypes?: string[]): ISLASTDocument {
-    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]) });
-    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
-    console.time(timeLabel);
-    document.parse(textDocument, flags);
     console.timeEnd(timeLabel);
     return document;
 }

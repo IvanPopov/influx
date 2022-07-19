@@ -1,13 +1,14 @@
 import { sourceCode as sourceActions } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
-import fxRuntime from '@sandbox/logic/fxRuntime';
-import parsing from '@sandbox/logic/parsing';
-import s3d from '@sandbox/logic/s3d';
-import graph from '@sandbox/logic/nodes';
+import fxRuntimeLogic from '@sandbox/logic/fxRuntime';
+import parsingLogic from '@sandbox/logic/parsing';
+import s3dLogic from '@sandbox/logic/s3d';
+import depotLogic from '@sandbox/logic/depot';
+import graphLogic from '@sandbox/logic/nodes';
 import { history } from '@sandbox/reducers/router';
-import { getFileState } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
+import * as Depot from '@sandbox/reducers/depot';
 import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { createLogic, createLogicMiddleware } from 'redux-logic';
@@ -73,7 +74,6 @@ export const GRAPH_KEYWORD = '@graph';
 export const LOCAL_SESSION_ID = 'last-session-id';
 export const LOCAL_SESSION_AUTOSAVE = 'local-session-autosave';
 
-export const ASSETS_PATH = './assets/fx/tests';
 
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW, GRAPH_VIEW ];
 
@@ -86,7 +86,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
     async process({ getState, action }, dispatch, done) {
         const location = action.payload.location.pathname;
-        const { s3d, sourceFile } = getState()
+        const { sourceFile, depot } = getState()
         const defaultFilename = localStorage.getItem(LOCAL_SESSION_ID) || DEFAULT_FILENAME;
         
         if (location === '/') {
@@ -125,14 +125,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                     return done();
                 }
                 
-                let fxRequest: string = null;
-                if (!s3d.env)
-                {
-                    fxRequest = `${ASSETS_PATH}/${fx}`;
-                } else {
-                    fxRequest = path.normalize(`${s3d.env.Get('project-assets-dir')}/ssl/sfx/next/${fx}`);
-                }
-
+                const fxRequest = Depot.resolveName(depot, fx);
                 if (sourceFile.uri !== fxRequest 
                     // && name !== GRAPH_KEYWORD
                     ) {
@@ -167,6 +160,7 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
         if (match) {
             const { view, fx } = match.params;
             if (!fx) {
+                console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
                 // something went wrong
                 history.push(`/${view}/${DEFAULT_FILENAME}`);
             } else {
@@ -184,8 +178,9 @@ export default createLogicMiddleware([
     fetchSourceFileLogic,
     navigationLogic,
     sourceFileNotFoundLogic,
-    ...parsing,
-    ...fxRuntime,
-    ...graph,
-    ...s3d
+    ...parsingLogic,
+    ...fxRuntimeLogic,
+    ...graphLogic,
+    ...s3dLogic,
+    ...depotLogic
 ]);

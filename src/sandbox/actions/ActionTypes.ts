@@ -4,7 +4,7 @@ import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerState, IMarker, IP4Info } from '@sandbox/store/IStoreState';
+import { IDebuggerState, IDepotFolder, IMarker, IP4Info } from '@sandbox/store/IStoreState';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import * as S3D from '@lib/util/s3d/prjenv';
 
@@ -113,7 +113,17 @@ export type IS3DActions = IS3DInitEnv | IS3DInitEnvSuccess | IS3DInitEnvFailed |
 //
 //
 
+export type IDepotUpdateRequest = IAction<typeof evt.DEPOT_UPDATE_REQUEST, {}>;
+export type IDepotUpdateComplete = IAction<typeof evt.DEPOT_UPDATE_COMPLETE, { root: IDepotFolder }>;
+
+export type IDepotActions = IDepotUpdateRequest | IDepotUpdateComplete;
+
+//
+//
+//
+
 export type ActionTypes = ISourceFileActions & IParserParamsActions & 
-    IDebuggerActions & IPlaygroundActions & IGraphActions & IS3DActions;
+    IDebuggerActions & IPlaygroundActions & IGraphActions & IS3DActions & 
+    IDepotActions;
 
 export default ActionTypes;

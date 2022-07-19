@@ -75,7 +75,7 @@ let sandboxWin;
 app.on('ready', () => {
     sandboxWin = createSandboxWindow();
     logoWin = createImageWindow();
-    // sandboxWin.once('ready-to-show', onReady);
+    sandboxWin.once('ready-to-show', onReady);
 });
 
 ipc.on('argv', (event, arg) => {
@@ -105,7 +105,7 @@ function onReady()
 }
 
 // custom 'ready' event is more precise than basic 'ready-to-show'
-ipc.on('app-ready', onReady);
+// ipc.on('app-ready', onReady);
 
 
 

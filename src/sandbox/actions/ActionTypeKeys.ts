@@ -47,3 +47,5 @@ export const S3D_INIT_ENV_FAILED                    = 's3d-init-env-failed';
 export const S3D_CONNECT_P4                         = 's3d-connect-p4';
 export const S3D_CONNECT_P4_SUCCESSED               = 's3d-connect-p4-successed';
 
+export const DEPOT_UPDATE_REQUEST                   = 'depot-update-request';
+export const DEPOT_UPDATE_COMPLETE                  = 'depot-update-complete';

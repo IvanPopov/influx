@@ -99,7 +99,7 @@ export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
 
-    const textDocument = createTextDocument('://raw', emitter.toString());
+    const textDocument = await createTextDocument('://raw', emitter.toString());
     const slDocument = await createSLDocument(textDocument);
     const scope = slDocument.root.scope;
 
