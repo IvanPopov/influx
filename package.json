@@ -87,6 +87,7 @@
     "ts-loader": "^9.2.9",
     "tsconfig-paths-webpack-plugin": "^3.5.2",
     "tslint": "^5.20.1",
+    "typedoc": "^0.22.15",
     "typescript": "4.5.5",
     "url-loader": "^4.1.1",
     "vscode-languageserver-types": "^3.16.0",
@@ -104,10 +105,11 @@
     "dev-server:web": "cross-env NODE_ENV=development APP_TARGET=web webpack-dev-server",
     "dev-server:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack --watch",
     "docs:web": "typedoc --out dist/web/docs src",
-    "pack:electron": "npx electron-builder -c ./electron-builder.yml"
+    "pack:electron": "npx electron-builder -c ./electron-builder.yml",
+    "clean:electron": "node -e \"let fs = require('fs-extra');fs.emptyDir('dist/electron');fs.emptyDir('release');\"",
+    "package:electron": "npm run clean:electron & npm run build:electron & npm run pack:electron"
   },
   "dependencies": {
-    "ajv": "^8.x",
-    "typedoc": "^0.22.15"
+    "minimist": "^1.2.6"
   }
 }

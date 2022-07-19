@@ -11,13 +11,15 @@ files:
   - "dist/electron"
   - "package.json"
   - "shell.js"
+  - "black-sun-logo.js"
 
 # Windows configuration
 win:
   icon: "src/site/icon.ico"
   target:
-    - "zip"
-    - "nsis"
+    - "portable"
+    # - "zip"
+    # - "nsis"
 
 # Config for the windows installer
 nsis:

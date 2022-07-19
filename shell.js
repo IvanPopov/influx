@@ -2,10 +2,7 @@ const electron = require("electron");
 const path = require("path");
 const url = require("url");
 const fs = require("fs");
-
 const argv = require('minimist')(process.argv.slice(2));
-const exec = require('child_process').exec;
-
 const logo = require('./black-sun-logo');
 const ipc = electron.ipcMain;
 const app = electron.app;
