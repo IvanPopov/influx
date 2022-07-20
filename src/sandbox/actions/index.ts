@@ -144,7 +144,7 @@ export const s3d = {
 
 export const depot = {
     update() {
-        return { type: evt.DEPOT_UPDATE_REQUEST, payload: { } };
+        return { type: evt.DEPOT_UPDATE_REQUEST, payload: {} };
     }
 }
 

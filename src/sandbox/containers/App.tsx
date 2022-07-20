@@ -20,21 +20,26 @@ import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceF
 import IStoreState, { IP4Info } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
+import * as p4 from '@lib/util/p4/p4';
 // global defines from webpack's config;
 /// <reference path="../webpack.d.ts" />
-import isElectron from 'is-electron';
-import * as path from 'path';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
-import { Button, Checkbox, Container, Dropdown, Form, Grid, Icon, Input, Loader, Menu, Message, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+
+import * as URI from '@lib/uri/uri';
+import * as fs from 'fs';
+import isElectron from 'is-electron';
+import * as path from 'path';
 
 const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 type UnknownIcon = any;
 
+const localName = (uri: string) => URI.parse(uri).path.substring(1);
 
 export const styles = {
     toastFontFix: {
@@ -329,10 +334,19 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
 let SourceCodeMenu = withStyles(styles)(SourceCodeMenuRaw);
 
 
+interface ConfirmDialog
+{
+    title: string,
+    message: string,
+    onAccept: () => void;
+    onReject: () => void;
+};
+
 @(withRouter as any) // << NOTE: known issue with TS decorators :/
 class App extends React.Component<IAppProps> {
 
     declare state: {
+        confirmDialog: { open: boolean } & ConfirmDialog;
         showFileBrowser: boolean;
         testProcessing: boolean;
     };
@@ -343,7 +357,8 @@ class App extends React.Component<IAppProps> {
         super(props);
         this.state = {
             showFileBrowser: false,
-            testProcessing: false
+            testProcessing: false,
+            confirmDialog: { open: false, title: null, message: null, onAccept: null, onReject: null }
         };
     }
 
@@ -360,10 +375,33 @@ class App extends React.Component<IAppProps> {
         return stateDiff;
     }
 
+    //
+    // Side pamel
+    //
 
     handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser });
     hideFileBrowser = () => this.setState({ showFileBrowser: false });
 
+    setAutocompile(autocompile: boolean) {
+        this.props.actions.specifyOptions({ autocompile });
+    }
+
+    //
+    // Runtime options
+    //
+
+    switchVMRuntime() {
+        this.props.actions.specifyOptions({ wasm: !this.props.sourceFile.debugger.options.wasm });
+    }
+
+    switchEmitterRuntime() {
+        this.props.actions.switchRuntime();
+    }
+
+
+    //
+    // Bytecode tab functionality
+    //
 
 
     @autobind
@@ -408,17 +446,10 @@ class App extends React.Component<IAppProps> {
     }
 
 
-    setAutocompile(autocompile: boolean) {
-        this.props.actions.specifyOptions({ autocompile });
-    }
+    //
+    // Markers
+    //
 
-    switchVMRuntime() {
-        this.props.actions.specifyOptions({ wasm: !this.props.sourceFile.debugger.options.wasm });
-    }
-
-    switchEmitterRuntime() {
-        this.props.actions.switchRuntime();
-    }
 
     setBytecodeColorization(colorize: boolean) {
         this.props.actions.specifyOptions({ colorize });
@@ -492,6 +523,78 @@ class App extends React.Component<IAppProps> {
         }
     }
 
+    //
+    // General functionality
+    //
+
+    @autobind
+    openFile(file: string) {
+        const doOpen = () => history.push(`/${this.props.match.params.view}/${path.basename(file)}`);
+
+        if (!this.isEdited() || !isElectron())
+        {
+            doOpen();
+            return;
+        }
+
+        const message = 'Your current changes will be lost, do you want to continue?';
+        const title = 'New file';
+        const dialog = {
+            title,
+            message,
+            onReject() {},
+            onAccept: doOpen
+        };
+
+        this.openConfirmDialog(dialog);
+    }
+
+    reopenThisFile()
+    {
+        this.props.actions.openFile(this.currentUri());
+    }
+
+    //
+    // General info
+    //
+
+    isEdited()
+    {
+        return this.props.sourceFile.revision > 1;
+    }
+
+    currentUri()
+    {
+        return this.props.sourceFile?.uri;
+    }
+
+    isP4Connected()
+    {
+        return !!this.props.s3d.p4;
+    }
+
+    isEnv()
+    {
+        return !!this.props.s3d.env;
+    }
+
+    isReadonly()
+    {
+        const uri = this.currentUri();
+
+        if (!uri)
+        {
+            return false;
+        }
+    
+        if (!isElectron())
+        {
+            // assume that we always able to edit effects in web version
+            return false;
+        }
+    
+        return (fs.statSync(localName(uri)).mode & 146) == 0;
+    }
 
     canCompile(): boolean {
         const { sourceFile } = this.props;
@@ -499,11 +602,100 @@ class App extends React.Component<IAppProps> {
     }
 
 
+    //
+    // Perforce 
+    //
+
     @autobind
-    openFile(file: string) {
-        history.push(`/${this.props.match.params.view}/${path.basename(file)}`);
+    onCheckout()
+    {
+        if (!this.isP4Connected())
+        {
+            console.error('Perforce is not connected.');
+            return;
+        }
+
+        // add to default changelist
+        p4.addToChangelist(0, localName(this.currentUri()), () => this.forceUpdate());
     }
 
+    @autobind
+    onRevert()
+    {
+        if (!this.isP4Connected())
+        {
+            console.error('Perforce is not connected.');
+            return;
+        }
+
+        function doRevert()
+        {
+            p4.revert(localName(this.currentUri()), () => {
+                console.assert(this.isReadonly(), 'Revert failed?!');
+                // reopen file to drop revesion and other states/markers
+                this.reopenThisFile();
+            });
+        }
+
+        if (!this.isEdited())
+        {
+            doRevert();
+            return;
+        }
+
+        const dialog = {
+            title: `Revert ${path.basename(localName(this.currentUri()))}`,
+            message: 'Drop unsaved changes?',
+            onReject() {},
+            onAccept: doRevert
+        };
+
+        this.openConfirmDialog(dialog);
+    }
+
+    @autobind
+    onSave()
+    {
+        if (!isElectron())
+        {
+            console.error('File can not be saved under web version.');
+            return;
+        }
+
+        if (this.isReadonly())
+        {
+            console.error('File is read only.');
+            return;
+        }
+
+        const data = this.props.sourceFile.content;
+        if (ipcRenderer.sendSync('process-save-file-silent', { name: localName(this.currentUri()), data })) {
+            this.reopenThisFile();
+        }
+    }
+
+    //
+    // Confirm dialog
+    //
+
+    openConfirmDialog(options: ConfirmDialog) {
+        this.setState({ confirmDialog: { ...options, open: true} });
+    }
+
+    closeConfirmDialog() {
+        this.setState({ confirmDialog: { open: false } });
+    }
+
+    processConfirmDialog(decision: boolean)
+    {
+        decision ? this.state.confirmDialog.onAccept.apply(this)
+                 : this.state.confirmDialog.onReject.apply(this);
+        this.closeConfirmDialog();
+    }
+
+    //
+    // Render processing
+    //
 
     buildShaderMenu(): { name: string; link: string }[] {
         const props = this.props;
@@ -789,15 +981,24 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key="source-file-item">
-                        Source File
-                        <span style={ { fontWeight: 'normal', color: 'rgba(0, 0, 0, 0.6)' } }>
-                            &nbsp;|&nbsp;
-                            <Popup
-                                trigger={ <span>{ path.basename(props.sourceFile.uri || '') }</span> }
-                                content={ props.sourceFile.uri }
-                                basic
-                            />
-                        </span>
+                        <Popup
+                            trigger={ <span>{path.basename(props.sourceFile.uri || '') + (this.isEdited() ? '*': '')}</span> }
+                            content={ props.sourceFile.uri }
+                            basic
+                        />
+                        &nbsp;
+                        { (isElectron() && this.isReadonly()) &&
+                            <Button.Group size='mini'>
+                                <Button positive onClick={ this.onCheckout }>Checkout</Button>
+                            </Button.Group>
+                        }
+                        { (isElectron() && !this.isReadonly()) &&
+                            <Button.Group size='mini'>
+                                <Button onClick={ this.onRevert }>Revert</Button>
+                                <Button.Or />
+                                <Button positive onClick={ this.onSave }>Save</Button>
+                            </Button.Group>
+                        }
                     </Menu.Item>
                 ),
                 render: () => (
@@ -864,7 +1065,11 @@ class App extends React.Component<IAppProps> {
                 )
             },
             {
-                menuItem: 'Grammar',
+                menuItem: (
+                    <Menu.Item key="grammar-item" style={ { marginBottom: isElectron() ? '-1px': '-4px' } }>
+                        <span>Grammar</span>
+                    </Menu.Item>
+                ),
                 render: () => (
                     <Tab.Pane key='grammar' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
                         <ParserParameters />
@@ -888,6 +1093,29 @@ class App extends React.Component<IAppProps> {
 
         return (
             <div className={ props.classes.mainContentHotfix }>
+                <Modal
+                    onClose={ () => this.closeConfirmDialog() }
+                    onOpen={ () => null }
+                    open={ this.state.confirmDialog.open }
+                >
+                    <Header icon>
+                        {/* <Icon name='archive' /> */}
+                        { this.state.confirmDialog.title }
+                    </Header>
+                    <Modal.Content>
+                        <p>
+                            { this.state.confirmDialog.message }
+                        </p>
+                    </Modal.Content>
+                    <Modal.Actions>
+                        <Button color='red' onClick={() => this.processConfirmDialog(false)}>
+                            <Icon name='remove' /> No
+                        </Button>
+                        <Button color='green' onClick={ () => this.processConfirmDialog(true) }>
+                            <Icon name='checkmark' /> Yes
+                        </Button>
+                    </Modal.Actions>
+                </Modal>
                 <Sidebar.Pushable>
                     <Sidebar
                         as={ Segment }

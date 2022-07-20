@@ -39,6 +39,8 @@ export interface IFileState {
     uri: string;                    // source file's path
     content: string;                // source file's content
 
+    revision: number;          // number of updates of file
+
     error: Error;                   // source file loading's error
 
     slastDocument: ISLASTDocument;

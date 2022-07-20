@@ -34,6 +34,7 @@ const p2m = new ProtocolToMonacoConverter(monaco as any); // FIXME
 
 const provider = Comlink.wrap<ILanguageServiceProvider>(new LanguageServiceWorker());
 
+
 function defer() {
     const deferred = {
         promise: null,
@@ -99,7 +100,6 @@ const options: monaco.editor.IStandaloneEditorConstructionOptions = {
     lineDecorationsWidth: 0,
     cursorSmoothCaretAnimation: true,
     fontLigatures: true,
-    // readOnly: true
 };
 
 
@@ -525,7 +525,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 width='100%'
                 height='calc(100vh - 67px)' // todo: fixme
 
-                options={ options }
+                options={ { ...options } }
                 onChange={ this.onChange }
                 editorDidMount={ this.editorDidMount }
                 editorWillMount={ this.editorWillMount }

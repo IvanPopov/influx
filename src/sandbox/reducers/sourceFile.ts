@@ -8,6 +8,7 @@ import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
 const initialState: IFileState = {
+    revision: 0,
     uri: null,
     content: '',
     error: null,
@@ -34,7 +35,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
         ({ ...state, uri: action.payload.filename }),
 
     [evt.SOURCE_FILE_LOADED]: (state, action: ISourceFileLoaded) =>
-        ({ ...state, content: action.payload.content }),
+        ({ ...state, content: action.payload.content, revision: 0 }),
 
     [evt.SOURCE_FILE_LOADING_FAILED]: (state, action: ISourceFileLoadingFailed) =>
         ({
@@ -47,7 +48,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slASTDocument: null,
             slDocument: null,
             emitter: null,
-            $revision: 0,
+            revision: 0,
             wasm: Emitter.isWASM()
         }),
 
@@ -60,14 +61,15 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             breakpoints: [],
             slASTDocument: null,
             slDocument: null,
-            emitter: null,
-            $revision: 0,
-            wasm: Emitter.isWASM()
+            revision: 0
         }),
 
     [evt.SOURCE_CODE_MODIFED]: (state, action: ISourceCodeModified) =>
         ({
-            ...state, markers: {}, content: action.payload.content, uri: action.payload.filename || state.uri
+            ...state, markers: {}, 
+            content: action.payload.content, 
+            uri: action.payload.filename || state.uri,
+            revision: state.revision + 1
             // , debugger: { entryPoint: null, runtime: null, ...state.debugger } =
         }),
 

@@ -115,7 +115,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
         } else {
             const rootPath = !env 
                 ? path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH) 
-                : path.join(env.Get('project-assets-dir'), 'ssl', 'sfx');
+                : env.Get('influx-sfx-dir');
             await scan(rootPath, root, ['.fx', '.xfx']);
         }
         

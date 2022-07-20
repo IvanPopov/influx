@@ -3,73 +3,8 @@ import * as React from "react";
 // import { Button, OverlayTrigger, Tooltip } from 'react-bootstrap';
 
 
-const p4 = require("node-perforce");
+import p4 from 'node-perforce';
 
-// const { dialog } = require('electron');
-
-// function MessageBox(message, opt) {
-//     var params;
-
-//     if (typeof arguments[0] == "string") {
-//         params = opt || {};
-//         params.message = message;
-//     } else params = arguments[0];
-
-//     params.type = params.type || 'info';
-//     params.buttons = params.buttons || ['Ok'];
-
-//     dialog.showMessageBox(params);
-// }
-
-// interface P4Props extends React.Props<P4Status> {
-//     info: any;
-//     config: {
-//         p4: boolean;
-//     }
-// }
-
-// interface P4State {
-//     enabled: boolean;
-//     message: string;
-// }
-
-// export class P4Status extends React.Component<P4Props, P4State> {
-//     constructor(props: P4Props, context) {
-//         super(props, context);
-//         this.state = {
-//             enabled: props.config.p4,
-//             message: 'Perforce is available.'
-//         };
-//     }
-
-//     handleClick() {
-//         if (this.props.info["Proxy address"]) return; //temp hack
-
-//         let useP4 = !this.state.enabled;
-//         this.props.config.p4 = useP4;
-//         this.setState({ enabled: useP4, message: 'Perforce is ' + (useP4 ? 'enabled' : 'disabled') + '.' });
-//     }
-
-//     render() {
-//         return (
-//             <div style={{ zIndex: 9999, position: 'fixed', top: '10px', right: '40px' }} onClick={this.handleClick.bind(this)} >
-//                 <OverlayTrigger placement="bottom" overlay={
-//                     <Tooltip placement="bottom" id="">
-//                         <p style={{ textAlign: "left" }}>
-//                             {this.state.message}<br />
-//                             Current server: <b>{this.props.info["Proxy address"]}</b><br />
-//                             User name: <b>{this.props.info["User name"]}</b>
-//                         </p>
-//                     </Tooltip>
-//                 }>
-//                     <Button bsStyle={this.state.enabled ? 'primary' : 'default'} className="btn-sm" >
-//                         <strong>P4<sub> perforce</sub></strong>
-//                     </Button>
-//                 </OverlayTrigger>
-//             </div>
-//         );
-//     }
-// }
 
 export function run(command: string, done?: (e: Error, stdout: string) => void): Promise<any>;
 export function run(command: string, args: string, done?: (e: Error, stdout: string) => void): Promise<any>;
@@ -130,3 +65,9 @@ export function createChangelist(description: string, cb: (changelist: number) =
     });
 }
 
+export function revert(file: string, cb: () => void) {
+    p4.revert({files: [ file ]}, function(err) {
+        if (err) return console.log(err);
+        cb();
+    });
+}
