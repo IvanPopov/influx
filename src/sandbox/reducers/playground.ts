@@ -10,18 +10,18 @@ import IStoreState, { IPlaygroundState } from "@sandbox/store/IStoreState";
 const initialState: IPlaygroundState = {
     emitter: null,
     timeline: Timeline.make(),
-    $revision: 0,
+    revision: 0,
     wasm: Emitter.isWASM(),
 
     exportName: null, // LOCAL_SESSION_AUTOSAVE
-    autosave: true
+    autosave: false
 };
 
 
 
 export default handleActions<IPlaygroundState, IPlaygroundActions>({
     [evt.PLAYGROUND_EMITTER_UPDATE]: (state, action: IPlaygroundEmitterUpdate) =>
-        ({ ...state, emitter: action.payload.emitter, $revision: state.$revision + 1 }),
+        ({ ...state, emitter: action.payload.emitter, revision: state.revision + 1 }),
     [evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME]: (state, action: IPlaygroundSwitchEmitterRuntime) =>
         ({ ...state, wasm: !state.wasm }),
     [evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED]: (state, action: IPlaygroundEffectHasBeenSaved) =>

@@ -628,7 +628,7 @@ class App extends React.Component<IAppProps> {
             return;
         }
 
-        function doRevert()
+        const doRevert = () =>
         {
             p4.revert(localName(this.currentUri()), () => {
                 console.assert(this.isReadonly(), 'Revert failed?!');
@@ -996,7 +996,7 @@ class App extends React.Component<IAppProps> {
                             <Button.Group size='mini'>
                                 <Button onClick={ this.onRevert }>Revert</Button>
                                 <Button.Or />
-                                <Button positive onClick={ this.onSave }>Save</Button>
+                                <Button positive onClick={ this.onSave } disabled={!this.isEdited()} >Save</Button>
                             </Button.Group>
                         }
                     </Menu.Item>

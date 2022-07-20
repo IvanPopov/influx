@@ -6,7 +6,7 @@ import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect } from '@sandbox/actions/ActionTypes';
+import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as Emitter from '@lib/fx/emitter';
 import { IEmitter } from '@lib/idl/emitter';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
@@ -14,6 +14,7 @@ import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as Path from '@lib/path/path';
+import * as URI from '@lib/uri/uri';
 
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
@@ -83,14 +84,14 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
-        async function create() {
+        async function create(forceRestart = true) {
             const i = list.map(fx => fx.name).indexOf(active);
             if (i == -1) {
                 return null;
             }
             const emitter = Emitter.create(await FxBundle.createPartFxBundle(list[i]));
             if (emitter) {
-                timeline.start();
+                if (forceRestart) timeline.start();
                 verbose('next emitter has been created.');
             }
             return emitter;
@@ -125,7 +126,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 return;
             }
 
-            let next = await create();
+            let next = await create(false);
             let prev = emitter;
 
             Emitter.copy(next, prev);
@@ -154,6 +155,18 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         if (playground.autosave)
         {
             dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: { } });
+        }
+
+        // construct default export name if possible
+        if (!playground.exportName)
+        {
+            const uri = URI.parse(file.uri);
+            if (uri.protocol == 'file')
+            {
+                const filename = Path.parse(uri.path).replaceExt('bfx');
+                // dispatch fake event to update export name
+                dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename: URI.fromLocalPath(filename) } });
+            }
         }
 
         done();
@@ -254,9 +267,26 @@ const playgroundEmitterUpdateLogic = createLogic<IStoreState>({
     }
 });
 
+// on emitter update complete
+const playgroundSetOptionAutosave = createLogic<IStoreState, IPlaygroundSetOptionAutosave['payload']>({
+    type: [ evt.PLAYGROUND_SET_OPTION_AUTOSAVE ],
+    latest: true,
+    debounce: 100,
+
+    async process({ getState, action }, dispatch, done) {
+        if (action.payload.enabled)
+        {
+            dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: { } });
+        }
+        done();
+    }
+});
+
+
 
 export default [
     playgroundUpdateLogic,
     playgroundSaveFileAsLogic,
-    playgroundEmitterUpdateLogic
+    playgroundEmitterUpdateLogic,
+    playgroundSetOptionAutosave
 ];

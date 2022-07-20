@@ -25,6 +25,7 @@ partFx example {
     pass P0 {
         Sorting = TRUE;
         PrerenderRoutine = compile PrerenderRoutine();
+        Geometry = Billboard;
     }
 }
 

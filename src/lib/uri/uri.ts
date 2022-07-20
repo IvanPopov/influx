@@ -252,3 +252,9 @@ export function currentPath(): string {
 export function here(): URI {
     return new URI(document.location.href);
 }
+
+
+export function fromLocalPath(filepath: string | ReturnType<typeof path.parse>)
+{
+    return `file:///${String(filepath).replaceAll('\\', '/')}`;
+}

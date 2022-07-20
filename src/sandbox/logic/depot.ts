@@ -1,7 +1,7 @@
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import IStoreState, { IDepotFolder } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import { resolveName } from '@sandbox/reducers/depot';
+import * as URI from '@lib/uri/uri';
 import * as fs1 from 'fs';
 import isElectron from 'is-electron';
 import * as path from 'path';
@@ -56,14 +56,11 @@ function feedFakeDepot(root: IDepotFolder) {
     root.folders = [ aux ];
 }
 
-function localFileAsURI(filepath)
-{
-    return `file:///${filepath.replaceAll('\\', '/')}`;
-}
+
 
 function scan(dir: string, node: IDepotFolder, filters?: string[]) {
     try {
-        node.path = localFileAsURI(dir);
+        node.path = URI.fromLocalPath(dir);
 
         let stats = fs.statSync(dir);
         if (!stats.isDirectory()) {
@@ -77,7 +74,7 @@ function scan(dir: string, node: IDepotFolder, filters?: string[]) {
             if (filestats.isFile()) {
                 if (!filters || filters.indexOf(path.extname(filename)) != -1) {
                     node.files = node.files || [];
-                    node.files.push(localFileAsURI(filepath));
+                    node.files.push(URI.fromLocalPath(filepath));
                     node.totalFiles++;
                 }
             }
@@ -85,7 +82,7 @@ function scan(dir: string, node: IDepotFolder, filters?: string[]) {
             if (filestats.isDirectory()) {
                 node.folders = node.folders || [];
 
-                let subfolder = { path: localFileAsURI(filepath), totalFiles: 0 };
+                let subfolder = { path: URI.fromLocalPath(filepath), totalFiles: 0 };
                 scan(filepath, subfolder, filters);
 
                 node.folders.push(subfolder);

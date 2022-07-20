@@ -88,6 +88,12 @@ class Pathinfo {
         }
     }
 
+    replaceExt(ext: string): Pathinfo
+    {
+        this.ext = ext;
+        return this;
+    }
+
     isAbsolute(): boolean { return this._dirname[0] === "/"; }
 
 
@@ -146,4 +152,14 @@ export function parse(path: Pathinfo): Pathinfo;
 export function parse(path: string): Pathinfo;
 export function parse(path?): Pathinfo {
     return new Pathinfo(path);
+}
+
+export function dirname(path: string)
+{
+    return parse(path).dirname;
+}
+
+export function ext(path)
+{
+    return parse(path).ext;
 }

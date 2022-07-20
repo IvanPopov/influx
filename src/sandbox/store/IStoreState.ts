@@ -56,7 +56,7 @@ export interface IFileState {
 export interface INodePipeline {
     docs: string;               // current info of selected node
     graph: LGraph;
-    $revision: number;          // number of updates of graph
+    revision: number;          // number of updates of graph
 
 
 }
@@ -64,7 +64,7 @@ export interface INodePipeline {
 export interface IPlaygroundState {
     emitter: IEmitter;      // todo: add type.
     timeline: ITimeline;
-    $revision: number;      // number of updates of emitter
+    revision: number;      // number of updates of emitter
     wasm: boolean;
 
     exportName: string;       // path on user disk (last 'save as' path)

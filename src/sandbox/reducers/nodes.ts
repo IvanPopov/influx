@@ -7,13 +7,13 @@ import { LGraph } from 'litegraph.js';
 const initialState: INodePipeline = {
     docs: null,
     graph: new LGraph,
-    $revision: 0
+    revision: 0
 };
 
 
 export default handleActions<INodePipeline, IGraphActions>({
     [evt.GRAPH_COMPILE]: (state, action: IGraphCompile) =>
-        ({ ...state, $graph: state.$revision + 1 }),
+        ({ ...state, $graph: state.revision + 1 }),
 
     [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
         ({ ...state, docs: action.payload.docs })

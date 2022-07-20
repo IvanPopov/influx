@@ -85,9 +85,6 @@ class GraphView extends React.Component<IGraphViewProps> {
 
     spawnRoutine: LGraphNode;
 
-    // number of update of given graph; 
-    $revision: number;
-
     get graph(): LGraph {
         return this.props.nodes.graph;
     }
