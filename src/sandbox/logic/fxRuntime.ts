@@ -178,8 +178,9 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
     ],
 
     async process({ getState, action }, dispatch, done) {
-        const file = getFileState(getState());
-        const playground = getPlaygroundState(getState());
+        const state = getState();
+        const file = getFileState(state);
+        const playground = getPlaygroundState(state);
         const scope = getScope(file);
         const list = filterPartFx(scope);
 
@@ -190,8 +191,14 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
 
         // download packed version of single (! active only !) emitter
         // -----------------------------------
-
-        let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.getName())), true) as Uint8Array;
+        let options: FxBundle.BundleOptions = { 
+            packed: true,
+            meta: {
+                source: file.uri,
+                author: state.s3d?.p4?.['User name']
+            }
+        };
+        let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.getName())), options) as Uint8Array;
 
         // download unpacked version
         // -----------------------------------

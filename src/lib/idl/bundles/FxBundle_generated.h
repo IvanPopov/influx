@@ -19,6 +19,10 @@ struct BundleSignature;
 struct BundleSignatureBuilder;
 struct BundleSignatureT;
 
+struct BundleMeta;
+struct BundleMetaBuilder;
+struct BundleMetaT;
+
 struct TypeField;
 struct TypeFieldBuilder;
 struct TypeFieldT;
@@ -456,6 +460,83 @@ inline flatbuffers::Offset<BundleSignature> CreateBundleSignatureDirect(
 }
 
 flatbuffers::Offset<BundleSignature> CreateBundleSignature(flatbuffers::FlatBufferBuilder &_fbb, const BundleSignatureT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct BundleMetaT : public flatbuffers::NativeTable {
+  typedef BundleMeta TableType;
+  std::string author{};
+  std::string source{};
+};
+
+struct BundleMeta FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BundleMetaT NativeTableType;
+  typedef BundleMetaBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_AUTHOR = 4,
+    VT_SOURCE = 6
+  };
+  const flatbuffers::String *author() const {
+    return GetPointer<const flatbuffers::String *>(VT_AUTHOR);
+  }
+  const flatbuffers::String *source() const {
+    return GetPointer<const flatbuffers::String *>(VT_SOURCE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_AUTHOR) &&
+           verifier.VerifyString(author()) &&
+           VerifyOffset(verifier, VT_SOURCE) &&
+           verifier.VerifyString(source()) &&
+           verifier.EndTable();
+  }
+  BundleMetaT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(BundleMetaT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<BundleMeta> Pack(flatbuffers::FlatBufferBuilder &_fbb, const BundleMetaT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct BundleMetaBuilder {
+  typedef BundleMeta Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_author(flatbuffers::Offset<flatbuffers::String> author) {
+    fbb_.AddOffset(BundleMeta::VT_AUTHOR, author);
+  }
+  void add_source(flatbuffers::Offset<flatbuffers::String> source) {
+    fbb_.AddOffset(BundleMeta::VT_SOURCE, source);
+  }
+  explicit BundleMetaBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<BundleMeta> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<BundleMeta>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<BundleMeta> CreateBundleMeta(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> author = 0,
+    flatbuffers::Offset<flatbuffers::String> source = 0) {
+  BundleMetaBuilder builder_(_fbb);
+  builder_.add_source(source);
+  builder_.add_author(author);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<BundleMeta> CreateBundleMetaDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *author = nullptr,
+    const char *source = nullptr) {
+  auto author__ = author ? _fbb.CreateString(author) : 0;
+  auto source__ = source ? _fbb.CreateString(source) : 0;
+  return Fx::CreateBundleMeta(
+      _fbb,
+      author__,
+      source__);
+}
+
+flatbuffers::Offset<BundleMeta> CreateBundleMeta(flatbuffers::FlatBufferBuilder &_fbb, const BundleMetaT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 struct TypeFieldT : public flatbuffers::NativeTable {
   typedef TypeField TableType;
@@ -1386,6 +1467,7 @@ struct BundleT : public flatbuffers::NativeTable {
   typedef Bundle TableType;
   std::string name{};
   std::unique_ptr<Fx::BundleSignatureT> signature{};
+  std::unique_ptr<Fx::BundleMetaT> meta{};
   Fx::BundleContentUnion content{};
   BundleT() = default;
   BundleT(const BundleT &o);
@@ -1399,14 +1481,18 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NAME = 4,
     VT_SIGNATURE = 6,
-    VT_CONTENT_TYPE = 8,
-    VT_CONTENT = 10
+    VT_META = 8,
+    VT_CONTENT_TYPE = 10,
+    VT_CONTENT = 12
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
   }
   const Fx::BundleSignature *signature() const {
     return GetPointer<const Fx::BundleSignature *>(VT_SIGNATURE);
+  }
+  const Fx::BundleMeta *meta() const {
+    return GetPointer<const Fx::BundleMeta *>(VT_META);
   }
   Fx::BundleContent content_type() const {
     return static_cast<Fx::BundleContent>(GetField<uint8_t>(VT_CONTENT_TYPE, 0));
@@ -1424,6 +1510,8 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_SIGNATURE) &&
            verifier.VerifyTable(signature()) &&
+           VerifyOffset(verifier, VT_META) &&
+           verifier.VerifyTable(meta()) &&
            VerifyField<uint8_t>(verifier, VT_CONTENT_TYPE, 1) &&
            VerifyOffset(verifier, VT_CONTENT) &&
            VerifyBundleContent(verifier, content(), content_type()) &&
@@ -1448,6 +1536,9 @@ struct BundleBuilder {
   void add_signature(flatbuffers::Offset<Fx::BundleSignature> signature) {
     fbb_.AddOffset(Bundle::VT_SIGNATURE, signature);
   }
+  void add_meta(flatbuffers::Offset<Fx::BundleMeta> meta) {
+    fbb_.AddOffset(Bundle::VT_META, meta);
+  }
   void add_content_type(Fx::BundleContent content_type) {
     fbb_.AddElement<uint8_t>(Bundle::VT_CONTENT_TYPE, static_cast<uint8_t>(content_type), 0);
   }
@@ -1469,10 +1560,12 @@ inline flatbuffers::Offset<Bundle> CreateBundle(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> name = 0,
     flatbuffers::Offset<Fx::BundleSignature> signature = 0,
+    flatbuffers::Offset<Fx::BundleMeta> meta = 0,
     Fx::BundleContent content_type = Fx::BundleContent_NONE,
     flatbuffers::Offset<void> content = 0) {
   BundleBuilder builder_(_fbb);
   builder_.add_content(content);
+  builder_.add_meta(meta);
   builder_.add_signature(signature);
   builder_.add_name(name);
   builder_.add_content_type(content_type);
@@ -1483,6 +1576,7 @@ inline flatbuffers::Offset<Bundle> CreateBundleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
     flatbuffers::Offset<Fx::BundleSignature> signature = 0,
+    flatbuffers::Offset<Fx::BundleMeta> meta = 0,
     Fx::BundleContent content_type = Fx::BundleContent_NONE,
     flatbuffers::Offset<void> content = 0) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
@@ -1490,6 +1584,7 @@ inline flatbuffers::Offset<Bundle> CreateBundleDirect(
       _fbb,
       name__,
       signature,
+      meta,
       content_type,
       content);
 }
@@ -1599,6 +1694,35 @@ inline flatbuffers::Offset<BundleSignature> CreateBundleSignature(flatbuffers::F
       _commithash,
       _branch,
       _timestamp);
+}
+
+inline BundleMetaT *BundleMeta::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<BundleMetaT>(new BundleMetaT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void BundleMeta::UnPackTo(BundleMetaT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = author(); if (_e) _o->author = _e->str(); }
+  { auto _e = source(); if (_e) _o->source = _e->str(); }
+}
+
+inline flatbuffers::Offset<BundleMeta> BundleMeta::Pack(flatbuffers::FlatBufferBuilder &_fbb, const BundleMetaT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateBundleMeta(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<BundleMeta> CreateBundleMeta(flatbuffers::FlatBufferBuilder &_fbb, const BundleMetaT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const BundleMetaT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _author = _o->author.empty() ? 0 : _fbb.CreateString(_o->author);
+  auto _source = _o->source.empty() ? 0 : _fbb.CreateString(_o->source);
+  return Fx::CreateBundleMeta(
+      _fbb,
+      _author,
+      _source);
 }
 
 inline TypeFieldT::TypeFieldT(const TypeFieldT &o)
@@ -2026,12 +2150,14 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
 inline BundleT::BundleT(const BundleT &o)
       : name(o.name),
         signature((o.signature) ? new Fx::BundleSignatureT(*o.signature) : nullptr),
+        meta((o.meta) ? new Fx::BundleMetaT(*o.meta) : nullptr),
         content(o.content) {
 }
 
 inline BundleT &BundleT::operator=(BundleT o) FLATBUFFERS_NOEXCEPT {
   std::swap(name, o.name);
   std::swap(signature, o.signature);
+  std::swap(meta, o.meta);
   std::swap(content, o.content);
   return *this;
 }
@@ -2047,6 +2173,7 @@ inline void Bundle::UnPackTo(BundleT *_o, const flatbuffers::resolver_function_t
   (void)_resolver;
   { auto _e = name(); if (_e) _o->name = _e->str(); }
   { auto _e = signature(); if (_e) { if(_o->signature) { _e->UnPackTo(_o->signature.get(), _resolver); } else { _o->signature = std::unique_ptr<Fx::BundleSignatureT>(_e->UnPack(_resolver)); } } }
+  { auto _e = meta(); if (_e) { if(_o->meta) { _e->UnPackTo(_o->meta.get(), _resolver); } else { _o->meta = std::unique_ptr<Fx::BundleMetaT>(_e->UnPack(_resolver)); } } }
   { auto _e = content_type(); _o->content.type = _e; }
   { auto _e = content(); if (_e) _o->content.value = Fx::BundleContentUnion::UnPack(_e, content_type(), _resolver); }
 }
@@ -2061,12 +2188,14 @@ inline flatbuffers::Offset<Bundle> CreateBundle(flatbuffers::FlatBufferBuilder &
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const BundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
   auto _signature = _o->signature ? CreateBundleSignature(_fbb, _o->signature.get(), _rehasher) : 0;
+  auto _meta = _o->meta ? CreateBundleMeta(_fbb, _o->meta.get(), _rehasher) : 0;
   auto _content_type = _o->content.type;
   auto _content = _o->content.Pack(_fbb);
   return Fx::CreateBundle(
       _fbb,
       _name,
       _signature,
+      _meta,
       _content_type,
       _content);
 }

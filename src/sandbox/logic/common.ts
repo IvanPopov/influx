@@ -18,7 +18,7 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
     latest: true,
     async process({ getState, action }, dispatch, done) {
         // drop autosave params
-        dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename: null } });
+        dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_DROPPED, payload: { } });
 
         try {
             const response = await readFile(action.payload.filename);

@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT} from  './FxBundle_generated';
+import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -211,6 +211,93 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
     commithash,
     branch,
     timestamp
+  );
+}
+}
+export class BundleMeta {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):BundleMeta {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsBundleMeta(bb:flatbuffers.ByteBuffer, obj?:BundleMeta):BundleMeta {
+  return (obj || new BundleMeta()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsBundleMeta(bb:flatbuffers.ByteBuffer, obj?:BundleMeta):BundleMeta {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new BundleMeta()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+author():string|null
+author(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+author(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+source():string|null
+source(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+source(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+static startBundleMeta(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addAuthor(builder:flatbuffers.Builder, authorOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, authorOffset, 0);
+}
+
+static addSource(builder:flatbuffers.Builder, sourceOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, sourceOffset, 0);
+}
+
+static endBundleMeta(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createBundleMeta(builder:flatbuffers.Builder, authorOffset:flatbuffers.Offset, sourceOffset:flatbuffers.Offset):flatbuffers.Offset {
+  BundleMeta.startBundleMeta(builder);
+  BundleMeta.addAuthor(builder, authorOffset);
+  BundleMeta.addSource(builder, sourceOffset);
+  return BundleMeta.endBundleMeta(builder);
+}
+
+unpack(): BundleMetaT {
+  return new BundleMetaT(
+    this.author(),
+    this.source()
+  );
+}
+
+
+unpackTo(_o: BundleMetaT): void {
+  _o.author = this.author();
+  _o.source = this.source();
+}
+}
+
+export class BundleMetaT {
+constructor(
+  public author: string|Uint8Array|null = null,
+  public source: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const author = (this.author !== null ? builder.createString(this.author!) : 0);
+  const source = (this.source !== null ? builder.createString(this.source!) : 0);
+
+  return FxBundleMeta.createBundleMeta(builder,
+    author,
+    source
   );
 }
 }
@@ -1424,18 +1511,23 @@ signature(obj?:FxBundleSignature):FxBundleSignature|null {
   return offset ? (obj || new FxBundleSignature()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-contentType():FxBundleContent {
+meta(obj?:FxBundleMeta):FxBundleMeta|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? (obj || new FxBundleMeta()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+contentType():FxBundleContent {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.readUint8(this.bb_pos + offset) : FxBundleContent.NONE;
 }
 
 content<T extends flatbuffers.Table>(obj:any):any|null {
-  const offset = this.bb!.__offset(this.bb_pos, 10);
+  const offset = this.bb!.__offset(this.bb_pos, 12);
   return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
 }
 
 static startBundle(builder:flatbuffers.Builder) {
-  builder.startObject(4);
+  builder.startObject(5);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
@@ -1446,12 +1538,16 @@ static addSignature(builder:flatbuffers.Builder, signatureOffset:flatbuffers.Off
   builder.addFieldOffset(1, signatureOffset, 0);
 }
 
+static addMeta(builder:flatbuffers.Builder, metaOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, metaOffset, 0);
+}
+
 static addContentType(builder:flatbuffers.Builder, contentType:FxBundleContent) {
-  builder.addFieldInt8(2, contentType, FxBundleContent.NONE);
+  builder.addFieldInt8(3, contentType, FxBundleContent.NONE);
 }
 
 static addContent(builder:flatbuffers.Builder, contentOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(3, contentOffset, 0);
+  builder.addFieldOffset(4, contentOffset, 0);
 }
 
 static endBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -1472,6 +1568,7 @@ unpack(): BundleT {
   return new BundleT(
     this.name(),
     (this.signature() !== null ? this.signature()!.unpack() : null),
+    (this.meta() !== null ? this.meta()!.unpack() : null),
     this.contentType(),
     (() => {
       let temp = unionToBundleContent(this.contentType(), this.content.bind(this));
@@ -1485,6 +1582,7 @@ unpack(): BundleT {
 unpackTo(_o: BundleT): void {
   _o.name = this.name();
   _o.signature = (this.signature() !== null ? this.signature()!.unpack() : null);
+  _o.meta = (this.meta() !== null ? this.meta()!.unpack() : null);
   _o.contentType = this.contentType();
   _o.content = (() => {
       let temp = unionToBundleContent(this.contentType(), this.content.bind(this));
@@ -1498,6 +1596,7 @@ export class BundleT {
 constructor(
   public name: string|Uint8Array|null = null,
   public signature: FxBundleSignatureT|null = null,
+  public meta: FxBundleMetaT|null = null,
   public contentType: FxBundleContent = FxBundleContent.NONE,
   public content: FxPartBundleT|null = null
 ){}
@@ -1506,11 +1605,13 @@ constructor(
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const name = (this.name !== null ? builder.createString(this.name!) : 0);
   const signature = (this.signature !== null ? this.signature!.pack(builder) : 0);
+  const meta = (this.meta !== null ? this.meta!.pack(builder) : 0);
   const content = builder.createObjectOffset(this.content);
 
   FxBundle.startBundle(builder);
   FxBundle.addName(builder, name);
   FxBundle.addSignature(builder, signature);
+  FxBundle.addMeta(builder, meta);
   FxBundle.addContentType(builder, this.contentType);
   FxBundle.addContent(builder, content);
 

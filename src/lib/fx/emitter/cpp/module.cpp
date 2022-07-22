@@ -6,7 +6,7 @@
 #include "../../bytecode/VM/cpp/bundle_uav.cpp"
 #include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
-#include "emitter.cpp"
+#include "emitter.cpp" 
    
 namespace em = emscripten;    
 

@@ -735,6 +735,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: {this.state.nParticles}</span>
                     <br />
                     <span>simulation: CPU</span>
+                    {/* <br />
+                    <span>{this.state.nParticles}</span> */}
                 </div>
             </div>
         );

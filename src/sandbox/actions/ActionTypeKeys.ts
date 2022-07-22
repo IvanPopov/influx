@@ -33,6 +33,7 @@ export const PLAYGROUND_SWITCH_VM_RUNTIME           = 'playground-force-destroy-
 export const PLAYGROUND_EFFECT_SAVE_REQUEST         = 'playground-effect-save-request';
 export const PLAYGROUND_EFFECT_AUTOSAVE_REQUEST     = 'playground-effect-autosave-request';
 export const PLAYGROUND_EFFECT_HAS_BEEN_SAVED       = 'playground-effect-has-been-saved';
+export const PLAYGROUND_EFFECT_HAS_BEEN_DROPPED     = 'playground-effect-has-been-dropped';
 export const PLAYGROUND_SET_OPTION_AUTOSAVE         = 'playground-set-option-autosave';
 
 export const GRAPH_LOADED                           = 'graph-loaded';                   // serialized content of graph has been provided

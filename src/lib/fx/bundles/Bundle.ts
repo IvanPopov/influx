@@ -5,7 +5,7 @@ import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, ICSShaderReflection, IPartFxPassReflection } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { Bundle, BundleContent, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, PartBundleT, PartRenderPassT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from "@lib/idl/bundles/FxBundle_generated";
+import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, PartBundleT, PartRenderPassT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from "@lib/idl/bundles/FxBundle_generated";
 import { ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
@@ -22,9 +22,9 @@ function getFxBundleSignature(): BundleSignatureT {
 }
 
 
-function createFxBundle(name: string, type: 'part', data: PartBundleT): BundleT {
+function createFxBundle(name: string, type: 'part', data: PartBundleT, meta = new BundleMetaT): BundleT {
     const signature = getFxBundleSignature();
-    return new BundleT(name, signature, BundleContent.PartBundle, data);
+    return new BundleT(name, signature, meta, BundleContent.PartBundle, data);
 }
 
 
@@ -93,8 +93,16 @@ function createFxRoutineGLSLBundle(document: ISLDocument, interpolatorsType: str
     return new RoutineGLSLBundleT(code, attributes);
 }
 
+export interface BundleOptions
+{
+    packed?: boolean;
+    meta?: {
+        author: string;
+        source: string;
+    };
+}
 
-export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean = PACKED): Promise<Uint8Array | BundleT> {
+export async function createPartFxBundle(fx: IPartFxInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
@@ -128,11 +136,15 @@ export async function createPartFxBundle(fx: IPartFxInstruction, packed: boolean
     const passes = reflection.passes.map(pass => createPartFxGLSLRenderPass(slDocument, pass));
     const part = new PartBundleT(capacity, routineTypes, routines, passes, particle);
 
-    const bundle = createFxBundle(name, 'part', part);
+    const { meta } = options;
+    const bundle = createFxBundle(name, 'part', part, new BundleMetaT(meta?.author, meta?.source));
+
     // get unpacked version
     // --------------------------------
 
-    if (!PACKED)
+    let { packed = PACKED } = options;
+
+    if (!packed)
         return bundle;
 
     // get packed version

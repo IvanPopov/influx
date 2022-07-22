@@ -67,11 +67,13 @@ export type IPlaygroundEmitterUpdate = IAction<typeof evt.PLAYGROUND_EMITTER_UPD
 export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { name: string }>;
 export type IPlaygroundSwitchVMRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_VM_RUNTIME, { }>;
 export type IPlaygroundSwitchEmitterRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME, { }>;
+export type IPlaygroundEffectHasBeenDropped = IAction<typeof evt.PLAYGROUND_EFFECT_HAS_BEEN_DROPPED, { }>;
 export type IPlaygroundEffectHasBeenSaved = IAction<typeof evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, { filename: string }>;
 export type IPlaygroundSetOptionAutosave = IAction<typeof evt.PLAYGROUND_SET_OPTION_AUTOSAVE, { enabled: boolean }>;
 export type IPlaygroundEffectSaveRequest = IAction<typeof evt.PLAYGROUND_EFFECT_SAVE_REQUEST, { silent?: boolean }>;
 export type IPlaygroundActions = IPlaygroundEmitterUpdate | IPlaygroundSelectEffect | IPlaygroundSwitchVMRuntime | 
-    IPlaygroundSwitchEmitterRuntime | IPlaygroundEffectHasBeenSaved | IPlaygroundSetOptionAutosave | IPlaygroundEffectSaveRequest;
+    IPlaygroundSwitchEmitterRuntime | IPlaygroundEffectHasBeenSaved | IPlaygroundSetOptionAutosave | IPlaygroundEffectSaveRequest |
+    IPlaygroundEffectHasBeenDropped;
 
 //
 // grammar api (simplified)

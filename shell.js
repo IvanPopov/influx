@@ -162,7 +162,8 @@ ipc.on('app-ready', onReady);
 ipc.on('process-save-file-silent', (event, arg) => {
     console.log(`Request to silent save file for '${arg.name}...'`);
     const filename = arg.name;
-    if (fs.existsSync(filename))
+
+    if (fs.existsSync(path.dirname(filename)))
     {
         fs.writeFileSync(filename, arg.data);
         console.log(`File '${filename} has been saved.'`);

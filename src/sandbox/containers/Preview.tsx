@@ -4,6 +4,8 @@ import ThreeScene from '@sandbox/containers/playground/ThreeScene';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import React from 'react';
+import * as flatbuffers from 'flatbuffers';
+import { Bundle, BundleMetaT } from '@lib/idl/bundles/FxBundle_generated';
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',
@@ -17,6 +19,14 @@ const style: React.CSSProperties = {
 interface IProps {
     name: string;
 };
+
+function decodeBundleMeta(data: Uint8Array): BundleMetaT {
+    let meta = new BundleMetaT();
+    let buf = new flatbuffers.ByteBuffer(data);
+    Bundle.getRootAsBundle(buf).meta().unpackTo(meta);
+    return meta;
+}
+
 
 class Preview extends React.Component<IProps> {
     constructor(props) {
@@ -34,6 +44,7 @@ class Preview extends React.Component<IProps> {
         const emitter = Emitter.create(data);
         const timeline = Timeline.make();
         timeline.start();
+        console.log(`source: ${decodeBundleMeta(data).source}`);
         return <ThreeScene style={style} emitter={emitter} timeline={timeline} />
     }
 }

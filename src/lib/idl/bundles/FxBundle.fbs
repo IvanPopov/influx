@@ -9,6 +9,12 @@ table BundleSignature
     timestamp: string;
 }
 
+table BundleMeta
+{
+    author: string;
+    source: string;
+}
+
 table TypeField 
 {
     type: TypeLayout;
@@ -102,6 +108,7 @@ table Bundle
 {
     name: string;
     signature: BundleSignature;
+    meta: BundleMeta;
     content: BundleContent;
 }
 
