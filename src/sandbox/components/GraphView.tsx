@@ -3,7 +3,6 @@
 import { mapActions, nodes as nodesActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
-import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 import autobind from 'autobind-decorator';
 import { LGraph, LGraphCanvas, LGraphNode, LiteGraph } from 'litegraph.js';
 import 'litegraph.js/css/litegraph.css';
@@ -12,6 +11,8 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
 import './graph';
+
+import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 
 
 // LiteGraph.debug = true;
@@ -169,11 +170,11 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.onWindowResize();
 
         // trick to force redraw when font is loaded
-        document.fonts.ready.then(() => {
+        document.fonts.onloadingdone = () => {
             if (document.fonts.check("13px 'Open Sans'")) {
                 this.canvas.draw(true, true);
             }
-        });
+        };
 
         // IP: fix of unknown problem with keydown event which doen't work without this magic.
         this.canvasRef.current.setAttribute("tabindex", '0');

@@ -58,7 +58,7 @@ export class LGraphNodeEx extends LGraphNode
         const docs = this.getDocs();
         if (docs)
         {
-            nodesProvideDocs(this.getDocs());
+            nodesProvideDocs(docs);
         }
     }
 

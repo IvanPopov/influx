@@ -10,6 +10,7 @@ import { InitRoutineHLSL } from '../lib';
 
 const type = PART_STRUCTURE_SL_DOCUMENT.root.scope.types[PART_TYPE] as ComplexTypeInstruction;
 const inputs = type.fields.map((decl: IVariableDeclInstruction) => ({ name: decl.name, type: decl.type.name }));
+
 const desc = "InitRoutine";
 const name = "InitRoutine";
 
