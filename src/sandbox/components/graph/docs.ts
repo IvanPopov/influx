@@ -31,8 +31,12 @@ const UPDATE_TEXT_DOCUMENT = await createTextDocument("://SpawnRoutine.hlsl", Up
 const docs = [LIB_TEXT_DOCUMENT, SPAWN_TEXT_DOCUMENT, INIT_TEXT_DOCUMENT, UPDATE_TEXT_DOCUMENT];
 let ll = new LibLoader();
 
-docs.forEach(doc => ll.parse(doc, XHRResolveFile));
+for (let doc of docs)
+{
+    await ll.parse(doc, XHRResolveFile)
+}
 
 for (let node in ll.nodes) {
     LGraphNodeEx.nodesDocs[node] = ll.nodes[node];
 }
+

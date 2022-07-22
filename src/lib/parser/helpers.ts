@@ -8,7 +8,8 @@ import { cloneRange } from "@lib/parser/util";
 /** @deprecated Use CommentExtractor instead. */
 export async function exractComments(document: ITextDocument, includeResolver?: IncludeResolver): Promise<IToken[]> {
     const lexer = new Lexer({ skipComments: false });
-    lexer.setTextDocument(await createPPDocument(document, { skipComments: false, includeResolver }));
+    const ppdoc = await createPPDocument(document, { skipComments: false, includeResolver });
+    lexer.setTextDocument(ppdoc);
 
     let comments = [];
     let token: IToken;
@@ -86,7 +87,8 @@ export class CommentExtractor
 {
     async parse(document: ITextDocument, includeResolver?: IncludeResolver)
     {
-        (await exractComments(document, includeResolver)).forEach((commentToken: IToken) => {
+        const tokens = await exractComments(document, includeResolver);
+        tokens.forEach((commentToken: IToken) => {
             let comment = commentToken.value.slice(2, -2);
             let list = comment
                 .split('\n')
