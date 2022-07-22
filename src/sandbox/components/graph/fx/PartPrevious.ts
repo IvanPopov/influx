@@ -9,7 +9,7 @@ import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { LiteGraph } from "litegraph.js";
 import { PART_LOCAL_NAME, PART_STRUCTURE_SL_DOCUMENT, PART_TYPE } from "../common";
-import { LGraphNodeAST } from "../IGraph";
+import { LGraphNodeAST } from "../GraphNode";
 
 
 const type = PART_STRUCTURE_SL_DOCUMENT.root.scope.types[PART_TYPE] as ComplexTypeInstruction;

@@ -6,7 +6,7 @@ import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js";
 import { LIB_SL_DOCUMENT } from "../common";
-import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx } from "../IGraph";
+import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx } from "../GraphNode";
 import { SpawnRoutineHLSL } from '../lib';
 
 const desc = "SpawnRoutine";

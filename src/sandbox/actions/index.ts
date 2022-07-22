@@ -122,6 +122,10 @@ export const nodes = {
         return { type: evt.GRAPH_COMPILE, payload: {} };
     },
 
+    changed() {
+        return { type: evt.GRAPH_MODIFIED, payload: {} };
+    },
+
     load(content: string) {
         return { type: evt.GRAPH_LOADED, payload: { content } };
     },

@@ -564,7 +564,7 @@ class App extends React.Component<IAppProps> {
 
     isEdited()
     {
-        return this.props.sourceFile.revision > 1;
+        return this.props.sourceFile.revision > 1 || this.props.nodes.revision > 0;
     }
 
     currentUri()
@@ -673,7 +673,12 @@ class App extends React.Component<IAppProps> {
             return;
         }
 
-        const data = this.props.sourceFile.content;
+        
+        const { sourceFile, nodes: { graph } } = this.props;
+        const isGraph = path.extname(URI.toLocalPath(sourceFile.uri)) == '.xfx';
+        // save graph layout instead of source code if possible
+        const data = !isGraph ? sourceFile.content : JSON.stringify(graph.serialize(), null, '    ');
+
         if (ipc.sync.saveFile(URI.toLocalPath(this.currentUri()), data)) {
             this.reopenThisFile();
         }

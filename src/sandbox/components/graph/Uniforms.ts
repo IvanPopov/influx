@@ -6,7 +6,7 @@ import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { LiteGraph } from "litegraph.js";
 import { LIB_SL_DOCUMENT } from "./common";
-import { LGraphNodeAST } from "./IGraph";
+import { LGraphNodeAST } from "./GraphNode";
 
 const vars = LIB_SL_DOCUMENT.root.scope.variables;
 for (let name in vars)

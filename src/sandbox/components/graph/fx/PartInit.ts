@@ -5,7 +5,7 @@ import { IExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstructio
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { LiteGraph } from "litegraph.js";
 import { LIB_SL_DOCUMENT, PART_STRUCTURE_SL_DOCUMENT, PART_TYPE } from "../common";
-import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx } from "../IGraph";
+import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx } from "../GraphNode";
 import { InitRoutineHLSL } from '../lib';
 
 const type = PART_STRUCTURE_SL_DOCUMENT.root.scope.types[PART_TYPE] as ComplexTypeInstruction;

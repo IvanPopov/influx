@@ -10,7 +10,7 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js";
 import { PART_LOCAL_NAME, PART_STRUCTURE_SL_DOCUMENT, PART_TYPE } from "./common";
-import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
+import { IGraphASTNode, LGraphNodeAST } from "./GraphNode";
 
 
 class Node extends LGraphNodeAST {

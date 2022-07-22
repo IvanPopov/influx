@@ -94,12 +94,14 @@ export type IParserParamsActions = IGrammarContentSpecified | IParserParamsChang
 export type IGraphReset = IAction<typeof evt.GRAPH_RESET, {}>;
 // emits on any significant graph change
 export type IGraphCompile = IAction<typeof evt.GRAPH_COMPILE, {}>;
+// emits on any graph change
+export type IGraphModified = IAction<typeof evt.GRAPH_MODIFIED, {}>;
 // emits on graph node selection if docs is presened
 export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 // emits on new serialized graph content has been specified
 export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string }>;
 
-export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded;
+export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded | IGraphModified;
 
 //
 //

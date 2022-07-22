@@ -7,7 +7,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { INodeInputSlot, INodeOutputSlot, IWidget, LGraphNode, LiteGraph, LLink } from "litegraph.js";
-import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
+import { IGraphASTNode, LGraphNodeAST } from "./GraphNode";
 
 
 [

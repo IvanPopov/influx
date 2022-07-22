@@ -39,6 +39,7 @@ export const PLAYGROUND_SET_OPTION_AUTOSAVE         = 'playground-set-option-aut
 export const GRAPH_LOADED                           = 'graph-loaded';                   // serialized content of graph has been provided
 export const GRAPH_RESET                            = 'graph-reset';                    // nothing 
 export const GRAPH_COMPILE                          = 'graph-compile';                  // requst to generate and recompile (via default pipline with source content) code from graph
+export const GRAPH_MODIFIED                         = 'graph-modified';                  
 export const GRAPH_PART_STRUCTURE_SPECIFIED         = 'graph-part-structure-specified'; // 'Part' strcuture has been modified 
 export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';       // update floating docs of selected graph node
 

@@ -1,7 +1,7 @@
 import { IMap } from "@lib/idl/IMap";
 import { IRange } from "@lib/idl/parser/IParser";
 import { CommentExtractor } from "@lib/parser/helpers";
-import { INodeDocs } from "./IGraph";
+import { INodeDocs } from "./GraphNode";
 
 export class LibLoader extends CommentExtractor
 {

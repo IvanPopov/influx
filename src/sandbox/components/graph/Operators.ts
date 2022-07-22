@@ -5,7 +5,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IArithmeticOperator, IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { LiteGraph } from "litegraph.js";
-import { IGraphASTNode, LGraphNodeAST } from "./IGraph";
+import { IGraphASTNode, LGraphNodeAST } from "./GraphNode";
 
 let types = [ 'float', 'int', 'uint', 'float3' ];
 

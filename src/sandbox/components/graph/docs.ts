@@ -1,6 +1,6 @@
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { LIB_TEXT_DOCUMENT } from "./common";
-import { LGraphNodeEx } from "./IGraph";
+import { LGraphNodeEx } from "./GraphNode";
 import { InitRoutineHLSL, SpawnRoutineHLSL, UpdateRoutineHLSL } from './lib';
 import { LibLoader } from "./LibLoader";
 

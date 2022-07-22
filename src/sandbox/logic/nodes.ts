@@ -7,7 +7,7 @@ import { nodes, sourceCode } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IGraphCompile, IGraphLoaded } from '@sandbox/actions/ActionTypes';
 import { PART_STRUCTURE_SL_DOCUMENT } from '@sandbox/components/graph/common';
-import { IGraphASTFinalNode } from '@sandbox/components/graph/IGraph';
+import { IGraphASTFinalNode } from '@sandbox/components/graph/GraphNode';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
 import { matchPath } from 'react-router-dom';
@@ -15,20 +15,6 @@ import { createLogic } from 'redux-logic';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
 import { EffectTemplateHLSL } from '../components/graph/lib';
 
-function saveTemp(uri: string, content: string)
-{
-    localStorage.setItem(`graph-unfinished-[${uri}]`, content);
-}
-
-function tryToLoadTempVersion(uri: string, content: string)
-{
-    const temp = localStorage.getItem(`graph-unfinished-[${uri}]`);
-    if (temp /*&& confirm("Load unfisnihed version?")*/)
-    {
-        return temp;
-    }
-    return  content;
-}
 
 const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload']>({
     type: [evt.GRAPH_LOADED],
@@ -38,7 +24,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload']>({
     async process({ getState, action, action$ }, dispatch, done) {
         const graph = getState().nodes.graph;
         const uri = getState().sourceFile.uri;
-        const content = tryToLoadTempVersion(uri, action.payload.content);
+        const content = action.payload.content;
         
         graph.clear();
         graph.configure(JSON.parse(content));
@@ -70,8 +56,6 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         const graph = getState().nodes.graph;
         const uri = getState().sourceFile.uri;
 
-        console.log('graph compile!');
-
         const spawn = graph.findNodeByTitle("SpawnRoutine") as IGraphASTFinalNode;
         const init = graph.findNodeByTitle("InitRoutine") as IGraphASTFinalNode;
         const update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
@@ -89,8 +73,6 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         dispatch(sourceCode.setContent(FxEmitter.translateDocument(doc)));
         // (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } }); // to run preprocessed document
         // (props as any).$dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content: FxEmitter.translateDocument(doc) } }); // to update effect content
-
-        saveTemp(uri, JSON.stringify(graph.serialize()));
 
         done();
     }

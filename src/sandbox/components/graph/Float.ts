@@ -4,7 +4,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LiteGraph } from "litegraph.js";
-import { LGraphNodeAST } from "./IGraph";
+import { LGraphNodeAST } from "./GraphNode";
 
 
 class Float extends LGraphNodeAST {
