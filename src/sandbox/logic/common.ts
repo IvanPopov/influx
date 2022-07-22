@@ -1,20 +1,15 @@
+import * as path from '@lib/path/path';
 import { sourceCode as sourceActions } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
-import fxRuntimeLogic from '@sandbox/logic/fxRuntime';
-import parsingLogic from '@sandbox/logic/parsing';
-import s3dLogic from '@sandbox/logic/s3d';
-import depotLogic from '@sandbox/logic/depot';
-import graphLogic from '@sandbox/logic/nodes';
+import * as Depot from '@sandbox/reducers/depot';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
-import * as Depot from '@sandbox/reducers/depot';
-import { LOCATION_CHANGE, LocationChangeAction } from 'connected-react-router';
+import { LocationChangeAction, LOCATION_CHANGE } from 'connected-react-router';
 import { matchPath } from 'react-router';
-import { createLogic, createLogicMiddleware } from 'redux-logic';
-import * as path from '@lib/path/path';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
+import { createLogic } from 'redux-logic';
 
 const readFile = fname => fetch(fname);
 
@@ -173,14 +168,8 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
     }
 });
 
-
-export default createLogicMiddleware([
+export default [
     fetchSourceFileLogic,
     navigationLogic,
-    sourceFileNotFoundLogic,
-    ...parsingLogic,
-    ...fxRuntimeLogic,
-    ...graphLogic,
-    ...s3dLogic,
-    ...depotLogic
-]);
+    sourceFileNotFoundLogic
+];

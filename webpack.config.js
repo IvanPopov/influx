@@ -187,9 +187,10 @@ let options = {
         }
     },
     output,
-    entry: [
-        `${sandboxPath}/index.tsx`
-    ],
+    entry: {
+        sandbox: `${sandboxPath}/sandbox.tsx`,
+        preview: `${sandboxPath}/preview.tsx`
+    },
     plugins: [
         new webpack.ProvidePlugin({
             process: 'process/browser',
@@ -205,9 +206,17 @@ let options = {
         }),
         new HtmlWebpackPlugin({
             template: `!!pug3-loader!${sandboxPath}/index-webpack.pug`,
-            filename: `${outputPath}/${isWeb ? 'index' : 'index-electron'}.html`,
+            filename: `${outputPath}/${isWeb ? 'index' : 'sandbox-electron'}.html`,
             title: `Influx ${isWeb ? 'Web' : 'Electron'} App | ver-${version}.${branch}`,
-            minify: false
+            minify: false,
+            chunks: ['sandbox'],
+        }),
+        new HtmlWebpackPlugin({
+            template: `!!pug3-loader!${sandboxPath}/index-webpack.pug`,
+            filename: `${outputPath}/${isWeb ? 'preview' : 'preview-electron'}.html`,
+            title: `Influx ${isWeb ? 'Web' : 'Electron'} App | ver-${version}.${branch}`,
+            minify: false,
+            chunks: ['preview'],
         }),
         new HtmlWebpackPlugin({
             template: `!!pug3-loader!${sandboxPath}/../site/code-view.pug`,

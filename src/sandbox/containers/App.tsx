@@ -9,11 +9,20 @@ import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
 import { mapActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
-import { ASTView, FileListView, GraphView, MemoryView, PPView, ProgramView } from '@sandbox/components';
+import ASTView from '@sandbox/components/ASTView';
 import CodeView from '@sandbox/components/CodeView';
+import FileListView from '@sandbox/components/FileListView';
 import GraphConfigView from '@sandbox/components/GraphConfigView';
-import { BytecodeView, ParserParameters, Playground, ShaderTranslatorView, SourceEditor2 } from '@sandbox/containers';
-import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic';
+import GraphView from '@sandbox/components/GraphView';
+import MemoryView from '@sandbox/components/MemoryView';
+import PPView from '@sandbox/components/PreprocessorView';
+import ProgramView from '@sandbox/components/ProgramView';
+import BytecodeView from '@sandbox/containers/BytecodeView';
+import SourceEditor2 from '@sandbox/containers/editor/Editor';
+import ParserParameters from '@sandbox/containers/ParserParameters';
+import Playground from '@sandbox/containers/playground/Playground';
+import ShaderTranslatorView from '@sandbox/containers/ShaderTranslatorView';
+import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterPartFx } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
@@ -25,8 +34,8 @@ import { routerActions } from 'connected-react-router';
 /// <reference path="../webpack.d.ts" />
 import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
-import * as fs from 'fs';           // << todo: remove
-import * as path from 'path';       // << todo: remove
+import * as fs from 'fs'; // << todo: remove
+import * as path from 'path'; // << todo: remove
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';

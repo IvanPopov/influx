@@ -9,6 +9,8 @@ const logo = require('./black-sun-logo');
 const ipc = electron.ipcMain;
 const app = electron.app;
 
+console.time('loading');
+
 app.setName("FX Sandbox");
 
 function printHelp() {
@@ -67,7 +69,7 @@ function createSandboxWindow() {
     });
 
     win.loadURL(url.format({
-        pathname: path.join(__dirname, 'dist/electron/index-electron.html'),
+        pathname: path.join(__dirname, 'dist/electron/sandbox-electron.html'),
         protocol: 'file:',
         slashes: true
     }));
@@ -83,7 +85,7 @@ function createSandboxWindow() {
 
 function createPreviewWindow() {
     let win = new electron.BrowserWindow({
-        show: true, width: 512, height: 512, webPreferences: {
+        show: false, width: 512, height: 512, webPreferences: {
             experimentalFeatures: true,
             nodeIntegration: true,
             contextIsolation: false,
@@ -92,7 +94,7 @@ function createPreviewWindow() {
     });
 
     win.loadURL(url.format({
-        pathname: path.join(__dirname, 'dist/electron/index-electron.html'),
+        pathname: path.join(__dirname, 'dist/electron/preview-electron.html'),
         protocol: 'file:',
         slashes: true
     }));
@@ -107,25 +109,27 @@ function createPreviewWindow() {
 }
 
 let logoWin;
-let mainWin;
+let sandboxWin;
+let previewWin;
 
 app.on('ready', () => {
     switch (argv['runtime'])
     {
         case 'preview':
-            mainWin = createPreviewWindow();        
+            logoWin = createImageWindow();    
+            previewWin = createPreviewWindow();        
             break;
         default:
-            mainWin = createSandboxWindow();
             logoWin = createImageWindow();
-            mainWin.once('ready-to-show', onReady);
+            sandboxWin = createSandboxWindow();
     }
+
+    // sandboxWin.once('ready-to-show', onReady);
 });
 
 ipc.on('argv', (event, arg) => {
     const win = electron.BrowserWindow.getAllWindows().find((win) => win.webContents.id === event.sender.id);
     event.returnValue = argv;
-    console.log(win == mainWin);
 });
 
 app.on('window-all-closed', () => {
@@ -135,21 +139,25 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-    if (mainWin === null) {
+    if (sandboxWin === null) {
         createSandboxWindow();
     }
 });
 
 function onReady()
 {
-    if (!logoWin?.isDestroyed() && logoWin?.isFocusable())
+    if (logoWin && !logoWin?.isDestroyed() && logoWin?.isFocusable())
         logoWin.close();
-    if (!mainWin?.isVisible())
-        mainWin.maximize() && mainWin.show();
+    if (sandboxWin && !sandboxWin?.isVisible())
+        sandboxWin.maximize() && sandboxWin.show();
+    if (previewWin && !previewWin?.isVisible())
+        previewWin.show();
+
+    console.timeEnd('loading');
 }
 
 // custom 'ready' event is more precise than basic 'ready-to-show'
-// ipc.on('app-ready', onReady);
+ipc.on('app-ready', onReady);
 
 ipc.on('process-save-file-silent', (event, arg) => {
     console.log(`Request to silent save file for '${arg.name}...'`);

@@ -1,12 +1,44 @@
+/// <reference path="../webpack.d.ts" />
+
 import ActionTypes from '@sandbox/actions/ActionTypes';
-import logic from '@sandbox/logic';
-import reducer from '@sandbox/reducers';
+import commonLogic from '@sandbox/logic/common';
+import depotLogic from '@sandbox/logic/depot';
+import fxRuntimeLogic from '@sandbox/logic/fxRuntime';
+import graphLogic from '@sandbox/logic/nodes';
+import parsingLogic from '@sandbox/logic/parsing';
+import s3dLogic from '@sandbox/logic/s3d';
+import depot from '@sandbox/reducers/depot';
+import nodes from '@sandbox/reducers/nodes';
+import parserParams from '@sandbox/reducers/parserParams';
+import playground from '@sandbox/reducers/playground';
+import router from '@sandbox/reducers/router';
+import s3d from '@sandbox/reducers/s3d';
+import sourceFile from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
-import { applyMiddleware, createStore, Middleware } from 'redux';
+import { applyMiddleware, combineReducers, createStore, Middleware } from 'redux';
 import reduxImmutableStateInvariant from 'redux-immutable-state-invariant';
 import { createLogger } from 'redux-logger';
+import { createLogicMiddleware } from 'redux-logic';
 
-declare const PRODUCTION: boolean;
+const reducer = combineReducers<IStoreState>({ 
+    sourceFile, 
+    parserParams, 
+    router, 
+    playground, 
+    nodes, 
+    s3d, 
+    depot
+});
+
+const logic = createLogicMiddleware([
+    ...commonLogic,
+    ...parsingLogic,
+    ...fxRuntimeLogic,
+    ...graphLogic,
+    ...s3dLogic,
+    ...depotLogic
+]);
+
 
 const logger = createLogger({
     collapsed: true,

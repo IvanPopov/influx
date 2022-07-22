@@ -12,7 +12,7 @@ import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
-import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from '.';
+import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
 import { EffectTemplateHLSL } from '../components/graph/lib';
 
 function saveTemp(uri: string, content: string)

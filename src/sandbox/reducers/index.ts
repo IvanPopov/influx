@@ -1,15 +1,6 @@
-import { LOCATION_PATTERN, PATH_PARAMS_TYPE } from '@sandbox/logic';
+import { LOCATION_PATTERN, PATH_PARAMS_TYPE } from '@sandbox/logic/common';
 import IStoreState from '@sandbox/store/IStoreState';
 import { matchPath } from 'react-router';
-import { combineReducers } from 'redux';
-
-import parserParams from './parserParams';
-import router from './router';
-import sourceFile from './sourceFile';
-import playground from './playground';
-import nodes from './nodes';
-import s3d from './s3d';
-import depot from './depot';
 
 /**
  * selectors
@@ -29,4 +20,3 @@ export function mapProps<T extends { (state: IStoreState): any; }>(selector: T):
     return (state) => selector(state);
 }
 
-export default combineReducers<IStoreState>({ sourceFile, parserParams, router, playground, nodes, s3d, depot });

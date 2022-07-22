@@ -19,7 +19,7 @@ import { matchPath } from 'react-router-dom';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { createLogic } from 'redux-logic';
-import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from '.';
+import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from './common';
 import * as Depot from '@sandbox/reducers/depot';
 
 
