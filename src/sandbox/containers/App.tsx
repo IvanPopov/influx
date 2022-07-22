@@ -7,6 +7,7 @@ import { createTextDocument } from '@lib/fx/TextDocument';
 import * as Fxmitter from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
+import * as p4 from '@lib/util/p4/p4';
 import { mapActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
 import { ASTView, FileListView, GraphView, MemoryView, PPView, ProgramView } from '@sandbox/components';
 import CodeView from '@sandbox/components/CodeView';
@@ -20,9 +21,12 @@ import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceF
 import IStoreState, { IP4Info } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
-import * as p4 from '@lib/util/p4/p4';
 // global defines from webpack's config;
 /// <reference path="../webpack.d.ts" />
+import * as URI from '@lib/uri/uri';
+import * as ipc from '@sandbox/ipc';
+import * as fs from 'fs';           // << todo: remove
+import * as path from 'path';       // << todo: remove
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
@@ -30,16 +34,7 @@ import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react
 import { SemanticToastContainer } from 'react-semantic-toasts';
 import { Button, Checkbox, Container, Dropdown, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
-import * as URI from '@lib/uri/uri';
-import * as fs from 'fs';
-import isElectron from 'is-electron';
-import * as path from 'path';
-
-const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
-
 type UnknownIcon = any;
-
-const localName = (uri: string) => URI.parse(uri).path.substring(1);
 
 export const styles = {
     toastFontFix: {
@@ -531,7 +526,7 @@ class App extends React.Component<IAppProps> {
     openFile(file: string) {
         const doOpen = () => history.push(`/${this.props.match.params.view}/${path.basename(file)}`);
 
-        if (!this.isEdited() || !isElectron())
+        if (!this.isEdited() || !ipc.isElectron())
         {
             doOpen();
             return;
@@ -587,13 +582,14 @@ class App extends React.Component<IAppProps> {
             return false;
         }
     
-        if (!isElectron())
+        if (!ipc.isElectron())
         {
             // assume that we always able to edit effects in web version
             return false;
         }
     
-        return (fs.statSync(localName(uri)).mode & 146) == 0;
+        // todo: move to ipc
+        return (fs.statSync(URI.toLocalPath(uri)).mode & 146) == 0;
     }
 
     canCompile(): boolean {
@@ -616,7 +612,7 @@ class App extends React.Component<IAppProps> {
         }
 
         // add to default changelist
-        p4.addToChangelist(0, localName(this.currentUri()), () => this.forceUpdate());
+        p4.addToChangelist(0, URI.toLocalPath(this.currentUri()), () => this.forceUpdate());
     }
 
     @autobind
@@ -630,7 +626,7 @@ class App extends React.Component<IAppProps> {
 
         const doRevert = () =>
         {
-            p4.revert(localName(this.currentUri()), () => {
+            p4.revert(URI.toLocalPath(this.currentUri()), () => {
                 console.assert(this.isReadonly(), 'Revert failed?!');
                 // reopen file to drop revesion and other states/markers
                 this.reopenThisFile();
@@ -644,7 +640,7 @@ class App extends React.Component<IAppProps> {
         }
 
         const dialog = {
-            title: `Revert ${path.basename(localName(this.currentUri()))}`,
+            title: `Revert ${path.basename(URI.toLocalPath(this.currentUri()))}`,
             message: 'Drop unsaved changes?',
             onReject() {},
             onAccept: doRevert
@@ -656,7 +652,7 @@ class App extends React.Component<IAppProps> {
     @autobind
     onSave()
     {
-        if (!isElectron())
+        if (!ipc.isElectron())
         {
             console.error('File can not be saved under web version.');
             return;
@@ -669,7 +665,7 @@ class App extends React.Component<IAppProps> {
         }
 
         const data = this.props.sourceFile.content;
-        if (ipcRenderer.sendSync('process-save-file-silent', { name: localName(this.currentUri()), data })) {
+        if (ipc.sync.saveFile(URI.toLocalPath(this.currentUri()), data)) {
             this.reopenThisFile();
         }
     }
@@ -987,12 +983,12 @@ class App extends React.Component<IAppProps> {
                             basic
                         />
                         &nbsp;
-                        { (isElectron() && this.isReadonly()) &&
+                        { (ipc.isElectron() && this.isReadonly()) &&
                             <Button.Group size='mini'>
                                 <Button positive onClick={ this.onCheckout }>Checkout</Button>
                             </Button.Group>
                         }
-                        { (isElectron() && !this.isReadonly()) &&
+                        { (ipc.isElectron() && !this.isReadonly()) &&
                             <Button.Group size='mini'>
                                 <Button onClick={ this.onRevert }>Revert</Button>
                                 <Button.Or />
@@ -1066,7 +1062,7 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: (
-                    <Menu.Item key="grammar-item" style={ { marginBottom: isElectron() ? '-1px': '-4px' } }>
+                    <Menu.Item key="grammar-item" style={ { marginBottom: ipc.isElectron() ? '-1px': '-4px' } }>
                         <span>Grammar</span>
                     </Menu.Item>
                 ),
@@ -1162,11 +1158,8 @@ class App extends React.Component<IAppProps> {
 
     async componentDidMount()
     {
-        if (ipcRenderer)
-        {
-            // custom request to hide prevew window and show main when it's completely ready
-            ipcRenderer.send('app-ready', {});
-        }
+        // custom request to hide prevew window and show main when it's completely ready
+        ipc.async.notifyAppReady();
     }
 }
 

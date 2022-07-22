@@ -227,8 +227,8 @@ export function parseDataURI(uri: string): IDataURI {
 }
 
 
-export function parse(uri: string): URI {
-    return new URI(uri);
+export function parse(uri: string | URI): URI {
+    return new URI(String(uri));
 }
 
 
@@ -254,7 +254,10 @@ export function here(): URI {
 }
 
 
-export function fromLocalPath(filepath: string | ReturnType<typeof path.parse>)
-{
+export function fromLocalPath(filepath: string | ReturnType<typeof path.parse>) {
     return `file:///${String(filepath).replaceAll('\\', '/')}`;
+}
+
+export function toLocalPath(uri: string | URI): string {
+    return parse(uri).path.substring(1);
 }

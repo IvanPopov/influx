@@ -11,8 +11,8 @@ import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterPartFx, getEmitterName } from '@sandbox/reducers/playground';
 import { getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
+import * as ipc from '@sandbox/ipc';
 import autobind from 'autobind-decorator';
-import isElectron from 'is-electron';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
@@ -220,7 +220,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                                             <Checkbox 
                                                                 label={ `auto export` }
                                                                 checked={ playground.autosave } 
-                                                                disabled={ !isElectron() || !playground.exportName } 
+                                                                disabled={ !ipc.isElectron() || !playground.exportName } 
                                                                 onClick={ this.handleAutosaveClick } 
                                                             /> 
                                                         } />

@@ -15,6 +15,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as Path from '@lib/path/path';
 import * as URI from '@lib/uri/uri';
+import * as ipc from '@sandbox/ipc';
 
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
@@ -97,8 +98,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             return emitter;
         }
 
-        async function drop()
-        {
+        async function drop() {
             await destroy(emitter);
             emitter = null;
         }
@@ -151,19 +151,16 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         }
 
         dispatch({ type: evt.PLAYGROUND_EMITTER_UPDATE, payload: { emitter } });
-        
-        if (playground.autosave)
-        {
-            dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: { } });
+
+        if (playground.autosave) {
+            dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: {} });
         }
 
         // construct default export name if possible
-        if (!playground.exportName)
-        {
+        if (!playground.exportName) {
             const uri = URI.parse(file.uri);
-            if (uri.protocol == 'file')
-            {
-                const filename = Path.parse(uri.path).replaceExt('bfx');
+            if (uri.protocol == 'file') {
+                const filename = Path.parse(URI.toLocalPath(uri)).replaceExt('bfx');
                 // dispatch fake event to update export name
                 dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename: URI.fromLocalPath(filename) } });
             }
@@ -173,9 +170,6 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
     }
 });
 
-
-import isElectron from 'is-electron';
-const ipcRenderer = isElectron() ? require('electron').ipcRenderer : null;
 
 
 const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSaveRequest['payload']>({
@@ -206,25 +200,23 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
         // let fbb = new flatbuffers.Builder(1);
         // let size = bundles.pack(fbb);
 
-        // electron
-        if (ipcRenderer)
-        {
+        if (ipc.isElectron()) {
             let filename = null;
             // reqest to make silent auto save using known local file path
-            if (action.payload.silent)
-            {
-                filename = ipcRenderer.sendSync('process-save-file-silent', { name: playground.exportName, data });
-            } 
+            if (action.payload.silent) {
+                filename = ipc.sync.saveFile(URI.toLocalPath(playground.exportName), data);
+            }
             else {
-                filename = ipcRenderer.sendSync('process-save-file-dialog', { name: exportName.basename, data });
+                filename = ipc.sync.saveFileDialog(URI.toLocalPath(playground.exportName), data);
             }
 
-            if (filename)
-            {
-                dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename } });
+            if (filename) {
+                // URI.fromLocalPath(fromLocalPath)
+                dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, payload: { filename: URI.fromLocalPath(filename) } });
                 verbose(`Effect '${filename}' has been exported successfully.`);
-                
+
                 toast({
+                    size: 'tiny',
                     type: 'info',
                     title: `${action.payload.silent ? 'Autoexport' : 'Export'} complete`,
                     description: `Effect '${filename}' has been exported successfully.`,
@@ -238,7 +230,7 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
             // download packed version of single (! active only !) emitter
             // -----------------------------------
             downloadByteBuffer(data, exportName.basename, 'application/octet-stream');
-            
+
             // download unpacked version
             // -----------------------------------
             // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');   
@@ -259,8 +251,7 @@ const playgroundEmitterUpdateLogic = createLogic<IStoreState>({
 
     async process({ getState, action }, dispatch, done) {
         const playground = getPlaygroundState(getState());
-        if (playground.exportName && playground.emitter)
-        {
+        if (playground.exportName && playground.emitter) {
             dispatch({ type: evt.PLAYGROUND_EFFECT_SAVE_REQUEST, payload: { silent: true } });
         }
         done();
@@ -269,14 +260,13 @@ const playgroundEmitterUpdateLogic = createLogic<IStoreState>({
 
 // on emitter update complete
 const playgroundSetOptionAutosave = createLogic<IStoreState, IPlaygroundSetOptionAutosave['payload']>({
-    type: [ evt.PLAYGROUND_SET_OPTION_AUTOSAVE ],
+    type: [evt.PLAYGROUND_SET_OPTION_AUTOSAVE],
     latest: true,
     debounce: 100,
 
     async process({ getState, action }, dispatch, done) {
-        if (action.payload.enabled)
-        {
-            dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: { } });
+        if (action.payload.enabled) {
+            dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: {} });
         }
         done();
     }

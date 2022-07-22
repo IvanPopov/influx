@@ -13,15 +13,15 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OrbitControls } from '@three-ts/orbit-controls';
 
-import { IEmitter, IEmitterPass, Uniforms } from '@lib/idl/emitter';
-import { ITimeline } from '../../../lib/idl/emitter/timelime';
+import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
+import { ITimeline } from '@lib/idl/emitter/timelime';
 
 import * as Emitter from '@lib/fx/emitter';
 import * as GLSL from './shaders';
 import UniformHelper from '@lib/idl/emitter/UniformHelper';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { createSLDocument } from '@lib/fx/SLDocument';
-import { asNative, asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
+import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
 
 let desc = `
 struct PartLight {
@@ -52,7 +52,7 @@ const PartLightT = typeAstToTypeLayout(slDocument.root.scope.findType('PartLight
 const Shaders = (id: string) => GLSL[id];
 
 interface ITreeSceneProps {
-    style: React.CSSProperties;
+    style?: React.CSSProperties;
     emitter: IEmitter;
     timeline: ITimeline;
 }
@@ -361,7 +361,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         const desc = pass.getDesc();
         const instanceData = Emitter.memoryToF32Array(pass.getData());
         const geometry = new THREE.InstancedBufferGeometry();
-        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry, "sphere");
+        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry, "box");
 
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);

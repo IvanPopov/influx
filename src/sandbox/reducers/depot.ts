@@ -4,7 +4,7 @@ import IStoreState, { IDepot, IDepotFolder } from '@sandbox/store/IStoreState';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import path from 'path';
 import { IncludeResolver } from '@lib/idl/parser/IParser';
-import isElectron from 'is-electron';
+import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import * as URI from '@lib/uri/uri';
 
@@ -43,8 +43,9 @@ export function makeResolver(depot: IDepot): IncludeResolver {
         switch (uri.protocol)
         {
             case 'file':
-                console.assert(isElectron());
-                return (await fs.promises.readFile(uri.path.substring(1))).toString();
+                console.assert(ipc.isElectron());
+                // todo: move readFile to ipc
+                return (await fs.promises.readFile(URI.toLocalPath(uri))).toString();
             default:
                 return (await fetch(fullname)).text();
         }

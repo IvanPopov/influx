@@ -2,18 +2,9 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import IStoreState, { IDepotFolder } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as URI from '@lib/uri/uri';
-import * as fs1 from 'fs';
-import isElectron from 'is-electron';
+import * as ipc from '@sandbox/ipc';
+import * as fs from 'fs';
 import * as path from 'path';
-
-const FS_NO_STATS = {
-    isDirectory() { return false },
-    isFile() { return false }
-};
-
-const fs = isElectron()
-    ? fs1
-    : { statSync: (dir) => FS_NO_STATS, readdirSync: null };
 
 const ASSETS_PATH = './assets/fx/tests';
 
@@ -107,7 +98,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
             totalFiles: 0
         };
 
-        if (!isElectron()) {
+        if (!ipc.isElectron()) {
             feedFakeDepot(root);
         } else {
             const rootPath = !env 
@@ -125,8 +116,7 @@ const depotUpdateCompleteLogic = createLogic<IStoreState>({
     type: evt.DEPOT_UPDATE_COMPLETE,
 
     async process({ getState, action }, dispatch, done) {
-        // let { depot } = getState();
-        // console.log(resolveName(depot, 'noise.fx'));
+        // ...
         done();
     }
 });
