@@ -206,19 +206,17 @@ class Playground extends React.Component<IPlaygroundProps> {
                                         />
                                     </Button.Group>
                                 </Grid.Column>
-                                <Grid.Column width={3}>
-
-                                </Grid.Column>
-                                <Grid.Column width={7}>
-                                    <Table unstackable>
+                                <Grid.Column width={10}>
+                                    <Table unstackable basic='very'>
                                         <Table.Body>
                                             <Table.Row>
-                                                <Table.Cell collapsing>
+                                                <Table.Cell collapsing style={ { width: '100%', textAlign: 'right' } }>
                                                     <Popup
                                                         content={ playground.exportName || '[save file manually for the first time]' }
                                                         trigger={ 
                                                             <Checkbox 
-                                                                label={ `auto export` }
+                                                                style={ { marginRight: '-10px' } }
+                                                                label={ `auto` }
                                                                 checked={ playground.autosave } 
                                                                 disabled={ !ipc.isElectron() || !playground.exportName } 
                                                                 onClick={ this.handleAutosaveClick } 
@@ -228,15 +226,13 @@ class Playground extends React.Component<IPlaygroundProps> {
                                                 <Table.Cell>
                                                     <Button.Group compact >
                                                         <Button
-                                                            icon={<Icon className={'cloud download'} />}
                                                             // save packed version only
                                                             onClick={this.handleDownloadDataClick.bind(this, true, false)}
-                                                        />
+                                                        >export</Button>
                                                         <Button
-                                                            icon={<Icon className={'image arrow down'} />}
                                                             // save screenshot only
                                                             onClick={this.handleDownloadDataClick.bind(this, false, true)}
-                                                        />
+                                                        >screenshot</Button>
                                                     </Button.Group>
                                                 </Table.Cell>
                                             </Table.Row>
