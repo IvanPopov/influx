@@ -5,3 +5,4 @@ declare const BRANCH: string;
 declare const MODE: string;
 declare const PRODUCTION: boolean;
 declare const TIMESTAMP: string;
+declare const WASM: boolean;

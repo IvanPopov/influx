@@ -1,5 +1,6 @@
 'use strict';
 const webpack = require('webpack');
+const fs = require('fs');;
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TsConfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
@@ -13,6 +14,8 @@ const gitRevisionPlugin = new GitRevisionPlugin()
 
 const [, , command, value] = process.argv;
 
+const locate = (filename) => process.env.PATH.split(';').find(dir => fs.existsSync(path.join(dir, filename))); 
+
 const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 const srcPath = `${__dirname}/src`;
 const outputPath = `${__dirname}/dist/${isWeb ? 'web' : 'electron'}`;
@@ -22,10 +25,12 @@ const commithash = gitRevisionPlugin.commithash();
 const branch = gitRevisionPlugin.branch();
 const mode = process.env.NODE_ENV || 'development';
 const timestamp = String(new Date());
+const emcc = locate('em++.bat'); // path to emcc compiler
 
 const DEVELOPMENT = mode == 'development';
 const PRODUCTION = mode == 'production';
 const ENABLE_PROFILING = false;             // turn it on to compile minified version with source map support enabled
+
 
 let optimization = {
     nodeEnv: mode,
@@ -236,6 +241,7 @@ let options = {
             'MODE': JSON.stringify(mode),
             'TIMESTAMP': JSON.stringify(timestamp),
             'PRODUCTION': PRODUCTION,
+            'WASM': !!emcc,
             'global': {}
         }),
         new MonacoWebpackPlugin({

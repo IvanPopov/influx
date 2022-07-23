@@ -14,6 +14,7 @@ const unlink = (fileName) => {
 const writeFile = _bluebird.promisify(fs.writeFile);
 const readFile = _bluebird.promisify(fs.readFile);
 const execFile = _bluebird.promisify(cp.execFile);
+const locateFile = (filename) => process.env.PATH.split(';').find(dir => fs.existsSync(path.join(dir, filename))); 
 
 function basename(resource)
 {
@@ -38,6 +39,13 @@ module.exports = async function (source) {
     const wasmMapFile = wasmBuildName.replace('.wasm', '.wasm.map');
 	const indexFile = wasmBuildName.replace('.wasm', '.js');
     
+    if (!locateFile('em++.bat'))
+    {
+        console.error(`Emscriptent compiler is not found, cpp module '${this.resourcePath}' will be omitted.`);
+        callback(null, "module.exports = () => Promise.resolve();");
+        return null;
+    }
+
     //  emcc -o example.js example.cpp -gsource-map -O0  -s MODULARIZE=1 -s ENVIRONMENT=web -s EXPORT_ES6=1 --bind -s WASM=1
     let wasmFlags = [
         ...additionalFlags,

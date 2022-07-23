@@ -13,7 +13,8 @@ export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native'
 /// Common API
 /////////////////////////////////////////////////////////////////////
 
-let useWASM = true;
+/// <reference path="./webpack.d.ts" />
+let useWASM = WASM;
 
 function VMBundle()
 {

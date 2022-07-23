@@ -770,9 +770,10 @@ class App extends React.Component<IAppProps> {
                             </Dropdown>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
-                                    <Checkbox toggle label='WASM runtime'
+                                    <Checkbox label='WASM runtime'
+                                        disabled={!WASM}
                                         checked={ $pg.wasm }
-                                        onMouseDown={
+                                        onChange={
                                             e => this.switchEmitterRuntime()
                                         }
                                     />
@@ -839,8 +840,9 @@ class App extends React.Component<IAppProps> {
                                                     <Dropdown.Item key="ddmi-use-wasm">
                                                         <Form>
                                                             <Form.Checkbox error label='WASM runtime' size='small'
+                                                                disabled={ !WASM }
                                                                 checked={ $debugger.options.wasm }
-                                                                onMouseDown={
+                                                                onChange={
                                                                     e => this.switchVMRuntime()
                                                                 } />
                                                         </Form>

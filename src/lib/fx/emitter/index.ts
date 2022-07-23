@@ -6,7 +6,8 @@ import * as WASMPipe from "./cpp/bridge";
 import * as TSPipe from "./ts/bridge";
 import { isDef } from '@lib/common';
 
-let useWASM = true;
+/// <reference path="./webpack.d.ts" />
+let useWASM = WASM;
 
 function Pipe()
 {

@@ -48,7 +48,7 @@ ReactDOM.render(
 
 
 /// <reference path="./webpack.d.ts" />
-console.log(`%c Is this running in electron.js?: ${ipc.isElectron()}`, 'background: #222; color: #bada55');
 console.log(`%c This is ${ipc.isElectron() ? 'electron' : 'a web browser'}!!!`, 'background: #222; color: #bada55');
-console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}, timestamp=${TIMESTAMP}`, 'background: #222; color: #bada55');
+console.log(`%c ver: ${VERSION} (${COMMITHASH}, ${BRANCH}), mode=${MODE}, production=${PRODUCTION}, timestamp=${TIMESTAMP}, %cwasm=${WASM}`, 
+    `background: #222; color: #bada55`, `background: ${WASM ? 'green': 'red'}; color: #bada55`);
 

@@ -27,7 +27,7 @@ import * as Bytecode from '@lib/idl/bytecode';
 type IBundle = Bytecode.IBundle;
 
 const BundleModule = await loadBundleWASM();
-const WASMBundle = BundleModule.Bundle;
+const WASMBundle = BundleModule?.Bundle;
 
 export function make(name:string, code: Uint8Array): IBundle
 {
