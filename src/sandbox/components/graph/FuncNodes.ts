@@ -6,7 +6,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { LiteGraph } from "litegraph.js";
 import { LIB_SL_DOCUMENT } from "./common";
-import { IGraphASTNode, LGraphNodeAST, LGraphNodeEx } from "./GraphNode";
+import { IGraphASTNode, LGraphNodeAST } from "./GraphNode";
 
 interface INodeDesc {
     func: IFunctionDeclInstruction;

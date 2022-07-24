@@ -92,7 +92,6 @@ export function ContextBuilder() {
     const ret = () => top().ret;
     const pc = () => instructions.pc;
 
-
     const debug = debugLayout(pc);
 
     /* (assuming that all registers for all types are placed in the same memory) */
@@ -402,7 +401,7 @@ export function ContextBuilder() {
 
     // next operation will be 'k_Ret'
     function addReturn() {
-        top().retRequests.push(pc());
+        top()?.retRequests.push(pc());
     }
 
     const Addr = {

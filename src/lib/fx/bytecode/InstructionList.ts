@@ -154,8 +154,9 @@ class InstructionList {
 
             case EOperation.k_Jump:
                 assert(args.length === 1);
-                // multiply jump in order to facilitate the operation of the VM
-                args[0] *= InstructionList.STRIDE;
+                // don't multiply jump in order to facilitate the operation of the VM
+                // see bundle.cpp/bundle.ts for more details.
+                args[0] *= 1; // InstructionList.STRIDE;
                 break;
             case EOperation.k_JumpIf:
                 assert(args.length === 1);

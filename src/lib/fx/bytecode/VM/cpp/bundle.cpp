@@ -70,32 +70,30 @@ BUNDLE::BUNDLE(std::string debugName, memory_view data): m_debugName(debugName)
 
 BUNDLE::BUNDLE() {} 
 
+struct INSTRUCTION
+{
+    uint32_t op;
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+};
+
 memory_view BUNDLE::Play()
 {
-    constexpr int STRIDE = 5;
+    const INSTRUCTION* ilist = (INSTRUCTION*)m_instructions.data();
 
-    uint32_t regs[8192]; // {}
- 
-    uint32_t* ilist = m_instructions.data();
-    uint32_t length = m_instructions.size();
-
-    int32_t*  iregs = (int32_t*)regs;
-    uint32_t* uregs = (uint32_t*)regs;
-    float_t*  fregs = (float_t*)regs;
-
-    assert(m_inputs[CBUFFER0_REGISTER].ptr == (uintptr_t)m_constants.data());
+    uint32_t  regs[8192]; // {}
+    int32_t*  iregs = reinterpret_cast<int32_t*>(regs);
+    uint32_t* uregs = reinterpret_cast<uint32_t*>(regs);
+    float_t*  fregs = reinterpret_cast<float_t*>(regs);
 
     memory_view* iinput = m_inputs;
 
-    int i5 = 0;                      // current instruction;
-    while (i5 < length) {
-        auto op = ilist[i5];
-        auto a = ilist[i5 + 1];
-        auto b = ilist[i5 + 2];
-        auto c = ilist[i5 + 3];
-        auto d = ilist[i5 + 4];
+    int pc = 0;
+    while (1) {
+        const auto& [ op, a, b, c, d ] = ilist[pc];
         
-
         switch (op) {
             // registers
             case EOperation::k_I32SetConst:
@@ -127,11 +125,9 @@ memory_view BUNDLE::Play()
             // c => source pointer
             // d => offset
             case EOperation::k_I32LoadInputPointer:
-                assert(iinput[a].size > (iregs[c] + d));
                 iregs[b] = iinput[a][iregs[c] + d];
                 break;
             case EOperation::k_I32StoreInputPointer:
-                assert(iinput[a].size > (iregs[b] + d));
                 iinput[a][iregs[b] + d] = iregs[c];
                 break;
 
@@ -161,10 +157,10 @@ memory_view BUNDLE::Play()
                 break;
             
             case EOperation::k_I32Min:
-                iregs[a] = std::min(iregs[b], iregs[c]);
+                iregs[a] = iregs[b] < iregs[c] ? iregs[b] : iregs[c];
                 break;
             case EOperation::k_I32Max:
-                iregs[a] = std::max(iregs[b], iregs[c]);
+                iregs[a] = iregs[b] < iregs[c] ? iregs[c] : iregs[b];
                 break;
 
             case EOperation::k_F32Add:
@@ -189,32 +185,32 @@ memory_view BUNDLE::Play()
             //
 
             case EOperation::k_U32LessThan:
-                iregs[a] = +(uregs[b] < uregs[c]);
+                iregs[a] = uregs[b] < uregs[c];
                 break;
             case EOperation::k_U32GreaterThanEqual:
-                iregs[a] = +(uregs[b] >= uregs[c]);
+                iregs[a] = uregs[b] >= uregs[c];
                 break;
             case EOperation::k_I32LessThan:
-                iregs[a] = +(iregs[b] < iregs[c]);
+                iregs[a] = iregs[b] < iregs[c];
                 break;
             case EOperation::k_I32GreaterThanEqual:
-                iregs[a] = +(iregs[b] >= iregs[c]);
+                iregs[a] = iregs[b] >= iregs[c];
                 break;
             case EOperation::k_I32Equal:
-                iregs[a] = +(iregs[b] == iregs[c]);
+                iregs[a] = iregs[b] == iregs[c];
                 break;
             case EOperation::k_I32NotEqual:
-                iregs[a] = +(iregs[b] != iregs[c]);
+                iregs[a] = iregs[b] != iregs[c];
                 break;
             case EOperation::k_I32Not:
-                iregs[a] = +(!iregs[b]);
+                iregs[a] = !iregs[b];
                 break;
 
             case EOperation::k_F32LessThan:
-                fregs[a] = +(fregs[b] < fregs[c]);
+                fregs[a] = fregs[b] < fregs[c];
                 break;
             case EOperation::k_F32GreaterThanEqual:
-                fregs[a] = +(fregs[b] >= fregs[c]);
+                fregs[a] = fregs[b] >= fregs[c];
                 break;
 
             //
@@ -223,10 +219,10 @@ memory_view BUNDLE::Play()
 
 
             case EOperation::k_I32LogicalOr:
-                iregs[a] = +(iregs[b] || iregs[c]);
+                iregs[a] = iregs[b] || iregs[c];
                 break;
             case EOperation::k_I32LogicalAnd:
-                iregs[a] = +(iregs[b] && iregs[c]);
+                iregs[a] = iregs[b] && iregs[c];
                 break;
 
             //
@@ -258,10 +254,10 @@ memory_view BUNDLE::Play()
                 fregs[a] = std::sqrt(fregs[b]);
                 break;
             case EOperation::k_F32Min:
-                fregs[a] = std::min(fregs[b], fregs[c]);
+                fregs[a] = fregs[b] < fregs[c] ? fregs[b] : fregs[c];
                 break;
             case EOperation::k_F32Max:
-                fregs[a] = std::max(fregs[b], fregs[c]);
+                fregs[a] = fregs[b] < fregs[c] ? fregs[c] : fregs[b];
                 break;
 
             //
@@ -287,13 +283,12 @@ memory_view BUNDLE::Play()
             //
 
             case EOperation::k_Jump:
-                // TODO: don't use multiplication here
-                i5 = a;
+                pc = a;
                 continue;
             case EOperation::k_JumpIf:
-                i5 = iregs[a] != 0
-                    ? i5 + STRIDE                   /* skip one instruction */
-                    : i5;                           /* do nothing (cause next instruction must always be Jump) */
+                pc = iregs[a] != 0
+                    ? pc + 1                         /* skip one instruction */
+                    : pc;                           /* do nothing (cause next instruction must always be Jump) */
                 break;
             case EOperation::k_Ret:
                 {
@@ -301,9 +296,9 @@ memory_view BUNDLE::Play()
                 }
                 break;
             default:
-                std::cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + i5) << std::endl;
+                std::cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + pc) << std::endl;
         }
-        i5 += STRIDE;
+        pc ++;
     }
     end:
     return memory_view((uintptr_t)regs, sizeof(regs) / sizeof(regs[0]));

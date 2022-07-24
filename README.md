@@ -1,7 +1,7 @@
 
 # Influx
 
-[Influx](https://github.com/IvanPopov/Influx) is a toolset and sandbox for creatingprocedural visual effects that can run on both CPU and GPU. The library includes a parser, compiler and translator for the HLSL shader language and its special extended version for working with visual effects, conceptually similar to HLSL effects in D3D11. The sandbox includes all the necessary set of tools for creating procedural effects both in the form of code and visual programming tools known as blueprints, as well as a dedicated runtime based on both javascript and websm for playing effects on any platform.
+[Influx](https://github.com/IvanPopov/Influx) is a toolset and sandbox for creating procedural visual effects that can run on both CPU and GPU. The library includes a parser, compiler and translator for the HLSL shader language and its special extended version for working with visual effects, conceptually similar to HLSL effects in D3D11. The sandbox includes all the necessary set of tools for creating procedural effects both in the form of code and visual programming tools known as blueprints, as well as a dedicated runtime based on both javascript and websm for playing effects on any platform.
 
 ## Installing
 
