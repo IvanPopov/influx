@@ -73,7 +73,7 @@ export class TSBundle implements Bundle.IBundle
 
         let i5 = 0;                      // current instruction;
         end:
-        while (i5 < ilist.length) {
+        while (1) {
             let op = ilist[i5];
             let a = ilist[i5 + 1];
             let b = ilist[i5 + 2];
@@ -282,7 +282,7 @@ export class TSBundle implements Bundle.IBundle
 
                 case EOperation.k_Jump:
                     // TODO: don't use multiplication here
-                    i5 = a;
+                    i5 = a * InstructionList.STRIDE;
                     continue;
                 case EOperation.k_JumpIf:
                     i5 = iregs[a] !== 0
