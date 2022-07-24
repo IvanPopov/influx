@@ -1004,7 +1004,7 @@ class App extends React.Component<IAppProps> {
                                 <Button positive onClick={ this.onCheckout }>Checkout</Button>
                             </Button.Group>
                         }
-                        { (ipc.isElectron() && !this.isReadonly()) &&
+                        { (ipc.isElectron() && !this.isReadonly() && props.s3d.p4) &&
                             <Button.Group size='mini'>
                                 <Button onClick={ this.onRevert }>Revert</Button>
                                 <Button.Or />
