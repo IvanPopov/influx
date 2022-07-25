@@ -160,7 +160,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     const [ op, ] = instructions.back();
     if (op != EOperation.k_Ret)
         icode(EOperation.k_Ret);
-        
+
     debug.endCompilationUnit();
 
     let code = binary(ctx);         // TODO: stay only binary view
@@ -421,6 +421,46 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             intrinsics.addf(dest, dest, temp);
 
             return dest;
+        },
+
+        // hlsl supports float3 x float3 only
+        cross(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress)
+        {
+            // .x = (m.y * n.z - m.z * n.y)
+            // .y = (m.z * n.x - m.x * n.z)
+            // .z = (m.x * n.y - m.y * n.x)
+            let f32 = sizeof.f32();
+            
+            let t1 = alloca(f32);
+            let t2 = alloca(f32);
+            let temp = alloca(f32 * 3);
+
+            let mx = addr.sub(left, 0 * f32, f32);
+            let my = addr.sub(left, 1 * f32, f32);
+            let mz = addr.sub(left, 2 * f32, f32);
+
+            let nx = addr.sub(right, 0 * f32, f32);
+            let ny = addr.sub(right, 1 * f32, f32);
+            let nz = addr.sub(right, 2 * f32, f32);
+
+            let tx = addr.sub(temp, 0 * f32, f32);
+            let ty = addr.sub(temp, 1 * f32, f32);
+            let tz = addr.sub(temp, 2 * f32, f32);
+
+            intrinsics.mulf(t1, my, nz);
+            intrinsics.mulf(t2, mz, ny);
+            intrinsics.subf(tx, t1, t2); // .x
+
+            intrinsics.mulf(t1, mz, nx);
+            intrinsics.mulf(t2, mx, nz);
+            intrinsics.subf(ty, t1, t2); // .y
+
+            intrinsics.mulf(t1, mx, ny);
+            intrinsics.mulf(t2, my, nx);
+            intrinsics.subf(tz, t1, t2); // .z
+
+            imove(dest, temp);
+            return dest;
         }
     }
 
@@ -572,6 +612,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'lerp':
                 assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
+            case 'cross':
+                assert(fdef.params.length === 2);
+                return intrinsics.cross(dest, args[0], args[1]);
 
             case 'InterlockedAdd':
                 {
