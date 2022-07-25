@@ -72,10 +72,6 @@ IFX::UNIFORMS UniformsFromJSObject(const em::val &v)
             
 EMSCRIPTEN_BINDINGS(pipeline) 
 {  
-    em::value_object<VM::memory_view>("Memory") 
-        .field("size", &VM::memory_view::size)
-        .field("heap", &VM::memory_view::ptr);     
-
     em::register_map<std::string, float>("Uniforms");  
     
     //

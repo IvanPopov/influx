@@ -35,6 +35,11 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
     renderContent(): JSX.Element[] {
         const { props } = this;
         const bundle = VM.make(`[memory-view]`, props.program.code);
+        
+        // temp hack to fix problem with unset CBUFFER0_REGISTER input if wasm bundle is used
+        // without it bundle.getInput(CBUFFER0_REGISTER) return no input
+        bundle.setConstant("[dummy]", new Uint8Array());
+
         const binaryData = VM.memoryToU8Array(bundle.getInput(CBUFFER0_REGISTER));
         const layout = bundle.getLayout();
 

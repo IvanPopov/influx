@@ -21,10 +21,10 @@ std::vector<T> vecFromJSArray(const em::val &v)
 }
 
 EMSCRIPTEN_BINDINGS(bundle) 
-{ 
-    em::value_object<VM::memory_view>("Memory")
-        .field("heap", &VM::memory_view::ptr) 
-        .field("size", &VM::memory_view::size);
+{  
+    em::value_object<VM::memory_view>("Memory") 
+        .field("size", &VM::memory_view::size)
+        .field("heap", &VM::memory_view::ptr);     
     em::value_object<VM::BUNDLE_NUMGROUPS>("Numgroups")
         .field("x", &VM::BUNDLE_NUMGROUPS::x)
         .field("y", &VM::BUNDLE_NUMGROUPS::y)
