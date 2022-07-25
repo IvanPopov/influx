@@ -23,6 +23,8 @@ import { createTextDocument } from '@lib/fx/TextDocument';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
 
+
+
 let desc = `
 struct PartLight {
     float3 pos;
@@ -60,13 +62,7 @@ interface ITreeSceneProps {
 interface IThreeSceneState {
     emitter: IEmitter;
     nParticles: number;
-}
-
-class Particle {
-    position: THREE.Vector3;
-    color: THREE.Color;
-    alpha: number;
-    size: number;
+    fps: { min: number, max: number, value: number };
 }
 
 
@@ -78,7 +74,8 @@ const statsStyleFix: React.CSSProperties = {
     fontSize: '10px',
     right: '0',
     lineHeight: '11px',
-    textShadow: '0 0 1px grey'
+    textShadow: '0 0 1px grey',
+    whiteSpace: 'pre'
 };
 
 const progressStyleFix: React.CSSProperties = {
@@ -86,12 +83,23 @@ const progressStyleFix: React.CSSProperties = {
     borderRadius: '0'
 };
 
+
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     state: IThreeSceneState = {
         emitter: null,
-        nParticles: 0
+        nParticles: 0,
+        fps: {
+            min: 0,
+            max: 0,
+            value: 0
+        }
     };
+
+    beginTime = 0;
+    frames = 0;
+    prevTime = 0;
+    
 
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
@@ -114,11 +122,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         backWall?: THREE.Mesh,
         ceiling?: THREE.Mesh
     } = null;
-
-    lights: THREE.PointLight[] = [];
-
-    particles: Particle[];
-
 
     componentDidMount() {
         const width = this.mount.clientWidth;
@@ -520,7 +523,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.camera.position.z = 3;
         this.camera.position.y = 2;
         this.camera.position.x = 2;
-        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+        this.camera.lookAt(new THREE.Vector3(0, 0, 0)); 
     }
 
 
@@ -536,7 +539,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         this.renderer.domElement.style.borderBottomLeftRadius = '3px';
         this.renderer.domElement.style.borderBottomRightRadius = '3px';
     }
-
 
     createGridHelper() {
         const size = 10;
@@ -574,6 +576,37 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         cancelAnimationFrame(this.frameId);
     }
 
+    
+    begin()
+    {
+        this.beginTime = ( performance || Date ).now();
+    }
+
+    end() {
+
+        this.frames ++;
+
+        var time = ( performance || Date ).now();
+
+        if ( time > this.prevTime + 1000 ) {
+
+            this.updateFps( ( this.frames * 1000 ) / ( time - this.prevTime ), 100 );
+
+            this.prevTime = time;
+            this.frames = 0;
+        }
+
+        return time;
+
+    }
+
+    updateFps ( value, maxValue ) {
+
+        const min = Math.min( this.state.fps.min, value );
+        const max = Math.max( this.state.fps.max, value );
+        this.setState({ fps: { min, max, value } });
+    }
+
     animate = async (time: number) => {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
@@ -581,6 +614,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         if (!emitter) {
             return;
         }
+
+        this.begin();
 
         let constants = timeline.getConstants();
         let helper = UniformHelper();
@@ -644,6 +679,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         if (lights.length) this.scene.remove(...lights);
         this.setState({ nParticles: emitter.getNumParticles() });
         // emitter.dump();
+
+        this.end();
     }
 
     shouldComponentUpdate(nextProps: ITreeSceneProps, nexState) {
@@ -732,11 +769,9 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
                     style={progressStyleFix}
                 />
                 <div style={statsStyleFix}>
-                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: {this.state.nParticles}</span>
-                    <br />
-                    <span>simulation: CPU</span>
-                    {/* <br />
-                    <span>{this.state.nParticles}</span> */}
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br/>
+                    simulation: CPU<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br/>
                 </div>
             </div>
         );
