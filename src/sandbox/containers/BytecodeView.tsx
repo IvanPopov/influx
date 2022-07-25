@@ -328,7 +328,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 sArgs[2] = register(args[2]);
                 break;
             case EOperation.k_Jump:
-                sArgs[0] = hex2(args[0] / InstructionList.STRIDE);
+                sArgs[0] = hex2(args[0]/* / InstructionList.STRIDE*/);
                 break;
             default:
                 sArgs = args.map(register);

@@ -14,7 +14,12 @@ export { asNative, asNativeRaw, asNativeViaAST, asNativeViaCDL } from './native'
 /////////////////////////////////////////////////////////////////////
 
 /// <reference path="./webpack.d.ts" />
-let useWASM = WASM;
+
+// check shell.js for more details
+// electron hack to support option --disable-wasm
+const forceNoWasm = () => (new URLSearchParams(window.location.search)).get('disable-wasm') === 'true';
+
+let useWASM = WASM && !forceNoWasm();
 
 function VMBundle()
 {

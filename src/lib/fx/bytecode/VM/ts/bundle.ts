@@ -65,7 +65,7 @@ export class TSBundle implements Bundle.IBundle
     }
     
 
-    play(): TSBundleMemory {
+    play(): Uint8Array {
         const ilist = this.instructions;
         const iregs = TSBundle.iregs;
         const fregs = TSBundle.fregs;
@@ -279,16 +279,15 @@ export class TSBundle implements Bundle.IBundle
                 //
                 // Flow controls
                 //
-
-                case EOperation.k_Jump:
-                    // TODO: don't use multiplication here
-                    i5 = a * InstructionList.STRIDE;
-                    continue;
                 case EOperation.k_JumpIf:
                     i5 = iregs[a] !== 0
                         ? i5 + InstructionList.STRIDE /* skip one instruction */
                         : i5;                         /* do nothing (cause next instruction must always be Jump) */
                     break;
+                case EOperation.k_Jump:
+                    // TODO: don't use multiplication here
+                    i5 = a * InstructionList.STRIDE;
+                    continue;
                 case EOperation.k_Ret:
                     {
                         break end;
@@ -300,7 +299,7 @@ export class TSBundle implements Bundle.IBundle
             i5 += InstructionList.STRIDE;
         }
 
-        return asBundleMemory(TSBundle.iregs);
+        return TSBundle.regs;
     }
 
 

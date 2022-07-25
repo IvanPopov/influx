@@ -1,6 +1,6 @@
 /* tslint:disable:typedef */
 
-import { isNull, verbose } from '@lib/common';
+import { isDef, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import * as VM from '@lib/fx/bytecode/VM';
@@ -321,16 +321,17 @@ const debuggerOptionsChangedLogic = createLogic<IStoreState, IDebuggerOptionsCha
     type: evt.DEBUGGER_OPTIONS_CHANGED,
 
     async process({ getState, action }, dispatch, done) {
-        if (action.payload.options.autocompile === true) {
+        const { autocompile, colorize, wasm } = action.payload.options;
+        if (isDef(autocompile) && autocompile === true) {
             dispatch({ type: evt.DEBUGGER_COMPILE });
         }
-        if (action.payload.options.colorize === false) {
+        if (isDef(colorize) && colorize === false) {
             cleanupMarkers(<IDispatch>dispatch, cleanupDebuggerColorization(getState()));
         } else {
             const markers = buildDebuggerSourceColorization(getDebugger(getState()), getFileState(getState()));
             emitMarkers(<IDispatch>dispatch, emitDebuggerColorization(markers));
         }
-        if (action.payload.options.wasm != VM.isWASM()) {
+        if (isDef(wasm) && wasm != VM.isWASM()) {
             dispatch({ type: evt.PLAYGROUND_SWITCH_VM_RUNTIME });
         }
         done();

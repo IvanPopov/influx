@@ -113,8 +113,8 @@ export function asNativeViaAST(result: Uint8Array, type: ITypeInstruction): any 
     return asNativeRaw(result, typeAstToTypeLayout(type));
 }
 
-export function asNativeViaCDL(result: Bundle.IMemory, cdl: CDL): any {
-    return asNative(result, typeAstToTypeLayout(cdl.info.layout));
+export function asNativeViaCDL(result: Uint8Array, cdl: CDL): any {
+    return asNativeRaw(result, typeAstToTypeLayout(cdl.info.layout));
 }
 
 export function asNativeFunction(fn: IFunctionDeclInstruction): Function

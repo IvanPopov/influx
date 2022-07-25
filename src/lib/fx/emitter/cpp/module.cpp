@@ -7,8 +7,8 @@
 #include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp" 
-   
-namespace em = emscripten;    
+
+namespace em = emscripten;
 
 int main(void)  
 {
@@ -16,17 +16,16 @@ int main(void)
     return 0;
 } 
 
- 
-IFX::EMITTER* CreateFromBundle(VM::memory_view data) 
+IFX::EMITTER* CreateFromBundle(VM::memory_view data)
 { 
-    return new IFX::EMITTER(data.As<void>());     
+    return new IFX::EMITTER(data.As<void>());
 }
-     
-bool CopyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)  
+
+bool CopyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)
 {
     return dst->Copy(*src); 
 }
- 
+
 void DestroyEmitter(IFX::EMITTER* pEmitter)
 { 
     if (pEmitter)
@@ -41,9 +40,9 @@ IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
     v3.x = v["x"].as<float>();
     v3.y = v["y"].as<float>();
     v3.z = v["z"].as<float>();
-    return v3;    
-}     
-  
+    return v3;
+}
+
 template <typename T> 
 std::vector<T> vecFromJSArray(const em::val &v)
 {

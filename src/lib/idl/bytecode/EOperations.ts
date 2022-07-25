@@ -81,8 +81,8 @@ export enum EOperation {
     // Flow control
     //
 
-    k_Jump,
     k_JumpIf,
+    k_Jump,
 
     // the operation is only necessary to maintain the purity of the code, 
     // when generating the code will be replaced by a jump for all 

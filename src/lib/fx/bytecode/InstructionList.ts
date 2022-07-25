@@ -182,7 +182,6 @@ class InstructionList {
         this._length += 4 - args.length;
     }
 
-
     /**
      * Replace specified instruction with new one;
      * @param pc number of instruction to be replaced
@@ -205,6 +204,11 @@ class InstructionList {
         this.data[pc5] = op;
         // replace arguments
         args.forEach((v, i) => { this.data[pc5 + 1 + i] = v; });
+    }
+
+    // [ op, a, b, c, d ]
+    back() {
+        return this.data.slice(-InstructionList.STRIDE);
     }
 
     private push(val: number) {

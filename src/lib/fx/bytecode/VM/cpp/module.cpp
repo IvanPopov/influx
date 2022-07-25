@@ -2,8 +2,8 @@
 #include "bundle.h"
 
 #include "bundle.cpp"
-#include "bundle_uav.cpp"   
- 
+#include "bundle_uav.cpp"
+
 namespace em = emscripten;
  
 template <typename T> 
@@ -16,11 +16,11 @@ std::vector<T> vecFromJSArray(const em::val &v)
 
     em::val memoryView{em::typed_memory_view(l, rv.data())};
     memoryView.call<void>("set", v);
-
+ 
     return rv;
 }
 
-EMSCRIPTEN_BINDINGS(bundle)
+EMSCRIPTEN_BINDINGS(bundle) 
 { 
     em::value_object<VM::memory_view>("Memory")
         .field("heap", &VM::memory_view::ptr) 
@@ -40,8 +40,8 @@ EMSCRIPTEN_BINDINGS(bundle)
         .field("semantic", &VM::BUNDLE_CONSTANT::semantic)
         .field("type", &VM::BUNDLE_CONSTANT::type);
     em::value_object<VM::BUNDLE_UAV>("Uav")
-        .field("name", &VM::BUNDLE_UAV::name) 
-        .field("elementSize", &VM::BUNDLE_UAV::elementSize) 
+        .field("name", &VM::BUNDLE_UAV::name)
+        .field("elementSize", &VM::BUNDLE_UAV::elementSize)
         .field("length", &VM::BUNDLE_UAV::length)
         .field("register", &VM::BUNDLE_UAV::reg)
         .field("data", &VM::BUNDLE_UAV::data)
@@ -50,13 +50,12 @@ EMSCRIPTEN_BINDINGS(bundle)
 
     em::register_vector<VM::BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
 
-    em::class_<VM::BUNDLE>("Bundle")
+    em::class_<VM::BUNDLE>("Bundle") 
         .constructor<std::string, VM::memory_view>()
-        // .function("play", optional_override([](BUNDLE& self) {
-        //     memory_view result = self.BUNDLE::play();
-        //     return em::val(em::typed_memory_view(result.size * 4, (char*)result.ptr));
-        // }))
-        .function("play", &VM::BUNDLE::Play)
+        .function("play", em::optional_override([](VM::BUNDLE& self) {
+            int res = self.BUNDLE::Play();
+            return em::val(em::typed_memory_view(4, (uint8_t*)&res));
+        }))
         .function("dispatch", &VM::BUNDLE::Dispatch)
         .function("getInput", &VM::BUNDLE::GetInput)
         // .function("setConstant", &VM::BUNDLE::SetConstant)
@@ -73,4 +72,3 @@ EMSCRIPTEN_BINDINGS(bundle)
         .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV);  
 }
 
- 

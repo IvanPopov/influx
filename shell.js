@@ -68,15 +68,18 @@ function createSandboxWindow() {
         }
     });
 
-    win.loadURL(url.format({
-        pathname: path.join(__dirname, 'dist/electron/sandbox-electron.html'),
-        protocol: 'file:',
-        slashes: true
-    }));
-
     if (argv['dev-tools'])
         win.webContents.openDevTools();
     
+
+    win.loadURL(url.format({
+        pathname: path.join(__dirname, 'dist/electron/sandbox-electron.html'),
+        protocol: 'file:',
+        slashes: true,
+        // hack to pass global variable before page initialization
+        search: `disable-wasm=${String(!!argv['disable-wasm'])}`
+    }));
+
     //win.removeMenu();
 
     win.on('closed', () => { win = null; });

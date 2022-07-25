@@ -58,6 +58,7 @@ npm run electron                        # Run sandbox with virtual enviroment.
                                         # (mount folder with test effects)
 npm run electron -- [options...]        # Avalable options:
     --dev-tools                         # Run with dev tools.
+    --disable-wasm                      # Run with disabled wasm.
     --project "path/to/project/root"    # Run from Saber 3d enviroment. 
 npm run electron path/to/fx.bfx         # Run preview mode to show prebuild effect.
 ```

@@ -127,7 +127,7 @@ function binary(ctx: IContext): Uint8Array {
 
 
 function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
-    const { constants, debug, alloca, push, pop, addr, imove, ref, icode } = ctx;
+    const { constants, debug, alloca, push, pop, addr, imove, ref, icode, instructions } = ctx;
 
     // NOTE: it does nothing at the momemt :/
     debug.beginCompilationUnit('[todo]', fn.def.returnType);
@@ -155,8 +155,12 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
 
     translateUnknown(ctx, fn);
     pop();
+    
     // always push ret as last instruction
-    icode(EOperation.k_Ret);    
+    const [ op, ] = instructions.back();
+    if (op != EOperation.k_Ret)
+        icode(EOperation.k_Ret);
+        
     debug.endCompilationUnit();
 
     let code = binary(ctx);         // TODO: stay only binary view

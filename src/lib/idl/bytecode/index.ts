@@ -65,7 +65,7 @@ export interface IUAV
 
 export interface IBundle 
 {
-    play(): IMemory;
+    play(): Uint8Array;
     dispatch(numgroups: Numgroups, numthreads: Numthreads);
 
     setInput(slot: number, input: IMemory): void;

@@ -79,7 +79,145 @@ struct INSTRUCTION
     uint32_t d;
 };
 
-memory_view BUNDLE::Play()
+#define OPERATIONS(PREDICATE) \
+    PREDICATE(I32LoadRegister)\
+    PREDICATE(I32LoadInput)\
+    PREDICATE(I32LoadInputPointer)\
+    PREDICATE(I32LoadRegistersPointer)\
+    PREDICATE(I32StoreRegisterPointer)\
+    PREDICATE(I32StoreInput)\
+    PREDICATE(I32StoreInputPointer)\
+    PREDICATE(I32SetConst)\
+    PREDICATE(I32Add)\
+    PREDICATE(I32Sub)\
+    PREDICATE(I32Mul)\
+    PREDICATE(I32Div)\
+    PREDICATE(I32Mod)\
+    PREDICATE(F32Add)\
+    PREDICATE(F32Sub)\
+    PREDICATE(F32Mul)\
+    PREDICATE(F32Div)\
+    PREDICATE(F32Mod)\
+    PREDICATE(U32LessThan)\
+    PREDICATE(U32GreaterThanEqual)\
+    PREDICATE(I32LessThan)\
+    PREDICATE(I32GreaterThanEqual)\
+    PREDICATE(I32Equal)\
+    PREDICATE(I32NotEqual)\
+    PREDICATE(I32Not)\
+    PREDICATE(F32LessThan)\
+    PREDICATE(F32GreaterThanEqual)\
+    PREDICATE(I32LogicalOr)\
+    PREDICATE(I32LogicalAnd)\
+    PREDICATE(F32Frac)\
+    PREDICATE(F32Floor)\
+    PREDICATE(F32Ceil)\
+    PREDICATE(F32Sin)\
+    PREDICATE(F32Cos)\
+    PREDICATE(F32Abs)\
+    PREDICATE(F32Sqrt)\
+    PREDICATE(F32Max)\
+    PREDICATE(F32Min)\
+    PREDICATE(I32Mad)\
+    PREDICATE(I32Min)\
+    PREDICATE(I32Max)\
+    PREDICATE(F32ToU32)\
+    PREDICATE(F32ToI32)\
+    PREDICATE(U32ToF32)\
+    PREDICATE(I32ToF32)\
+    PREDICATE(JumpIf)
+
+#define FLOW_CONTROLS(PREDICATE) \
+    PREDICATE(Jump)
+
+// ===============================================================================//
+// Attention! Must be strictly sychronized with @lib/idl/bytecode/EOperations.ts  //
+// ===============================================================================//
+#define COMMANDS(PREDICATE) \
+    OPERATIONS(PREDICATE)\
+    FLOW_CONTROLS(PREDICATE)\
+    PREDICATE(Ret)
+
+// registers
+#define I32SetConst()               iregs[a] = *((int*)&b);
+#define I32LoadRegister()           iregs[a] = iregs[b];
+// inputs
+#define I32LoadInput()              iregs[b] = iinput[a][c];
+#define I32StoreInput()             iinput[a][b] = iregs[c];
+// registers pointers    
+// a => dest
+// b => source pointer
+// c => offset
+#define I32LoadRegistersPointer()   iregs[a] = iregs[iregs[b] + c];
+#define I32StoreRegisterPointer()   iregs[iregs[a] + c] = iregs[b];
+// input pointers
+// a => input index
+// b => dest
+// c => source pointer
+// d => offset
+#define I32LoadInputPointer()       iregs[b] = iinput[a][iregs[c] + d];
+#define I32StoreInputPointer()      iinput[a][iregs[b] + d] = iregs[c];
+//
+// Arithmetic operations
+//
+#define I32Add()                    iregs[a] = iregs[b] + iregs[c];
+#define I32Sub()                    iregs[a] = iregs[b] - iregs[c];
+#define I32Mul()                    iregs[a] = iregs[b] * iregs[c];
+#define I32Div()                    iregs[a] = iregs[b] / iregs[c];
+#define I32Mod()                    iregs[a] = iregs[c] != 0 ? iregs[b] % iregs[c] : 0;     // IP: temp hack to avoid runtine error
+#define I32Mad()                    iregs[a] = iregs[b] + iregs[c] * iregs[d];
+#define I32Min()                    iregs[a] = iregs[b] < iregs[c] ? iregs[b] : iregs[c];
+#define I32Max()                    iregs[a] = iregs[b] < iregs[c] ? iregs[c] : iregs[b];
+#define F32Add()                    fregs[a] = fregs[b] + fregs[c];
+#define F32Sub()                    fregs[a] = fregs[b] - fregs[c];
+#define F32Mul()                    fregs[a] = fregs[b] * fregs[c];
+#define F32Div()                    fregs[a] = fregs[b] / fregs[c];
+#define F32Mod()                    fregs[a] = std::fmod(fregs[b], fregs[c]);
+//
+// Relational operations
+//
+#define U32LessThan()               iregs[a] = uregs[b] < uregs[c];
+#define U32GreaterThanEqual()       iregs[a] = uregs[b] >= uregs[c];
+#define I32LessThan()               iregs[a] = iregs[b] < iregs[c];
+#define I32GreaterThanEqual()       iregs[a] = iregs[b] >= iregs[c];
+#define I32Equal()                  iregs[a] = iregs[b] == iregs[c];
+#define I32NotEqual()               iregs[a] = iregs[b] != iregs[c];
+#define I32Not()                    iregs[a] = !iregs[b];
+#define F32LessThan()               fregs[a] = fregs[b] < fregs[c];
+#define F32GreaterThanEqual()       fregs[a] = fregs[b] >= fregs[c];
+//
+// Logical operations
+//
+#define I32LogicalOr()              iregs[a] = iregs[b] || iregs[c];
+#define I32LogicalAnd()             iregs[a] = iregs[b] && iregs[c];
+//
+// intrinsics
+//
+#define F32Frac()                   fregs[a] = fregs[b] - std::floor(fregs[b]); // same as frac() in HLSL
+#define F32Floor()                  fregs[a] = std::floor(fregs[b]);
+#define F32Ceil()                   fregs[a] = std::ceil(fregs[b]);
+#define F32Sin()                    fregs[a] = std::sin(fregs[b]);
+#define F32Cos()                    fregs[a] = std::cos(fregs[b]);
+#define F32Abs()                    fregs[a] = std::abs(fregs[b]);
+#define F32Sqrt()                   fregs[a] = std::sqrt(fregs[b]);
+#define F32Min()                    fregs[a] = fregs[b] < fregs[c] ? fregs[b] : fregs[c];
+#define F32Max()                    fregs[a] = fregs[b] < fregs[c] ? fregs[c] : fregs[b];
+//
+// Cast
+//
+#define U32ToF32()                  fregs[a] = (float_t)uregs[b];
+#define I32ToF32()                  fregs[a] = (float_t)iregs[b];
+#define F32ToU32()                  uregs[a] = (uint32_t)fregs[b];
+#define F32ToI32()                  iregs[a] = (int32_t)fregs[b];
+
+#define JumpIf()                    pc = iregs[a] != 0 ? pc + 1 /* skip one instruction */: pc /* do nothing (cause next instruction must always be Jump) */;
+//
+// Flow controls
+//
+#define Jump()                      pc = a;
+
+
+int BUNDLE::Play()
 {
     const INSTRUCTION* ilist = (INSTRUCTION*)m_instructions.data();
 
@@ -89,219 +227,66 @@ memory_view BUNDLE::Play()
     float_t*  fregs = reinterpret_cast<float_t*>(regs);
 
     memory_view* iinput = m_inputs;
-
     int pc = 0;
+
+    #define READ_INSTRUCTION() const auto& [ op, a, b, c, d ] = ilist[pc]
+    #define PC_INC() pc++
+    #define HALT() return iregs[0]
+
+#if defined(__clang__)
+    #define LABEL(NAME) k_##NAME
+    #define ADD_LABEL(CMD) &&LABEL(CMD),
+    static void* dispatchTable[] = {
+        COMMANDS(ADD_LABEL)
+    };
+
+    #define DISPATCH() goto *dispatchTable[ilist[pc].op]
+    #define EXEC_COMMAND(NAME) NAME();
+
+    // perform operation
+    #define OP(NAME) {\
+        LABEL(NAME):\
+            READ_INSTRUCTION();\
+            EXEC_COMMAND(NAME);\
+            PC_INC();\
+            DISPATCH();}
+    // flow control
+    #define FC(NAME) {\
+        LABEL(NAME):\
+            READ_INSTRUCTION();\
+            EXEC_COMMAND(NAME);\
+            DISPATCH();}
+
+    DISPATCH();
     while (1) {
-        const auto& [ op, a, b, c, d ] = ilist[pc];
-        
-        switch (op) {
-            // registers
-            case EOperation::k_I32SetConst:
-                iregs[a] =  *((int*)&b);
-                break;
-            case EOperation::k_I32LoadRegister:
-                iregs[a] = iregs[b];
-                break;
-            // inputs
-            case EOperation::k_I32LoadInput:
-                iregs[b] = iinput[a][c];
-                break;
-            case EOperation::k_I32StoreInput:
-                iinput[a][b] = iregs[c];
-                break;
-            // registers pointers    
-            // a => dest
-            // b => source pointer
-            // c => offset
-            case EOperation::k_I32LoadRegistersPointer:
-                iregs[a] = iregs[iregs[b] + c];
-                break;
-            case EOperation::k_I32StoreRegisterPointer:
-                iregs[iregs[a] + c] = iregs[b];
-                break;
-            // input pointers
-            // a => input index
-            // b => dest
-            // c => source pointer
-            // d => offset
-            case EOperation::k_I32LoadInputPointer:
-                iregs[b] = iinput[a][iregs[c] + d];
-                break;
-            case EOperation::k_I32StoreInputPointer:
-                iinput[a][iregs[b] + d] = iregs[c];
-                break;
-
-            //
-            // Arithmetic operations
-            //
-
-            case EOperation::k_I32Add:
-                iregs[a] = iregs[b] + iregs[c];
-                break;
-            case EOperation::k_I32Sub:
-                iregs[a] = iregs[b] - iregs[c];
-                break;
-            case EOperation::k_I32Mul:
-                iregs[a] = iregs[b] * iregs[c];
-                break;
-            case EOperation::k_I32Div:
-                iregs[a] = iregs[b] / iregs[c];
-                break;
-            case EOperation::k_I32Mod:
-                // IP: temp hack to avoid runtine error
-                iregs[a] = iregs[c] != 0 ? iregs[b] % iregs[c] : 0;
-                break;
-            
-            case EOperation::k_I32Mad:
-                iregs[a] = iregs[b] + iregs[c] * iregs[d];
-                break;
-            
-            case EOperation::k_I32Min:
-                iregs[a] = iregs[b] < iregs[c] ? iregs[b] : iregs[c];
-                break;
-            case EOperation::k_I32Max:
-                iregs[a] = iregs[b] < iregs[c] ? iregs[c] : iregs[b];
-                break;
-
-            case EOperation::k_F32Add:
-                fregs[a] = fregs[b] + fregs[c];
-                break;
-            case EOperation::k_F32Sub:
-                fregs[a] = fregs[b] - fregs[c];
-                break;
-            case EOperation::k_F32Mul:
-                fregs[a] = fregs[b] * fregs[c];
-                break;
-            case EOperation::k_F32Div:
-                fregs[a] = fregs[b] / fregs[c];
-                break;
-            case EOperation::k_F32Mod:
-                fregs[a] = std::fmod(fregs[b], fregs[c]);
-                break;
-
-
-            //
-            // Relational operations
-            //
-
-            case EOperation::k_U32LessThan:
-                iregs[a] = uregs[b] < uregs[c];
-                break;
-            case EOperation::k_U32GreaterThanEqual:
-                iregs[a] = uregs[b] >= uregs[c];
-                break;
-            case EOperation::k_I32LessThan:
-                iregs[a] = iregs[b] < iregs[c];
-                break;
-            case EOperation::k_I32GreaterThanEqual:
-                iregs[a] = iregs[b] >= iregs[c];
-                break;
-            case EOperation::k_I32Equal:
-                iregs[a] = iregs[b] == iregs[c];
-                break;
-            case EOperation::k_I32NotEqual:
-                iregs[a] = iregs[b] != iregs[c];
-                break;
-            case EOperation::k_I32Not:
-                iregs[a] = !iregs[b];
-                break;
-
-            case EOperation::k_F32LessThan:
-                fregs[a] = fregs[b] < fregs[c];
-                break;
-            case EOperation::k_F32GreaterThanEqual:
-                fregs[a] = fregs[b] >= fregs[c];
-                break;
-
-            //
-            // Logical operations
-            //
-
-
-            case EOperation::k_I32LogicalOr:
-                iregs[a] = iregs[b] || iregs[c];
-                break;
-            case EOperation::k_I32LogicalAnd:
-                iregs[a] = iregs[b] && iregs[c];
-                break;
-
-            //
-            // intrinsics
-            //
-
-            case EOperation::k_F32Frac:
-                // same as frac() in HLSL
-                fregs[a] = fregs[b] - std::floor(fregs[b]);
-                break;
-            case EOperation::k_F32Floor:
-                fregs[a] = std::floor(fregs[b]);
-                break;
-            case EOperation::k_F32Ceil:
-                fregs[a] = std::ceil(fregs[b]);
-                break;
-
-            case EOperation::k_F32Sin:
-                fregs[a] = std::sin(fregs[b]);
-                break;
-            case EOperation::k_F32Cos:
-                fregs[a] = std::cos(fregs[b]);
-                break;
-
-            case EOperation::k_F32Abs:
-                fregs[a] = std::abs(fregs[b]);
-                break;
-            case EOperation::k_F32Sqrt:
-                fregs[a] = std::sqrt(fregs[b]);
-                break;
-            case EOperation::k_F32Min:
-                fregs[a] = fregs[b] < fregs[c] ? fregs[b] : fregs[c];
-                break;
-            case EOperation::k_F32Max:
-                fregs[a] = fregs[b] < fregs[c] ? fregs[c] : fregs[b];
-                break;
-
-            //
-            // Cast
-            //
-
-
-            case EOperation::k_U32ToF32:
-                fregs[a] = (float_t)uregs[b];
-                break;
-            case EOperation::k_I32ToF32:
-                fregs[a] = (float_t)iregs[b];
-                break;
-            case EOperation::k_F32ToU32:
-                uregs[a] = (uint32_t)fregs[b];
-                break;
-            case EOperation::k_F32ToI32:
-                iregs[a] = (int32_t)fregs[b];
-                break;
-
-            //
-            // Flow controls
-            //
-
-            case EOperation::k_Jump:
-                pc = a;
-                continue;
-            case EOperation::k_JumpIf:
-                pc = iregs[a] != 0
-                    ? pc + 1                         /* skip one instruction */
-                    : pc;                           /* do nothing (cause next instruction must always be Jump) */
-                break;
-            case EOperation::k_Ret:
-                {
-                    goto end;
-                }
-                break;
-            default:
-                std::cout << m_debugName << " :: unknown operation found: " << op << ", addr: " << (ilist + pc) << std::endl;
-        }
-        pc ++;
+        OPERATIONS(OP);
+        FLOW_CONTROLS(FC);
+        LABEL(Ret): HALT();
     }
-    end:
-    return memory_view((uintptr_t)regs, sizeof(regs) / sizeof(regs[0]));
+#else
+    #define LABEL(NAME) case EOperation::k_##NAME
+    // perform operation
+    #define OP(NAME) LABEL(NAME): NAME(); break;
+    // flow control
+    #define FC(NAME) LABEL(NAME): NAME(); continue;
+
+    while (1) {
+        READ_INSTRUCTION();
+        switch (op) {
+            OPERATIONS(OP);
+            FLOW_CONTROLS(FC);
+            LABEL(Ret): HALT();
+            default:
+                #if defined(_MSC_VER)
+                    __assume(0);
+                #else // clang/gcc
+                    __builtin_unreachable();
+                #endif
+        }
+        PC_INC();
+    }
+#endif
+    return 0;
 }
 
  

@@ -394,10 +394,12 @@ class App extends React.Component<IAppProps> {
     // Runtime options
     //
 
+    @autobind
     switchVMRuntime() {
         this.props.actions.specifyOptions({ wasm: !this.props.sourceFile.debugger.options.wasm });
     }
 
+    @autobind
     switchEmitterRuntime() {
         this.props.actions.switchRuntime();
     }
@@ -773,9 +775,7 @@ class App extends React.Component<IAppProps> {
                                     <Checkbox label='WASM runtime'
                                         disabled={!WASM}
                                         checked={ $pg.wasm }
-                                        onChange={
-                                            e => this.switchEmitterRuntime()
-                                        }
+                                        onChange={ this.switchEmitterRuntime }
                                     />
                                 </div>
                             </Menu.Menu>
@@ -838,14 +838,12 @@ class App extends React.Component<IAppProps> {
                                             <Dropdown text='Options' pointing='left' >
                                                 <Dropdown.Menu>
                                                     <Dropdown.Item key="ddmi-use-wasm">
-                                                        <Form>
-                                                            <Form.Checkbox error label='WASM runtime' size='small'
-                                                                disabled={ !WASM }
-                                                                checked={ $debugger.options.wasm }
-                                                                onChange={
-                                                                    e => this.switchVMRuntime()
-                                                                } />
-                                                        </Form>
+                                                        <Checkbox label='WASM runtime' size='small'
+                                                            disabled={ !WASM }
+                                                            checked={ $debugger.options.wasm }
+                                                            onMouseDown={ this.switchVMRuntime }
+                                                            /* onChange doen't work for some reason :/ */
+                                                            />
                                                     </Dropdown.Item>
                                                     <Dropdown.Item key="ddmi-auto-compilation">
                                                         <Checkbox label='auto compilation' size='small'

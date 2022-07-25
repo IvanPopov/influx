@@ -54,7 +54,7 @@ public:
     BUNDLE(std::string debugName, memory_view data);
     BUNDLE();
 
-    memory_view Play();
+    int Play();
     void Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
     void SetInput(int slot, memory_view input);
     memory_view GetInput(int slot);
