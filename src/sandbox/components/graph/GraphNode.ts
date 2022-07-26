@@ -6,6 +6,8 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { nodesForceRecompile, nodesProvideDocs } from "@sandbox/actions";
 import { INodeInputSlot, INodeOutputSlot, LGraphNode, LLink } from "litegraph.js";
 
+export type LGraphNodeFactory = IMap<new () => LGraphNode>;
+
 export interface IGraphASTNode extends LGraphNode
 {
     // evaluate(context: Context, program: ProgramScope, slot: number): IInstruction;

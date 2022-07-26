@@ -57,8 +57,7 @@ export interface INodePipeline {
     docs: string;               // current info of selected node
     graph: LGraph;
     revision: number;          // number of updates of graph
-
-
+    env: ISLDocument;          // library extended with particle struct
 }
 
 export interface IPlaygroundState {

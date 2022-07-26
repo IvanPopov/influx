@@ -99,7 +99,7 @@ export type IGraphModified = IAction<typeof evt.GRAPH_MODIFIED, {}>;
 // emits on graph node selection if docs is presened
 export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 // emits on new serialized graph content has been specified
-export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string }>;
+export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string, env?: ISLDocument }>;
 
 export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded | IGraphModified;
 

@@ -10,7 +10,6 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
-import './graph';
 
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 
