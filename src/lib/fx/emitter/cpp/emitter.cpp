@@ -164,12 +164,11 @@ void EMITTER_PASS::Serialize()
 
     std::vector<std::pair<uint32_t, int32_t>> indicies;
 
-    for (uint32_t iPart = 0; iPart < Parent().GetCapacity(); ++iPart) 
-    {
-        bool alive = UavStates()->data.As<int32_t>()[iPart];
-        if (alive)
+     for (uint32_t iPart = 0; iPart < Parent().GetCapacity(); ++iPart) 
+     {
+        if (states[iPart]) 
         {
-            indicies.push_back({ iPart, GetDesc().sorting ? UavSerials()->data.As<int32_t>()[iPart * GetDesc().instanceCount] : 0 });
+            indicies.push_back({ iPart, GetDesc().sorting ? serials[iPart * GetDesc().instanceCount] : 0 });
         }
     }
  

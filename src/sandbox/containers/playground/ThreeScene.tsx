@@ -621,6 +621,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         let helper = UniformHelper();
         helper.set('elapsedTime').float(constants.elapsedTime);
         helper.set('elapsedTimeLevel').float(constants.elapsedTimeLevel);
+        helper.set('elapsedTimeThis').float(constants.elapsedTimeLevel);
         helper.set('parentPosition').float3(0, 0, 0);
         helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
         helper.set('instanceTotal').int(2);

@@ -147,7 +147,7 @@ export const s3d = {
 }
 
 export const depot = {
-    update() {
+    rescan() {
         return { type: evt.DEPOT_UPDATE_REQUEST, payload: {} };
     }
 }

@@ -33,7 +33,7 @@ class CodeView extends React.Component<ICodeViewProps, {}> {
                 ref='monaco'
                 value={content}
                 width='100%'
-                height='calc(100vh - 67px)' // todo: fixme
+                height='calc(100vh - 63px)' // todo: fixme
                 options={monacoOptions}
             />
         );

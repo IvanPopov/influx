@@ -8,7 +8,7 @@ import * as Fxmitter from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
-import { mapActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { mapActions, playground as playgroundActions, sourceCode as sourceActions, depot as depotActions } from '@sandbox/actions';
 import ASTView from '@sandbox/components/ASTView';
 import CodeView from '@sandbox/components/CodeView';
 import FileListView from '@sandbox/components/FileListView';
@@ -22,7 +22,7 @@ import SourceEditor2 from '@sandbox/containers/editor/Editor';
 import ParserParameters from '@sandbox/containers/ParserParameters';
 import Playground from '@sandbox/containers/playground/Playground';
 import ShaderTranslatorView from '@sandbox/containers/ShaderTranslatorView';
-import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
+import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, DEFAULT_FILENAME, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterPartFx } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
@@ -42,6 +42,7 @@ import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
 import { Button, Checkbox, Container, Dropdown, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { packGraphToJSON } from '@sandbox/logic/nodes';
 
 type UnknownIcon = any;
 
@@ -53,11 +54,14 @@ export const styles = {
         }
     },
     sidebarLeftHotfix: {
-        width: `79px !important`,
-        backgroundColor: '#1e1e1e !important'
+        width: `57px !important`,
+        backgroundColor: '#1e1e1e !important',
+        '& > .item': {
+            minWidth: 'auto !important'
+        }
     },
     mainContentHotfix: {
-        marginLeft: `calc(79px)`
+        marginLeft: `calc(57px)`
     },
     mainViewHeightHotfix: {
         marginBottom: '0 !important'
@@ -164,7 +168,7 @@ export const styles = {
 
 // todo: remove the inheritance of the type of data
 export interface IAppProps extends IStoreState, Partial<WithStylesProps<typeof styles>>, RouteComponentProps<any> {
-    actions: typeof sourceActions & typeof routerActions & typeof playgroundActions;
+    actions: typeof sourceActions & typeof routerActions & typeof playgroundActions & typeof depotActions;
 }
 
 
@@ -386,6 +390,11 @@ class App extends React.Component<IAppProps> {
     handleShowFileBrowser = () => this.setState({ showFileBrowser: !this.state.showFileBrowser });
     hideFileBrowser = () => this.setState({ showFileBrowser: false });
 
+    @autobind
+    handleCreateNewEffect() {
+        this.openFile(DEFAULT_FILENAME);
+    }
+
     setAutocompile(autocompile: boolean) {
         this.props.actions.specifyOptions({ autocompile });
     }
@@ -584,6 +593,26 @@ class App extends React.Component<IAppProps> {
         return !!this.props.s3d.env;
     }
 
+    isExists()
+    {
+        const uri = this.currentUri();
+
+        if (!uri)
+        {
+            return false;
+        }
+    
+        if (!ipc.isElectron())
+        {
+            // assume that we always able to edit effects in web version
+            return true;
+        }
+
+        // todo: move to ipc
+        const localPath = URI.toLocalPath(uri);
+        return fs.existsSync(localPath);
+    }
+
     isReadonly()
     {
         const uri = this.currentUri();
@@ -600,7 +629,8 @@ class App extends React.Component<IAppProps> {
         }
     
         // todo: move to ipc
-        return (fs.statSync(URI.toLocalPath(uri)).mode & 146) == 0;
+        const localPath = URI.toLocalPath(uri);
+        return (fs.statSync(localPath).mode & 146) == 0;
     }
 
     canCompile(): boolean {
@@ -622,8 +652,34 @@ class App extends React.Component<IAppProps> {
             return;
         }
 
-        // add to default changelist
-        p4.addToChangelist(0, URI.toLocalPath(this.currentUri()), () => this.forceUpdate());
+        const localPath = URI.toLocalPath(this.currentUri());
+        if (this.isExists())
+        {
+            // add to default changelist
+            p4.edit(0, localPath, () => this.forceUpdate());
+            return;
+        }
+
+        const filename = ipc.sync.saveFileDialog(
+        { 
+            defaultPath: localPath,
+            title: "Save FX", 
+            buttonLabel: "Save",
+            filters: [ 
+                { name: 'Source FX', extensions: ['fx'] },
+                { name: 'Graph FX', extensions: ['xfx'] }
+            ]
+        }
+        , this.props.sourceFile.content);
+
+        if (filename)
+        {
+            p4.add(0, filename, () => {
+                // request depot update
+                this.props.actions.rescan();
+                this.openFile(path.basename(filename));
+            });
+        }
     }
 
     @autobind
@@ -678,8 +734,7 @@ class App extends React.Component<IAppProps> {
         
         const { sourceFile, nodes: { graph } } = this.props;
         const isGraph = path.extname(URI.toLocalPath(sourceFile.uri)) == '.xfx';
-        // save graph layout instead of source code if possible
-        const data = !isGraph ? sourceFile.content : JSON.stringify(graph.serialize(), null, '    ');
+        const data = !isGraph ? sourceFile.content : packGraphToJSON(this.props);
 
         if (ipc.sync.saveFile(URI.toLocalPath(this.currentUri()), data)) {
             this.reopenThisFile();
@@ -987,22 +1042,30 @@ class App extends React.Component<IAppProps> {
             });
         });
 
+        const add = ipc.isElectron() && !this.isExists();
+        const checkout = ipc.isElectron() && this.isExists() && this.isReadonly();
+        const revert = ipc.isElectron() && this.isExists() && !this.isReadonly();
+
         const panes = [
             {
                 menuItem: (
                     <Menu.Item key="source-file-item">
-                        <Popup
-                            trigger={ <span>{path.basename(props.sourceFile.uri || '') + (this.isEdited() ? '*': '')}</span> }
-                            content={ props.sourceFile.uri }
-                            basic
-                        />
-                        &nbsp;
-                        { (ipc.isElectron() && this.isReadonly()) &&
-                            <Button.Group size='mini'>
-                                <Button positive onClick={ this.onCheckout }>Checkout</Button>
-                            </Button.Group>
+                        { !add &&
+                            <Popup
+                                trigger={ <span>{path.basename(props.sourceFile.uri || '') + (this.isEdited() ? '*': '')}</span> }
+                                content={ props.sourceFile.uri }
+                                basic
+                            />
                         }
-                        { (ipc.isElectron() && !this.isReadonly() && props.s3d.p4) &&
+                        &nbsp;
+                        { (add || checkout)  &&
+                                <Button.Group size='mini'>
+                                    <Button positive onClick={ this.onCheckout }>
+                                        { this.isExists() ? 'Checkout' : 'Add' }
+                                    </Button>
+                                </Button.Group>
+                        }
+                        { (revert) &&
                             <Button.Group size='mini'>
                                 <Button onClick={ this.onRevert }>Revert</Button>
                                 <Button.Or />
@@ -1118,10 +1181,10 @@ class App extends React.Component<IAppProps> {
                         </p>
                     </Modal.Content>
                     <Modal.Actions>
-                        <Button color='red' onClick={() => this.processConfirmDialog(false)}>
+                        <Button onClick={() => this.processConfirmDialog(false)}>
                             <Icon name='remove' /> No
                         </Button>
-                        <Button color='green' onClick={ () => this.processConfirmDialog(true) }>
+                        <Button onClick={ () => this.processConfirmDialog(true) }>
                             <Icon name='checkmark' /> Yes
                         </Button>
                     </Modal.Actions>
@@ -1139,6 +1202,7 @@ class App extends React.Component<IAppProps> {
                         onFileClick={ this.openFile }
                         desc={ env?.Get('game-name') || 'Development' }
                         expanded={true}
+                        filters={ [ '.fx', '.xfx' ] }
                     />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
@@ -1158,11 +1222,17 @@ class App extends React.Component<IAppProps> {
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
-                    <Menu.Item name='home' onClick={ this.handleShowFileBrowser } >
+                <Menu size='mini' vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
+                    <Menu.Item name='depot' onClick={ this.handleShowFileBrowser } >
                         <Icon className={ 'three bars' as UnknownIcon } />
-                        File Browser
+                        Depot
+                    </Menu.Item>
+                    { ipc.isElectron() &&
+                        <Menu.Item name='create' onClick={ this.handleCreateNewEffect } >
+                            <Icon className={ 'plus' as UnknownIcon } />
+                            New
                         </Menu.Item>
+                    }
                 </Menu>
 
                 <SemanticToastContainer position='bottom-right' animation='fade down' className={ props.classes.toastFontFix }/>
@@ -1182,4 +1252,4 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions, ...playgroundActions }))(withStyles(styles)(App)) as any;
+export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions, ...playgroundActions, ...depotActions }))(withStyles(styles)(App)) as any;

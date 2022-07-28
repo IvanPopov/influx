@@ -165,18 +165,18 @@ let options = {
                     loader: path.resolve(__dirname, 'webpack-addons/cpp-loader.js'),
                     options: {
                         sourceMaps: !PRODUCTION,
-                        debug: !PRODUCTION,
+                        // debug: !PRODUCTION, // uncomment to build with -O0 instead of -O3
                         additionalFlags: [ 
                              `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
                          ].map(f => f.replace(/\\/g, '/')),
                         defines: { EMCC_ENV: 1 } // to indicate that we are inside of emcc enviroment
                     }
                 }
+            },
+            { 
+                test: /\.json$/, 
+                type: 'json' 
             }
-            // { 
-            //     test: /\.json$/, 
-            //     type: 'json' 
-            // }
         ]
     },
     ignoreWarnings: [/Failed to parse source map/],

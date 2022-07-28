@@ -39,10 +39,21 @@ export function run(command: string, args?, done?): Promise<any> {
     });
 }
 
-export function addToChangelist(changelist, file, cb: () => void) {
+export function edit(changelist, file, cb: () => void) {
     if (changelist < 0) return cb();
 
     p4.edit({ changelist: changelist, files: [file] }, function (err) {
+        if (err) {
+            // MessageBox('Error:: Could not add files to p4 changelist. See console for details.', { type: 'warning' });
+            return console.error(err);
+        }
+
+        cb();
+    });
+}
+
+export function add(changelist, file, cb: () => void) {
+    p4.add({ changelist: changelist, files: [file] }, function (err) {
         if (err) {
             // MessageBox('Error:: Could not add files to p4 changelist. See console for details.', { type: 'warning' });
             return console.error(err);

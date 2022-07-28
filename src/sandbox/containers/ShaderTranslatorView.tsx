@@ -116,7 +116,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                 value={ value }
 
                 width='100%'
-                height='calc(100vh - 74px)' // todo: fixme
+                height='calc(100vh - 63px)' // todo: fixme
 
                 options={ diffOptions }
                 editorDidMount={ this.editorDidMount }

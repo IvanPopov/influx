@@ -59,8 +59,10 @@ function createImageWindow() {
 
 
 function createSandboxWindow() {
+    const devTools = !!argv['dev-tools'];
+
     let win = new electron.BrowserWindow({
-        show: false, width: 800, height: 600, webPreferences: {
+        show: devTools, width: 800, height: 600, webPreferences: {
             experimentalFeatures: true,
             nodeIntegration: true,
             contextIsolation: false,
@@ -68,7 +70,7 @@ function createSandboxWindow() {
         }
     });
 
-    if (argv['dev-tools'])
+    if (devTools)
         win.webContents.openDevTools();
     
 
@@ -176,15 +178,9 @@ ipc.on('process-save-file-silent', (event, arg) => {
 });
 
 ipc.on('process-save-file-dialog', (event, arg) => {
-    console.log(`Request to process save file dialog for '${arg.name}...'`);
-    let options = {
-        title: "Save binary FX",
-        defaultPath: arg.name,
-        buttonLabel: "Save",
-        filters: [
-            { name: 'Binary FX', extensions: ['bfx'] },
-        ]
-    }
+    const options = arg.options;
+    console.log(`Request to process save file dialog for '${options.defaultPath}...'`);
+    
     const filename = electron.dialog.showSaveDialogSync(options) || null;
     if (filename)
     {

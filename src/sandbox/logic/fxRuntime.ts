@@ -214,7 +214,16 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
                 filename = ipc.sync.saveFile(URI.toLocalPath(playground.exportName), data);
             }
             else {
-                filename = ipc.sync.saveFileDialog(URI.toLocalPath(playground.exportName), data);
+                filename = ipc.sync.saveFileDialog(
+                { 
+                    defaultPath: URI.toLocalPath(playground.exportName),
+                    title: "Save binary FX", 
+                    buttonLabel: "Save",
+                    filters: [
+                        { name: 'Binary FX', extensions: ['bfx'] },
+                    ]
+                }
+                , data);
             }
 
             if (filename) {

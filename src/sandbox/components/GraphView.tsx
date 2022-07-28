@@ -62,11 +62,10 @@ LiteGraphA.pointerevents_method = "mouse";                  // "mouse"|"pointer"
 
 LiteGraphA.middle_click_canvas_dragging = true;
 
-
 const styles = {
     sizing: {
         width: '100%',
-        height: 'calc(100vh - 67px)',
+        height: 'calc(100vh - 63px)',
         background: '#333'
     }
 };
@@ -113,6 +112,8 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_x = 1;
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
+
+        (this.canvas as any).align_to_grid = true;
     }
 
 

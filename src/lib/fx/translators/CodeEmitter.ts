@@ -54,11 +54,7 @@ export class CodeEmitter extends BaseEmitter {
             typeName = type.name;
 
             if (this.knownTypes.indexOf(typeName) === -1) {
-                this.begin();
-                this.emitComplexType(type);
-                this.emitChar(';');
-                this.end();
-
+                this.emit(type);
                 this.knownTypes.push(typeName);
             }
         }
@@ -637,6 +633,13 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_TypeDecl:
                 this.emitTypeDecl(instr as ITypeDeclInstruction);
+                break;
+            case EInstructionTypes.k_ComplexType:
+            case EInstructionTypes.k_VariableType:
+                this.begin();
+                this.emitComplexType(instr as ITypeInstruction);
+                this.emitChar(';');
+                this.end();
                 break;
             default:
                 assert(false, `unsupported instruction found: ${instr.instructionName}`);

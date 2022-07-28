@@ -7,7 +7,7 @@ import { LOCATION_NOT_FOUND, LOCATION_PATTERN } from '@sandbox/logic/common';
 import { history } from '@sandbox/reducers/router';
 import { store } from '@sandbox/store';
 import { ConnectedRouter } from 'connected-react-router';
-import * as React from 'react';
+import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import { Route, Switch } from 'react-router';
@@ -24,17 +24,32 @@ if (ipc.isElectron()) {
 } 
 
 // fetch filesystem
-store.dispatch(depot.update());
+store.dispatch(depot.rescan());
 // make grammar available for editing
 store.dispatch(parser.setGrammar(defaultSLGrammar()));
+
+const goHome = () => history.push(`/`);
+const LocationNotFound = () => (
+    <div>
+        Location not found. &nbsp; 
+        <a 
+            href='#' 
+            style={ { cursor: 'pointer', textDecoration: 'none' } } 
+            onClick={ goHome }>{ "Ok :(" }
+        </a>
+        <br />
+        <small>{ history.location.pathname }</small>
+    </div>
+);
+
 
 ReactDOM.render(
     <Provider store={store}>
         <ConnectedRouter history={history}>
             <Switch>
                 <Route exact path={LOCATION_NOT_FOUND}>
-                    <Modal open basic size='small'>
-                        <Header icon='archive' content='Location not found :/' />
+                    <Modal open basic>
+                        <Header icon='archive' content={ <LocationNotFound/> } />
                         <Modal.Content>
                         </Modal.Content>
                     </Modal>

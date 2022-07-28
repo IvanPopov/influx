@@ -47,7 +47,7 @@ function downloadURL(data: string, fileName: string) {
 
 // TODO: remove it
 const threeStylesHotfix: React.CSSProperties = {
-    height: 'calc(100vh - 275px - 1em)',
+    height: 'calc(100vh - 245px - 1em)',
     position: 'relative',
     left: '0',
     right: '0',

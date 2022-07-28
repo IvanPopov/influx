@@ -5,6 +5,7 @@ import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DEFAULT_FILENAME } from './common';
 
 const ASSETS_PATH = './assets/fx/tests';
 
@@ -105,6 +106,8 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
                 ? path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH) 
                 : env.Get('influx-sfx-dir');
             await scan(rootPath, root, ['.fx', '.xfx']);
+
+            root.files.push(URI.fromLocalPath(DEFAULT_FILENAME));
         }
         
         dispatch({ type: evt.DEPOT_UPDATE_COMPLETE, payload: { root } });

@@ -9,6 +9,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { nodes as nodesActions } from '@sandbox/actions';
 import { Segment } from 'semantic-ui-react';
+import { PART_TYPE } from './graph/common';
 
 export const styles = {
 };
@@ -42,24 +43,28 @@ class GraphConfigView extends React.Component<IProps> {
     }
 
     render() {
-        const docs = this.props.nodes.docs;
+        const { nodes } = this.props;
+        const { docs, env } = nodes;
+
+        const type = env?.root.scope.findType(PART_TYPE);
+
         return (
             <div>
                 <MonacoEditor
                     ref='monaco'
-                    value={"float3 speed;\nfloat3 pos;\nfloat size;\nfloat timelife;"}
+                    value={ type?.toCode() }
                     width='100%'
                     height='calc(150px)' // todo: fixme
                     options={monacoOptions}
                     onChange={this.onChange}
                 />
                 { docs && 
-                    <Segment secondary>
+                    <Segment size='small' basic color='grey'>
                         { docs }
                     </Segment>
                 }
 
-                <Segment secondary>
+                <Segment size='small' basic color='grey'>
                     Emitter's capacity is { (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() }.
                 </Segment>
             </div>

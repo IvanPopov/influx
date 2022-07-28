@@ -322,7 +322,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                     //     return p2m.asCompletionResult(list, defaultRange);
                     // });
 
-                    console.log('provideCompletionItems', defaultRange, wordUntil);
+                    // console.log('provideCompletionItems', defaultRange, wordUntil);
 
                     return null;
                 },
@@ -523,7 +523,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 ref='monaco'
                 value={ content }
                 width='100%'
-                height='calc(100vh - 67px)' // todo: fixme
+                height='calc(100vh - 63px)' // todo: fixme
 
                 options={ { ...options } }
                 onChange={ this.onChange }

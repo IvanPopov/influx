@@ -8,8 +8,29 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 
 
 import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx, LGraphNodeFactory } from "../GraphNode";
-import { UpdateRoutineHLSL } from '../lib';
 import { PART_TYPE } from "../common";
+import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
+
+interface Plugs {
+    timelife?: boolean;
+    pos?: boolean;
+    alive?: boolean;
+}
+
+function updateCode(env: ISLDocument, plugs: Plugs = {})
+{
+    const type = env.root.scope.findType(PART_TYPE);
+    return (
+`
+bool UpdateRoutine(inout Part part)
+{
+    ${ plugs.timelife ? `part.timelife = part.timelife + elapsedTime;`: `` }
+    ${ plugs.pos ? `part.pos = part.pos + float3(0.f, 1.f, 0.f) * elapsedTime;`: `` }
+    ${type.fields.map((field, i) => `part.${field.name} = $${field.name};`).join("\n")}
+    return ${ !plugs.alive ? `$alive` : plugs.timelife ? 'part.timelife < 1.f' : 'true' };
+}
+`);
+}
 
 function producer(env: ISLDocument): LGraphNodeFactory
 {
@@ -22,36 +43,104 @@ function producer(env: ISLDocument): LGraphNodeFactory
     const desc = "UpdateRoutine";
     const name = "UpdateRoutine";
 
+
     class Node extends LGraphNodeEx implements IGraphASTFinalNode {
         static desc = desc;
         constructor() {
             super(name);
             inputs.forEach(i => this.addInput(i.name, i.type));
-            this.addInput('is alive', 'bool');
+            this.addInput('alive', 'bool');
             this.size = [180, 25 * (inputs.length + 1)];
+            this.updateInputNames();
         }
 
 
+        doesInputExistAndDisconnected(name: string) {
+            const i = type.fieldNames.indexOf(name);
+            return i != -1 && !this.getInputNode(i);
+        }
+
+        checkPlugs(): Plugs
+        {
+            const plugs: Plugs = {};
+            plugs.timelife = this.doesInputExistAndDisconnected('timelife');
+            plugs.pos = this.doesInputExistAndDisconnected('pos');
+            plugs.alive = !this.getInputNode(type.fieldNames.length);
+            return plugs;
+        }
+
         async run(env: ISLDocument): Promise<ISLDocument> {
-            const textDocument = await createTextDocument("://UpdateRoutine.hlsl", UpdateRoutineHLSL);
-            return extendSLDocument(textDocument, env, {
-                '$input0': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(0) as IGraphASTNode || NullNode).run(context, program, this.link(0)) as IExprInstruction;
-                },
-                '$input1': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(1) as IGraphASTNode || NullNode).run(context, program, this.link(1)) as IExprInstruction;
-                },
-                '$input2': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(2) as IGraphASTNode || NullNode).run(context, program, this.link(2)) as IExprInstruction;
-                },
-                '$input3': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(3) as IGraphASTNode || NullNode).run(context, program, this.link(3)) as IExprInstruction;
-                },
-                // isAlive
-                '$input4': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(4) as IGraphASTNode || NullNode).run(context, program, this.link(4)) as IExprInstruction;
+            const plugs = this.checkPlugs();
+            const textDocument = await createTextDocument("://UpdateRoutine.hlsl", updateCode(env, plugs));
+            const node = this;
+            const exprHandler = new Proxy({}, {
+                get: (target, propertyName) => {
+                    // IP: a bit ugly way to skip all execept $name properties.
+                    if (propertyName[0] !== '$') return null;
+                    return (context, program, sourceNode): IExprInstruction => {
+                        if (propertyName == '$alive') {
+                            const i = type.fieldNames.length;
+                            const input = node.getInputNode(i) as IGraphASTNode;
+                            return input.run(context, program, node.link(i)) as IExprInstruction;
+                        }
+
+                        // $name => name
+                        const fieldName = String(propertyName).substring(1);
+                        const i = type.fieldNames.indexOf(fieldName);
+                        const input = node.getInputNode(i) as IGraphASTNode;
+                        
+                        if (input)
+                            return input.run(context, program, node.link(i)) as IExprInstruction;
+
+                        return null;
+                    }
                 }
             });
+            return extendSLDocument(textDocument, env, exprHandler);
+        }
+
+        getTitle(): string { return 'Update routine'; }
+        getDocs(): string { return 'Determines state of particle after each update.'; }
+
+        renameInput(name: string, auto: boolean)
+        {
+            let i = name == 'alive' ? type.fieldNames.length : type.fieldNames.indexOf(name);
+            if (name == 'timelife') 
+            {
+                this.inputs[i].name = auto ? `${name} += dT` : name;
+                return;
+            }
+            if (name == 'alive') 
+            {
+                this.inputs[i].name = auto ? `${name} = timelife < 1` : name;
+                return;
+            }
+            if (name == 'pos') 
+            {
+                this.inputs[i].name = auto ? `${name} += dT * Y` : name;
+                return;
+            }
+            this.inputs[i].name = auto ? `${name} (auto)` : name;
+        }
+
+        updateInputNames()
+        {
+            const plugs = this.checkPlugs();
+            for (let name in plugs)
+            {
+                this.renameInput(name, plugs[name]);
+            }
+        }
+
+        onConnectionsChange(type: number, slotIndex: number, isConnected: boolean, link: LLink, ioSlot: INodeInputSlot | INodeOutputSlot): void {
+            super.onConnectionsChange(type, slotIndex, isConnected, link, ioSlot);
+            this.updateInputNames();
+        }
+
+        onPropertyChanged(name: string, value: number, prevValue: number): boolean {
+            super.onPropertyChanged(name, value, prevValue);
+            this.updateInputNames();
+            return true;
         }
     }
 

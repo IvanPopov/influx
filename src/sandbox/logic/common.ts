@@ -10,8 +10,19 @@ import { matchPath } from 'react-router';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { createLogic } from 'redux-logic';
+import * as URI from '@lib/uri/uri';
 
-const readFile = fname => fetch(fname);
+// hack to resolve unexisting files
+const fetchVirtual = (fname) =>
+{
+    if (fname === URI.fromLocalPath(DEFAULT_FILENAME))
+        return { status: 200, async text() { return `/* created: ${new Date()} */\n\n`; } }
+    return null;
+}
+
+const readFile = fname => {
+    return fetchVirtual(fname) || fetch(fname);
+}
 
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
     type: evt.SOURCE_FILE_REQUEST,
@@ -27,11 +38,11 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
                 dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
                 dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { } });
             } else {
-                const uri = path.parse(action.payload.filename);
+                const ext = path.ext(action.payload.filename);
                 const content = await response.text();
                 dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
 
-                if (uri.ext === 'xfx')    
+                if (ext === 'xfx')    
                 {
                     dispatch({ type: evt.GRAPH_LOADED, payload: { content } });
                 }
@@ -50,10 +61,9 @@ const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payloa
 });
 
 
-
 export const LOCATION_NOT_FOUND = '/NotFound';
 export const LOCATION_PATTERN = '/:view/:fx?/:name?/:pass?/:property?';
-export const DEFAULT_FILENAME = '@new';
+export const DEFAULT_FILENAME = 'unnamed';
 
 export const PLAYGROUND_VIEW = 'playground';
 export const BYTECODE_VIEW = 'bytecode';
@@ -97,10 +107,6 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                 }, 2000);
                 
             history.push(`/${PLAYGROUND_VIEW}/${defaultFilename}`);
-            // history.push(`/${PLAYGROUND_VIEW}/${DEFAULT_FILENAME}/${GRAPH_KEYWORD}`);
-            // //                                                  ^^^^^^^^^^^^^^^^^^^^^
-            // //                                         FIXME: hack to show graph view by default 
-            // //                                         -----------------------------------------
             return done();
         }
 
@@ -115,15 +121,12 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
             const supportedViews = SUPPORTED_VIEWS;
             if (supportedViews.indexOf(view) !== -1) {
                 if (!fx) {
-                    // dispatch(push(`/${view}/${DEFAULT_FILENAME}/`));
                     history.push(`/${view}/${DEFAULT_FILENAME}`);
                     return done();
                 }
                 
                 const fxRequest = Depot.resolveName(depot, fx);
-                if (sourceFile.uri !== fxRequest 
-                    // && name !== GRAPH_KEYWORD
-                    ) {
+                if (sourceFile.uri !== fxRequest) {
                     dispatch(sourceActions.openFile(fxRequest));
                 }
             }
@@ -141,7 +144,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
 
 
 /**
- * Redirect to default source (@new) if requested file was not found.
+ * Redirect to default source (DEFAULT_FILENAME) if requested file was not found.
  */
 const sourceFileNotFoundLogic = createLogic<IStoreState>({
     type: evt.SOURCE_FILE_LOADING_FAILED,
@@ -155,7 +158,6 @@ const sourceFileNotFoundLogic = createLogic<IStoreState>({
         if (match) {
             const { view, fx } = match.params;
             if (!fx) {
-                console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
                 // something went wrong
                 history.push(`/${view}/${DEFAULT_FILENAME}`);
             } else {

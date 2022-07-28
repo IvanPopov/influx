@@ -19,8 +19,16 @@ export const sync = {
 
     // save file using file dialog
     // returns saved file name
-    saveFileDialog(name: string, data: any): string {
-        return ipcRenderer?.sendSync('process-save-file-dialog', { name, data });
+    saveFileDialog(options: any, data: any): string {
+        options = { 
+            title: "Save File",
+            defaultPath: "",
+            buttonLabel: "Save",
+            filters: [],
+            ...options 
+        };
+        return ipcRenderer?.sendSync('process-save-file-dialog', 
+            { data, options });
     },
 
     // readFile(name: string): string {

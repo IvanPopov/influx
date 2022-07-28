@@ -10,12 +10,14 @@ import { IGraphCompile, IGraphLoaded } from '@sandbox/actions/ActionTypes';
 import { IGraphASTFinalNode, LGraphNodeFactory } from '@sandbox/components/graph/GraphNode';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
-import { LiteGraph } from 'litegraph.js';
+import { LGraph, LGraphNode, LiteGraph } from 'litegraph.js';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
-
-import { EffectTemplateHLSL } from '../components/graph/lib';
+import { isDefAndNotNull } from '@lib/util/s3d/type';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
+
+import docs from '@sandbox/components/graph/utils/docs';
+import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 
 // import all factories
 
@@ -35,11 +37,9 @@ import PartPrevious from '@sandbox/components/graph/fx/PartPrevious';
 import PartSpawn from '@sandbox/components/graph/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graph/fx/PartUpdate';
 
-import { isDefAndNotNull } from '@lib/util/s3d/type';
-import docs from '@sandbox/components/graph/utils/docs';
-import { assert } from 'console';
+import GraphTemplateJSON from '@sandbox/components/graph/lib/template.json';
 
-async function loadEnv(): Promise<ISLDocument> {
+async function loadEnv(layout: string): Promise<ISLDocument> {
     // todo: don't reload library every time
     const includeResolver = async (name) => (await fetch(name)).text();
     const libraryPath = "./assets/graph/lib.hlsl";
@@ -47,38 +47,87 @@ async function loadEnv(): Promise<ISLDocument> {
     const lib = await createSLDocument(libText, { includeResolver });
 
     // extract and fill graph node documentation database
+    // todo: move to statics
     docs(libText);
 
-    const partTex = await createTextDocument('://part-structure',
-        `
-    struct ${PART_TYPE} {
-        float3 speed;
-        float3 pos;
-        float size;
-        float timelife;
-    };`
-    );
-
+    const partTex = await createTextDocument('://part-layout', layout);
     return extendSLDocument(partTex, lib, null, { includeResolver })
 }
 
-const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload']>({
+
+//
+// 
+//
+
+interface IJSONPartFx
+{
+    layout: string;
+    graph: ReturnType<LGraph['serialize']>;
+}
+
+interface IJSONFx
+{
+    type: 'part';
+    content: IJSONPartFx;
+}
+
+
+export function packGraphToJSON(state: IStoreState): string
+{
+    const { nodes: { graph, env } } = state;
+    const type = env.root.scope.findType(PART_TYPE);
+    const layout = CodeEmitter.translate(type);
+
+    const content = <IJSONPartFx>{
+        layout,             
+        graph: graph.serialize()
+    }
+
+    const fx: IJSONFx = { type: 'part', content };
+    return JSON.stringify(fx, null, '    ');
+}
+
+
+export function unpackGraphFromJSON(data: string): IJSONPartFx
+{
+    let json: IJSONFx = null;
+    try {
+        json = JSON.parse(data);
+    } catch(e) {
+        console.error('could not parse XFX data');
+        // replace invalid data with dummy graph
+        const type = 'part';
+        const content = GraphTemplateJSON as any;
+        json = { type, content };
+    }
+    console.assert(json.type === 'part');
+    return json.content;
+}
+
+//
+// 
+//
+
+const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSONPartFx>({
     type: [evt.GRAPH_LOADED],
     latest: true,
     debounce: 500,
 
     async transform({ getState, action }, next) {
-        action.payload.env = await loadEnv();
-        next({ ...action });
+        const unpacked = unpackGraphFromJSON(action.payload.content);
+        action.payload.env = await loadEnv(unpacked.layout);
+        // pass unpacked json as meta so as not to double the unpacking
+        next({ ...action, meta: unpacked });
     },
 
     async process({ getState, action, action$ }, dispatch, done) {
+
         // const uri = getState().sourceFile.uri;
         const graph = getState().nodes.graph;
-        const content = action.payload.content;
+        const { graph: content } = action.meta;
         const env = action.payload.env;
 
-        assert(isDefAndNotNull(env));
+        console.assert(isDefAndNotNull(env));
 
         graph.clear();
         // todo: unregister previous nodes
@@ -102,16 +151,19 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload']>({
                 PartUpdate
             ];
 
+            // extend node list with all available node types
             producers.forEach(prod => { nodeList = { ...nodeList, ...prod(env) } });
         }
 
+        LiteGraph.clearRegisteredTypes();
+
         // register all available nodes
-        Object.keys(nodeList).forEach(link =>
+        Object.keys(nodeList).forEach(link => 
             LiteGraph.registerNodeType(link, nodeList[link]));
 
         // load serialized graph
         // todo: validate that all serialized nodes are available
-        graph.configure(JSON.parse(content));
+        graph.configure(content);
 
         dispatch(nodes.recompile());
 
@@ -131,6 +183,44 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload']>({
 });
 
 
+function makeFxTemplate(env: ISLDocument)
+{
+    return (
+`/* Example of default shader input. */
+// Warning: Do not change layout of this structure!
+struct DefaultShaderInput {
+    //float3 pos : POSITION;
+    float3 pos;
+    float4 color : COLOR0;
+    float  size : SIZE;
+};
+
+
+void PrerenderRoutine(inout Part part, out DefaultShaderInput input)
+{
+    input.pos.xyz = part.pos.xyz;
+    input.size = 0.1f;
+    input.color = float4(1.f, 0.f, 1.f, 1.f);
+}
+
+
+partFx example {
+    Capacity = 1000;
+    SpawnRoutine = compile SpawnRoutine();
+    InitRoutine = compile InitRoutine();
+    UpdateRoutine = compile UpdateRoutine();
+
+    pass P0 {
+        Sorting = FALSE;
+        PrerenderRoutine = compile PrerenderRoutine();
+        Geometry = Billboard;
+    }
+}
+
+`);
+}
+
+
 const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
     type: [evt.GRAPH_COMPILE],
     latest: true,
@@ -138,20 +228,20 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
 
     async process({ getState, action }, dispatch, done) {
         const state = getState();
-        const nodes = state.nodes;
-        const graph = nodes.graph;
+        const { nodes } = state;
+        const { graph, env } = nodes;
         const uri = state.sourceFile.uri;
 
-        const spawn = graph.findNodeByTitle("SpawnRoutine") as IGraphASTFinalNode;
-        const init = graph.findNodeByTitle("InitRoutine") as IGraphASTFinalNode;
-        const update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
+        let spawn = graph.findNodeByTitle("SpawnRoutine") as IGraphASTFinalNode;
+        let init = graph.findNodeByTitle("InitRoutine") as IGraphASTFinalNode;
+        let update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
 
-        let doc = await extendSLDocument(null, nodes.env);
+        let doc = await extendSLDocument(null, env);
         doc = await spawn.run(doc);
         doc = await init.run(doc);
         doc = await update.run(doc);
 
-        doc = await extendFXSLDocument(await createTextDocument("://fx-template", EffectTemplateHLSL), doc);
+        doc = await extendFXSLDocument(await createTextDocument("://fx-template", makeFxTemplate(env)), doc);
 
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);

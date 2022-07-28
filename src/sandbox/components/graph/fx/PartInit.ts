@@ -1,17 +1,45 @@
 import { ComplexTypeInstruction } from "@lib/fx/analisys/instructions/ComplexTypeInstruction";
 import { extendSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { IExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { LiteGraph } from "litegraph.js";
+import { LLink, INodeInputSlot, INodeOutputSlot } from "litegraph.js";
 
 
 import { PART_TYPE } from "../common";
 import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx, LGraphNodeFactory } from "../GraphNode";
-import { InitRoutineHLSL } from '../lib';
 
-function producer(env: ISLDocument): LGraphNodeFactory
+interface Plugs
 {
+    [i :string]: boolean;
+}
+
+function plugByType(type: IVariableTypeInstruction): string {
+    switch (type.name)
+    {
+        case 'float': return '0.f';
+        case 'float2': return 'float2(0.f, 0.f)';
+        case 'float3': return 'float3(0.f, 0.f, 0.f)';
+        case 'float4': return 'float4(0.f, 0.f, 0.f, 0.f)';
+        case 'bool': return 'false';
+        case 'int': return '0';
+        case 'uint': return '0u';
+    }
+    return '0';
+}
+
+function initCode(env: ISLDocument, plugs: Plugs = {}) {
+    const type = env.root.scope.findType(PART_TYPE);
+    return (
+        `
+void InitRoutine(out Part part, int partId)
+{
+    ${type.fields.map(({ name, type }, i) => `part.${name} = ${ plugs[name] ? plugByType(type): `$${name}` };`).join("\n")}
+}
+`);
+}
+
+function producer(env: ISLDocument): LGraphNodeFactory {
     const type = env.root.scope.types[PART_TYPE] as ComplexTypeInstruction;
     const inputs = type.fields.map((decl: IVariableDeclInstruction) => ({ name: decl.name, type: decl.type.name }));
 
@@ -26,30 +54,71 @@ function producer(env: ISLDocument): LGraphNodeFactory
             this.size = [180, 25 * inputs.length];
         }
 
+        doesInputExistAndDisconnected(name: string) {
+            const i = type.fieldNames.indexOf(name);
+            return i != -1 && !this.getInputNode(i);
+        }
+
+        checkPlugs(): Plugs
+        {
+            const plugs: Plugs = {};
+            inputs.forEach(i => plugs[i.name] = this.doesInputExistAndDisconnected(i.name));
+            return plugs;
+        }
+
         async run(document): Promise<ISLDocument> {
-            const textDocument = await createTextDocument("://InitRoutine.hlsl", InitRoutineHLSL);
+            const plugs = this.checkPlugs();
+            const textDocument = await createTextDocument("://InitRoutine.hlsl", initCode(env, plugs));
+            const node = this;
+            const exprHandler = new Proxy({}, {
+                get: (target, propertyName) => {
+                    // IP: a bit ugly way to skip all execept $name properties.
+                    if (propertyName[0] !== '$') return null;
+                    return (context, program, sourceNode): IExprInstruction => {
+                        // $name => name
+                        const fieldName = String(propertyName).substring(1);
+                        const field = type.getField(fieldName);
 
-            // are all inputs connceted?
-            if (this.inputs.filter(i => i.link).length !== this.inputs.length)
-            {
-                this.emitError(`all initials must be presented`);
-                return null;
-            }
-
-            return extendSLDocument(textDocument, document, {
-                '$input0': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(0) as IGraphASTNode).run(context, program, this.link(0)) as IExprInstruction;
-                },
-                '$input1': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(1) as IGraphASTNode).run(context, program, this.link(1)) as IExprInstruction;
-                },
-                '$input2': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(2) as IGraphASTNode).run(context, program, this.link(2)) as IExprInstruction;
-                },
-                '$input3': (context, program, sourceNode): IExprInstruction => {
-                    return (this.getInputNode(3) as IGraphASTNode).run(context, program, this.link(3)) as IExprInstruction;
+                        const i = type.fieldNames.indexOf(fieldName);
+                        const input = node.getInputNode(i) as IGraphASTNode;
+                        
+                        if (input)
+                            return input.run(context, program, node.link(i)) as IExprInstruction;
+                        return null;
+                    }
                 }
             });
+
+            return extendSLDocument(textDocument, document, exprHandler);
+        }
+
+        getTitle(): string { return 'Init routine'; }
+        getDocs(): string { return 'Determines initial state of each particle.'; }
+
+        renameInput(name: string, auto: boolean)
+        {
+            let i = type.fieldNames.indexOf(name);
+            this.inputs[i].name = auto ? `${name} = ${plugByType(type.fields[i].type)}` : name;
+        }
+
+        updateInputNames()
+        {
+            const plugs = this.checkPlugs();
+            for (let name in plugs)
+            {
+                this.renameInput(name, plugs[name]);
+            }
+        }
+
+        onConnectionsChange(type: number, slotIndex: number, isConnected: boolean, link: LLink, ioSlot: INodeInputSlot | INodeOutputSlot): void {
+            super.onConnectionsChange(type, slotIndex, isConnected, link, ioSlot);
+            this.updateInputNames();
+        }
+
+        onPropertyChanged(name: string, value: number, prevValue: number): boolean {
+            super.onPropertyChanged(name, value, prevValue);
+            this.updateInputNames();
+            return true;
         }
     }
 

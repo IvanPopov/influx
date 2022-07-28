@@ -1,14 +1,20 @@
-import { parseUintLiteral } from "@lib/fx/analisys/Analyzer";
-import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
+import { isNumber } from "@lib/common";
 import { extendSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
-
-
 import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx, LGraphNodeFactory } from "../GraphNode";
-import { SpawnRoutineHLSL } from '../lib';
+
+interface Plugs
+{
+    count?: number;
+}
+
+function spawnCode(env: ISLDocument, plugs: Plugs = {})
+{
+    return(`int SpawnRoutine() { return ${ isNumber(plugs.count) ? String(plugs.count) : '$count' }; }`);
+}
 
 function producer(env: ISLDocument): LGraphNodeFactory
 {
@@ -33,20 +39,22 @@ function producer(env: ISLDocument): LGraphNodeFactory
             const inputInfo = this.getInputInfo(0);
             const link = this.graph.links[inputInfo.link];
 
-            // analyse inside of virtual enviroment for subsequent mixing with the full context
-            let textDocument = await createTextDocument("://SpawnRoutine.hlsl", SpawnRoutineHLSL);
+            const plugs: Plugs = {};
+
+            if (!inputNode) {
+                plugs.count = +this.properties[propName].toFixed(0);
+            }
+
+            let textDocument = await createTextDocument("://SpawnRoutine.hlsl", spawnCode(env, plugs));
             return extendSLDocument(textDocument, env, {
-                '$input0': (context, program, sourceNode): IExprInstruction => {
-                    const scope = program.currentScope;
-                    if (!inputNode)
-                    {
-                        const { base, signed, heximal, exp } = parseUintLiteral(this.properties[propName].toFixed(0));
-                        return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
-                    }
+                '$count': (context, program, sourceNode): IExprInstruction => {
                     return (inputNode as IGraphASTNode).run(context, program, link.origin_slot) as IExprInstruction;
                 }
             });
         }
+
+        getTitle(): string { return 'Spawn routine'; }
+        getDocs(): string { return 'Determines number of particles spawnd per second.'; }
 
         updateInputNames()
         {

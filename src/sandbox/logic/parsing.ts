@@ -137,6 +137,12 @@ const updateParserLogic = createLogic<IStoreState>({
     }
 });
 
+const dropSourceFileLogic = createLogic<IStoreState>({
+    type: evt.SOURCE_FILE_DROP_STATE,
+    async process({ getState, action }) {
+        localStorage.removeItem(LOCAL_SESSION_ID);
+    }
+});
 
 const updateSourceContentLogic = createLogic<IStoreState>({
     type: [evt.SOURCE_CODE_MODIFED, evt.SOURCE_FILE_LOADED],
@@ -260,7 +266,8 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 
 async function processRaw(state: IStoreState, dispatch): Promise<void> {
     const file = getFileState(state);
-    const document = await createPPDocument(await createTextDocument(file.uri, file.content));
+    const includeResolver = Depot.makeResolver(state.depot);
+    const document = await createPPDocument(await createTextDocument(file.uri, file.content), { includeResolver });
 
     dispatch({ type: evt.SOURCE_CODE_PREPROCESSING_COMPLETE, payload: { document } });
 }
@@ -371,6 +378,7 @@ const debuggerAutocompileLogic = createLogic<IStoreState>({
 
 
 export default [
+    dropSourceFileLogic,
     updateParserLogic,
     updateSourceContentLogic,
     parsingCompleteLogic,
