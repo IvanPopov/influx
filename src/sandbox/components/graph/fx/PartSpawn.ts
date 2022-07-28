@@ -16,7 +16,7 @@ function spawnCode(env: ISLDocument, plugs: Plugs = {})
     return(`int SpawnRoutine() { return ${ isNumber(plugs.count) ? String(plugs.count) : '$count' }; }`);
 }
 
-function producer(env: ISLDocument): LGraphNodeFactory
+function producer(env: () => ISLDocument): LGraphNodeFactory
 {
     const desc = "SpawnRoutine";
     const name = "SpawnRoutine";

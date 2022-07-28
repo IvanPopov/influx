@@ -130,13 +130,12 @@ export const nodes = {
         return { type: evt.GRAPH_LOADED, payload: { content } };
     },
 
-    // update per particle data
-    spicifyFxPartStructure(content: string) {
-        return { type: evt.GRAPH_PART_STRUCTURE_SPECIFIED, payload: { content } };
-    },
-
     provideNodeDocs(docs: string) {
         return { type: evt.GRAPH_NODE_DOCS_PROVIDED, payload: { docs } };
+    },
+
+    changeLayout(layout: string) {
+        return { type: evt.GRAPH_CHANGE_LAYOUT, payload: { layout } };
     }
 }
 

@@ -14,11 +14,11 @@ import { PART_LOCAL_NAME, PART_TYPE } from "../common";
 import { LGraphNodeAST, LGraphNodeFactory } from "../GraphNode";
 
 
-function producer(env: ISLDocument): LGraphNodeFactory
+function producer(env: () => ISLDocument): LGraphNodeFactory
 {
     const nodes = <LGraphNodeFactory>{};
 
-    const type = env.root.scope.types[PART_TYPE] as ComplexTypeInstruction;
+    const type = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
 
     const name = `${PART_LOCAL_NAME}`;
     const desc = `${name} (previous value).`;

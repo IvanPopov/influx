@@ -8,10 +8,10 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 
 import { LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
-    const vars = env.root.scope.variables;
+    const vars = env().root.scope.variables;
     for (let name in vars) {
         let v = vars[name];
         if (v.type.isUniform()) {

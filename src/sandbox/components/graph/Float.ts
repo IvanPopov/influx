@@ -8,7 +8,7 @@ import { IWidget } from "litegraph.js";
 
 import { LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     class Float extends LGraphNodeAST {
         static desc = "Float";
 

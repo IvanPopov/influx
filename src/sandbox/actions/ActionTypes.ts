@@ -100,8 +100,10 @@ export type IGraphModified = IAction<typeof evt.GRAPH_MODIFIED, {}>;
 export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 // emits on new serialized graph content has been specified
 export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string, env?: ISLDocument }>;
+export type IGraphChangeLayout = IAction<typeof evt.GRAPH_CHANGE_LAYOUT, { layout: string, env?: ISLDocument }>;
 
-export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded | IGraphModified;
+export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded |
+    IGraphModified | IGraphChangeLayout;
 
 //
 //

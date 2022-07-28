@@ -615,6 +615,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'cross':
                 assert(fdef.params.length === 2);
                 return intrinsics.cross(dest, args[0], args[1]);
+            case 'mod':
+                // TODO: separate INT/FLOAT intrisics
+                if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
+                    assert(fdef.params.length === 2);
+                    return intrinsics.modf(dest, args[0], args[1]);
+                }
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
+                // handle INT/UINT params as int intrinsic
+                return intrinsics.modi(dest, args[0], args[1]);
 
             case 'InterlockedAdd':
                 {

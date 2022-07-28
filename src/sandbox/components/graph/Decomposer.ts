@@ -5,7 +5,7 @@ import { PostfixPointInstruction } from "@lib/fx/analisys/instructions/PostfixPo
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { extendSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { EInstructionTypes, IExprInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, ITypeInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -15,7 +15,7 @@ import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js"
 import { PART_LOCAL_NAME, PART_TYPE } from "./common";
 import { IGraphASTNode, LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 
-function producer(env: ISLDocument): LGraphNodeFactory
+function producer(env: () => ISLDocument): LGraphNodeFactory
 {
     class Node extends LGraphNodeAST {
         static desc = 'Decomposer';
@@ -50,10 +50,10 @@ function producer(env: ISLDocument): LGraphNodeFactory
                 const source = `auto anonymous(${PART_TYPE} ${PART_LOCAL_NAME}) { return ($complexExpr); }`;
                 const textDocument = await createTextDocument(`://decompose-node`, source);
 
-                let type: IVariableTypeInstruction = null;
+                let type: ITypeInstruction = null;
                 
                 // quick analisys inside of virtual enviroment in order to compute on fly expression type
-                let documentEx = await extendSLDocument(textDocument, env, {
+                let documentEx = await extendSLDocument(textDocument, env(), {
                     $complexExpr: (context, program, sourceNode): IExprInstruction => {
                         const expr = (outputNode as LGraphNodeAST).evaluate(context, program, outputIndex) as IExprInstruction;
                         console.log(`(${expr.toCode()})`);
@@ -69,6 +69,13 @@ function producer(env: ISLDocument): LGraphNodeFactory
                 if (type.isComplex()) {
                     type.fields.forEach(field => self.addOutput(field.name, field.type.name));
                     return true;
+                }
+
+                // IP: probably not really valid hack to handle variable decl type
+                if (!type.isNotBaseArray() && 
+                type.baseType.instructionType === EInstructionTypes.k_SystemType) {
+
+                    type = type.baseType;
                 }
 
                 // corner case for system types    

@@ -8,8 +8,9 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { nodes as nodesActions } from '@sandbox/actions';
-import { Segment } from 'semantic-ui-react';
+import { Button, Segment } from 'semantic-ui-react';
 import { PART_TYPE } from './graph/common';
+import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 
 export const styles = {
 };
@@ -39,7 +40,17 @@ class GraphConfigView extends React.Component<IProps> {
     @autobind
     async onChange(content, e) {
         // this.validate(content);
-        this.props.actions.spicifyFxPartStructure(content);
+    }
+
+    getEditor(): monaco.editor.ICodeEditor {
+        // don't know better way :/
+        return (this.refs.monaco as any).editor;
+    }
+
+    @autobind
+    applyLayout() {
+        const layout = this.getEditor().getValue();
+        this.props.actions.changeLayout(layout);
     }
 
     render() {
@@ -52,12 +63,13 @@ class GraphConfigView extends React.Component<IProps> {
             <div>
                 <MonacoEditor
                     ref='monaco'
-                    value={ type?.toCode() }
+                    value={ CodeEmitter.translate(type) }
                     width='100%'
                     height='calc(150px)' // todo: fixme
                     options={monacoOptions}
                     onChange={this.onChange}
                 />
+                <Button onClick={ this.applyLayout }>Apply</Button>
                 { docs && 
                     <Segment size='small' basic color='grey'>
                         { docs }

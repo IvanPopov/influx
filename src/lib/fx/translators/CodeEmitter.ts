@@ -396,7 +396,16 @@ export class CodeEmitter extends BaseEmitter {
 
 
     emitPostfixPoint(pfxp: IPostfixPointInstruction) {
-        this.emitExpression(pfxp.element);
+        // todo: skip brackets wherever possible to avoid exprs like (a).x;
+        if (pfxp.element.instructionType === EInstructionTypes.k_IdExpr ||
+            pfxp.element.instructionType === EInstructionTypes.k_PostfixPointExpr) {
+            this.emitExpression(pfxp.element);
+        } else {
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitExpression(pfxp.element);
+            this.emitChar(')');
+        }
         this.emitChar('.');
         this.emitChar(pfxp.postfix.name);
     }

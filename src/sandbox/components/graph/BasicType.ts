@@ -12,7 +12,7 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
 import { IGraphASTNode, LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
     [

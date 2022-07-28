@@ -1,5 +1,5 @@
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IGraphActions, IGraphCompile, IGraphLoaded, IGraphNodeDocsProvided, ISourceFileActions, ISourceFileDropState } from '@sandbox/actions/ActionTypes';
+import { IGraphActions, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphNodeDocsProvided, ISourceFileActions, ISourceFileDropState } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { INodePipeline } from '@sandbox/store/IStoreState';
 import { LGraph } from 'litegraph.js';
@@ -27,6 +27,10 @@ export default handleActions<INodePipeline, IGraphActions | ISourceFileActions>(
         ({ ...state, env: action.payload.env }),
 
     [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
-        ({ ...state, docs: action.payload.docs })
+        ({ ...state, docs: action.payload.docs }),
+    
+    [evt.GRAPH_CHANGE_LAYOUT]: (state, action: IGraphChangeLayout) =>
+    ({ ...state, env: action.payload.env })
+    
 }, initialState);
 

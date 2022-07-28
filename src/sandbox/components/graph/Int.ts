@@ -13,7 +13,7 @@ import { LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 //  processNodeWidgets handles clicks and events
 //  drawNodeWidgets handles drawning
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
     class Int extends LGraphNodeAST {
         static desc = "Int";

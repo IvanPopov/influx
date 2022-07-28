@@ -39,8 +39,8 @@ void InitRoutine(out Part part, int partId)
 `);
 }
 
-function producer(env: ISLDocument): LGraphNodeFactory {
-    const type = env.root.scope.types[PART_TYPE] as ComplexTypeInstruction;
+function producer(env: () => ISLDocument): LGraphNodeFactory {
+    const type = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
     const inputs = type.fields.map((decl: IVariableDeclInstruction) => ({ name: decl.name, type: decl.type.name }));
 
     const desc = "InitRoutine";
@@ -68,7 +68,7 @@ function producer(env: ISLDocument): LGraphNodeFactory {
 
         async run(document): Promise<ISLDocument> {
             const plugs = this.checkPlugs();
-            const textDocument = await createTextDocument("://InitRoutine.hlsl", initCode(env, plugs));
+            const textDocument = await createTextDocument("://InitRoutine.hlsl", initCode(env(), plugs));
             const node = this;
             const exprHandler = new Proxy({}, {
                 get: (target, propertyName) => {
@@ -98,7 +98,7 @@ function producer(env: ISLDocument): LGraphNodeFactory {
         renameInput(name: string, auto: boolean)
         {
             let i = type.fieldNames.indexOf(name);
-            this.inputs[i].name = auto ? `${name} = ${plugByType(type.fields[i].type)}` : name;
+            this.inputs[i].name = auto ? `${name} = ${0}` : name; // plugByType(type.fields[i].type)
         }
 
         updateInputNames()

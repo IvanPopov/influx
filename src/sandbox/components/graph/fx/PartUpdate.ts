@@ -15,6 +15,7 @@ interface Plugs {
     timelife?: boolean;
     pos?: boolean;
     alive?: boolean;
+    size?: boolean;
 }
 
 function updateCode(env: ISLDocument, plugs: Plugs = {})
@@ -26,19 +27,20 @@ bool UpdateRoutine(inout Part part)
 {
     ${ plugs.timelife ? `part.timelife = part.timelife + elapsedTime;`: `` }
     ${ plugs.pos ? `part.pos = part.pos + float3(0.f, 1.f, 0.f) * elapsedTime;`: `` }
+    ${ plugs.size ? `part.size = 0.1;`: `` }
     ${type.fields.map((field, i) => `part.${field.name} = $${field.name};`).join("\n")}
     return ${ !plugs.alive ? `$alive` : plugs.timelife ? 'part.timelife < 1.f' : 'true' };
 }
 `);
 }
 
-function producer(env: ISLDocument): LGraphNodeFactory
+function producer(env: () => ISLDocument): LGraphNodeFactory
 {
     const NullNode: any = {
         run: (context: Context, program: ProgramScope, slot: number): IExprInstruction => null
     };
 
-    const type = env.root.scope.types[PART_TYPE] as ComplexTypeInstruction;
+    const type = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
     const inputs = type.fields.map((decl: IVariableDeclInstruction) => ({ name: decl.name, type: decl.type.name }));
     const desc = "UpdateRoutine";
     const name = "UpdateRoutine";
@@ -65,6 +67,7 @@ function producer(env: ISLDocument): LGraphNodeFactory
             const plugs: Plugs = {};
             plugs.timelife = this.doesInputExistAndDisconnected('timelife');
             plugs.pos = this.doesInputExistAndDisconnected('pos');
+            plugs.size = this.doesInputExistAndDisconnected('size');
             plugs.alive = !this.getInputNode(type.fieldNames.length);
             return plugs;
         }
@@ -102,25 +105,28 @@ function producer(env: ISLDocument): LGraphNodeFactory
         getTitle(): string { return 'Update routine'; }
         getDocs(): string { return 'Determines state of particle after each update.'; }
 
+        // must be aligned with updateCode() logic.
         renameInput(name: string, auto: boolean)
         {
             let i = name == 'alive' ? type.fieldNames.length : type.fieldNames.indexOf(name);
-            if (name == 'timelife') 
-            {
-                this.inputs[i].name = auto ? `${name} += dT` : name;
-                return;
-            }
-            if (name == 'alive') 
-            {
-                this.inputs[i].name = auto ? `${name} = timelife < 1` : name;
-                return;
-            }
-            if (name == 'pos') 
-            {
-                this.inputs[i].name = auto ? `${name} += dT * Y` : name;
-                return;
-            }
-            this.inputs[i].name = auto ? `${name} (auto)` : name;
+            if (i != -1)
+                switch (name)
+                {
+                    case 'timelife':
+                        this.inputs[i].name = auto ? `${name} += dt` : name;
+                        return;
+                    case 'alive':
+                        this.inputs[i].name = auto ? `${name} = timelife < 1` : name;
+                        return;
+                    case 'pos':
+                        this.inputs[i].name = auto ? `${name} += dt * up` : name;
+                        return;
+                    case 'size':
+                        this.inputs[i].name = auto ? `${name} = 0.1` : name;
+                        return;
+                    default:
+                        this.inputs[i].name = auto ? `${name} (unset)` : name;
+                }
         }
 
         updateInputNames()

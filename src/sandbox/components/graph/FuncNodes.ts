@@ -16,7 +16,7 @@ interface INodeDesc {
     outputs: { name: string, type: string }[];
 }
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
     function loadLibrary(slDocument: ISLDocument) {
@@ -72,7 +72,7 @@ function producer(env: ISLDocument): LGraphNodeFactory {
         nodes[`functions/${node.desc}`] = Node;
     }
 
-    loadLibrary(env).forEach(node => autogenNode(node));
+    loadLibrary(env()).forEach(node => autogenNode(node));
     return nodes;
 }
 

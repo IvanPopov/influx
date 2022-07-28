@@ -8,7 +8,7 @@ import { IParseNode } from "@lib/idl/parser/IParser";
 
 import { IGraphASTNode, LGraphNodeAST, LGraphNodeFactory } from "./GraphNode";
 
-function producer(env: ISLDocument): LGraphNodeFactory {
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
     const types = ['float', 'int', 'uint', 'float3'];
