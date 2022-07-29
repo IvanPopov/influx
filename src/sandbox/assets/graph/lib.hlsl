@@ -1,3 +1,5 @@
 #include "externals.hlsl"
+#include "common.hlsl"
 #include "random.hlsl"
 #include "lwi.hlsl"
+#include "defaultMat.hlsl"

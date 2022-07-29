@@ -7,15 +7,16 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { nodes, sourceCode } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IGraphChangeLayout, IGraphCompile, IGraphLoaded } from '@sandbox/actions/ActionTypes';
-import { IGraphASTFinalNode, LGraphNodeFactory } from '@sandbox/components/graph/GraphNode';
+import { IGraphASTFinalNode, IGraphASTMaterial, LGraphNodeFactory } from '@sandbox/components/graph/GraphNode';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
-import { LGraph, LGraphNode, LiteGraph } from 'litegraph.js';
+import { LGraph, LiteGraph } from 'litegraph.js';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 import { isDefAndNotNull } from '@lib/util/s3d/type';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
 import { type as typeHelper } from '@lib/fx/analisys/helpers';
+import { ITypeInstruction } from '@lib/idl/IInstruction';
 
 import docs from '@sandbox/components/graph/utils/docs';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
@@ -37,10 +38,12 @@ import PartInit from '@sandbox/components/graph/fx/PartInit';
 import PartPrevious from '@sandbox/components/graph/fx/PartPrevious';
 import PartSpawn from '@sandbox/components/graph/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graph/fx/PartUpdate';
+import DefaultMaterial from '@sandbox/components/graph/fx/DefaultMaterial';
+import LwiMaterial from '@sandbox/components/graph/fx/LwiMaterial';
 
 import GraphTemplateJSON from '@sandbox/components/graph/lib/template.json';
-import { ITypeInstruction } from '@lib/idl/IInstruction';
-import { isArray } from '@lib/common';
+import { getEnv } from '@sandbox/reducers/nodes';
+
 
 async function loadEnv(layout: string): Promise<ISLDocument> {
     // todo: don't reload library every time
@@ -94,10 +97,7 @@ export function unpackGraphFromJSON(data: string): IJSONPartFx {
         json = JSON.parse(data);
     } catch (e) {
         console.error('could not parse XFX data');
-        // replace invalid data with dummy graph
-        const type = 'part';
-        const content = GraphTemplateJSON as any;
-        json = { type, content };
+        json = (GraphTemplateJSON as any);
     }
     console.assert(json.type === 'part');
     return json.content;
@@ -140,7 +140,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
 
         // reload graph infrastructure
         // produce nodes
-        let nodeList = produceNodes(() => getState().nodes.env, 
+        let nodeList = produceNodes(() => getEnv(getState()), 
             FuncNodes,
             Uniforms,
             Int,
@@ -152,7 +152,10 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             PartPrevious,
             PartSpawn,
             PartInit,
-            PartUpdate);
+            PartUpdate,
+            DefaultMaterial,
+            LwiMaterial
+        );
 
         LiteGraph.clearRegisteredTypes();
 
@@ -181,38 +184,30 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
     }
 });
 
-
-function makeFxTemplate(env: ISLDocument) {
-    return (
-        `/* Example of default shader input. */
-// Warning: Do not change layout of this structure!
-struct DefaultShaderInput {
-    //float3 pos : POSITION;
-    float3 pos;
-    float4 color : COLOR0;
-    float  size : SIZE;
-};
-
-
-void PrerenderRoutine(inout Part part, out DefaultShaderInput input)
-{
-    input.pos.xyz = part.pos.xyz;
-    input.size = 0.1f;
-    input.color = float4(1.f, 0.f, 1.f, 1.f);
+interface Plug {
+    uid: number;
+    sorting: boolean;
+    geometry: string;
 }
 
+function makeFxTemplate(env: ISLDocument, plugs: Plug[]) {
 
+    let passes = plugs.map((plug, i) => 
+`   pass P${i} {
+        Sorting = ${plug.sorting};
+        PrerenderRoutine = compile PrerenderRoutine${plug.uid}();
+        Geometry = "${plug.geometry.toLowerCase()}";
+    }`).join("\n\n");
+
+    return (
+`
 partFx example {
-    Capacity = 1000;
+    Capacity = 4096;
     SpawnRoutine = compile SpawnRoutine();
     InitRoutine = compile InitRoutine();
     UpdateRoutine = compile UpdateRoutine();
 
-    pass P0 {
-        Sorting = FALSE;
-        PrerenderRoutine = compile PrerenderRoutine();
-        Geometry = Billboard;
-    }
+${passes}
 }
 
 `);
@@ -233,13 +228,24 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         let spawn = graph.findNodeByTitle("SpawnRoutine") as IGraphASTFinalNode;
         let init = graph.findNodeByTitle("InitRoutine") as IGraphASTFinalNode;
         let update = graph.findNodeByTitle("UpdateRoutine") as IGraphASTFinalNode;
+        let prerender: IGraphASTMaterial[] = [];
+        prerender = [ ...prerender, ...graph.findNodesByTitle("DefaultMaterial") as IGraphASTMaterial[] ];
+        prerender = [ ...prerender, ...graph.findNodesByTitle("LwiMaterial") as IGraphASTMaterial[] ];
 
         let doc = await extendSLDocument(null, env);
         doc = await spawn.run(doc);
         doc = await init.run(doc);
         doc = await update.run(doc);
 
-        doc = await extendFXSLDocument(await createTextDocument("://fx-template", makeFxTemplate(env)), doc);
+        let plugs: Plug[] = [];
+        for (let i in prerender) {
+            let { uid, sorting, geometry } = prerender[i];
+            doc = await prerender[i].run(doc);
+            plugs.push({ uid, sorting, geometry });
+        }
+        
+        doc = await extendFXSLDocument(await createTextDocument("://fx-template", 
+            makeFxTemplate(env, plugs)), doc);
 
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);

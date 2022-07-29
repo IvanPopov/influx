@@ -1,7 +1,8 @@
+import { ISLDocument } from '@lib/idl/ISLDocument';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IGraphActions, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphNodeDocsProvided, ISourceFileActions, ISourceFileDropState } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
-import { INodePipeline } from '@sandbox/store/IStoreState';
+import IStoreState, { INodePipeline } from '@sandbox/store/IStoreState';
 import { LGraph } from 'litegraph.js';
 
 const initialState: INodePipeline = {
@@ -31,6 +32,7 @@ export default handleActions<INodePipeline, IGraphActions | ISourceFileActions>(
     
     [evt.GRAPH_CHANGE_LAYOUT]: (state, action: IGraphChangeLayout) =>
     ({ ...state, env: action.payload.env })
-    
+
 }, initialState);
 
+export const getEnv = (state: IStoreState): ISLDocument => state.nodes.env;

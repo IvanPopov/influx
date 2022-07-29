@@ -20,6 +20,13 @@ export interface IGraphASTFinalNode extends LGraphNode
     run(document: ISLDocument): Promise<ISLDocument>;
 }
 
+export interface IGraphASTMaterial extends IGraphASTFinalNode
+{
+    get uid(): number;
+    get sorting(): boolean;
+    get geometry(): string;
+}
+
 export interface INodeDocs
 {
     name: string;
