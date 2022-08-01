@@ -10,7 +10,6 @@ export type LGraphNodeFactory = IMap<new () => LGraphNode>;
 
 export interface IGraphASTNode extends LGraphNode
 {
-    // evaluate(context: Context, program: ProgramScope, slot: number): IInstruction;
     run(context: Context, program: ProgramScope, slot: number): IInstruction;
 }
 
@@ -22,9 +21,15 @@ export interface IGraphASTFinalNode extends LGraphNode
 
 export interface IGraphASTMaterial extends IGraphASTFinalNode
 {
-    get uid(): number;
-    get sorting(): boolean;
-    get geometry(): string;
+    get uid(): number;          // name identifier for PrerenderRoutine<UID>()
+    get sorting(): boolean;     // pass options
+    get geometry(): string;     // pass options
+}
+
+export interface IGraphASTAction extends LGraphNode
+{
+    // extend document with dependent routines
+    injectDependencies(document: ISLDocument): Promise<ISLDocument>;
 }
 
 export interface INodeDocs

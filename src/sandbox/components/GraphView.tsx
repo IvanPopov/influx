@@ -13,6 +13,14 @@ import { RouteComponentProps, withRouter } from 'react-router';
 
 import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 
+// IP: same as `static title_mode = LiteGraph.AUTOHIDE_TITLE`;
+// var title_mode = node.constructor.title_mode;
+// (LGraphNode as any).title_mode = LiteGraph.AUTOHIDE_TITLE;
+// (LGraphNode as any).title_mode = LiteGraph.TRANSPARENT_TITLE;
+// (LGraphNode as any).title_mode = LiteGraph.NO_TITLE;
+
+// var shape = node._shape || node.constructor.shape || LiteGraph.ROUND_SHAPE;
+// (LGraphNode as any).shape = LiteGraph.BOX_SHAPE;
 
 // LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
@@ -98,7 +106,7 @@ class GraphView extends React.Component<IGraphViewProps> {
     setupCanvas() {
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
         this.canvas.show_info = true;
-        // this.canvas.use_gradients = true;
+        this.canvas.use_gradients = true;
         this.canvas.allow_reconnect_links = true;
         this.canvas.links_render_mode = LiteGraph.LINEAR_LINK;
         this.canvas.round_radius = 4;

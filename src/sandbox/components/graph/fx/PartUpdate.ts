@@ -9,7 +9,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 
 import { IGraphASTFinalNode, IGraphASTNode, LGraphNodeEx, LGraphNodeFactory } from "../GraphNode";
 import { PART_TYPE } from "../common";
-import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
+import { INodeInputSlot, INodeOutputSlot, LGraphNode, LiteGraph, LLink } from "litegraph.js";
 
 interface Plugs {
     timelife?: boolean;
@@ -48,11 +48,20 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
     class Node extends LGraphNodeEx implements IGraphASTFinalNode {
         static desc = desc;
+
+        private aid: number = -1;
+        
+        action(): LGraphNode { return this.getInputNode(this.aid) }
+
         constructor() {
             super(name);
             inputs.forEach(i => this.addInput(i.name, i.type));
             this.addInput('alive', 'bool');
-            this.size = [180, 25 * (inputs.length + 1)];
+
+            this.aid = this.inputs.length;
+            this.addInput("", LiteGraph.ACTION, { shape: LiteGraph.SQUARE_SHAPE });
+            
+            this.size = [180, 25 * (inputs.length + 1) + 10];
             this.updateInputNames();
         }
 
@@ -73,6 +82,12 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         }
 
         async run(env: ISLDocument): Promise<ISLDocument> {
+
+            let act = this.action();
+            if (act) {
+                console.log(act);
+            }
+
             const plugs = this.checkPlugs();
             const textDocument = await createTextDocument("://UpdateRoutine.hlsl", updateCode(env, plugs));
             const node = this;

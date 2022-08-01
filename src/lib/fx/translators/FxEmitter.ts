@@ -146,3 +146,16 @@ export function translateDocument(document: ISLDocument): string {
     return translate(document.root);
 }
 
+export function translateTechnique(document: ISLDocument, techName: string): string {
+    if (isNull(document)) {
+        return '';
+    }
+
+    if (isNull(document.root)) {
+        return '';
+    }
+
+    return translate(document.root.scope.findTechnique(techName));
+}
+
+

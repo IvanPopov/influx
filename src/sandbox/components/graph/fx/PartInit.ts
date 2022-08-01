@@ -35,6 +35,7 @@ function initCode(env: ISLDocument, plugs: Plugs = {}) {
 void InitRoutine(out Part part, int partId)
 {
     ${type.fields.map(({ name, type }, i) => `part.${name} = ${ plugs[name] ? plugByType(type): `$${name}` };`).join("\n")}
+    $return;
 }
 `);
 }

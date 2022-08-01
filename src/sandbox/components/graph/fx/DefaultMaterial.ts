@@ -16,7 +16,7 @@ interface Plugs {
     pos?: boolean;
     size?: boolean;
     color?: boolean;
-    sort?: boolean;
+    sort: 'zero' | 'pos' | 'expr';
 }
 
 function updateCode(env: ISLDocument, { id, pos, size, color, sort }: Plugs)
@@ -29,7 +29,7 @@ int PrerenderRoutine${id}(inout Part part, out DefaultShaderInput input)
     input.pos.xyz = ${pos ? 'part.pos.xyz' : `$pos`};
     input.size = ${size ? '0.1f' : `$size`};
     input.color = ${color ? 'float4(1.f, 0.f, 1.f, 1.f)' : `$color`};
-    return ${sort ? `asint(distance(${pos ? `part.pos.xyz` : `float3(0.f)`}, cameraPosition))` : `$sort`};
+    return ${sort ? `asint(distance(${sort == 'pos' ? `part.pos.xyz` : `float3(0.f)`}, cameraPosition))` : `$sort`};
 }
 `);
 }
@@ -84,12 +84,16 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
         checkPlugs(): Plugs
         {
-            const plugs: Plugs = { id: this.uid };
+            const plugs: Plugs = { id: this.uid, sort: 'zero' };
             // if particle has position propertie and input diconnected - connect implicitly
             plugs.pos = this.doesInputExistAndDisconnected('pos') && layout.hasField('pos');
             plugs.size = this.doesInputExistAndDisconnected('size');
             plugs.color = this.doesInputExistAndDisconnected('color');
-            plugs.sort = !this.getInputNode(type.fieldNames.length);
+            plugs.sort = !this.getInputNode(type.fieldNames.length) 
+                ? layout.hasField('pos')  // sort relative to part.pos if possible 
+                    ? 'pos' 
+                    : 'zero' 
+                : 'expr'; // read $sort if connected
             return plugs;
         }
 

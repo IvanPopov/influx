@@ -40,6 +40,7 @@ import PartSpawn from '@sandbox/components/graph/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graph/fx/PartUpdate';
 import DefaultMaterial from '@sandbox/components/graph/fx/DefaultMaterial';
 import LwiMaterial from '@sandbox/components/graph/fx/LwiMaterial';
+import SpawnSelf from '@sandbox/components/graph/fx/SpawnSelf';
 
 import GraphTemplateJSON from '@sandbox/components/graph/lib/template.json';
 import { getEnv } from '@sandbox/reducers/nodes';
@@ -154,7 +155,8 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             PartInit,
             PartUpdate,
             DefaultMaterial,
-            LwiMaterial
+            LwiMaterial,
+            SpawnSelf
         );
 
         LiteGraph.clearRegisteredTypes();
@@ -201,7 +203,7 @@ function makeFxTemplate(env: ISLDocument, plugs: Plug[]) {
 
     return (
 `
-partFx example {
+partFx G {
     Capacity = 4096;
     SpawnRoutine = compile SpawnRoutine();
     InitRoutine = compile InitRoutine();
@@ -250,7 +252,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);
 
-        dispatch(sourceCode.setContent(FxEmitter.translateDocument(doc)));
+        dispatch(sourceCode.setContent(FxEmitter.translateTechnique(doc, 'G')));
         // (props as any).$dispatch({ type: 'source-code-analysis-complete', payload: { result: doc } }); // to run preprocessed document
         // (props as any).$dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content: FxEmitter.translateDocument(doc) } }); // to update effect content
 
