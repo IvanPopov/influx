@@ -2,11 +2,11 @@ import { Context } from "@lib/fx/analisys/Analyzer";
 import { ArithmeticExprInstruction } from "@lib/fx/analisys/instructions/ArithmeticExprInstruction";
 import { RelationalExprInstruction, RelationOperator } from "@lib/fx/analisys/instructions/RelationalExprInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
-import { IArithmeticOperator, IExprInstruction } from "@lib/idl/IInstruction";
+import { IArithmeticOperator, IExprInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 
-import { CodeEmitterNode, GraphContext, LGraphNodeFactory } from "./GraphNode";
+import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "./GraphNode";
 
 function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
@@ -34,32 +34,49 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     this.size = [100, 50];
                 }
 
-                override exec(context: GraphContext, program: ProgramScope, slot: number): IExprInstruction {
-                    const sourceNode = null as IParseNode;
+
+                override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
+                    if (this.locals || 
+                        !this.inputs.every((x, i) => this.isInputConnected(i))) {
+                        return [];
+                    }
+    
+                    const deps = super.compute(context, program);
                     const scope = program.currentScope;
                     const operator = desc.operator as IArithmeticOperator;
-
+    
                     let leftNode = this.getInputNode('a');
                     let rightNode = this.getInputNode('b');
+    
+                    const left = leftNode.exec(context, program, this.link('a'));
+                    const right = rightNode.exec(context, program, this.link('b'));
+                    // IP: todo - calc proper type
+                    const type = left.type;
+                    const expr = new ArithmeticExprInstruction({ scope, left, right, operator, type });
+                    return [ ...deps, ...this.addLocal(context, program, expr.type.name, expr) ];
+                }
 
+
+                override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+                    let leftNode = this.getInputNode('a');
+                    let rightNode = this.getInputNode('b');
+    
                     if (!leftNode || !rightNode) {
                         this.emitError(`All inputs must be conected.`);
                         return null;
                     }
-
-                    const left = leftNode.exec(context, program, this.link('a'));
-                    const right = rightNode.exec(context, program, this.link('b'));
-
-                    // IP: todo - calc proper type
-                    const type = left.type;
-
-                    return new ArithmeticExprInstruction({ scope, sourceNode, left, right, operator, type });
+    
+                    if (!this.locals)
+                        return null;
+                    return AST(context, program).idexpr(this.locals[slot]);
                 }
+
 
                 getTitle(): string {
                     return `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
                 }
 
+                
                 getDocs(): string {
                     return `Operator '${desc.search}'.`
                 }
@@ -93,12 +110,27 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                 this.size = [100, 50];
             }
 
+            override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
+                if (this.locals || 
+                    !this.inputs.every((x, i) => this.isInputConnected(i))) {
+                    return [];
+                }
 
-            override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
-                const sourceNode = null as IParseNode;
+                const deps = super.compute(context, program);
                 const scope = program.currentScope;
                 const operator = desc.operator as RelationOperator;
 
+                let leftNode = this.getInputNode('a');
+                let rightNode = this.getInputNode('b');
+
+                const left = leftNode.exec(context, program, this.link('a'));
+                const right = rightNode.exec(context, program, this.link('b'));
+                const expr = new RelationalExprInstruction({ scope, left, right, operator });
+                return [ ...deps, ...this.addLocal(context, program, expr.type.name, expr) ];
+            }
+
+
+            override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
                 let leftNode = this.getInputNode('a');
                 let rightNode = this.getInputNode('b');
 
@@ -107,9 +139,9 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     return null;
                 }
 
-                const left = leftNode.exec(context, program, this.link('a'));
-                const right = rightNode.exec(context, program, this.link('b'));
-                return new RelationalExprInstruction({ scope, sourceNode, left, right, operator });
+                if (!this.locals)
+                    return null;
+                return AST(context, program).idexpr(this.locals[slot]);
             }
 
 

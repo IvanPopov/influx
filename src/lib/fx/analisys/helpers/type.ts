@@ -4,6 +4,7 @@ import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDec
 import { instruction } from "./instruction";
 import { variable } from "./variable";
 import { T_INT, T_UINT } from "../SystemScope";
+import { isDefAndNotNull } from "@lib/util/s3d/type";
 
 export namespace type {
     // todo: rename it
@@ -153,7 +154,7 @@ export namespace type {
 
 
     export function signature(type: ITypeInstruction, strong: boolean = false): string {
-        if (isNull(type)) {
+        if (!isDefAndNotNull(type)) {
             assert(!strong);
             return '*';
         }

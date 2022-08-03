@@ -46,7 +46,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         }
 
         async run(env: ISLDocument): Promise<ISLDocument> {
-            this.onBeforeExecution();
+            // hack to be compartible, this function must be rewritten same way as PartUpdate.
+            this.onBeforeExecution(null, null);
             
             const inputNode = this.getInputNode(0);
             const plugs: Plugs = {};

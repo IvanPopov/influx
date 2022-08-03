@@ -6,7 +6,6 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
 import { IWidget } from "litegraph.js";
-import { PART_TYPE } from "../common";
 import { AST, CodeEmitterNode, GraphContext, ICodeMaterialNode, LGraphNodeFactory } from "../GraphNode";
 
 
@@ -58,14 +57,15 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             const uri = env.uri;
             const scope = env.root.scope;
             const program = new ProgramScope(scope);
-            const context = new GraphContext(uri)
+            const context = new GraphContext(uri);
+
+            this.onBeforeExecution(context, program);
+
             const ast = AST(context, program);
 
-            const execInput = (id: string) => 
-                this.getInputNode(id).exec(context, program, this.link(id));
-            const computeInput = (id: string) => 
-            this.getInputNode(id).compute(context, program);
-            
+            const execInput = id => this.getInputNode(id).exec(context, program, this.link(id));
+            const computeInput = id => this.getInputNode(id).compute(context, program);
+
             context.beginFunc();
             const fdecl = ast.func(`int PrerenderRoutine${this.uid}(inout Part part, out DefaultShaderInput input)`, 
                 () => 
@@ -92,7 +92,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
     
         async run(env: ISLDocument): Promise<ISLDocument>
         {
-            this.onBeforeExecution();
             return this.extend(env);
         }
 

@@ -24,9 +24,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         }
 
         override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
-            let sourceNode = null as IParseNode;
-            let scope = program.currentScope;
-            return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
+            const scope = program.currentScope;
+            return new FloatInstruction({ scope, value: Number(this.properties["value"]) });
         }
 
         override getTitle(): string {

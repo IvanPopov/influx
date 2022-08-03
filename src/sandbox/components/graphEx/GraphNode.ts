@@ -1,32 +1,35 @@
 import { isNull, isString } from "@lib/common";
 import { Context, parseUintLiteral } from "@lib/fx/analisys/Analyzer";
+import { FxContext } from "@lib/fx/analisys/FxAnalyzer";
 import { AssignmentExprInstruction } from "@lib/fx/analisys/instructions/AssignmentExprInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
+import { ConstructorCallInstruction } from "@lib/fx/analisys/instructions/ConstructorCallInstruction";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
 import { ExprStmtInstruction } from "@lib/fx/analisys/instructions/ExprStmtInstruction";
+import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { FunctionDeclInstruction } from "@lib/fx/analisys/instructions/FunctionDeclInstruction";
 import { FunctionDefInstruction } from "@lib/fx/analisys/instructions/FunctionDefInstruction";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
+import { PostfixPointInstruction } from "@lib/fx/analisys/instructions/PostfixPointInstruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import { StmtBlockInstruction } from "@lib/fx/analisys/instructions/StmtBlockInstruction";
 import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
+import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IStmtInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { nodesForceRecompile, nodesProvideDocs } from "@sandbox/actions";
 import { INodeInputSlot, INodeOutputSlot, LGraphNode, LiteGraph, LLink } from "litegraph.js";
-import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
-import { PostfixPointInstruction } from "@lib/fx/analisys/instructions/PostfixPointInstruction";
 
 export type LGraphNodeFactory = IMap<new () => LGraphNode>;
 
 
-export class GraphContext extends Context
+export class GraphContext extends FxContext
 {
     varNum = 0;
 
@@ -76,6 +79,32 @@ export const AST = <T extends Context>(context: T, program: ProgramScope) => ({
         const scope = program.currentScope;
         const { base, signed, heximal, exp } = parseUintLiteral(value.toFixed(0));
         return new IntInstruction({ scope, base, exp, signed, heximal });
+    },
+
+    float(x: number): IExprInstruction {
+        const scope = program.currentScope;
+        return new FloatInstruction({ scope, value: x });
+    },
+
+    float2(x: number, y: number): IExprInstruction {
+        const scope = program.currentScope;
+        const args = [ ...arguments ].map(x => this.float(x));
+        const ctor = new VariableTypeInstruction({ type: SystemScope[`T_FLOAT${args.length}`], scope: null });
+        return new ConstructorCallInstruction({ scope, args, ctor });
+    },
+
+    float3(x: number, y: number, z: number): IExprInstruction {
+        const scope = program.currentScope;
+        const args = [ ...arguments ].map(x => this.float(x));
+        const ctor = new VariableTypeInstruction({ type: SystemScope[`T_FLOAT${args.length}`], scope: null });
+        return new ConstructorCallInstruction({ scope, args, ctor });
+    },
+
+    float4(x: number, y: number, z: number, w: number): IExprInstruction {
+        const scope = program.currentScope;
+        const args = [ ...arguments ].map(x => this.float(x));
+        const ctor = new VariableTypeInstruction({ type: SystemScope[`T_FLOAT${args.length}`], scope: null });
+        return new ConstructorCallInstruction({ scope, args, ctor });
     },
 
     id(name: string): IIdInstruction {
@@ -145,7 +174,7 @@ export const AST = <T extends Context>(context: T, program: ProgramScope) => ({
         
         const stmtList = [ ...content() ];
 
-        if (stmtList[stmtList.length - 1].instructionType != EInstructionTypes.k_ReturnStmt) {
+        if (!stmtList.length || stmtList[stmtList.length - 1].instructionType != EInstructionTypes.k_ReturnStmt) {
             let returnExpr = null;
             switch (typeName) {
                 case 'bool': 
@@ -261,13 +290,14 @@ export class CodeEmitterNode extends LGraphNode
         ];
     }
 
-
-    onBeforeExecution(): void {
+    // be careful, this function cane be called more than once per node because of multiple connections
+    // it has to be fixed
+    onBeforeExecution(context: GraphContext, program: ProgramScope): void {
         this.locals = null; // clean up precached names
         this.inputs.forEach((n, i) => 
-            n.type != LiteGraph.ACTION && this.getInputNode(i)?.onBeforeExecution());
+            n.type != LiteGraph.ACTION && this.getInputNode(i)?.onBeforeExecution(context, program));
         this.outputs.forEach((n, i) => 
-            n.type == LiteGraph.EVENT && this.getOutputNodes(i)?.forEach(node => node.onBeforeExecution()));
+            n.type == LiteGraph.EVENT && this.getOutputNodes(i)?.forEach(node => node.onBeforeExecution(context, program)));
     }
 
 

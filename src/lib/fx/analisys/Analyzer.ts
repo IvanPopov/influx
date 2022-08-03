@@ -1750,7 +1750,7 @@ export class Analyzer {
 
 
         if (isNull(func)) {
-            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => type.signature(arg.type)) });
+            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => type.signature(arg?.type)) });
             return null;
         }
 

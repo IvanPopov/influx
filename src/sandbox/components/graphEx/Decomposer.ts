@@ -64,8 +64,9 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 // quick analisys inside of virtual enviroment in order to compute on fly expression type
                 let documentEx = await extendSLDocument(textDocument, env(), {
                     $complexExpr: (context, program, sourceNode): IExprInstruction => {
-                        outputNode.onBeforeExecution();
-                        outputNode.compute(asGraphContext(context), program);
+                        const gctx = asGraphContext(context);
+                        outputNode.onBeforeExecution(gctx, program);
+                        outputNode.compute(gctx, program);
                         const expr = outputNode.exec(context, program, outputIndex);
                         type = expr.type;
                         return expr;

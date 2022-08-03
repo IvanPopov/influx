@@ -1,6 +1,5 @@
 import { type as typeHelper } from '@lib/fx/analisys/helpers';
-import { extendFXSLDocument } from '@lib/fx/FXSLDocument';
-import { createSLDocument, extendSLDocument } from '@lib/fx/SLDocument';
+import { extendFXSLDocument, createFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import * as FxEmitter from '@lib/fx/translators/FxEmitter';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -24,9 +23,14 @@ import docs from '@sandbox/components/graph/utils/docs';
 import { PART_LOCAL_NAME, PART_TYPE } from '@sandbox/components/graphEx/common';
 
 import BasicType from '@sandbox/components/graphEx/BasicType';
-import Decomposer from '@sandbox/components/graphEx/Decomposer';
+import Decomposer from '@sandbox/components/graphEx/Decomposer';    
 import Float from '@sandbox/components/graphEx/Float';
 import FuncNodes from '@sandbox/components/graphEx/FuncNodes';
+import IfStmt from '@sandbox/components/graphEx/IfStmt';
+import Int from '@sandbox/components/graphEx/Int';
+import Operators from '@sandbox/components/graphEx/Operators';
+import Uniforms from '@sandbox/components/graphEx/Uniforms';
+
 import DefaultMaterial from '@sandbox/components/graphEx/fx/DefaultMaterial';
 import Kill from '@sandbox/components/graphEx/fx/Kill';
 import LwiMaterial from '@sandbox/components/graphEx/fx/LwiMaterial';
@@ -36,16 +40,13 @@ import PartInit from '@sandbox/components/graphEx/fx/PartInit';
 import PartPrevious from '@sandbox/components/graphEx/fx/PartPrevious';
 import PartSpawn from '@sandbox/components/graphEx/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graphEx/fx/PartUpdate';
-import IfStmt from '@sandbox/components/graphEx/IfStmt';
-import Int from '@sandbox/components/graphEx/Int';
-import Operators from '@sandbox/components/graphEx/Operators';
-import Uniforms from '@sandbox/components/graphEx/Uniforms';
+import SpawnSelf from '@sandbox/components/graphEx/fx/SpawnSelf';
 
 
+import { ITypeInstruction } from '@lib/idl/IInstruction';
 import { CodeEmitterNode, ICodeMaterialNode, LGraphNodeFactory } from '@sandbox/components/graphEx/GraphNode';
 import GraphTemplateJSON from '@sandbox/components/graphEx/lib/template.json';
 import { getEnv } from '@sandbox/reducers/nodes';
-import { ITypeInstruction } from '@lib/idl/IInstruction';
 
 
 async function loadEnv(layout: string): Promise<ISLDocument> {
@@ -53,14 +54,14 @@ async function loadEnv(layout: string): Promise<ISLDocument> {
     const includeResolver = async (name) => (await fetch(name)).text();
     const libraryPath = "./assets/graph/lib.hlsl";
     const libText = await createTextDocument("", `#include "${libraryPath}"`);
-    const lib = await createSLDocument(libText, { includeResolver });
+    const lib = await createFXSLDocument(libText, { includeResolver });
 
     // extract and fill graph node documentation database
     // todo: move to statics
     docs(libText);
 
     const partTex = await createTextDocument('://part-layout', layout);
-    return extendSLDocument(partTex, lib, null, { includeResolver })
+    return extendFXSLDocument(partTex, lib, null, { includeResolver })
 }
 
 
@@ -160,7 +161,8 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             PartInit,
             PartPrevious,
             LwiMaterial,
-            DefaultMaterial
+            DefaultMaterial,
+            SpawnSelf
         );
 
         LiteGraph.clearRegisteredTypes();
@@ -238,7 +240,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         prerender = [ ...prerender, ...graph.findNodesByTitle("LwiMaterial") as ICodeMaterialNode[] ];
 
 
-        let doc = await extendSLDocument(null, env);
+        let doc = await extendFXSLDocument(null, env);
         doc = await spawn.run(doc);
         doc = await init.run(doc);
         doc = await update.run(doc);

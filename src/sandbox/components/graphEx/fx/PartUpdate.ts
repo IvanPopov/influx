@@ -36,8 +36,10 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             const scope = env.root.scope;
             const program = new ProgramScope(scope);
             const context = new GraphContext(uri)
+            
+            this.onBeforeExecution(context, program);
+
             const ast = AST(context, program);
-    
             context.beginFunc();
             const fdecl = ast.func(`bool UpdateRoutine(inout Part part, int partId)`, 
                 () => (this.getOutputNodes(0) || []).map(node => node.compute(context, program)).flat());
@@ -51,7 +53,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
     
         async run(env: ISLDocument): Promise<ISLDocument>
         {
-            this.onBeforeExecution();
             return this.extend(env);
         }
 

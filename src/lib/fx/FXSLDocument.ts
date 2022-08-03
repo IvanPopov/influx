@@ -11,7 +11,7 @@ import { createSLASTDocument } from "./SLASTDocument";
 
 type Opts = { flags?: number, includeResolver?: IncludeResolver };
 
-export async function createFXSLDocument(document: ISLASTDocument | ITextDocument, opts: Opts = {}, parent: ISLDocument = null): Promise<ISLDocument> {
+export async function createFXSLDocument(document: ISLASTDocument | ITextDocument, opts : { flags?: number, includeResolver?: IncludeResolver } = {}, parent: ISLDocument = null): Promise<ISLDocument> {
     let textDocument: ITextDocument;
     let slastDocument: ISLASTDocument;
 
@@ -21,12 +21,16 @@ export async function createFXSLDocument(document: ISLASTDocument | ITextDocumen
     } else {
         slastDocument = <ISLASTDocument>document;
     }
-    
+    const timeLabel = `createFXSLDocument(${slastDocument.uri})`;
+    console.time(timeLabel);
     const analyzer = new FxAnalyzer;
-    return await analyzer.parse(slastDocument, parent);
+    const slDocument = await analyzer.parse(slastDocument);
+    console.timeEnd(timeLabel);
+
+    return slDocument;
 }
 
-export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, opts: Opts = {}): Promise<ISLDocument> {
+export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, opts: { flags?: number, includeResolver?: IncludeResolver } = {}): Promise<ISLDocument> {
     let addition = null;
     if (textAddition)
     {
@@ -38,3 +42,4 @@ export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLD
     const slDocument = analyzer.extend(addition, base, expressions);
     return slDocument;
 }
+

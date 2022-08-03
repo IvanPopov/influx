@@ -22,7 +22,7 @@ type IPartFxProperties = Omit<PropertiesDiff<IPartFxInstruction, IDeclInstructio
 
 const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.type : null;
 
-class FxContext extends Context {
+export class FxContext extends Context {
     /** Main particle structure type describing particle's simulation. */
     particleCore: ITypeInstruction;
     /** Particle instance structure type which describe per pass render instance of the particle. */

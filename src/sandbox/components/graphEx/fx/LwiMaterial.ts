@@ -54,11 +54,12 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             const uri = env.uri;
             const scope = env.root.scope;
             const program = new ProgramScope(scope);
-            const context = new GraphContext(uri)
-            const ast = AST(context, program);
+            const context = new GraphContext(uri);
 
-            const execInput = (id: string) => 
-                this.getInputNode(id).exec(context, program, this.link(id));
+            this.onBeforeExecution(context, program);
+
+            const ast = AST(context, program);
+            const execInput = id => this.getInputNode(id).exec(context, program, this.link(id));
     
             context.beginFunc();
             const fdecl = ast.func(`int PrerenderRoutine${this.uid}(inout Part part, inout LwiInstance input)`, 
@@ -89,7 +90,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
     
         async run(env: ISLDocument): Promise<ISLDocument>
         {
-            this.onBeforeExecution();
             return this.extend(env);
         }
 

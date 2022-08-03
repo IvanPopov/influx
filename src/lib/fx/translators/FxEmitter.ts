@@ -29,6 +29,9 @@ export class FxEmitter extends CodeEmitter {
     }
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
+        
+        this.emitFunction(stmt.init);
+
         this.emitKeyword(`spawn(${stmt.count})`);
         this.emitKeyword(stmt.name);
         this.emitChar('(');
