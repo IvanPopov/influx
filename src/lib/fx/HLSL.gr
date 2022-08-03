@@ -300,6 +300,7 @@ SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
 
 
 NonIfStmt : SimpleStmt --add
+NonIfStmt : ';'
 NonIfStmt : WhileStmt NonIfStmt
 NonIfStmt : ForStmt NonIfStmt
 

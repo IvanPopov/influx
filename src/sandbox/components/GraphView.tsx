@@ -63,7 +63,7 @@ LiteGraphA.slot_types_out = [];                             // slot types OUT
 
 LiteGraphA.alt_drag_do_clone_nodes = true;                  // [true!] very handy; ALT click to clone and drag the new node
 LiteGraphA.do_add_triggers_slots = true;                    // [true!] will create and connect event slots when using action/events connections; !WILL CHANGE node mode when using onTrigger (enable mode colors); onExecuted does not need this
-LiteGraphA.allow_multi_output_for_events = false;           // [false!] being events; it is strongly reccomended to use them sequentually; one by one
+LiteGraphA.allow_multi_output_for_events = true;            // [false!] being events; it is strongly reccomended to use them sequentually; one by one
 LiteGraphA.middle_click_slot_add_default_node = true;       // [true!] allows to create and connect a ndoe clicking with the third button (wheel)
 LiteGraphA.release_link_on_empty_shows_menu = true;         // [true!] dragging a link to empty space will open a menu, add from list, search or defaults
 LiteGraphA.pointerevents_method = "mouse";                  // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)

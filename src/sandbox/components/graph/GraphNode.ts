@@ -1,6 +1,10 @@
 import { Context } from "@lib/fx/analisys/Analyzer";
+import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
+import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
+import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
+import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
-import { IInstruction } from "@lib/idl/IInstruction";
+import { IExprInstruction, IInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { nodesForceRecompile, nodesProvideDocs } from "@sandbox/actions";
@@ -26,11 +30,6 @@ export interface IGraphASTMaterial extends IGraphASTFinalNode
     get geometry(): string;     // pass options
 }
 
-export interface IGraphASTAction extends LGraphNode
-{
-    // extend document with dependent routines
-    injectDependencies(document: ISLDocument): Promise<ISLDocument>;
-}
 
 export interface INodeDocs
 {
@@ -39,6 +38,7 @@ export interface INodeDocs
     title?: string;
     params?: any;
 }
+
 
 export class LGraphNodeEx extends LGraphNode
 {

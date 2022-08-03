@@ -1959,7 +1959,7 @@ export class Analyzer {
      * @param elementType Type of the element. (**element.postfix**)
      * @param fieldName 
      */
-    protected createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
+    static createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
         if (!elementType.hasField(fieldName)) {
             return null;
         }
@@ -1999,7 +1999,6 @@ export class Analyzer {
         });
 
         
-
         return Instruction.$withParent(field, elementType);
     }
 
@@ -2015,7 +2014,7 @@ export class Analyzer {
 
         const scope = program.currentScope;
         const name = sourceNode.value;                             // fiedl name
-        const decl = this.createFieldDecl(elementType, name);       // field decl
+        const decl = Analyzer.createFieldDecl(elementType, name);       // field decl
         // const decl = elementType.getField(name);
         
         if (isNull(decl)) {
@@ -3876,11 +3875,14 @@ export class Analyzer {
     }
 
     /**
-     * Extend existing document. (Base document stay unchanged.)
+     * Extend existing document. (Base document stay unchanged (!))
      * @param slastAddition Extension. (Can be null if just copy of base document is needed.)
      * @param slBase Original document to be extneded.
      * @param options 
      * @returns 
+     * 
+     * The idea is to create new documents which references to existings scope and extends 
+     * existings instruction list, but leave parent document unchanged. 
      */
     extend(
         slastAddition: ISLASTDocument, 
@@ -3888,7 +3890,10 @@ export class Analyzer {
         expressions?: IMap<IExprSubstCallback>
         ): ISLDocument {
         let uri = slBase.uri;
-        let program = this.createProgramEx(slBase); // create extended program
+
+        // new program (scope chain) holds links to known variales, types etc of parent document
+        let program = this.createProgramEx(slBase);
+        // context is absolutely new (!)
         let context = this.createContext(uri, expressions);
         let instructions = slBase.root.instructions;
         let diagnosticReport = slBase.diagnosticReport;
@@ -3897,6 +3902,7 @@ export class Analyzer {
         {
             uri = slastAddition.uri;
             try {
+                // new list holds links to existings instructions (!)
                 instructions = instructions.concat(this.analyzeGlobals(context, program, slastAddition));
             } catch (e) {
                 // critical errors were occured

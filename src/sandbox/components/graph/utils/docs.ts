@@ -1,5 +1,6 @@
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
+import { CodeEmitterNode } from "@sandbox/components/graphEx/GraphNode";
 import { LGraphNodeEx } from "../GraphNode";
 import { LibLoader } from "./LibLoader";
 
@@ -36,6 +37,7 @@ async function loader(lib: ITextDocument) {
 
     for (let node in ll.nodes) {
         LGraphNodeEx.nodesDocs[node] = ll.nodes[node];
+        CodeEmitterNode.nodesDocs[node] = ll.nodes[node];
     }
 }
 

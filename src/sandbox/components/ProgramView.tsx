@@ -7,7 +7,7 @@
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { mapProps } from '@sandbox/reducers';
@@ -657,7 +657,30 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         );
     }
 
+    IfStmt(instr: IIfStmtInstruction) {
+        if (isNull(instr)) {
+            return null;
+        }
+        return (
+            <Property { ...this.bindProps(instr, true) }>
+                <Property name='cond' >
+                    { this.Unknown(instr.cond) }
+                </Property>
+                <PropertyOpt name='conseq' >
+                    { this.Stmt(instr.conseq) }
+                </PropertyOpt>
+                <PropertyOpt name='contrary' >
+                    { this.Stmt(instr.contrary) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
     Stmt(instr: IStmtInstruction) {
+        if (!instr) {
+            return null;
+        }
+        
         switch (instr.instructionType) {
             case EInstructionTypes.k_DeclStmt:
                 return this.DeclStmt(instr as IDeclStmtInstruction);
@@ -671,6 +694,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ForStmt(instr as IForStmtInstruction);
             case EInstructionTypes.k_SemicolonStmt:
                 return this.SemicolonStmt(instr as IStmtInstruction);
+            case EInstructionTypes.k_IfStmt:
+                return this.IfStmt(instr as IIfStmtInstruction);
             default:
                 return this.NotImplemented(instr); // TODO: remove it
         }

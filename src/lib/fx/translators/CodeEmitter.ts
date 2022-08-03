@@ -143,7 +143,12 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(stmt.cond);
         this.emitChar(')');
         this.emitNewline();
-        this.emitStmt(stmt.conseq);
+        
+        if (stmt.conseq) {
+            this.emitStmt(stmt.conseq);
+        } else {
+            this.emitChar(';');
+        }
 
         if (stmt.contrary) {
             this.emitNewline();
@@ -550,6 +555,12 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitBlock(blk: IStmtBlockInstruction) {
+        // if (!blk.stmtList.length)
+        // {
+        //     this.emitChar(';');
+        //     return;
+        // }
+
         this.emitChar('{');
         this.push();
         blk.stmtList.forEach(stmt => (this.emitStmt(stmt), this.emitNewline()));
