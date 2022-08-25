@@ -5,7 +5,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
-import { IWidget } from "litegraph.js";
+import { IWidget, LGraphCanvas } from "litegraph.js";
 
 
 import { CodeEmitterNode, LGraphNodeFactory } from "./GraphNode";
@@ -45,7 +45,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             return super.getTitle();
         }
 
-        onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+        onDrawBackground(ctx: CanvasRenderingContext2D, graphcanvas: LGraphCanvas, canvas, mouse): void {
+            super.onDrawBackground(ctx, graphcanvas, canvas, mouse);
             this.outputs[0].label = this.properties["value"].toFixed(2);
         }
     }
@@ -81,7 +82,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             return super.getTitle();
         }
 
-        onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+        onDrawBackground(ctx: CanvasRenderingContext2D, graphcanvas: LGraphCanvas, canvas, mouse): void {
+            super.onDrawBackground(ctx, graphcanvas, canvas, mouse);
             this.outputs[0].label = this.properties["value"].toFixed(2);
         }
     }
@@ -93,7 +95,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
         private widget: IWidget;
 
-        constructor() {
+        constructor() { 
             super("Bool");
             this.addOutput("value", "bool");
             this.addProperty<boolean>("value", false, "bool");
@@ -116,7 +118,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             return super.getTitle();
         }
 
-        onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+        onDrawBackground(ctx: CanvasRenderingContext2D, graphcanvas: LGraphCanvas, canvas, mouse): void {
+            super.onDrawBackground(ctx, graphcanvas, canvas, mouse);
             this.outputs[0].label = this.properties["value"];
         }
     }

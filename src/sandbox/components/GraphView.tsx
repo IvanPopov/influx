@@ -120,8 +120,10 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvas.title_shadow_offset_x = 1;
         this.canvas.title_shadow_offset_y = 1;
         this.canvas.title_shadow_color = '#111';
+        this.canvas.render_collapsed_slots = true;
+        // this.canvas.render_connection_arrows = true;
 
-        (this.canvas as any).align_to_grid = true;
+        // (this.canvas as any).align_to_grid = true;
     }
 
 

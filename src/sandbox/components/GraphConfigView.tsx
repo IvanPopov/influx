@@ -9,7 +9,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { nodes as nodesActions } from '@sandbox/actions';
 import { Button, Segment } from 'semantic-ui-react';
-import { PART_TYPE } from './graph/common';
+import { PART_TYPE } from './graphEx/common';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 
 export const styles = {
@@ -70,11 +70,11 @@ class GraphConfigView extends React.Component<IProps> {
                     onChange={this.onChange}
                 />
                 <Button onClick={ this.applyLayout }>Apply</Button>
-                { docs && 
-                    <Segment size='small' basic color='grey'>
-                        { docs }
-                    </Segment>
-                }
+
+                <Segment size='small' basic color='grey'>
+                    { docs || "[[ no description found ]]" }
+                </Segment>
+                
 
                 <Segment size='small' basic color='grey'>
                     Emitter's capacity is { (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() }.

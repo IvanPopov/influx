@@ -42,7 +42,7 @@ import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
 import { Button, Checkbox, Container, Dropdown, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
-import { packGraphToJSON } from '@sandbox/logic/nodes';
+import { packGraphToJSON } from '@sandbox/logic/nodesEx';
 
 type UnknownIcon = any;
 

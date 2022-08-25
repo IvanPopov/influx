@@ -4,22 +4,34 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { LiteGraph } from "litegraph.js";
 
-import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "../GraphNode";
+import { AST, CodeEmitterStmt, GraphContext, LGraphNodeFactory, PartRoutine } from "../GraphNode";
 
 
-function producer(env: () => ISLDocument): LGraphNodeFactory
-{
+function producer(env: () => ISLDocument): LGraphNodeFactory {
     const desc = "InitRoutine";
     const name = "InitRoutine";
 
-    class PartInit extends CodeEmitterNode {
+    const HIDDEN_CONNECTION = { visible: false };
+
+    class PartInit extends PartRoutine {
         static desc = desc;
 
         constructor() {
             super(name);
-            this.addOutput("stmts", LiteGraph.EVENT);
+            this.addOutput("stmts", LiteGraph.EVENT, HIDDEN_CONNECTION);
+            this.update();
         }
-    
+
+
+        onDrop(node) {
+            // todo: validate node
+            if (this.connect('stmts', node, 'context')) {
+                this.update();
+                this.highlight(false);
+            }
+        }
+
+
         private extend(env: ISLDocument): ISLDocument {
             const uri = env.uri;
             const scope = env.root.scope;
@@ -30,18 +42,17 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
             const ast = AST(context, program);
             context.beginFunc();
-            const fdecl = ast.func(`void InitRoutine(out Part part, int partId)`, 
+            const fdecl = ast.func(`void InitRoutine(out Part part, int partId)`,
                 () => (this.getOutputNodes(0) || []).map(node => node.compute(context, program)).flat());
             context.endFunc();
-    
+
             const diagnosticReport = Diagnostics.mergeReports([env.diagnosticReport, context.diagnostics.resolve()]);
-            const instructions = env.root.instructions.concat([ fdecl ]);
+            const instructions = env.root.instructions.concat([fdecl]);
             const root = new InstructionCollector({ scope: program.globalScope, instructions });
             return { root, diagnosticReport, uri };
         }
-    
-        async run(env: ISLDocument): Promise<ISLDocument>
-        {
+
+        async run(env: ISLDocument): Promise<ISLDocument> {
             return this.extend(env);
         }
 

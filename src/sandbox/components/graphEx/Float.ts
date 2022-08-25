@@ -4,7 +4,7 @@ import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
-import { IWidget } from "litegraph.js";
+import { IWidget, LGraphCanvas } from "litegraph.js";
 
 import { CodeEmitterNode, LGraphNodeFactory } from "./GraphNode";
 
@@ -20,7 +20,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             this.addProperty<Number>("value", 0.0, "number");
             this.widget = this.addWidget("number", "value", 0, "value", { precision: 2 });
             this.widgets_up = true; // draw number widget in the middle of node (by default it's placed under node)
-            this.size = [160, 30];
+            this.size = this.computeSize();
         }
 
         override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
@@ -35,7 +35,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             return super.getTitle();
         }
 
-        onDrawBackground(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement): void {
+        onDrawBackground(ctx: CanvasRenderingContext2D, graphcanvas: LGraphCanvas, canvas, mouse): void {
+            super.onDrawBackground(ctx, graphcanvas, canvas, mouse);
             this.outputs[0].label = this.properties["value"].toFixed(2);
         }
     }

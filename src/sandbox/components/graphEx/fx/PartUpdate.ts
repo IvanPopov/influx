@@ -1,21 +1,10 @@
-import { Context } from "@lib/fx/analisys/Analyzer";
-import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
-import { FunctionDeclInstruction } from "@lib/fx/analisys/instructions/FunctionDeclInstruction";
-import { FunctionDefInstruction } from "@lib/fx/analisys/instructions/FunctionDefInstruction";
-import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { InstructionCollector } from "@lib/fx/analisys/instructions/InstructionCollector";
-import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
-import { StmtBlockInstruction } from "@lib/fx/analisys/instructions/StmtBlockInstruction";
-import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
-import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { EScopeType, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { LiteGraph } from "litegraph.js";
-import { PART_LOCAL_NAME, PART_TYPE } from "../common";
+import { LGraphCanvas, LGraphNode, LiteGraph } from "litegraph.js";
 
-import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "../GraphNode";
+import { AST, CodeEmitterNode, CodeEmitterStmt, GraphContext, LGraphNodeFactory, PartRoutine } from "../GraphNode";
 
 
 function producer(env: () => ISLDocument): LGraphNodeFactory
@@ -23,14 +12,27 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
     const desc = "UpdateRoutine";
     const name = "UpdateRoutine";
 
-    class PartUpdate extends CodeEmitterNode {
+    const HIDDEN_CONNECTION = { visible: false };
+
+
+    class PartUpdate extends PartRoutine {
         static desc = desc;
 
         constructor() {
             super(name);
-            this.addOutput("stmts", LiteGraph.EVENT);
+            this.addOutput("stmts", LiteGraph.EVENT, HIDDEN_CONNECTION);
+            this.update();
         }
-    
+
+        
+        onDrop(node) {
+            // todo: validate node
+            if (this.connect('stmts', node, 'context')) {
+                this.update();
+                this.highlight(false);
+            }
+        }
+
         private extend(env: ISLDocument): ISLDocument {
             const uri = env.uri;
             const scope = env.root.scope;

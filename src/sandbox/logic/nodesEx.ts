@@ -16,7 +16,7 @@ import { createLogic } from 'redux-logic';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
 
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
-import docs from '@sandbox/components/graph/utils/docs';
+import docs from '@sandbox/components/graphEx/utils/docs';
 
 // import all factories
 
@@ -33,6 +33,7 @@ import Uniforms from '@sandbox/components/graphEx/Uniforms';
 
 import DefaultMaterial from '@sandbox/components/graphEx/fx/DefaultMaterial';
 import Kill from '@sandbox/components/graphEx/fx/Kill';
+import KillBy from '@sandbox/components/graphEx/fx/KillBy';
 import LwiMaterial from '@sandbox/components/graphEx/fx/LwiMaterial';
 import Part from '@sandbox/components/graphEx/fx/Part';
 import PartId from '@sandbox/components/graphEx/fx/PartId';
@@ -152,6 +153,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             FuncNodes,
             BasicType,
             Kill,
+            KillBy,
             Decomposer,
             Uniforms,
             Part,

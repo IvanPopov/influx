@@ -26,8 +26,16 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
     const layout = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
     const fields = layout.fields;
 
+    const HIDDEN_CONNECTION = { visible: false };
+
     class SpawnSelf extends CodeEmitterNode {
         static desc = desc;
+
+        static color = 'transparent';
+        // static bgcolor = 'transparent';
+
+        static can_be_dropped = true;
+        static collapsable = false;
 
         private static ID = 0;
         private uid = SpawnSelf.ID ++;
@@ -36,8 +44,9 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             super(name);
 
             fields.forEach(({ name, type }) => this.addInput(name, type.name));
-            this.size = [180, 25 * fields.length + 10];
-            this.addInput("", LiteGraph.ACTION);
+            this.addInput("context", LiteGraph.ACTION, HIDDEN_CONNECTION);
+
+            this.size = this.computeSize();
         }
 
         override onBeforeExecution(context: GraphContext, program: ProgramScope): void {

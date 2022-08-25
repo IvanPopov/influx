@@ -53,14 +53,44 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         const name = `${PART_LOCAL_NAME}.${field.name}`;
         const desc = `${name} (previous value).`;
 
+        const HIDDEN_CONNECTION = { visible: false };
+
         class Part extends CodeEmitterNode {
             static desc = desc;
+
+            // render as fully transparent by default (only with custom design)
+            static title_mode = LiteGraph.NO_TITLE;
+            // static color = 'transparent';
+            // static bgcolor = 'transparent';
+
+            static can_be_dropped = true;
+            static collapsable = false;
+
             constructor() {
                 super(name);
                 this.addInput(name, field.type.name);
-                this.addInput("context", LiteGraph.ACTION);
-                this.size = [130, 50];
+                this.addInput("context", LiteGraph.ACTION, HIDDEN_CONNECTION);
+                this.size = this.computeSize();
             }
+    
+            // onDrawBackground(
+            //     ctx         /* CanvasRenderingContext2D */,
+            //     gcanvas     /* LGraphCanvas */,
+            //     canvas      /* HTMLCanvasElement */,
+            //     mouse
+            // ) {
+            //     super.onDrawBackground(ctx, gcanvas, canvas, mouse);
+
+            //     let [w, h] = this.size;
+                
+            //     ctx.save();
+            //     ctx.beginPath();
+            //     ctx.strokeStyle = 'white';
+            //     ctx.roundRect(0, 0, w, h, 5);
+            //     ctx.stroke();
+            //     ctx.closePath();
+            //     ctx.restore();
+            // }
 
 
             override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {

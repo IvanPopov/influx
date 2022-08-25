@@ -54,7 +54,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             constructor() {
                 super(name);
                 this.addOutput(name, field.type.name);
-                this.size = [130, 25];
+                this.size = this.computeSize();
             }
 
             override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
