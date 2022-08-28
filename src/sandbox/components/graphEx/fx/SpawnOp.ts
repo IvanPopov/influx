@@ -1,11 +1,13 @@
+import { parseUintLiteral } from "@lib/fx/analisys/Analyzer";
 import { ComplexTypeInstruction } from "@lib/fx/analisys/instructions/ComplexTypeInstruction";
+import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { SpawnInstruction } from "@lib/fx/analisys/instructions/part/SpawnInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction, IStmtInstruction, ITypeInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { LiteGraph } from "litegraph.js";
 import { PART_TYPE } from "../common";
-import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "../GraphNode";
+import { AST, CodeEmitterNode, CodeEmitterStmt, GraphContext, ISpawner, LGraphNodeFactory } from "../GraphNode";
 
 function def(type: IVariableTypeInstruction, ast: ReturnType<typeof AST>): IExprInstruction
 {
@@ -18,57 +20,43 @@ function def(type: IVariableTypeInstruction, ast: ReturnType<typeof AST>): IExpr
     return null;
 }
 
-function producer(env: () => ISLDocument): LGraphNodeFactory
+function producer(env: () => ISLDocument, spawner: ISpawner): LGraphNodeFactory
 {
-    const desc = "SpawnSelf";
-    const name = "SpawnSelf";
-
-    const layout = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
-    const fields = layout.fields;
-
+    const desc = `Spawn '${spawner.title} (${spawner.id})'`;
     const HIDDEN_CONNECTION = { visible: false };
 
-    class SpawnSelf extends CodeEmitterNode {
+    class SpawnOp extends CodeEmitterStmt {
         static desc = desc;
 
         static color = 'transparent';
-        // static bgcolor = 'transparent';
-
         static can_be_dropped = true;
         static collapsable = false;
 
-        private static ID = 0;
-        private uid = SpawnSelf.ID ++;
-
         constructor() {
-            super(name);
+            super(`Spawn '${spawner.title}'`);
 
-            fields.forEach(({ name, type }) => this.addInput(name, type.name));
+            const params = spawner.findParamsDependencies();
+            this.addInput('count', 'int');
+            params.forEach(param => this.addInput(param.getName(), param.getType()));
             this.addInput("context", LiteGraph.ACTION, HIDDEN_CONNECTION);
-
-            this.size = this.computeSize();
+            this.update();
         }
 
         override onBeforeExecution(context: GraphContext, program: ProgramScope): void {
-            const inputs = fields.map((f, i) => i).filter(i => this.isInputConnected(i));
+            const inputs = this.inputs.slice(1, -1).map((f, i) => i).filter(i => this.isInputConnected(i));
             
             if (!inputs.length) {
                 return;
             }
 
             super.onBeforeExecution(context, program);
-
-            const ast = AST(context, program);
-            context.beginFunc();
-            const params = inputs.map(i => `${fields[i].type.name} ${fields[i].name}`).join(', ');
-            const fdecl = ast.func(`void SpawnSelf${this.uid}(out Part part, int partId, ${params})`, () => [                
-                ...inputs.map(i => ast.assigment(ast.postfixpoint(`part.${fields[i].name}`), ast.idexpr(fields[i].name)))
-            ]);
-            context.endFunc();
         }
 
         override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
-            const inputs = fields.map((f, i) => i).filter(i => this.isInputConnected(i));
+            const fields = spawner.findParamsDependencies();
+            const inputs = fields.map((f, i) => i + 1).filter(i => this.isInputConnected(i));
+
+            fields.forEach((field, i) => this.inputs[i + 1].name = fields[i].title);
             
             if (!inputs.length) {
                 return [];
@@ -78,22 +66,34 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             const scope = program.currentScope;
             const ast = AST(context, program);
 
-            const count = 1;
-            const name = `SpawnSelf${this.uid}`;
+            let count = this.getInputNode('count')?.exec(context, program, this.link('count'));
+            if (!count) {
+                const { base, signed, heximal, exp } = parseUintLiteral('1');
+                count = new IntInstruction({ scope, base, exp, signed, heximal });
+            }
+
+
+            const name = `InitRoutine${spawner.id}`;
             const args = inputs.map(i => this.getInputNode(i)?.exec(context, program, this.link(i)));
     
             const spawnStmt = new SpawnInstruction({ scope, name, args, count });
-            const params = inputs.map(i => layout.fields[i].type);
+            const params = inputs.map(i => scope.findType(fields[i - 1].getType()));
             spawnStmt.$resolve(null, scope.findFunction(name, [ /Part/, /int/, ...params ]));
             context.spawnStmts.push(spawnStmt);
             return [ ...deps, spawnStmt ];
         }
 
-        getTitle(): string { return 'Spawn self'; }
-        getDocs(): string { return 'Spawn this emitter.'; }
+        onDrawTitleBox(
+            ctx, 
+            titleHeight, 
+            size, 
+            scale
+        ) {
+            // skip render of title pin
+        }
     }
 
-    return { [`fx/actions/${desc}`]: SpawnSelf };
+    return { [`fx/actions/${desc}`]: SpawnOp };
 }
 
 export default producer;

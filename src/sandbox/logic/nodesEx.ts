@@ -41,11 +41,11 @@ import PartInit from '@sandbox/components/graphEx/fx/PartInit';
 import PartPrevious from '@sandbox/components/graphEx/fx/PartPrevious';
 import PartSpawn from '@sandbox/components/graphEx/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graphEx/fx/PartUpdate';
-import SpawnSelf from '@sandbox/components/graphEx/fx/SpawnSelf';
+import Param from '@sandbox/components/graphEx/fx/Param';
 
 
 import { ITypeInstruction } from '@lib/idl/IInstruction';
-import { CodeEmitterNode, ICodeMaterialNode, LGraphNodeFactory } from '@sandbox/components/graphEx/GraphNode';
+import { CodeEmitterNode, ICodeMaterialNode, ISpawner, LGraphNodeFactory } from '@sandbox/components/graphEx/GraphNode';
 import GraphTemplateJSON from '@sandbox/components/graphEx/lib/template.json';
 import { getEnv } from '@sandbox/reducers/nodes';
 
@@ -164,7 +164,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             PartPrevious,
             LwiMaterial,
             DefaultMaterial,
-            SpawnSelf
+            Param
         );
 
         LiteGraph.clearRegisteredTypes();
@@ -196,17 +196,22 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
 
 
 interface Plug {
-    uid: number;
+    initId: number;
+    passes: PassPlug[];
+}
+
+interface PassPlug {
+    id: number;
     sorting: boolean;
     geometry: string;
 }
 
-function makeFxTemplate(env: ISLDocument, plugs: Plug[]) {
+function makeFxTemplate(env: ISLDocument, plug: Plug) {
 
-    let passes = plugs.map((plug, i) => 
+    let passes = plug.passes.map((plug, i) => 
 `   pass P${i} {
         Sorting = ${plug.sorting};
-        PrerenderRoutine = compile PrerenderRoutine${plug.uid}();
+        PrerenderRoutine = compile PrerenderRoutine${plug.id}();
         Geometry = "${plug.geometry.toLowerCase()}";
     }`).join("\n\n");
 
@@ -215,7 +220,7 @@ function makeFxTemplate(env: ISLDocument, plugs: Plug[]) {
 partFx G {
     Capacity = 4096;
     SpawnRoutine = compile SpawnRoutine();
-    InitRoutine = compile InitRoutine();
+    InitRoutine = compile InitRoutine${plug.initId}();
     UpdateRoutine = compile UpdateRoutine();
 
 ${passes}
@@ -234,9 +239,12 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         const { nodes } = state;
         const { graph, env } = nodes;
 
+        // IP: hack to find all spawners/initializer by type
+        const InitInstance = LiteGraph.registered_node_types['fx/InitRoutine'];
+
         let spawn = graph.findNodeByTitle("SpawnRoutine") as CodeEmitterNode;
         let update = graph.findNodeByTitle("UpdateRoutine") as CodeEmitterNode;
-        let init = graph.findNodeByTitle("InitRoutine") as CodeEmitterNode;
+        let inits = graph.findNodesByClass(InitInstance) as ISpawner[];
         let prerender: ICodeMaterialNode[] = [];
         prerender = [ ...prerender, ...graph.findNodesByTitle("DefaultMaterial") as ICodeMaterialNode[] ];
         prerender = [ ...prerender, ...graph.findNodesByTitle("LwiMaterial") as ICodeMaterialNode[] ];
@@ -244,18 +252,20 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
 
         let doc = await extendFXSLDocument(null, env);
         doc = await spawn.run(doc);
-        doc = await init.run(doc);
+        for (let init of inits) {
+            doc = await init.run(doc);
+        }
         doc = await update.run(doc);
 
-        let plugs: Plug[] = [];
+        let plugs: PassPlug[] = [];
         for (let i in prerender) {
-            let { uid, sorting, geometry } = prerender[i];
+            let { id, sorting, geometry } = prerender[i];
             doc = await prerender[i].run(doc);
-            plugs.push({ uid, sorting, geometry });
+            plugs.push({ id, sorting, geometry });
         }
 
         doc = await extendFXSLDocument(await createTextDocument("://fx-template", 
-        makeFxTemplate(env, plugs)), doc);
+        makeFxTemplate(env, { passes: plugs, initId: inits.find(init => init.pure).id })), doc);
 
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);

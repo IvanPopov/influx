@@ -6,8 +6,9 @@ import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDe
 import { IFile, IParseNode } from "@lib/idl/parser/IParser";
 import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
-import { Analyzer, Context, ICompileValidator } from "./Analyzer";
+import { Analyzer, Context, ICompileValidator, parseUintLiteral } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
+import { IntInstruction } from "./instructions/IntInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
 import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
@@ -88,7 +89,6 @@ export class FxAnalyzer extends Analyzer {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
-        const count = Number(children.slice(-3, -2)[0].value);
         const name = children.slice(-5, -4)[0].value;
         const args = <IExprInstruction[]>[];
 
@@ -98,6 +98,9 @@ export class FxAnalyzer extends Analyzer {
                 args.push(arg);
             }
         }
+
+        const { base, signed, heximal, exp } = parseUintLiteral(children.slice(-3, -2)[0].value);
+        const count = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
 
         const spawnStmt = new SpawnInstruction({ sourceNode, scope, name, args, count });
         context.spawnStmts.push(spawnStmt);

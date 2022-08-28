@@ -10,13 +10,10 @@ import { PART_TYPE } from "../common";
 import { AST, CodeEmitterNode, GraphContext, ICodeMaterialNode, LGraphNodeFactory } from "../GraphNode";
 
 
-// fixme: do not cross with ID from DefaultMaterial.ts
-let ID = 20000;
-
 function producer(env: () => ISLDocument): LGraphNodeFactory {
     const layout = env().root.scope.types[PART_TYPE] as ComplexTypeInstruction;
     const desc = "LwiMaterial";
-    const name = "LwiMaterial";
+    const name = "Lwi Material";
 
     class LwiMaterial extends CodeEmitterNode implements ICodeMaterialNode {
         static desc = desc;
@@ -25,7 +22,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         private sortingWidget: IWidget<boolean>;
         private geometryWidget: IWidget<string>;
         
-        uid: number;
+
         get sorting(): boolean {
             return this.sortingWidget.value;
         }
@@ -39,7 +36,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             this.addInput('transform', 'float3x4');
             this.addInput('template', 'int');
             this.size = [180, 25 * (2) + 50 * 2];
-            this.uid = ID++;
 
             this.addProperty("Sorting", true, "bool");
             this.sortingWidget = this.addWidget<IWidget>("toggle", "Sorting", true, "value");
@@ -62,7 +58,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             const execInput = id => this.getInputNode(id).exec(context, program, this.link(id));
     
             context.beginFunc();
-            const fdecl = ast.func(`int PrerenderRoutine${this.uid}(inout Part part, inout LwiInstance input)`, 
+            const fdecl = ast.func(`int PrerenderRoutine${this.id}(inout Part part, inout LwiInstance input)`, 
                 () => 
                 [ 
                     ...this.getInputNode('transform').compute(context, program),
@@ -93,7 +89,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             return this.extend(env);
         }
 
-        getTitle(): string { return 'Lwi Material'; }
         getDocs(): string { return 'Render particles as lwi templates.'; }
 
     }

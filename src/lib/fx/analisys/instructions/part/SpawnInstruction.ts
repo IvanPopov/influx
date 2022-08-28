@@ -5,14 +5,14 @@ import { IInstructionSettings } from "../Instruction";
 import { StmtInstruction } from "../StmtInstruction";
 
 export interface ISpawnInstructionSettings extends IInstructionSettings {
-    count: number;
+    count: IExprInstruction;
     args: IExprInstruction[];
     name: string;
 }
 
 
 export class SpawnInstruction extends StmtInstruction implements ISpawnStmtInstruction {
-    readonly count: number;
+    readonly count: IExprInstruction;
     readonly args: IExprInstruction[];
     readonly name: string;
     

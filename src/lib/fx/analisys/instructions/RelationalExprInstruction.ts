@@ -47,7 +47,7 @@ export class RelationalExprInstruction extends ExprInstruction implements IRelat
     toCode(): string {
         var code: string = '';
         code += this.left.toCode();
-        code += this.operator;
+        code += ` ${this.operator} `;
         code += this.right.toCode();
         return code;
     }

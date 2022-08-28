@@ -32,7 +32,7 @@ export interface IPartFxPassInstruction extends IPassInstruction {
 
  export interface ISpawnStmtInstruction extends IStmtInstruction {
     readonly name: string;
-    readonly count: number;
+    readonly count: IExprInstruction;
     readonly args: IExprInstruction[];
     
     // resolved properties

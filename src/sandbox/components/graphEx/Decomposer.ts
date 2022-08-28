@@ -7,7 +7,6 @@ import { extendSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { EInstructionTypes, IExprInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IParseNode } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { INodeInputSlot, INodeOutputSlot, LiteGraph, LLink } from "litegraph.js";
 
@@ -39,16 +38,12 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         override exec(context: GraphContext, program: ProgramScope, slot: number): IExprInstruction
         {
             const name = this.getOutputInfo(slot).name;
-            const element = this.getInputNode(0).exec(context, program, this.link(0));
-
-            const sourceNode = null as IParseNode;    
+            const element = this.getInputNode(0).exec(context, program, this.link(0));  
             const scope = program.currentScope;
-            
             const decl = element.type.getField(name);
-            const id = new IdInstruction({ scope, sourceNode, name });
-            const postfix = new IdExprInstruction({ scope, sourceNode, id, decl });
-
-            return new PostfixPointInstruction({ sourceNode, scope, element, postfix });
+            const id = new IdInstruction({ scope, name });
+            const postfix = new IdExprInstruction({ scope, id, decl });
+            return new PostfixPointInstruction({ scope, element, postfix });
         }
 
         onConnectInput(inputIndex: number, outputType: string | -1, outputSlot: INodeOutputSlot, outputNode: CodeEmitterNode, outputIndex: number): boolean 

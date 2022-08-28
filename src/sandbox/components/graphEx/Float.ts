@@ -3,7 +3,6 @@ import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IParseNode } from "@lib/idl/parser/IParser";
 import { IWidget, LGraphCanvas } from "litegraph.js";
 
 import { CodeEmitterNode, LGraphNodeFactory } from "./GraphNode";
@@ -25,7 +24,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
         override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
             const scope = program.currentScope;
-            return new FloatInstruction({ scope, value: Number(this.properties["value"]) });
+            return new FloatInstruction({ scope, value: Number(Number(this.properties["value"]).toFixed(3)) });
         }
 
         override getTitle(): string {

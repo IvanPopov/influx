@@ -43,7 +43,7 @@ export class ArithmeticExprInstruction extends ExprInstruction implements IArith
     toCode(): string {
         var sCode: string = "";
         sCode += this._leftOperand.toCode();
-        sCode += this.operator;
+        sCode += ` ${this.operator} `;
         sCode += this._rightOperand.toCode();
         return sCode;
     }

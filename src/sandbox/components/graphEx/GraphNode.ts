@@ -207,6 +207,7 @@ export class CodeEmitterNode extends LGraphNode {
 
     // names of local variables
     protected locals: string[];
+    protected localsCache: IExprInstruction[];
 
     // constructor(name) {
     //     super(name);
@@ -274,10 +275,15 @@ export class CodeEmitterNode extends LGraphNode {
         return this.locals[0];
     }
 
+    protected localCache(slot: number) {
+        return this.localsCache?.[0] || null;
+    }
 
     protected addLocal(context: GraphContext, program: ProgramScope, type: string, expr: IExprInstruction): IStmtInstruction[] {
         const t = context.addLocal();
         this.locals = [t];
+        this.localsCache = [expr];
+
         const ast = AST(context, program);
         return [
             ast.stmt([ast.variable(t, type)]),
@@ -289,6 +295,7 @@ export class CodeEmitterNode extends LGraphNode {
     // it has to be fixed
     onBeforeExecution(context: GraphContext, program: ProgramScope): void {
         this.locals = null; // clean up precached names
+        this.localsCache = null;
         this.inputs.forEach((n, i) =>
             n.type != LiteGraph.ACTION && this.getInputNode(i)?.onBeforeExecution(context, program));
         this.outputs.forEach((n, i) =>
@@ -393,13 +400,17 @@ export class CodeEmitterNode extends LGraphNode {
     // }
 }
 
+export class CodeEmitterParam extends CodeEmitterNode {
+    getName(): string { return null; }
+    getType(): string { return null; }
+}
 
 export class CodeEmitterStmt extends CodeEmitterNode {
 
     protected readyToAccept = false;
 
     protected dependentNodes() {
-        return this.getOutputNodes(0);
+        return this.getOutputNodes(0); // 'stmts' ?
     }
 
     protected update() {
@@ -410,7 +421,7 @@ export class CodeEmitterStmt extends CodeEmitterNode {
         const dh_post = 10;
 
         let [w, h] = this.computeSize();
-        let [x, y] = [dx, h - 26]; // fixme!!!
+        let [x, y] = [dx, h - (this.inputs.find(i => i.pos?.[1] < 0) || this.outputs?.[0]?.visible === false ? 26 : 0)]; // fixme!!!
 
         const nodes = this.dependentNodes();
         if (nodes) {
@@ -445,11 +456,11 @@ export class CodeEmitterStmt extends CodeEmitterNode {
     }
 
     onResize() {
-        (this.getInputNode(1) as CodeEmitterStmt)?.update?.();
+        (this.getInputNode("context") as CodeEmitterStmt)?.update?.();
     }
 
     onReposition() {
-        (this.getInputNode(1) as CodeEmitterStmt)?.update?.();
+        (this.getInputNode("context") as CodeEmitterStmt)?.update?.();
     }
 
     protected highlight(value) {
@@ -513,8 +524,15 @@ export class CodeEmitterStmt extends CodeEmitterNode {
     }
 }
 
+export interface ISpawner extends CodeEmitterNode {
+    // indicates that spawner/initializer doesn't 
+    // have dependencies and can be call inside per frame routine
+    get pure(): boolean;        
+
+    findParamsDependencies(): CodeEmitterParam[];
+} 
+
 export interface ICodeMaterialNode extends CodeEmitterNode {
-    get uid(): number;          // name identifier for PrerenderRoutine<UID>()
     get sorting(): boolean;     // pass options
     get geometry(): string;     // pass options
 }

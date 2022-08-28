@@ -1,13 +1,11 @@
 import { Context } from "@lib/fx/analisys/Analyzer";
 import { FunctionCallInstruction } from "@lib/fx/analisys/instructions/FunctionCallInstruction";
-import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
-import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IExprInstruction, IFunctionDeclInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 
 
-import { CodeEmitterNode, LGraphNodeFactory, AST as AST, GraphContext } from "./GraphNode";
+import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "./GraphNode";
 
 
 interface INodeDesc {
@@ -60,7 +58,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 this.size = [180, 25 * Math.max(node.inputs.length, node.outputs.length)];
             }
 
-
             override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
                 if (this.locals || 
                     !this.inputs.every((x, i) => this.isInputConnected(i))) {
@@ -68,15 +65,12 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 }
 
                 const deps = super.compute(context, program);
-
                 const scope = program.currentScope;
-
-                const func = node.func;
-                const type = func.def.returnType;
-
+                const decl = node.func;
+                const type = decl.def.returnType;
                 const args = node.inputs
                     .map((V, i) => this.getInputNode(i)?.exec(context, program, this.link(i))) || null;
-                const expr = new FunctionCallInstruction({ scope, type, decl: func, args });
+                const expr = new FunctionCallInstruction({ scope, type, decl, args });
 
                 return [ ...deps, ...this.addLocal(context, program, type.name, expr) ];
             }

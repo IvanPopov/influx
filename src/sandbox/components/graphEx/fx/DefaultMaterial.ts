@@ -9,8 +9,6 @@ import { IWidget } from "litegraph.js";
 import { AST, CodeEmitterNode, GraphContext, ICodeMaterialNode, LGraphNodeFactory } from "../GraphNode";
 
 
-let ID = 0;
-
 function producer(env: () => ISLDocument): LGraphNodeFactory
 {
     const DEFAULT_MATERIAL = 'DefaultShaderInput';
@@ -25,7 +23,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         private sortingWidget: IWidget<boolean>;
         private geometryWidget: IWidget<string>;
         
-        uid: number;
         get sorting(): boolean {
             return this.sortingWidget.value;
         }
@@ -43,7 +40,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             inputs.forEach(i => this.addInput(i.name, i.type));
             this.addInput('sort', 'int');
             this.size = [180, 25 * (inputs.length + 1) + 50 * 2];
-            this.uid = ID ++;
 
             this.addProperty("Sorting", true, "bool");
             this.sortingWidget = this.addWidget<IWidget>("toggle", "Sorting", true, "value");
@@ -67,7 +63,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             const computeInput = id => this.getInputNode(id).compute(context, program);
 
             context.beginFunc();
-            const fdecl = ast.func(`int PrerenderRoutine${this.uid}(inout Part part, out DefaultShaderInput input)`, 
+            const fdecl = ast.func(`int PrerenderRoutine${this.id}(inout Part part, out DefaultShaderInput input)`, 
                 () => 
                 [ 
                     ...computeInput('pos'),

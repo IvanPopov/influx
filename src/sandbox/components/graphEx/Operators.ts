@@ -4,12 +4,30 @@ import { RelationalExprInstruction, RelationOperator } from "@lib/fx/analisys/in
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IArithmeticOperator, IExprInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IParseNode } from "@lib/idl/parser/IParser";
+import { LGraph, LGraphCanvas, LiteGraph } from "litegraph.js";
 
 import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "./GraphNode";
 
 function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
+
+    class Operator extends CodeEmitterNode {
+        override collapse(force: boolean): void {
+            super.collapse(force);
+            this.restyle();
+        }
+
+        private restyle() {
+            this.size = this.flags.collapsed ? [50, 25] : [100, 50];
+            this.bgcolor = this.flags.collapsed ? 'transparent' : undefined;
+            this.color = this.flags.collapsed ? 'transparent' : undefined;
+            this.use_gradients = !this.flags.collapsed;
+        }
+
+        override onConfigure(): void {
+            this.restyle();
+        }
+    }
 
     const types = ['float', 'int', 'uint', 'float3'];
 
@@ -21,20 +39,21 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         { name: "Mod", operator: "%", search: "modulo '%'" }
     ];
 
+
     arithmetic.forEach(desc => {
-        types.forEach(typeName => {
-            class Node extends CodeEmitterNode {
+            class Arithmetic extends Operator {
                 static desc = desc.name;
 
                 constructor() {
                     super(desc.name);
-                    this.addInput("a", typeName);
-                    this.addInput("b", typeName);
-                    this.addOutput("value", typeName);
+                    this.addInput("a", types.join(','));
+                    this.addInput("b", types.join(','));
+                    this.addOutput("value", types.join(','));
                     this.size = [100, 50];
+                    this.shape = LiteGraph.ROUND_SHAPE;
                 }
 
-
+        
                 override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
                     if (this.locals || 
                         !this.inputs.every((x, i) => this.isInputConnected(i))) {
@@ -44,12 +63,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     const deps = super.compute(context, program);
                     const scope = program.currentScope;
                     const operator = desc.operator as IArithmeticOperator;
-    
-                    let leftNode = this.getInputNode('a');
-                    let rightNode = this.getInputNode('b');
-    
-                    const left = leftNode.exec(context, program, this.link('a'));
-                    const right = rightNode.exec(context, program, this.link('b'));
+                    const left = this.getInputNode('a').exec(context, program, this.link('a'));
+                    const right = this.getInputNode('b').exec(context, program, this.link('b'));
                     // IP: todo - calc proper type
                     const type = left.type;
                     const expr = new ArithmeticExprInstruction({ scope, left, right, operator, type });
@@ -71,20 +86,19 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     return AST(context, program).idexpr(this.locals[slot]);
                 }
 
-
-                getTitle(): string {
-                    return `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+               
+                override getTitle(): string {
+                    const title = `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+                    return this.flags.collapsed? desc.operator : title;
                 }
-
                 
-                getDocs(): string {
+
+                override getDocs(): string {
                     return `Operator '${desc.search}'.`
                 }
             }
 
-
-            nodes[`operators/${desc.search} | ${typeName}`] = Node;
-        });
+            nodes[`operators/${desc.search}`] = Arithmetic;
     });
 
     const relations = [
@@ -98,14 +112,13 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
     // todo: add support of different types
     relations.forEach(desc => {
-        class Node extends CodeEmitterNode {
+        class Relation extends Operator {
             static desc = desc.name;
-
 
             constructor() {
                 super(desc.name);
-                this.addInput("a", "float");
-                this.addInput("b", "float");
+                this.addInput("a", types.join(','));
+                this.addInput("b", types.join(','));
                 this.addOutput("value", "bool");
                 this.size = [100, 50];
             }
@@ -145,17 +158,17 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             }
 
 
-            getTitle(): string {
-                return `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+            override getTitle(): string {
+                const title = `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+                return this.flags.collapsed? desc.operator : title;
             }
 
-
-            getDocs(): string {
+            override getDocs(): string {
                 return `Operator '${desc.search}'.`
             }
         }
 
-        nodes[`operators/${desc.search}`] = Node;
+        nodes[`operators/${desc.search}`] = Relation;
     });
 
     return nodes;

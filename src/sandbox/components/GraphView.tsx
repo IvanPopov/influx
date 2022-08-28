@@ -70,6 +70,8 @@ LiteGraphA.pointerevents_method = "mouse";                  // "mouse"|"pointer"
 
 LiteGraphA.middle_click_canvas_dragging = true;
 
+// LiteGraph.draw_invisible_connections = true;
+
 const styles = {
     sizing: {
         width: '100%',

@@ -106,9 +106,9 @@ export async function createSLASTDocument(textDocument: ITextDocument,
     opts : { flags?: number, knownTypes?: string[], includeResolver?: IncludeResolver } = {}): Promise<ISLASTDocument> {
     const { flags, knownTypes, includeResolver } = opts;
     const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]), includeResolver });
-    const timeLabel = `createSLASTDocument(${textDocument.uri})`;
-    console.time(timeLabel);
+    // const timeLabel = `createSLASTDocument(${textDocument.uri})`;
+    // console.time(timeLabel);
     await document.parse(textDocument, flags);
-    console.timeEnd(timeLabel);
+    // console.timeEnd(timeLabel);
     return document;
 }
