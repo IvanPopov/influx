@@ -165,7 +165,7 @@ class GraphView extends React.Component<IGraphViewProps> {
 
         // todo: move to redux logic
         // notify store that graph have to be update
-        (this.graph as any).onNodeConnectionChange = () => { this.execute(); }
+        // (this.graph as any).onNodeConnectionChange = () => { this.execute(); }
         (this.graph as any).onAfterChange = () => { this.changed(); }
     }
 

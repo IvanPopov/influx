@@ -275,7 +275,12 @@ export class FxTranslator extends FxEmitter {
 
                 this.emitLine(`// usage of 4th element of ${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS} as temp value of number of particles`);
                 this.emitFunction(spawnFn);
-                this.emitGlobal(elapsedTime);
+                if (elapsedTime) {
+                    this.emitGlobal(elapsedTime);
+                } else {
+                    // IP: remove this hack
+                    this.emitGlobalRaw('elapsedTime', 'uniform float elapsedTime');
+                }
 
                 this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3]) + (float)${spawnFn.name}() * elapsedTime;`);
                 this.emitLine(`float nPartAdd = floor(nPartAddFloat);`);

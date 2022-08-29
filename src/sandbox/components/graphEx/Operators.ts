@@ -1,6 +1,7 @@
 import { Analyzer, Context } from "@lib/fx/analisys/Analyzer";
 import { ArithmeticExprInstruction } from "@lib/fx/analisys/instructions/ArithmeticExprInstruction";
 import { RelationalExprInstruction, RelationOperator } from "@lib/fx/analisys/instructions/RelationalExprInstruction";
+import { ConditionalExprInstruction } from "@lib/fx/analisys/instructions/ConditionalExprInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IArithmeticOperator, IExprInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
@@ -185,6 +186,79 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
         nodes[`operators/${desc.search}`] = Relation;
     });
+
+
+    class Conditional extends Operator {
+        static desc = 'Conditional';
+
+        constructor() {
+            super('Conditional');
+            this.addInput("cond", 'bool');
+            this.addInput("a", TYPE_LIST);
+            this.addInput("b", TYPE_LIST);
+            this.addOutput("value", TYPE_LIST);
+            this.size = this.computeSize();
+        }
+
+        protected get cond(): CodeEmitterNode {
+            return this.getInputNode('cond');
+        }
+
+        override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
+            if (this.locals || 
+                !this.inputs.every((x, i) => this.isInputConnected(i))) {
+                return [];
+            }
+
+            const deps = super.compute(context, program);
+            const scope = program.currentScope;
+
+            let leftNode = this.a;
+            let rightNode = this.b;
+            let condNode = this.cond;
+
+            const left = leftNode.exec(context, program, this.getOriginalSlot('a'));
+            const right = rightNode.exec(context, program, this.getOriginalSlot('b'));
+            const cond = condNode.exec(context, program, this.getOriginalSlot('cond'));
+
+            const expr = new ConditionalExprInstruction({ scope, cond, left, right });
+
+            for (const name of ['a', 'b']) {
+                this.getInputInfo(name).type = left.type.name;
+                this.getInputLink(name).type = left.type.name;
+            }
+            this.getOutputInfo('value').type = expr.type.name;
+
+            return [ ...deps, ...this.addLocal(context, program, expr.type.name, expr) ];
+        }
+
+
+        override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+            let leftNode = this.a;
+            let rightNode = this.b;
+
+            if (!leftNode || !rightNode) {
+                this.emitError(`All inputs must be conected.`);
+                return null;
+            }
+
+            if (!this.locals)
+                return null;
+            return AST(context, program).idexpr(this.locals[slot]);
+        }
+
+
+        override getTitle(): string {
+            const title = `${this.getInputInfo('cond').name} ? ${this.getInputInfo('a').name} : ${this.getInputInfo('b').name}`;
+            return title;
+        }
+
+        override getDocs(): string {
+            return `Conditional operator '?'.`
+        }
+    }
+
+    nodes[`operators/conditional '?'`] = Conditional;
 
     return nodes;
 }

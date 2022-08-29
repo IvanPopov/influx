@@ -58,9 +58,9 @@ function producer(env: () => ISLDocument, spawner: ISpawner): LGraphNodeFactory
 
             fields.forEach((field, i) => this.inputs[i + 1].name = fields[i].title);
             
-            if (!inputs.length) {
-                return [];
-            }
+            // if (!inputs.length) {
+            //     return [];
+            // }
 
             const deps = super.compute(context, program);
             const scope = program.currentScope;

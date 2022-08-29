@@ -3,15 +3,15 @@
     "content": {
         "layout": "struct Part\n{\n\tfloat3 pos;\n\tfloat timelife;\n};",
         "graph": {
-            "last_node_id": 7,
-            "last_link_id": 0,
+            "last_node_id": 21,
+            "last_link_id": 4,
             "nodes": [
                 {
-                    "id": 1,
+                    "id": 19,
                     "type": "fx/SpawnRoutine",
                     "pos": {
-                        "0": 310,
-                        "1": 420,
+                        "0": 504,
+                        "1": 102,
                         "2": 0,
                         "3": 0,
                         "4": 0,
@@ -42,11 +42,11 @@
                     }
                 },
                 {
-                    "id": 2,
-                    "type": "fx/InitRoutine",
+                    "id": 20,
+                    "type": "fx/UpdateRoutine",
                     "pos": {
-                        "0": 310,
-                        "1": 520,
+                        "0": 503,
+                        "1": 218,
                         "2": 0,
                         "3": 0,
                         "4": 0,
@@ -57,77 +57,30 @@
                         "9": 0
                     },
                     "size": [
-                        180,
-                        50
+                        140,
+                        30
                     ],
                     "flags": {},
                     "order": 1,
                     "mode": 0,
-                    "inputs": [
+                    "inputs": [],
+                    "outputs": [
                         {
-                            "name": "pos = 0",
-                            "type": "float3",
-                            "link": null
-                        },
-                        {
-                            "name": "timelife = 0",
-                            "type": "float",
-                            "link": null
+                            "name": "stmts",
+                            "type": -1,
+                            "links": null,
+                            "visible": false
                         }
                     ],
-                    "outputs": [],
-                    "title": "InitRoutine",
-                    "properties": {}
-                },
-                {
-                    "id": 3,
-                    "type": "fx/UpdateRoutine",
-                    "pos": {
-                        "0": 310,
-                        "1": 640,
-                        "2": 0,
-                        "3": 0,
-                        "4": 0,
-                        "5": 0,
-                        "6": 0,
-                        "7": 0,
-                        "8": 0,
-                        "9": 0
-                    },
-                    "size": [
-                        180,
-                        75
-                    ],
-                    "flags": {},
-                    "order": 2,
-                    "mode": 0,
-                    "inputs": [
-                        {
-                            "name": "pos += dt * up",
-                            "type": "float3",
-                            "link": null
-                        },
-                        {
-                            "name": "timelife += dt",
-                            "type": "float",
-                            "link": null
-                        },
-                        {
-                            "name": "alive = timelife < 1",
-                            "type": "bool",
-                            "link": null
-                        }
-                    ],
-                    "outputs": [],
                     "title": "UpdateRoutine",
                     "properties": {}
                 },
                 {
-                    "id": 7,
-                    "type": "fx/DefaultMaterial",
+                    "id": 21,
+                    "type": "fx/InitRoutine",
                     "pos": {
-                        "0": 310,
-                        "1": 790,
+                        "0": 504,
+                        "1": 319,
                         "2": 0,
                         "3": 0,
                         "4": 0,
@@ -138,31 +91,22 @@
                         "9": 0
                     },
                     "size": [
-                        180,
-                        140
+                        140,
+                        30
                     ],
                     "flags": {},
-                    "order": 3,
+                    "order": 2,
                     "mode": 0,
-                    "inputs": [
+                    "inputs": [],
+                    "outputs": [
                         {
-                            "name": "pos = part.pos",
-                            "type": "float3",
-                            "link": null
-                        },
-                        {
-                            "name": "color = (1, 0, 1, 1)",
-                            "type": "float4",
-                            "link": null
-                        },
-                        {
-                            "name": "size = 0.1",
-                            "type": "float",
-                            "link": null
+                            "name": "stmts",
+                            "type": -1,
+                            "links": null,
+                            "visible": false
                         }
                     ],
-                    "outputs": [],
-                    "title": "DefaultMaterial",
+                    "title": "Init Routine",
                     "properties": {}
                 }
             ],

@@ -30,6 +30,7 @@ import IfStmt from '@sandbox/components/graphEx/IfStmt';
 import Int from '@sandbox/components/graphEx/Int';
 import Operators from '@sandbox/components/graphEx/Operators';
 import Uniforms from '@sandbox/components/graphEx/Uniforms';
+import StmtList from '@sandbox/components/graphEx/StmtList';
 
 import DefaultMaterial from '@sandbox/components/graphEx/fx/DefaultMaterial';
 import Kill from '@sandbox/components/graphEx/fx/Kill';
@@ -156,6 +157,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
             KillBy,
             Decomposer,
             Uniforms,
+            StmtList,
             Part,
             PartId,
             PartUpdate,

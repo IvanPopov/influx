@@ -583,34 +583,30 @@ export class PartRoutine extends CodeEmitterStmt {
     static collapsable = false;
     // static title_offset_x = 5;
 
-    // onDrawBackground(
-    //     ctx         /* CanvasRenderingContext2D */,
-    //     gcanvas     /* LGraphCanvas */,
-    //     canvas      /* HTMLCanvasElement */,
-    //     mouse
-    // ) {
-    //     super.onDrawBackground(ctx, gcanvas, canvas, mouse);
+    onDrawBackground(
+        ctx         /* CanvasRenderingContext2D */,
+        gcanvas     /* LGraphCanvas */,
+        canvas      /* HTMLCanvasElement */,
+        mouse
+    ) {
+        super.onDrawBackground(ctx, gcanvas, canvas, mouse);
 
-    //     if (this.flags.collapsed)
-    //         return;
+        if (this.flags.collapsed)
+            return;
 
-    //     let [w, h] = this.size;
+        let [w, h] = this.size;
 
-    //     ctx.save();
-    //     ctx.beginPath();
-    //     ctx.lineWidth = 2;
-    //     ctx.strokeStyle = this.readyToAccept ? 'orange' : 'rgba(255, 255, 255, 0.5)';//'rgba(89, 195, 195, 0.5)';
-    //     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    //     // ctx.shadowColor = "#000";
-    //     // ctx.shadowOffsetX = 0;
-    //     // ctx.shadowOffsetY = 0;
-    //     // ctx.shadowBlur = 6;
-    //     ctx.roundRect(0, 0, w + 1, h, [0, 0, 0, 0], 0);
-    //     ctx.stroke();
-    //     ctx.fill();
-    //     ctx.closePath();
-    //     ctx.restore();
-    // }
+        if (this.readyToAccept) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'orange';
+            ctx.roundRect(0, 0, w + 1, h, [0, 0, 0, 0], 0);
+            ctx.stroke();
+            ctx.closePath();
+            ctx.restore();
+        }
+    }
 
 
     // onDrawTitleBar(

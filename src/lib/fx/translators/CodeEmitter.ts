@@ -472,6 +472,16 @@ export class CodeEmitter extends BaseEmitter {
         }
     }
 
+    emitGlobalRaw(name: string, content: string) {
+        if (this.knownGlobals.indexOf(name) === -1) {
+            this.begin();
+            this.emitChar(`${content};`);
+            this.emitNewline();
+            this.end();
+            this.knownGlobals.push(name);
+        }
+    }
+
     emitIdentifier(id: IIdExprInstruction) {
         const { decl, name } = id;
 

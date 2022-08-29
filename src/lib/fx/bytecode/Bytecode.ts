@@ -8,7 +8,7 @@ import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
@@ -1305,6 +1305,55 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     return ret;
                 }
                 break;
+            case EInstructionTypes.k_ConditionalExpr:
+                {
+                    const { condition, left, right } = expr as IConditionalExprInstruction;
+                    assert(left.type.isEqual(right.type));
+
+                    let size = left.type.size;
+                    let dest = alloca(size);
+                    let condAddr = raddr(condition);
+                    assert(condAddr.size === sizeof.bool());
+
+                    if (condAddr.type !== EAddrType.k_Registers) {
+                        condAddr = iload(condAddr);
+                        debug.map(condition);
+                    }
+
+                    iop1(EOperation.k_JumpIf, condAddr);
+
+                    let unresolvedJump = pc();
+                    icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
+
+                    let leftAddr = raddr(left as IExprInstruction);
+                    if (leftAddr.type !== EAddrType.k_Registers) {
+                        leftAddr = iload(leftAddr);
+                        debug.map(left);
+                    }
+                    imove(dest, leftAddr);
+                    debug.map(left);
+
+                    // jump co contrary or out of if
+                    let jumpTo = pc() + 1;
+                    instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]);
+
+                    unresolvedJump = pc();
+                    icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
+                    
+                    let rightAddr = raddr(right as IExprInstruction);
+                    if (rightAddr.type !== EAddrType.k_Registers) {
+                        rightAddr = iload(rightAddr);
+                        debug.map(right);
+                    }
+                    imove(dest, rightAddr);
+                    debug.map(right);
+
+                    // jump to skip contrary
+                    jumpTo = pc();
+                    instructions.replace(unresolvedJump, EOperation.k_Jump, [jumpTo]);
+                    return addr.loc({ addr: dest, size });
+                }
+                break;
             case EInstructionTypes.k_ConstructorCallExpr:
                 {
                     const ctorCall = expr as IConstructorCallInstruction;
@@ -1331,6 +1380,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         case 'uint2':
                         case 'uint3':
                         case 'uint4':
+                        case 'bool':
+                        case 'bool2':
+                        case 'bool3':
+                        case 'bool4':
 
                             switch (args.length) {
                                 case 1:
@@ -1342,6 +1395,17 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     if (src.type !== EAddrType.k_Registers) {
                                         src = iload(src);
                                         debug.map(args[0]);
+                                    }
+
+                                    // convert arguments from float to int and back
+                                    if (SystemScope.isFloatBasedType(args[0].type) !== SystemScope.isFloatBasedType(type)) {
+                                        const op = SystemScope.isFloatBasedType(type) ? EOperation.k_I32ToF32 : EOperation.k_F32ToI32;
+                                        assert(args[0].type.size === sizeof.i32()); // <= expected float4(10) or float3(10u) or float3(true);
+
+                                        // don't change initial location?
+                                        let temp = alloca(src.size);
+                                        iop2(op, temp, src);
+                                        src = temp;
                                     }
 
                                     const elementSize = SystemScope.isFloatBasedType(type) ? sizeof.f32() : sizeof.i32();
@@ -1372,10 +1436,22 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                             debug.map(args[i]);
                                         }
 
+
+                                        // convert arguments from float to int and back
+                                        if (SystemScope.isFloatBasedType(args[i].type) !== SystemScope.isFloatBasedType(type)) {
+                                            const op = SystemScope.isFloatBasedType(type) ? EOperation.k_I32ToF32 : EOperation.k_F32ToI32;
+                                            assert(args[i].type.size === sizeof.i32()); // <= expected float4(10) or float3(10u) or float3(true);
+                                            
+                                            // don't change initial location?
+                                            let temp = alloca(src.size);
+                                            iop2(op, temp, src);
+                                            src = temp;
+                                        }
+
                                         imove(addr.sub(dest, padding, src.size), src);
-                                        debug.map(ctorCall);
                                         padding += args[i].type.size;
                                     }
+                                    debug.map(ctorCall);
                                     break;
 
                             }

@@ -34,7 +34,9 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             let sourceNode = null as IParseNode;
             let scope = program.currentScope;
             // return new FloatInstruction({ scope, sourceNode, value: Number(this.properties["value"]) });
-            const { base, signed, heximal, exp } = parseUintLiteral(this.properties.value.toFixed(0));
+            let value = this.properties.value;
+            let { base, signed, heximal, exp } = parseUintLiteral(Math.abs(value).toFixed(0));
+            if (value < 0) base = -base;
             return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
         }
 

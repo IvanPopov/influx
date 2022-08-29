@@ -44,6 +44,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         return new IdExprInstruction({ scope, sourceNode, id, decl });
     }
 
+    const HIDDEN_CONNECTION = { visible: false };
+
     type.fields.forEach(field => {
         // todo: add suppor of complex types
         if (field.type.isComplex()) {
@@ -53,7 +55,6 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         const name = `${PART_LOCAL_NAME}.${field.name}`;
         const desc = `${name} (previous value).`;
 
-        const HIDDEN_CONNECTION = { visible: false };
 
         class Part extends CodeEmitterNode {
             static desc = desc;
@@ -107,12 +108,25 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
     class Part extends CodeEmitterNode {
         static desc = desc;
+        static color = 'transparent';
+        static can_be_dropped = true;
+        static collapsable = false;
 
         constructor() {
             super(name);
-            this.addInput(PART_LOCAL_NAME, PART_TYPE);
-            this.addInput("context", LiteGraph.ACTION);
-            this.size = [130, 50];
+            
+            type.fields.forEach(field => {
+                // todo: add suppor of complex types
+                if (field.type.isComplex()) {
+                    return;
+                }
+        
+                const name = `${field.name}`;
+                this.addInput(name, field.type.name);
+            });
+
+            this.addInput("context", LiteGraph.ACTION, HIDDEN_CONNECTION);
+            this.size = this.computeSize();
         }
 
         override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
@@ -120,14 +134,22 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
             const deps = super.compute(context, program);
             const scope = program.currentScope;
-            const right = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));
-            const left = new IdExprInstruction({ 
-                scope, 
-                id: new IdInstruction({ scope, name: 'part' }), 
-                decl: scope.findVariable('part') 
-            });
-            const expr = new AssignmentExprInstruction({ scope, left, right, operator: '=' });
-            return [ ...deps, new ExprStmtInstruction({ scope, expr }) ];   
+
+            return [ ...deps, ...this.inputs
+                    .map((v, i) => i)
+                    .slice(0, -1)
+                    .map((input, i) => {
+                        const right = this.getInputNode(i).exec(context, program, this.getOriginalSlot(i));
+                        const element = evaluatePartExpr(context, program);
+                        const postfix = new IdExprInstruction({ 
+                            scope,
+                            id: new IdInstruction({ scope, name: type.fields[i].name }), 
+                            decl: element.type.getField(type.fields[i].name) 
+                        });
+                        const left = new PostfixPointInstruction({ scope, element, postfix });
+                        const expr = new AssignmentExprInstruction({ scope, left, right, operator: '=' });
+                        return new ExprStmtInstruction({ scope, expr });   
+                    })];
         }
     }
 

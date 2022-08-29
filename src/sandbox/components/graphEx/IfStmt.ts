@@ -3,7 +3,7 @@ import { StmtBlockInstruction } from "@lib/fx/analisys/instructions/StmtBlockIns
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { LiteGraph } from "litegraph.js";
+import { IWidget, LiteGraph } from "litegraph.js";
 
 
 import { CodeEmitterStmt, GraphContext, LGraphNodeFactory } from "./GraphNode";
@@ -27,6 +27,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         static can_accept_drop = true; 
         static collapsable = false;
 
+        // toggle: IWidget;
+
         constructor() {
             super(name);
             this.addInput("cond", "bool", { pos: [13, -13], label: "" });
@@ -34,6 +36,11 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             this.addOutput("true", LiteGraph.EVENT, HIDDEN_CONNECTION);
             this.addOutput("false", LiteGraph.EVENT, HIDDEN_CONNECTION);
 
+            // this.addProperty<boolean>("value", true, "boolean");
+            // this.toggle = this.addWidget<IWidget>("toggle", null, true, "value", { on: "fwd", off: "bck" } );
+            // (this.toggle as any).width = 100;
+            // this.widgets_start_y = -13;
+            // this.serialize_widgets = true;
             this.update();
         }
 

@@ -51,7 +51,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             const self = this;
             async function wrapper () {
                 // part argument has been added in order to handle corner case related to 'fx' pipeline
-                const source = `auto anonymous(${PART_TYPE} ${PART_LOCAL_NAME}) { return ($complexExpr); }`;
+                const source = `auto anonymous(${PART_TYPE} ${PART_LOCAL_NAME}, int partId) { return ($complexExpr); }`;
                 const textDocument = await createTextDocument(`://decompose-node`, source);
 
                 let type: ITypeInstruction = null;

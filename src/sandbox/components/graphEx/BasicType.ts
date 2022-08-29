@@ -16,15 +16,15 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
     [
-        'float2', 'float3', 'float4',
-        'half2', 'half3', 'half4',
-        'int2', 'int3', 'int4',
-        'uint2', 'uint3', 'uint4',
-        'bool2', 'bool3', 'bool4'
+        'float', 'float2', 'float3', 'float4',
+        'half', 'half2', 'half3', 'half4',
+        'int', 'int2', 'int3', 'int4',
+        'uint', 'uint2', 'uint3', 'uint4',
+        'bool', 'bool2', 'bool3', 'bool4'
     ].forEach(typeName => {
-        const match = typeName.match(/(float|half|bool|uint|int)(2|3|4)/);
+        const match = typeName.match(/(float|half|bool|uint|int)(2|3|4)?/);
         const desc = [typeName[0].toUpperCase(), ...typeName.slice(1)].join('');
-        const count = Number(match[2]);
+        const count = Number(match[2] || 1);
         const type = match[1];
 
         let prettify = (raw: number | boolean): any => {
@@ -48,7 +48,11 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
 
                 [...'xyzw'].slice(0, count).forEach(name => {
-                    this.addInput(name, type);
+                    if (count == 1) {
+                        this.addInput(name, 'float,bool,int,uint,half');
+                    } else {
+                        this.addInput(name, type);
+                    }
                     this.inputNames.push(name);
 
                     if (type == 'bool')

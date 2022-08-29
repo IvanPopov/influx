@@ -75,7 +75,8 @@
 ***
 
 ### Graph
-+ Resolve link/nodes types for Operators (nodes which are supported multiple type for inputs)
++ add color picker!
++ ~~Resolve link/nodes types for Operators (nodes which are supported multiple type for inputs)~~
 + Add support of CTRL+Z
 + Generator nodes from expressions
 + Search nodes by word distance instead of exact match
@@ -90,3 +91,5 @@
 + Add support of comments (like groups)
 + Allow easy group renaming (via double click on group title)
 + highlight nodes with warnings (for ex if operation leads to loss of precision)
++ add portals (ability to make a mirror of node to be able to connect from mirrot not from original node)
++ add ability to add named constants
