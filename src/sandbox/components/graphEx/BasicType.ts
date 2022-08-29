@@ -80,7 +80,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                                 return new FloatInstruction({ scope, sourceNode, value: prettify(this.properties[name]) })
                         }
                     }
-                    return input.exec(context, program, this.link(i));
+                    return input.exec(context, program, this.getOriginalSlot(i));
                 });
                 return new ConstructorCallInstruction({ scope, sourceNode, ctor, args });
             }

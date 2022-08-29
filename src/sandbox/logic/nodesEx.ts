@@ -270,6 +270,8 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);
 
+        graph.list_of_graphcanvas.forEach(canvas => canvas.draw(true, true));
+
         dispatch(sourceCode.setContent(FxEmitter.translateTechnique(doc, 'G')));
         done();
     }

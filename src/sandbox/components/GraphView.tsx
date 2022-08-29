@@ -108,7 +108,7 @@ class GraphView extends React.Component<IGraphViewProps> {
     setupCanvas() {
         this.canvas = new LGraphCanvas("#node-graph-canvas", this.graph);
         this.canvas.show_info = true;
-        this.canvas.use_gradients = true;
+        // this.canvas.use_gradients = true;
         this.canvas.allow_reconnect_links = true;
         this.canvas.links_render_mode = LiteGraph.LINEAR_LINK;
         this.canvas.round_radius = 4;
@@ -130,29 +130,29 @@ class GraphView extends React.Component<IGraphViewProps> {
 
 
     setupTypesColoring() {
-        const palette = { 
-            "Cadet Blue": "#51a3a3", 
-            "Steel Teal": "#5A8D92",
-            "Slate Gray": "#637681", 
-            "Old Lavender": "#6c5f70", 
-            "Eggplant": "#75485e", 
-            "Blast Off Bronze": "#a06c56",
-            "Persian Orange": "#cb904d", 
-            "Sunray": "#d5ae61", 
-            "Arylide Yellow": "#dfcc74", 
-            "Yellow Green Crayola": "#c3e991" 
-        };
+        // const palette = { 
+        //     "Cadet Blue": "#51a3a3", 
+        //     "Steel Teal": "#5A8D92",
+        //     "Slate Gray": "#637681", 
+        //     "Old Lavender": "#6c5f70", 
+        //     "Eggplant": "#75485e", 
+        //     "Blast Off Bronze": "#a06c56",
+        //     "Persian Orange": "#cb904d", 
+        //     "Sunray": "#d5ae61", 
+        //     "Arylide Yellow": "#dfcc74", 
+        //     "Yellow Green Crayola": "#c3e991" 
+        // };
 
-        (this.canvas as any).default_connection_color_byType = {
-            uint: palette["Cadet Blue"],
-            int: palette["Steel Teal"],
-            int2: palette["Slate Gray"],
-            bool: palette["Old Lavender"],
-            float: palette["Eggplant"],
-            float2: palette["Blast Off Bronze"],
-            float3: palette["Sunray"],
-            float4: palette["Arylide Yellow"]
-        };
+        // (this.canvas as any).default_connection_color_byType = {
+        //     uint: palette["Cadet Blue"],
+        //     int: palette["Steel Teal"],
+        //     int2: palette["Slate Gray"],
+        //     bool: palette["Old Lavender"],
+        //     float: palette["Eggplant"],
+        //     float2: palette["Blast Off Bronze"],
+        //     float3: palette["Sunray"],
+        //     float4: palette["Arylide Yellow"]
+        // };
     }
 
     setupListeners() {

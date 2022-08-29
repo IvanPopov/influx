@@ -36,7 +36,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             const deps = super.compute(context, program);
             const ast = AST(context, program);
             const scope = program.currentScope;
-            const cond = this.getInputNode('cond')?.exec(context, program, this.link('cond')) ||
+            const cond = this.getInputNode('cond')?.exec(context, program, this.getOriginalSlot('cond')) ||
                 this.exec(context, program, 0)/* false */;
             const conseqStmts = [ ast.return(ast.bool(false)) ];
             const conseq = conseqStmts ? new StmtBlockInstruction({ scope, stmtList: conseqStmts }) : null;

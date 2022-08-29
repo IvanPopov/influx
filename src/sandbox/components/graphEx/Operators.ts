@@ -1,10 +1,10 @@
-import { Context } from "@lib/fx/analisys/Analyzer";
+import { Analyzer, Context } from "@lib/fx/analisys/Analyzer";
 import { ArithmeticExprInstruction } from "@lib/fx/analisys/instructions/ArithmeticExprInstruction";
 import { RelationalExprInstruction, RelationOperator } from "@lib/fx/analisys/instructions/RelationalExprInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import { IArithmeticOperator, IExprInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { LGraph, LGraphCanvas, LiteGraph } from "litegraph.js";
+import { INodeInputSlot, INodeOutputSlot, INodeSlot, LGraph, LGraphCanvas, LGraphNode, LiteGraph, LLink, SerializedLGraphNode } from "litegraph.js";
 
 import { AST, CodeEmitterNode, GraphContext, LGraphNodeFactory } from "./GraphNode";
 
@@ -12,26 +12,26 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
 
     class Operator extends CodeEmitterNode {
-        override collapse(force: boolean): void {
-            super.collapse(force);
-            this.restyle();
+        protected get a(): CodeEmitterNode {
+            return this.getInputNode('a');
         }
 
-        private restyle() {
-            this.size = this.flags.collapsed ? [50, 25] : [100, 50];
-            this.bgcolor = this.flags.collapsed ? 'transparent' : undefined;
-            this.color = this.flags.collapsed ? 'transparent' : undefined;
-            this.use_gradients = !this.flags.collapsed;
+        protected get b(): CodeEmitterNode {
+            return this.getInputNode('b');
         }
 
-        override onConfigure(): void {
-            this.restyle();
+        override onConnectionsChange(type: number, slotIndex: number, isConnected: boolean, link: LLink, ioSlot: INodeInputSlot | INodeOutputSlot) {
+            for (let name of ['a', 'b']) {
+                let slot = this.getInputInfo(name);
+                if (!slot.link) slot.type = TYPE_LIST;
+            }
+            super.onConnectionsChange(type, slotIndex, isConnected, link, ioSlot);
         }
     }
 
-    const types = ['float', 'int', 'uint', 'float3'];
+    const TYPES = ['float', 'int', 'uint', 'float3'];
 
-    const arithmetic = [
+    const ARITHMETIC = [
         { name: "Summ", operator: "+", search: "summ '+'" },
         { name: "Subtraction", operator: "-", search: "subtraction '-'" },
         { name: "Mult", operator: "*", search: "multiply '*'" },
@@ -39,16 +39,17 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         { name: "Mod", operator: "%", search: "modulo '%'" }
     ];
 
+    const TYPE_LIST = TYPES.join(',');
 
-    arithmetic.forEach(desc => {
+    ARITHMETIC.forEach(desc => {
             class Arithmetic extends Operator {
                 static desc = desc.name;
 
                 constructor() {
                     super(desc.name);
-                    this.addInput("a", types.join(','));
-                    this.addInput("b", types.join(','));
-                    this.addOutput("value", types.join(','));
+                    this.addInput("a", TYPE_LIST);
+                    this.addInput("b", TYPE_LIST);
+                    this.addOutput("value", TYPE_LIST);
                     this.size = [100, 50];
                     this.shape = LiteGraph.ROUND_SHAPE;
                 }
@@ -63,18 +64,26 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     const deps = super.compute(context, program);
                     const scope = program.currentScope;
                     const operator = desc.operator as IArithmeticOperator;
-                    const left = this.getInputNode('a').exec(context, program, this.link('a'));
-                    const right = this.getInputNode('b').exec(context, program, this.link('b'));
+                    const left = this.a.exec(context, program, this.getOriginalSlot('a'));
+                    const right = this.b.exec(context, program, this.getOriginalSlot('b'));
                     // IP: todo - calc proper type
-                    const type = left.type;
+                   
+                    const type = Analyzer.checkTwoOperandExprTypes(context, operator, left.type, right.type);
+
+                    for (const name of ['a', 'b']) {
+                        this.getInputInfo(name).type = left.type.name;
+                        this.getInputLink(name).type = left.type.name;
+                    }
+                    this.getOutputInfo('value').type = type.name;
+
                     const expr = new ArithmeticExprInstruction({ scope, left, right, operator, type });
                     return [ ...deps, ...this.addLocal(context, program, expr.type.name, expr) ];
                 }
 
 
                 override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
-                    let leftNode = this.getInputNode('a');
-                    let rightNode = this.getInputNode('b');
+                    let leftNode = this.a;
+                    let rightNode = this.b;
     
                     if (!leftNode || !rightNode) {
                         this.emitError(`All inputs must be conected.`);
@@ -88,7 +97,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
                
                 override getTitle(): string {
-                    const title = `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+                    const title = `${this.getInputInfo('a').name} ${desc.operator} ${this.getInputInfo('b').name}`;
                     return this.flags.collapsed? desc.operator : title;
                 }
                 
@@ -117,8 +126,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
             constructor() {
                 super(desc.name);
-                this.addInput("a", types.join(','));
-                this.addInput("b", types.join(','));
+                this.addInput("a", TYPES.join(','));
+                this.addInput("b", TYPES.join(','));
                 this.addOutput("value", "bool");
                 this.size = [100, 50];
             }
@@ -133,19 +142,25 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                 const scope = program.currentScope;
                 const operator = desc.operator as RelationOperator;
 
-                let leftNode = this.getInputNode('a');
-                let rightNode = this.getInputNode('b');
+                let leftNode = this.a;
+                let rightNode = this.b;
 
-                const left = leftNode.exec(context, program, this.link('a'));
-                const right = rightNode.exec(context, program, this.link('b'));
+                const left = leftNode.exec(context, program, this.getOriginalSlot('a'));
+                const right = rightNode.exec(context, program, this.getOriginalSlot('b'));
+
+                for (const name of ['a', 'b']) {
+                    this.getInputInfo(name).type = left.type.name;
+                    this.getInputLink(name).type = left.type.name;
+                }
+
                 const expr = new RelationalExprInstruction({ scope, left, right, operator });
                 return [ ...deps, ...this.addLocal(context, program, expr.type.name, expr) ];
             }
 
 
             override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
-                let leftNode = this.getInputNode('a');
-                let rightNode = this.getInputNode('b');
+                let leftNode = this.a;
+                let rightNode = this.b;
 
                 if (!leftNode || !rightNode) {
                     this.emitError(`All inputs must be conected.`);
@@ -159,7 +174,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
 
 
             override getTitle(): string {
-                const title = `${this.getInputInfo(0).name} ${desc.operator} ${this.getInputInfo(1).name}`;
+                const title = `${this.getInputInfo('a').name} ${desc.operator} ${this.getInputInfo('b').name}`;
                 return this.flags.collapsed? desc.operator : title;
             }
 

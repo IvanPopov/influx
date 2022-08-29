@@ -60,7 +60,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
             return extendSLDocument(textDocument, env, {
                 '$count': (context, program, sourceNode): IExprInstruction => {
                     inputNode.compute(asGraphContext(context), program);
-                    return inputNode.exec(context, program, this.link(0)) as IExprInstruction;
+                    return inputNode.exec(context, program, this.getOriginalSlot(0)) as IExprInstruction;
                 }
             });
         }

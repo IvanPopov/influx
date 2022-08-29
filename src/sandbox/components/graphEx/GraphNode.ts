@@ -217,38 +217,67 @@ export class CodeEmitterNode extends LGraphNode {
     // Helpers 
     //
 
-    link(id: number | string): number {
+    protected resolveInput(id: number | string): number {
         let slot: number = -1;
         if (isString(id)) {
             slot = this.inputs.findIndex(i => i.name == id)
         } else {
             slot = id as number;
         }
-        const ii = this.getInputInfo(slot);
-        if (!ii) return -1;
-        const link = ii.link;
-        if (!link) return -1;
-        return this.graph.links[link].origin_slot;
+        return slot;
     }
 
-    getInputNode(id: number | string): CodeEmitterNode {
-        let slot: number = -1;
-        if (isString(id)) {
-            slot = this.inputs.findIndex(i => i.name == id)
-        } else {
-            slot = id as number;
-        }
-        return super.getInputNode(slot) as CodeEmitterNode;
-    }
-
-
-    getOutputNodes(id: number | string): CodeEmitterNode[] {
+    protected resolveOutput(id: number | string): number {
         let slot: number = -1;
         if (isString(id)) {
             slot = this.outputs.findIndex(i => i.name == id)
         } else {
             slot = id as number;
         }
+        return slot;
+    }
+
+    getInputLink(id: number | string): LLink {
+        const ii = this.getInputInfo(id);
+        if (!ii) return null;
+        const link = ii.link;
+        if (!link) return null;
+        return this.graph.links[link];
+    }
+
+    getOutputLinks(id: number | string): LLink[] {
+        const ii = this.getOutputInfo(id);
+        if (!ii) return null;
+        const links = ii.links;
+        if (!links) return null;
+        return links.map(link => this.graph.links[link]);
+    }
+
+    getOriginalSlot(id: number | string): number {
+        let link = this.getInputLink(id);
+        if (!link) return -1;
+        return link.origin_slot;
+    }
+
+
+    getInputNode(id: number | string): CodeEmitterNode {
+        let slot = this.resolveInput(id);
+        return super.getInputNode(slot) as CodeEmitterNode;
+    }
+
+
+    getInputInfo(id: number | string) {
+        let slot = this.resolveInput(id);
+        return super.getInputInfo(slot);
+    }
+
+    getOutputInfo(id: number | string) {
+        let slot = this.resolveOutput(id);
+        return super.getOutputInfo(slot);
+    }
+
+    getOutputNodes(id: number | string): CodeEmitterNode[] {
+        let slot = this.resolveOutput(id);
         return super.getOutputNodes(slot) as CodeEmitterNode[];
     }
 
@@ -398,6 +427,11 @@ export class CodeEmitterNode extends LGraphNode {
     //         }
     //     }
     // }
+
+    ////
+
+    setOutputSlotType(type: string, slot: number): void {}
+    setInputSlotType(type: string, slot: number): void {}
 }
 
 export class CodeEmitterParam extends CodeEmitterNode {
@@ -542,67 +576,67 @@ export class PartRoutine extends CodeEmitterStmt {
         
     // render as fully transparent by default (only with custom design)
     // static title_mode = LiteGraph.TRANSPARENT_TITLE;
-    static color = 'transparent';
-    static bgcolor = 'transparent';
+    // static color = 'transparent';
+    // static bgcolor = 'transparent';
 
     static can_accept_drop = true;
     static collapsable = false;
-    static title_offset_x = 5;
+    // static title_offset_x = 5;
 
-    onDrawBackground(
-        ctx         /* CanvasRenderingContext2D */,
-        gcanvas     /* LGraphCanvas */,
-        canvas      /* HTMLCanvasElement */,
-        mouse
-    ) {
-        super.onDrawBackground(ctx, gcanvas, canvas, mouse);
+    // onDrawBackground(
+    //     ctx         /* CanvasRenderingContext2D */,
+    //     gcanvas     /* LGraphCanvas */,
+    //     canvas      /* HTMLCanvasElement */,
+    //     mouse
+    // ) {
+    //     super.onDrawBackground(ctx, gcanvas, canvas, mouse);
 
-        if (this.flags.collapsed)
-            return;
+    //     if (this.flags.collapsed)
+    //         return;
 
-        let [w, h] = this.size;
+    //     let [w, h] = this.size;
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = this.readyToAccept ? 'orange' : 'rgba(255, 255, 255, 0.5)';//'rgba(89, 195, 195, 0.5)';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        // ctx.shadowColor = "#000";
-        // ctx.shadowOffsetX = 0;
-        // ctx.shadowOffsetY = 0;
-        // ctx.shadowBlur = 6;
-        ctx.roundRect(0, 0, w + 1, h, [0, 0, 0, 0], 0);
-        ctx.stroke();
-        ctx.fill();
-        ctx.closePath();
-        ctx.restore();
-    }
+    //     ctx.save();
+    //     ctx.beginPath();
+    //     ctx.lineWidth = 2;
+    //     ctx.strokeStyle = this.readyToAccept ? 'orange' : 'rgba(255, 255, 255, 0.5)';//'rgba(89, 195, 195, 0.5)';
+    //     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    //     // ctx.shadowColor = "#000";
+    //     // ctx.shadowOffsetX = 0;
+    //     // ctx.shadowOffsetY = 0;
+    //     // ctx.shadowBlur = 6;
+    //     ctx.roundRect(0, 0, w + 1, h, [0, 0, 0, 0], 0);
+    //     ctx.stroke();
+    //     ctx.fill();
+    //     ctx.closePath();
+    //     ctx.restore();
+    // }
 
 
-    onDrawTitleBar(
-        ctx: CanvasRenderingContext2D, 
-        titleHeight: number,
-        size: number[],
-        scale: number,
-        fgColor: string
-    ) {
-        ctx.beginPath();
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.rect(-1, -titleHeight-1, size[0] + 1 + 2, titleHeight);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.fill();
-        ctx.closePath();
-    }
+    // onDrawTitleBar(
+    //     ctx: CanvasRenderingContext2D, 
+    //     titleHeight: number,
+    //     size: number[],
+    //     scale: number,
+    //     fgColor: string
+    // ) {
+    //     ctx.beginPath();
+    //     ctx.shadowBlur = 0;
+    //     ctx.lineWidth = 2;
+    //     ctx.rect(-1, -titleHeight-1, size[0] + 1 + 2, titleHeight);
+    //     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    //     ctx.fill();
+    //     ctx.closePath();
+    // }
 
-    onDrawTitleBox(
-        ctx, 
-        titleHeight, 
-        size, 
-        scale
-    ) {
-        // do not render title pin
-    }
+    // onDrawTitleBox(
+    //     ctx, 
+    //     titleHeight, 
+    //     size, 
+    //     scale
+    // ) {
+    //     // do not render title pin
+    // }
 
     // onDrawTitleText(
     //     ctx, 

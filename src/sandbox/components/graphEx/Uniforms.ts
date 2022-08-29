@@ -14,10 +14,20 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         if (v.type.isUniform()) {
             class Node extends CodeEmitterNode {
                 static desc = `Uniform '${name}'`;
+                static collapsable = false;
+                static color = 'transparent';
+
                 constructor() {
                     super(`${name}`);
-                    this.addOutput('out', v.type.name);
-                    this.size = [180, 25];
+                    this.addOutput('out', v.type.name, { label: '' });
+                    this.size = this.computeSize();
+                    this.size[1] = 0;
+                    this.size[0] = Math.max(180, this.size[0]);
+                    this.outputs[0].pos = [ this.size[0] - 13, -13 ];
+                }
+
+                onDrawTitleBox(ctx, titleHeight, size, scale) {
+                    // skip render of title pin
                 }
 
                 exec(context: Context, program: ProgramScope): IExprInstruction {

@@ -30,7 +30,7 @@
 ***
 
 ### Graph Issues ##
- + Add ability to update playground on any change is occured
+ + ~~Add ability to update playground on any change is occured~~
 
 ### Known Issues
 
@@ -73,3 +73,20 @@
 + Add browser version.
 
 ***
+
+### Graph
++ Resolve link/nodes types for Operators (nodes which are supported multiple type for inputs)
++ Add support of CTRL+Z
++ Generator nodes from expressions
++ Search nodes by word distance instead of exact match
++ Colorize nodes of different nature like uniforms, operators etc
++ Add support for icons in node's titles
++ Allow to pick correct output node when while connection to nowhere (fix auto pop-up menu)
++ Allow to connect outputs from collapsed nodes
++ Add action with ability to invert condition
++ Add ability to set default constants quickly (for unconnected nodes)
++ Allow to hide subgraphs
++ Fix spawners inputs if spawners logic is changed
++ Add support of comments (like groups)
++ Allow easy group renaming (via double click on group title)
++ highlight nodes with warnings (for ex if operation leads to loss of precision)

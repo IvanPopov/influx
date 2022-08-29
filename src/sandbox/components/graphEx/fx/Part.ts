@@ -65,7 +65,8 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 super(name);
                 this.addInput(name, field.type.name, { pos: [13, -13], label: "" });
                 this.addInput("context", LiteGraph.ACTION, HIDDEN_CONNECTION);
-                this.size = [100, 0];
+                this.size = this.computeSize();
+                this.size[1] = 0;
             }
 
             onDrawTitleBox(ctx, titleHeight, size, scale) {
@@ -77,7 +78,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 const deps = super.compute(context, program);
                 
                 const scope = program.currentScope;
-                const right = this.getInputNode(0).exec(context, program, this.link(0));
+                const right = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));
                 const element = evaluatePartExpr(context, program);
                 const postfix = new IdExprInstruction({ 
                     scope,
@@ -119,7 +120,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
             const deps = super.compute(context, program);
             const scope = program.currentScope;
-            const right = this.getInputNode(0).exec(context, program, this.link(0));
+            const right = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));
             const left = new IdExprInstruction({ 
                 scope, 
                 id: new IdInstruction({ scope, name: 'part' }), 

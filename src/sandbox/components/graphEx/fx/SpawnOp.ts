@@ -66,7 +66,7 @@ function producer(env: () => ISLDocument, spawner: ISpawner): LGraphNodeFactory
             const scope = program.currentScope;
             const ast = AST(context, program);
 
-            let count = this.getInputNode('count')?.exec(context, program, this.link('count'));
+            let count = this.getInputNode('count')?.exec(context, program, this.getOriginalSlot('count'));
             if (!count) {
                 const { base, signed, heximal, exp } = parseUintLiteral('1');
                 count = new IntInstruction({ scope, base, exp, signed, heximal });
@@ -74,7 +74,7 @@ function producer(env: () => ISLDocument, spawner: ISpawner): LGraphNodeFactory
 
 
             const name = `InitRoutine${spawner.id}`;
-            const args = inputs.map(i => this.getInputNode(i)?.exec(context, program, this.link(i)));
+            const args = inputs.map(i => this.getInputNode(i)?.exec(context, program, this.getOriginalSlot(i)));
     
             const spawnStmt = new SpawnInstruction({ scope, name, args, count });
             const params = inputs.map(i => scope.findType(fields[i - 1].getType()));

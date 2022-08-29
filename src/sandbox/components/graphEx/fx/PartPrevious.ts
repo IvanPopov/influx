@@ -51,10 +51,20 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
         class PartPrevous extends CodeEmitterNode {
             static desc = desc;
+            static collapsable = false;
+            static color = 'transparent';
+
             constructor() {
                 super(name);
                 this.addOutput(name, field.type.name);
                 this.size = this.computeSize();
+                this.size[1] = 0;
+                this.outputs[0].pos = [ this.size[0] - 13, -13 ];
+                this.outputs[0].label = '';
+            }
+
+            onDrawTitleBox(ctx, titleHeight, size, scale) {
+                // skip render of title pin
             }
 
             override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {

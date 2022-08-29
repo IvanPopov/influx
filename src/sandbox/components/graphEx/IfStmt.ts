@@ -139,7 +139,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             const deps = super.compute(context, program);
 
             const scope = program.currentScope;
-            const cond = this.getInputNode('cond')?.exec(context, program, this.link('cond')) ||
+            const cond = this.getInputNode('cond')?.exec(context, program, this.getOriginalSlot('cond')) ||
                 this.exec(context, program, 0)/* false */;
             const conseqStmts = this.getOutputNodes('true')?.map(node => node.compute(context, program)).flat();
             const conseq = conseqStmts ? new StmtBlockInstruction({ scope, stmtList: conseqStmts }) : null;

@@ -69,7 +69,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
                 const decl = node.func;
                 const type = decl.def.returnType;
                 const args = node.inputs
-                    .map((V, i) => this.getInputNode(i)?.exec(context, program, this.link(i))) || null;
+                    .map((V, i) => this.getInputNode(i)?.exec(context, program, this.getOriginalSlot(i))) || null;
                 const expr = new FunctionCallInstruction({ scope, type, decl, args });
 
                 return [ ...deps, ...this.addLocal(context, program, type.name, expr) ];

@@ -3953,7 +3953,7 @@ export class Analyzer {
      * @leftType {ITypeInstruction} Type of the left side of the expression.
      * @rightType {ITypeInstruction} Type of the right side of the expression.
      */
-    protected static checkTwoOperandExprTypes(
+    static checkTwoOperandExprTypes(
         context: Context,
         operator: string,
         leftType: ITypeInstruction,

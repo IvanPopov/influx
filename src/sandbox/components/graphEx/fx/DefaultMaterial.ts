@@ -59,7 +59,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
 
             const ast = AST(context, program);
 
-            const execInput = id => this.getInputNode(id).exec(context, program, this.link(id));
+            const execInput = id => this.getInputNode(id).exec(context, program, this.getOriginalSlot(id));
             const computeInput = id => this.getInputNode(id).compute(context, program);
 
             context.beginFunc();

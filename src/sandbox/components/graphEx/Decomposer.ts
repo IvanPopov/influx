@@ -38,7 +38,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory
         override exec(context: GraphContext, program: ProgramScope, slot: number): IExprInstruction
         {
             const name = this.getOutputInfo(slot).name;
-            const element = this.getInputNode(0).exec(context, program, this.link(0));  
+            const element = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));  
             const scope = program.currentScope;
             const decl = element.type.getField(name);
             const id = new IdInstruction({ scope, name });

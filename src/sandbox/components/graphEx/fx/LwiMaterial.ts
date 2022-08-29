@@ -55,7 +55,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             this.onBeforeExecution(context, program);
 
             const ast = AST(context, program);
-            const execInput = id => this.getInputNode(id).exec(context, program, this.link(id));
+            const execInput = id => this.getInputNode(id).exec(context, program, this.getOriginalSlot(id));
     
             context.beginFunc();
             const fdecl = ast.func(`int PrerenderRoutine${this.id}(inout Part part, inout LwiInstance input)`, 
