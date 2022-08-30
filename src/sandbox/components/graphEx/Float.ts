@@ -17,7 +17,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             super("Float");
             this.addOutput("value", "float");
             this.addProperty<Number>("value", 0.0, "number");
-            this.widget = this.addWidget("number", "value", 0, "value", { precision: 2 });
+            this.widget = this.addWidget("number", "value", 0, "value", { precision: 5 });
             this.widgets_up = true; // draw number widget in the middle of node (by default it's placed under node)
             this.size = this.computeSize();
         }

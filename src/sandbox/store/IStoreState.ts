@@ -53,11 +53,18 @@ export interface IFileState {
     debugger: IDebuggerState;
 }
 
+export interface INodeConstant {
+    name: string;
+    value: string;
+    type: string;
+}
+
 export interface INodePipeline {
     docs: string;               // current info of selected node
     graph: LGraph;
     revision: number;          // number of updates of graph
     env: ISLDocument;          // library extended with particle struct
+    constants: INodeConstant[];
 }
 
 export interface IPlaygroundState {

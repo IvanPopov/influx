@@ -13,5 +13,22 @@ void zeroMatr3x4(out float3x4 matr)
     matr[2] = float4(0);
 }
 
+
+/**
+ * @node {range01To11}
+ * @title range (0, 1) => (-1, 1)
+ * @desc range (0, 1) => (-1, 1)
+ */
+float range01To11(float x)
+{
+    return x * 2.f - 1.f;
+}
+
+float3 range01To11(float3 x)
+{
+    return x * 2.f - 1.f;
+}
+
+
 #endif
 

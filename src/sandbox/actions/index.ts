@@ -1,7 +1,7 @@
 import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
 import { store } from '@sandbox/store';
-import IStoreState, { IDebuggerState } from '@sandbox/store/IStoreState';
+import IStoreState, { IDebuggerState, INodeConstant } from '@sandbox/store/IStoreState';
 import { bindActionCreators, Dispatch } from 'redux';
 
 import * as evt from './ActionTypeKeys';
@@ -136,6 +136,14 @@ export const nodes = {
 
     changeLayout(layout: string) {
         return { type: evt.GRAPH_CHANGE_LAYOUT, payload: { layout } };
+    },
+
+    addConstant(value: INodeConstant) {
+        return { type: evt.GRAPH_ADD_CONSTANT, payload: { value } }
+    },
+
+    removeConstant(name: string) {
+        return { type: evt.GRAPH_REMOVE_CONSTANT, payload: { name } }
     }
 }
 

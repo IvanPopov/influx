@@ -1,6 +1,6 @@
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IGraphActions, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphNodeDocsProvided, ISourceFileActions, ISourceFileDropState } from '@sandbox/actions/ActionTypes';
+import { IGraphActions, IGraphAddConstant, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphNodeDocsProvided, IGraphRemoveConstant, ISourceFileActions, ISourceFileDropState } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import IStoreState, { INodePipeline } from '@sandbox/store/IStoreState';
 import { LGraph } from 'litegraph.js';
@@ -9,7 +9,8 @@ const initialState: INodePipeline = {
     docs: null,
     graph: new LGraph,
     revision: 0,
-    env: null
+    env: null,
+    constants: []
 };
 
 
@@ -24,14 +25,20 @@ export default handleActions<INodePipeline, IGraphActions | ISourceFileActions>(
     [evt.GRAPH_MODIFIED]: (state, action: IGraphCompile) =>
         ({ ...state, revision: state.revision + 1 }),
     
-    [evt.GRAPH_LOADED]: (state, action: IGraphLoaded) =>
-        ({ ...state, env: action.payload.env }),
+    [evt.GRAPH_LOADED]: (state, { payload }: IGraphLoaded) =>
+        ({ ...state, env: payload.env, constants: payload.constants }),
 
-    [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, action: IGraphNodeDocsProvided) =>
-        ({ ...state, docs: action.payload.docs }),
+    [evt.GRAPH_NODE_DOCS_PROVIDED]: (state, { payload }: IGraphNodeDocsProvided) =>
+        ({ ...state, docs: payload.docs }),
     
-    [evt.GRAPH_CHANGE_LAYOUT]: (state, action: IGraphChangeLayout) =>
-    ({ ...state, env: action.payload.env })
+    [evt.GRAPH_CHANGE_LAYOUT]: (state, { payload }: IGraphChangeLayout) =>
+    ({ ...state, env: payload.env }),
+
+    [evt.GRAPH_ADD_CONSTANT]: (state, { payload }: IGraphAddConstant) =>
+        ({ ...state, constants: [ ...state.constants, payload.value ], revision: state.revision + 1 }),
+
+    [evt.GRAPH_REMOVE_CONSTANT]: (state, { payload }: IGraphRemoveConstant) =>
+        ({ ...state, constants: state.constants.filter(desc => desc.name != payload.name), revision: state.revision + 1 }),
 
 }, initialState);
 

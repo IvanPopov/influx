@@ -60,5 +60,18 @@ float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
     return vRand;
 }
 
+
+/**
+ * @node {seed2}
+ * @title Seed from id
+ * @desc Generate UV-like seed based on id.
+ * 
+ * For example based on particle id.
+ */
+float2 seed2(int id) 
+{
+    return float2((float)(id) * elapsedTimeLevel, (float)(id) * elapsedTime);
+}
+
 #endif
 

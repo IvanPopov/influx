@@ -461,8 +461,7 @@ export class CodeEmitter extends BaseEmitter {
         const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
         if (decl.isGlobal() || isUniformArg) {
-            assert(decl.type.isUniform());
-
+            // assert(decl.type.isUniform());
             if (this.knownGlobals.indexOf(name) === -1) {
                 this.begin();
                 this.emitStmt(decl);

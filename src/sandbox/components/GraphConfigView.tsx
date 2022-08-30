@@ -11,6 +11,7 @@ import { nodes as nodesActions } from '@sandbox/actions';
 import { Button, Segment } from 'semantic-ui-react';
 import { PART_TYPE } from './graphEx/common';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
+import GraphConstants from './GraphConstants';
 
 export const styles = {
 };
@@ -70,7 +71,9 @@ class GraphConfigView extends React.Component<IProps> {
                     onChange={this.onChange}
                 />
                 <Button onClick={ this.applyLayout }>Apply</Button>
-
+                <Segment size='small' basic color='grey'>
+                    <GraphConstants />
+                </Segment>
                 <Segment size='small' basic color='grey'>
                     { docs || "[[ no description found ]]" }
                 </Segment>

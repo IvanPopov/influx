@@ -42,6 +42,8 @@ export const GRAPH_COMPILE                          = 'graph-compile';          
 export const GRAPH_MODIFIED                         = 'graph-modified';                  
 export const GRAPH_NODE_DOCS_PROVIDED               = 'graph-node-docs-provided';       // update floating docs of selected graph node
 export const GRAPH_CHANGE_LAYOUT                    = 'graph-change-layout';            // update 'Part' structure
+export const GRAPH_ADD_CONSTANT                     = 'graph-add-constant';
+export const GRAPH_REMOVE_CONSTANT                  = 'graph-remove-constant';
 
 export const S3D_INIT_ENV                           = 's3d-init-env';
 export const S3D_INIT_ENV_SUCCESSED                 = 's3d-init-env-successed';

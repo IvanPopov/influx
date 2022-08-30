@@ -464,6 +464,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
     }
 
+    // handle global variables like: const float VALUE = 10;
+    // as hidden uniform constants
+    function canBePlacedInUniforms(decl: IVariableDeclInstruction): boolean {
+        return decl.isGlobal() && 
+            (decl.type.isUniform() ||                                                  // is uniform
+            (decl.type.isConst() && decl.initExpr.isConst() && !decl.type.isUAV()));   // is non-uav constant 
+    }
 
     function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {
         if (decl.isParameter()) {
@@ -474,12 +481,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
 
         if (decl.isGlobal()) {
-            if (decl.type.isUniform()) {
+            if (canBePlacedInUniforms(decl)) {
                 return EAddrType.k_Input;
             }
             if (decl.type.isUAV()) {
                 return EAddrType.k_Input;
             }
+
             assert(false, `could not resolve address type for '${decl.toCode()}'`);
         }
 
@@ -762,10 +770,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         case EAddrType.k_Input:
                             {
                                 // CBUFFER0_REGISTER input is always being used for hidden constant buffer (uniform constants)
-                                if (decl.type.isUniform()) {
+                                if (canBePlacedInUniforms(decl)) {
                                     return constants.deref(decl);
                                 }
-
 
                                 if (decl.type.isUAV()) {
                                     return uavs.deref(decl);
