@@ -6,15 +6,18 @@ import { StmtInstruction } from "../StmtInstruction";
 
 export interface IDrawInstructionSettings extends IInstructionSettings {
     name: string;
+    args: IExprInstruction[];
 }
 
 
 export class DrawInstruction extends StmtInstruction implements IDrawStmtInstruction {
     readonly name: string;
+    readonly args: IExprInstruction[];
     
-    constructor({ name, ...settings }: IDrawInstructionSettings) {
+    constructor({ name, args, ...settings }: IDrawInstructionSettings) {
         super({ instrType: EInstructionTypes.k_DrawStmt, ...settings });
         this.name = name;
+        this.args = args;
     }    
 
     toCode(): string {

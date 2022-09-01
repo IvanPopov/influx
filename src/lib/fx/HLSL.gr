@@ -296,7 +296,7 @@ SimpleStmt : T_KW_CONTINUE ERROR
 
 #if FX_PART
 SimpleStmt : T_KW_SPAWN '(' Uint ')' NonTypeId '(' ArgumentsOpt ')' ';'
-SimpleStmt : T_KW_DRAW NonTypeId ';'
+SimpleStmt : T_KW_DRAW NonTypeId '(' ArgumentsOpt ')' ';'
 #endif
 
 

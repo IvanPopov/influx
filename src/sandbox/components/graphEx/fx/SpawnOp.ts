@@ -78,7 +78,7 @@ function producer(env: () => ISLDocument, spawner: ISpawner): LGraphNodeFactory
     
             const spawnStmt = new SpawnInstruction({ scope, name, args, count });
             const params = inputs.map(i => scope.findType(fields[i - 1].getType()));
-            spawnStmt.$resolve(null, scope.findFunction(name, [ /Part/, /int/, ...params ]));
+            // spawnStmt.$resolve(null, scope.findFunction(name, [ /Part/, /int/, ...params ]));
             context.spawnStmts.push(spawnStmt);
             return [ ...deps, spawnStmt ];
         }

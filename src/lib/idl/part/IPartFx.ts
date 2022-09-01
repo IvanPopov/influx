@@ -42,11 +42,11 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly args: IExprInstruction[];
     
     // resolved properties
-    readonly fx: IPartFxInstruction;
-    readonly init: IFunctionDeclInstruction;
+   //  readonly fx: IPartFxInstruction;
+   //  readonly init: IFunctionDeclInstruction;
  }
 
  export interface IDrawStmtInstruction extends IStmtInstruction {
    readonly name: string;
-
+   readonly args: IExprInstruction[];
 }

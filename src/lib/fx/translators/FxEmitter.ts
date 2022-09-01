@@ -29,8 +29,8 @@ export class FxEmitter extends CodeEmitter {
     }
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
-        
-        this.emitFunction(stmt.init);
+        // const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
+        // this.emitFunction(stmt.init);
 
         this.emitKeyword(`spawn(${stmt.count})`);
         this.emitKeyword(stmt.name);
@@ -48,6 +48,13 @@ export class FxEmitter extends CodeEmitter {
         
         this.emitKeyword(`draw`);
         this.emitKeyword(stmt.name);
+        this.emitChar('(');
+        this.emitNoSpace();
+        stmt.args.forEach((arg, i, list) => {
+            this.emitExpression(arg);
+            (i + 1 != list.length) && this.emitChar(',');
+        });
+        this.emitChar(')');
         this.emitChar(';');
     }
 

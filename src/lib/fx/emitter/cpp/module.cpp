@@ -131,3 +131,4 @@ EMSCRIPTEN_BINDINGS(pipeline)
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
     em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());
 }      
+ 

@@ -127,12 +127,12 @@ EMITTER_PASS::EMITTER_PASS (
 
 VM::BUNDLE_UAV* EMITTER_PASS::UavNonSorted() { return const_cast<VM::BUNDLE_UAV*>(Parent().Uav(UavPrerendered(m_id))); }
 VM::BUNDLE_UAV* EMITTER_PASS::UavSorted() { return const_cast<VM::BUNDLE_UAV*>(Parent().Uav(UavPrerenderedSorted(m_id))); }
+VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() { return const_cast<VM::BUNDLE_UAV*>(Parent().Uav(IFX::UavSerials(m_id))); }
 
 const VM::BUNDLE_UAV* EMITTER_PASS::UavNonSorted() const { return Parent().Uav(UavPrerendered(m_id)); }
 const VM::BUNDLE_UAV* EMITTER_PASS::UavSorted() const { return Parent().Uav(UavPrerenderedSorted(m_id)); }
-
 const VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() const { return Parent().Uav(IFX::UavSerials(m_id)); }
-const VM::BUNDLE_UAV* EMITTER_PASS::UavStates() const { return Parent().Uav(FxTranslator::UAV_STATES); }
+
 
 const EMITTER& EMITTER_PASS::Parent() const
 {
@@ -142,51 +142,50 @@ const EMITTER& EMITTER_PASS::Parent() const
 
 uint32_t EMITTER_PASS::GetNumRenderedParticles() const
 { 
-    return Parent().GetNumParticles() * m_desc.instanceCount; 
+    return UavNonSorted()->ReadCounter() * m_desc.instanceCount; 
 }
 
 
 VM::memory_view EMITTER_PASS::GetData() const
 {
-    return UavSorted()->data;
+    return GetDesc().sorting ? UavSorted()->data : UavNonSorted()->data;
 }
 
+struct SERIAL_PAIR {
+    int32_t sortIndex;
+    int32_t instanceIndex;
+};
+
+struct SERIAL_PAIR_CMP
+{
+    inline bool operator() (const SERIAL_PAIR& a, const SERIAL_PAIR& b)
+    {
+        return a.sortIndex > b.sortIndex;
+    }
+};
 
 void EMITTER_PASS::Serialize()
 {
+    if (!GetDesc().sorting) {
+        return;
+    }
+
     // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
     //       I hate javascript for that :/
 
     uint32_t nStride = m_desc.stride * m_desc.instanceCount; // stride in floats
 
-    assert(UavSorted()->data.size == nStride * Parent().GetCapacity());
-
     auto* src = UavNonSorted()->data.As<float_t>();
     auto* dst = UavSorted()->data.As<float_t>();
 
-    auto* states = UavStates()->data.As<int32_t>();
-    auto* serials = UavSerials()->data.As<int32_t>();
-
-    std::vector<std::pair<uint32_t, int32_t>> indicies;
-
-     for (uint32_t iPart = 0; iPart < Parent().GetCapacity(); ++iPart) 
-     {
-        if (states[iPart]) 
-        {
-            indicies.push_back({ iPart, GetDesc().sorting ? serials[iPart * GetDesc().instanceCount] : 0 });
-        }
-    }
+    int nPart = UavSerials()->ReadCounter();
+    auto* serials = UavSerials()->data.As<SERIAL_PAIR>();
  
-    if (GetDesc().sorting)
-    {
-        std::sort(begin(indicies), end(indicies), 
-            [](const std::pair<uint32_t, uint32_t>& a, const std::pair<uint32_t, uint32_t>& b) {
-                return a.second > b.second; 
-            });
-    }
-
-    for (uint32_t i = 0; i < indicies.size(); ++i) {
-        uint32_t iFrom = indicies[i].first * nStride;
+    std::sort(UavSerials()->data.Begin<SERIAL_PAIR>(), UavSerials()->data.End<SERIAL_PAIR>(), 
+        SERIAL_PAIR_CMP());
+    
+    for (uint32_t i = 0; i < nPart; ++i) {
+        uint32_t iFrom = serials[i].instanceIndex * nStride;
         uint32_t iTo = i * nStride;
         memcpy(dst + iTo, src + iFrom, nStride * sizeof(float_t));
     }
@@ -200,11 +199,19 @@ void EMITTER_PASS::Prerender(const UNIFORMS& uniforms)
     if (!bundle) {
         return;
     }
+
     assert(Parent().GetCapacity() % bundle->numthreads.x == 0);
 
-    auto uav = find_if(begin(bundle->uavs), end(bundle->uavs), 
-        [&](const VM::BUNDLE_UAV& uav) { return uav.name == UavPrerendered(m_id); });
-    assert(uav != end(bundle->uavs));
+    auto prerenderUav = find_if(begin(bundle->uavs), end(bundle->uavs), 
+        [&](const VM::BUNDLE_UAV& uav) { return uav.name == IFX::UavPrerendered(m_id); });
+    auto serialsUav = find_if(begin(bundle->uavs), end(bundle->uavs), 
+        [&](const VM::BUNDLE_UAV& uav) { return uav.name == IFX::UavSerials(m_id); });
+
+    prerenderUav->OverwriteCounter(0);
+    if (serialsUav != end(bundle->uavs)) {
+        serialsUav->OverwriteCounter(0);
+    }
+
     bundle->SetConstants(uniforms);
     bundle->Run(Parent().GetCapacity() / bundle->numthreads.x);
 }
@@ -295,18 +302,21 @@ EMITTER::EMITTER(void* buf)
         // note: only GLSL routines are supported!
         std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->attributes;
 
-        // if no prerender bundle then all particles must be prerendered within update stage
-        // looking for prerendered reflection among prerender or update routine uavs
-        auto &prerenderUAVs = (bundle ? routines[Fx::EPartRenderRoutines_k_Prerender] : simulationRoutines[Fx::EPartSimRoutines_k_Update]).AsRoutineBytecodeBundle()->resources->uavs;
-        auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
-                                            { return uav->name == UavPrerendered(i); });
-
+        if (sorting) 
         {
-            std::vector<std::unique_ptr<Fx::UAVBundleT>> bundles;
-            bundles.push_back(std::make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
-            bundles.back()->name = UavPrerenderedSorted(i);
+            // if no prerender bundle then all particles must be prerendered within update stage
+            // looking for prerendered reflection among prerender or update routine uavs
+            auto &prerenderUAVs = (bundle ? routines[Fx::EPartRenderRoutines_k_Prerender] : simulationRoutines[Fx::EPartSimRoutines_k_Update]).AsRoutineBytecodeBundle()->resources->uavs;
+            auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
+                                                { return uav->name == UavPrerendered(i); });
 
-            CreateUAVsEx(bundles, capacity * instanceCount, sharedUAVs)[0];
+            {
+                std::vector<std::unique_ptr<Fx::UAVBundleT>> bundles;
+                bundles.push_back(std::make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
+                bundles.back()->name = UavPrerenderedSorted(i);
+
+                CreateUAVsEx(bundles, capacity * instanceCount, sharedUAVs);
+            }
         }
 
         {
@@ -421,10 +431,25 @@ void EMITTER::Serialize()
 
 void EMITTER::Simulate(const UNIFORMS& uniforms)
 {
+    PreparePrerender();
     Update(uniforms);
     Emit(uniforms);
     // dump();
 }
+
+
+void EMITTER::PreparePrerender()
+{
+    for (int i = 0; i < m_passes.size(); ++i) {
+        auto* pPrerendered = Uav(UavPrerendered(i));
+        if (pPrerendered) pPrerendered->OverwriteCounter(0);
+
+        auto* pSerials = Uav(UavSerials(i));
+        if (pSerials) pSerials->OverwriteCounter(0);
+    }
+}
+
+
 
 
 //

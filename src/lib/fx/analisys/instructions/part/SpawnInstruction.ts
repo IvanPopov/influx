@@ -16,8 +16,8 @@ export class SpawnInstruction extends StmtInstruction implements ISpawnStmtInstr
     readonly args: IExprInstruction[];
     readonly name: string;
     
-    private _fx: IPartFxInstruction = null;
-    private _init: IFunctionDeclInstruction = null;
+    // private _fx: IPartFxInstruction = null;
+    // private _init: IFunctionDeclInstruction = null;
 
     constructor({ count, name, args, ...settings }: ISpawnInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SpawnStmt, ...settings });
@@ -28,23 +28,23 @@ export class SpawnInstruction extends StmtInstruction implements ISpawnStmtInstr
     }    
 
     
-    get fx(): IPartFxInstruction {
-        return this._fx;
-    }
+    // get fx(): IPartFxInstruction {
+    //     return this._fx;
+    // }
 
 
-    get init(): IFunctionDeclInstruction {
-        return this._init;
-    }
+    // get init(): IFunctionDeclInstruction {
+    //     return this._init;
+    // }
 
 
     toCode(): string {
         return `spawn(${this.count}) ${this.name}(${this.args.map(arg => arg.toCode()).join(', ')});`;
     }
 
-    // delayed resolve of the spawn instructions
-    $resolve(fx: IPartFxInstruction, init: IFunctionDeclInstruction): void {
-        this._fx = fx;
-        this._init = init;
-    }
+    // // delayed resolve of the spawn instructions
+    // $resolve(fx: IPartFxInstruction, init: IFunctionDeclInstruction): void {
+    //     this._fx = fx;
+    //     this._init = init;
+    // }
 }

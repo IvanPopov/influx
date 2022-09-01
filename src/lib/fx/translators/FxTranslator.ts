@@ -1,6 +1,6 @@
 import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
-import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_VOID } from "@lib/fx/analisys/SystemScope";
+import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
@@ -77,14 +77,17 @@ export class FxTranslator extends FxEmitter {
     protected fx: IPartFxInstruction = null;
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
+        const fx = this.fx;
+        const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
 
-        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === stmt.init) + 1;
+        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === init) + 1;
+
 
         if (guid === 0) {
-            this.knownSpawnCtors.push(stmt.init);
+            this.knownSpawnCtors.push(init);
             guid = this.knownSpawnCtors.length;
 
-            this.emitSpawnOperator(guid, stmt.init);
+            this.emitSpawnOperator(guid, init);
         }
 
         this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
@@ -103,7 +106,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected emitDrawStmt({ name }: IDrawStmtInstruction) {
+    protected emitDrawStmt({ name, args }: IDrawStmtInstruction) {
         let fx = this.fx;//<IPartFxInstruction>pass.parent;
         let pass = fx.passList.find(pass => pass.name == name);
         let i = fx.passList.indexOf(pass);
@@ -114,7 +117,13 @@ export class FxTranslator extends FxEmitter {
             this.emitPrerenderRoutune(pass, i, uavs);
             this.knownDrawOps.push({ name, uavs });
         }
-        this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(part, partId);`);
+        this.emitKeyword(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}`);
+        this.emitChar(`(`);
+        this.emitNoSpace();
+        this.emitExpressionList(args);
+        this.emitChar(`)`);
+        this.emitChar(';');
+        this.emitNewline();
     }
 
 
@@ -519,63 +528,101 @@ export class FxTranslator extends FxEmitter {
         const { typeName: partType } = this.resolveType(fx.particle);
         this.begin();
         {
-            this.emitLine(`void ${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(${partType} Particle, int PartId)`);
+            this.emitLine(`void ${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(${partType} Particle)`);
             this.emitChar('{');
             this.push();
+
+            /*
+                void __draw_op0(Part Particle)
+                {
+                    uint PrerenderId = uavPrerendered0.IncrementCounter();
+                    uint SerialId = uavSerials0.IncrementCounter();
+                    DefaultShaderInput Prerendered;
+                    int SortIndex = prerender(Particle, Prerendered);
+                    uavSerials0[SerialId] = int2(SortIndex, PrerenderId);
+                    uavPrerendered0[PrerenderId] = Prerendered;
+                }
+
+                void __draw_op0(Part Particle)
+                {
+                    uint PrerenderId = uavPrerendered0.IncrementCounter();
+                    uint SerialId = uavSerials0.IncrementCounter();
+                    for (int InstanceId = 0; InstanceId < 5; ++ InstanceId) {
+                        DefaultShaderInput Prerendered;
+                        int SortIndex = prerender(Particle, Prerendered, InstanceId);
+                        if (InstanceId == 0) {
+                            uavSerials0[SerialId] = int2(SortIndex, PrerenderId);
+                        }
+                        uavPrerendered0[PrerenderId * 5 + InstanceId] = Prerendered;
+                    }
+                }
+            */
+
             {
                 uavs.push(this.emitUav(`RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
 
                 if (pass.sorting)
                 {
-                    uavs.push(this.emitUav(`RWStructuredBuffer<int>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
+                    uavs.push(this.emitUav(`RWStructuredBuffer<int2>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
                 }
 
-                let strInstanceArg = ', InstanceId';
+                this.emitLine(`uint PrerenderId = ${FxTranslator.UAV_PRERENDERED}${i}.IncrementCounter();`);
+                if (pass.sorting)
+                {
+                    this.emitLine(`uint SerialId = ${FxTranslator.UAV_SERIALS}${i}.IncrementCounter();`);
+                }
+                
                 if (pass.instanceCount > 1) {
                     this.emitLine(`for(int InstanceId = 0; InstanceId < ${pass.instanceCount}; InstanceId++)`);
                     this.emitChar('{');
                     this.push();
                 }
-                else if (prerenderFn.def.params.length > 2)
                 {
-                    this.emitLine(`int InstanceId = 0;`);
-                }
-                else{
-                    strInstanceArg = '';
-                }
 
-                {
-                    if (pass.instanceCount > 1)
+                    this.emitLine(`${prerenderedType} Prerendered;`);
+
+                    const inputIndex = prerenderFn.def.params.findIndex(p => p.type.name === prerenderedType);
+                    const partndex = prerenderFn.def.params.findIndex(p => p.type.name === partType);
+                    const insidIndex = prerenderFn.def.params.findIndex(p => p.type.name === T_INT.name); // first int arg index
+                    const args = [];
+                    args[inputIndex] = `Prerendered`;
+                    args[partndex] = `Particle`;
+
+                    if (insidIndex !== -1)
                     {
-                        this.emitLine(`int PrerenderId = ${pass.instanceCount} * PartId + InstanceId;`);
-                        this.emitLine(`${prerenderedType} Prerendered = ${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId];`);
-                    }
-                    else
-                    {
-                        this.emitLine(`${prerenderedType} Prerendered = ${FxTranslator.UAV_PRERENDERED}${i}[PartId];`);
+                        args[insidIndex] = `InstanceId`;
                     }
 
                     if (type.equals(prerenderFn.def.returnType, T_VOID))
                     {
-                        this.emitLine(`int SerialId = 0;`);
-                        this.emitLine(`${prerenderFn.name}(Particle, Prerendered${strInstanceArg});`);
+                        this.emitLine(`int SortIndex = 0;`);
+                        this.emitLine(`${prerenderFn.name}(${args.join(', ')});`);
                     }
                     else
                     {
-                        this.emitLine(`int SerialId = ${prerenderFn.name}(Particle, Prerendered${strInstanceArg});`);
+                        this.emitLine(`int SortIndex = ${prerenderFn.name}(${args.join(', ')});`);
                     }
+
                     if (pass.sorting)
                     {
-                        this.emitLine(`${FxTranslator.UAV_SERIALS}${i}[PartId] = SerialId;`);
+                        if (pass.instanceCount > 1)
+                        {
+                            this.emitLine(`if (InstanceId == 0)`);
+                            this.push();
+                            this.emitLine(`${FxTranslator.UAV_SERIALS}${i}[SerialId] = int2(SortIndex, PrerenderId);`);
+                            this.pop();
+                        } else {
+                            this.emitLine(`${FxTranslator.UAV_SERIALS}${i}[SerialId] = int2(SortIndex, PrerenderId);`);
+                        }
                     }
 
                     if (pass.instanceCount > 1)
                     {
-                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId] = Prerendered;`);
+                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId * ${pass.instanceCount} + InstanceId] = Prerendered;`);
                     }
                     else
                     {
-                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PartId] = Prerendered;`);
+                        this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId] = Prerendered;`);
                     }
                     
                 }
@@ -624,7 +671,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
 
                 this.emitPrerenderRoutune(pass, i, uavs);
-                this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(Particle, PartId);`);
+                this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(Particle);`);
             }
             this.pop();
             this.emitChar('}');

@@ -71,7 +71,6 @@ public:
     const VM::BUNDLE_UAV* UavSorted() const;
     const VM::BUNDLE_UAV* UavNonSorted() const;
     const VM::BUNDLE_UAV* UavSerials() const;
-    const VM::BUNDLE_UAV* UavStates() const;
 
 private:
     const EMITTER* m_parent;
@@ -83,6 +82,7 @@ private:
     // parent shortcuts
     VM::BUNDLE_UAV* UavSorted();
     VM::BUNDLE_UAV* UavNonSorted();
+    VM::BUNDLE_UAV* UavSerials();
 };
 
 
@@ -121,6 +121,7 @@ private:
 
     void Emit(const UNIFORMS& uniforms);
     void Update(const UNIFORMS& uniforms);
+    void PreparePrerender();
    
 public:
     EMITTER(void* buf);

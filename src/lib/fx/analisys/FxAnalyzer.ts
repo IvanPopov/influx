@@ -110,21 +110,31 @@ export class FxAnalyzer extends Analyzer {
         return spawnStmt;
     }
 
-
     /**
      * AST example:
      *    SimpleStmt
      *         T_PUNCTUATOR_59 = ';'
-     *         T_NON_TYPE_ID = 'Init'
+     *         T_PUNCTUATOR_41 = ')'
+     *         T_NON_TYPE_ID = 'part'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_NON_TYPE_ID = 'P0'
      *         T_KW_DRAW = 'draw'
      */
      protected analyzeDrawStmt(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
-        const name = children[1].value;
+        const name = children[children.length - 2].value;
+        const args = <IExprInstruction[]>[];
 
-        const instr = new DrawInstruction({ sourceNode, scope, name });
+        for (let i = children.length - 4; i >= 2; i--) {
+            if (children[i].value !== ',') {
+                const arg = this.analyzeExpr(context, program, children[i]);
+                args.push(arg);
+            }
+        }
+
+        const instr = new DrawInstruction({ sourceNode, scope, name, args });
         const ctx = context.funcDef;
         context.drawStmts.push({ instr, ctx });
         
@@ -777,7 +787,7 @@ export class FxAnalyzer extends Analyzer {
                     }
 
                     if (initializer) {
-                        spawnStmt.$resolve(fx, initializer);
+                        // spawnStmt.$resolve(fx, initializer);
                         break;
                     }
                 }

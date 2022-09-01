@@ -115,6 +115,19 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
     const uavCreationRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
 
+    function preparePrerender() {
+        passes.forEach((p, i) => {
+            const uavPrerendered = uavResources.find(uav => uav.name === `${FxTranslator.UAV_PRERENDERED}${i}`);
+            const uavSerials = uavResources.find(uav => uav.name === `${FxTranslator.UAV_SERIALS}${i}`);
+            if (uavPrerendered) {
+                UAV.overwriteCounter(uavPrerendered, 0);
+            }
+            if (uavSerials) {
+                UAV.overwriteCounter(uavSerials, 0);
+            }
+        });
+    }
+
     const passes = renderPasses.map((pass, i) => {
         const {
             routines,
@@ -139,7 +152,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         // note: only GLSL routines are supported!
         const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
-        const getNumRenderedParticles = () => getNumParticles() * instanceCount;
+        const getNumRenderedParticles = () => UAV.readCounter(uavPrerendered) * instanceCount;
 
         // if no prerender bundle then all particles must be prerendered within update stage
         // looking for prerendered reflection among prerender or update routine uavs
@@ -151,29 +164,35 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         //
 
         const uavNonSorted = uavPrerendered;
-        const uavPrerendReflectSorted = new UAVBundleT(`${uavPrerendReflect.name}Sorted`, uavPrerendReflect.slot, uavPrerendReflect.stride, uavPrerendReflect.type);
-        const uavSorted = createUAVsEx([uavPrerendReflectSorted], capacity * instanceCount, uavResources)[0];
-
         const uavNonSortedU8 = VM.memoryToU8Array(uavNonSorted.data);
-        const uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
+
+        let uavPrerendReflectSorted: UAVBundleT = null;
+        let uavSorted: Bytecode.IUAV = null;
+        let uavSortedU8: Uint8Array = null;
+        let uavSerialsI32: Int32Array = null;
         
-        const uavStatesI32 = VM.memoryToI32Array(uavStates.data);
-        const uavSerialsI32 = sorting ? VM.memoryToI32Array(uavSerials.data) : null;
-        // const uavSerialsF32 = VM.memoryToF32Array(uavSerials.data);
+        if (sorting)
+        {
+            uavPrerendReflectSorted = new UAVBundleT(`${uavPrerendReflect.name}Sorted`, uavPrerendReflect.slot, uavPrerendReflect.stride, uavPrerendReflect.type);
+            uavSorted = createUAVsEx([uavPrerendReflectSorted], capacity * instanceCount, uavResources)[0];
+            uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
+            uavSerialsI32 = VM.memoryToI32Array(uavSerials.data);
+        }
+        
 
         // dump prerendered particles
         const dump = (): void => {
             let nPart = getNumRenderedParticles();
             verbose(`dump ${nPart}/${capacity} prerendred particles: `);
             for (let iElement = 0; iElement < nPart; ++iElement) {
-                verbose(VM.asNativeRaw(UAV.readElement(uavSorted, iElement), instance));
+                verbose(VM.asNativeRaw(UAV.readElement(uavNonSorted, iElement), instance));
             }
         };
 
         function serialize() {
-
-            // NOTE: yes, I understand this is a crappy and stupid brute force sorting,
-            //       I hate javascript for that :/
+            if (!sorting) {
+                return;
+            }
 
             const nStrideF32 = stride * instanceCount; // stride in floats
 
@@ -184,18 +203,14 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
             const indicies = [];
 
-            for (let iPart = 0; iPart < capacity; ++iPart) 
+            // todo: sort inplace using serials pairs
+            for (let iPart = 0; iPart < UAV.readCounter(uavPrerendered); ++iPart) 
             {
-                const alive = uavStatesI32[iPart];
-                if (alive) {
-                    indicies.push([ iPart, sorting ? uavSerialsI32[iPart * instanceCount] : 0 ]);
-                }
+                const sortIndex = uavSerialsI32[iPart * 2 + 0];
+                const partIndex = uavSerialsI32[iPart * 2 + 1];
+                indicies.push([ partIndex, sortIndex ]);
             };
-
-            if (sorting)
-            {
-                indicies.sort((a, b) => -a[1] + b[1]);
-            }
+            indicies.sort((a, b) => -a[1] + b[1]);
 
             for (let i = 0; i < indicies.length; ++i) {
                 const iFrom = indicies[i][0] * nStrideF32;
@@ -207,7 +222,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             }
         }
 
-        function getData() { return asBundleMemory(uavSortedU8); }
+        function getData() { return asBundleMemory(sorting ? uavSortedU8 : uavNonSortedU8); }
         function getDesc() {
             return {
                 instanceName: instance.name as string,
@@ -228,7 +243,6 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 return;
             }
 
-            const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
             bundle.setConstants(uniforms);
             bundle.run(Math.ceil(capacity / bundle.groupsizex));
         }
@@ -257,6 +271,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
 
     function update(uniforms: Uniforms) {
+        preparePrerender();
         updateBundle.setConstants(uniforms);
         updateBundle.run(Math.ceil(capacity / updateBundle.groupsizex));
     }
@@ -333,6 +348,7 @@ function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
     for (let i = 0; i < left.renderPasses.length; ++i) {
         if (left.renderPasses[i].geometry != right.renderPasses[i].geometry) return false;
         if (left.renderPasses[i].sorting != right.renderPasses[i].sorting) return false;
+        if (left.renderPasses[i].instanceCount != right.renderPasses[i].instanceCount) return false;
         if (!compareFxTypeLayouts(left.renderPasses[i].instance, right.renderPasses[i].instance)) return false;
     }
     return true;
