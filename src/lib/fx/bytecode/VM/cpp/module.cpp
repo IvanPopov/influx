@@ -72,3 +72,4 @@ EMSCRIPTEN_BINDINGS(bundle)
         .class_function("destroyUAV", &VM::BUNDLE::DestroyUAV);  
 }
 
+ 

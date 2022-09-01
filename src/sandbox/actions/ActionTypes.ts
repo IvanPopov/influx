@@ -99,13 +99,17 @@ export type IGraphModified = IAction<typeof evt.GRAPH_MODIFIED, {}>;
 // emits on graph node selection if docs is presened
 export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 // emits on new serialized graph content has been specified
-export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string, env?: ISLDocument, constants: INodeConstant[] }>;
+export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string, env?: ISLDocument, constants: INodeConstant[], capacity: number }>;
 export type IGraphChangeLayout = IAction<typeof evt.GRAPH_CHANGE_LAYOUT, { layout: string, env?: ISLDocument }>;
 export type IGraphAddConstant = IAction<typeof evt.GRAPH_ADD_CONSTANT, { value: INodeConstant }>;
 export type IGraphRemoveConstant = IAction<typeof evt.GRAPH_REMOVE_CONSTANT, { name: string }>;
+export type IGraphSetConstant = IAction<typeof evt.GRAPH_SET_CONSTANT, { name: string, value: string }>;
+export type IGraphSetCapacity = IAction<typeof evt.GRAPH_SET_CAPACITY, { value: number }>;
+
 
 export type IGraphActions = IGraphReset | IGraphCompile | IGraphNodeDocsProvided | IGraphLoaded |
-    IGraphModified | IGraphChangeLayout | IGraphAddConstant | IGraphRemoveConstant;
+    IGraphModified | IGraphChangeLayout | IGraphAddConstant | IGraphRemoveConstant | IGraphSetConstant | 
+    IGraphSetCapacity;
 
 //
 //
@@ -130,8 +134,8 @@ export type IDepotActions = IDepotUpdateRequest | IDepotUpdateComplete;
 //
 //
 
-export type ActionTypes = ISourceFileActions & IParserParamsActions & 
-    IDebuggerActions & IPlaygroundActions & IGraphActions & IS3DActions & 
-    IDepotActions;
+// export type ActionTypes = ISourceFileActions & IParserParamsActions & 
+//     IDebuggerActions & IPlaygroundActions & IGraphActions & IS3DActions & 
+//     IDepotActions;
 
-export default ActionTypes;
+// export default ActionTypes;

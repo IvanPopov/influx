@@ -8,7 +8,7 @@ import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, PartBundleT, PartRenderPassT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from "@lib/idl/bundles/FxBundle_generated";
 import { ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
+import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import * as flatbuffers from 'flatbuffers';
 
@@ -20,7 +20,7 @@ export const PACKED = true;
 function getFxBundleSignature(): BundleSignatureT {
     return new BundleSignatureT( MODE, VERSION, COMMITHASH, BRANCH, TIMESTAMP );
 }
-
+ 
 
 function createFxBundle(name: string, type: 'part', data: PartBundleT, meta = new BundleMetaT): BundleT {
     const signature = getFxBundleSignature();
@@ -31,8 +31,10 @@ function createFxBundle(name: string, type: 'part', data: PartBundleT, meta = ne
 
 function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPassReflection): PartRenderPassT {
     const scope = document.root.scope;
-    const { geometry, sorting, instanceCount, CSParticlesPrerenderRoutine } = reflection;
-    const prerender = createFxRoutineBytecodeBundle(document, CSParticlesPrerenderRoutine);
+    const { geometry, sorting, instanceCount, CSParticlesPrerenderRoutine, drawMode } = reflection;
+    const prerender = drawMode == EPassDrawMode.k_Auto 
+        ? createFxRoutineBytecodeBundle(document, CSParticlesPrerenderRoutine)
+        : createFxRoutineNoBytecodeBundle(); // fill dummy routine for backward compartibility
     // create GLSL attribute based instance layout
     const partType = scope.findType(reflection.instance);
     const instance = createFxTypeLayout(partType);
@@ -51,12 +53,15 @@ function createFxTypeLayout(type: ITypeInstruction): TypeLayoutT {
     return typeAstToTypeLayout(type);
 }
 
+function createFxRoutineNoBytecodeBundle(): RoutineBytecodeBundleT {
+        return new RoutineBytecodeBundleT([], new RoutineBytecodeBundleResourcesT([]), []);
+}
 
 function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSShaderReflection): RoutineBytecodeBundleT {
+    
     const entry = reflection.name;
     const shader = document.root.scope.findFunction(entry, null);
     assert(shader);
-
     const numthreads = [...reflection.numthreads];
     const program = Bytecode.translate(shader);
     const code = program.code;

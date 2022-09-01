@@ -55,7 +55,7 @@ public:
         const EMITTER* pParent, 
         uint32_t id, 
         const EMITTER_DESC& desc,
-        const BYTECODE_BUNDLE& prerenderBundle
+        std::unique_ptr<BYTECODE_BUNDLE> prerenderBundle
     );
 
     uint32_t     GetNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
@@ -78,7 +78,7 @@ private:
     uint32_t m_id;
 
     EMITTER_DESC m_desc;
-    BYTECODE_BUNDLE m_prerenderBundle;
+    std::unique_ptr<BYTECODE_BUNDLE> m_prerenderBundle;
 
     // parent shortcuts
     VM::BUNDLE_UAV* UavSorted();
@@ -94,10 +94,10 @@ private:
     uint32_t                    m_capacity;
     std::vector<EMITTER_PASS>   m_passes;
 
-    BYTECODE_BUNDLE             m_resetBundle;
-    BYTECODE_BUNDLE             m_initBundle;
-    BYTECODE_BUNDLE             m_spawnBundle;
-    BYTECODE_BUNDLE             m_updateBundle;
+    std::unique_ptr<BYTECODE_BUNDLE> m_resetBundle;
+    std::unique_ptr<BYTECODE_BUNDLE> m_initBundle;
+    std::unique_ptr<BYTECODE_BUNDLE> m_spawnBundle;
+    std::unique_ptr<BYTECODE_BUNDLE> m_updateBundle;
 
     std::vector<VM::BUNDLE_UAV> m_sharedUAVs;
 

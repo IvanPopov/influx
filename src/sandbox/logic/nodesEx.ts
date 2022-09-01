@@ -1,5 +1,5 @@
 import { type as typeHelper } from '@lib/fx/analisys/helpers';
-import { extendFXSLDocument, createFXSLDocument } from '@lib/fx/FXSLDocument';
+import { createFXSLDocument, extendFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import * as FxEmitter from '@lib/fx/translators/FxEmitter';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -7,9 +7,9 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { isDefAndNotNull } from '@lib/util/s3d/type';
 import { nodes, sourceCode } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IGraphAddConstant, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphRemoveConstant } from '@sandbox/actions/ActionTypes';
+import { IGraphAddConstant, IGraphChangeLayout, IGraphCompile, IGraphLoaded, IGraphRemoveConstant, IGraphSetConstant } from '@sandbox/actions/ActionTypes';
 import { history } from '@sandbox/reducers/router';
-import IStoreState, { INodeConstant } from '@sandbox/store/IStoreState';
+import IStoreState from '@sandbox/store/IStoreState';
 import { LGraph, LiteGraph } from 'litegraph.js';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
@@ -23,26 +23,26 @@ import docs from '@sandbox/components/graphEx/utils/docs';
 import { PART_LOCAL_NAME, PART_TYPE } from '@sandbox/components/graphEx/common';
 
 import BasicType from '@sandbox/components/graphEx/BasicType';
-import Decomposer from '@sandbox/components/graphEx/Decomposer';    
+import Decomposer from '@sandbox/components/graphEx/Decomposer';
 import Float from '@sandbox/components/graphEx/Float';
 import FuncNodes from '@sandbox/components/graphEx/FuncNodes';
 import IfStmt from '@sandbox/components/graphEx/IfStmt';
 import Int from '@sandbox/components/graphEx/Int';
 import Operators from '@sandbox/components/graphEx/Operators';
-import Uniforms from '@sandbox/components/graphEx/Uniforms';
 import StmtList from '@sandbox/components/graphEx/StmtList';
+import Uniforms from '@sandbox/components/graphEx/Uniforms';
 
 import DefaultMaterial from '@sandbox/components/graphEx/fx/DefaultMaterial';
 import Kill from '@sandbox/components/graphEx/fx/Kill';
 import KillBy from '@sandbox/components/graphEx/fx/KillBy';
 import LwiMaterial from '@sandbox/components/graphEx/fx/LwiMaterial';
+import Param from '@sandbox/components/graphEx/fx/Param';
 import Part from '@sandbox/components/graphEx/fx/Part';
 import PartId from '@sandbox/components/graphEx/fx/PartId';
 import PartInit from '@sandbox/components/graphEx/fx/PartInit';
 import PartPrevious from '@sandbox/components/graphEx/fx/PartPrevious';
 import PartSpawn from '@sandbox/components/graphEx/fx/PartSpawn';
 import PartUpdate from '@sandbox/components/graphEx/fx/PartUpdate';
-import Param from '@sandbox/components/graphEx/fx/Param';
 import UserConst from '@sandbox/components/graphEx/fx/UserConst';
 
 
@@ -50,6 +50,7 @@ import { ITypeInstruction } from '@lib/idl/IInstruction';
 import { CodeEmitterNode, ICodeMaterialNode, ISpawner, LGraphNodeFactory } from '@sandbox/components/graphEx/GraphNode';
 import GraphTemplateJSON from '@sandbox/components/graphEx/lib/template.json';
 import { getEnv } from '@sandbox/reducers/nodes';
+import { getPlaygroundState } from '@sandbox/reducers/playground';
 
 
 async function loadEnv(layout: string): Promise<ISLDocument> {
@@ -76,6 +77,8 @@ interface IJSONPartFx {
     layout: string;
     graph: ReturnType<LGraph['serialize']>;
     constants?: { name: string; type: string; value: string; } [];
+    capacity?: number;
+    source?: string;
 }
 
 interface IJSONFx {
@@ -85,14 +88,17 @@ interface IJSONFx {
 
 
 export function packGraphToJSON(state: IStoreState): string {
-    const { nodes: { graph, env, constants } } = state;
+    const { nodes: { graph, env, constants, capacity }, sourceFile } = state;
     const type = env.root.scope.findType(PART_TYPE);
     const layout = CodeEmitter.translate(type);
+    const source = sourceFile.content;
 
     const content = <IJSONPartFx>{
         layout,
         graph: graph.serialize(),
-        constants
+        constants,
+        capacity,
+        source
     }
 
     const fx: IJSONFx = { type: 'part', content };
@@ -132,6 +138,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
         const unpacked = unpackGraphFromJSON(action.payload.content);
         action.payload.env = await loadEnv(unpacked.layout);
         action.payload.constants = unpacked.constants || [];
+        action.payload.capacity = unpacked.capacity || 4096;
         // pass unpacked json as meta so as not to double the unpacking
         next({ ...action, meta: unpacked });
     },
@@ -204,6 +211,7 @@ const graphLoadedLogic = createLogic<IStoreState, IGraphLoaded['payload'], IJSON
 
 
 interface Plug {
+    capacity: number;
     initId: number;
     passes: PassPlug[];
 }
@@ -226,7 +234,7 @@ function makeFxTemplate(env: ISLDocument, plug: Plug) {
     return (
 `
 partFx G {
-    Capacity = 4096;
+    Capacity = ${plug.capacity};
     SpawnRoutine = compile SpawnRoutine();
     InitRoutine = compile InitRoutine${plug.initId}();
     UpdateRoutine = compile UpdateRoutine();
@@ -245,7 +253,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
     async process({ getState, action }, dispatch, done) {
         const state = getState();
         const { nodes } = state;
-        const { graph, env, constants } = nodes;
+        const { graph, env, constants, capacity } = nodes;
 
         // IP: hack to find all spawners/initializer by type
         const InitInstance = LiteGraph.registered_node_types['fx/InitRoutine'];
@@ -274,7 +282,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         }
 
         doc = await extendFXSLDocument(await createTextDocument("://fx-template", 
-        makeFxTemplate(env, { passes: plugs, initId: inits.find(init => init.pure).id })), doc);
+        makeFxTemplate(env, { passes: plugs, initId: inits.find(init => init.pure).id, capacity })), doc);
 
         let content = Diagnostics.stringify(doc.diagnosticReport);
         console.log(content);
@@ -455,6 +463,15 @@ const removeConstantlogic = createLogic<IStoreState, IGraphRemoveConstant['paylo
     }
 });
 
+const updateParamsLogic = createLogic<IStoreState, IGraphSetConstant['payload']>({
+    type: [evt.GRAPH_SET_CONSTANT, evt.GRAPH_SET_CAPACITY],
+
+    async process({ getState, action }, dispatch, done) {
+        dispatch(nodes.recompile());
+        done();
+    }
+});
+
 const resetLogic = createLogic<IStoreState>({
     type: [evt.GRAPH_RESET],
 
@@ -470,5 +487,6 @@ export default [
     graphLoadedLogic,
     changeLayoutLogic,
     addConstantlogic,
-    removeConstantlogic
+    removeConstantlogic,
+    updateParamsLogic
 ];

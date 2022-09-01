@@ -2,7 +2,7 @@ import { assert, isNull } from "@lib/common";
 import { EInstructionTypes, ICompileExprInstruction, IFunctionDeclInstruction, IInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 
@@ -41,6 +41,13 @@ export class FxEmitter extends CodeEmitter {
             (i + 1 != list.length) && this.emitChar(',');
         });
         this.emitChar(')');
+        this.emitChar(';');
+    }
+
+    protected emitDrawStmt(stmt: IDrawStmtInstruction) {
+        
+        this.emitKeyword(`draw`);
+        this.emitKeyword(stmt.name);
         this.emitChar(';');
     }
 
@@ -96,6 +103,9 @@ export class FxEmitter extends CodeEmitter {
         switch (stmt.instructionType) {
             case EInstructionTypes.k_SpawnStmt:
                 this.emitSpawnStmt(stmt as ISpawnStmtInstruction);
+                break;
+            case EInstructionTypes.k_DrawStmt:
+                this.emitDrawStmt(stmt as IDrawStmtInstruction);
                 break;
             default:
                 super.emitStmt(stmt);

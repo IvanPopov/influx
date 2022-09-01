@@ -1,6 +1,6 @@
 /// <reference path="../webpack.d.ts" />
 
-import ActionTypes from '@sandbox/actions/ActionTypes';
+// import ActionTypes from '@sandbox/actions/ActionTypes';
 import commonLogic from '@sandbox/logic/common';
 import depotLogic from '@sandbox/logic/depot';
 import fxRuntimeLogic from '@sandbox/logic/fxRuntime';
@@ -65,7 +65,7 @@ const middleware: Middleware[] = !PRODUCTION ?
     [/*thunk, */logic, logger, reduxImmutableState] :
     [logic];
 
-export const store = createStore<IStoreState, ActionTypes, any, any>(
+export const store = createStore<IStoreState, any, any, any>(
     reducer,
     applyMiddleware(...middleware)
 );

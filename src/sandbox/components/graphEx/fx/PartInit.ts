@@ -40,6 +40,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
             function filterParams(node: LGraphNode, params: CodeEmitterParam[] = []): CodeEmitterParam[] {
                 let checkLink = (id, output) => {
                     let link = node.graph.links[id];
+                    if (!link) return;
                     let targetNode = node.graph.getNodeById(output ? link.target_id : link.origin_id);
                     filterParams(targetNode, params);
                     if (targetNode instanceof CodeEmitterParam) {

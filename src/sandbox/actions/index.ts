@@ -144,6 +144,14 @@ export const nodes = {
 
     removeConstant(name: string) {
         return { type: evt.GRAPH_REMOVE_CONSTANT, payload: { name } }
+    },
+
+    setConstant(name: string, value: string) {
+        return { type: evt.GRAPH_SET_CONSTANT, payload: { name, value } }
+    },
+
+    setCapacity(value: number) {
+        return { type: evt.GRAPH_SET_CAPACITY, payload: { value } }
     }
 }
 

@@ -71,7 +71,8 @@ export enum EInstructionTypes {
     // part fx
     k_PartFxDecl,
     k_PartFxPass,
-    k_SpawnStmt
+    k_SpawnStmt,
+    k_DrawStmt
 }
 
 

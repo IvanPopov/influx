@@ -1,8 +1,8 @@
-import { assert, isUint } from "@lib/common";
+import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { FxEmitter } from "./FxEmitter";
 
@@ -20,6 +20,7 @@ export interface ICSShaderReflection {
     uavs: IUavReflection[];
 }
 
+
 export interface IPartFxPassReflection
 {
     instance: string;
@@ -29,6 +30,7 @@ export interface IPartFxPassReflection
     VSParticleShader: string;
     PSParticleShader: string;
     CSParticlesPrerenderRoutine: ICSShaderReflection;
+    drawMode: number; // EPassDrawMode (0 - auto, 1 - manual)
 }
 
 export interface IPartFxReflection {
@@ -41,6 +43,11 @@ export interface IPartFxReflection {
     CSParticlesUpdateRoutine: ICSShaderReflection;
 
     passes: IPartFxPassReflection[];
+}
+
+export interface IDrawOpReflection {
+    name: string;
+    uavs: IUavReflection[];
 }
 
 export class FxTranslator extends FxEmitter {
@@ -61,11 +68,13 @@ export class FxTranslator extends FxEmitter {
 
     private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op';
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
-
+    private static DRAW_OPERATOR_POLYFILL_NAME = '__draw_op';
 
     protected knownUAVs: IUavReflection[] = [];
     protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
+    protected knownDrawOps: IDrawOpReflection[] = [];
 
+    protected fx: IPartFxInstruction = null;
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
 
@@ -94,7 +103,22 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitUav(type: string, name: string, comment?: string): IUavReflection {
+    protected emitDrawStmt({ name }: IDrawStmtInstruction) {
+        let fx = this.fx;//<IPartFxInstruction>pass.parent;
+        let pass = fx.passList.find(pass => pass.name == name);
+        let i = fx.passList.indexOf(pass);
+        if (this.knownDrawOps.map(r => r.name).indexOf(name) == -1) {
+            let uavs = [];
+            const prerenderFn = pass.prerenderRoutine.function;
+            this.emitFunction(prerenderFn);
+            this.emitPrerenderRoutune(pass, i, uavs);
+            this.knownDrawOps.push({ name, uavs });
+        }
+        this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(part, partId);`);
+    }
+
+
+    protected emitUav(type: string, name: string, comment?: string): IUavReflection {
         let register = this.knownUAVs.map(uav => uav.name).indexOf(name);
         if (register === -1) {
             this.begin();
@@ -123,13 +147,13 @@ export class FxTranslator extends FxEmitter {
         return this.knownUAVs[register];
     }
 
-    emitResetShader(fx: IPartFxInstruction): ICSShaderReflection {
+    protected emitResetShader(): ICSShaderReflection {
         const name = 'CSParticlesResetRoutine';
         const numthreads = [64, 1, 1];
         const uavs = [];
 
         const reflection: ICSShaderReflection = { name, numthreads, uavs };
-
+        const fx = this.fx;
         const capacity = fx.capacity;
 
         this.begin();
@@ -244,7 +268,8 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitSpawnShader(fx: IPartFxInstruction): ICSShaderReflection {
+    protected emitSpawnShader(): ICSShaderReflection {
+        const fx = this.fx;
         if (!fx.spawnRoutine)
         {
             return null;
@@ -303,7 +328,8 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitInitShader(fx: IPartFxInstruction): ICSShaderReflection {
+    protected emitInitShader(): ICSShaderReflection {
+        const fx = this.fx;
         const initFn = fx.initRoutine.function;
 
         const name = 'CSParticlesInitRoutine';
@@ -416,7 +442,8 @@ export class FxTranslator extends FxEmitter {
         return reflection;
     }
 
-    emitUpdateShader(fx: IPartFxInstruction): ICSShaderReflection {
+    protected emitUpdateShader(): ICSShaderReflection {
+        const fx = this.fx;
         const updateFn = fx.updateRoutine.function;
 
         const name = 'CSParticlesUpdateRoutine';
@@ -473,6 +500,8 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
+        uavs.push(...this.knownDrawOps.map(r => r.uavs).flat());
+
         // hack
         uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
             FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
@@ -483,37 +512,17 @@ export class FxTranslator extends FxEmitter {
         return reflection;
     }
 
-    emitPrerenderShader(fx: IPartFxInstruction, pass: IPartFxPassInstruction, i: number): ICSShaderReflection {
+    protected emitPrerenderRoutune(pass: IPartFxPassInstruction, i: number, uavs: IUavReflection[]) {
+        const fx = this.fx;
         const prerenderFn = pass.prerenderRoutine.function;
-
-        const name = `CSParticlesPrerenderShader${i}`;
-        const numthreads = [64, 1, 1];
-        const uavs = [];
-
-        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
-
+        const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
+        const { typeName: partType } = this.resolveType(fx.particle);
         this.begin();
         {
-            this.emitLine(`[numthreads(${numthreads.join(', ')})]`);
-            this.emitLine(`void ${name}(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3 GTid: SV_GroupThreadID, uint3 DTid: SV_DispatchThreadID)`);
+            this.emitLine(`void ${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(${partType} Particle, int PartId)`);
             this.emitChar('{');
             this.push();
             {
-                this.emitLine(`uint PartId = DTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
-                this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
-                this.emitNewline();
-                this.emitLine(`[branch]`);
-                this.emitLine(`if(!Alive) return;`);
-                this.emitNewline();
-
-                this.emitFunction(prerenderFn);
-                const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
-                this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
-
-                const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
-
                 uavs.push(this.emitUav(`RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
 
                 if (pass.sorting)
@@ -582,13 +591,50 @@ export class FxTranslator extends FxEmitter {
             this.emitChar('}');
         }
         this.end();
+    }
+
+    protected emitPrerenderShader(pass: IPartFxPassInstruction, i: number): ICSShaderReflection {
+        const prerenderFn = pass.prerenderRoutine.function;
+
+        const name = `CSParticlesPrerenderShader${i}`;
+        const numthreads = [64, 1, 1];
+        const uavs = [];
+        const fx = this.fx;
+
+        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
+
+        this.begin();
+        {
+            this.emitLine(`[numthreads(${numthreads.join(', ')})]`);
+            this.emitLine(`void ${name}(uint3 Gid: SV_GroupID, uint GI: SV_GroupIndex, uint3 GTid: SV_GroupThreadID, uint3 DTid: SV_DispatchThreadID)`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`uint PartId = DTid.x;`);
+                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
+                this.emitNewline();
+                this.emitLine(`[branch]`);
+                this.emitLine(`if(!Alive) return;`);
+                this.emitNewline();
+
+                this.emitFunction(prerenderFn);
+                const { typeName: partType } = this.resolveType(fx.particle);
+                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
+
+                this.emitPrerenderRoutune(pass, i, uavs);
+                this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(Particle, PartId);`);
+            }
+            this.pop();
+            this.emitChar('}');
+        }
+        this.end();
 
         return reflection;
     }
 
-    emitSpawnOpContainer() {
-
-
+    protected emitSpawnOpContainer() {
         const payloadSize = this.knownSpawnCtors.map(
             // slice 1 or 2 depending on necessity of partID
             ctor => ctor.def.params.slice(2).map(param => param.type.size).reduce((size, summ) => summ + size, 0))
@@ -622,28 +668,33 @@ export class FxTranslator extends FxEmitter {
         this.end(true);
     }
 
+   
+
     emitPartFxDecl(fx: IPartFxInstruction): IPartFxReflection {
         if (!fx.particle)
         {
             return null;
         }
 
+        // note: only one effect can be tranclated at a time 
+        this.fx = fx;
+
         const { name, capacity } = fx;
 
-        const CSParticlesSpawnRoutine = this.emitSpawnShader(fx);
-        const CSParticlesResetRoutine = this.emitResetShader(fx);
-        const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(fx);
-        const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader(fx);
+        const CSParticlesSpawnRoutine = this.emitSpawnShader();
+        const CSParticlesResetRoutine = this.emitResetShader();
+        const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader();
+        const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader();
 
-        const passes = fx.passList.map((pass, i) => {
-            const { prerenderRoutine, vertexShader, pixelShader } = pass;
+        const passes = fx.passList.map((pass, i): IPartFxPassReflection => {
+            const { prerenderRoutine, vertexShader, pixelShader, drawMode } = pass;
             let { sorting, geometry, instanceCount } = pass;
             let VSParticleShader: string = null;
             let PSParticleShader: string = null;
             let CSParticlesPrerenderRoutine: ICSShaderReflection = null;
 
-            if (prerenderRoutine) {
-                CSParticlesPrerenderRoutine = this.emitPrerenderShader(fx, pass, i);
+            if (prerenderRoutine && drawMode === EPassDrawMode.k_Auto) {
+                CSParticlesPrerenderRoutine = this.emitPrerenderShader(pass, i);
             }
 
             if (vertexShader) {
@@ -665,7 +716,8 @@ export class FxTranslator extends FxEmitter {
                 instanceCount,
                 VSParticleShader,
                 PSParticleShader,
-                CSParticlesPrerenderRoutine
+                CSParticlesPrerenderRoutine,
+                drawMode
             };
         });
 

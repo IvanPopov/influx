@@ -65,6 +65,7 @@ export interface INodePipeline {
     revision: number;          // number of updates of graph
     env: ISLDocument;          // library extended with particle struct
     constants: INodeConstant[];
+    capacity: number;
 }
 
 export interface IPlaygroundState {

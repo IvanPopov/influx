@@ -77,19 +77,24 @@ std::vector<VM::BUNDLE_UAV> CreateUAVsEx(const std::vector<std::unique_ptr<Fx::U
 }
 
 
-BYTECODE_BUNDLE SetupFxRoutineBytecodeBundle(
+std::unique_ptr<BYTECODE_BUNDLE> SetupFxRoutineBytecodeBundle(
     std::string debugName,
-    const Fx::RoutineBytecodeBundleT &routineBundle,
+    const Fx::RoutineBytecodeBundleT* routineBundle,
     int capacity,
     std::vector<VM::BUNDLE_UAV> &sharedUAVs)
 {
-    auto uavs = CreateUAVsEx(routineBundle.resources->uavs, capacity, sharedUAVs);
+    if (routineBundle->code.empty()) {
+        // it's dummy bundle (manual prerender is used)
+        return nullptr;
+    }
+
+    auto uavs = CreateUAVsEx(routineBundle->resources->uavs, capacity, sharedUAVs);
     
-    VM::BUNDLE vmBundle(debugName, VM::memory_view::FromVector(routineBundle.code));
+    VM::BUNDLE vmBundle(debugName, VM::memory_view::FromVector(routineBundle->code));
     VM::BUNDLE_NUMTHREADS numthreads{
-        routineBundle.numthreads[0],
-        routineBundle.numthreads[1],
-        routineBundle.numthreads[2]
+        routineBundle->numthreads[0],
+        routineBundle->numthreads[1],
+        routineBundle->numthreads[2]
     };
 
     for (auto &uav : uavs)
@@ -97,10 +102,10 @@ BYTECODE_BUNDLE SetupFxRoutineBytecodeBundle(
         vmBundle.SetInput(uav.index, uav.buffer);
     }
 
-    BYTECODE_BUNDLE bcBundle;
-    bcBundle.uavs = std::move(uavs);
-    bcBundle.vmBundle = std::move(vmBundle); // << important to copy because of circular dependencies of constants
-    bcBundle.numthreads = numthreads;
+    auto bcBundle = std::make_unique<BYTECODE_BUNDLE>();
+    bcBundle->uavs = std::move(uavs);
+    bcBundle->vmBundle = std::move(vmBundle); // << important to copy because of circular dependencies of constants
+    bcBundle->numthreads = numthreads;
     return bcBundle;
 }
 
@@ -109,12 +114,12 @@ EMITTER_PASS::EMITTER_PASS (
     const EMITTER* pParent, 
     uint32_t id, 
     const EMITTER_DESC& desc, 
-    const BYTECODE_BUNDLE& bundle
+    std::unique_ptr<BYTECODE_BUNDLE> bundle
 )
     : m_parent(pParent)
     , m_id(id)
     , m_desc(desc)
-    , m_prerenderBundle(bundle)
+    , m_prerenderBundle(std::move(bundle))
 {
 
 }
@@ -192,14 +197,16 @@ void EMITTER_PASS::Serialize()
 void EMITTER_PASS::Prerender(const UNIFORMS& uniforms) 
 {
     auto& bundle = m_prerenderBundle;
-    assert(Parent().GetCapacity() % bundle.numthreads.x == 0);
+    if (!bundle) {
+        return;
+    }
+    assert(Parent().GetCapacity() % bundle->numthreads.x == 0);
 
-    auto uav = find_if(begin(bundle.uavs), end(bundle.uavs), 
+    auto uav = find_if(begin(bundle->uavs), end(bundle->uavs), 
         [&](const VM::BUNDLE_UAV& uav) { return uav.name == UavPrerendered(m_id); });
-    assert(uav != end(bundle.uavs));
-    uav->OverwriteCounter(0);
-    bundle.SetConstants(uniforms);
-    bundle.Run(Parent().GetCapacity() / bundle.numthreads.x);
+    assert(uav != end(bundle->uavs));
+    bundle->SetConstants(uniforms);
+    bundle->Run(Parent().GetCapacity() / bundle->numthreads.x);
 }
 
 
@@ -246,22 +253,22 @@ EMITTER::EMITTER(void* buf)
     auto& sharedUAVs = m_sharedUAVs;
     m_resetBundle = SetupFxRoutineBytecodeBundle(
         name + "/reset",
-        *simulationRoutines[Fx::EPartSimRoutines_k_Reset].AsRoutineBytecodeBundle(),
+        simulationRoutines[Fx::EPartSimRoutines_k_Reset].AsRoutineBytecodeBundle(),
         capacity,
         sharedUAVs);
     m_initBundle = SetupFxRoutineBytecodeBundle(
         name + "/init",
-        *simulationRoutines[Fx::EPartSimRoutines_k_Init].AsRoutineBytecodeBundle(),
+        simulationRoutines[Fx::EPartSimRoutines_k_Init].AsRoutineBytecodeBundle(),
         capacity,
         sharedUAVs);
     m_updateBundle = SetupFxRoutineBytecodeBundle(
         name + "/update",
-        *simulationRoutines[Fx::EPartSimRoutines_k_Update].AsRoutineBytecodeBundle(),
+        simulationRoutines[Fx::EPartSimRoutines_k_Update].AsRoutineBytecodeBundle(),
         capacity,
         sharedUAVs);
     m_spawnBundle = SetupFxRoutineBytecodeBundle(
         name + "/spawn",
-        *simulationRoutines[Fx::EPartSimRoutines_k_Spawn].AsRoutineBytecodeBundle(),
+        simulationRoutines[Fx::EPartSimRoutines_k_Spawn].AsRoutineBytecodeBundle(),
         4,
         sharedUAVs);
 
@@ -271,14 +278,15 @@ EMITTER::EMITTER(void* buf)
         auto &pass = renderPasses[i];
         auto [routines, geometry, sorting, instanceCount, stride, instance] = *pass;
 
-        const Fx::RoutineBytecodeBundleT &prerender = *routines[Fx::EPartRenderRoutines_k_Prerender].AsRoutineBytecodeBundle();
-        BYTECODE_BUNDLE bundle = SetupFxRoutineBytecodeBundle(
+        
+        const Fx::RoutineBytecodeBundleT* prerender = routines[Fx::EPartRenderRoutines_k_Prerender].AsRoutineBytecodeBundle();
+        auto bundle = SetupFxRoutineBytecodeBundle(
             name + "/prerender",
             prerender,
             capacity * instanceCount,
             sharedUAVs);
 
-        auto uav = find_if(begin(bundle.uavs), end(bundle.uavs), [&](const VM::BUNDLE_UAV &uav)
+        auto uav = find_if(begin(sharedUAVs), end(sharedUAVs), [&](const VM::BUNDLE_UAV &uav)
                             { return uav.name == UavPrerendered(i); });
 
         std::string vertexShader = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->code;
@@ -287,7 +295,9 @@ EMITTER::EMITTER(void* buf)
         // note: only GLSL routines are supported!
         std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->attributes;
 
-        auto &prerenderUAVs = prerender.resources->uavs;
+        // if no prerender bundle then all particles must be prerendered within update stage
+        // looking for prerendered reflection among prerender or update routine uavs
+        auto &prerenderUAVs = (bundle ? routines[Fx::EPartRenderRoutines_k_Prerender] : simulationRoutines[Fx::EPartSimRoutines_k_Update]).AsRoutineBytecodeBundle()->resources->uavs;
         auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
                                             { return uav->name == UavPrerendered(i); });
 
@@ -315,7 +325,7 @@ EMITTER::EMITTER(void* buf)
             desc.vertexShader = vertexShader;
             desc.pixelShader = pixelShader;
 
-            passes.emplace_back(this, i, desc, bundle);
+            passes.emplace_back(this, i, desc, std::move(bundle));
         }
     }
 }
@@ -367,28 +377,28 @@ uint32_t EMITTER::GetNumParticles() const
 
 void EMITTER::Reset()
 {
-    assert(m_capacity % m_resetBundle.numthreads.x == 0);
+    assert(m_capacity % m_resetBundle->numthreads.x == 0);
     // reset all available particles
-    m_resetBundle.Run(m_capacity / m_resetBundle.numthreads.x);
+    m_resetBundle->Run(m_capacity / m_resetBundle->numthreads.x);
     UavDeadIndices()->OverwriteCounter(m_capacity);
 }
 
 
 void EMITTER::Emit(const UNIFORMS& uniforms)
 {
-    m_initBundle.SetConstants(uniforms);
-    m_initBundle.Run(UavInitArguments()->data.As<int>()[0]);
+    m_initBundle->SetConstants(uniforms);
+    m_initBundle->Run(UavInitArguments()->data.As<int>()[0]);
 
-    m_spawnBundle.SetConstants(uniforms);
-    m_spawnBundle.Run(1);
+    m_spawnBundle->SetConstants(uniforms);
+    m_spawnBundle->Run(1);
 }
 
 
 void EMITTER::Update(const UNIFORMS& uniforms)
 {
-    assert(m_capacity % m_updateBundle.numthreads.x == 0);
-    m_updateBundle.SetConstants(uniforms);
-    m_updateBundle.Run(m_capacity / m_updateBundle.numthreads.x);
+    assert(m_capacity % m_updateBundle->numthreads.x == 0);
+    m_updateBundle->SetConstants(uniforms);
+    m_updateBundle->Run(m_capacity / m_updateBundle->numthreads.x);
 }
 
 

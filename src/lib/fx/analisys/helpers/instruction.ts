@@ -26,6 +26,7 @@ export namespace instruction {
             case EInstructionTypes.k_CastExpr:
             case EInstructionTypes.k_UnaryExpr:
             case EInstructionTypes.k_RelationalExpr:
+            case EInstructionTypes.k_LogicalExpr:
                 // todo: add other types!!!
                 return true;
         }

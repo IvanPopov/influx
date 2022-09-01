@@ -2,13 +2,14 @@ import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common
 import { expression, instruction, type, variable } from "@lib/fx/analisys/helpers";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
-import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IFile, IParseNode } from "@lib/idl/parser/IParser";
-import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { EPassDrawMode, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { Analyzer, Context, ICompileValidator, parseUintLiteral } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { IntInstruction } from "./instructions/IntInstruction";
+import { DrawInstruction } from "./instructions/part/DrawInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
 import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
@@ -30,6 +31,7 @@ export class FxContext extends Context {
     particleInstance: ITypeInstruction;
 
     spawnStmts: SpawnInstruction[] = [];
+    drawStmts: { instr: DrawInstruction, ctx: IFunctionDefInstruction }[] = [];
 
     // beginFunc(): void {
     //     super.beginFunc();
@@ -108,6 +110,29 @@ export class FxAnalyzer extends Analyzer {
         return spawnStmt;
     }
 
+
+    /**
+     * AST example:
+     *    SimpleStmt
+     *         T_PUNCTUATOR_59 = ';'
+     *         T_NON_TYPE_ID = 'Init'
+     *         T_KW_DRAW = 'draw'
+     */
+     protected analyzeDrawStmt(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        const name = children[1].value;
+
+        const instr = new DrawInstruction({ sourceNode, scope, name });
+        const ctx = context.funcDef;
+        context.drawStmts.push({ instr, ctx });
+        
+        return instr;
+    }
+
+
+
     protected analyzeSimpleStmt(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IStmtInstruction {
         const children = sourceNode.children;
         const firstNodeName: string = children[children.length - 1].name;
@@ -115,7 +140,8 @@ export class FxAnalyzer extends Analyzer {
         switch (firstNodeName) {
             case 'T_KW_SPAWN':
                 return this.analyzeSpawnStmt(context, program, sourceNode);
-
+            case 'T_KW_DRAW':
+                return this.analyzeDrawStmt(context, program, sourceNode);
             default:
                 return super.analyzeSimpleStmt(context, program, sourceNode);
         }
@@ -139,6 +165,12 @@ export class FxAnalyzer extends Analyzer {
      *    PassDecl
      *       + PassStateBlock 
      *         T_NON_TYPE_ID = 'P0'
+     *         T_KW_PASS = 'pass'
+     */
+    /**
+     * AST example:
+     *    PassDecl
+     *       + PassStateBlock 
      *         T_KW_PASS = 'pass'
      */
     protected analyzePartFXPassDecl(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IPartFxPassInstruction {
@@ -214,6 +246,14 @@ export class FxAnalyzer extends Analyzer {
             }
         }
 
+        let drawMode = EPassDrawMode.k_Auto;
+        if (id) {
+            if (context.drawStmts.find(x => x.instr.name == id.name)) {
+                drawMode = EPassDrawMode.k_Manual;
+            }
+        }
+
+
         const pass = new PartFxPassInstruction({
             scope,
             sourceNode,
@@ -223,6 +263,7 @@ export class FxAnalyzer extends Analyzer {
             geometry,
             instanceCount,
             prerenderRoutine,
+            drawMode,
 
             renderStates,
             pixelShader,
@@ -642,6 +683,24 @@ export class FxAnalyzer extends Analyzer {
             }
         }
 
+        //
+        // draw operator finalization
+        //
+
+        for (const stmt of context.drawStmts) {
+            const { instr, ctx } = stmt;
+            const pass = props.passList.find(pass => pass.id.name == instr.name);
+            if (!pass) {
+                context.error(instr.sourceNode, EErrors.PartFx_RenderPassWasNotFound);
+            }
+
+            const p0Type = ctx.params[0].type;
+            if (!p0Type.isEqual(context.particleCore) || !p0Type.readable) {
+                context.error(instr.sourceNode, EErrors.PartFx_DrawOpOnlyAllowedWithinUpdateRoutine,
+                    { tooltip: 'Draw operator only allowed within update routine' });
+            }
+        }
+
         context.endPartFx();
 
         const partFx = new PartFxInstruction({
@@ -687,6 +746,7 @@ export class FxAnalyzer extends Analyzer {
 
         // NOTE: all effects are assumed to be valid
         const fxList = <IPartFxInstruction[]>root.instructions.filter(instr => instr.instructionType === EInstructionTypes.k_PartFxDecl);
+
 
         //
         // spawn operator validation

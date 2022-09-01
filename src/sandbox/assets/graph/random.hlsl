@@ -73,5 +73,28 @@ float2 seed2(int id)
     return float2((float)(id) * elapsedTimeLevel, (float)(id) * elapsedTime);
 }
 
+/**
+ * @node {rand3}
+ * @title rand3
+ * @desc Returns 3-component vector with [0-1] range random values.
+ */
+float3 rand3(float2 uv) {
+   float3 randVec = float3(
+      random(uv), 
+      random(float2(uv.y, uv.x)), 
+      random(float2(uv.x + uv.y, uv.y + 13.149845f))
+   );
+   return randVec;
+}
+
+/**
+ * @node {randDir}
+ * @title Random Direction
+ * @desc Returns random normalized direction.
+ */
+float3 randDir(float2 uv) {
+    return normalize(rand3(uv) * 2.f - float3(1.f));
+}
+
 #endif
 

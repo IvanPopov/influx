@@ -8,9 +8,11 @@ import { IExprInstruction, IStmtInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
+import * as SystemScope from "@lib/fx/analisys/SystemScope";
 
 
 import { CodeEmitterNode, LGraphNodeFactory, GraphContext } from "./GraphNode";
+import { CastExprInstruction } from "@lib/fx/analisys/instructions/CastExprInstruction";
 
 function producer(env: () => ISLDocument): LGraphNodeFactory {
     const nodes = <LGraphNodeFactory>{};
@@ -72,6 +74,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                 const sourceNode = null as IParseNode;
                 const scope = program.currentScope;
                 const type = scope.findType(typeName);
+
                 const ctor = new VariableTypeInstruction({ type, scope: null });
                 const args = [...Array(count).keys()].map(i => {
                     const input = this.getInputNode(i);
@@ -86,6 +89,12 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                     }
                     return input.exec(context, program, this.getOriginalSlot(i));
                 });
+                // avoid float(float(t)) expressions
+                if (count == 1) {
+                    if (type.isEqual(args[0].type)) {
+                        return args[0];
+                    }
+                }
                 return new ConstructorCallInstruction({ scope, sourceNode, ctor, args });
             }
 
@@ -120,6 +129,46 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
         }
 
         nodes[`constructors/${typeName}`] = Node;
+
+        class Cast extends CodeEmitterNode {
+            static desc = `${desc} (cast)`;
+
+            private inputNames: string[] = [];
+
+            constructor() {
+                super(desc);
+                this.addOutput("out", typeName);
+                this.addInput('x', 'float,bool,int,uint,half'.split(',').map(x => `${x}${count}`).join(','));
+                this.size = this.computeSize();
+            }
+
+            override compute(context: GraphContext, program: ProgramScope): IStmtInstruction[] {
+                return this.getInputNode(0)?.compute(context, program);
+            }
+
+            override exec(context: Context, program: ProgramScope, slot: number): IExprInstruction {
+                const scope = program.currentScope;
+                const type = scope.findType(typeName);
+                const sourceExpr = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));
+                if (sourceExpr.type.isEqual(type)) {
+                    return sourceExpr;
+                }
+                return new CastExprInstruction({ scope, sourceExpr, type });
+            }
+
+            getDocs(): string {
+                return `Cast to ${typeName}() type.`
+            }
+
+            // getTitle(): string {
+            //     if (this.flags.collapsed && this.inputs.filter(i => i.link).length === 0) {
+            //         return `(${this.inputNames.map(name => prettify(this.properties[name])).join(' ,')})`;
+            //     }
+            //     return super.getTitle();
+            // }
+        }
+
+        nodes[`constructors/${typeName} (cast)`] = Cast;
     });
 
     return nodes;

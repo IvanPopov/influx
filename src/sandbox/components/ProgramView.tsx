@@ -10,6 +10,7 @@ import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTyp
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
+import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
 import { mapProps } from '@sandbox/reducers';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
@@ -676,6 +677,14 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         );
     }
 
+    DrawStmt(instr: IDrawStmtInstruction) {
+        return (
+            <Property { ...this.bindProps(instr, true) }>
+                <Property name='name' value={ instr.name } />
+            </Property>
+        )
+    }
+
     Stmt(instr: IStmtInstruction) {
         if (!instr) {
             return null;
@@ -696,6 +705,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.SemicolonStmt(instr as IStmtInstruction);
             case EInstructionTypes.k_IfStmt:
                 return this.IfStmt(instr as IIfStmtInstruction);
+            case EInstructionTypes.k_DrawStmt:
+                return this.DrawStmt(instr as IDrawStmtInstruction);
             default:
                 return this.NotImplemented(instr); // TODO: remove it
         }

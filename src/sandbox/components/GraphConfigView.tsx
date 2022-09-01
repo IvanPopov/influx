@@ -8,7 +8,7 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { nodes as nodesActions } from '@sandbox/actions';
-import { Button, Segment } from 'semantic-ui-react';
+import { Button, Form, Header, Input, Segment } from 'semantic-ui-react';
 import { PART_TYPE } from './graphEx/common';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import GraphConstants from './GraphConstants';
@@ -37,6 +37,16 @@ export interface IProps extends IStoreState, Partial<WithStylesProps<typeof styl
     actions: typeof nodesActions;
 }
 
+function Capacity({ value, onChange }) {
+    const [ref, setValue] = React.useState(value);
+    return (
+        <div className='ui'>
+            <Input size='small' action={{ basic: true, content: 'Set', color: 'green', onClick: e => onChange(ref) }} 
+                onChange={e => setValue(e.target.value)} value={ref} />
+        </div>
+    );
+}
+
 class GraphConfigView extends React.Component<IProps> {
     @autobind
     async onChange(content, e) {
@@ -54,6 +64,11 @@ class GraphConfigView extends React.Component<IProps> {
         this.props.actions.changeLayout(layout);
     }
 
+    @autobind
+    setCapacity(value) {
+        this.props.actions.setCapacity(Number(value) || 4096);
+    }
+
     render() {
         const { nodes } = this.props;
         const { docs, env } = nodes;
@@ -62,25 +77,38 @@ class GraphConfigView extends React.Component<IProps> {
 
         return (
             <div>
-                <MonacoEditor
-                    ref='monaco'
-                    value={ CodeEmitter.translate(type) }
-                    width='100%'
-                    height='calc(150px)' // todo: fixme
-                    options={monacoOptions}
-                    onChange={this.onChange}
-                />
-                <Button onClick={ this.applyLayout }>Apply</Button>
-                <Segment size='small' basic color='grey'>
+                <Header as='h5' attached='top'>
+                    Particle Layout
+                </Header>
+                <Segment attached>
+                    <MonacoEditor
+                        ref='monaco'
+                        value={ CodeEmitter.translate(type) }
+                        width='100%'
+                        height='calc(150px)' // todo: fixme
+                        options={monacoOptions}
+                        onChange={this.onChange}
+                    />
+                    <Button onClick={ this.applyLayout }>Apply</Button>
+                </Segment>
+                <Header as='h5' attached='top'>
+                    User Constants
+                </Header>
+                <Segment attached>
                     <GraphConstants />
                 </Segment>
-                <Segment size='small' basic color='grey'>
+                {/* <Header as='h5' attached='top'>
+                    Node Description
+                </Header>
+                <Segment attached>
                     { docs || "[[ no description found ]]" }
-                </Segment>
-                
-
-                <Segment size='small' basic color='grey'>
+                </Segment> */}
+                <Header as='h5' attached='top'>
+                    Emitter Properties
+                </Header>
+                <Segment attached='bottom'>
                     Emitter's capacity is { (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() }.
+                    <Capacity value={ (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() } onChange={this.setCapacity} />
                 </Segment>
             </div>
         );

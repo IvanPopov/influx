@@ -1,6 +1,6 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction } from "@lib/idl/IInstruction";
 
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { BaseEmitter } from "./BaseEmitter";
@@ -261,6 +261,8 @@ export class CodeEmitter extends BaseEmitter {
                 return this.emitConditionalExpr(expr as IConditionalExprInstruction);
             case EInstructionTypes.k_RelationalExpr:
                 return this.emitRelationalExpr(expr as IRelationalExprInstruction);
+            case EInstructionTypes.k_LogicalExpr:
+                return this.emitLogicalExpr(expr as ILogicalExprInstruction);
             case EInstructionTypes.k_UnaryExpr:
                 return this.emitUnaryExpr(expr as IUnaryExprInstruction);
             case EInstructionTypes.k_PostfixArithmeticExpr:
@@ -310,6 +312,12 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitRelationalExpr(rel: IRelationalExprInstruction) {
+        this.emitExpression(rel.left);
+        this.emitKeyword(rel.operator);
+        this.emitExpression(rel.right);
+    }
+
+    emitLogicalExpr(rel: ILogicalExprInstruction) {
         this.emitExpression(rel.left);
         this.emitKeyword(rel.operator);
         this.emitExpression(rel.right);

@@ -21,7 +21,6 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
     protected _initRoutine: ICompileExprInstruction;
     protected _updateRoutine: ICompileExprInstruction;
     protected _particle: ITypeInstruction;
-    protected _material: ITypeInstruction;
     protected _capacity: number;
 
     constructor({ spawnRoutine, initRoutine, updateRoutine, particle, capacity = -1, ...settings }: IPartFxInstructionSettings) {

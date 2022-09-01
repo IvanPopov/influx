@@ -135,7 +135,8 @@ export const language = <ILanguage>{
 
         // partFX
         'partFx',
-        'spawn'
+        'spawn',
+        'draw'
     ],
 
     operators: [

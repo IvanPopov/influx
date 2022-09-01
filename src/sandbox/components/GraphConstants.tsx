@@ -19,14 +19,22 @@ const types = [
     { key: 'bool', value: 'bool', text: 'bool' },
 ];
 
-function Constant({ desc, index, removeConst }) {
+function Constant({ desc, index, removeConst, setConst }) {
+    const [value, setValue] = React.useState(desc.value);
     return (
-        <div>
-            <span>{desc.type} {desc.name}  = {desc.value}</span>
-            <div>
-                <Button onClick={() => removeConst(desc.name)}>✕</Button>
-            </div>
-        </div>
+        <Card raised>
+            <Card.Content>
+                <Card.Header>{desc.name}</Card.Header>
+                <Card.Meta>{desc.type}</Card.Meta>
+            </Card.Content>
+            <Card.Content extra>
+                <div className='ui'>
+                    <Button size='small' basic color='red' onClick={() => removeConst(desc.name)}>✕</Button>
+                    <Input size='small' action={{ basic: true, content: 'Set', color: 'green', onClick: e => setConst(desc.name, value) }} 
+                        onChange={e => setValue(e.target.value)} placeholder={desc.type} value={value} />
+                </div>
+            </Card.Content>
+        </Card>
     );
 }
 
@@ -86,6 +94,13 @@ class Constants extends React.Component<IProps> {
         this.props.actions.removeConstant(name);
     };
 
+
+    @autobind
+    setConst(name, value) {
+        console.log(name, value);
+        this.props.actions.setConstant(name, value);
+    };
+
     render() {
         const { constants } = this.props.nodes;
         return (
@@ -94,16 +109,13 @@ class Constants extends React.Component<IProps> {
                 <div>
                     <Card.Group itemsPerRow={2}>
                     {constants.map((desc, index) => (
-                        <Card raised>
-                            <Card.Content>
-                                <Constant
-                                    key={index}
-                                    index={index}
-                                    desc={desc}
-                                    removeConst={this.removeConst}
-                                />
-                            </Card.Content>
-                        </Card>
+                        <Constant
+                            key={index}
+                            index={index}
+                            desc={desc}
+                            removeConst={this.removeConst}
+                            setConst={this.setConst}
+                        />
                     ))}
                     </Card.Group>
                 </div>

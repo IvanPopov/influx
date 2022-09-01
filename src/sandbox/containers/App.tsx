@@ -1023,7 +1023,7 @@ class App extends React.Component<IAppProps> {
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
-                                    Particle Structure
+                                    Graph Configuration
                                 </div>
                             </Menu.Menu>
                         </Menu>

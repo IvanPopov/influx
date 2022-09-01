@@ -86,5 +86,7 @@ export enum EAnalyzerErrors {
     //
 
     PartFx_VertexShaderParametersMismatch,
-    PartFx_InvalidSpawnStmtInitializerNotFound
+    PartFx_InvalidSpawnStmtInitializerNotFound,
+    PartFx_RenderPassWasNotFound,
+    PartFx_DrawOpOnlyAllowedWithinUpdateRoutine
 };

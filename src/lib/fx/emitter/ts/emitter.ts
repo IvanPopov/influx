@@ -31,6 +31,12 @@ function createUAVsEx(bundles: UAVBundleT[], capacity: number, sharedUAVs: IUAVR
 
 
 function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineBytecodeBundleT, capacity: number, sharedUAVs: IUAVResource[]) {
+    const codeLength = routineBundle.code.length;
+    if (codeLength == 0) {
+        // it's dummy bundle
+        return null;
+    }
+
     const vmBundle = VM.make(debugName, routineBundle.code);
     const uavs = createUAVsEx(routineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = routineBundle.numthreads;
@@ -125,8 +131,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const prerenderBundle = routines[EPartRenderRoutines.k_Prerender];
         const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, <RoutineBytecodeBundleT>prerenderBundle, capacity * instanceCount, uavResources);
         
-        const uavPrerendered = bundle.uavs.find(uav => uav.name === UAV_PRERENDERED);
-        const uavSerials = bundle.uavs.find(uav => uav.name === UAV_SERIALS);
+        const uavPrerendered = uavResources.find(uav => uav.name === UAV_PRERENDERED);
+        const uavSerials = uavResources.find(uav => uav.name === UAV_SERIALS);
 
         const vertexShader = <string>routines[EPartRenderRoutines.k_Vertex].code;
         const pixelShader = <string>routines[EPartRenderRoutines.k_Pixel].code;
@@ -135,8 +141,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
         const getNumRenderedParticles = () => getNumParticles() * instanceCount;
 
-        // tslint:disable-next-line:max-line-length
-        const uavPrerendReflect: UAVBundleT = (<RoutineBytecodeBundleT>prerenderBundle).resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
+        // if no prerender bundle then all particles must be prerendered within update stage
+        // looking for prerendered reflection among prerender or update routine uavs
+        const uavPrerendReflect: UAVBundleT = (<RoutineBytecodeBundleT>(bundle ? routines[EPartRenderRoutines.k_Prerender] : simulationRoutines[EPartSimRoutines.k_Update]))
+            .resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
 
         //
         // Sorting
@@ -215,8 +223,12 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         function prerender(uniforms: Uniforms)
         {
+            if (!bundle) {
+                // manual prerender is used
+                return;
+            }
+
             const uavPrerendered = bundle.uavs.find(uav => uav.name === `uavPrerendered${i}`);
-            UAV.overwriteCounter(uavPrerendered, 0);
             bundle.setConstants(uniforms);
             bundle.run(Math.ceil(capacity / bundle.groupsizex));
         }
