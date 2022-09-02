@@ -78,7 +78,8 @@ export class FxTranslator extends FxEmitter {
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = this.fx;
-        const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
+        const init = stmt.scope.findFunction(stmt.name, 
+            [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
 
         let guid = this.knownSpawnCtors.findIndex(ctor => ctor === init) + 1;
 

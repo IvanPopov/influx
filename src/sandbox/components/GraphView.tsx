@@ -22,7 +22,7 @@ import '@sandbox/styles/custom/fonts/OpenSans/stylesheet.css';
 // var shape = node._shape || node.constructor.shape || LiteGraph.ROUND_SHAPE;
 // (LGraphNode as any).shape = LiteGraph.BOX_SHAPE;
 
-LiteGraph.debug = true;
+// LiteGraph.debug = true;
 LiteGraph.catch_exceptions = true;
 LiteGraph.throw_errors = true;
 LiteGraph.allow_scripts = false; //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration); which could lead to exploits

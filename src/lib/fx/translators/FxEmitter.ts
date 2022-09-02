@@ -1,12 +1,14 @@
-import { assert, isNull } from "@lib/common";
-import { EInstructionTypes, ICompileExprInstruction, IFunctionDeclInstruction, IInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { IMap } from "@lib/idl/IMap";
+import { isNull } from "@lib/common";
+import { T_INT } from "@lib/fx/analisys/SystemScope";
+import { EInstructionTypes, ICompileExprInstruction, IInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 
 export class FxEmitter extends CodeEmitter {
+    protected fx: IPartFxInstruction;
+
     static translateDocument(doc: ISLDocument): any {
         throw new Error('Method not implemented.');
     }
@@ -29,8 +31,9 @@ export class FxEmitter extends CodeEmitter {
     }
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
-        // const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
-        // this.emitFunction(stmt.init);
+        const fx = this.fx;
+        const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
+        this.emitFunction(init);
 
         this.emitKeyword(`spawn(${stmt.count})`);
         this.emitKeyword(stmt.name);
@@ -59,6 +62,8 @@ export class FxEmitter extends CodeEmitter {
     }
 
     emitPartFxDecl(fx: IPartFxInstruction) {
+        this.fx = fx;
+
         this.begin();
         {
             this.emitKeyword('partFx');

@@ -265,8 +265,12 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         prerender = [ ...prerender, ...graph.findNodesByTitle("DefaultMaterial") as ICodeMaterialNode[] ];
         prerender = [ ...prerender, ...graph.findNodesByTitle("LwiMaterial") as ICodeMaterialNode[] ];
 
-        let constDoc = await createTextDocument('://user-constants', 
+        let constDoc = null;
+        if (constants.length) {
+            constDoc = await createTextDocument('://user-constants', 
             constants.map(({ name, type, value }) => `const ${type} ${name} = ${value};`).join('\n') + '\n\n');
+        }
+
         let doc = await extendFXSLDocument(constDoc, env);
         doc = await spawn.run(doc);
         for (let init of inits) {
