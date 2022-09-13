@@ -140,6 +140,7 @@ public:
 
     void Reset();
     void Dump();
+    void ReloadBundles(void* buf);
     
     bool Copy(const EMITTER& src);
     bool operator == (const EMITTER& emit) const;

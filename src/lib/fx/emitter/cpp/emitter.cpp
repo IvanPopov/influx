@@ -241,6 +241,12 @@ void EMITTER_PASS::Dump() const
 
 EMITTER::EMITTER(void* buf)
 {
+   ReloadBundles(buf);
+}
+
+
+void IFX::EMITTER::ReloadBundles(void* buf)
+{
     Fx::BundleT fx;
     const Fx::Bundle *pBundle = Fx::GetBundle(buf);
     pBundle->UnPackTo(&fx);
