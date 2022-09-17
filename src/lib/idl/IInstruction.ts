@@ -536,6 +536,7 @@ export type IExprDerived =
     | IUnaryExprInstruction;
 
 export interface IAnnotationInstruction extends IInstruction {
+    decls: IVariableDeclInstruction[];
 }
 
 

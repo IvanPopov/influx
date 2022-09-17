@@ -469,7 +469,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     function canBePlacedInUniforms(decl: IVariableDeclInstruction): boolean {
         return decl.isGlobal() && 
             (decl.type.isUniform() ||                                                  // is uniform
-            (decl.type.isConst() && decl.initExpr.isConst() && !decl.type.isUAV()));   // is non-uav constant 
+            (/*decl.type.isConst() && */decl.initExpr && decl.initExpr.isConst() && !decl.type.isUAV()));   // is non-uav constant 
     }
 
     function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {

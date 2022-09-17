@@ -11,14 +11,18 @@ import * as Emitter from '@lib/fx/emitter';
 import { IEmitter } from '@lib/idl/emitter';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState from '@sandbox/store/IStoreState';
+import IStoreState, { IPlaygroundControlProps, IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as Path from '@lib/path/path';
 import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
+import * as flatbuffers from 'flatbuffers';
 
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
+import { Bundle, BundleT, UIColorT, UIControlT, UIProperties } from '@lib/idl/bundles/FxBundle_generated';
+import { IMap } from '@lib/idl/IMap';
+import { isNumber, isObject } from '@lib/util/s3d/type';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);
@@ -42,6 +46,33 @@ function downloadURL(data: string, fileName: string) {
     a.remove();
 };
 
+function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
+    let fx: BundleT = null;
+
+    // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
+    if (data instanceof Uint8Array) {
+        fx = new BundleT();
+        Bundle.getRootAsBundle(new flatbuffers.ByteBuffer(data)).unpackTo(fx);
+    } else {
+        fx = <BundleT>data;
+    }
+    
+    let props: IMap<IPlaygroundControlProps> = {};
+    let values: IMap<{ x: number; y: number; z: number } | { r: number; g: number; b: number; a: number } | number> = {};
+
+    fx.controls.forEach(ctrl => {
+        props[ctrl.name as string] = {
+            ...ctrl.props,
+            type: UIProperties[ctrl.propsType],
+            name: ctrl.props.name as string
+        };
+
+        let value = ctrl.props.value;
+        values[ctrl.name as string] = isObject(value) ? { ...(value as any) } : value;
+    });
+    
+    return { props, values };
+}
 
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
@@ -62,6 +93,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
         let emitter = playground.emitter;
+        let controls = playground.controls;
 
         if (!isNull(emitter) && isNull(active)) {
             if (list.map(fx => fx.name).indexOf(emitter.getName()) !== -1) {
@@ -85,39 +117,43 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
-        async function create(forceRestart = true) {
+        async function create(forceRestart = true): Promise<[ IEmitter, IPlaygroundControls ]> {
             const i = list.map(fx => fx.name).indexOf(active);
             if (i == -1) {
                 return null;
             }
-            const emitter = Emitter.create(await FxBundle.createPartFxBundle(list[i]));
+            const bundle = await FxBundle.createPartFxBundle(list[i]);
+            const emitter = Emitter.create(bundle);
+            const controls = decodeBundleControls(bundle);
+
             if (emitter) {
                 if (forceRestart) timeline.start();
                 verbose('next emitter has been created.');
             }
-            return emitter;
+
+            return [ emitter, controls ];
         }
 
         async function drop() {
             await destroy(emitter);
-            emitter = null;
+            [ emitter, controls ] = [ null, null ];
         }
 
         async function forceReload() {
             await destroy(emitter);
-            emitter = await create();
+            [ emitter, controls ] = await create();
         }
 
         async function switchVMRuntime() {
             await destroy(emitter);
             VM.switchRuntime();
-            emitter = await create();
+            [ emitter, controls ] = await create();
         }
 
         async function switchEmitterRuntime() {
             await destroy(emitter);
             Emitter.switchRuntime();
-            emitter = await create();
+            [ emitter, controls ] = await create();
         }
 
         async function softReload() {
@@ -125,13 +161,15 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 await forceReload();
                 return;
             }
-
-            let next = await create(false);
+            // controls stay unchanged
+            let [ next, ctrlsNext ] = await create(false);
             let prev = emitter;
 
             Emitter.copy(next, prev);
             await destroy(prev);
+            
             emitter = next;
+            controls = ctrlsNext;
         }
 
         switch (action.type) {
@@ -150,7 +188,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 }
         }
 
-        dispatch({ type: evt.PLAYGROUND_EMITTER_UPDATE, payload: { emitter } });
+        dispatch({ type: evt.PLAYGROUND_EMITTER_UPDATE, payload: { emitter, controls } });
 
         if (playground.autosave) {
             dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: {} });

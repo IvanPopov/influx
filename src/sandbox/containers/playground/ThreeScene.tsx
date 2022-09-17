@@ -22,8 +22,10 @@ import UniformHelper from '@lib/idl/emitter/UniformHelper';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
-
-
+import { GUI } from 'dat.gui';
+import '@sandbox/styles/custom/dat-gui.css';
+import { IPlaygroundControls } from '@sandbox/store/IStoreState';
+import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
 let desc = `
 struct PartLight {
@@ -57,11 +59,13 @@ interface ITreeSceneProps {
     style?: React.CSSProperties;
     emitter: IEmitter;
     timeline: ITimeline;
+    controls?: IPlaygroundControls;
 }
 
 interface IThreeSceneState {
     emitter: IEmitter;
     nParticles: number;
+    controls: string; // hash
     fps: { min: number, max: number, value: number };
 }
 
@@ -84,10 +88,25 @@ const progressStyleFix: React.CSSProperties = {
 };
 
 
+type Color =  { r: number, g: number, b: number, a: number };
+type Vector3 = { x: number, y: number; z: number; };
+
+function colorToUint({ r, g, b, a }: Color) {
+    [r ,g, b, a] = [r, g, b, a].map(x => Math.max(0, Math.min(255, x * 255)));
+    return /*a << 24 | */b << 0 | g << 8 | r << 16;
+}
+
+function uintToColor(src: number, dst: Color) {
+    dst.r = ((src >> 16) & 0xff) / 255.0;
+    dst.g = ((src >> 8) & 0xff) / 255.0;
+    dst.b = ((src >> 0) & 0xff) / 255.0;
+}
+
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     state: IThreeSceneState = {
         emitter: null,
+        controls: null,
         nParticles: 0,
         fps: {
             min: 0,
@@ -110,6 +129,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     frameId: number;
     mount: HTMLDivElement;
 
+    gui: GUI = null;
     passes: {
         mesh: THREE.Mesh | THREE.LineSegments;
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
@@ -528,16 +548,88 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
 
     createRenderer(width, height) {
+        this.createControls(this.props.controls);
+
         this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true /* to be able to save screenshots */ });
         // this.renderer.setClearColor('#000000');
         this.renderer.setSize(width, height - 3);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.mount.appendChild(this.renderer.domElement);
 
+  
         this.renderer.domElement.id = "playground-main-canvas";
         // FIXME: remove this ui hack
         this.renderer.domElement.style.borderBottomLeftRadius = '3px';
         this.renderer.domElement.style.borderBottomRightRadius = '3px';
+    }
+
+    removeControls() {
+        if (this.gui) {
+            this.mount.removeChild(this.gui.domElement);
+            this.gui.destroy();
+            this.gui = null;
+        }
+    }
+
+    createControls(controls: IPlaygroundControls) {
+        const hash = JSON.stringify(controls.props);
+
+        if (this.state.controls != hash) {
+            this.removeControls();
+        }
+
+        if (!controls || Object.keys(controls.values).length == 0) {
+            // empty controls are valid ?
+            return null;
+        }
+
+        if (this.gui) {
+            // nothing todo, same controls have been requested
+            return;
+        }
+        
+        const gui = new GUI({ autoPlace: false })
+        for (let name in controls.values) {
+            const props = controls.props[name];
+            let ctrl = null;
+            switch (props.type) {
+                case 'UIColor':
+                    let color = gui.addFolder(props.name || name);
+                    let cval = controls.values[name] as Color; 
+                    color.addColor({ color: colorToUint(cval) }, 'color').onChange(value => uintToColor(value, cval));
+                    color.add({ opacity: cval.a }, 'opacity', 0, 1).onChange(value => cval.a = value);
+                    color.open();
+                    break;
+                case 'UIFloatSpinner':
+                case 'UISpinner':
+                    ctrl = gui.add(controls.values, name, props.min, props.max, props.step);
+                    break;
+                case 'UIFloat3':
+                    let vec3 = gui.addFolder(props.name || name);
+                    vec3.add(controls.values[name], 'x');
+                    vec3.add(controls.values[name], 'y');
+                    vec3.add(controls.values[name], 'z');
+                    vec3.open();
+                    break;
+                default:
+                    ctrl = gui.add(controls.values, name);
+            } 
+
+            if (ctrl) {
+                if (props.name) ctrl.name(props.name);
+            }
+        }
+
+        // gui.close();
+        gui.open();
+
+        this.mount.appendChild(gui.domElement);
+        
+        gui.domElement.style.position = 'absolute';
+        gui.domElement.style.top = '2px';
+
+        this.gui = gui;
+        this.setState({ controls: hash });
     }
 
     createGridHelper() {
@@ -610,6 +702,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     animate = async (time: number) => {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
+        const controls = this.props.controls;
 
         if (!emitter) {
             return;
@@ -625,6 +718,27 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         helper.set('parentPosition').float3(0, 0, 0);
         helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
         helper.set('instanceTotal').int(2);
+
+        for (let name in controls.values) {
+            switch (controls.props[name].type) {
+                case "UIFloatSpinner":
+                case "UIFloat": helper.set(name).float(controls.values[name]); break;
+                case "UISpinner":
+                case "UIInt":
+                case "UIUint":
+                    helper.set(name).int(controls.values[name]); break;
+                // todo: add alpha support!
+                case "UIFloat3":
+                    let { x, y, z } = controls.values[name] as Vector3;
+                    helper.set(name).float3(x, y, z); 
+                    break;
+                case "UIColor":
+                    let { r, g, b, a } = controls.values[name] as Color;
+                    helper.set(name).float4(r, g, b, a);
+                    break;
+            }
+        }
+
         let uniforms = helper.finish();
 
         if (!timeline.isStopped()) {
@@ -698,7 +812,11 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     componentDidUpdate(prevProps, prevState) {
+        
         if (prevState.emitter === this.state.emitter) {
+            // todo: preserve prev values
+            this.createControls(this.props.controls);
+
             const emitter = this.props.emitter;
 
             let nPass = emitter.getPassCount();

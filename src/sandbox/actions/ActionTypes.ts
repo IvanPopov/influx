@@ -63,7 +63,7 @@ export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStar
 // playground
 //
 
-export type IPlaygroundEmitterUpdate = IAction<typeof evt.PLAYGROUND_EMITTER_UPDATE, { emitter: any }>;
+export type IPlaygroundEmitterUpdate = IAction<typeof evt.PLAYGROUND_EMITTER_UPDATE, { emitter: any, controls: any }>;
 export type IPlaygroundSelectEffect = IAction<typeof evt.PLAYGROUND_SELECT_EFFECT, { name: string }>;
 export type IPlaygroundSwitchVMRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_VM_RUNTIME, { }>;
 export type IPlaygroundSwitchEmitterRuntime = IAction<typeof evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME, { }>;

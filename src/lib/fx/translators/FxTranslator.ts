@@ -1,8 +1,9 @@
 import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { StringInstruction } from "../analisys/instructions/StringInstruction";
 
 import { FxEmitter } from "./FxEmitter";
 
@@ -43,11 +44,22 @@ export interface IPartFxReflection {
     CSParticlesUpdateRoutine: ICSShaderReflection;
 
     passes: IPartFxPassReflection[];
+    controls: IUIControl[];
 }
 
 export interface IDrawOpReflection {
     name: string;
     uavs: IUavReflection[];
+}
+
+export interface IUIControl {
+    UIName: string;
+    UIType: 'FloatSpinner' | 'Spinner' | 'Color' | 'Float' | 'Float3' | 'Int' | 'Uint';
+    UIMin?: number;
+    UIMax?: number;
+    UIStep?: number;
+    value?: number[] | string[];
+    name: string;
 }
 
 export class FxTranslator extends FxEmitter {
@@ -75,6 +87,7 @@ export class FxTranslator extends FxEmitter {
     protected knownDrawOps: IDrawOpReflection[] = [];
 
     protected fx: IPartFxInstruction = null;
+    protected controls: IUIControl[] = [];
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = this.fx;
@@ -277,6 +290,52 @@ export class FxTranslator extends FxEmitter {
         return uavs;
     }
 
+    /*
+        https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
+        https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
+    */
+
+    emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        super.emitVariableDecl(src, rename);
+        let ctrl: IUIControl = { UIType: null, UIName: null, name: null };
+
+        if (src.annotation) {
+            src.annotation.decls.forEach(decl => {
+                switch (decl.name) {
+                    case 'UIType': 
+                        const type = <StringInstruction>decl.initExpr.args[0];
+                        ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                        console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
+                        break;
+                    case 'UIName':
+                        const name = <StringInstruction>decl.initExpr.args[0];
+                        ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                        break;
+                    case 'UIMin': ctrl.UIMin = Number(decl.initExpr.args[0].toCode()); break;
+                    case 'UIMax': ctrl.UIMax = Number(decl.initExpr.args[0].toCode()); break;
+                    case 'UIStep': ctrl.UIStep = Number(decl.initExpr.args[0].toCode()); break;
+                }
+            });
+
+            if (!ctrl.UIType) {
+                switch (src.type.name) {
+                    case 'float': ctrl.UIType = 'Float'; break;
+                    case 'float3': ctrl.UIType = 'Float3'; break;
+                    case 'int': ctrl.UIType = 'Int'; break;
+                    case 'uint': ctrl.UIType = 'Uint'; break;
+                }
+            }
+
+            ctrl.value = src.initExpr.args.map(arg => arg.instructionType === EInstructionTypes.k_InitExpr 
+                ? ((arg as IInitExprInstruction).args[0] as ILiteralInstruction<number>).value
+                : (<ILiteralInstruction<number>>arg).value);
+            ctrl.name = src.id.name;
+
+            // todo: validate controls
+            if (ctrl.UIType)
+                this.controls.push(ctrl);
+        }
+    }
 
     protected emitSpawnShader(): ICSShaderReflection {
         const fx = this.fx;
@@ -772,6 +831,7 @@ export class FxTranslator extends FxEmitter {
         this.emitSpawnOpContainer();
 
         const { typeName: particle } = this.resolveType(fx.particle);
+        const controls = this.controls;
 
         return {
             name,
@@ -781,7 +841,8 @@ export class FxTranslator extends FxEmitter {
             CSParticlesSpawnRoutine,
             CSParticlesResetRoutine,
             CSParticlesInitRoutine,
-            CSParticlesUpdateRoutine
+            CSParticlesUpdateRoutine,
+            controls
         };
     }
 }

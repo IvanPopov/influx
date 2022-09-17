@@ -386,6 +386,12 @@ export class TSBundle implements Bundle.IBundle
                 dst.setFloat32(4, src.getFloat32(4, true), true);
                 dst.setFloat32(8, src.getFloat32(8, true), true);
                 break;
+            case 'float4':
+                dst.setFloat32(0, src.getFloat32(0, true), true);
+                dst.setFloat32(4, src.getFloat32(4, true), true);
+                dst.setFloat32(8, src.getFloat32(8, true), true);
+                dst.setFloat32(12, src.getFloat32(12, true), true);
+                break;
             default:
                 assert(false, 'unsupported');
         }

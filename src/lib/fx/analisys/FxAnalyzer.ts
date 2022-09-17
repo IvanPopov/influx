@@ -681,7 +681,7 @@ export class FxAnalyzer extends Analyzer {
 
             switch (children[i].name) {
                 case 'Annotation':
-                    annotation = this.analyzeAnnotation(children[i]);
+                    annotation = this.analyzeAnnotation(context, program, children[i]);
                     break;
                 case 'Semantic':
                     semantic = this.analyzeSemantic(children[i]);

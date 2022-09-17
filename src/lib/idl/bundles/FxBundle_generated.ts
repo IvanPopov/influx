@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT} from  './FxBundle_generated';
+import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, Color as FxColor, ColorT as FxColorT, Float3 as FxFloat3, Float3T as FxFloat3T, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -72,6 +72,52 @@ export function unionListToBundleContent(
   switch(FxBundleContent[type]) {
     case 'NONE': return null; 
     case 'PartBundle': return accessor(index, new FxPartBundle())! as FxPartBundle;
+    default: return null;
+  }
+}
+
+export enum UIProperties{
+  NONE = 0,
+  UISpinner = 1,
+  UIFloatSpinner = 2,
+  UIColor = 3,
+  UIFloat = 4,
+  UIFloat3 = 5,
+  UIInt = 6,
+  UIUint = 7
+}
+
+export function unionToUIProperties(
+  type: UIProperties,
+  accessor: (obj:FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint) => FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint|null
+): FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint|null {
+  switch(FxUIProperties[type]) {
+    case 'NONE': return null; 
+    case 'UISpinner': return accessor(new FxUISpinner())! as FxUISpinner;
+    case 'UIFloatSpinner': return accessor(new FxUIFloatSpinner())! as FxUIFloatSpinner;
+    case 'UIColor': return accessor(new FxUIColor())! as FxUIColor;
+    case 'UIFloat': return accessor(new FxUIFloat())! as FxUIFloat;
+    case 'UIFloat3': return accessor(new FxUIFloat3())! as FxUIFloat3;
+    case 'UIInt': return accessor(new FxUIInt())! as FxUIInt;
+    case 'UIUint': return accessor(new FxUIUint())! as FxUIUint;
+    default: return null;
+  }
+}
+
+export function unionListToUIProperties(
+  type: UIProperties, 
+  accessor: (index: number, obj:FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint) => FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint|null, 
+  index: number
+): FxUIColor|FxUIFloat|FxUIFloat3|FxUIFloatSpinner|FxUIInt|FxUISpinner|FxUIUint|null {
+  switch(FxUIProperties[type]) {
+    case 'NONE': return null; 
+    case 'UISpinner': return accessor(index, new FxUISpinner())! as FxUISpinner;
+    case 'UIFloatSpinner': return accessor(index, new FxUIFloatSpinner())! as FxUIFloatSpinner;
+    case 'UIColor': return accessor(index, new FxUIColor())! as FxUIColor;
+    case 'UIFloat': return accessor(index, new FxUIFloat())! as FxUIFloat;
+    case 'UIFloat3': return accessor(index, new FxUIFloat3())! as FxUIFloat3;
+    case 'UIInt': return accessor(index, new FxUIInt())! as FxUIInt;
+    case 'UIUint': return accessor(index, new FxUIUint())! as FxUIUint;
     default: return null;
   }
 }
@@ -1481,6 +1527,979 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   return FxPartBundle.endPartBundle(builder);
 }
 }
+export class UISpinner {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UISpinner {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUISpinner(bb:flatbuffers.ByteBuffer, obj?:UISpinner):UISpinner {
+  return (obj || new UISpinner()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUISpinner(bb:flatbuffers.ByteBuffer, obj?:UISpinner):UISpinner {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UISpinner()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+min():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
+
+max():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
+
+step():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
+
+static startUISpinner(builder:flatbuffers.Builder) {
+  builder.startObject(5);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addMin(builder:flatbuffers.Builder, min:number) {
+  builder.addFieldInt32(1, min, 0);
+}
+
+static addMax(builder:flatbuffers.Builder, max:number) {
+  builder.addFieldInt32(2, max, 0);
+}
+
+static addStep(builder:flatbuffers.Builder, step:number) {
+  builder.addFieldInt32(3, step, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldInt32(4, value, 0);
+}
+
+static endUISpinner(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUISpinner(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, min:number, max:number, step:number, value:number):flatbuffers.Offset {
+  UISpinner.startUISpinner(builder);
+  UISpinner.addName(builder, nameOffset);
+  UISpinner.addMin(builder, min);
+  UISpinner.addMax(builder, max);
+  UISpinner.addStep(builder, step);
+  UISpinner.addValue(builder, value);
+  return UISpinner.endUISpinner(builder);
+}
+
+unpack(): UISpinnerT {
+  return new UISpinnerT(
+    this.name(),
+    this.min(),
+    this.max(),
+    this.step(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: UISpinnerT): void {
+  _o.name = this.name();
+  _o.min = this.min();
+  _o.max = this.max();
+  _o.step = this.step();
+  _o.value = this.value();
+}
+}
+
+export class UISpinnerT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public min: number = 0,
+  public max: number = 0,
+  public step: number = 0,
+  public value: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+
+  return FxUISpinner.createUISpinner(builder,
+    name,
+    this.min,
+    this.max,
+    this.step,
+    this.value
+  );
+}
+}
+export class UIFloatSpinner {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIFloatSpinner {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIFloatSpinner(bb:flatbuffers.ByteBuffer, obj?:UIFloatSpinner):UIFloatSpinner {
+  return (obj || new UIFloatSpinner()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIFloatSpinner(bb:flatbuffers.ByteBuffer, obj?:UIFloatSpinner):UIFloatSpinner {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIFloatSpinner()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+min():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+max():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+step():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+static startUIFloatSpinner(builder:flatbuffers.Builder) {
+  builder.startObject(5);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addMin(builder:flatbuffers.Builder, min:number) {
+  builder.addFieldFloat32(1, min, 0.0);
+}
+
+static addMax(builder:flatbuffers.Builder, max:number) {
+  builder.addFieldFloat32(2, max, 0.0);
+}
+
+static addStep(builder:flatbuffers.Builder, step:number) {
+  builder.addFieldFloat32(3, step, 0.0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldFloat32(4, value, 0.0);
+}
+
+static endUIFloatSpinner(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUIFloatSpinner(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, min:number, max:number, step:number, value:number):flatbuffers.Offset {
+  UIFloatSpinner.startUIFloatSpinner(builder);
+  UIFloatSpinner.addName(builder, nameOffset);
+  UIFloatSpinner.addMin(builder, min);
+  UIFloatSpinner.addMax(builder, max);
+  UIFloatSpinner.addStep(builder, step);
+  UIFloatSpinner.addValue(builder, value);
+  return UIFloatSpinner.endUIFloatSpinner(builder);
+}
+
+unpack(): UIFloatSpinnerT {
+  return new UIFloatSpinnerT(
+    this.name(),
+    this.min(),
+    this.max(),
+    this.step(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: UIFloatSpinnerT): void {
+  _o.name = this.name();
+  _o.min = this.min();
+  _o.max = this.max();
+  _o.step = this.step();
+  _o.value = this.value();
+}
+}
+
+export class UIFloatSpinnerT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public min: number = 0.0,
+  public max: number = 0.0,
+  public step: number = 0.0,
+  public value: number = 0.0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+
+  return FxUIFloatSpinner.createUIFloatSpinner(builder,
+    name,
+    this.min,
+    this.max,
+    this.step,
+    this.value
+  );
+}
+}
+export class Float3 {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):Float3 {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsFloat3(bb:flatbuffers.ByteBuffer, obj?:Float3):Float3 {
+  return (obj || new Float3()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsFloat3(bb:flatbuffers.ByteBuffer, obj?:Float3):Float3 {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new Float3()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+x():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+y():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+z():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+static startFloat3(builder:flatbuffers.Builder) {
+  builder.startObject(3);
+}
+
+static addX(builder:flatbuffers.Builder, x:number) {
+  builder.addFieldFloat32(0, x, 0.0);
+}
+
+static addY(builder:flatbuffers.Builder, y:number) {
+  builder.addFieldFloat32(1, y, 0.0);
+}
+
+static addZ(builder:flatbuffers.Builder, z:number) {
+  builder.addFieldFloat32(2, z, 0.0);
+}
+
+static endFloat3(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createFloat3(builder:flatbuffers.Builder, x:number, y:number, z:number):flatbuffers.Offset {
+  Float3.startFloat3(builder);
+  Float3.addX(builder, x);
+  Float3.addY(builder, y);
+  Float3.addZ(builder, z);
+  return Float3.endFloat3(builder);
+}
+
+unpack(): Float3T {
+  return new Float3T(
+    this.x(),
+    this.y(),
+    this.z()
+  );
+}
+
+
+unpackTo(_o: Float3T): void {
+  _o.x = this.x();
+  _o.y = this.y();
+  _o.z = this.z();
+}
+}
+
+export class Float3T {
+constructor(
+  public x: number = 0.0,
+  public y: number = 0.0,
+  public z: number = 0.0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return FxFloat3.createFloat3(builder,
+    this.x,
+    this.y,
+    this.z
+  );
+}
+}
+export class Color {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):Color {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsColor(bb:flatbuffers.ByteBuffer, obj?:Color):Color {
+  return (obj || new Color()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsColor(bb:flatbuffers.ByteBuffer, obj?:Color):Color {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new Color()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+r():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+g():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+b():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+a():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+static startColor(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
+
+static addR(builder:flatbuffers.Builder, r:number) {
+  builder.addFieldFloat32(0, r, 0.0);
+}
+
+static addG(builder:flatbuffers.Builder, g:number) {
+  builder.addFieldFloat32(1, g, 0.0);
+}
+
+static addB(builder:flatbuffers.Builder, b:number) {
+  builder.addFieldFloat32(2, b, 0.0);
+}
+
+static addA(builder:flatbuffers.Builder, a:number) {
+  builder.addFieldFloat32(3, a, 0.0);
+}
+
+static endColor(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createColor(builder:flatbuffers.Builder, r:number, g:number, b:number, a:number):flatbuffers.Offset {
+  Color.startColor(builder);
+  Color.addR(builder, r);
+  Color.addG(builder, g);
+  Color.addB(builder, b);
+  Color.addA(builder, a);
+  return Color.endColor(builder);
+}
+
+unpack(): ColorT {
+  return new ColorT(
+    this.r(),
+    this.g(),
+    this.b(),
+    this.a()
+  );
+}
+
+
+unpackTo(_o: ColorT): void {
+  _o.r = this.r();
+  _o.g = this.g();
+  _o.b = this.b();
+  _o.a = this.a();
+}
+}
+
+export class ColorT {
+constructor(
+  public r: number = 0.0,
+  public g: number = 0.0,
+  public b: number = 0.0,
+  public a: number = 0.0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return FxColor.createColor(builder,
+    this.r,
+    this.g,
+    this.b,
+    this.a
+  );
+}
+}
+export class UIColor {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIColor {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIColor(bb:flatbuffers.ByteBuffer, obj?:UIColor):UIColor {
+  return (obj || new UIColor()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIColor(bb:flatbuffers.ByteBuffer, obj?:UIColor):UIColor {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIColor()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+value(obj?:FxColor):FxColor|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? (obj || new FxColor()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+static startUIColor(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, valueOffset, 0);
+}
+
+static endUIColor(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+
+unpack(): UIColorT {
+  return new UIColorT(
+    this.name(),
+    (this.value() !== null ? this.value()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: UIColorT): void {
+  _o.name = this.name();
+  _o.value = (this.value() !== null ? this.value()!.unpack() : null);
+}
+}
+
+export class UIColorT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public value: FxColorT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const value = (this.value !== null ? this.value!.pack(builder) : 0);
+
+  FxUIColor.startUIColor(builder);
+  FxUIColor.addName(builder, name);
+  FxUIColor.addValue(builder, value);
+
+  return FxUIColor.endUIColor(builder);
+}
+}
+export class UIFloat3 {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIFloat3 {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIFloat3(bb:flatbuffers.ByteBuffer, obj?:UIFloat3):UIFloat3 {
+  return (obj || new UIFloat3()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIFloat3(bb:flatbuffers.ByteBuffer, obj?:UIFloat3):UIFloat3 {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIFloat3()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+value(obj?:FxFloat3):FxFloat3|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? (obj || new FxFloat3()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+static startUIFloat3(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, valueOffset, 0);
+}
+
+static endUIFloat3(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+
+unpack(): UIFloat3T {
+  return new UIFloat3T(
+    this.name(),
+    (this.value() !== null ? this.value()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: UIFloat3T): void {
+  _o.name = this.name();
+  _o.value = (this.value() !== null ? this.value()!.unpack() : null);
+}
+}
+
+export class UIFloat3T {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public value: FxFloat3T|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const value = (this.value !== null ? this.value!.pack(builder) : 0);
+
+  FxUIFloat3.startUIFloat3(builder);
+  FxUIFloat3.addName(builder, name);
+  FxUIFloat3.addValue(builder, value);
+
+  return FxUIFloat3.endUIFloat3(builder);
+}
+}
+export class UIFloat {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIFloat {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIFloat(bb:flatbuffers.ByteBuffer, obj?:UIFloat):UIFloat {
+  return (obj || new UIFloat()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIFloat(bb:flatbuffers.ByteBuffer, obj?:UIFloat):UIFloat {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIFloat()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readFloat32(this.bb_pos + offset) : 0.0;
+}
+
+static startUIFloat(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldFloat32(1, value, 0.0);
+}
+
+static endUIFloat(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUIFloat(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, value:number):flatbuffers.Offset {
+  UIFloat.startUIFloat(builder);
+  UIFloat.addName(builder, nameOffset);
+  UIFloat.addValue(builder, value);
+  return UIFloat.endUIFloat(builder);
+}
+
+unpack(): UIFloatT {
+  return new UIFloatT(
+    this.name(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: UIFloatT): void {
+  _o.name = this.name();
+  _o.value = this.value();
+}
+}
+
+export class UIFloatT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public value: number = 0.0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+
+  return FxUIFloat.createUIFloat(builder,
+    name,
+    this.value
+  );
+}
+}
+export class UIInt {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIInt {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIInt(bb:flatbuffers.ByteBuffer, obj?:UIInt):UIInt {
+  return (obj || new UIInt()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIInt(bb:flatbuffers.ByteBuffer, obj?:UIInt):UIInt {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIInt()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
+}
+
+static startUIInt(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldInt32(1, value, 0);
+}
+
+static endUIInt(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUIInt(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, value:number):flatbuffers.Offset {
+  UIInt.startUIInt(builder);
+  UIInt.addName(builder, nameOffset);
+  UIInt.addValue(builder, value);
+  return UIInt.endUIInt(builder);
+}
+
+unpack(): UIIntT {
+  return new UIIntT(
+    this.name(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: UIIntT): void {
+  _o.name = this.name();
+  _o.value = this.value();
+}
+}
+
+export class UIIntT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public value: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+
+  return FxUIInt.createUIInt(builder,
+    name,
+    this.value
+  );
+}
+}
+export class UIUint {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIUint {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIUint(bb:flatbuffers.ByteBuffer, obj?:UIUint):UIUint {
+  return (obj || new UIUint()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIUint(bb:flatbuffers.ByteBuffer, obj?:UIUint):UIUint {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIUint()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+static startUIUint(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldInt32(1, value, 0);
+}
+
+static endUIUint(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUIUint(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, value:number):flatbuffers.Offset {
+  UIUint.startUIUint(builder);
+  UIUint.addName(builder, nameOffset);
+  UIUint.addValue(builder, value);
+  return UIUint.endUIUint(builder);
+}
+
+unpack(): UIUintT {
+  return new UIUintT(
+    this.name(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: UIUintT): void {
+  _o.name = this.name();
+  _o.value = this.value();
+}
+}
+
+export class UIUintT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public value: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+
+  return FxUIUint.createUIUint(builder,
+    name,
+    this.value
+  );
+}
+}
+export class UIControl {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):UIControl {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsUIControl(bb:flatbuffers.ByteBuffer, obj?:UIControl):UIControl {
+  return (obj || new UIControl()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsUIControl(bb:flatbuffers.ByteBuffer, obj?:UIControl):UIControl {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new UIControl()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+propsType():FxUIProperties {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint8(this.bb_pos + offset) : FxUIProperties.NONE;
+}
+
+props<T extends flatbuffers.Table>(obj:any):any|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
+}
+
+static startUIControl(builder:flatbuffers.Builder) {
+  builder.startObject(3);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addPropsType(builder:flatbuffers.Builder, propsType:FxUIProperties) {
+  builder.addFieldInt8(1, propsType, FxUIProperties.NONE);
+}
+
+static addProps(builder:flatbuffers.Builder, propsOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, propsOffset, 0);
+}
+
+static endUIControl(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createUIControl(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, propsType:FxUIProperties, propsOffset:flatbuffers.Offset):flatbuffers.Offset {
+  UIControl.startUIControl(builder);
+  UIControl.addName(builder, nameOffset);
+  UIControl.addPropsType(builder, propsType);
+  UIControl.addProps(builder, propsOffset);
+  return UIControl.endUIControl(builder);
+}
+
+unpack(): UIControlT {
+  return new UIControlT(
+    this.name(),
+    this.propsType(),
+    (() => {
+      let temp = unionToUIProperties(this.propsType(), this.props.bind(this));
+      if(temp === null) { return null; }
+      return temp.unpack()
+  })()
+  );
+}
+
+
+unpackTo(_o: UIControlT): void {
+  _o.name = this.name();
+  _o.propsType = this.propsType();
+  _o.props = (() => {
+      let temp = unionToUIProperties(this.propsType(), this.props.bind(this));
+      if(temp === null) { return null; }
+      return temp.unpack()
+  })();
+}
+}
+
+export class UIControlT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public propsType: FxUIProperties = FxUIProperties.NONE,
+  public props: FxUIColorT|FxUIFloat3T|FxUIFloatSpinnerT|FxUIFloatT|FxUIIntT|FxUISpinnerT|FxUIUintT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const props = builder.createObjectOffset(this.props);
+
+  return FxUIControl.createUIControl(builder,
+    name,
+    this.propsType,
+    props
+  );
+}
+}
 export class Bundle {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -1526,8 +2545,18 @@ content<T extends flatbuffers.Table>(obj:any):any|null {
   return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
 }
 
+controls(index: number, obj?:FxUIControl):FxUIControl|null {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? (obj || new FxUIControl()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+controlsLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startBundle(builder:flatbuffers.Builder) {
-  builder.startObject(5);
+  builder.startObject(6);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
@@ -1548,6 +2577,22 @@ static addContentType(builder:flatbuffers.Builder, contentType:FxBundleContent) 
 
 static addContent(builder:flatbuffers.Builder, contentOffset:flatbuffers.Offset) {
   builder.addFieldOffset(4, contentOffset, 0);
+}
+
+static addControls(builder:flatbuffers.Builder, controlsOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, controlsOffset, 0);
+}
+
+static createControlsVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startControlsVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
 }
 
 static endBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -1574,7 +2619,8 @@ unpack(): BundleT {
       let temp = unionToBundleContent(this.contentType(), this.content.bind(this));
       if(temp === null) { return null; }
       return temp.unpack()
-  })()
+  })(),
+    this.bb!.createObjList(this.controls.bind(this), this.controlsLength())
   );
 }
 
@@ -1589,6 +2635,7 @@ unpackTo(_o: BundleT): void {
       if(temp === null) { return null; }
       return temp.unpack()
   })();
+  _o.controls = this.bb!.createObjList(this.controls.bind(this), this.controlsLength());
 }
 }
 
@@ -1598,7 +2645,8 @@ constructor(
   public signature: FxBundleSignatureT|null = null,
   public meta: FxBundleMetaT|null = null,
   public contentType: FxBundleContent = FxBundleContent.NONE,
-  public content: FxPartBundleT|null = null
+  public content: FxPartBundleT|null = null,
+  public controls: (UIControlT)[] = []
 ){}
 
 
@@ -1607,6 +2655,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const signature = (this.signature !== null ? this.signature!.pack(builder) : 0);
   const meta = (this.meta !== null ? this.meta!.pack(builder) : 0);
   const content = builder.createObjectOffset(this.content);
+  const controls = FxBundle.createControlsVector(builder, builder.createObjectOffsetList(this.controls));
 
   FxBundle.startBundle(builder);
   FxBundle.addName(builder, name);
@@ -1614,6 +2663,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   FxBundle.addMeta(builder, meta);
   FxBundle.addContentType(builder, this.contentType);
   FxBundle.addContent(builder, content);
+  FxBundle.addControls(builder, controls);
 
   return FxBundle.endBundle(builder);
 }

@@ -375,6 +375,13 @@ bool BUNDLE::SetConstant(std::string name, memory_view value) {
         std::memcpy((void*)dst, (void*)src, sizeof(float) * 3);
     }
 
+    if (reflection.type == "float4") 
+    {
+        auto* dst = constants.As<uint8_t>() + offset;
+        auto* src = value.As<uint8_t>();
+        std::memcpy((void*)dst, (void*)src, sizeof(float) * 4);
+    }
+
     return true;
 }
 

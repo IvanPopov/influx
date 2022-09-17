@@ -16,6 +16,8 @@ export interface ICodeEmitterOptions {
     mode: 'vertex' | 'pixel' | 'raw';
 }
 
+const asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
+
 export class CodeEmitter extends BaseEmitter {
     protected knownGlobals: string[] = [];
     protected knownTypes: string[] = [];
@@ -131,7 +133,7 @@ export class CodeEmitter extends BaseEmitter {
 
         if (src.isGlobal())
         {
-            this.knownGlobals.push(name);
+            this.knownGlobals.push(asSTRID(src));
         }
     }
 
@@ -470,11 +472,11 @@ export class CodeEmitter extends BaseEmitter {
 
         if (decl.isGlobal() || isUniformArg) {
             // assert(decl.type.isUniform());
-            if (this.knownGlobals.indexOf(name) === -1) {
+            if (this.knownGlobals.indexOf(asSTRID(decl)) === -1) {
                 this.begin();
                 this.emitStmt(decl);
                 this.end();
-                this.knownGlobals.push(name);
+                this.knownGlobals.push(asSTRID(decl));
             }
         }
     }

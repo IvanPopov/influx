@@ -156,6 +156,7 @@ class Playground extends React.Component<IPlaygroundProps> {
         const playground = props.playground;
         const emitter = playground.emitter;
         const timeline = playground.timeline;
+        const controls = playground.controls;
         const scope = getScope(props.sourceFile);
 
         const list: IPartFxInstruction[] = filterPartFx(scope);
@@ -244,6 +245,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 style={threeStylesHotfix}
                                 emitter={emitter}
                                 timeline={timeline}
+                                controls={controls}
                             />
                         </div>
                     </div>

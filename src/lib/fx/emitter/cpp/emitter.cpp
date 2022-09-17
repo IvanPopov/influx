@@ -256,7 +256,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
     std::cout << "bundle version: " << fx.signature->version << std::endl;
     std::cout << "==========================================" << std::endl;
 
-    auto [name, signature, meta, content] = fx;
+    auto [name, signature, meta, content, controls] = fx;
     auto [capacity, simulationRoutines, renderPasses, particle] = *content.AsPartBundle();
 
     m_name = name;

@@ -1,11 +1,13 @@
 import { assert, isNull } from "@lib/common";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
-import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { T_BOOL, T_FLOAT, T_FLOAT3, T_FLOAT4, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EAddrType } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { CBUFFER0_REGISTER } from "./Bytecode";
 import PromisedAddress from "./PromisedAddress";
+import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
+import { InitExprInstruction } from "../analisys/instructions/InitExprInstruction";
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;
@@ -69,7 +71,7 @@ export class ConstanPool {
             if (!isNull(initExpr)) {
                 switch (initExpr.type.name) {
                     case T_FLOAT.name:
-                        defaultValue = new Float32Array([ (initExpr.args[0] as IntInstruction).value ]);
+                        defaultValue = new Float32Array([ (initExpr.args[0] as FloatInstruction).value ]);
                         break;
                     case T_UINT.name:
                         defaultValue = new Uint32Array([ (initExpr.args[0] as IntInstruction).value ]);
@@ -80,6 +82,10 @@ export class ConstanPool {
                         break;
                     case T_INT.name:
                         defaultValue = new Int32Array([ (initExpr.args[0] as IntInstruction).value ]);
+                        break;
+                    case T_FLOAT3.name:
+                    case T_FLOAT4.name:
+                        defaultValue = new Float32Array(initExpr.args.map(arg => ((arg as InitExprInstruction).args[0] as FloatInstruction).value));
                         break;
                     default:
                         assert(false, 'unsupported');

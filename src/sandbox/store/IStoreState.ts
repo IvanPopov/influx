@@ -68,9 +68,24 @@ export interface INodePipeline {
     capacity: number;
 }
 
+
+export interface IPlaygroundControlProps {
+    min?: number;
+    max?: number;
+    step?: number;
+    type: string;
+    name?: string;
+}
+
+export interface IPlaygroundControls {
+    values: IMap<{ x: number; y: number; z: number } | { r: number; g: number; b: number; a: number } | number>;
+    props: IMap<IPlaygroundControlProps>;
+}
+
 export interface IPlaygroundState {
     emitter: IEmitter;      // todo: add type.
     timeline: ITimeline;
+    controls: IPlaygroundControls;
     revision: number;      // number of updates of emitter
     wasm: boolean;
 

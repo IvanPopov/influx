@@ -28,6 +28,13 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
             float(z);
             return self;
         }
+
+        function float4(x, y, z, w)
+        {
+            float3(x, y, z);
+            float(w);
+            return self;
+        }
     
         function float(x)
         {
@@ -45,7 +52,7 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
             return self;
         }
     
-        return { float3, float, int };
+        return { float4, float3, float, int };
     }
 
     return self;

@@ -7,7 +7,7 @@
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
@@ -419,6 +419,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <PropertyOpt name='init' opened={ true }>
                     { this.InitExpr(instr.initExpr) }
                 </PropertyOpt>
+                <PropertyOpt name='annotations' opened={ true }>
+                    { this.Annotation(instr.annotation) }
+                </PropertyOpt>
             </Property>
         );
     }
@@ -811,6 +814,15 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </Property>
             </Property>
         );
+    }
+
+
+    Annotation(instr: IAnnotationInstruction) {
+        if (isNull(instr)) {
+            return null;
+        }
+
+        return instr.decls.map(arg => this.VariableDecl(arg));
     }
 
 

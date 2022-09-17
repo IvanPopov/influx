@@ -59,6 +59,46 @@ struct PartBundle;
 struct PartBundleBuilder;
 struct PartBundleT;
 
+struct UISpinner;
+struct UISpinnerBuilder;
+struct UISpinnerT;
+
+struct UIFloatSpinner;
+struct UIFloatSpinnerBuilder;
+struct UIFloatSpinnerT;
+
+struct Float3;
+struct Float3Builder;
+struct Float3T;
+
+struct Color;
+struct ColorBuilder;
+struct ColorT;
+
+struct UIColor;
+struct UIColorBuilder;
+struct UIColorT;
+
+struct UIFloat3;
+struct UIFloat3Builder;
+struct UIFloat3T;
+
+struct UIFloat;
+struct UIFloatBuilder;
+struct UIFloatT;
+
+struct UIInt;
+struct UIIntBuilder;
+struct UIIntT;
+
+struct UIUint;
+struct UIUintBuilder;
+struct UIUintT;
+
+struct UIControl;
+struct UIControlBuilder;
+struct UIControlT;
+
 struct Bundle;
 struct BundleBuilder;
 struct BundleT;
@@ -338,6 +378,209 @@ struct BundleContentUnion {
 
 bool VerifyBundleContent(flatbuffers::Verifier &verifier, const void *obj, BundleContent type);
 bool VerifyBundleContentVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
+
+enum UIProperties : uint8_t {
+  UIProperties_NONE = 0,
+  UIProperties_UISpinner = 1,
+  UIProperties_UIFloatSpinner = 2,
+  UIProperties_UIColor = 3,
+  UIProperties_UIFloat = 4,
+  UIProperties_UIFloat3 = 5,
+  UIProperties_UIInt = 6,
+  UIProperties_UIUint = 7,
+  UIProperties_MIN = UIProperties_NONE,
+  UIProperties_MAX = UIProperties_UIUint
+};
+
+inline const UIProperties (&EnumValuesUIProperties())[8] {
+  static const UIProperties values[] = {
+    UIProperties_NONE,
+    UIProperties_UISpinner,
+    UIProperties_UIFloatSpinner,
+    UIProperties_UIColor,
+    UIProperties_UIFloat,
+    UIProperties_UIFloat3,
+    UIProperties_UIInt,
+    UIProperties_UIUint
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesUIProperties() {
+  static const char * const names[9] = {
+    "NONE",
+    "UISpinner",
+    "UIFloatSpinner",
+    "UIColor",
+    "UIFloat",
+    "UIFloat3",
+    "UIInt",
+    "UIUint",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameUIProperties(UIProperties e) {
+  if (flatbuffers::IsOutRange(e, UIProperties_NONE, UIProperties_UIUint)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesUIProperties()[index];
+}
+
+template<typename T> struct UIPropertiesTraits {
+  static const UIProperties enum_value = UIProperties_NONE;
+};
+
+template<> struct UIPropertiesTraits<Fx::UISpinner> {
+  static const UIProperties enum_value = UIProperties_UISpinner;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIFloatSpinner> {
+  static const UIProperties enum_value = UIProperties_UIFloatSpinner;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIColor> {
+  static const UIProperties enum_value = UIProperties_UIColor;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIFloat> {
+  static const UIProperties enum_value = UIProperties_UIFloat;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIFloat3> {
+  static const UIProperties enum_value = UIProperties_UIFloat3;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIInt> {
+  static const UIProperties enum_value = UIProperties_UIInt;
+};
+
+template<> struct UIPropertiesTraits<Fx::UIUint> {
+  static const UIProperties enum_value = UIProperties_UIUint;
+};
+
+template<typename T> struct UIPropertiesUnionTraits {
+  static const UIProperties enum_value = UIProperties_NONE;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UISpinnerT> {
+  static const UIProperties enum_value = UIProperties_UISpinner;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIFloatSpinnerT> {
+  static const UIProperties enum_value = UIProperties_UIFloatSpinner;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIColorT> {
+  static const UIProperties enum_value = UIProperties_UIColor;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIFloatT> {
+  static const UIProperties enum_value = UIProperties_UIFloat;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIFloat3T> {
+  static const UIProperties enum_value = UIProperties_UIFloat3;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIIntT> {
+  static const UIProperties enum_value = UIProperties_UIInt;
+};
+
+template<> struct UIPropertiesUnionTraits<Fx::UIUintT> {
+  static const UIProperties enum_value = UIProperties_UIUint;
+};
+
+struct UIPropertiesUnion {
+  UIProperties type;
+  void *value;
+
+  UIPropertiesUnion() : type(UIProperties_NONE), value(nullptr) {}
+  UIPropertiesUnion(UIPropertiesUnion&& u) FLATBUFFERS_NOEXCEPT :
+    type(UIProperties_NONE), value(nullptr)
+    { std::swap(type, u.type); std::swap(value, u.value); }
+  UIPropertiesUnion(const UIPropertiesUnion &);
+  UIPropertiesUnion &operator=(const UIPropertiesUnion &u)
+    { UIPropertiesUnion t(u); std::swap(type, t.type); std::swap(value, t.value); return *this; }
+  UIPropertiesUnion &operator=(UIPropertiesUnion &&u) FLATBUFFERS_NOEXCEPT
+    { std::swap(type, u.type); std::swap(value, u.value); return *this; }
+  ~UIPropertiesUnion() { Reset(); }
+
+  void Reset();
+
+  template <typename T>
+  void Set(T&& val) {
+    typedef typename std::remove_reference<T>::type RT;
+    Reset();
+    type = UIPropertiesUnionTraits<RT>::enum_value;
+    if (type != UIProperties_NONE) {
+      value = new RT(std::forward<T>(val));
+    }
+  }
+
+  static void *UnPack(const void *obj, UIProperties type, const flatbuffers::resolver_function_t *resolver);
+  flatbuffers::Offset<void> Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher = nullptr) const;
+
+  Fx::UISpinnerT *AsUISpinner() {
+    return type == UIProperties_UISpinner ?
+      reinterpret_cast<Fx::UISpinnerT *>(value) : nullptr;
+  }
+  const Fx::UISpinnerT *AsUISpinner() const {
+    return type == UIProperties_UISpinner ?
+      reinterpret_cast<const Fx::UISpinnerT *>(value) : nullptr;
+  }
+  Fx::UIFloatSpinnerT *AsUIFloatSpinner() {
+    return type == UIProperties_UIFloatSpinner ?
+      reinterpret_cast<Fx::UIFloatSpinnerT *>(value) : nullptr;
+  }
+  const Fx::UIFloatSpinnerT *AsUIFloatSpinner() const {
+    return type == UIProperties_UIFloatSpinner ?
+      reinterpret_cast<const Fx::UIFloatSpinnerT *>(value) : nullptr;
+  }
+  Fx::UIColorT *AsUIColor() {
+    return type == UIProperties_UIColor ?
+      reinterpret_cast<Fx::UIColorT *>(value) : nullptr;
+  }
+  const Fx::UIColorT *AsUIColor() const {
+    return type == UIProperties_UIColor ?
+      reinterpret_cast<const Fx::UIColorT *>(value) : nullptr;
+  }
+  Fx::UIFloatT *AsUIFloat() {
+    return type == UIProperties_UIFloat ?
+      reinterpret_cast<Fx::UIFloatT *>(value) : nullptr;
+  }
+  const Fx::UIFloatT *AsUIFloat() const {
+    return type == UIProperties_UIFloat ?
+      reinterpret_cast<const Fx::UIFloatT *>(value) : nullptr;
+  }
+  Fx::UIFloat3T *AsUIFloat3() {
+    return type == UIProperties_UIFloat3 ?
+      reinterpret_cast<Fx::UIFloat3T *>(value) : nullptr;
+  }
+  const Fx::UIFloat3T *AsUIFloat3() const {
+    return type == UIProperties_UIFloat3 ?
+      reinterpret_cast<const Fx::UIFloat3T *>(value) : nullptr;
+  }
+  Fx::UIIntT *AsUIInt() {
+    return type == UIProperties_UIInt ?
+      reinterpret_cast<Fx::UIIntT *>(value) : nullptr;
+  }
+  const Fx::UIIntT *AsUIInt() const {
+    return type == UIProperties_UIInt ?
+      reinterpret_cast<const Fx::UIIntT *>(value) : nullptr;
+  }
+  Fx::UIUintT *AsUIUint() {
+    return type == UIProperties_UIUint ?
+      reinterpret_cast<Fx::UIUintT *>(value) : nullptr;
+  }
+  const Fx::UIUintT *AsUIUint() const {
+    return type == UIProperties_UIUint ?
+      reinterpret_cast<const Fx::UIUintT *>(value) : nullptr;
+  }
+};
+
+bool VerifyUIProperties(flatbuffers::Verifier &verifier, const void *obj, UIProperties type);
+bool VerifyUIPropertiesVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
 struct BundleSignatureT : public flatbuffers::NativeTable {
   typedef BundleSignature TableType;
@@ -1463,12 +1706,923 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundleDirect(
 
 flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferBuilder &_fbb, const PartBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct UISpinnerT : public flatbuffers::NativeTable {
+  typedef UISpinner TableType;
+  std::string name{};
+  int32_t min = 0;
+  int32_t max = 0;
+  int32_t step = 0;
+  int32_t value = 0;
+};
+
+struct UISpinner FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UISpinnerT NativeTableType;
+  typedef UISpinnerBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_MIN = 6,
+    VT_MAX = 8,
+    VT_STEP = 10,
+    VT_VALUE = 12
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  int32_t min() const {
+    return GetField<int32_t>(VT_MIN, 0);
+  }
+  int32_t max() const {
+    return GetField<int32_t>(VT_MAX, 0);
+  }
+  int32_t step() const {
+    return GetField<int32_t>(VT_STEP, 0);
+  }
+  int32_t value() const {
+    return GetField<int32_t>(VT_VALUE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<int32_t>(verifier, VT_MIN, 4) &&
+           VerifyField<int32_t>(verifier, VT_MAX, 4) &&
+           VerifyField<int32_t>(verifier, VT_STEP, 4) &&
+           VerifyField<int32_t>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  UISpinnerT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UISpinnerT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UISpinner> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UISpinnerT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UISpinnerBuilder {
+  typedef UISpinner Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UISpinner::VT_NAME, name);
+  }
+  void add_min(int32_t min) {
+    fbb_.AddElement<int32_t>(UISpinner::VT_MIN, min, 0);
+  }
+  void add_max(int32_t max) {
+    fbb_.AddElement<int32_t>(UISpinner::VT_MAX, max, 0);
+  }
+  void add_step(int32_t step) {
+    fbb_.AddElement<int32_t>(UISpinner::VT_STEP, step, 0);
+  }
+  void add_value(int32_t value) {
+    fbb_.AddElement<int32_t>(UISpinner::VT_VALUE, value, 0);
+  }
+  explicit UISpinnerBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UISpinner> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UISpinner>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UISpinner> CreateUISpinner(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    int32_t min = 0,
+    int32_t max = 0,
+    int32_t step = 0,
+    int32_t value = 0) {
+  UISpinnerBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_step(step);
+  builder_.add_max(max);
+  builder_.add_min(min);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UISpinner> CreateUISpinnerDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    int32_t min = 0,
+    int32_t max = 0,
+    int32_t step = 0,
+    int32_t value = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUISpinner(
+      _fbb,
+      name__,
+      min,
+      max,
+      step,
+      value);
+}
+
+flatbuffers::Offset<UISpinner> CreateUISpinner(flatbuffers::FlatBufferBuilder &_fbb, const UISpinnerT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIFloatSpinnerT : public flatbuffers::NativeTable {
+  typedef UIFloatSpinner TableType;
+  std::string name{};
+  float min = 0.0f;
+  float max = 0.0f;
+  float step = 0.0f;
+  float value = 0.0f;
+};
+
+struct UIFloatSpinner FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIFloatSpinnerT NativeTableType;
+  typedef UIFloatSpinnerBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_MIN = 6,
+    VT_MAX = 8,
+    VT_STEP = 10,
+    VT_VALUE = 12
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  float min() const {
+    return GetField<float>(VT_MIN, 0.0f);
+  }
+  float max() const {
+    return GetField<float>(VT_MAX, 0.0f);
+  }
+  float step() const {
+    return GetField<float>(VT_STEP, 0.0f);
+  }
+  float value() const {
+    return GetField<float>(VT_VALUE, 0.0f);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<float>(verifier, VT_MIN, 4) &&
+           VerifyField<float>(verifier, VT_MAX, 4) &&
+           VerifyField<float>(verifier, VT_STEP, 4) &&
+           VerifyField<float>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  UIFloatSpinnerT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIFloatSpinnerT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIFloatSpinner> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatSpinnerT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIFloatSpinnerBuilder {
+  typedef UIFloatSpinner Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIFloatSpinner::VT_NAME, name);
+  }
+  void add_min(float min) {
+    fbb_.AddElement<float>(UIFloatSpinner::VT_MIN, min, 0.0f);
+  }
+  void add_max(float max) {
+    fbb_.AddElement<float>(UIFloatSpinner::VT_MAX, max, 0.0f);
+  }
+  void add_step(float step) {
+    fbb_.AddElement<float>(UIFloatSpinner::VT_STEP, step, 0.0f);
+  }
+  void add_value(float value) {
+    fbb_.AddElement<float>(UIFloatSpinner::VT_VALUE, value, 0.0f);
+  }
+  explicit UIFloatSpinnerBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIFloatSpinner> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIFloatSpinner>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIFloatSpinner> CreateUIFloatSpinner(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    float min = 0.0f,
+    float max = 0.0f,
+    float step = 0.0f,
+    float value = 0.0f) {
+  UIFloatSpinnerBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_step(step);
+  builder_.add_max(max);
+  builder_.add_min(min);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIFloatSpinner> CreateUIFloatSpinnerDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    float min = 0.0f,
+    float max = 0.0f,
+    float step = 0.0f,
+    float value = 0.0f) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIFloatSpinner(
+      _fbb,
+      name__,
+      min,
+      max,
+      step,
+      value);
+}
+
+flatbuffers::Offset<UIFloatSpinner> CreateUIFloatSpinner(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatSpinnerT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct Float3T : public flatbuffers::NativeTable {
+  typedef Float3 TableType;
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+};
+
+struct Float3 FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef Float3T NativeTableType;
+  typedef Float3Builder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_X = 4,
+    VT_Y = 6,
+    VT_Z = 8
+  };
+  float x() const {
+    return GetField<float>(VT_X, 0.0f);
+  }
+  float y() const {
+    return GetField<float>(VT_Y, 0.0f);
+  }
+  float z() const {
+    return GetField<float>(VT_Z, 0.0f);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<float>(verifier, VT_X, 4) &&
+           VerifyField<float>(verifier, VT_Y, 4) &&
+           VerifyField<float>(verifier, VT_Z, 4) &&
+           verifier.EndTable();
+  }
+  Float3T *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(Float3T *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<Float3> Pack(flatbuffers::FlatBufferBuilder &_fbb, const Float3T* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct Float3Builder {
+  typedef Float3 Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_x(float x) {
+    fbb_.AddElement<float>(Float3::VT_X, x, 0.0f);
+  }
+  void add_y(float y) {
+    fbb_.AddElement<float>(Float3::VT_Y, y, 0.0f);
+  }
+  void add_z(float z) {
+    fbb_.AddElement<float>(Float3::VT_Z, z, 0.0f);
+  }
+  explicit Float3Builder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<Float3> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Float3>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Float3> CreateFloat3(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    float x = 0.0f,
+    float y = 0.0f,
+    float z = 0.0f) {
+  Float3Builder builder_(_fbb);
+  builder_.add_z(z);
+  builder_.add_y(y);
+  builder_.add_x(x);
+  return builder_.Finish();
+}
+
+flatbuffers::Offset<Float3> CreateFloat3(flatbuffers::FlatBufferBuilder &_fbb, const Float3T *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct ColorT : public flatbuffers::NativeTable {
+  typedef Color TableType;
+  float r = 0.0f;
+  float g = 0.0f;
+  float b = 0.0f;
+  float a = 0.0f;
+};
+
+struct Color FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef ColorT NativeTableType;
+  typedef ColorBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_R = 4,
+    VT_G = 6,
+    VT_B = 8,
+    VT_A = 10
+  };
+  float r() const {
+    return GetField<float>(VT_R, 0.0f);
+  }
+  float g() const {
+    return GetField<float>(VT_G, 0.0f);
+  }
+  float b() const {
+    return GetField<float>(VT_B, 0.0f);
+  }
+  float a() const {
+    return GetField<float>(VT_A, 0.0f);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<float>(verifier, VT_R, 4) &&
+           VerifyField<float>(verifier, VT_G, 4) &&
+           VerifyField<float>(verifier, VT_B, 4) &&
+           VerifyField<float>(verifier, VT_A, 4) &&
+           verifier.EndTable();
+  }
+  ColorT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(ColorT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<Color> Pack(flatbuffers::FlatBufferBuilder &_fbb, const ColorT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct ColorBuilder {
+  typedef Color Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_r(float r) {
+    fbb_.AddElement<float>(Color::VT_R, r, 0.0f);
+  }
+  void add_g(float g) {
+    fbb_.AddElement<float>(Color::VT_G, g, 0.0f);
+  }
+  void add_b(float b) {
+    fbb_.AddElement<float>(Color::VT_B, b, 0.0f);
+  }
+  void add_a(float a) {
+    fbb_.AddElement<float>(Color::VT_A, a, 0.0f);
+  }
+  explicit ColorBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<Color> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Color>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Color> CreateColor(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    float r = 0.0f,
+    float g = 0.0f,
+    float b = 0.0f,
+    float a = 0.0f) {
+  ColorBuilder builder_(_fbb);
+  builder_.add_a(a);
+  builder_.add_b(b);
+  builder_.add_g(g);
+  builder_.add_r(r);
+  return builder_.Finish();
+}
+
+flatbuffers::Offset<Color> CreateColor(flatbuffers::FlatBufferBuilder &_fbb, const ColorT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIColorT : public flatbuffers::NativeTable {
+  typedef UIColor TableType;
+  std::string name{};
+  std::unique_ptr<Fx::ColorT> value{};
+  UIColorT() = default;
+  UIColorT(const UIColorT &o);
+  UIColorT(UIColorT&&) FLATBUFFERS_NOEXCEPT = default;
+  UIColorT &operator=(UIColorT o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct UIColor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIColorT NativeTableType;
+  typedef UIColorBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_VALUE = 6
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  const Fx::Color *value() const {
+    return GetPointer<const Fx::Color *>(VT_VALUE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyOffset(verifier, VT_VALUE) &&
+           verifier.VerifyTable(value()) &&
+           verifier.EndTable();
+  }
+  UIColorT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIColorT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIColor> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIColorT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIColorBuilder {
+  typedef UIColor Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIColor::VT_NAME, name);
+  }
+  void add_value(flatbuffers::Offset<Fx::Color> value) {
+    fbb_.AddOffset(UIColor::VT_VALUE, value);
+  }
+  explicit UIColorBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIColor> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIColor>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIColor> CreateUIColor(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    flatbuffers::Offset<Fx::Color> value = 0) {
+  UIColorBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIColor> CreateUIColorDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    flatbuffers::Offset<Fx::Color> value = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIColor(
+      _fbb,
+      name__,
+      value);
+}
+
+flatbuffers::Offset<UIColor> CreateUIColor(flatbuffers::FlatBufferBuilder &_fbb, const UIColorT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIFloat3T : public flatbuffers::NativeTable {
+  typedef UIFloat3 TableType;
+  std::string name{};
+  std::unique_ptr<Fx::Float3T> value{};
+  UIFloat3T() = default;
+  UIFloat3T(const UIFloat3T &o);
+  UIFloat3T(UIFloat3T&&) FLATBUFFERS_NOEXCEPT = default;
+  UIFloat3T &operator=(UIFloat3T o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct UIFloat3 FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIFloat3T NativeTableType;
+  typedef UIFloat3Builder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_VALUE = 6
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  const Fx::Float3 *value() const {
+    return GetPointer<const Fx::Float3 *>(VT_VALUE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyOffset(verifier, VT_VALUE) &&
+           verifier.VerifyTable(value()) &&
+           verifier.EndTable();
+  }
+  UIFloat3T *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIFloat3T *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIFloat3> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloat3T* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIFloat3Builder {
+  typedef UIFloat3 Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIFloat3::VT_NAME, name);
+  }
+  void add_value(flatbuffers::Offset<Fx::Float3> value) {
+    fbb_.AddOffset(UIFloat3::VT_VALUE, value);
+  }
+  explicit UIFloat3Builder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIFloat3> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIFloat3>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIFloat3> CreateUIFloat3(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    flatbuffers::Offset<Fx::Float3> value = 0) {
+  UIFloat3Builder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIFloat3> CreateUIFloat3Direct(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    flatbuffers::Offset<Fx::Float3> value = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIFloat3(
+      _fbb,
+      name__,
+      value);
+}
+
+flatbuffers::Offset<UIFloat3> CreateUIFloat3(flatbuffers::FlatBufferBuilder &_fbb, const UIFloat3T *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIFloatT : public flatbuffers::NativeTable {
+  typedef UIFloat TableType;
+  std::string name{};
+  float value = 0.0f;
+};
+
+struct UIFloat FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIFloatT NativeTableType;
+  typedef UIFloatBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_VALUE = 6
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  float value() const {
+    return GetField<float>(VT_VALUE, 0.0f);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<float>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  UIFloatT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIFloatT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIFloat> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIFloatBuilder {
+  typedef UIFloat Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIFloat::VT_NAME, name);
+  }
+  void add_value(float value) {
+    fbb_.AddElement<float>(UIFloat::VT_VALUE, value, 0.0f);
+  }
+  explicit UIFloatBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIFloat> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIFloat>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIFloat> CreateUIFloat(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    float value = 0.0f) {
+  UIFloatBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIFloat> CreateUIFloatDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    float value = 0.0f) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIFloat(
+      _fbb,
+      name__,
+      value);
+}
+
+flatbuffers::Offset<UIFloat> CreateUIFloat(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIIntT : public flatbuffers::NativeTable {
+  typedef UIInt TableType;
+  std::string name{};
+  int32_t value = 0;
+};
+
+struct UIInt FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIIntT NativeTableType;
+  typedef UIIntBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_VALUE = 6
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  int32_t value() const {
+    return GetField<int32_t>(VT_VALUE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<int32_t>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  UIIntT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIIntT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIInt> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIIntT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIIntBuilder {
+  typedef UIInt Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIInt::VT_NAME, name);
+  }
+  void add_value(int32_t value) {
+    fbb_.AddElement<int32_t>(UIInt::VT_VALUE, value, 0);
+  }
+  explicit UIIntBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIInt> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIInt>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIInt> CreateUIInt(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    int32_t value = 0) {
+  UIIntBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIInt> CreateUIIntDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    int32_t value = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIInt(
+      _fbb,
+      name__,
+      value);
+}
+
+flatbuffers::Offset<UIInt> CreateUIInt(flatbuffers::FlatBufferBuilder &_fbb, const UIIntT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIUintT : public flatbuffers::NativeTable {
+  typedef UIUint TableType;
+  std::string name{};
+  uint32_t value = 0;
+};
+
+struct UIUint FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIUintT NativeTableType;
+  typedef UIUintBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_VALUE = 6
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  uint32_t value() const {
+    return GetField<uint32_t>(VT_VALUE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<uint32_t>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  UIUintT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIUintT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIUint> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIUintT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct UIUintBuilder {
+  typedef UIUint Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIUint::VT_NAME, name);
+  }
+  void add_value(uint32_t value) {
+    fbb_.AddElement<uint32_t>(UIUint::VT_VALUE, value, 0);
+  }
+  explicit UIUintBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIUint> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIUint>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIUint> CreateUIUint(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    uint32_t value = 0) {
+  UIUintBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIUint> CreateUIUintDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    uint32_t value = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIUint(
+      _fbb,
+      name__,
+      value);
+}
+
+flatbuffers::Offset<UIUint> CreateUIUint(flatbuffers::FlatBufferBuilder &_fbb, const UIUintT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct UIControlT : public flatbuffers::NativeTable {
+  typedef UIControl TableType;
+  std::string name{};
+  Fx::UIPropertiesUnion props{};
+};
+
+struct UIControl FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UIControlT NativeTableType;
+  typedef UIControlBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_PROPS_TYPE = 6,
+    VT_PROPS = 8
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  Fx::UIProperties props_type() const {
+    return static_cast<Fx::UIProperties>(GetField<uint8_t>(VT_PROPS_TYPE, 0));
+  }
+  const void *props() const {
+    return GetPointer<const void *>(VT_PROPS);
+  }
+  template<typename T> const T *props_as() const;
+  const Fx::UISpinner *props_as_UISpinner() const {
+    return props_type() == Fx::UIProperties_UISpinner ? static_cast<const Fx::UISpinner *>(props()) : nullptr;
+  }
+  const Fx::UIFloatSpinner *props_as_UIFloatSpinner() const {
+    return props_type() == Fx::UIProperties_UIFloatSpinner ? static_cast<const Fx::UIFloatSpinner *>(props()) : nullptr;
+  }
+  const Fx::UIColor *props_as_UIColor() const {
+    return props_type() == Fx::UIProperties_UIColor ? static_cast<const Fx::UIColor *>(props()) : nullptr;
+  }
+  const Fx::UIFloat *props_as_UIFloat() const {
+    return props_type() == Fx::UIProperties_UIFloat ? static_cast<const Fx::UIFloat *>(props()) : nullptr;
+  }
+  const Fx::UIFloat3 *props_as_UIFloat3() const {
+    return props_type() == Fx::UIProperties_UIFloat3 ? static_cast<const Fx::UIFloat3 *>(props()) : nullptr;
+  }
+  const Fx::UIInt *props_as_UIInt() const {
+    return props_type() == Fx::UIProperties_UIInt ? static_cast<const Fx::UIInt *>(props()) : nullptr;
+  }
+  const Fx::UIUint *props_as_UIUint() const {
+    return props_type() == Fx::UIProperties_UIUint ? static_cast<const Fx::UIUint *>(props()) : nullptr;
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<uint8_t>(verifier, VT_PROPS_TYPE, 1) &&
+           VerifyOffset(verifier, VT_PROPS) &&
+           VerifyUIProperties(verifier, props(), props_type()) &&
+           verifier.EndTable();
+  }
+  UIControlT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(UIControlT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<UIControl> Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIControlT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+template<> inline const Fx::UISpinner *UIControl::props_as<Fx::UISpinner>() const {
+  return props_as_UISpinner();
+}
+
+template<> inline const Fx::UIFloatSpinner *UIControl::props_as<Fx::UIFloatSpinner>() const {
+  return props_as_UIFloatSpinner();
+}
+
+template<> inline const Fx::UIColor *UIControl::props_as<Fx::UIColor>() const {
+  return props_as_UIColor();
+}
+
+template<> inline const Fx::UIFloat *UIControl::props_as<Fx::UIFloat>() const {
+  return props_as_UIFloat();
+}
+
+template<> inline const Fx::UIFloat3 *UIControl::props_as<Fx::UIFloat3>() const {
+  return props_as_UIFloat3();
+}
+
+template<> inline const Fx::UIInt *UIControl::props_as<Fx::UIInt>() const {
+  return props_as_UIInt();
+}
+
+template<> inline const Fx::UIUint *UIControl::props_as<Fx::UIUint>() const {
+  return props_as_UIUint();
+}
+
+struct UIControlBuilder {
+  typedef UIControl Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(UIControl::VT_NAME, name);
+  }
+  void add_props_type(Fx::UIProperties props_type) {
+    fbb_.AddElement<uint8_t>(UIControl::VT_PROPS_TYPE, static_cast<uint8_t>(props_type), 0);
+  }
+  void add_props(flatbuffers::Offset<void> props) {
+    fbb_.AddOffset(UIControl::VT_PROPS, props);
+  }
+  explicit UIControlBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<UIControl> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<UIControl>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<UIControl> CreateUIControl(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    Fx::UIProperties props_type = Fx::UIProperties_NONE,
+    flatbuffers::Offset<void> props = 0) {
+  UIControlBuilder builder_(_fbb);
+  builder_.add_props(props);
+  builder_.add_name(name);
+  builder_.add_props_type(props_type);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<UIControl> CreateUIControlDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    Fx::UIProperties props_type = Fx::UIProperties_NONE,
+    flatbuffers::Offset<void> props = 0) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return Fx::CreateUIControl(
+      _fbb,
+      name__,
+      props_type,
+      props);
+}
+
+flatbuffers::Offset<UIControl> CreateUIControl(flatbuffers::FlatBufferBuilder &_fbb, const UIControlT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct BundleT : public flatbuffers::NativeTable {
   typedef Bundle TableType;
   std::string name{};
   std::unique_ptr<Fx::BundleSignatureT> signature{};
   std::unique_ptr<Fx::BundleMetaT> meta{};
   Fx::BundleContentUnion content{};
+  std::vector<std::unique_ptr<Fx::UIControlT>> controls{};
   BundleT() = default;
   BundleT(const BundleT &o);
   BundleT(BundleT&&) FLATBUFFERS_NOEXCEPT = default;
@@ -1483,7 +2637,8 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_SIGNATURE = 6,
     VT_META = 8,
     VT_CONTENT_TYPE = 10,
-    VT_CONTENT = 12
+    VT_CONTENT = 12,
+    VT_CONTROLS = 14
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -1504,6 +2659,9 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::PartBundle *content_as_PartBundle() const {
     return content_type() == Fx::BundleContent_PartBundle ? static_cast<const Fx::PartBundle *>(content()) : nullptr;
   }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>> *controls() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>> *>(VT_CONTROLS);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
@@ -1515,6 +2673,9 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_CONTENT_TYPE, 1) &&
            VerifyOffset(verifier, VT_CONTENT) &&
            VerifyBundleContent(verifier, content(), content_type()) &&
+           VerifyOffset(verifier, VT_CONTROLS) &&
+           verifier.VerifyVector(controls()) &&
+           verifier.VerifyVectorOfTables(controls()) &&
            verifier.EndTable();
   }
   BundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1545,6 +2706,9 @@ struct BundleBuilder {
   void add_content(flatbuffers::Offset<void> content) {
     fbb_.AddOffset(Bundle::VT_CONTENT, content);
   }
+  void add_controls(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>>> controls) {
+    fbb_.AddOffset(Bundle::VT_CONTROLS, controls);
+  }
   explicit BundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1562,8 +2726,10 @@ inline flatbuffers::Offset<Bundle> CreateBundle(
     flatbuffers::Offset<Fx::BundleSignature> signature = 0,
     flatbuffers::Offset<Fx::BundleMeta> meta = 0,
     Fx::BundleContent content_type = Fx::BundleContent_NONE,
-    flatbuffers::Offset<void> content = 0) {
+    flatbuffers::Offset<void> content = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>>> controls = 0) {
   BundleBuilder builder_(_fbb);
+  builder_.add_controls(controls);
   builder_.add_content(content);
   builder_.add_meta(meta);
   builder_.add_signature(signature);
@@ -1578,15 +2744,18 @@ inline flatbuffers::Offset<Bundle> CreateBundleDirect(
     flatbuffers::Offset<Fx::BundleSignature> signature = 0,
     flatbuffers::Offset<Fx::BundleMeta> meta = 0,
     Fx::BundleContent content_type = Fx::BundleContent_NONE,
-    flatbuffers::Offset<void> content = 0) {
+    flatbuffers::Offset<void> content = 0,
+    const std::vector<flatbuffers::Offset<Fx::UIControl>> *controls = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto controls__ = controls ? _fbb.CreateVector<flatbuffers::Offset<Fx::UIControl>>(*controls) : 0;
   return Fx::CreateBundle(
       _fbb,
       name__,
       signature,
       meta,
       content_type,
-      content);
+      content,
+      controls__);
 }
 
 flatbuffers::Offset<Bundle> CreateBundle(flatbuffers::FlatBufferBuilder &_fbb, const BundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -2147,11 +3316,355 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
       _particle);
 }
 
+inline UISpinnerT *UISpinner::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UISpinnerT>(new UISpinnerT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UISpinner::UnPackTo(UISpinnerT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = min(); _o->min = _e; }
+  { auto _e = max(); _o->max = _e; }
+  { auto _e = step(); _o->step = _e; }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<UISpinner> UISpinner::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UISpinnerT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUISpinner(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UISpinner> CreateUISpinner(flatbuffers::FlatBufferBuilder &_fbb, const UISpinnerT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UISpinnerT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _min = _o->min;
+  auto _max = _o->max;
+  auto _step = _o->step;
+  auto _value = _o->value;
+  return Fx::CreateUISpinner(
+      _fbb,
+      _name,
+      _min,
+      _max,
+      _step,
+      _value);
+}
+
+inline UIFloatSpinnerT *UIFloatSpinner::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIFloatSpinnerT>(new UIFloatSpinnerT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIFloatSpinner::UnPackTo(UIFloatSpinnerT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = min(); _o->min = _e; }
+  { auto _e = max(); _o->max = _e; }
+  { auto _e = step(); _o->step = _e; }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<UIFloatSpinner> UIFloatSpinner::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatSpinnerT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIFloatSpinner(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIFloatSpinner> CreateUIFloatSpinner(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatSpinnerT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIFloatSpinnerT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _min = _o->min;
+  auto _max = _o->max;
+  auto _step = _o->step;
+  auto _value = _o->value;
+  return Fx::CreateUIFloatSpinner(
+      _fbb,
+      _name,
+      _min,
+      _max,
+      _step,
+      _value);
+}
+
+inline Float3T *Float3::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<Float3T>(new Float3T());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void Float3::UnPackTo(Float3T *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = x(); _o->x = _e; }
+  { auto _e = y(); _o->y = _e; }
+  { auto _e = z(); _o->z = _e; }
+}
+
+inline flatbuffers::Offset<Float3> Float3::Pack(flatbuffers::FlatBufferBuilder &_fbb, const Float3T* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateFloat3(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<Float3> CreateFloat3(flatbuffers::FlatBufferBuilder &_fbb, const Float3T *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const Float3T* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _x = _o->x;
+  auto _y = _o->y;
+  auto _z = _o->z;
+  return Fx::CreateFloat3(
+      _fbb,
+      _x,
+      _y,
+      _z);
+}
+
+inline ColorT *Color::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<ColorT>(new ColorT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void Color::UnPackTo(ColorT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = r(); _o->r = _e; }
+  { auto _e = g(); _o->g = _e; }
+  { auto _e = b(); _o->b = _e; }
+  { auto _e = a(); _o->a = _e; }
+}
+
+inline flatbuffers::Offset<Color> Color::Pack(flatbuffers::FlatBufferBuilder &_fbb, const ColorT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateColor(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<Color> CreateColor(flatbuffers::FlatBufferBuilder &_fbb, const ColorT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const ColorT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _r = _o->r;
+  auto _g = _o->g;
+  auto _b = _o->b;
+  auto _a = _o->a;
+  return Fx::CreateColor(
+      _fbb,
+      _r,
+      _g,
+      _b,
+      _a);
+}
+
+inline UIColorT::UIColorT(const UIColorT &o)
+      : name(o.name),
+        value((o.value) ? new Fx::ColorT(*o.value) : nullptr) {
+}
+
+inline UIColorT &UIColorT::operator=(UIColorT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(value, o.value);
+  return *this;
+}
+
+inline UIColorT *UIColor::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIColorT>(new UIColorT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIColor::UnPackTo(UIColorT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = value(); if (_e) { if(_o->value) { _e->UnPackTo(_o->value.get(), _resolver); } else { _o->value = std::unique_ptr<Fx::ColorT>(_e->UnPack(_resolver)); } } }
+}
+
+inline flatbuffers::Offset<UIColor> UIColor::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIColorT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIColor(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIColor> CreateUIColor(flatbuffers::FlatBufferBuilder &_fbb, const UIColorT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIColorT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _value = _o->value ? CreateColor(_fbb, _o->value.get(), _rehasher) : 0;
+  return Fx::CreateUIColor(
+      _fbb,
+      _name,
+      _value);
+}
+
+inline UIFloat3T::UIFloat3T(const UIFloat3T &o)
+      : name(o.name),
+        value((o.value) ? new Fx::Float3T(*o.value) : nullptr) {
+}
+
+inline UIFloat3T &UIFloat3T::operator=(UIFloat3T o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(value, o.value);
+  return *this;
+}
+
+inline UIFloat3T *UIFloat3::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIFloat3T>(new UIFloat3T());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIFloat3::UnPackTo(UIFloat3T *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = value(); if (_e) { if(_o->value) { _e->UnPackTo(_o->value.get(), _resolver); } else { _o->value = std::unique_ptr<Fx::Float3T>(_e->UnPack(_resolver)); } } }
+}
+
+inline flatbuffers::Offset<UIFloat3> UIFloat3::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloat3T* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIFloat3(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIFloat3> CreateUIFloat3(flatbuffers::FlatBufferBuilder &_fbb, const UIFloat3T *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIFloat3T* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _value = _o->value ? CreateFloat3(_fbb, _o->value.get(), _rehasher) : 0;
+  return Fx::CreateUIFloat3(
+      _fbb,
+      _name,
+      _value);
+}
+
+inline UIFloatT *UIFloat::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIFloatT>(new UIFloatT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIFloat::UnPackTo(UIFloatT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<UIFloat> UIFloat::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIFloat(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIFloat> CreateUIFloat(flatbuffers::FlatBufferBuilder &_fbb, const UIFloatT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIFloatT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _value = _o->value;
+  return Fx::CreateUIFloat(
+      _fbb,
+      _name,
+      _value);
+}
+
+inline UIIntT *UIInt::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIIntT>(new UIIntT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIInt::UnPackTo(UIIntT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<UIInt> UIInt::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIIntT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIInt(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIInt> CreateUIInt(flatbuffers::FlatBufferBuilder &_fbb, const UIIntT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIIntT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _value = _o->value;
+  return Fx::CreateUIInt(
+      _fbb,
+      _name,
+      _value);
+}
+
+inline UIUintT *UIUint::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIUintT>(new UIUintT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIUint::UnPackTo(UIUintT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<UIUint> UIUint::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIUintT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIUint(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIUint> CreateUIUint(flatbuffers::FlatBufferBuilder &_fbb, const UIUintT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIUintT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _value = _o->value;
+  return Fx::CreateUIUint(
+      _fbb,
+      _name,
+      _value);
+}
+
+inline UIControlT *UIControl::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<UIControlT>(new UIControlT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void UIControl::UnPackTo(UIControlT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = props_type(); _o->props.type = _e; }
+  { auto _e = props(); if (_e) _o->props.value = Fx::UIPropertiesUnion::UnPack(_e, props_type(), _resolver); }
+}
+
+inline flatbuffers::Offset<UIControl> UIControl::Pack(flatbuffers::FlatBufferBuilder &_fbb, const UIControlT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateUIControl(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<UIControl> CreateUIControl(flatbuffers::FlatBufferBuilder &_fbb, const UIControlT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const UIControlT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _props_type = _o->props.type;
+  auto _props = _o->props.Pack(_fbb);
+  return Fx::CreateUIControl(
+      _fbb,
+      _name,
+      _props_type,
+      _props);
+}
+
 inline BundleT::BundleT(const BundleT &o)
       : name(o.name),
         signature((o.signature) ? new Fx::BundleSignatureT(*o.signature) : nullptr),
         meta((o.meta) ? new Fx::BundleMetaT(*o.meta) : nullptr),
         content(o.content) {
+  controls.reserve(o.controls.size());
+  for (const auto &controls_ : o.controls) { controls.emplace_back((controls_) ? new Fx::UIControlT(*controls_) : nullptr); }
 }
 
 inline BundleT &BundleT::operator=(BundleT o) FLATBUFFERS_NOEXCEPT {
@@ -2159,6 +3672,7 @@ inline BundleT &BundleT::operator=(BundleT o) FLATBUFFERS_NOEXCEPT {
   std::swap(signature, o.signature);
   std::swap(meta, o.meta);
   std::swap(content, o.content);
+  std::swap(controls, o.controls);
   return *this;
 }
 
@@ -2176,6 +3690,7 @@ inline void Bundle::UnPackTo(BundleT *_o, const flatbuffers::resolver_function_t
   { auto _e = meta(); if (_e) { if(_o->meta) { _e->UnPackTo(_o->meta.get(), _resolver); } else { _o->meta = std::unique_ptr<Fx::BundleMetaT>(_e->UnPack(_resolver)); } } }
   { auto _e = content_type(); _o->content.type = _e; }
   { auto _e = content(); if (_e) _o->content.value = Fx::BundleContentUnion::UnPack(_e, content_type(), _resolver); }
+  { auto _e = controls(); if (_e) { _o->controls.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->controls[_i]) { _e->Get(_i)->UnPackTo(_o->controls[_i].get(), _resolver); } else { _o->controls[_i] = std::unique_ptr<Fx::UIControlT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<Bundle> Bundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const BundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -2191,13 +3706,15 @@ inline flatbuffers::Offset<Bundle> CreateBundle(flatbuffers::FlatBufferBuilder &
   auto _meta = _o->meta ? CreateBundleMeta(_fbb, _o->meta.get(), _rehasher) : 0;
   auto _content_type = _o->content.type;
   auto _content = _o->content.Pack(_fbb);
+  auto _controls = _o->controls.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::UIControl>> (_o->controls.size(), [](size_t i, _VectorArgs *__va) { return CreateUIControl(*__va->__fbb, __va->__o->controls[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateBundle(
       _fbb,
       _name,
       _signature,
       _meta,
       _content_type,
-      _content);
+      _content,
+      _controls);
 }
 
 inline BundleCollectionT::BundleCollectionT(const BundleCollectionT &o) {
@@ -2397,6 +3914,203 @@ inline void BundleContentUnion::Reset() {
   }
   value = nullptr;
   type = BundleContent_NONE;
+}
+
+inline bool VerifyUIProperties(flatbuffers::Verifier &verifier, const void *obj, UIProperties type) {
+  switch (type) {
+    case UIProperties_NONE: {
+      return true;
+    }
+    case UIProperties_UISpinner: {
+      auto ptr = reinterpret_cast<const Fx::UISpinner *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIFloatSpinner: {
+      auto ptr = reinterpret_cast<const Fx::UIFloatSpinner *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIColor: {
+      auto ptr = reinterpret_cast<const Fx::UIColor *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIFloat: {
+      auto ptr = reinterpret_cast<const Fx::UIFloat *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIFloat3: {
+      auto ptr = reinterpret_cast<const Fx::UIFloat3 *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIInt: {
+      auto ptr = reinterpret_cast<const Fx::UIInt *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case UIProperties_UIUint: {
+      auto ptr = reinterpret_cast<const Fx::UIUint *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    default: return true;
+  }
+}
+
+inline bool VerifyUIPropertiesVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types) {
+  if (!values || !types) return !values && !types;
+  if (values->size() != types->size()) return false;
+  for (flatbuffers::uoffset_t i = 0; i < values->size(); ++i) {
+    if (!VerifyUIProperties(
+        verifier,  values->Get(i), types->GetEnum<UIProperties>(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline void *UIPropertiesUnion::UnPack(const void *obj, UIProperties type, const flatbuffers::resolver_function_t *resolver) {
+  (void)resolver;
+  switch (type) {
+    case UIProperties_UISpinner: {
+      auto ptr = reinterpret_cast<const Fx::UISpinner *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIFloatSpinner: {
+      auto ptr = reinterpret_cast<const Fx::UIFloatSpinner *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIColor: {
+      auto ptr = reinterpret_cast<const Fx::UIColor *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIFloat: {
+      auto ptr = reinterpret_cast<const Fx::UIFloat *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIFloat3: {
+      auto ptr = reinterpret_cast<const Fx::UIFloat3 *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIInt: {
+      auto ptr = reinterpret_cast<const Fx::UIInt *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case UIProperties_UIUint: {
+      auto ptr = reinterpret_cast<const Fx::UIUint *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    default: return nullptr;
+  }
+}
+
+inline flatbuffers::Offset<void> UIPropertiesUnion::Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher) const {
+  (void)_rehasher;
+  switch (type) {
+    case UIProperties_UISpinner: {
+      auto ptr = reinterpret_cast<const Fx::UISpinnerT *>(value);
+      return CreateUISpinner(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIFloatSpinner: {
+      auto ptr = reinterpret_cast<const Fx::UIFloatSpinnerT *>(value);
+      return CreateUIFloatSpinner(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIColor: {
+      auto ptr = reinterpret_cast<const Fx::UIColorT *>(value);
+      return CreateUIColor(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIFloat: {
+      auto ptr = reinterpret_cast<const Fx::UIFloatT *>(value);
+      return CreateUIFloat(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIFloat3: {
+      auto ptr = reinterpret_cast<const Fx::UIFloat3T *>(value);
+      return CreateUIFloat3(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIInt: {
+      auto ptr = reinterpret_cast<const Fx::UIIntT *>(value);
+      return CreateUIInt(_fbb, ptr, _rehasher).Union();
+    }
+    case UIProperties_UIUint: {
+      auto ptr = reinterpret_cast<const Fx::UIUintT *>(value);
+      return CreateUIUint(_fbb, ptr, _rehasher).Union();
+    }
+    default: return 0;
+  }
+}
+
+inline UIPropertiesUnion::UIPropertiesUnion(const UIPropertiesUnion &u) : type(u.type), value(nullptr) {
+  switch (type) {
+    case UIProperties_UISpinner: {
+      value = new Fx::UISpinnerT(*reinterpret_cast<Fx::UISpinnerT *>(u.value));
+      break;
+    }
+    case UIProperties_UIFloatSpinner: {
+      value = new Fx::UIFloatSpinnerT(*reinterpret_cast<Fx::UIFloatSpinnerT *>(u.value));
+      break;
+    }
+    case UIProperties_UIColor: {
+      value = new Fx::UIColorT(*reinterpret_cast<Fx::UIColorT *>(u.value));
+      break;
+    }
+    case UIProperties_UIFloat: {
+      value = new Fx::UIFloatT(*reinterpret_cast<Fx::UIFloatT *>(u.value));
+      break;
+    }
+    case UIProperties_UIFloat3: {
+      value = new Fx::UIFloat3T(*reinterpret_cast<Fx::UIFloat3T *>(u.value));
+      break;
+    }
+    case UIProperties_UIInt: {
+      value = new Fx::UIIntT(*reinterpret_cast<Fx::UIIntT *>(u.value));
+      break;
+    }
+    case UIProperties_UIUint: {
+      value = new Fx::UIUintT(*reinterpret_cast<Fx::UIUintT *>(u.value));
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+inline void UIPropertiesUnion::Reset() {
+  switch (type) {
+    case UIProperties_UISpinner: {
+      auto ptr = reinterpret_cast<Fx::UISpinnerT *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIFloatSpinner: {
+      auto ptr = reinterpret_cast<Fx::UIFloatSpinnerT *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIColor: {
+      auto ptr = reinterpret_cast<Fx::UIColorT *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIFloat: {
+      auto ptr = reinterpret_cast<Fx::UIFloatT *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIFloat3: {
+      auto ptr = reinterpret_cast<Fx::UIFloat3T *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIInt: {
+      auto ptr = reinterpret_cast<Fx::UIIntT *>(value);
+      delete ptr;
+      break;
+    }
+    case UIProperties_UIUint: {
+      auto ptr = reinterpret_cast<Fx::UIUintT *>(value);
+      delete ptr;
+      break;
+    }
+    default: break;
+  }
+  value = nullptr;
+  type = UIProperties_NONE;
 }
 
 inline const Fx::Bundle *GetBundle(const void *buf) {

@@ -12,6 +12,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
 import { expression, instruction, type } from './helpers';
+import { AnnotationInstruction } from './instructions/AnnotationInstruction';
 import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
 import { AttributeInstruction } from './instructions/AttributeInstruction';
@@ -865,7 +866,13 @@ export class Analyzer {
                 return null;
             }
 
-            const initExpr = this.analyzeExpr(context, program, children[children.length - 3]);
+            const exprNode = children[children.length - 2];
+
+            let initExpr = null;
+            if (exprNode.name === 'InitExpr')
+                initExpr = this.analyzeInitExpr(context, program, exprNode, expectedType);
+            else
+                initExpr = this.analyzeExpr(context, program, children[children.length - 2]);
 
             // TODO: use checkTwoOperandTypes() function instead
             if (!expectedType.isEqual(initExpr.type)) {
@@ -1174,7 +1181,7 @@ export class Analyzer {
         }
 
         if (children[ic].name === 'Annotation') {
-            annotation = this.analyzeAnnotation(children[ic]);
+            annotation = this.analyzeAnnotation(context, program, children[ic]);
             ic--;
         }
 
@@ -1269,7 +1276,7 @@ export class Analyzer {
 
         for (let i = children.length - 2; i >= 0; i--) {
             if (children[i].name === 'Annotation') {
-                annotation = this.analyzeAnnotation(children[i]);
+                annotation = this.analyzeAnnotation(context, program, children[i]);
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else if (children[i].name === 'Initializer') {
@@ -1311,13 +1318,42 @@ export class Analyzer {
 
     /**
      * AST example:
+     *    AnnotationDecls
+     *       + AnnotationDecls 
+     *       + VariableDecl 
+     */
+    protected analyzeAnnotationDecls(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction[] {
+        const children = sourceNode.children;
+        let decls = [];
+        for (let i = children.length - 1; i >= 0; i--) {
+            switch (children[i].name) {
+                case 'AnnotationDecls':
+                    decls.push(...this.analyzeAnnotationDecls(context, program, children[i]));
+                    break;
+                case 'VariableDecl':
+                    decls.push(...this.analyzeVariableDecl(context, program, children[i]));
+                    break;
+            }
+        }
+        return decls;
+    }
+
+    /**
+     * AST example:
      *    Annotation
      *         T_PUNCTUATOR_62 = '>'
      *         T_PUNCTUATOR_60 = '<'
      */
-    protected analyzeAnnotation(sourceNode: IParseNode): IAnnotationInstruction {
-        // todo
-        return null;
+    protected analyzeAnnotation(context: Context, $program: ProgramScope, sourceNode: IParseNode): IAnnotationInstruction {
+        // IP: hucky way to not add annotation variables to real scope
+        const program = new ProgramScope(SystemScope.SCOPE); 
+        const scope = program.currentScope;
+        const decls = [
+            ...sourceNode.children.filter(node => node.name == 'AnnotationDecls').map(node => this.analyzeAnnotationDecls(context, program, node)).flat(),
+            ...sourceNode.children.filter(node => node.name == 'VariableDecl').map(node => this.analyzeVariableDecl(context, program, node)).flat()
+        ];
+        if (!decls || !decls.length) return null;
+        return new AnnotationInstruction({ scope, sourceNode, decls });
     }
 
 
@@ -2709,7 +2745,7 @@ export class Analyzer {
         context.funcDef = definition;
 
         if (children.length === 3) {
-            annotation = this.analyzeAnnotation(children[1]);
+            annotation = this.analyzeAnnotation(context, program, children[1]);
         }
 
         if (lastNodeValue !== ';') {
@@ -3395,7 +3431,7 @@ export class Analyzer {
 
         for (let i = children.length - 3; i >= 0; i--) {
             if (children[i].name === 'Annotation') {
-                annotation = this.analyzeAnnotation(children[i]);
+                annotation = this.analyzeAnnotation(context, program, children[i]);
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else {

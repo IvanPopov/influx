@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { ECheckStage, EInstructionTypes, IInstruction, IInstructionError, IScope } from "@lib/idl/IInstruction";
+import { ECheckStage, EInstructionTypes, IInstruction, IInstructionError, IScope, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IParseNode } from "@lib/idl/parser/IParser";
 
 export interface IInstructionSettings {

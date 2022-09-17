@@ -54,6 +54,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.debugger.runtime',
         'playground.emitter',
         'playground.timeline',
+        'playground.controls',
         'nodes.graph',
         'nodes.env',
         's3d.env'

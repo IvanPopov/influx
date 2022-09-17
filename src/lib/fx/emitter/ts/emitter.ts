@@ -1,7 +1,7 @@
 import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIControlT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
 import {  Uniforms, IEmitter, IEmitterPass } from '@lib/idl/emitter';
 import { Vector3 } from 'three';
@@ -339,6 +339,10 @@ type TSEmitter = ReturnType<typeof createTsEmitter>;
 function compareFxTypeLayouts(left: TypeLayoutT, right: TypeLayoutT) {
     return JSON.stringify(left) == JSON.stringify(right);
 }
+
+// function compareFxControls(left: UIControlT[], right: UIControlT[]) {
+//     return JSON.stringify(left) == JSON.stringify(right);
+// }
 
 // todo: rework comparisson to be more readable and compact
 function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {

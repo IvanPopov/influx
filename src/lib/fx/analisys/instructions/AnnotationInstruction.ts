@@ -1,12 +1,18 @@
-import { EInstructionTypes, IAnnotationInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
+export interface IAnnotationSettings extends IInstructionSettings {
+    decls: IVariableDeclInstruction[];
+}
+
 export class AnnotationInstruction extends Instruction implements IAnnotationInstruction {
     
-    // TODO: implement it!
+    readonly decls: IVariableDeclInstruction[];
 
-    constructor({ ...settings }: IInstructionSettings) {
+    constructor({ decls, ...settings }: IAnnotationSettings) {
         super({ instrType: EInstructionTypes.k_Annotation, ...settings });
+
+        this.decls = decls;
     }
 }

@@ -10,6 +10,7 @@
   "devDependencies": {
     "@three-ts/orbit-controls": "^1.4.7",
     "@types/css-font-loading-module": "^0.0.7",
+    "@types/dat.gui": "^0.7.7",
     "@types/emscripten": "^1.39.6",
     "@types/hoist-non-react-statics": "^3.3.1",
     "@types/jss": "^9.5.8",
@@ -32,6 +33,7 @@
     "cross-env": "^7.0.3",
     "css-loader": "^6.7.1",
     "css-minimizer-webpack-plugin": "latest",
+    "dat.gui": "^0.7.9",
     "electron": "^18.2.3",
     "electron-react-devtools": "^0.5.3",
     "file-loader": "^6.2.0",

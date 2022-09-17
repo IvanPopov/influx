@@ -104,12 +104,48 @@ table PartBundle
 
 union BundleContent { PartBundle }
 
+table UISpinner 
+{
+    name: string; 
+    min: int;
+    max: int;
+    step: int;
+    value: int;
+}
+
+table UIFloatSpinner 
+{
+    name: string; // UIName
+    min: float;
+    max: float;
+    step: float;
+    value: float;
+}
+
+table Float3 { x: float; y: float; z: float; }
+table Color { r: float; g: float; b: float; a: float; }
+
+table UIColor { name: string; value: Color; }
+table UIFloat3 { name: string; value: Float3; }
+table UIFloat { name: string; value: float; }
+table UIInt { name: string; value: int; }
+table UIUint { name: string; value: uint; }
+
+union UIProperties { UISpinner, UIFloatSpinner, UIColor, UIFloat, UIFloat3, UIInt, UIUint }
+
+table UIControl
+{
+    name: string;
+    props: UIProperties;
+}
+
 table Bundle 
 {
     name: string;
     signature: BundleSignature;
     meta: BundleMeta;
     content: BundleContent;
+    controls: [ UIControl ];
 }
 
 table BundleCollection
