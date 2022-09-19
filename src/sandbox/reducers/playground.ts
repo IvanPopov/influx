@@ -11,6 +11,7 @@ const initialState: IPlaygroundState = {
     emitter: null,
     timeline: Timeline.make(),
     controls: { values: {}, props: {} },
+    presets: {},
     revision: 0,
     wasm: Emitter.isWASM(),
 

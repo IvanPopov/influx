@@ -376,10 +376,10 @@ export class TSBundle implements Bundle.IBundle
                 dst.setFloat32(0, src.getFloat32(0, true), true);
                 break;
             case 'int':
-                dst.setInt32(0, src.getFloat32(0, true), true);
+                dst.setInt32(0, src.getInt32(0, true), true);
                 break;
             case 'uint':
-                dst.setUint32(0, src.getFloat32(0, true), true);
+                dst.setUint32(0, src.getUint32(0, true), true);
                 break;
             case 'float3':
                 dst.setFloat32(0, src.getFloat32(0, true), true);

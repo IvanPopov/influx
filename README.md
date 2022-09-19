@@ -48,6 +48,9 @@ npm run pack:electron       # Pack standlone build of electron version based on 
                             # unpackd build.
 npm run clean:electron      # Remove all temprary files relates to electron builds.
 npm run package:electron    # Build packed and optimized electron based executable.
+
+npm run details             # Run helper tool to extract package details.
+npm run build:details       # Build details tool.
 ```
 
 

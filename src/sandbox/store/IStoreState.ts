@@ -77,15 +77,22 @@ export interface IPlaygroundControlProps {
     name?: string;
 }
 
+type Color = { r: number; g: number; b: number; a: number };
+type Vector3 = { x: number; y: number; z: number };
+type ControlValues = IMap<Vector3 | Color | Number>;
+
 export interface IPlaygroundControls {
-    values: IMap<{ x: number; y: number; z: number } | { r: number; g: number; b: number; a: number } | number>;
+    values: ControlValues;
     props: IMap<IPlaygroundControlProps>;
 }
+
+type PlaygroundPresets = IMap<ControlValues>;
 
 export interface IPlaygroundState {
     emitter: IEmitter;      // todo: add type.
     timeline: ITimeline;
     controls: IPlaygroundControls;
+    presets: PlaygroundPresets;
     revision: number;      // number of updates of emitter
     wasm: boolean;
 

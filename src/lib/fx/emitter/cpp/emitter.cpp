@@ -200,18 +200,6 @@ void EMITTER_PASS::Prerender(const UNIFORMS& uniforms)
         return;
     }
 
-    assert(Parent().GetCapacity() % bundle->numthreads.x == 0);
-
-    auto prerenderUav = find_if(begin(bundle->uavs), end(bundle->uavs), 
-        [&](const VM::BUNDLE_UAV& uav) { return uav.name == IFX::UavPrerendered(m_id); });
-    auto serialsUav = find_if(begin(bundle->uavs), end(bundle->uavs), 
-        [&](const VM::BUNDLE_UAV& uav) { return uav.name == IFX::UavSerials(m_id); });
-
-    prerenderUav->OverwriteCounter(0);
-    if (serialsUav != end(bundle->uavs)) {
-        serialsUav->OverwriteCounter(0);
-    }
-
     bundle->SetConstants(uniforms);
     bundle->Run(Parent().GetCapacity() / bundle->numthreads.x);
 }
@@ -397,6 +385,8 @@ void EMITTER::Reset()
     // reset all available particles
     m_resetBundle->Run(m_capacity / m_resetBundle->numthreads.x);
     UavDeadIndices()->OverwriteCounter(m_capacity);
+
+    // std::cout << "Reset emitter, new dead indices count is " << UavDeadIndices()->ReadCounter() << std::endl;
 }
 
 

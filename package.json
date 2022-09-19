@@ -100,6 +100,8 @@
   },
   "scripts": {
     "electron": "electron ./shell.js",
+    "details": "node ./dist/utils/details/entry.js",
+    "build:details": "tsc --p ./src/utils/details",
     "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack",
     "build:electron": "cross-env NODE_ENV=production APP_TARGET=electron webpack",
     "dev:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack",

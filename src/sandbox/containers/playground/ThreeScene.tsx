@@ -24,7 +24,7 @@ import { createSLDocument } from '@lib/fx/SLDocument';
 import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
 import { GUI } from 'dat.gui';
 import '@sandbox/styles/custom/dat-gui.css';
-import { IPlaygroundControls } from '@sandbox/store/IStoreState';
+import { IPlaygroundControlProps, IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
 let desc = `
@@ -60,6 +60,7 @@ interface ITreeSceneProps {
     emitter: IEmitter;
     timeline: ITimeline;
     controls?: IPlaygroundControls;
+    onSavePreset?: (name: string, values: IPlaygroundControls['values']) => void;
 }
 
 interface IThreeSceneState {
@@ -594,22 +595,22 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             let ctrl = null;
             switch (props.type) {
                 case 'UIColor':
-                    let color = gui.addFolder(props.name || name);
+                    let colorFolder = gui.addFolder(props.name || name);
                     let cval = controls.values[name] as Color; 
-                    color.addColor({ color: colorToUint(cval) }, 'color').onChange(value => uintToColor(value, cval));
-                    color.add({ opacity: cval.a }, 'opacity', 0, 1).onChange(value => cval.a = value);
-                    color.open();
+                    colorFolder.addColor({ color: colorToUint(cval) }, 'color').onChange(value => uintToColor(value, cval));
+                    colorFolder.add({ opacity: cval.a }, 'opacity', 0, 1).onChange(value => cval.a = value);
+                    colorFolder.open();
                     break;
                 case 'UIFloatSpinner':
                 case 'UISpinner':
                     ctrl = gui.add(controls.values, name, props.min, props.max, props.step);
                     break;
                 case 'UIFloat3':
-                    let vec3 = gui.addFolder(props.name || name);
-                    vec3.add(controls.values[name], 'x');
-                    vec3.add(controls.values[name], 'y');
-                    vec3.add(controls.values[name], 'z');
-                    vec3.open();
+                    let vec3Folder = gui.addFolder(props.name || name);
+                    vec3Folder.add(controls.values[name], 'x');
+                    vec3Folder.add(controls.values[name], 'y');
+                    vec3Folder.add(controls.values[name], 'z');
+                    vec3Folder.open();
                     break;
                 default:
                     ctrl = gui.add(controls.values, name);
@@ -620,6 +621,25 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             }
         }
 
+        const NEW_PRESET = '[New]';
+        const presetsFolder = gui.addFolder('Presets');
+        const preset = { 'name': 'Default' };
+        const presetList = ['Default'];
+        const onSelectPreset = (value: string) => {
+            // if (value !== NEW_PRESET) return;
+            // const name = 'preset1';//prompt('Enter preset name');
+            // presetList.push(name);
+            // preset.name = name;
+        };
+        presetsFolder
+            .add(preset, 'name', [...presetList, NEW_PRESET])
+            .name('List')
+            .onChange(onSelectPreset);
+
+        const savePreset = '<b><center>Save preset</center></b>';
+        presetsFolder.add({ [savePreset]: () => this.props.onSavePreset?.(preset.name, controls.values) }, savePreset);
+
+        presetsFolder.close();
         // gui.close();
         gui.open();
 
@@ -812,10 +832,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     componentDidUpdate(prevProps, prevState) {
-        
+        // todo: preserve prev values
+        this.createControls(this.props.controls);
+
         if (prevState.emitter === this.state.emitter) {
-            // todo: preserve prev values
-            this.createControls(this.props.controls);
 
             const emitter = this.props.emitter;
 
@@ -860,6 +880,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             };
             return;
         }
+
+        this.removeControls();
 
         this.passes.forEach(pass => {
             this.scene.remove(pass.mesh);
