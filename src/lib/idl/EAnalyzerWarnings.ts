@@ -10,5 +10,6 @@ export enum EAnalyzerWarnings {
     ImplicitTypeTruncation,
 
     // part fx
-    SortingCannotBeApplied
+    SortingCannotBeApplied,
+    PresetPropertyHasNotBeenFound
 }

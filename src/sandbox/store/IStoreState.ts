@@ -75,15 +75,28 @@ export interface IPlaygroundControlProps {
     step?: number;
     type: string;
     name?: string;
+    value?: Vector3 | Color | Number;
 }
 
-type Color = { r: number; g: number; b: number; a: number };
-type Vector3 = { x: number; y: number; z: number };
-type ControlValues = IMap<Vector3 | Color | Number>;
+export type Color = { r: number; g: number; b: number; a: number };
+export type Vector3 = { x: number; y: number; z: number };
+export type ControlValues = IMap<Vector3 | Color | Number>;
+
+export interface IPlaygroundPresetEntry {
+    name: string;
+    value: Uint8Array;
+}
+
+export interface IPlaygroundPreset {
+    name: string;
+    desc: string;
+    data: IPlaygroundPresetEntry[];
+}
 
 export interface IPlaygroundControls {
     values: ControlValues;
     props: IMap<IPlaygroundControlProps>;
+    presets: IPlaygroundPreset[];
 }
 
 type PlaygroundPresets = IMap<ControlValues>;

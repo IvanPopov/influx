@@ -1,6 +1,6 @@
 import { EInstructionTypes, ETechniqueType, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ICompileExprInstruction } from "@lib/idl/IInstruction";
-import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { IFxPreset, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
 
@@ -11,48 +11,29 @@ export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSe
     updateRoutine: ICompileExprInstruction;
     particle: ITypeInstruction;
     capacity?: number;
+    presets: IFxPreset[];
 }
 
 // var s: IPartFxInstructionSettings;
 // s.te
 
 export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstruction> implements IPartFxInstruction {
-    protected _spawnRoutine: ICompileExprInstruction;
-    protected _initRoutine: ICompileExprInstruction;
-    protected _updateRoutine: ICompileExprInstruction;
-    protected _particle: ITypeInstruction;
-    protected _capacity: number;
+    readonly spawnRoutine: ICompileExprInstruction;
+    readonly initRoutine: ICompileExprInstruction;
+    readonly updateRoutine: ICompileExprInstruction;
+    readonly particle: ITypeInstruction;
+    readonly capacity: number;
+    readonly presets: IFxPreset[];
 
-    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, capacity = -1, ...settings }: IPartFxInstructionSettings) {
+    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, presets, capacity = -1, ...settings }: IPartFxInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PartFxDecl, techniqueType: ETechniqueType.k_PartFx, ...settings });
 
-        this._spawnRoutine = spawnRoutine;
-        this._initRoutine = initRoutine;
-        this._updateRoutine = updateRoutine;
-        this._particle = particle;
-        this._capacity = capacity;
-    }
-
-    get spawnRoutine(): ICompileExprInstruction {
-        return this._spawnRoutine;
-    }
-
-    
-    get initRoutine(): ICompileExprInstruction {
-        return this._initRoutine;
-    }
-
-    
-    get updateRoutine(): ICompileExprInstruction {
-        return this._updateRoutine;
-    }
-
-    get particle(): ITypeInstruction {
-        return this._particle;
-    }
-
-    get capacity(): number {
-        return this._capacity;
+        this.spawnRoutine = spawnRoutine;
+        this.initRoutine = initRoutine;
+        this.updateRoutine = updateRoutine;
+        this.particle = particle;
+        this.capacity = capacity;
+        this.presets = presets;
     }
 
     isValid() {

@@ -21,7 +21,7 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
     {
         mapping.push({ name, offset });
         
-        function float3(x, y, z)
+        function float3(x: number, y: number, z: number)
         {
             float(x);
             float(y);
@@ -29,14 +29,14 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
             return self;
         }
 
-        function float4(x, y, z, w)
+        function float4(x: number, y: number, z: number, w: number)
         {
             float3(x, y, z);
             float(w);
             return self;
         }
     
-        function float(x)
+        function float(x: number)
         {
             (new DataView(storage.buffer, storage.byteOffset)).setFloat32(offset, x, true);
             offset += 4;
@@ -44,15 +44,24 @@ function UniformHelper (storage: Uint8Array = new Uint8Array(256))
             return self;
         }
 
-        function int(x)
+        function int(x: number)
         {
             (new DataView(storage.buffer, storage.byteOffset)).setInt32(offset, x, true);
             offset += 4;
             console.assert(offset < storage.byteLength);
             return self;
         }
+
+        function raw(data: Uint8Array) {
+            for (let u8 of data) {
+                storage[offset] = u8;
+                offset++;
+            }
+            console.assert(offset < storage.byteLength);
+            return self;
+        }
     
-        return { float4, float3, float, int };
+        return { float4, float3, float, int, raw };
     }
 
     return self;

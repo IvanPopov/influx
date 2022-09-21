@@ -278,6 +278,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
 
     function prerender(uniforms: Uniforms) {
+        preparePrerender();
         passes.forEach(pass => pass.prerender(uniforms));
     }
 

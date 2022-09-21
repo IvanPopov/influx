@@ -110,7 +110,7 @@ table UISpinner
     min: int;
     max: int;
     step: int;
-    value: int;
+    value: [ ubyte ];
 }
 
 table UIFloatSpinner 
@@ -119,17 +119,15 @@ table UIFloatSpinner
     min: float;
     max: float;
     step: float;
-    value: float;
+    value: [ ubyte ];
 }
 
-table Float3 { x: float; y: float; z: float; }
-table Color { r: float; g: float; b: float; a: float; }
-
-table UIColor { name: string; value: Color; }
-table UIFloat3 { name: string; value: Float3; }
-table UIFloat { name: string; value: float; }
-table UIInt { name: string; value: int; }
-table UIUint { name: string; value: uint; }
+table UIColor { name: string; value: [ ubyte ]; }
+table UIFloat3 { name: string; value: [ ubyte ]; }
+table UIFloat { name: string; value: [ ubyte ]; }
+table UIInt { name: string; value: [ ubyte ]; }
+table UIUint { name: string; value: [ ubyte ]; }
+table UIBool { name: string; value: [ ubyte ]; }
 
 union UIProperties { UISpinner, UIFloatSpinner, UIColor, UIFloat, UIFloat3, UIInt, UIUint }
 
@@ -139,6 +137,16 @@ table UIControl
     props: UIProperties;
 }
 
+
+table PresetEntry { name: string; value: [ ubyte ]; }
+
+table Preset 
+{
+    name: string;
+    desc: string;
+    data: [ PresetEntry ];
+}
+
 table Bundle 
 {
     name: string;
@@ -146,6 +154,7 @@ table Bundle
     meta: BundleMeta;
     content: BundleContent;
     controls: [ UIControl ];
+    presets: [ Preset ];
 }
 
 table BundleCollection

@@ -11,7 +11,7 @@ import * as Emitter from '@lib/fx/emitter';
 import { IEmitter } from '@lib/idl/emitter';
 import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState, { IPlaygroundControlProps, IPlaygroundControls } from '@sandbox/store/IStoreState';
+import IStoreState, { Color, ControlValues, IPlaygroundControlProps, IPlaygroundControls, IPlaygroundPreset, Vector3 } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 import * as Path from '@lib/path/path';
 import * as URI from '@lib/uri/uri';
@@ -46,6 +46,40 @@ function downloadURL(data: string, fileName: string) {
     a.remove();
 };
 
+function decodeProp(type: string, data: Uint8Array): Vector3 | Color | Number {
+    switch (type) {
+        case 'UIColor': 
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return { r: view[0], g: view[1], b: view[2], a: view[3] };
+        }
+        case 'UIFloatSpinner':
+        case 'UIFloat': 
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+        case 'UIFloat3':
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return { x: view[0], y: view[1], z: view[2] };
+        }
+        case 'UIInt':
+        case 'UISpinner':
+        {
+            const view = new Int32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+        case 'UIUint':
+        {
+            const view = new Uint32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+    }
+    console.assert(false, 'unsupported control type is found!');
+    return null;
+}
+
 function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
     let fx: BundleT = null;
 
@@ -58,20 +92,26 @@ function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
     }
     
     let props: IMap<IPlaygroundControlProps> = {};
-    let values: IMap<{ x: number; y: number; z: number } | { r: number; g: number; b: number; a: number } | number> = {};
+    let values: ControlValues = {};
 
     fx.controls.forEach(ctrl => {
-        props[ctrl.name as string] = {
-            ...ctrl.props,
-            type: UIProperties[ctrl.propsType],
-            name: ctrl.props.name as string
-        };
-
-        let value = ctrl.props.value;
-        values[ctrl.name as string] = isObject(value) ? { ...(value as any) } : value;
+        const type = UIProperties[ctrl.propsType];
+        const value = decodeProp(type, new Uint8Array(ctrl.props.value));
+        const copy = isObject(value) ? { ...value } : value;
+        const name = <string>ctrl.props.name;
+        props[ctrl.name as string] = { ...ctrl.props, type, name, value };
+        values[ctrl.name as string] = copy;
     });
+
+    // some kind of muddy and clumsy convert from flatbuffers to native TS :/
+    const presets = fx.presets.map(({ name, desc, data }): IPlaygroundPreset => 
+        ({ 
+            name: <string>name, 
+            desc: <string>desc,
+            data: data.map(({ name, value }) => ({ name: <string>name, value: new Uint8Array(value) })) 
+        }));
     
-    return { props, values };
+    return { props, values, presets };
 }
 
 

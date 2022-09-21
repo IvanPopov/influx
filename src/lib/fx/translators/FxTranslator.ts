@@ -3,6 +3,9 @@ import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
+import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
+import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { StringInstruction } from "../analisys/instructions/StringInstruction";
 
 import { FxEmitter } from "./FxEmitter";
@@ -45,6 +48,7 @@ export interface IPartFxReflection {
 
     passes: IPartFxPassReflection[];
     controls: IUIControl[];
+    presets: IPreset[];
 }
 
 export interface IDrawOpReflection {
@@ -52,14 +56,37 @@ export interface IDrawOpReflection {
     uavs: IUavReflection[];
 }
 
-export interface IUIControl {
+interface IUIControlBase {
     UIName: string;
-    UIType: 'FloatSpinner' | 'Spinner' | 'Color' | 'Float' | 'Float3' | 'Int' | 'Uint';
+    UIType: string;
+
+    name: string;
+    value: Uint8Array;
+}
+
+export interface IUISpinner extends IUIControlBase {
+    UIType: 'FloatSpinner' | 'Spinner';
     UIMin?: number;
     UIMax?: number;
     UIStep?: number;
-    value?: number[] | string[];
+}
+
+export interface IUIVector extends IUIControlBase {
+    UIType: 'Float3' | 'Color';
+}
+
+export interface IUIConstant extends IUIControlBase {
+    UIType: 'Float' | 'Int' | 'Uint';
+}
+
+export type IUIControl = IUISpinner | IUIConstant | IUIVector;
+
+export interface IPresetEntry { name: string; value: Uint8Array; }
+
+export interface IPreset {
     name: string;
+    desc: string;
+    data: IPresetEntry[];
 }
 
 export class FxTranslator extends FxEmitter {
@@ -297,7 +324,7 @@ export class FxTranslator extends FxEmitter {
 
     emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         super.emitVariableDecl(src, rename);
-        let ctrl: IUIControl = { UIType: null, UIName: null, name: null };
+        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
 
         if (src.annotation) {
             src.annotation.decls.forEach(decl => {
@@ -311,9 +338,9 @@ export class FxTranslator extends FxEmitter {
                         const name = <StringInstruction>decl.initExpr.args[0];
                         ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
                         break;
-                    case 'UIMin': ctrl.UIMin = Number(decl.initExpr.args[0].toCode()); break;
-                    case 'UIMax': ctrl.UIMax = Number(decl.initExpr.args[0].toCode()); break;
-                    case 'UIStep': ctrl.UIStep = Number(decl.initExpr.args[0].toCode()); break;
+                    case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
+                    case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
+                    case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
                 }
             });
 
@@ -326,9 +353,31 @@ export class FxTranslator extends FxEmitter {
                 }
             }
 
-            ctrl.value = src.initExpr.args.map(arg => arg.instructionType === EInstructionTypes.k_InitExpr 
-                ? ((arg as IInitExprInstruction).args[0] as ILiteralInstruction<number>).value
-                : (<ILiteralInstruction<number>>arg).value);
+            let buffer = new ArrayBuffer(16); // todo: don't use fixed size
+            let view1 = new DataView(buffer);
+            let offset = 0;
+
+            src.initExpr.args.forEach(arg => {
+                const instr = arg.instructionType === EInstructionTypes.k_InitExpr 
+                    ? ((arg as IInitExprInstruction).args[0])
+                    : (<ILiteralInstruction<number>>arg);
+                switch (instr.instructionType) {
+                    case EInstructionTypes.k_FloatExpr:
+                        view1.setFloat32(offset, (instr as FloatInstruction).value, true);
+                        offset += 4;
+                        break;
+                    case EInstructionTypes.k_IntExpr:
+                        view1.setInt32(offset, (instr as IntInstruction).value, true);
+                        offset += 4;
+                        break;
+                    case EInstructionTypes.k_BoolExpr:
+                        view1.setInt32(offset, +(instr as BoolInstruction).value, true);
+                        offset += 4;
+                        break;
+                }
+            });
+
+            ctrl.value = new Uint8Array(buffer);
             ctrl.name = src.id.name;
 
             // todo: validate controls
@@ -828,6 +877,41 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
+        const presets = fx.presets.map((preset, i): IPreset => {
+            const name = preset.name;
+            const desc = null; // todo
+            const data = preset.props.map((prop): IPresetEntry => {
+                const decl = prop.resolveDeclaration();
+                const type = decl.type;
+                const name = decl.name;
+                const value = new Uint8Array(16); // todo: don't use fixed size
+                const view = new DataView(value.buffer);
+                switch (type.name) {
+                    case 'float': 
+                    case 'float2':
+                    case 'float3':
+                    case 'float4':
+                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
+                        break;
+                    case 'int':
+                    case 'int2':
+                    case 'int3':
+                    case 'int4':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
+                    case 'uint':
+                    case 'uint2':
+                    case 'uint3':
+                    case 'uint4':
+                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
+                    case 'bool':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
+                        break;
+                }
+                return { name, value };
+            });
+            return { name, desc, data };
+        });
+
         this.emitSpawnOpContainer();
 
         const { typeName: particle } = this.resolveType(fx.particle);
@@ -842,7 +926,8 @@ export class FxTranslator extends FxEmitter {
             CSParticlesResetRoutine,
             CSParticlesInitRoutine,
             CSParticlesUpdateRoutine,
-            controls
+            controls,
+            presets
         };
     }
 }

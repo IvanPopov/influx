@@ -249,11 +249,16 @@ PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --
 PartFxBody : '{' '}' 
 PartFxBody : '{' PartFxProperties '}'
 
+FxPreset : T_KW_FXPRESET Id AnnotationOpt PassStateBlock --add
+
 PartFxProperties : PartFxProperty --expose
 PartFxProperties : PartFxProperties PartFxProperty
 
 PartFxProperty : PassState
 PartFxProperty : PassDecl
+PartFxProperty : PartFxPreset
+
+PartFxPreset : FxPreset
 
 #endif // FX_PART
 
@@ -612,6 +617,7 @@ T_KW_TECHNIQUE : "technique"
 
 #if FX_PART
     T_KW_FXPART : "partFx"
+    T_KW_FXPRESET : "preset"
 #endif
 
 T_KW_PASS : "pass"

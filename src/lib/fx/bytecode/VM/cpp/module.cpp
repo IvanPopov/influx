@@ -19,7 +19,7 @@ std::vector<T> vecFromJSArray(const em::val &v)
  
     return rv;
 }
-
+ 
 EMSCRIPTEN_BINDINGS(bundle) 
 {  
     em::value_object<VM::memory_view>("Memory") 

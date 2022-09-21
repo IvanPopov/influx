@@ -7,25 +7,26 @@
 /* tslint:disable:insecure-random */
 
 import { isDefAndNotNull, verbose } from '@lib/common';
+import { OrbitControls } from '@three-ts/orbit-controls';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
-import { OrbitControls } from '@three-ts/orbit-controls';
 
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 import { ITimeline } from '@lib/idl/emitter/timelime';
 
-import * as Emitter from '@lib/fx/emitter';
-import * as GLSL from './shaders';
-import UniformHelper from '@lib/idl/emitter/UniformHelper';
-import { createTextDocument } from '@lib/fx/TextDocument';
-import { createSLDocument } from '@lib/fx/SLDocument';
 import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
+import * as Emitter from '@lib/fx/emitter';
+import { createSLDocument } from '@lib/fx/SLDocument';
+import { createTextDocument } from '@lib/fx/TextDocument';
+import UniformHelper from '@lib/idl/emitter/UniformHelper';
+import { IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { GUI } from 'dat.gui';
+import * as GLSL from './shaders';
+
+// must be imported last
 import '@sandbox/styles/custom/dat-gui.css';
-import { IPlaygroundControlProps, IPlaygroundControls } from '@sandbox/store/IStoreState';
-import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
 let desc = `
 struct PartLight {
@@ -60,7 +61,6 @@ interface ITreeSceneProps {
     emitter: IEmitter;
     timeline: ITimeline;
     controls?: IPlaygroundControls;
-    onSavePreset?: (name: string, values: IPlaygroundControls['values']) => void;
 }
 
 interface IThreeSceneState {
@@ -103,6 +103,40 @@ function uintToColor(src: number, dst: Color) {
     dst.b = ((src >> 0) & 0xff) / 255.0;
 }
 
+function decodeProp(type: string, data: Uint8Array): Vector3 | Color | Number {
+    switch (type) {
+        case 'UIColor': 
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return { r: view[0], g: view[1], b: view[2], a: view[3] };
+        }
+        case 'UIFloatSpinner':
+        case 'UIFloat': 
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+        case 'UIFloat3':
+        {
+            const view = new Float32Array(data.buffer, data.byteOffset);
+            return { x: view[0], y: view[1], z: view[2] };
+        }
+        case 'UIInt':
+        case 'UISpinner':
+        {
+            const view = new Int32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+        case 'UIUint':
+        {
+            const view = new Uint32Array(data.buffer, data.byteOffset);
+            return view[0];
+        }
+    }
+    console.assert(false, 'unsupported control type is found!');
+    return null;
+}
+
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
     state: IThreeSceneState = {
@@ -131,6 +165,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     mount: HTMLDivElement;
 
     gui: GUI = null;
+    preset: string = null;
+
     passes: {
         mesh: THREE.Mesh | THREE.LineSegments;
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
@@ -577,6 +613,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
         if (this.state.controls != hash) {
             this.removeControls();
+            this.preset = null;
         }
 
         if (!controls || Object.keys(controls.values).length == 0) {
@@ -589,7 +626,8 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
         
-        const gui = new GUI({ autoPlace: false })
+        const gui = new GUI({ autoPlace: false });
+        
         for (let name in controls.values) {
             const props = controls.props[name];
             let ctrl = null;
@@ -621,25 +659,28 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             }
         }
 
-        const NEW_PRESET = '[New]';
-        const presetsFolder = gui.addFolder('Presets');
-        const preset = { 'name': 'Default' };
-        const presetList = ['Default'];
-        const onSelectPreset = (value: string) => {
-            // if (value !== NEW_PRESET) return;
-            // const name = 'preset1';//prompt('Enter preset name');
-            // presetList.push(name);
-            // preset.name = name;
-        };
-        presetsFolder
-            .add(preset, 'name', [...presetList, NEW_PRESET])
-            .name('List')
-            .onChange(onSelectPreset);
+        if (controls.presets?.length) {
+            gui.add(this, 'preset', [ '', ...controls.presets.map(p => p.name) ]).onChange(name => {
+                console.log('apply preset', name);
+                const preset = controls.presets.find(p => p.name == name);
+                if (preset) {
+                    preset.data.forEach(entry => {
+                        let prop = controls.props[entry.name];
+                        if (prop) {
+                            controls.values[entry.name] = decodeProp(prop.type, entry.value);
+                        }
+                    });
+                    setTimeout(() => {
+                        this.removeControls();
+                        this.createControls(this.props.controls);
+                    }, 10);
+                }
+            });
+        }
 
-        const savePreset = '<b><center>Save preset</center></b>';
-        presetsFolder.add({ [savePreset]: () => this.props.onSavePreset?.(preset.name, controls.values) }, savePreset);
+        const copyToClipboard = '<center>copy to clipboard</center>';
+        gui.add({ [copyToClipboard]: () => console.log('copy!') }, copyToClipboard);
 
-        presetsFolder.close();
         // gui.close();
         gui.open();
 
@@ -739,14 +780,19 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
         helper.set('instanceTotal').int(2);
 
+        if (this.preset) {
+            let preset = this.props.controls.presets.find(p => p.name == this.preset);
+            preset.data.forEach(entry => helper.set(entry.name).raw(entry.value));
+        }
+        
         for (let name in controls.values) {
             switch (controls.props[name].type) {
                 case "UIFloatSpinner":
-                case "UIFloat": helper.set(name).float(controls.values[name]); break;
+                case "UIFloat": helper.set(name).float(controls.values[name] as number); break;
                 case "UISpinner":
                 case "UIInt":
                 case "UIUint":
-                    helper.set(name).int(controls.values[name]); break;
+                    helper.set(name).int(controls.values[name] as number); break;
                 // todo: add alpha support!
                 case "UIFloat3":
                     let { x, y, z } = controls.values[name] as Vector3;

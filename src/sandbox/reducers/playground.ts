@@ -10,7 +10,7 @@ import IStoreState, { IPlaygroundState } from "@sandbox/store/IStoreState";
 const initialState: IPlaygroundState = {
     emitter: null,
     timeline: Timeline.make(),
-    controls: { values: {}, props: {} },
+    controls: { values: {}, props: {}, presets: [] },
     presets: {},
     revision: 0,
     wasm: Emitter.isWASM(),

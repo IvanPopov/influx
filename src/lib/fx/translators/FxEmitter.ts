@@ -2,7 +2,7 @@ import { isNull } from "@lib/common";
 import { T_INT } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, ICompileExprInstruction, IInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { IDrawStmtInstruction, IFxPreset, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 
@@ -83,6 +83,9 @@ export class FxEmitter extends CodeEmitter {
                 this.emitNewline();
                 fx.passList.forEach((pass, i) => (this.emitPartFxPass(pass),
                     i !== fx.passList.length - 1 && this.emitNewline()));
+                this.emitNewline();
+                fx.presets.forEach((preset, i) => (this.emitPresetDecl(preset),
+                    i !== fx.presets.length - 1 && this.emitNewline()));
             }
             this.pop();
             this.emitChar('}');
@@ -104,6 +107,29 @@ export class FxEmitter extends CodeEmitter {
             pass.instanceCount !== 1 && this.emitStringProperty('InstanceCount', String(pass.instanceCount));
 
             super.emitPassBody(pass);
+        }
+        this.pop();
+        this.emitChar('}');
+        this.emitNewline();
+    }
+
+
+    emitPresetDecl(preset: IFxPreset) {
+        this.emitKeyword('preset');
+        preset.name && this.emitKeyword(preset.name);
+        this.emitNewline();
+        this.emitChar('{');
+        this.push();
+        {
+            preset.props.forEach(prop => {
+                this.emitKeyword(prop.id.name);
+                this.emitKeyword('=');
+                this.emitKeyword('{');
+                this.emitExpressionList(prop.args);
+                this.emitKeyword('}');
+                this.emitChar(';');
+                this.emitNewline();
+            });
         }
         this.pop();
         this.emitChar('}');
@@ -134,9 +160,12 @@ export class FxEmitter extends CodeEmitter {
             case EInstructionTypes.k_PartFxDecl:
                 this.emitPartFxDecl(instr as IPartFxInstruction);
                 break;
-            case EInstructionTypes.k_PartFxPass:
-                this.emitPartFxPass(instr as IPartFxPassInstruction);
-                break;
+            // case EInstructionTypes.k_PartFxPass:
+            //     this.emitPartFxPass(instr as IPartFxPassInstruction);
+            //     break;
+            // case EInstructionTypes.k_PresetDecl:
+            //     this.emitPresetDecl(instr as IFxPreset);
+            //     break;
             default:
                 super.emit(instr)
         }

@@ -150,10 +150,6 @@ class Playground extends React.Component<IPlaygroundProps> {
         }
     }
 
-    @autobind
-    onSavePreset(name, values) {
-        console.log(name, values);
-    }
 
     render() {
         const props = this.props;
@@ -250,7 +246,6 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 emitter={emitter}
                                 timeline={timeline}
                                 controls={controls}
-                                onSavePreset={this.onSavePreset}
                             />
                         </div>
                     </div>

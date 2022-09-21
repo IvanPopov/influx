@@ -244,7 +244,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
     std::cout << "bundle version: " << fx.signature->version << std::endl;
     std::cout << "==========================================" << std::endl;
 
-    auto [name, signature, meta, content, controls] = fx;
+    auto [name, signature, meta, content, controls, presets] = fx;
     auto [capacity, simulationRoutines, renderPasses, particle] = *content.AsPartBundle();
 
     m_name = name;
@@ -410,6 +410,7 @@ void EMITTER::Update(const UNIFORMS& uniforms)
 
 void EMITTER::Prerender(const UNIFORMS& uniforms) 
 {
+    PreparePrerender(); // must be called here in case of simulation is paused
     for (int i = 0; i < m_passes.size(); ++ i)
     {
         m_passes[i].Prerender(uniforms);
