@@ -4,25 +4,22 @@
 import { isNull, verbose } from '@lib/common';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
-import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as Emitter from '@lib/fx/emitter';
 import { IEmitter } from '@lib/idl/emitter';
-import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
-import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState, { Color, ControlValues, IPlaygroundControlProps, IPlaygroundControls, IPlaygroundPreset, Vector3 } from '@sandbox/store/IStoreState';
-import { createLogic } from 'redux-logic';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as Path from '@lib/path/path';
 import * as URI from '@lib/uri/uri';
+import * as evt from '@sandbox/actions/ActionTypeKeys';
+import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as ipc from '@sandbox/ipc';
-import * as flatbuffers from 'flatbuffers';
+import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
+import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import IStoreState, { IPlaygroundControls } from '@sandbox/store/IStoreState';
+import { createLogic } from 'redux-logic';
 
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
-import { Bundle, BundleT, UIColorT, UIControlT, UIProperties } from '@lib/idl/bundles/FxBundle_generated';
-import { IMap } from '@lib/idl/IMap';
-import { isNumber, isObject } from '@lib/util/s3d/type';
+import { decodeBundleControls } from '@lib/fx/bundles/unitls';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);
@@ -45,74 +42,6 @@ function downloadURL(data: string, fileName: string) {
     a.click();
     a.remove();
 };
-
-function decodeProp(type: string, data: Uint8Array): Vector3 | Color | Number {
-    switch (type) {
-        case 'UIColor': 
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return { r: view[0], g: view[1], b: view[2], a: view[3] };
-        }
-        case 'UIFloatSpinner':
-        case 'UIFloat': 
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-        case 'UIFloat3':
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return { x: view[0], y: view[1], z: view[2] };
-        }
-        case 'UIInt':
-        case 'UISpinner':
-        {
-            const view = new Int32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-        case 'UIUint':
-        {
-            const view = new Uint32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-    }
-    console.assert(false, 'unsupported control type is found!');
-    return null;
-}
-
-function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
-    let fx: BundleT = null;
-
-    // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
-    if (data instanceof Uint8Array) {
-        fx = new BundleT();
-        Bundle.getRootAsBundle(new flatbuffers.ByteBuffer(data)).unpackTo(fx);
-    } else {
-        fx = <BundleT>data;
-    }
-    
-    let props: IMap<IPlaygroundControlProps> = {};
-    let values: ControlValues = {};
-
-    fx.controls.forEach(ctrl => {
-        const type = UIProperties[ctrl.propsType];
-        const value = decodeProp(type, new Uint8Array(ctrl.props.value));
-        const copy = isObject(value) ? { ...value } : value;
-        const name = <string>ctrl.props.name;
-        props[ctrl.name as string] = { ...ctrl.props, type, name, value };
-        values[ctrl.name as string] = copy;
-    });
-
-    // some kind of muddy and clumsy convert from flatbuffers to native TS :/
-    const presets = fx.presets.map(({ name, desc, data }): IPlaygroundPreset => 
-        ({ 
-            name: <string>name, 
-            desc: <string>desc,
-            data: data.map(({ name, value }) => ({ name: <string>name, value: new Uint8Array(value) })) 
-        }));
-    
-    return { props, values, presets };
-}
 
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({

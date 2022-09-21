@@ -12,6 +12,8 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
+import copy from 'copy-to-clipboard';
+import { toast } from 'react-semantic-toasts';
 
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 import { ITimeline } from '@lib/idl/emitter/timelime';
@@ -25,8 +27,10 @@ import { IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { GUI } from 'dat.gui';
 import * as GLSL from './shaders';
 
+
 // must be imported last
 import '@sandbox/styles/custom/dat-gui.css';
+import { decodeProp, encodeControlsToString } from '@lib/fx/bundles/unitls';
 
 let desc = `
 struct PartLight {
@@ -103,39 +107,6 @@ function uintToColor(src: number, dst: Color) {
     dst.b = ((src >> 0) & 0xff) / 255.0;
 }
 
-function decodeProp(type: string, data: Uint8Array): Vector3 | Color | Number {
-    switch (type) {
-        case 'UIColor': 
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return { r: view[0], g: view[1], b: view[2], a: view[3] };
-        }
-        case 'UIFloatSpinner':
-        case 'UIFloat': 
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-        case 'UIFloat3':
-        {
-            const view = new Float32Array(data.buffer, data.byteOffset);
-            return { x: view[0], y: view[1], z: view[2] };
-        }
-        case 'UIInt':
-        case 'UISpinner':
-        {
-            const view = new Int32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-        case 'UIUint':
-        {
-            const view = new Uint32Array(data.buffer, data.byteOffset);
-            return view[0];
-        }
-    }
-    console.assert(false, 'unsupported control type is found!');
-    return null;
-}
 
 class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
 
@@ -609,11 +580,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
     }
 
     createControls(controls: IPlaygroundControls) {
-        const hash = JSON.stringify(controls.props);
+        const hash = JSON.stringify(controls.props) + JSON.stringify(controls.presets);
 
         if (this.state.controls != hash) {
             this.removeControls();
-            this.preset = null;
         }
 
         if (!controls || Object.keys(controls.values).length == 0) {
@@ -626,6 +596,10 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             return;
         }
         
+        if (this.preset && !controls.presets.find(p => p.name === this.preset)) {
+            this.preset = null;
+        }
+
         const gui = new GUI({ autoPlace: false });
         
         for (let name in controls.values) {
@@ -679,7 +653,19 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
         }
 
         const copyToClipboard = '<center>copy to clipboard</center>';
-        gui.add({ [copyToClipboard]: () => console.log('copy!') }, copyToClipboard);
+        // todo: show notification
+        gui.add({ [copyToClipboard]: () => 
+            {
+                copy(encodeControlsToString(controls), { debug: true });
+                toast({
+                    size: 'tiny',
+                    type: 'info',
+                    title: `Copied to clipboard`,
+                    animation: 'bounce',
+                    time: 2000
+                });
+            }
+        }, copyToClipboard);
 
         // gui.close();
         gui.open();
@@ -784,7 +770,7 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             let preset = this.props.controls.presets.find(p => p.name == this.preset);
             preset.data.forEach(entry => helper.set(entry.name).raw(entry.value));
         }
-        
+
         for (let name in controls.values) {
             switch (controls.props[name].type) {
                 case "UIFloatSpinner":
@@ -926,8 +912,6 @@ class ThreeScene extends React.Component<ITreeSceneProps, IThreeSceneState> {
             };
             return;
         }
-
-        this.removeControls();
 
         this.passes.forEach(pass => {
             this.scene.remove(pass.mesh);
