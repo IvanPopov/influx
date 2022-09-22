@@ -121,3 +121,15 @@ export function encodeControlsToString(controls: IPlaygroundControls): string {
     }
     return [...data, null].join(';\n');
 }
+
+export function colorToUint({ r, g, b, a }: Color) {
+    [r ,g, b, a] = [r, g, b, a].map(x => Math.max(0, Math.min(255, x * 255)));
+    return /*a << 24 | */b << 0 | g << 8 | r << 16;
+}
+
+export function uintToColor(src: number, dst: Color) {
+    dst.r = ((src >> 16) & 0xff) / 255.0;
+    dst.g = ((src >> 8) & 0xff) / 255.0;
+    dst.b = ((src >> 0) & 0xff) / 255.0;
+}
+

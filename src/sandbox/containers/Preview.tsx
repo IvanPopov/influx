@@ -1,11 +1,11 @@
 import * as Emitter from '@lib/fx/emitter';
 import * as Timeline from '@lib/idl/emitter/timelime';
-import ThreeScene from '@sandbox/containers/playground/ThreeScene';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import React from 'react';
 import * as flatbuffers from 'flatbuffers';
 import { Bundle, BundleMetaT } from '@lib/idl/bundles/FxBundle_generated';
+import FxScene from '@sandbox/containers/playground/FxScene';
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',
@@ -45,7 +45,7 @@ class Preview extends React.Component<IProps> {
         const timeline = Timeline.make();
         timeline.start();
         console.log(`source: ${decodeBundleMeta(data).source}`);
-        return <ThreeScene style={style} emitter={emitter} timeline={timeline} />
+        return <FxScene style={style} emitter={emitter} timeline={timeline} />
     }
 }
 

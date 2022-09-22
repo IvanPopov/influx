@@ -19,7 +19,7 @@ import { createLogic } from 'redux-logic';
 
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
-import { decodeBundleControls } from '@lib/fx/bundles/unitls';
+import { decodeBundleControls } from '@lib/fx/bundles/utils';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);

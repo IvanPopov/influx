@@ -16,7 +16,8 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
-import ThreeScene from './ThreeScene';
+import FxScene from './FxScene';
+import MaterialScene from './MaterialScene';
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -241,12 +242,16 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     </Table>
                                 </Grid.Column>
                             </Grid>
-                            <ThreeScene
+                            <FxScene
                                 style={threeStylesHotfix}
                                 emitter={emitter}
                                 timeline={timeline}
                                 controls={controls}
                             />
+                            {/* <MaterialScene   
+                                style={threeStylesHotfix}
+                                timeline={timeline}
+                                controls={null}/> */}
                         </div>
                     </div>
                 }
