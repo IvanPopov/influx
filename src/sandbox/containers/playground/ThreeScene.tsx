@@ -21,7 +21,6 @@ import { GUI } from 'dat.gui';
 
 // must be imported last
 import { colorToUint, decodeProp, encodeControlsToString, uintToColor } from '@lib/fx/bundles/utils';
-import '@sandbox/styles/custom/dat-gui.css';
 
 export interface ITreeSceneProps {
     style?: React.CSSProperties;
@@ -47,8 +46,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     protected mount: HTMLDivElement;
 
     // animation loop
-    private frameId: number;
-    private gui: GUI = null;
+    protected frameId: number;
+    protected gui: GUI = null;
 
     protected preset: string = null;
 
@@ -65,7 +64,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    componentDidMount({ camera, grid } = { camera: true, grid: true }) {
+    componentDidMount({ grid } = { grid: true }) {
         const width = this.mount.clientWidth;
         const height = this.mount.clientHeight;
 
@@ -76,6 +75,12 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         this.createGUI(this.props.controls);
 
         this.renderer = this.createRenderer(width, height);
+        this.renderer.setSize(width, height - 3);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.domElement.id = "playground-main-canvas";
+        // FIXME: remove this ui hack
+        this.renderer.domElement.style.borderBottomLeftRadius = '3px';
+        this.renderer.domElement.style.borderBottomRightRadius = '3px';
         this.mount.appendChild(this.renderer.domElement);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -139,15 +144,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    private createRenderer(width, height): THREE.WebGLRenderer {
+    protected createRenderer(width, height): THREE.WebGLRenderer {
         const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true /* to be able to save screenshots */ });
-        // renderer.setClearColor('#000000');
-        renderer.setSize(width, height - 3);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.domElement.id = "playground-main-canvas";
-        // FIXME: remove this ui hack
-        renderer.domElement.style.borderBottomLeftRadius = '3px';
-        renderer.domElement.style.borderBottomRightRadius = '3px';
         return renderer;
     }
 
@@ -330,17 +328,17 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     protected animate(time: DOMHighResTimeStamp) {
         this.begin();
 
-        this.renderFrame(time);
-
+        this.feedScene(time);
+        this.renderScene(time);
         this.controls.update();
-        this.renderer.render(this.scene, this.camera);
         this.frameId = requestAnimationFrame(this.animate);
 
         this.end();
     }
 
 
-    protected renderFrame(time: DOMHighResTimeStamp) {}
+    protected feedScene(time: DOMHighResTimeStamp) {}
+    protected renderScene(time: DOMHighResTimeStamp) { this.renderer.render(this.scene, this.camera); }
 
     render() {
         return (

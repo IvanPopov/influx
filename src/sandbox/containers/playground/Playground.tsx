@@ -242,12 +242,14 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     </Table>
                                 </Grid.Column>
                             </Grid>
+                                                         
                             <FxScene
                                 style={threeStylesHotfix}
                                 emitter={emitter}
                                 timeline={timeline}
                                 controls={controls}
-                            />
+                            /> 
+                            
                             {/* <MaterialScene   
                                 style={threeStylesHotfix}
                                 timeline={timeline}

@@ -20,8 +20,9 @@ import { createSLDocument } from '@lib/fx/SLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import UniformHelper from '@lib/idl/emitter/UniformHelper';
 import { Color, Vector3 } from '@sandbox/store/IStoreState';
-import * as GLSL from './shaders';
+import * as GLSL from './shaders/fx';
 
+import '@sandbox/styles/custom/dat-gui.css';
 
 interface IFxSceneProps extends ITreeSceneProps {
     emitter: IEmitter;
@@ -464,7 +465,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
 
-    renderFrame (time: DOMHighResTimeStamp) {
+    feedScene (time: DOMHighResTimeStamp) {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
         const controls = this.props.controls;
