@@ -12,6 +12,7 @@ import { Button, Form, Header, Input, Segment } from 'semantic-ui-react';
 import { PART_TYPE } from './graphEx/common';
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import GraphConstants from './GraphConstants';
+import { IEmitter } from '@lib/idl/emitter';
 
 export const styles = {
 };
@@ -74,6 +75,8 @@ class GraphConfigView extends React.Component<IProps> {
         const { docs, env } = nodes;
 
         const type = env?.root.scope.findType(PART_TYPE);
+        const tech = this.props.playground.technique;
+        const emitter = tech as IEmitter;
 
         return (
             <div>
@@ -97,19 +100,17 @@ class GraphConfigView extends React.Component<IProps> {
                 <Segment attached>
                     <GraphConstants />
                 </Segment>
-                {/* <Header as='h5' attached='top'>
-                    Node Description
-                </Header>
-                <Segment attached>
-                    { docs || "[[ no description found ]]" }
-                </Segment> */}
-                <Header as='h5' attached='top'>
-                    Emitter Properties
-                </Header>
-                <Segment attached='bottom'>
-                    Emitter's capacity is { (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() }.
-                    <Capacity value={ (this.props.playground.emitter || { getCapacity() { return 0 } }).getCapacity() } onChange={this.setCapacity} />
-                </Segment>
+                { tech?.getType() === 'emitter' &&
+                    <div>
+                        <Header as='h5' attached='top'>
+                            Emitter Properties
+                        </Header>
+                        <Segment attached='bottom'>
+                            Emitter's capacity is { (emitter || { getCapacity() { return 0 } }).getCapacity() }.
+                            <Capacity value={ (emitter || { getCapacity() { return 0 } }).getCapacity() } onChange={this.setCapacity} />
+                        </Segment>
+                    </div>
+                }
             </div>
         );
     }

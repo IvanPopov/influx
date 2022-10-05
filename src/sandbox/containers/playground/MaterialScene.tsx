@@ -47,12 +47,43 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     params = {
-        bloom: true,
+        bloom: false,
         exposure: 1,
         bloomStrength: 0.3,
         bloomThreshold: 0,
         bloomRadius: 1,
     };
+
+    createSceneControls(bloomPass: UnrealBloomPass, renderer: THREE.WebGLRenderer) {
+        const params = this.params;
+        const gui = new GUI({ autoPlace: false });
+
+        // gui.name = 'Tonemapping';
+        GUI.TEXT_OPEN = 'Show Tonemapping Options';
+
+        this.mount.appendChild(gui.domElement);
+        gui.domElement.style.position = 'absolute';
+        gui.domElement.style.bottom = '23px';
+
+        gui.add(params, 'bloom');
+        gui.add(params, 'exposure', 0.1, 2).onChange((value) => {
+            renderer.toneMappingExposure = Math.pow(value, 4.0);
+        });
+
+        gui.add(params, 'bloomThreshold', 0.0, 1.0).onChange((value) => {
+            bloomPass.threshold = Number(value);
+        });
+
+        gui.add(params, 'bloomStrength', 0.0, 3.0).onChange((value) => {
+            bloomPass.strength = Number(value);
+        });
+
+        gui.add(params, 'bloomRadius', 0.0, 1.0).step(0.01).onChange((value) => {
+            bloomPass.radius = Number(value);
+        });
+
+        gui.close();
+    }
 
     componentDidMount() {
         super.componentDidMount({ grid: true });
@@ -77,28 +108,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
-        const gui = new GUI({ autoPlace: false });
-        this.mount.appendChild(gui.domElement);
-        gui.domElement.style.position = 'absolute';
-        gui.domElement.style.top = '2px';
-
-        gui.add(params, 'bloom');
-
-        gui.add(params, 'exposure', 0.1, 2).onChange(function (value) {
-            renderer.toneMappingExposure = Math.pow(value, 4.0);
-        });
-
-        gui.add(params, 'bloomThreshold', 0.0, 1.0).onChange(function (value) {
-            bloomPass.threshold = Number(value);
-        });
-
-        gui.add(params, 'bloomStrength', 0.0, 3.0).onChange(function (value) {
-            bloomPass.strength = Number(value);
-        });
-
-        gui.add(params, 'bloomRadius', 0.0, 1.0).step(0.01).onChange(function (value) {
-            bloomPass.radius = Number(value);
-        });
+        this.createSceneControls(bloomPass, renderer);
 
         // load a resource
         loader.load(

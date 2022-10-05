@@ -59,6 +59,14 @@ struct PartBundle;
 struct PartBundleBuilder;
 struct PartBundleT;
 
+struct MatRenderPass;
+struct MatRenderPassBuilder;
+struct MatRenderPassT;
+
+struct MatBundle;
+struct MatBundleBuilder;
+struct MatBundleT;
+
 struct UISpinner;
 struct UISpinnerBuilder;
 struct UISpinnerT;
@@ -294,32 +302,68 @@ inline const char *EnumNameEPartRenderRoutines(EPartRenderRoutines e) {
   return EnumNamesEPartRenderRoutines()[index];
 }
 
+enum EMatRenderRoutines : int16_t {
+  EMatRenderRoutines_k_Vertex = 0,
+  EMatRenderRoutines_k_Pixel = 1,
+  EMatRenderRoutines_k_Last = 2,
+  EMatRenderRoutines_MIN = EMatRenderRoutines_k_Vertex,
+  EMatRenderRoutines_MAX = EMatRenderRoutines_k_Last
+};
+
+inline const EMatRenderRoutines (&EnumValuesEMatRenderRoutines())[3] {
+  static const EMatRenderRoutines values[] = {
+    EMatRenderRoutines_k_Vertex,
+    EMatRenderRoutines_k_Pixel,
+    EMatRenderRoutines_k_Last
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesEMatRenderRoutines() {
+  static const char * const names[4] = {
+    "k_Vertex",
+    "k_Pixel",
+    "k_Last",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameEMatRenderRoutines(EMatRenderRoutines e) {
+  if (flatbuffers::IsOutRange(e, EMatRenderRoutines_k_Vertex, EMatRenderRoutines_k_Last)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesEMatRenderRoutines()[index];
+}
+
 enum BundleContent : uint8_t {
   BundleContent_NONE = 0,
   BundleContent_PartBundle = 1,
+  BundleContent_MatBundle = 2,
   BundleContent_MIN = BundleContent_NONE,
-  BundleContent_MAX = BundleContent_PartBundle
+  BundleContent_MAX = BundleContent_MatBundle
 };
 
-inline const BundleContent (&EnumValuesBundleContent())[2] {
+inline const BundleContent (&EnumValuesBundleContent())[3] {
   static const BundleContent values[] = {
     BundleContent_NONE,
-    BundleContent_PartBundle
+    BundleContent_PartBundle,
+    BundleContent_MatBundle
   };
   return values;
 }
 
 inline const char * const *EnumNamesBundleContent() {
-  static const char * const names[3] = {
+  static const char * const names[4] = {
     "NONE",
     "PartBundle",
+    "MatBundle",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameBundleContent(BundleContent e) {
-  if (flatbuffers::IsOutRange(e, BundleContent_NONE, BundleContent_PartBundle)) return "";
+  if (flatbuffers::IsOutRange(e, BundleContent_NONE, BundleContent_MatBundle)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesBundleContent()[index];
 }
@@ -332,12 +376,20 @@ template<> struct BundleContentTraits<Fx::PartBundle> {
   static const BundleContent enum_value = BundleContent_PartBundle;
 };
 
+template<> struct BundleContentTraits<Fx::MatBundle> {
+  static const BundleContent enum_value = BundleContent_MatBundle;
+};
+
 template<typename T> struct BundleContentUnionTraits {
   static const BundleContent enum_value = BundleContent_NONE;
 };
 
 template<> struct BundleContentUnionTraits<Fx::PartBundleT> {
   static const BundleContent enum_value = BundleContent_PartBundle;
+};
+
+template<> struct BundleContentUnionTraits<Fx::MatBundleT> {
+  static const BundleContent enum_value = BundleContent_MatBundle;
 };
 
 struct BundleContentUnion {
@@ -377,6 +429,14 @@ struct BundleContentUnion {
   const Fx::PartBundleT *AsPartBundle() const {
     return type == BundleContent_PartBundle ?
       reinterpret_cast<const Fx::PartBundleT *>(value) : nullptr;
+  }
+  Fx::MatBundleT *AsMatBundle() {
+    return type == BundleContent_MatBundle ?
+      reinterpret_cast<Fx::MatBundleT *>(value) : nullptr;
+  }
+  const Fx::MatBundleT *AsMatBundle() const {
+    return type == BundleContent_MatBundle ?
+      reinterpret_cast<const Fx::MatBundleT *>(value) : nullptr;
   }
 };
 
@@ -1710,6 +1770,150 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundleDirect(
 
 flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferBuilder &_fbb, const PartBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct MatRenderPassT : public flatbuffers::NativeTable {
+  typedef MatRenderPass TableType;
+  std::vector<Fx::RoutineBundleUnion> routines{};
+};
+
+struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef MatRenderPassT NativeTableType;
+  typedef MatRenderPassBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROUTINES_TYPE = 4,
+    VT_ROUTINES = 6
+  };
+  const flatbuffers::Vector<uint8_t> *routines_type() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_ROUTINES_TYPE);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<void>> *routines() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<void>> *>(VT_ROUTINES);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_ROUTINES_TYPE) &&
+           verifier.VerifyVector(routines_type()) &&
+           VerifyOffset(verifier, VT_ROUTINES) &&
+           verifier.VerifyVector(routines()) &&
+           VerifyRoutineBundleVector(verifier, routines(), routines_type()) &&
+           verifier.EndTable();
+  }
+  MatRenderPassT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(MatRenderPassT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<MatRenderPass> Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct MatRenderPassBuilder {
+  typedef MatRenderPass Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_routines_type(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> routines_type) {
+    fbb_.AddOffset(MatRenderPass::VT_ROUTINES_TYPE, routines_type);
+  }
+  void add_routines(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines) {
+    fbb_.AddOffset(MatRenderPass::VT_ROUTINES, routines);
+  }
+  explicit MatRenderPassBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<MatRenderPass> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<MatRenderPass>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> routines_type = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines = 0) {
+  MatRenderPassBuilder builder_(_fbb);
+  builder_.add_routines(routines);
+  builder_.add_routines_type(routines_type);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPassDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *routines_type = nullptr,
+    const std::vector<flatbuffers::Offset<void>> *routines = nullptr) {
+  auto routines_type__ = routines_type ? _fbb.CreateVector<uint8_t>(*routines_type) : 0;
+  auto routines__ = routines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*routines) : 0;
+  return Fx::CreateMatRenderPass(
+      _fbb,
+      routines_type__,
+      routines__);
+}
+
+flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct MatBundleT : public flatbuffers::NativeTable {
+  typedef MatBundle TableType;
+  std::vector<std::unique_ptr<Fx::MatRenderPassT>> renderPasses{};
+  MatBundleT() = default;
+  MatBundleT(const MatBundleT &o);
+  MatBundleT(MatBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  MatBundleT &operator=(MatBundleT o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct MatBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef MatBundleT NativeTableType;
+  typedef MatBundleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_RENDERPASSES = 4
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::MatRenderPass>> *renderPasses() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::MatRenderPass>> *>(VT_RENDERPASSES);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_RENDERPASSES) &&
+           verifier.VerifyVector(renderPasses()) &&
+           verifier.VerifyVectorOfTables(renderPasses()) &&
+           verifier.EndTable();
+  }
+  MatBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(MatBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<MatBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct MatBundleBuilder {
+  typedef MatBundle Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_renderPasses(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::MatRenderPass>>> renderPasses) {
+    fbb_.AddOffset(MatBundle::VT_RENDERPASSES, renderPasses);
+  }
+  explicit MatBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<MatBundle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<MatBundle>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<MatBundle> CreateMatBundle(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::MatRenderPass>>> renderPasses = 0) {
+  MatBundleBuilder builder_(_fbb);
+  builder_.add_renderPasses(renderPasses);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<MatBundle> CreateMatBundleDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<Fx::MatRenderPass>> *renderPasses = nullptr) {
+  auto renderPasses__ = renderPasses ? _fbb.CreateVector<flatbuffers::Offset<Fx::MatRenderPass>>(*renderPasses) : 0;
+  return Fx::CreateMatBundle(
+      _fbb,
+      renderPasses__);
+}
+
+flatbuffers::Offset<MatBundle> CreateMatBundle(flatbuffers::FlatBufferBuilder &_fbb, const MatBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct UISpinnerT : public flatbuffers::NativeTable {
   typedef UISpinner TableType;
   std::string name{};
@@ -2761,6 +2965,9 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::PartBundle *content_as_PartBundle() const {
     return content_type() == Fx::BundleContent_PartBundle ? static_cast<const Fx::PartBundle *>(content()) : nullptr;
   }
+  const Fx::MatBundle *content_as_MatBundle() const {
+    return content_type() == Fx::BundleContent_MatBundle ? static_cast<const Fx::MatBundle *>(content()) : nullptr;
+  }
   const flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>> *controls() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::UIControl>> *>(VT_CONTROLS);
   }
@@ -2793,6 +3000,10 @@ struct Bundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 template<> inline const Fx::PartBundle *Bundle::content_as<Fx::PartBundle>() const {
   return content_as_PartBundle();
+}
+
+template<> inline const Fx::MatBundle *Bundle::content_as<Fx::MatBundle>() const {
+  return content_as_MatBundle();
 }
 
 struct BundleBuilder {
@@ -3432,6 +3643,71 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
       _particle);
 }
 
+inline MatRenderPassT *MatRenderPass::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<MatRenderPassT>(new MatRenderPassT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void MatRenderPass::UnPackTo(MatRenderPassT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = routines_type(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].type = static_cast<Fx::RoutineBundle>(_e->Get(_i)); } } }
+  { auto _e = routines(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].value = Fx::RoutineBundleUnion::UnPack(_e->Get(_i), routines_type()->GetEnum<RoutineBundle>(_i), _resolver); } } }
+}
+
+inline flatbuffers::Offset<MatRenderPass> MatRenderPass::Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateMatRenderPass(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const MatRenderPassT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _routines_type = _o->routines.size() ? _fbb.CreateVector<uint8_t>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return static_cast<uint8_t>(__va->__o->routines[i].type); }, &_va) : 0;
+  auto _routines = _o->routines.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->routines[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
+  return Fx::CreateMatRenderPass(
+      _fbb,
+      _routines_type,
+      _routines);
+}
+
+inline MatBundleT::MatBundleT(const MatBundleT &o) {
+  renderPasses.reserve(o.renderPasses.size());
+  for (const auto &renderPasses_ : o.renderPasses) { renderPasses.emplace_back((renderPasses_) ? new Fx::MatRenderPassT(*renderPasses_) : nullptr); }
+}
+
+inline MatBundleT &MatBundleT::operator=(MatBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(renderPasses, o.renderPasses);
+  return *this;
+}
+
+inline MatBundleT *MatBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<MatBundleT>(new MatBundleT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void MatBundle::UnPackTo(MatBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = renderPasses(); if (_e) { _o->renderPasses.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->renderPasses[_i]) { _e->Get(_i)->UnPackTo(_o->renderPasses[_i].get(), _resolver); } else { _o->renderPasses[_i] = std::unique_ptr<Fx::MatRenderPassT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
+}
+
+inline flatbuffers::Offset<MatBundle> MatBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateMatBundle(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<MatBundle> CreateMatBundle(flatbuffers::FlatBufferBuilder &_fbb, const MatBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const MatBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _renderPasses = _o->renderPasses.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::MatRenderPass>> (_o->renderPasses.size(), [](size_t i, _VectorArgs *__va) { return CreateMatRenderPass(*__va->__fbb, __va->__o->renderPasses[i].get(), __va->__rehasher); }, &_va ) : 0;
+  return Fx::CreateMatBundle(
+      _fbb,
+      _renderPasses);
+}
+
 inline UISpinnerT *UISpinner::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<UISpinnerT>(new UISpinnerT());
   UnPackTo(_o.get(), _resolver);
@@ -3991,6 +4267,10 @@ inline bool VerifyBundleContent(flatbuffers::Verifier &verifier, const void *obj
       auto ptr = reinterpret_cast<const Fx::PartBundle *>(obj);
       return verifier.VerifyTable(ptr);
     }
+    case BundleContent_MatBundle: {
+      auto ptr = reinterpret_cast<const Fx::MatBundle *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     default: return true;
   }
 }
@@ -4014,6 +4294,10 @@ inline void *BundleContentUnion::UnPack(const void *obj, BundleContent type, con
       auto ptr = reinterpret_cast<const Fx::PartBundle *>(obj);
       return ptr->UnPack(resolver);
     }
+    case BundleContent_MatBundle: {
+      auto ptr = reinterpret_cast<const Fx::MatBundle *>(obj);
+      return ptr->UnPack(resolver);
+    }
     default: return nullptr;
   }
 }
@@ -4025,6 +4309,10 @@ inline flatbuffers::Offset<void> BundleContentUnion::Pack(flatbuffers::FlatBuffe
       auto ptr = reinterpret_cast<const Fx::PartBundleT *>(value);
       return CreatePartBundle(_fbb, ptr, _rehasher).Union();
     }
+    case BundleContent_MatBundle: {
+      auto ptr = reinterpret_cast<const Fx::MatBundleT *>(value);
+      return CreateMatBundle(_fbb, ptr, _rehasher).Union();
+    }
     default: return 0;
   }
 }
@@ -4033,6 +4321,10 @@ inline BundleContentUnion::BundleContentUnion(const BundleContentUnion &u) : typ
   switch (type) {
     case BundleContent_PartBundle: {
       value = new Fx::PartBundleT(*reinterpret_cast<Fx::PartBundleT *>(u.value));
+      break;
+    }
+    case BundleContent_MatBundle: {
+      value = new Fx::MatBundleT(*reinterpret_cast<Fx::MatBundleT *>(u.value));
       break;
     }
     default:
@@ -4044,6 +4336,11 @@ inline void BundleContentUnion::Reset() {
   switch (type) {
     case BundleContent_PartBundle: {
       auto ptr = reinterpret_cast<Fx::PartBundleT *>(value);
+      delete ptr;
+      break;
+    }
+    case BundleContent_MatBundle: {
+      auto ptr = reinterpret_cast<Fx::MatBundleT *>(value);
       delete ptr;
       break;
     }

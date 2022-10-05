@@ -102,7 +102,8 @@ const UAV = {
 
 // tslint:disable-next-line:max-func-body-length
 function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): IEmitter {
-    const { name, content: { capacity, particle, simulationRoutines, renderPasses } } = bundle;
+    const { name, content } = bundle;
+    const { capacity, particle, simulationRoutines, renderPasses } = content as PartBundleT;
 
     const resetBundle = setupFxRoutineBytecodeBundle(`${name}/reset`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Reset], capacity, uavResources);
     const initBundle = setupFxRoutineBytecodeBundle(`${name}/init`, <RoutineBytecodeBundleT>simulationRoutines[EPartSimRoutines.k_Init], capacity, uavResources);
@@ -259,6 +260,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
     const getNumParticles = () => capacity - UAV.readCounter(uavDeadIndices);
     const getName = () => <string>name;
+    const getType = (): 'emitter' => 'emitter';
     const getPassCount = () => passes.length;
     const getPass = (i: number) => passes[i];
     const getCapacity = () => capacity;
@@ -320,6 +322,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
     return {
         // abstract interface
+        getType,
         getName,
         getCapacity,
         getPassCount,
@@ -361,7 +364,7 @@ function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
 
 export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean
 {
-    if (comparePartFxBundles((<TSEmitter>dst).bundle.content, (<TSEmitter>src).bundle.content)) 
+    if (comparePartFxBundles((<TSEmitter>dst).bundle.content as PartBundleT, (<TSEmitter>src).bundle.content as PartBundleT)) 
     {
         (<TSEmitter>dst).uavResources.forEach((uav, i) =>
             VM.memoryToU8Array(uav.buffer).set(VM.memoryToU8Array((<TSEmitter>src).uavResources[i].buffer)));

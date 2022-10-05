@@ -112,6 +112,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
    
     em::class_<IFX::EMITTER>("Emitter")
          .function("getName", &IFX::EMITTER::GetName)
+         .function("getType", em::optional_override([](IFX::EMITTER& self) -> std::string { return "emitter"; }))
          .function("getCapacity", &IFX::EMITTER::GetCapacity)
          .function("getPassCount", &IFX::EMITTER::GetPassCount)
          .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())

@@ -47,7 +47,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             breakpoints: [],
             slASTDocument: null,
             slDocument: null,
-            emitter: null,
+            technique: null,
             revision: 0,
             wasm: Emitter.isWASM()
         }),

@@ -5,9 +5,10 @@ import * as Hlsl from '@lib/fx/translators/CodeEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
 import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 // import { getCommon, mapProps, matchLocation } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
-import { filterPartFx } from '@sandbox/reducers/playground';
+import { filterTechniques } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -82,7 +83,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             return null;
         }
 
-        const fxList = filterPartFx(scope);
+        const fxList = filterTechniques(scope);
         const fx = fxList.find(tech => tech.name === match.params.name);
 
         if (!fx) {
@@ -105,7 +106,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             value = Glsl.translate(shader, { mode });
         } else {
             original = FxHlsl.translate(fx);
-            value = FxTranslator.translateFlat(fx);
+            value = FxTranslator.translateFlat(fx as IPartFxInstruction);
         }
 
         return (

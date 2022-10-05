@@ -18,7 +18,7 @@ import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
 import * as Emitter from '@lib/fx/emitter';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import UniformHelper from '@lib/idl/emitter/UniformHelper';
+import UniformHelper from '@lib/fx/UniformHelper';
 import { Color, Vector3 } from '@sandbox/store/IStoreState';
 import * as GLSL from './shaders/fx';
 

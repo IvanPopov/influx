@@ -2,13 +2,13 @@ import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
-import { EParserType, IncludeResolver, IParserParams, IRange } from '@lib/idl/parser/IParser';
-import { IEmitter } from '@lib/idl/emitter';
+import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { LGraph } from 'litegraph.js';
-import { ITimeline } from '@lib/idl/emitter/timelime';
+import { ITimeline } from '@lib/fx/timelime';
 import * as S3D from '@lib/util/s3d/prjenv';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 export interface IMarker {
     range: IRange;
@@ -102,15 +102,15 @@ export interface IPlaygroundControls {
 type PlaygroundPresets = IMap<ControlValues>;
 
 export interface IPlaygroundState {
-    emitter: IEmitter;      // todo: add type.
+    technique: ITechnique;
     timeline: ITimeline;
     controls: IPlaygroundControls;
     presets: PlaygroundPresets;
-    revision: number;      // number of updates of emitter
-    wasm: boolean;
+    revision: number;               // number of updates of emitter
+    wasm: boolean;                  // technique's backend mode (makes sense only if it's 'emitter' technique)
 
-    exportName: string;       // path on user disk (last 'save as' path)
-    autosave: boolean;      // save file to disk on every change
+    exportName: string;             // path on user disk (last 'save as' path)
+    autosave: boolean;              // save file to disk on every change
 }
 
 export interface IParserState extends IParserParams {

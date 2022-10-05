@@ -24,7 +24,7 @@ import Playground from '@sandbox/containers/playground/Playground';
 import ShaderTranslatorView from '@sandbox/containers/ShaderTranslatorView';
 import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, DEFAULT_FILENAME, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
 import { getCommon, mapProps } from '@sandbox/reducers';
-import { filterPartFx } from '@sandbox/reducers/playground';
+import { filterTechniques } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IP4Info } from '@sandbox/store/IStoreState';
@@ -767,7 +767,7 @@ class App extends React.Component<IAppProps> {
     buildShaderMenu(): { name: string; link: string }[] {
         const props = this.props;
         const file = getFileState(props);
-        const list = filterPartFx(getScope(file));
+        const list = filterTechniques(getScope(file));
 
         if (!file.uri) {
             return [];

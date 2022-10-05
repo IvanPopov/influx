@@ -52,7 +52,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
         'sourceFile.slastDocument',
         'sourceFile.slDocument',
         'sourceFile.debugger.runtime',
-        'playground.emitter',
+        'playground.technique',
         'playground.timeline',
         'playground.controls',
         'nodes.graph',

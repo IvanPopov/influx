@@ -67,6 +67,10 @@ table RoutineGLSLBundle
     attributes: [ GLSLAttribute ];
 }
 
+//
+// Particles
+//
+
 enum EPartSimRoutines : short
 {
     k_Reset,
@@ -102,7 +106,28 @@ table PartBundle
     particle: TypeLayout;
 }
 
-union BundleContent { PartBundle }
+//
+// Materials
+//
+
+enum EMatRenderRoutines : short
+{
+    k_Vertex,
+    k_Pixel,
+    k_Last
+}
+
+table MatRenderPass
+{
+    routines: [ RoutineBundle ];
+}
+
+table MatBundle
+{
+    renderPasses: [ MatRenderPass ];
+}
+
+union BundleContent { PartBundle, MatBundle }
 
 table UISpinner 
 {

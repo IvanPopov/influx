@@ -99,7 +99,7 @@ export const playground = {
     },
 
     switchRuntime() {
-        return { type: evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME };
+        return { type: evt.PLAYGROUND_SWITCH_TECHNIQUE_RUNTIME };
     },
 
     saveFileAs() {

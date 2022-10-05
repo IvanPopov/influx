@@ -1,6 +1,6 @@
 import { IMemory } from '@lib/idl/bytecode';
 import { IMap } from '@lib/idl/IMap';
-import { Vector3 } from 'three';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 
 export interface IAttribute {
@@ -38,8 +38,7 @@ export interface IEmitterPass {
 }
 
 
-export interface IEmitter {
-    getName(): string;
+export interface IEmitter extends ITechnique {
     getCapacity(): number;
     getPassCount(): number;
     getPass(i: number): IEmitterPass;

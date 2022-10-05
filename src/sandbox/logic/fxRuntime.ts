@@ -5,14 +5,14 @@ import { isNull, verbose } from '@lib/common';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Emitter from '@lib/fx/emitter';
-import { IEmitter } from '@lib/idl/emitter';
+import { ITechnique } from '@lib/idl/ITechnique';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as Path from '@lib/path/path';
 import * as URI from '@lib/uri/uri';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as ipc from '@sandbox/ipc';
-import { filterPartFx, getPlaygroundState } from '@sandbox/reducers/playground';
+import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
@@ -20,6 +20,8 @@ import { createLogic } from 'redux-logic';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
+import { IEmitter } from '@lib/idl/emitter';
+import { EInstructionTypes, ETechniqueType, IPassInstruction } from '@lib/idl/IInstruction';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);
@@ -49,7 +51,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         evt.SOURCE_CODE_ANALYSIS_COMPLETE,
         evt.PLAYGROUND_SELECT_EFFECT,
         evt.PLAYGROUND_SWITCH_VM_RUNTIME,
-        evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME
+        evt.PLAYGROUND_SWITCH_TECHNIQUE_RUNTIME
     ],
 
     async process({ getState, action }, dispatch, done) {
@@ -58,40 +60,63 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const timeline = playground.timeline;
 
         const scope = getScope(file);
-        const list: IPartFxInstruction[] = filterPartFx(scope);
+        const list = filterTechniques(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
-        let emitter = playground.emitter;
+        let technique = playground.technique;
         let controls = playground.controls;
 
-        if (!isNull(emitter) && isNull(active)) {
-            if (list.map(fx => fx.name).indexOf(emitter.getName()) !== -1) {
-                active = emitter.getName();
+        if (!isNull(technique) && isNull(active)) {
+            if (list.map(fx => fx.name).indexOf(technique.getName()) !== -1) {
+                active = technique.getName();
             }
         }
 
         if (!active) {
+            stop:
             for (const fx of list) {
-                if (fx.isValid()) {
-                    active = fx.name;
-                    break;
+                switch (fx.type) {
+                    case ETechniqueType.k_PartFx:
+                        if ((fx as IPartFxInstruction).isValid()) {
+                            active = fx.name;
+                            break stop;
+                        }
+                    // material
+                    case ETechniqueType.k_BasicFx:
+                        // todo: check if it is valid
+                        active = fx.name;
+                        break stop;
                 }
+                
             }
         }
 
-        async function destroy(emitter: IEmitter) {
-            if (emitter) {
-                Emitter.destroy(emitter);
+        async function destroy(technique: ITechnique) {
+            if (technique?.getType() === 'emitter') {
+                Emitter.destroy(technique as IEmitter);
                 verbose('previous emitter has been dropped.');
             }
         }
 
-        async function create(forceRestart = true): Promise<[ IEmitter, IPlaygroundControls ]> {
+        async function copy(next: ITechnique, prev: ITechnique) {
+            if (next?.getType() === 'emitter') {
+                Emitter.copy(next as IEmitter, prev as IEmitter);
+            }
+        }
+
+        async function create(forceRestart = true): Promise<[ ITechnique, IPlaygroundControls ]> {
             const i = list.map(fx => fx.name).indexOf(active);
+
             if (i == -1) {
                 return null;
             }
-            const bundle = await FxBundle.createPartFxBundle(list[i]);
+
+            // fixme: remove dummy code
+            if (list[i].instructionType === EInstructionTypes.k_TechniqueDecl) {
+                return [ { getName() { return list[i].name }, getType() { return 'material' } }, null ];
+            }
+
+            const bundle = await FxBundle.createPartFxBundle(list[i] as IPartFxInstruction);
             const emitter = Emitter.create(bundle);
             const controls = decodeBundleControls(bundle);
 
@@ -104,40 +129,44 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         }
 
         async function drop() {
-            await destroy(emitter);
-            [ emitter, controls ] = [ null, null ];
+            await destroy(technique);
+            [ technique, controls ] = [ null, null ];
         }
 
         async function forceReload() {
-            await destroy(emitter);
-            [ emitter, controls ] = await create();
+            await destroy(technique);
+            [ technique, controls ] = await create();
         }
 
         async function switchVMRuntime() {
-            await destroy(emitter);
+            await destroy(technique);
             VM.switchRuntime();
-            [ emitter, controls ] = await create();
+            [ technique, controls ] = await create();
         }
 
         async function switchEmitterRuntime() {
-            await destroy(emitter);
+            await destroy(technique);
             Emitter.switchRuntime();
-            [ emitter, controls ] = await create();
+            [ technique, controls ] = await create();
         }
 
         async function softReload() {
-            if (!emitter) {
+            if (!technique) {
                 await forceReload();
                 return;
             }
+
             // controls stay unchanged
             let [ next, ctrlsNext ] = await create(false);
-            let prev = emitter;
+            let prev = technique;
 
-            Emitter.copy(next, prev);
+            if (prev.getType() === next.getType()) {
+                await copy(next, prev);
+            }
+
             await destroy(prev);
             
-            emitter = next;
+            technique = next;
             controls = ctrlsNext;
         }
 
@@ -145,7 +174,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             case evt.PLAYGROUND_SWITCH_VM_RUNTIME:
                 await switchVMRuntime();
                 break;
-            case evt.PLAYGROUND_SWITCH_EMITTER_RUNTIME:
+            case evt.PLAYGROUND_SWITCH_TECHNIQUE_RUNTIME:
                 await switchEmitterRuntime();
                 break;
             default:
@@ -157,7 +186,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 }
         }
 
-        dispatch({ type: evt.PLAYGROUND_EMITTER_UPDATE, payload: { emitter, controls } });
+        dispatch({ type: evt.PLAYGROUND_TECHNIQUE_UPDATE, payload: { technique, controls } });
 
         if (playground.autosave) {
             dispatch({ type: evt.PLAYGROUND_EFFECT_AUTOSAVE_REQUEST, payload: {} });
@@ -189,9 +218,9 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
         const file = getFileState(state);
         const playground = getPlaygroundState(state);
         const scope = getScope(file);
-        const list = filterPartFx(scope);
+        const list = filterTechniques(scope);
 
-        const emitter = playground.emitter;
+        const tech = playground.technique;
 
         const exportName = Path.parse(file.uri);
         exportName.ext = "bfx"; // binary fx
@@ -205,7 +234,11 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
                 author: state.s3d?.p4?.['User name']
             }
         };
-        let data = await FxBundle.createPartFxBundle(list.find((fx => fx.name == emitter.getName())), options) as Uint8Array;
+        
+        const techInstr = list.find((fx => fx.name == tech.getName()));
+        console.assert(techInstr.type === ETechniqueType.k_PartFx);
+
+        const data = await FxBundle.createPartFxBundle(techInstr as IPartFxInstruction, options) as Uint8Array;
 
         // download unpacked version
         // -----------------------------------
@@ -274,7 +307,7 @@ const playgroundEmitterUpdateLogic = createLogic<IStoreState>({
 
     async process({ getState, action }, dispatch, done) {
         const playground = getPlaygroundState(getState());
-        if (playground.exportName && playground.emitter) {
+        if (playground.exportName && playground.technique) {
             dispatch({ type: evt.PLAYGROUND_EFFECT_SAVE_REQUEST, payload: { silent: true } });
         }
         done();

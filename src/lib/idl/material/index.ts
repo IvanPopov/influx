@@ -1,0 +1,2 @@
+export { IMaterial } from "./IMaterial";
+

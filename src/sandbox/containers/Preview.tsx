@@ -1,5 +1,5 @@
 import * as Emitter from '@lib/fx/emitter';
-import * as Timeline from '@lib/idl/emitter/timelime';
+import * as Timeline from '@lib/fx/timelime';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import React from 'react';
@@ -39,6 +39,7 @@ class Preview extends React.Component<IProps> {
     }
 
     render() {
+        // TODO: add support of material's preview
         const name = this.props.name;
         const data = new Uint8Array(fs.readFileSync(name));
         const emitter = Emitter.create(data);

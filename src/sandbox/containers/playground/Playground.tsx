@@ -8,7 +8,7 @@ import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
 import { getCommon, mapProps } from '@sandbox/reducers';
-import { filterPartFx, getEmitterName } from '@sandbox/reducers/playground';
+import { filterTechniques, getEmitterName } from '@sandbox/reducers/playground';
 import { getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import * as ipc from '@sandbox/ipc';
@@ -18,6 +18,8 @@ import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
 import FxScene from './FxScene';
 import MaterialScene from './MaterialScene';
+import { IEmitter } from '@lib/idl/emitter';
+import { ETechniqueType } from '@lib/idl/IInstruction';
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -74,7 +76,7 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePlayClick() {
         const props = this.props;
-        if (props.playground.emitter) {
+        if (props.playground.technique) {
             if (props.playground.timeline.isStopped()) {
                 props.playground.timeline.start();
                 this.forceUpdate();
@@ -85,7 +87,7 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handlePauseClick() {
         const props = this.props;
-        if (props.playground.emitter) {
+        if (props.playground.technique) {
             if (!props.playground.timeline.isStopped()) {
                 props.playground.timeline.stop();
                 this.forceUpdate();
@@ -97,8 +99,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     @autobind
     handleResetClick() {
         const props = this.props;
-        if (props.playground.emitter) {
-            props.playground.emitter.reset();
+        const tech = props.playground.technique;
+        if (tech && tech.getType() === 'emitter') {
+            (tech as IEmitter).reset();
         }
     }
 
@@ -139,13 +142,13 @@ class Playground extends React.Component<IPlaygroundProps> {
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
         return nextProps.playground.exportName !== this.props.playground.exportName || 
             nextProps.playground.autosave !== this.props.playground.autosave || 
-            nextProps.playground.emitter !== this.props.playground.emitter ||
-            (this.props.playground.emitter && this.$emitterName !== this.props.playground.emitter.getName());
+            nextProps.playground.technique !== this.props.playground.technique ||
+            (this.props.playground.technique && this.$emitterName !== this.props.playground.technique.getName());
     }
 
     componentDidUpdate() {
-        if (this.props.playground.emitter) {
-            this.$emitterName = this.props.playground.emitter.getName();
+        if (this.props.playground.technique) {
+            this.$emitterName = this.props.playground.technique.getName();
         } else {
             this.$emitterName = null;
         }
@@ -155,12 +158,12 @@ class Playground extends React.Component<IPlaygroundProps> {
     render() {
         const props = this.props;
         const playground = props.playground;
-        const emitter = playground.emitter;
+        const technique = playground.technique;
         const timeline = playground.timeline;
         const controls = playground.controls;
         const scope = getScope(props.sourceFile);
 
-        const list: IPartFxInstruction[] = filterPartFx(scope);
+        const list = filterTechniques(scope);
         const active = getEmitterName(playground);
 
         return (
@@ -172,13 +175,13 @@ class Playground extends React.Component<IPlaygroundProps> {
                         </Message.Content>
                     </Message>
                 }
-                {emitter &&
+                {technique &&
                     <div>
                         <List bulleted horizontal>
                             {list.map(fx => (
                                 <List.Item
                                     key={`li-${fx.name}`}
-                                    disabled={!fx.isValid()}
+                                    disabled={(fx.type === ETechniqueType.k_PartFx && !(fx as IPartFxInstruction).isValid())}
                                     as={(fx.name === active ? 'b' : 'a')}
                                     onClick={() => this.pickEffect(fx.name)}
                                 >
@@ -242,18 +245,23 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     </Table>
                                 </Grid.Column>
                             </Grid>
-                                                         
-                            <FxScene
-                                style={threeStylesHotfix}
-                                emitter={emitter}
-                                timeline={timeline}
-                                controls={controls}
-                            /> 
+
+                            { technique.getType() === 'emitter' &&                             
+                                <FxScene
+                                    style={threeStylesHotfix}
+                                    emitter={technique as IEmitter}
+                                    timeline={timeline}
+                                    controls={controls}
+                                /> 
+                            }
                             
-                            {/* <MaterialScene   
-                                style={threeStylesHotfix}
-                                timeline={timeline}
-                                controls={null}/> */}
+                            { technique.getType() === 'material' &&  
+                                <MaterialScene   
+                                    style={threeStylesHotfix}
+                                    timeline={timeline}
+                                    controls={null}
+                                />
+                            }
                         </div>
                     </div>
                 }
