@@ -37,4 +37,8 @@ export class TechniqueInstruction<PassType extends IPassInstruction> extends Dec
     get type(): ETechniqueType {
         return this._techniqueType;
     }
+
+    isValid(): boolean {
+        return true;
+    }
 }

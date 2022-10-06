@@ -1,4 +1,4 @@
-import { Uniforms } from "../idl/emitter/IEmitter";
+import { Uniforms } from "@lib/idl/Uniforms";
 
 function UniformHelper (storage: Uint8Array = new Uint8Array(256))
 {

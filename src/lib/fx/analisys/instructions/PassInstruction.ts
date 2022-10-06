@@ -116,5 +116,9 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
             min_filter: ETextureFilters.LINEAR*/
         };
     }
+
+    isValid(): boolean {
+        return true;
+    }
 }
 

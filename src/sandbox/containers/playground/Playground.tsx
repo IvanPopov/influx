@@ -62,6 +62,10 @@ const textAlignCenter: React.CSSProperties = {
     textAlign: 'center'
 };
 
+const isEmitter = tech => tech?.getType() === 'emitter';
+const isMat = tech => tech?.getType() === 'material';
+
+
 class Playground extends React.Component<IPlaygroundProps> {
     $emitterName: string = null;
 
@@ -100,7 +104,9 @@ class Playground extends React.Component<IPlaygroundProps> {
     handleResetClick() {
         const props = this.props;
         const tech = props.playground.technique;
-        if (tech && tech.getType() === 'emitter') {
+
+        // todo: add reset support for materials
+        if (isEmitter(tech)) {
             (tech as IEmitter).reset();
         }
     }
@@ -166,6 +172,9 @@ class Playground extends React.Component<IPlaygroundProps> {
         const list = filterTechniques(scope);
         const active = getEmitterName(playground);
 
+        const renderAsEmitter = isEmitter(technique);
+        const renderAsMaterial = isMat(technique);
+
         return (
             <div>
                 {!list.length &&
@@ -181,7 +190,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             {list.map(fx => (
                                 <List.Item
                                     key={`li-${fx.name}`}
-                                    disabled={(fx.type === ETechniqueType.k_PartFx && !(fx as IPartFxInstruction).isValid())}
+                                    disabled={(fx.type === ETechniqueType.k_PartFx && !fx.isValid())}
                                     as={(fx.name === active ? 'b' : 'a')}
                                     onClick={() => this.pickEffect(fx.name)}
                                 >
@@ -246,7 +255,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 </Grid.Column>
                             </Grid>
 
-                            { technique.getType() === 'emitter' &&                             
+                            { renderAsEmitter &&                             
                                 <FxScene
                                     style={threeStylesHotfix}
                                     emitter={technique as IEmitter}
@@ -255,7 +264,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 /> 
                             }
                             
-                            { technique.getType() === 'material' &&  
+                            { renderAsMaterial &&  
                                 <MaterialScene   
                                     style={threeStylesHotfix}
                                     timeline={timeline}

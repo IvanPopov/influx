@@ -1,6 +1,6 @@
 import { IMemory } from '@lib/idl/bytecode';
-import { IMap } from '@lib/idl/IMap';
 import { ITechnique } from '@lib/idl/ITechnique';
+import { Uniforms } from '@lib/idl/Uniforms';
 
 
 export interface IAttribute {
@@ -8,9 +8,6 @@ export interface IAttribute {
     offset: number;
     name: string;
 }
-
-// temp solution
-export type Uniforms = IMap<Uint8Array>;
 
 
 export interface IEmitterPassDesc

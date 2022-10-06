@@ -3,10 +3,10 @@ import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { FxTranslator, ICSShaderReflection, IPartFxPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
+import { FxTranslator, ICSShaderReflection, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinner, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
-import { ITypeInstruction } from "@lib/idl/IInstruction";
+import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinner, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
@@ -22,9 +22,9 @@ function getFxBundleSignature(): BundleSignatureT {
 }
  
 
-function createFxBundle(name: string, type: 'part', data: PartBundleT, meta = new BundleMetaT, controls?: UIControlT[], presets?: PresetT[]): BundleT {
+function createFxBundle(name: string, type: BundleContent, data: PartBundleT | MatBundleT, meta = new BundleMetaT, controls?: UIControlT[], presets?: PresetT[]): BundleT {
     const signature = getFxBundleSignature();
-    return new BundleT(name, signature, meta, BundleContent.PartBundle, data, controls, presets);
+    return new BundleT(name, signature, meta, type, data, controls, presets);
 }
 
 
@@ -46,6 +46,18 @@ function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPa
     const stride = instanceType.size >> 2;
 
     return new PartRenderPassT(routineTypes, routines, geometry, sorting, instanceCount, stride, instance);
+}
+
+
+function createMatFxGLSLRenderPass(document: ISLDocument, reflection: IPassReflection): MatRenderPassT {
+    const scope = document.root.scope;
+    // const vertexType = scope.findType(reflection.instance);
+    // const instance = createFxTypeLayout(vertexType);
+    const vertex = createFxRoutineGLSLBundle(document, reflection.instance, reflection.VSParticleShader, 'vertex');
+    const pixel = createFxRoutineGLSLBundle(document, null, reflection.PSParticleShader, 'pixel');
+    const routineTypes = [ RoutineBundle.RoutineBytecodeBundle, RoutineBundle.RoutineGLSLBundle, RoutineBundle.RoutineGLSLBundle ];
+    const routines = [ vertex, pixel ]; // must be aligned with EPartFxRenderRoutines
+    return new MatRenderPassT(routineTypes, routines);
 }
 
 
@@ -162,7 +174,28 @@ export interface BundleOptions
     };
 }
 
-export async function createPartFxBundle(fx: IPartFxInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
+
+function finalizeBundle(bundle: BundleT, options: BundleOptions = {}): Uint8Array | BundleT {
+    // get unpacked version
+    // --------------------------------
+
+    let { packed = PACKED } = options;
+
+    if (!packed)
+        return bundle;
+
+    // get packed version
+    // --------------------------------
+
+    let fbb = new flatbuffers.Builder();
+    let end = bundle.pack(fbb);
+    fbb.finish(end);
+
+    return fbb.asUint8Array();
+}
+
+
+async function createPartFxBundle(fx: IPartFxInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
@@ -200,22 +233,43 @@ export async function createPartFxBundle(fx: IPartFxInstruction, options: Bundle
     const presets = createFxPresets(reflection.presets);
 
     const { meta } = options;
-    const bundle = createFxBundle(name, 'part', part, new BundleMetaT(meta?.author, meta?.source), controls, presets); 
+    const bundle = createFxBundle(name, BundleContent.PartBundle, part, new BundleMetaT(meta?.author, meta?.source), controls, presets); 
 
-    // get unpacked version
-    // --------------------------------
+    return finalizeBundle(bundle, options);
+}
 
-    let { packed = PACKED } = options;
 
-    if (!packed)
-        return bundle;
+async function createMatFxBundle(tech: ITechniqueInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
+    const emitter = new FxTranslator();
+    const reflection = emitter.emitTechniqueDecl(tech);
+    const { name } = reflection;
 
-    // get packed version
-    // --------------------------------
+    const textDocument = await createTextDocument('://raw', emitter.toString());
+    const slDocument = await createSLDocument(textDocument);
+    const scope = slDocument.root.scope;
 
-    let fbb = new flatbuffers.Builder();
-    let end = bundle.pack(fbb);
-    fbb.finish(end);
+    if (slDocument.diagnosticReport.errors) {
+        console.error(Diagnostics.stringify(slDocument.diagnosticReport));
+        return null;
+    }
 
-    return fbb.asUint8Array();
+    const passes = reflection.passes.map(pass => createMatFxGLSLRenderPass(slDocument, pass));
+    const mat = new MatBundleT(passes);
+
+    const { meta } = options;
+    const bundle = createFxBundle(name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source)); 
+
+    return finalizeBundle(bundle, options);
+}
+
+
+export async function createBundle(fx: ITechniqueInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
+    switch (fx.instructionType) {
+        case EInstructionTypes.k_PartFxDecl:
+            return createPartFxBundle(<IPartFxInstruction>fx, options);
+        case EInstructionTypes.k_TechniqueDecl:
+            return createMatFxBundle(fx, options);
+    }
+    console.assert(false);
+    return null;
 }

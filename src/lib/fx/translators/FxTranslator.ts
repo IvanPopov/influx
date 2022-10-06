@@ -1,7 +1,7 @@
 import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
 import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
@@ -24,15 +24,17 @@ export interface ICSShaderReflection {
     uavs: IUavReflection[];
 }
 
-
-export interface IPartFxPassReflection
-{
+export interface IPassReflection {
     instance: string;
+    VSParticleShader: string;
+    PSParticleShader: string;
+}
+
+export interface IPartFxPassReflection extends IPassReflection
+{
     sorting: boolean;
     geometry: string;
     instanceCount: number;
-    VSParticleShader: string;
-    PSParticleShader: string;
     CSParticlesPrerenderRoutine: ICSShaderReflection;
     drawMode: number; // EPassDrawMode (0 - auto, 1 - manual)
 }
@@ -50,6 +52,12 @@ export interface IPartFxReflection {
     controls: IUIControl[];
     presets: IPreset[];
 }
+
+export interface ITechniqueReflection {
+    name: string;
+    passes: IPassReflection[];
+}
+
 
 export interface IDrawOpReflection {
     name: string;
@@ -113,11 +121,11 @@ export class FxTranslator extends FxEmitter {
     protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
     protected knownDrawOps: IDrawOpReflection[] = [];
 
-    protected fx: IPartFxInstruction = null;
+    protected tech: ITechniqueInstruction = null;
     protected controls: IUIControl[] = [];
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         const init = stmt.scope.findFunction(stmt.name, 
             [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
 
@@ -148,7 +156,7 @@ export class FxTranslator extends FxEmitter {
 
 
     protected emitDrawStmt({ name, args }: IDrawStmtInstruction) {
-        let fx = this.fx;//<IPartFxInstruction>pass.parent;
+        let fx = <IPartFxInstruction>this.tech;//<IPartFxInstruction>pass.parent;
         let pass = fx.passList.find(pass => pass.name == name);
         let i = fx.passList.indexOf(pass);
         if (this.knownDrawOps.map(r => r.name).indexOf(name) == -1) {
@@ -203,7 +211,7 @@ export class FxTranslator extends FxEmitter {
         const uavs = [];
 
         const reflection: ICSShaderReflection = { name, numthreads, uavs };
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         const capacity = fx.capacity;
 
         this.begin();
@@ -387,7 +395,7 @@ export class FxTranslator extends FxEmitter {
     }
 
     protected emitSpawnShader(): ICSShaderReflection {
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         if (!fx.spawnRoutine)
         {
             return null;
@@ -447,7 +455,7 @@ export class FxTranslator extends FxEmitter {
 
 
     protected emitInitShader(): ICSShaderReflection {
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         const initFn = fx.initRoutine.function;
 
         const name = 'CSParticlesInitRoutine';
@@ -561,7 +569,7 @@ export class FxTranslator extends FxEmitter {
     }
 
     protected emitUpdateShader(): ICSShaderReflection {
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         const updateFn = fx.updateRoutine.function;
 
         const name = 'CSParticlesUpdateRoutine';
@@ -631,7 +639,7 @@ export class FxTranslator extends FxEmitter {
     }
 
     protected emitPrerenderRoutune(pass: IPartFxPassInstruction, i: number, uavs: IUavReflection[]) {
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
         const prerenderFn = pass.prerenderRoutine.function;
         const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
         const { typeName: partType } = this.resolveType(fx.particle);
@@ -755,7 +763,7 @@ export class FxTranslator extends FxEmitter {
         const name = `CSParticlesPrerenderShader${i}`;
         const numthreads = [64, 1, 1];
         const uavs = [];
-        const fx = this.fx;
+        const fx = <IPartFxInstruction>this.tech;
 
         const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
 
@@ -833,7 +841,7 @@ export class FxTranslator extends FxEmitter {
         }
 
         // note: only one effect can be tranclated at a time 
-        this.fx = fx;
+        this.tech = fx;
 
         const { name, capacity } = fx;
 
@@ -930,11 +938,60 @@ export class FxTranslator extends FxEmitter {
             presets
         };
     }
+
+
+    emitTechniqueDecl(tech: ITechniqueInstruction): ITechniqueReflection {
+        // note: only one effect can be tranclated at a time 
+        this.tech = tech;
+        const { name } = tech;
+
+        const passes = tech.passList.map((pass, i): IPassReflection => {
+            const { vertexShader, pixelShader } = pass;
+
+            let VSParticleShader: string = null;
+            let PSParticleShader: string = null;
+
+            if (vertexShader) {
+                this.emitFunction(vertexShader);
+                VSParticleShader = vertexShader.name;
+            }
+
+            if (pixelShader) {
+                this.emitFunction(pixelShader);
+                PSParticleShader = pixelShader.name;
+            }
+
+            // todo: 
+            const matInstance = vertexShader?.def.params[0].type;
+            const { typeName: instance } = this.resolveType(matInstance);
+
+            return {
+                instance,
+                VSParticleShader,
+                PSParticleShader
+            };
+        });
+
+        return {
+            name,
+            passes
+        };
+    }
 }
 
-export function translateFlat(fx: IPartFxInstruction): string {
+
+export function translateFlat(fx: ITechniqueInstruction): string {
     const emitter = new FxTranslator();
-    const reflection = emitter.emitPartFxDecl(fx);
-    // console.log(JSON.stringify(reflection, null, '\t'));
+    switch(fx.instructionType) {
+        case EInstructionTypes.k_PartFxDecl:
+            emitter.emitPartFxDecl(<IPartFxInstruction>fx);
+            break;
+        case EInstructionTypes.k_TechniqueDecl:
+            emitter.emitTechniqueDecl(fx);
+            break;
+        default:
+            console.assert(false);
+    }
     return emitter.toString();
 }
+

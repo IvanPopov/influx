@@ -15,7 +15,7 @@ import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 
 import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
-import * as Emitter from '@lib/fx/emitter';
+import * as Techniques from '@lib/fx/techniques';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import UniformHelper from '@lib/fx/UniformHelper';
@@ -115,7 +115,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     
     addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
-        const instanceData = Emitter.memoryToF32Array(pass.getData());
+        const instanceData = Techniques.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
         const instancedBuffer = new THREE.InterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
         //
@@ -151,7 +151,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     addPass(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const instanceData = Emitter.memoryToF32Array(pass.getData());
+        const instanceData = Techniques.memoryToF32Array(pass.getData());
         if (desc.geometry === "line") {
             this.addPassLine(pass);
             return;
@@ -310,7 +310,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     addPassLWI(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const instanceData = Emitter.memoryToF32Array(pass.getData());
+        const instanceData = Techniques.memoryToF32Array(pass.getData());
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry, "box");
 
@@ -364,7 +364,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const desc = pass.getDesc();
         const geometry = new THREE.InstancedBufferGeometry();
         const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry);
-        const instanceData = Emitter.memoryToF32Array(pass.getData());
+        const instanceData = Techniques.memoryToF32Array(pass.getData());
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
 
@@ -529,7 +529,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 console.assert(emitPass.getDesc().instanceName == "PartLight");
 
                 // is light pass
-                const instanceData = Emitter.memoryToU8Array(emitPass.getData());
+                const instanceData = Techniques.memoryToU8Array(emitPass.getData());
                 
                 for (let iPart = 0; iPart < emitPass.getNumRenderedParticles(); ++iPart)
                 {

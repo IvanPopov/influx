@@ -1,1 +1,1 @@
-export { IEmitter, IEmitterPass, IEmitterPassDesc, Uniforms } from "./IEmitter"
+export { IEmitter, IEmitterPass, IEmitterPassDesc } from "./IEmitter"

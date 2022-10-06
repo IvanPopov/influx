@@ -107,7 +107,7 @@ export interface IPlaygroundState {
     controls: IPlaygroundControls;
     presets: PlaygroundPresets;
     revision: number;               // number of updates of emitter
-    wasm: boolean;                  // technique's backend mode (makes sense only if it's 'emitter' technique)
+    wasm: boolean;                  // technique's backend mode
 
     exportName: string;             // path on user disk (last 'save as' path)
     autosave: boolean;              // save file to disk on every change

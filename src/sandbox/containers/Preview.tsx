@@ -1,4 +1,4 @@
-import * as Emitter from '@lib/fx/emitter';
+import * as Techniques from '@lib/fx/techniques';
 import * as Timeline from '@lib/fx/timelime';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
@@ -6,6 +6,8 @@ import React from 'react';
 import * as flatbuffers from 'flatbuffers';
 import { Bundle, BundleMetaT } from '@lib/idl/bundles/FxBundle_generated';
 import FxScene from '@sandbox/containers/playground/FxScene';
+import { IEmitter } from '@lib/idl/emitter';
+import MaterialScene from './playground/MaterialScene';
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',
@@ -42,11 +44,15 @@ class Preview extends React.Component<IProps> {
         // TODO: add support of material's preview
         const name = this.props.name;
         const data = new Uint8Array(fs.readFileSync(name));
-        const emitter = Emitter.create(data);
+        const tech = Techniques.create(data);
         const timeline = Timeline.make();
         timeline.start();
         console.log(`source: ${decodeBundleMeta(data).source}`);
-        return <FxScene style={style} emitter={emitter} timeline={timeline} />
+        if (tech.getType() == 'emitter')
+            return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} />
+        else
+            // todo: pass technique
+            return <MaterialScene style={style} timeline={timeline} />
     }
 }
 

@@ -94,7 +94,6 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         let value: string;
 
         if (match.params.pass) {
-
             const pass = fx.passList.find((instr, i) => isNumber(match.params.pass)
                 ? i === Number(match.params.pass)
                 : instr.name === match.params.pass);
@@ -106,7 +105,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             value = Glsl.translate(shader, { mode });
         } else {
             original = FxHlsl.translate(fx);
-            value = FxTranslator.translateFlat(fx as IPartFxInstruction);
+            value = FxTranslator.translateFlat(fx);
         }
 
         return (

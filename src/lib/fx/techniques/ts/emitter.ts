@@ -1,12 +1,11 @@
 import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
-import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIControlT } from '@lib/idl/bundles/FxBundle_generated';
-import * as Bytecode from "@lib/idl/bytecode";
-import {  Uniforms, IEmitter, IEmitterPass } from '@lib/idl/emitter';
-import { Vector3 } from 'three';
 import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
-import * as FxBundle from '@lib/fx/bundles/Bundle';
+import { FxTranslator } from '@lib/fx/translators/FxTranslator';
+import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import * as Bytecode from "@lib/idl/bytecode";
+import { IEmitter } from '@lib/idl/emitter';
+import { Uniforms } from '@lib/idl/Uniforms';
 
 
 type IUAVResource = ReturnType<typeof VM.createUAV>;

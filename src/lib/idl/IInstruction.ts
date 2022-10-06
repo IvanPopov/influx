@@ -604,6 +604,9 @@ export interface IPassInstruction extends IDeclInstruction {
 
     readonly renderStates: IMap<ERenderStateValues>;
     getState(type: ERenderStates): ERenderStateValues;
+
+    /** check if the pass is ready for runtime */
+    isValid(): boolean;
 }
 
 
@@ -626,6 +629,9 @@ export enum ETechniqueType {
 export interface ITechniqueInstruction extends IDeclInstruction {
     readonly passList: IPassInstruction[];
     readonly type: ETechniqueType;
+
+    /** check if the technique is ready for runtime */
+    isValid(): boolean;
 }
 
 

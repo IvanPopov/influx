@@ -1,4 +1,4 @@
-import * as Emitter from '@lib/fx/emitter';
+import * as Techniques from '@lib/fx/techniques';
 import * as Timeline from '@lib/fx/timelime';
 import { IScope, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import * as evt from '@sandbox/actions/ActionTypeKeys';
@@ -12,7 +12,7 @@ const initialState: IPlaygroundState = {
     controls: { values: {}, props: {}, presets: [] },
     presets: {},
     revision: 0,
-    wasm: Emitter.isWASM(),
+    wasm: Techniques.isWASM(),
 
     exportName: null, // LOCAL_SESSION_AUTOSAVE
     autosave: false

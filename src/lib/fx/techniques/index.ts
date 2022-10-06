@@ -1,10 +1,10 @@
 import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
-import { IEmitter } from '../../idl/emitter/IEmitter';
 import * as Bytecode from '@lib/idl/bytecode';
 
 import * as WASMPipe from "./cpp/bridge";
 import * as TSPipe from "./ts/bridge";
 import { isDef } from '@lib/common';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 /// <reference path="./webpack.d.ts" />
 
@@ -26,24 +26,24 @@ export function isWASM()
 export function switchRuntime(runtime?: 'wasm' | 'js')
 {
     useWASM = isDef(runtime) ? runtime === 'wasm' : !useWASM;
-    console.log(`%c Emitter runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
+    console.log(`%c Technique runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
 
-export function create(data: Uint8Array | BundleT): IEmitter
+export function create(data: Uint8Array | BundleT): ITechnique
 {
-   return Pipe().createEmitter(data);
-}
-
-
-export function destroy(emitter: IEmitter): void
-{
-    Pipe().destroyEmitter(emitter);
+   return Pipe().createTechnique(data);
 }
 
 
-export function copy(dst: IEmitter, src: IEmitter): boolean
+export function destroy(tech: ITechnique): void
 {
-    return Pipe().copyEmitter(dst, src);
+    Pipe().destroyTechnique(tech);
+}
+
+
+export function copy(dst: ITechnique, src: ITechnique): boolean
+{
+    return Pipe().copyTechnique(dst, src);
 }
 
 //

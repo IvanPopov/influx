@@ -26,9 +26,6 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly geometry: string;
     readonly instanceCount: number;
     readonly drawMode: EPassDrawMode;
-
-    /** check if the pass is ready for runtime */
-    isValid(): boolean;
 }
 
 
@@ -43,9 +40,6 @@ export interface IPartFxPassInstruction extends IPassInstruction {
 
     readonly passList: IPartFxPassInstruction[];
     readonly presets: IFxPreset[];
-
-    /** check if the technique is ready for runtime */
-    isValid(): boolean;
  }
 
 

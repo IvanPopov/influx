@@ -43,6 +43,10 @@ export class CodeEmitter extends BaseEmitter {
 
 
     protected resolveType(type: ITypeInstruction): ITypeInfo {
+        if (!type) {
+            return null;
+        }
+        
         let complex = type.isComplex();
 
         let length: number;

@@ -1,6 +1,6 @@
 import { assert } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode/VM';
-import * as Emitter from '@lib/fx/emitter';
+import * as Techniques from '@lib/fx/techniques';
 import { IScope } from '@lib/idl/IInstruction';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
@@ -49,7 +49,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             slDocument: null,
             technique: null,
             revision: 0,
-            wasm: Emitter.isWASM()
+            wasm: Techniques.isWASM()
         }),
 
     [evt.SOURCE_FILE_DROP_STATE]: (state, action: ISourceFileDropState) =>
