@@ -5,6 +5,7 @@ import { IEmitter } from '@lib/idl/emitter';
 import { ITechnique } from '@lib/idl/ITechnique';
 import * as flatbuffers from 'flatbuffers';
 import { copyTsEmitter, createTsEmitter, destroyTsEmitter } from './emitter';
+import { copyTsMaterial, createTsMaterial, destroyTsMaterial } from './mat';
 
 const isEmitter = tech => tech?.getType() === 'emitter';
 const isMat = tech => tech?.getType() === 'material';
@@ -22,21 +23,33 @@ function decodeBundleData(data: Uint8Array | BundleT): BundleT {
     return <BundleT>data;
 }
 
+
 export function createTechnique(data: Uint8Array | BundleT): ITechnique {
     const bundle = decodeBundleData(data);
+
     if (bundle.contentType === BundleContent.PartBundle) {
         const emitter = createTsEmitter(bundle);
         emitter.reset();
         return emitter;
     }
 
-    // fixme: remove dummy code
-    return { getName() { return <string>bundle.name }, getType() { return 'material' } };
+    if (bundle.contentType === BundleContent.MatBundle) {
+        const mat = createTsMaterial(bundle);
+        return mat;
+    }
+
+    return null;
 }
+
 
 export function destroyTechnique(tech: ITechnique): void {
     if (isEmitter(tech)) {
         destroyTsEmitter(<IEmitter>tech);
+        return;
+    }
+    if (isMat(tech)) {
+        destroyTsMaterial(tech);
+        return;
     }
 }
 
@@ -44,6 +57,9 @@ export function destroyTechnique(tech: ITechnique): void {
 export function copyTechnique(dst: ITechnique, src: ITechnique): boolean {
     if (isEmitter(dst) && isEmitter(src)) {
         return copyTsEmitter(<IEmitter>dst, <IEmitter>src);
+    }
+    if (isMat(dst) && isMat(src)) {
+        return copyTsMaterial(<IEmitter>dst, <IEmitter>src);
     }
     return false;
 }

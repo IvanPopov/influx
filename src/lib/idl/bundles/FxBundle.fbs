@@ -120,6 +120,8 @@ enum EMatRenderRoutines : short
 table MatRenderPass
 {
     routines: [ RoutineBundle ];
+    stride: uint;                           // instance stride in 32bit (integers)
+    instance: TypeLayout;
 }
 
 table MatBundle

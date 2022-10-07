@@ -1,4 +1,4 @@
-import { BundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
 
 import * as WASMPipe from "./cpp/bridge";
@@ -29,9 +29,30 @@ export function switchRuntime(runtime?: 'wasm' | 'js')
     console.log(`%c Technique runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
 
+// hack
+import * as flatbuffers from 'flatbuffers';
+function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
+    // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
+    if (data instanceof Uint8Array) {
+        let buf = new flatbuffers.ByteBuffer(data);
+        return Bundle.getRootAsBundle(buf).contentType() === BundleContent.MatBundle;
+    }
+
+    return (<BundleT>data).contentType === BundleContent.MatBundle;
+}
+// end of hack
+
 export function create(data: Uint8Array | BundleT): ITechnique
 {
-   return Pipe().createTechnique(data);
+    // hack:
+    // cpp module doesn't support material bundles
+    if (HACK_IsMaterialBundle(data) && isWASM()) {
+        console.warn('material bundle was created using TS module while WASM is on.');
+        return TSPipe.createTechnique(data);
+    }
+    // end of hack
+
+    return Pipe().createTechnique(data);
 }
 
 

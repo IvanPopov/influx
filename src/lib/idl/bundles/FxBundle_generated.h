@@ -1773,6 +1773,12 @@ flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferBuilder 
 struct MatRenderPassT : public flatbuffers::NativeTable {
   typedef MatRenderPass TableType;
   std::vector<Fx::RoutineBundleUnion> routines{};
+  uint32_t stride = 0;
+  std::unique_ptr<Fx::TypeLayoutT> instance{};
+  MatRenderPassT() = default;
+  MatRenderPassT(const MatRenderPassT &o);
+  MatRenderPassT(MatRenderPassT&&) FLATBUFFERS_NOEXCEPT = default;
+  MatRenderPassT &operator=(MatRenderPassT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1780,13 +1786,21 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef MatRenderPassBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROUTINES_TYPE = 4,
-    VT_ROUTINES = 6
+    VT_ROUTINES = 6,
+    VT_STRIDE = 8,
+    VT_INSTANCE = 10
   };
   const flatbuffers::Vector<uint8_t> *routines_type() const {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_ROUTINES_TYPE);
   }
   const flatbuffers::Vector<flatbuffers::Offset<void>> *routines() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<void>> *>(VT_ROUTINES);
+  }
+  uint32_t stride() const {
+    return GetField<uint32_t>(VT_STRIDE, 0);
+  }
+  const Fx::TypeLayout *instance() const {
+    return GetPointer<const Fx::TypeLayout *>(VT_INSTANCE);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1795,6 +1809,9 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_ROUTINES) &&
            verifier.VerifyVector(routines()) &&
            VerifyRoutineBundleVector(verifier, routines(), routines_type()) &&
+           VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
+           VerifyOffset(verifier, VT_INSTANCE) &&
+           verifier.VerifyTable(instance()) &&
            verifier.EndTable();
   }
   MatRenderPassT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1812,6 +1829,12 @@ struct MatRenderPassBuilder {
   void add_routines(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines) {
     fbb_.AddOffset(MatRenderPass::VT_ROUTINES, routines);
   }
+  void add_stride(uint32_t stride) {
+    fbb_.AddElement<uint32_t>(MatRenderPass::VT_STRIDE, stride, 0);
+  }
+  void add_instance(flatbuffers::Offset<Fx::TypeLayout> instance) {
+    fbb_.AddOffset(MatRenderPass::VT_INSTANCE, instance);
+  }
   explicit MatRenderPassBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1826,8 +1849,12 @@ struct MatRenderPassBuilder {
 inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> routines_type = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines = 0,
+    uint32_t stride = 0,
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
   MatRenderPassBuilder builder_(_fbb);
+  builder_.add_instance(instance);
+  builder_.add_stride(stride);
   builder_.add_routines(routines);
   builder_.add_routines_type(routines_type);
   return builder_.Finish();
@@ -1836,13 +1863,17 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(
 inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPassDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const std::vector<uint8_t> *routines_type = nullptr,
-    const std::vector<flatbuffers::Offset<void>> *routines = nullptr) {
+    const std::vector<flatbuffers::Offset<void>> *routines = nullptr,
+    uint32_t stride = 0,
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
   auto routines_type__ = routines_type ? _fbb.CreateVector<uint8_t>(*routines_type) : 0;
   auto routines__ = routines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*routines) : 0;
   return Fx::CreateMatRenderPass(
       _fbb,
       routines_type__,
-      routines__);
+      routines__,
+      stride,
+      instance);
 }
 
 flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3643,6 +3674,19 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
       _particle);
 }
 
+inline MatRenderPassT::MatRenderPassT(const MatRenderPassT &o)
+      : routines(o.routines),
+        stride(o.stride),
+        instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr) {
+}
+
+inline MatRenderPassT &MatRenderPassT::operator=(MatRenderPassT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(routines, o.routines);
+  std::swap(stride, o.stride);
+  std::swap(instance, o.instance);
+  return *this;
+}
+
 inline MatRenderPassT *MatRenderPass::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<MatRenderPassT>(new MatRenderPassT());
   UnPackTo(_o.get(), _resolver);
@@ -3654,6 +3698,8 @@ inline void MatRenderPass::UnPackTo(MatRenderPassT *_o, const flatbuffers::resol
   (void)_resolver;
   { auto _e = routines_type(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].type = static_cast<Fx::RoutineBundle>(_e->Get(_i)); } } }
   { auto _e = routines(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].value = Fx::RoutineBundleUnion::UnPack(_e->Get(_i), routines_type()->GetEnum<RoutineBundle>(_i), _resolver); } } }
+  { auto _e = stride(); _o->stride = _e; }
+  { auto _e = instance(); if (_e) { if(_o->instance) { _e->UnPackTo(_o->instance.get(), _resolver); } else { _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
 }
 
 inline flatbuffers::Offset<MatRenderPass> MatRenderPass::Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -3666,10 +3712,14 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatB
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const MatRenderPassT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _routines_type = _o->routines.size() ? _fbb.CreateVector<uint8_t>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return static_cast<uint8_t>(__va->__o->routines[i].type); }, &_va) : 0;
   auto _routines = _o->routines.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->routines[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
+  auto _stride = _o->stride;
+  auto _instance = _o->instance ? CreateTypeLayout(_fbb, _o->instance.get(), _rehasher) : 0;
   return Fx::CreateMatRenderPass(
       _fbb,
       _routines_type,
-      _routines);
+      _routines,
+      _stride,
+      _instance);
 }
 
 inline MatBundleT::MatBundleT(const MatBundleT &o) {

@@ -20,6 +20,7 @@ import FxScene from './FxScene';
 import MaterialScene from './MaterialScene';
 import { IEmitter } from '@lib/idl/emitter';
 import { ETechniqueType } from '@lib/idl/IInstruction';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -269,6 +270,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     style={threeStylesHotfix}
                                     timeline={timeline}
                                     controls={null}
+                                    material={technique as ITechnique}
                                 />
                             }
                         </div>

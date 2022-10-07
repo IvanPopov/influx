@@ -1579,8 +1579,18 @@ routinesLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+stride():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+instance(obj?:FxTypeLayout):FxTypeLayout|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
 static startMatRenderPass(builder:flatbuffers.Builder) {
-  builder.startObject(2);
+  builder.startObject(4);
 }
 
 static addRoutinesType(builder:flatbuffers.Builder, routinesTypeOffset:flatbuffers.Offset) {
@@ -1615,17 +1625,19 @@ static startRoutinesVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addStride(builder:flatbuffers.Builder, stride:number) {
+  builder.addFieldInt32(2, stride, 0);
+}
+
+static addInstance(builder:flatbuffers.Builder, instanceOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, instanceOffset, 0);
+}
+
 static endMatRenderPass(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createMatRenderPass(builder:flatbuffers.Builder, routinesTypeOffset:flatbuffers.Offset, routinesOffset:flatbuffers.Offset):flatbuffers.Offset {
-  MatRenderPass.startMatRenderPass(builder);
-  MatRenderPass.addRoutinesType(builder, routinesTypeOffset);
-  MatRenderPass.addRoutines(builder, routinesOffset);
-  return MatRenderPass.endMatRenderPass(builder);
-}
 
 unpack(): MatRenderPassT {
   return new MatRenderPassT(
@@ -1641,7 +1653,9 @@ unpack(): MatRenderPassT {
       ret.push(temp.unpack());
     }
     return ret;
-  })()
+  })(),
+    this.stride(),
+    (this.instance() !== null ? this.instance()!.unpack() : null)
   );
 }
 
@@ -1660,24 +1674,32 @@ unpackTo(_o: MatRenderPassT): void {
     }
     return ret;
   })();
+  _o.stride = this.stride();
+  _o.instance = (this.instance() !== null ? this.instance()!.unpack() : null);
 }
 }
 
 export class MatRenderPassT {
 constructor(
   public routinesType: (FxRoutineBundle)[] = [],
-  public routines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = []
+  public routines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = [],
+  public stride: number = 0,
+  public instance: FxTypeLayoutT|null = null
 ){}
 
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const routinesType = FxMatRenderPass.createRoutinesTypeVector(builder, this.routinesType);
   const routines = FxMatRenderPass.createRoutinesVector(builder, builder.createObjectOffsetList(this.routines));
+  const instance = (this.instance !== null ? this.instance!.pack(builder) : 0);
 
-  return FxMatRenderPass.createMatRenderPass(builder,
-    routinesType,
-    routines
-  );
+  FxMatRenderPass.startMatRenderPass(builder);
+  FxMatRenderPass.addRoutinesType(builder, routinesType);
+  FxMatRenderPass.addRoutines(builder, routines);
+  FxMatRenderPass.addStride(builder, this.stride);
+  FxMatRenderPass.addInstance(builder, instance);
+
+  return FxMatRenderPass.endMatRenderPass(builder);
 }
 }
 export class MatBundle {

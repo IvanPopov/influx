@@ -8,11 +8,12 @@ import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import * as THREE from 'three';
 import * as GLSL from './shaders/materials';
 import autobind from 'autobind-decorator';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 const Shaders = (id: string) => GLSL[id];
 
 interface IMaterialSceneProps extends ITreeSceneProps {
-    // todo
+    material: ITechnique;
 }
 
 
@@ -25,6 +26,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     state: IMaterialSceneState;
 
     composer: EffectComposer;
+    group: THREE.Group;
 
     constructor(props) {
         super(props);
@@ -110,37 +112,61 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         this.createSceneControls(bloomPass, renderer);
 
-        // load a resource
+        
         loader.load(
             './assets/models/probe.obj',
-            function (group: THREE.Group) {
-                console.log(group);
-
-                const material = new THREE.RawShaderMaterial({
-                    uniforms: {},
-                    vertexShader: Shaders('defMatVS'),
-                    fragmentShader: Shaders('defMatFS'),
-                    transparent: false,
-                    blending: THREE.NormalBlending,
-                    depthTest: true
-                });
-
-                for (const object of group.children) {
-                    const mesh = object as THREE.Mesh;
-                    mesh.material = material;
-                }
-
+            (group: THREE.Group) => {
                 scene.add(group);
+
+                this.group = group;
+                this.assignMaterial(this.group);
             },
-            function (xhr) {
+            (xhr) => {
                 console.log((xhr.loaded / xhr.total * 100) + '% loaded');
             },
-            function (error) {
+            (error) => {
                 console.log('An error happened');
+                this.group = null;
             }
         );
     }
 
+    componentDidUpdate(prevProps: any, prevState: any): void {
+        this.assignMaterial(this.group);
+    }
+
+    protected assignMaterial(group: THREE.Group) {
+        if (!group) {
+            return;
+        }
+
+        const { vertexShader, pixelShader } = this.props.material.getPass(0).getDesc();
+
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {},
+            vertexShader: vertexShader,
+            fragmentShader: pixelShader,
+            transparent: false,
+            blending: THREE.NormalBlending,
+            depthTest: true
+        });
+
+        for (const object of group.children) {
+            const mesh = object as THREE.Mesh;
+            mesh.material = material;
+
+            // IP: hack to support default geom layout like:
+            // struct Geometry {
+            //  float3 position: POSITION0;
+            //  float3 normal: NORMAL0;
+            //  float2 uv: TEXCOORD0;
+            // };
+
+            mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
+            mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
+            mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
+        }
+    }
 
     protected renderScene(time) {
         if (this.params.bloom) {

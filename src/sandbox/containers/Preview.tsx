@@ -8,6 +8,7 @@ import { Bundle, BundleMetaT } from '@lib/idl/bundles/FxBundle_generated';
 import FxScene from '@sandbox/containers/playground/FxScene';
 import { IEmitter } from '@lib/idl/emitter';
 import MaterialScene from './playground/MaterialScene';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',
@@ -52,7 +53,7 @@ class Preview extends React.Component<IProps> {
             return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} />
         else
             // todo: pass technique
-            return <MaterialScene style={style} timeline={timeline} />
+            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} />
     }
 }
 

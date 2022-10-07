@@ -51,13 +51,15 @@ function createPartFxGLSLRenderPass(document: ISLDocument, reflection: IPartFxPa
 
 function createMatFxGLSLRenderPass(document: ISLDocument, reflection: IPassReflection): MatRenderPassT {
     const scope = document.root.scope;
-    // const vertexType = scope.findType(reflection.instance);
-    // const instance = createFxTypeLayout(vertexType);
     const vertex = createFxRoutineGLSLBundle(document, reflection.instance, reflection.VSParticleShader, 'vertex');
     const pixel = createFxRoutineGLSLBundle(document, null, reflection.PSParticleShader, 'pixel');
-    const routineTypes = [ RoutineBundle.RoutineBytecodeBundle, RoutineBundle.RoutineGLSLBundle, RoutineBundle.RoutineGLSLBundle ];
+    const routineTypes = [ RoutineBundle.RoutineGLSLBundle, RoutineBundle.RoutineGLSLBundle ];
     const routines = [ vertex, pixel ]; // must be aligned with EPartFxRenderRoutines
-    return new MatRenderPassT(routineTypes, routines);
+    const vertexType = scope.findType(reflection.instance);
+    const instance = createFxTypeLayout(vertexType);
+    const instanceType = scope.findType(reflection.instance);
+    const stride = instanceType.size >> 2;
+    return new MatRenderPassT(routineTypes, routines, stride, instance);
 }
 
 

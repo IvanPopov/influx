@@ -76,7 +76,7 @@ export function createTechnique(data: Uint8Array | BundleT): ITechnique {
     }
 
     // fixme: remove dummy code
-    return { getName() { return <string>decodeBundleData(data).name }, getType() { return 'material' } };
+    return { getName() { return <string>decodeBundleData(data).name }, getType() { return 'material' }, getPassCount() { return 0 }, getPass(i) { return null }, };
 }
 
 
