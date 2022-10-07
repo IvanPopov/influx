@@ -224,6 +224,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         function getData() { return asBundleMemory(sorting ? uavSortedU8 : uavNonSortedU8); }
         function getDesc() {
+            const renderStates = {};
             return {
                 instanceName: instance.name as string,
                 instanceLayout: instanceLayout.map(({ name, offset, size }) => ({ name: <string>name, offset, size })), // FIXME
@@ -232,6 +233,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 sorting,
                 vertexShader,
                 pixelShader,
+                renderStates
             };
         }
 

@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
+import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -1536,6 +1536,86 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   return FxPartBundle.endPartBundle(builder);
 }
 }
+export class RenderState {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):RenderState {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsRenderState(bb:flatbuffers.ByteBuffer, obj?:RenderState):RenderState {
+  return (obj || new RenderState()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsRenderState(bb:flatbuffers.ByteBuffer, obj?:RenderState):RenderState {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new RenderState()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+type():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+value():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+static startRenderState(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addType(builder:flatbuffers.Builder, type:number) {
+  builder.addFieldInt32(0, type, 0);
+}
+
+static addValue(builder:flatbuffers.Builder, value:number) {
+  builder.addFieldInt32(1, value, 0);
+}
+
+static endRenderState(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createRenderState(builder:flatbuffers.Builder, type:number, value:number):flatbuffers.Offset {
+  RenderState.startRenderState(builder);
+  RenderState.addType(builder, type);
+  RenderState.addValue(builder, value);
+  return RenderState.endRenderState(builder);
+}
+
+unpack(): RenderStateT {
+  return new RenderStateT(
+    this.type(),
+    this.value()
+  );
+}
+
+
+unpackTo(_o: RenderStateT): void {
+  _o.type = this.type();
+  _o.value = this.value();
+}
+}
+
+export class RenderStateT {
+constructor(
+  public type: number = 0,
+  public value: number = 0
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  return FxRenderState.createRenderState(builder,
+    this.type,
+    this.value
+  );
+}
+}
 export class MatRenderPass {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -1589,8 +1669,18 @@ instance(obj?:FxTypeLayout):FxTypeLayout|null {
   return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
+renderStates(index: number, obj?:FxRenderState):FxRenderState|null {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? (obj || new FxRenderState()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+renderStatesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startMatRenderPass(builder:flatbuffers.Builder) {
-  builder.startObject(4);
+  builder.startObject(5);
 }
 
 static addRoutinesType(builder:flatbuffers.Builder, routinesTypeOffset:flatbuffers.Offset) {
@@ -1633,6 +1723,22 @@ static addInstance(builder:flatbuffers.Builder, instanceOffset:flatbuffers.Offse
   builder.addFieldOffset(3, instanceOffset, 0);
 }
 
+static addRenderStates(builder:flatbuffers.Builder, renderStatesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(4, renderStatesOffset, 0);
+}
+
+static createRenderStatesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startRenderStatesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endMatRenderPass(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
@@ -1655,7 +1761,8 @@ unpack(): MatRenderPassT {
     return ret;
   })(),
     this.stride(),
-    (this.instance() !== null ? this.instance()!.unpack() : null)
+    (this.instance() !== null ? this.instance()!.unpack() : null),
+    this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength())
   );
 }
 
@@ -1676,6 +1783,7 @@ unpackTo(_o: MatRenderPassT): void {
   })();
   _o.stride = this.stride();
   _o.instance = (this.instance() !== null ? this.instance()!.unpack() : null);
+  _o.renderStates = this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength());
 }
 }
 
@@ -1684,7 +1792,8 @@ constructor(
   public routinesType: (FxRoutineBundle)[] = [],
   public routines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = [],
   public stride: number = 0,
-  public instance: FxTypeLayoutT|null = null
+  public instance: FxTypeLayoutT|null = null,
+  public renderStates: (RenderStateT)[] = []
 ){}
 
 
@@ -1692,12 +1801,14 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const routinesType = FxMatRenderPass.createRoutinesTypeVector(builder, this.routinesType);
   const routines = FxMatRenderPass.createRoutinesVector(builder, builder.createObjectOffsetList(this.routines));
   const instance = (this.instance !== null ? this.instance!.pack(builder) : 0);
+  const renderStates = FxMatRenderPass.createRenderStatesVector(builder, builder.createObjectOffsetList(this.renderStates));
 
   FxMatRenderPass.startMatRenderPass(builder);
   FxMatRenderPass.addRoutinesType(builder, routinesType);
   FxMatRenderPass.addRoutines(builder, routines);
   FxMatRenderPass.addStride(builder, this.stride);
   FxMatRenderPass.addInstance(builder, instance);
+  FxMatRenderPass.addRenderStates(builder, renderStates);
 
   return FxMatRenderPass.endMatRenderPass(builder);
 }

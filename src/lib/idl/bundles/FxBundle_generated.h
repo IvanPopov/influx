@@ -59,6 +59,10 @@ struct PartBundle;
 struct PartBundleBuilder;
 struct PartBundleT;
 
+struct RenderState;
+struct RenderStateBuilder;
+struct RenderStateT;
+
 struct MatRenderPass;
 struct MatRenderPassBuilder;
 struct MatRenderPassT;
@@ -1770,11 +1774,75 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundleDirect(
 
 flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferBuilder &_fbb, const PartBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct RenderStateT : public flatbuffers::NativeTable {
+  typedef RenderState TableType;
+  uint32_t type = 0;
+  uint32_t value = 0;
+};
+
+struct RenderState FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RenderStateT NativeTableType;
+  typedef RenderStateBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_TYPE = 4,
+    VT_VALUE = 6
+  };
+  uint32_t type() const {
+    return GetField<uint32_t>(VT_TYPE, 0);
+  }
+  uint32_t value() const {
+    return GetField<uint32_t>(VT_VALUE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_TYPE, 4) &&
+           VerifyField<uint32_t>(verifier, VT_VALUE, 4) &&
+           verifier.EndTable();
+  }
+  RenderStateT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(RenderStateT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<RenderState> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RenderStateT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct RenderStateBuilder {
+  typedef RenderState Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_type(uint32_t type) {
+    fbb_.AddElement<uint32_t>(RenderState::VT_TYPE, type, 0);
+  }
+  void add_value(uint32_t value) {
+    fbb_.AddElement<uint32_t>(RenderState::VT_VALUE, value, 0);
+  }
+  explicit RenderStateBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<RenderState> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RenderState>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RenderState> CreateRenderState(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t type = 0,
+    uint32_t value = 0) {
+  RenderStateBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_type(type);
+  return builder_.Finish();
+}
+
+flatbuffers::Offset<RenderState> CreateRenderState(flatbuffers::FlatBufferBuilder &_fbb, const RenderStateT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct MatRenderPassT : public flatbuffers::NativeTable {
   typedef MatRenderPass TableType;
   std::vector<Fx::RoutineBundleUnion> routines{};
   uint32_t stride = 0;
   std::unique_ptr<Fx::TypeLayoutT> instance{};
+  std::vector<std::unique_ptr<Fx::RenderStateT>> renderStates{};
   MatRenderPassT() = default;
   MatRenderPassT(const MatRenderPassT &o);
   MatRenderPassT(MatRenderPassT&&) FLATBUFFERS_NOEXCEPT = default;
@@ -1788,7 +1856,8 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ROUTINES_TYPE = 4,
     VT_ROUTINES = 6,
     VT_STRIDE = 8,
-    VT_INSTANCE = 10
+    VT_INSTANCE = 10,
+    VT_RENDERSTATES = 12
   };
   const flatbuffers::Vector<uint8_t> *routines_type() const {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_ROUTINES_TYPE);
@@ -1802,6 +1871,9 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::TypeLayout *instance() const {
     return GetPointer<const Fx::TypeLayout *>(VT_INSTANCE);
   }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *renderStates() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *>(VT_RENDERSTATES);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_ROUTINES_TYPE) &&
@@ -1812,6 +1884,9 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_INSTANCE) &&
            verifier.VerifyTable(instance()) &&
+           VerifyOffset(verifier, VT_RENDERSTATES) &&
+           verifier.VerifyVector(renderStates()) &&
+           verifier.VerifyVectorOfTables(renderStates()) &&
            verifier.EndTable();
   }
   MatRenderPassT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1835,6 +1910,9 @@ struct MatRenderPassBuilder {
   void add_instance(flatbuffers::Offset<Fx::TypeLayout> instance) {
     fbb_.AddOffset(MatRenderPass::VT_INSTANCE, instance);
   }
+  void add_renderStates(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates) {
+    fbb_.AddOffset(MatRenderPass::VT_RENDERSTATES, renderStates);
+  }
   explicit MatRenderPassBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1851,8 +1929,10 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> routines_type = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines = 0,
     uint32_t stride = 0,
-    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates = 0) {
   MatRenderPassBuilder builder_(_fbb);
+  builder_.add_renderStates(renderStates);
   builder_.add_instance(instance);
   builder_.add_stride(stride);
   builder_.add_routines(routines);
@@ -1865,15 +1945,18 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPassDirect(
     const std::vector<uint8_t> *routines_type = nullptr,
     const std::vector<flatbuffers::Offset<void>> *routines = nullptr,
     uint32_t stride = 0,
-    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    const std::vector<flatbuffers::Offset<Fx::RenderState>> *renderStates = nullptr) {
   auto routines_type__ = routines_type ? _fbb.CreateVector<uint8_t>(*routines_type) : 0;
   auto routines__ = routines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*routines) : 0;
+  auto renderStates__ = renderStates ? _fbb.CreateVector<flatbuffers::Offset<Fx::RenderState>>(*renderStates) : 0;
   return Fx::CreateMatRenderPass(
       _fbb,
       routines_type__,
       routines__,
       stride,
-      instance);
+      instance,
+      renderStates__);
 }
 
 flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3674,16 +3757,48 @@ inline flatbuffers::Offset<PartBundle> CreatePartBundle(flatbuffers::FlatBufferB
       _particle);
 }
 
+inline RenderStateT *RenderState::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<RenderStateT>(new RenderStateT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void RenderState::UnPackTo(RenderStateT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = type(); _o->type = _e; }
+  { auto _e = value(); _o->value = _e; }
+}
+
+inline flatbuffers::Offset<RenderState> RenderState::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RenderStateT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateRenderState(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<RenderState> CreateRenderState(flatbuffers::FlatBufferBuilder &_fbb, const RenderStateT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RenderStateT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _type = _o->type;
+  auto _value = _o->value;
+  return Fx::CreateRenderState(
+      _fbb,
+      _type,
+      _value);
+}
+
 inline MatRenderPassT::MatRenderPassT(const MatRenderPassT &o)
       : routines(o.routines),
         stride(o.stride),
         instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr) {
+  renderStates.reserve(o.renderStates.size());
+  for (const auto &renderStates_ : o.renderStates) { renderStates.emplace_back((renderStates_) ? new Fx::RenderStateT(*renderStates_) : nullptr); }
 }
 
 inline MatRenderPassT &MatRenderPassT::operator=(MatRenderPassT o) FLATBUFFERS_NOEXCEPT {
   std::swap(routines, o.routines);
   std::swap(stride, o.stride);
   std::swap(instance, o.instance);
+  std::swap(renderStates, o.renderStates);
   return *this;
 }
 
@@ -3700,6 +3815,7 @@ inline void MatRenderPass::UnPackTo(MatRenderPassT *_o, const flatbuffers::resol
   { auto _e = routines(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].value = Fx::RoutineBundleUnion::UnPack(_e->Get(_i), routines_type()->GetEnum<RoutineBundle>(_i), _resolver); } } }
   { auto _e = stride(); _o->stride = _e; }
   { auto _e = instance(); if (_e) { if(_o->instance) { _e->UnPackTo(_o->instance.get(), _resolver); } else { _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
+  { auto _e = renderStates(); if (_e) { _o->renderStates.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->renderStates[_i]) { _e->Get(_i)->UnPackTo(_o->renderStates[_i].get(), _resolver); } else { _o->renderStates[_i] = std::unique_ptr<Fx::RenderStateT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<MatRenderPass> MatRenderPass::Pack(flatbuffers::FlatBufferBuilder &_fbb, const MatRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -3714,12 +3830,14 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatB
   auto _routines = _o->routines.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->routines[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
   auto _stride = _o->stride;
   auto _instance = _o->instance ? CreateTypeLayout(_fbb, _o->instance.get(), _rehasher) : 0;
+  auto _renderStates = _o->renderStates.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::RenderState>> (_o->renderStates.size(), [](size_t i, _VectorArgs *__va) { return CreateRenderState(*__va->__fbb, __va->__o->renderStates[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateMatRenderPass(
       _fbb,
       _routines_type,
       _routines,
       _stride,
-      _instance);
+      _instance,
+      _renderStates);
 }
 
 inline MatBundleT::MatBundleT(const MatBundleT &o) {

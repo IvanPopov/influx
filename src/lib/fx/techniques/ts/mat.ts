@@ -10,7 +10,8 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
         const {
             routines,
             instance,
-            stride
+            stride,
+            renderStates
         } = pass;
 
 
@@ -19,6 +20,9 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
 
         // note: only GLSL routines are supported!
         const instanceLayout = (<RoutineGLSLBundleT>routines[EMatRenderRoutines.k_Vertex]).attributes;
+        
+        const states = {};
+        renderStates.forEach(({ type, value }) => { states[type] = value; });
 
         function getDesc(): ITechniquePassDesc {
             return {
@@ -27,6 +31,7 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
                 stride,                                                                          // FIXME
                 vertexShader,
                 pixelShader,
+                renderStates: states
             };
         }
 

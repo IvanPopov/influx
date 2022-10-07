@@ -5,7 +5,7 @@ import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, ICSShaderReflection, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinner, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinner, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
@@ -59,7 +59,8 @@ function createMatFxGLSLRenderPass(document: ISLDocument, reflection: IPassRefle
     const instance = createFxTypeLayout(vertexType);
     const instanceType = scope.findType(reflection.instance);
     const stride = instanceType.size >> 2;
-    return new MatRenderPassT(routineTypes, routines, stride, instance);
+    const renderStates = Object.keys(reflection.renderStates).map(key => new RenderStateT(Number(key), Number(reflection.renderStates[key])));
+    return new MatRenderPassT(routineTypes, routines, stride, instance, renderStates);
 }
 
 

@@ -9,6 +9,11 @@ import * as THREE from 'three';
 import * as GLSL from './shaders/materials';
 import autobind from 'autobind-decorator';
 import { ITechnique } from '@lib/idl/ITechnique';
+import { isDef, isString } from '@lib/common';
+import { IUniform } from 'three';
+import { IMap } from '@lib/idl/IMap';
+import { ERenderStates } from '@lib/idl/ERenderStates';
+import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
 const Shaders = (id: string) => GLSL[id];
 
@@ -26,7 +31,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     state: IMaterialSceneState;
 
     composer: EffectComposer;
-    group: THREE.Group;
+    groups: THREE.Group[];
 
     constructor(props) {
         super(props);
@@ -36,7 +41,6 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             ...this.stateInitials()
         };
     }
-
 
     protected createRenderer(width, height): THREE.WebGLRenderer {
         const renderer = new THREE.WebGLRenderer({
@@ -50,11 +54,17 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
     params = {
         bloom: false,
-        exposure: 1,
+        toneMappingExposure: 1.0,
         bloomStrength: 0.3,
-        bloomThreshold: 0,
-        bloomRadius: 1,
+        bloomThreshold: 0.0,
+        bloomRadius: 1.0,
     };
+
+    uniforms: IMap<IUniform> = {
+        elapsedTime: { value: 0 },
+        elapsedTimeLevel: { value: 0 },
+        // elapsedTimeThis: { value: 0 }
+    }
 
     createSceneControls(bloomPass: UnrealBloomPass, renderer: THREE.WebGLRenderer) {
         const params = this.params;
@@ -67,21 +77,28 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         gui.domElement.style.position = 'absolute';
         gui.domElement.style.bottom = '23px';
 
-        gui.add(params, 'bloom');
-        gui.add(params, 'exposure', 0.1, 2).onChange((value) => {
-            renderer.toneMappingExposure = Math.pow(value, 4.0);
+        gui.add(params, 'bloom').onChange(value => { 
+            this.saveSceneParams(); 
         });
+
+        gui.add(params, 'toneMappingExposure', 0.1, 2.0).onChange((value) => {
+            renderer.toneMappingExposure = Math.pow(value, 4.0);
+            this.saveSceneParams();
+        }).name('exposure');
 
         gui.add(params, 'bloomThreshold', 0.0, 1.0).onChange((value) => {
             bloomPass.threshold = Number(value);
+            this.saveSceneParams();
         });
 
         gui.add(params, 'bloomStrength', 0.0, 3.0).onChange((value) => {
             bloomPass.strength = Number(value);
+            this.saveSceneParams();
         });
 
         gui.add(params, 'bloomRadius', 0.0, 1.0).step(0.01).onChange((value) => {
             bloomPass.radius = Number(value);
+            this.saveSceneParams();
         });
 
         gui.close();
@@ -97,10 +114,14 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const camera = this.camera;
         const params = this.params;
         const renderer = this.renderer;
+        const mat = this.props.material;
 
         const renderScene = new RenderPass(scene, camera);
         const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
 
+        this.restoreSceneParams();
+        
+        renderer.toneMappingExposure = params.toneMappingExposure;
         bloomPass.threshold = params.bloomThreshold;
         bloomPass.strength = params.bloomStrength;
         bloomPass.radius = params.bloomRadius;
@@ -112,60 +133,108 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         this.createSceneControls(bloomPass, renderer);
 
-        
         loader.load(
             './assets/models/probe.obj',
             (group: THREE.Group) => {
-                scene.add(group);
 
-                this.group = group;
-                this.assignMaterial(this.group);
+                this.groups = Array(mat.getPassCount()).fill(null).map(x => group.clone(true));
+                scene.add(...this.groups);
+
+                this.reloadMaterial();
             },
             (xhr) => {
                 console.log((xhr.loaded / xhr.total * 100) + '% loaded');
             },
             (error) => {
                 console.log('An error happened');
-                this.group = null;
+                this.groups = null;
             }
         );
     }
 
-    componentDidUpdate(prevProps: any, prevState: any): void {
-        this.assignMaterial(this.group);
+    shouldComponentUpdate(nextProps: IMaterialSceneProps, nexState) {
+        return this.props.material !== nextProps.material;
     }
 
-    protected assignMaterial(group: THREE.Group) {
-        if (!group) {
-            return;
+    componentDidUpdate(prevProps: any, prevState: any): void {
+        const mat = this.props.material;
+
+        this.scene.remove(...this.groups);
+        this.groups = Array(mat.getPassCount()).fill(null).map(x => this.groups[0].clone(true));
+        this.scene.add(...this.groups);
+
+        this.reloadMaterial();
+    }
+
+    protected saveSceneParams() {
+        const params = this.params;
+
+        for (let prop in params) {
+            localStorage[prop] = params[prop];
         }
+    }
 
-        const { vertexShader, pixelShader } = this.props.material.getPass(0).getDesc();
+    protected restoreSceneParams() {
+        const params = this.params;
+        params.bloom = isString(localStorage.bloom) ? localStorage.bloom === 'true' : params.bloom;
+        params.toneMappingExposure = Number(localStorage.toneMappingExposure || params.toneMappingExposure);
+        params.bloomThreshold = Number(localStorage.bloomThreshold || params.bloomThreshold);
+        params.bloomStrength = Number(localStorage.bloomStrength || params.bloomStrength);
+        params.bloomRadius = Number(localStorage.bloomRadius || params.bloomRadius);
+        
+    }
+    
+    protected reloadMaterial() {
+        const groups = this.groups;
 
-        const material = new THREE.RawShaderMaterial({
-            uniforms: {},
-            vertexShader: vertexShader,
-            fragmentShader: pixelShader,
-            transparent: false,
-            blending: THREE.NormalBlending,
-            depthTest: true
-        });
+        for (let iPass = 0; iPass < groups?.length; ++iPass) {
+            const group = groups[iPass];
+            const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(iPass).getDesc();
 
-        for (const object of group.children) {
-            const mesh = object as THREE.Mesh;
-            mesh.material = material;
+            const material = new THREE.RawShaderMaterial({
+                uniforms: this.uniforms,
+                vertexShader: vertexShader,
+                fragmentShader: pixelShader,
+                blending: THREE.NormalBlending,
+                transparent: false,
+                depthTest: true
+            });
 
-            // IP: hack to support default geom layout like:
-            // struct Geometry {
-            //  float3 position: POSITION0;
-            //  float3 normal: NORMAL0;
-            //  float2 uv: TEXCOORD0;
-            // };
+            if (renderStates[ERenderStates.ZENABLE]) {
+                material.depthTest = renderStates[ERenderStates.ZENABLE] === ERenderStateValues.TRUE;
+            }
 
-            mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
-            mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
-            mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
+            if (renderStates[ERenderStates.BLENDENABLE]) {
+                material.transparent = renderStates[ERenderStates.BLENDENABLE] === ERenderStateValues.TRUE;
+            }
+
+            for (const object of group.children) {
+                const mesh = object as THREE.Mesh;
+                mesh.material = material;
+
+                // IP: hack to support default geom layout like:
+                // struct Geometry {
+                //  float3 position: POSITION0;
+                //  float3 normal: NORMAL0;
+                //  float2 uv: TEXCOORD0;
+                // };
+
+                mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
+                mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
+                mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
+            }
         }
+    }
+
+    protected feedScene(time: number): void {
+        const timeline = this.props.timeline;
+        const uniforms = this.uniforms;
+
+        let constants = timeline.getConstants();
+        uniforms.elapsedTime.value = constants.elapsedTime;
+        uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
+
+        timeline.tick();
     }
 
     protected renderScene(time) {

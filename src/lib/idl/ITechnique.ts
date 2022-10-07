@@ -1,3 +1,5 @@
+import { ERenderStateValues } from "./ERenderStateValues";
+import { IMap } from "./IMap";
 
 export interface IAttribute {
     size: number;
@@ -15,6 +17,8 @@ export interface ITechniquePassDesc
     // GLSL shader's sources
     vertexShader: string;
     pixelShader: string;
+
+    renderStates: IMap<ERenderStateValues>;
 }
 
 export interface ITechniquePass<DESC_T extends ITechniquePassDesc = ITechniquePassDesc> {

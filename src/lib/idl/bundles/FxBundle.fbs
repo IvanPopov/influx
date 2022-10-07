@@ -117,11 +117,17 @@ enum EMatRenderRoutines : short
     k_Last
 }
 
+table RenderState {
+    type: uint;
+    value: uint;
+}
+
 table MatRenderPass
 {
     routines: [ RoutineBundle ];
     stride: uint;                           // instance stride in 32bit (integers)
     instance: TypeLayout;
+    renderStates: [ RenderState ];
 }
 
 table MatBundle

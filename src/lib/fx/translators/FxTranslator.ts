@@ -1,6 +1,8 @@
 import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
+import { ERenderStates } from "@lib/idl/ERenderStates";
+import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
@@ -28,6 +30,8 @@ export interface IPassReflection {
     instance: string;
     VSParticleShader: string;
     PSParticleShader: string;
+
+    renderStates: { [key: number/* ERenderStates */]: ERenderStateValues };
 }
 
 export interface IPartFxPassReflection extends IPassReflection
@@ -856,6 +860,7 @@ export class FxTranslator extends FxEmitter {
             let VSParticleShader: string = null;
             let PSParticleShader: string = null;
             let CSParticlesPrerenderRoutine: ICSShaderReflection = null;
+            let renderStates = pass.renderStates;
 
             if (prerenderRoutine && drawMode === EPassDrawMode.k_Auto) {
                 CSParticlesPrerenderRoutine = this.emitPrerenderShader(pass, i);
@@ -880,6 +885,7 @@ export class FxTranslator extends FxEmitter {
                 instanceCount,
                 VSParticleShader,
                 PSParticleShader,
+                renderStates,
                 CSParticlesPrerenderRoutine,
                 drawMode
             };
@@ -965,10 +971,13 @@ export class FxTranslator extends FxEmitter {
             const matInstance = vertexShader?.def.params[0].type;
             const { typeName: instance } = this.resolveType(matInstance);
 
+            const renderStates = pass.renderStates;
+
             return {
                 instance,
                 VSParticleShader,
-                PSParticleShader
+                PSParticleShader,
+                renderStates
             };
         });
 
