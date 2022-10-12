@@ -9,8 +9,6 @@ export enum EAnalyzerWarnings {
     ImplicitTypeConversion,
     ImplicitTypeTruncation,
 
-    InvalidTypeForReading, // relaxed version of error (temp solution)
-
     // part fx
     SortingCannotBeApplied,
     PresetPropertyHasNotBeenFound

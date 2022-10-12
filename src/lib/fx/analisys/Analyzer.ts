@@ -4232,13 +4232,11 @@ export class Analyzer {
 
         if (Analyzer.isAssignmentOperator(operator)) {
             if (!leftType.writable && !isInitializing) {
-                // context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
-                context.warn(leftSourceNode, EWarnings.InvalidTypeForReading);
+                context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
             }
 
             if (!rightType.readable) {                
-                // context.error(rightSourceNode, EErrors.InvalidTypeForReading);
-                context.warn(rightSourceNode, EWarnings.InvalidTypeForReading);
+                context.error(rightSourceNode, EErrors.InvalidTypeForReading);
             }
 
             if (operator !== '=' && !leftType.readable) {
@@ -4248,19 +4246,16 @@ export class Analyzer {
                 //      x = 10;
                 //      x |= 1; // << allow to write here
                 // }
-                context.warn(exprSourceNode, EWarnings.InvalidTypeForReading, { tooltip: `lvalue is not readable` });
-                // context.error(leftSourceNode, EErrors.InvalidTypeForReading);
+                context.error(exprSourceNode, EErrors.InvalidTypeForReading, { tooltip: `lvalue is not readable` });
             }
         }
         else {
             if (!leftType.readable) {
-                // context.error(leftSourceNode, EErrors.InvalidTypeForReading);
-                context.warn(leftSourceNode, EWarnings.InvalidTypeForReading);
+                context.error(leftSourceNode, EErrors.InvalidTypeForReading);
             }
 
             if (!rightType.readable) {
-                // context.error(rightSourceNode, EErrors.InvalidTypeForReading);
-                context.warn(rightSourceNode, EWarnings.InvalidTypeForReading);
+                context.error(rightSourceNode, EErrors.InvalidTypeForReading);
             }
         }
 
