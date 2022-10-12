@@ -399,6 +399,7 @@ export class Preprocessor {
             case '#if': return this.processIfMacro(token);
             case '#error': return this.processErrorMacro(token);
             case '#include': return this.processIncludeMacro(token);
+            case '#undef': return this.processUndefMacro(token);
             case '#pragma': {
                 this.readLine();
                 return this.readToken();
@@ -406,6 +407,26 @@ export class Preprocessor {
         }
 
         this.emitMacroWarning(`unsupported macro type found: ${token.value}`, token.loc)
+        return this.readToken();
+    }
+
+
+    protected async processUndefMacro(token: IToken): Promise<IToken> {
+        const name = await this.readToken(false);
+        const text = this.readLine();
+
+        if (name.name !== T_NON_TYPE_ID) {
+            // TODO: emit error
+            assert(name.name === T_NON_TYPE_ID);
+            return this.readToken();
+        }
+
+        if (!this.macros.has(name.value)) {
+            this.emitMacroWarning(`target macro not found: ${name.value}`, name.loc);
+        } else {
+            this.macros.unset(name.value);
+        }
+
         return this.readToken();
     }
 

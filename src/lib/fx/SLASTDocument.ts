@@ -72,22 +72,32 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 
         this.ruleFunctions.set('addType', this._addType.bind(this));
         this.ruleFunctions.set('addTypeDef', this._addTypeDef.bind(this));
+        this.ruleFunctions.set('print', this._print.bind(this));
     }
 
 
     private _addType(): EOperationType {
         const tree = this.tree;
         const node = tree.lastNode;
-        const typeId = node.children[node.children.length - 2].value;
+        const typeId = node.value;
         this.knownTypes.add(typeId);
         return EOperationType.k_Ok;
     }
+
 
     private _addTypeDef(): EOperationType {
         const tree = this.tree;
         const node = tree.lastNode;
         const typeId = node.children[0].value;
         this.knownTypes.add(typeId);
+        return EOperationType.k_Ok;
+    }
+
+
+    private _print(): EOperationType {
+        const tree = this.tree;
+        const node = tree.lastNode;
+        console.log(node);
         return EOperationType.k_Ok;
     }
 

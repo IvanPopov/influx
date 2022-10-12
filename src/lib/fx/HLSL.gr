@@ -56,7 +56,7 @@ UsageStructDecl : Usages StructDecl
 
 TypeDecl : T_KW_TYPEDEF ConstType TypeDefs --F addTypeDef ';' --add
 TypeDecl : T_KW_TYPEDEF ConstStructDecl TypeDefs --F addTypeDef ';'
-TypeDecl : StructDecl --F addType ';'
+TypeDecl : StructDecl ';'
 TypeDefs : VariableDim
 TypeDefs : VariableDim ',' TypeDefs
 
@@ -124,9 +124,9 @@ ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
 
 Struct : T_KW_STRUCT '{' '}' --add
 Struct : T_KW_STRUCT '{' StructDecls '}'
-StructDecl : T_KW_STRUCT Id '{' '}' --add
-StructDecl : T_KW_STRUCT Id '{' UseDecl StructDecls '}'
-StructDecl : T_KW_STRUCT Id '{' StructDecls '}'
+StructDecl : T_KW_STRUCT Id --F addType '{' '}' --add
+StructDecl : T_KW_STRUCT Id --F addType '{' UseDecl StructDecls '}'
+StructDecl : T_KW_STRUCT Id --F addType '{' StructDecls '}'
 
 ConstStructDecl : StructDecl
 ConstStructDecl : ConstUsages StructDecl

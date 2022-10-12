@@ -20,6 +20,10 @@ export class Macros {
         this.stack[this.stack.length - 1].macros[macro.name] = macro;
     }
 
+    unset(name: string): void {
+        delete this.stack[this.stack.length - 1].macros[name];
+    }
+
     get(name: string): IMacro {
         for (let i = this.stack.length - 1; i >= 0; --i) {
             const macros = this.stack[i].macros;

@@ -1809,7 +1809,7 @@ export class Analyzer {
                     // don't relax all types because it's useless
                     // like: (0, 0, 0) => (float|int, float|int)
                     // relax only uint => int if not strict types were provided 
-                    func = globalScope.findFunction(funcName, args.map(arg => arg.type));
+                    func = globalScope.findFunction(funcName, args.map(arg => arg?.type || null));
                     // still not found?
                     if (!func) {
                         // last resort for cases like: "sqrt(2)"
@@ -3286,10 +3286,13 @@ export class Analyzer {
 
         const isIfElse = (children.length - attributes.length === 7);
 
-        const cond = this.analyzeExpr(context, program, children[children.length - 3 - attributes.length]);
+        const condNode = children[children.length - 3 - attributes.length];
+        const cond = this.analyzeExpr(context, program, condNode);
 
-        if (!cond || !cond.type.isEqual(T_BOOL)) {
-            context.error(sourceNode, EErrors.InvalidIfCondition, { typeName: cond ? String(cond.type) : '[unknown]' });
+        if (!cond || !type.equals(asRelaxedType(cond.type), T_BOOL)) {
+            context.error(condNode, EErrors.InvalidIfCondition, { typeName: cond ? String(cond.type) : '[unknown]' });
+        } else if (!type.equals(cond.type, T_BOOL)) {
+            context.warn(condNode, EWarnings.ImplicitTypeConversion, { tooltip: `${cond.type.name} => bool` });
         }
 
         let conseq: IStmtInstruction = null;

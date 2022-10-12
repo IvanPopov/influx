@@ -8,7 +8,7 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
-import { Checkbox, List, Popup } from 'semantic-ui-react';
+import { Button, Checkbox, Dropdown, Input, List, Popup, Select } from 'semantic-ui-react';
 
 const styles = {
     checkboxTiny: {
@@ -28,6 +28,12 @@ const styles = {
     //     minHeight: 'auto !important',
     //     fontWeight: 'bold'
     // }
+    tipFix: {
+        transform: 'scale(0.85) !important',
+        display: 'inline-block',
+        position: 'relative',
+        left: '-11%'
+    }
 };
 
 export interface IPPViewProps extends IStoreState, Partial<WithStylesProps<typeof styles>> {
@@ -41,6 +47,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
         showMacros: boolean;
         showMacrosOther: boolean;
         showUnreachableCode: boolean;
+
+        filter: string;
     };
 
     rootRef: React.RefObject<HTMLDivElement>;
@@ -51,7 +59,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
             showIncludes: false,
             showMacros: true,
             showMacrosOther: false,
-            showUnreachableCode: false
+            showUnreachableCode: false,
+            filter: null
         };
 
         this.rootRef = React.createRef();
@@ -76,34 +85,41 @@ class PPView extends React.Component<IPPViewProps, {}> {
             overflowY: 'auto'
         };
 
+
         return (
-            <div ref={ this.rootRef }>
-                <List style={ style } selection size='small' className='astlist' >
-                    <List.Item key={ `pp-include-list` } className='astnode'
-                        onClick={ this.handleIncludesClick }
+            <div ref={this.rootRef}>
+                <Input
+                    size='small'
+                    iconPosition='left'
+                    placeholder='Filter...'
+                    onChange={(e) => { this.setState({ filter: e.target.value }) }}
+                />
+                <List style={style} selection size='small' className='astlist' >
+                    <List.Item key={`pp-include-list`} className='astnode'
+                        onClick={this.handleIncludesClick}
                     >
-                        <List.Icon name={ (showIncludes ? `chevron down` : `chevron right`) } />
+                        <List.Icon name={(showIncludes ? `chevron down` : `chevron right`)} />
                         <List.Content>
-                            <List.Header>{ 'Include list' }</List.Header>
-                            { this.renderIncludes([...includes.keys()]) }
+                            <List.Header>{'Include list'}</List.Header>
+                            {this.renderIncludes([...includes.keys()])}
                         </List.Content>
                     </List.Item>
-                    <List.Item key={ `pp-macros` } className='astnode'
-                        onClick={ this.handleMacrosClick }
+                    <List.Item key={`pp-macros`} className='astnode'
+                        onClick={this.handleMacrosClick}
                     >
-                        <List.Icon name={ (showMacros ? `chevron down` : `chevron right`) } />
+                        <List.Icon name={(showMacros ? `chevron down` : `chevron right`)} />
                         <List.Content>
-                            <List.Header>{ 'Macro list' }</List.Header>
-                            { this.renderMacros(macros.concat(unresolvedMacros).sort((a, b) => a.name.localeCompare(b.name))) }
+                            <List.Header>{'Macro list'}</List.Header>
+                            {this.renderMacros(macros.concat(unresolvedMacros).sort((a, b) => a.name.localeCompare(b.name)))}
                         </List.Content>
                     </List.Item>
-                    <List.Item key={ `pp-unreachable-code` } className='astnode'
-                        onClick={ this.handleUnreachableCodeClick }
+                    <List.Item key={`pp-unreachable-code`} className='astnode'
+                        onClick={this.handleUnreachableCodeClick}
                     >
-                        <List.Icon name={ (showUnreachableCode ? `chevron down` : `chevron right`) } />
+                        <List.Icon name={(showUnreachableCode ? `chevron down` : `chevron right`)} />
                         <List.Content>
-                            <List.Header>{ 'Unreachable regions' }</List.Header>
-                            { this.renderUnreachableRegions(unreachableCode) }
+                            <List.Header>{'Unreachable regions'}</List.Header>
+                            {this.renderUnreachableRegions(unreachableCode)}
                         </List.Content>
                     </List.Item>
                 </List>
@@ -118,22 +134,22 @@ class PPView extends React.Component<IPPViewProps, {}> {
         }
 
         const items = includes.map((filename, i) => (
-            <List.Item key={ `pp-include-${i}` }
+            <List.Item key={`pp-include-${i}`}
                 // onClick={ this.handleNodeClick.bind(this, idx, node) }
                 // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                 // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                 className='astnode'
             >
                 <List.Content>
-                    {/* <List.Header>{ filename }</List.Header> */ }
-                    <List.Description>{ path.normalize(filename) }</List.Description>
+                    {/* <List.Header>{ filename }</List.Header> */}
+                    <List.Description>{path.normalize(filename)}</List.Description>
                 </List.Content>
             </List.Item>
         ));
 
         return (
             <List.List className='astlist'>
-                { items }
+                {items}
             </List.List>
         );
     }
@@ -156,57 +172,67 @@ class PPView extends React.Component<IPPViewProps, {}> {
 
         const { showMacrosOther } = this.state;
         const { sourceFile } = this.props;
+        const filter = this.state.filter?.toLowerCase();
+
+        const doFilter = (value) => !filter || (value.toLowerCase()).indexOf(filter) !== -1;
 
         return (
             <List.List className='astlist'>
                 {
-                    macros.filter(macro => macro.bRegionExpr).map((macro, i) => (
-                        <List.Item key={ `pp-macro-${i}` }
+                    macros.filter(macro => macro.bRegionExpr && doFilter(macro.name)).map((macro, i) => (
+                        <List.Item key={`pp-macro-${i}`}
                             // onClick={ this.handleNodeClick.bind(this, idx, node) }
                             // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                             // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                             className='astnode'
                         >
                             <List.Content>
-                                {/* <List.Header>{ filename }</List.Header> */ }
+                                {/* <List.Header>{ filename }</List.Header> */}
                                 <List.Description>
-                                    <Checkbox label={ macro.name } checked={ !!macro.tokens } 
-                                        disabled={ !!macro.tokens && !sourceFile.defines.find(def => def === macro.name) }
-                                        
-                                        onClick={ e => 
-                                            { 
-                                                e.preventDefault(); 
-                                                e.stopPropagation(); 
-                                                this.handleBoolMacroClick(macro, !macro.tokens); 
-                                            } 
+                                    <Checkbox 
+                                        label={macro.name} 
+                                        checked={!!macro.tokens}
+                                        disabled={!!macro.tokens && !sourceFile.defines.find(def => def === macro.name)}
+                                        onClick={e => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                this.handleBoolMacroClick(macro, !macro.tokens);
+                                            }
                                         }
-                                        className={ this.props.classes.checkboxTiny } />
+                                        className={this.props.classes.checkboxTiny} />
+
+                                        { (macro.tokens?.length > 0) && 
+                                            <Popup inverted
+                                                    content={<span>{`${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}`}</span>}
+                                                    trigger={<span className={this.props.classes.tipFix} >{`(?)`}</span>} 
+                                                />
+                                        }
                                 </List.Description>
                             </List.Content>
                         </List.Item>
                     ))
                 }
-                <List.Item key={ `pp-macros-other` } className='astnode'
-                    onClick={ this.handleMacrosOtherClick }
+                <List.Item key={`pp-macros-other`} className='astnode'
+                    onClick={this.handleMacrosOtherClick}
                 >
-                    <List.Icon name={ (showMacrosOther ? `chevron down` : `chevron right`) } />
+                    <List.Icon name={(showMacrosOther ? `chevron down` : `chevron right`)} />
                     <List.Content>
-                        <List.Header>{ 'other...' }</List.Header>
+                        <List.Header>{'other...'}</List.Header>
                         {
                             showMacrosOther &&
-                            macros.filter(macro => !macro.bRegionExpr).map((macro, i) => (
-                                <List.Item key={ `pp-macro-${i}` }
+                            macros.filter(macro => !macro.bRegionExpr && doFilter(macro.name)).map((macro, i) => (
+                                <List.Item key={`pp-macro-${i}`}
                                     // onClick={ this.handleNodeClick.bind(this, idx, node) }
                                     // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                                     // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                                     className='astnode'
                                 >
                                     <List.Content>
-                                        {/* <List.Header>{ filename }</List.Header> */ }
+                                        {/* <List.Header>{ filename }</List.Header> */}
                                         <List.Description>
                                             <Popup inverted
-                                                content={ <span>{ `${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}` }</span> }
-                                                trigger={ <span>{ `${macro.name}` }</span> } />
+                                                content={<span>{`${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}`}</span>}
+                                                trigger={<span>{`${macro.name}`}</span>} />
                                         </List.Description>
                                     </List.Content>
                                 </List.Item>
@@ -225,22 +251,22 @@ class PPView extends React.Component<IPPViewProps, {}> {
         }
 
         const items = regions.map(({ start, end }, i) => (
-            <List.Item key={ `pp-include-${i}` }
+            <List.Item key={`pp-include-${i}`}
                 // onClick={ this.handleNodeClick.bind(this, idx, node) }
                 // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
                 // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
                 className='astnode'
             >
                 <List.Content>
-                    {/* <List.Header>{ filename }</List.Header> */ }
-                    <List.Description>{ path.parse(start.file.toString()).filename }{ ` (${start.line} - ${end.line})` }</List.Description>
+                    {/* <List.Header>{ filename }</List.Header> */}
+                    <List.Description>{path.parse(start.file.toString()).filename}{` (${start.line} - ${end.line})`}</List.Description>
                 </List.Content>
             </List.Item>
         ));
 
         return (
             <List.List className='astlist'>
-                { items }
+                {items}
             </List.List>
         );
     }
@@ -278,4 +304,4 @@ class PPView extends React.Component<IPPViewProps, {}> {
     }
 }
 
-export default connect<{}, {}, IPPViewProps>(mapProps(getCommon),  mapActions(sourceActions))(withStyles(styles)(PPView)) as any;
+export default connect<{}, {}, IPPViewProps>(mapProps(getCommon), mapActions(sourceActions))(withStyles(styles)(PPView)) as any;
