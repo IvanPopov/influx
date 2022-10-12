@@ -47,7 +47,12 @@ export function makeResolver(depot: IDepot): IncludeResolver {
                 // todo: move readFile to ipc
                 return (await fs.promises.readFile(URI.toLocalPath(uri))).toString();
             default:
-                return (await fetch(fullname)).text();
+                try {
+                    return (await fetch(fullname)).text();
+                } catch (e) {
+                    console.error(`Can't resolve file "${name}"`);
+                    return null;
+                }
         }
     };
 }

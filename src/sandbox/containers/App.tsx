@@ -1202,7 +1202,7 @@ class App extends React.Component<IAppProps> {
                         onFileClick={ this.openFile }
                         desc={ env?.Get('game-name') || 'Development' }
                         expanded={true}
-                        filters={ [ '.fx', '.xfx' ] }
+                        filters={ [ '.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.cs' ] }
                     />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>

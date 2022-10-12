@@ -3,7 +3,7 @@ import * as Bytecode from '@lib/fx/bytecode/VM';
 import * as Techniques from '@lib/fx/techniques';
 import { IScope } from '@lib/idl/IInstruction';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeSetDefine, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 
@@ -17,6 +17,7 @@ const initialState: IFileState = {
     slastDocument: null,
     slDocument: null,
     rawDocument: null,
+    defines: [],
     debugger: {
         expression: null,
         runtime: null,
@@ -120,6 +121,14 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
 
     [evt.SOURCE_CODE_REMOVE_BREAKPOINT]: (state, action: ISourceCodeRemoveBreakpoint) => {
         return { ...state, breakpoints: state.breakpoints.filter(ln => ln !== action.payload.line) };
+    },
+
+    [evt.SOURCE_CODE_SET_DEFINE]: (state, { payload: { name } }: ISourceCodeSetDefine) => {
+        return { ...state, defines: [ name, ...state.defines.filter(def => def != name) ] };
+    },
+
+    [evt.SOURCE_CODE_REMOVE_DEFINE]: (state, { payload: { name } }: ISourceCodeSetDefine) => {
+        return { ...state, defines: state.defines.filter(def => def != name) };
     },
 
     //

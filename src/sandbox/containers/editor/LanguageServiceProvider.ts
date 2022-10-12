@@ -5,6 +5,7 @@ import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IncludeResolver, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { getLanguageService } from '@lib/language-service/LanguageService';
+import { IKnownDefine } from '@lib/parser/Preprocessor';
 import * as Comlink from 'comlink';
 import { CodeLens, Diagnostic, DiagnosticSeverity, Position, Range, SignatureHelp, TextDocument, TextDocumentIdentifier } from 'vscode-languageserver-types';
 
@@ -64,7 +65,7 @@ class LanguageServiceProvider {
     private service: ILanguageService;
     private documents: Map<string, IDocumentCacheEntry> = new Map();
 
-    init(parserParams: IParserParams, parsingFlags: number, includeResolver: IncludeResolver) {
+    init(parserParams: IParserParams, parsingFlags: number, includeResolver: IncludeResolver, defines?: IKnownDefine[]) {
         console.log('%c Creating parser for language service provider...', 'background: #222; color: #bada55');
         try {
             createDefaultSLParser(parserParams);
@@ -74,7 +75,7 @@ class LanguageServiceProvider {
             return null;
         }
 
-        this.service = getLanguageService({ flags: parsingFlags, includeResolver });
+        this.service = getLanguageService({ flags: parsingFlags, includeResolver, defines });
     }
 
     async validate(rawDocument): Promise<Diagnostic[]> {
@@ -83,7 +84,7 @@ class LanguageServiceProvider {
         const slastDocument = await this.service.$parseSLASTDocument(textDocument);
         const slDocument = await this.service.$parseSLDocument(slastDocument);
         this.documents.set(textDocument.uri, { textDocument, slastDocument, slDocument });
-
+        
         slDocument.diagnosticReport.messages.forEach(msg => {
             const loc = resolveLocation(msg, slastDocument);
             if (!loc) {

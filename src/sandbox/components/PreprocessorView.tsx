@@ -2,6 +2,7 @@ import { IMacro } from '@lib/idl/parser/IMacro';
 import { IRange } from '@lib/idl/parser/IParser';
 import * as path from '@lib/path/path';
 import { getCommon, mapProps } from '@sandbox/reducers';
+import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
@@ -17,11 +18,20 @@ const styles = {
         transform: 'scale(0.85) !important',
         transformOrigin: 'left !important',
         minHeight: 'auto !important'
-    }
+    },
+    // checkboxTinyChanged: {
+    //     fontSize: '0.92857143em !important',
+    //     lineHeight: '15px !important',
+    //     minWidth: '17px !important',
+    //     transform: 'scale(0.85) !important',
+    //     transformOrigin: 'left !important',
+    //     minHeight: 'auto !important',
+    //     fontWeight: 'bold'
+    // }
 };
 
 export interface IPPViewProps extends IStoreState, Partial<WithStylesProps<typeof styles>> {
-
+    actions: typeof sourceActions;
 }
 
 class PPView extends React.Component<IPPViewProps, {}> {
@@ -128,6 +138,12 @@ class PPView extends React.Component<IPPViewProps, {}> {
         );
     }
 
+    @autobind
+    handleBoolMacroClick(macro: IMacro, checked: boolean) {
+        if (checked) this.props.actions.setDefine(macro.name);
+        else this.props.actions.removeDefine(macro.name);
+    }
+
 
     renderMacros(macros: IMacro[]): JSX.Element {
         if (!this.state.showMacros) {
@@ -139,6 +155,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
         }
 
         const { showMacrosOther } = this.state;
+        const { sourceFile } = this.props;
 
         return (
             <List.List className='astlist'>
@@ -153,7 +170,16 @@ class PPView extends React.Component<IPPViewProps, {}> {
                             <List.Content>
                                 {/* <List.Header>{ filename }</List.Header> */ }
                                 <List.Description>
-                                    <Checkbox label={ macro.name } checked={ !!macro.tokens } disabled={ !!macro.tokens }
+                                    <Checkbox label={ macro.name } checked={ !!macro.tokens } 
+                                        disabled={ !!macro.tokens && !sourceFile.defines.find(def => def === macro.name) }
+                                        
+                                        onClick={ e => 
+                                            { 
+                                                e.preventDefault(); 
+                                                e.stopPropagation(); 
+                                                this.handleBoolMacroClick(macro, !macro.tokens); 
+                                            } 
+                                        }
                                         className={ this.props.classes.checkboxTiny } />
                                 </List.Description>
                             </List.Content>
@@ -252,4 +278,4 @@ class PPView extends React.Component<IPPViewProps, {}> {
     }
 }
 
-export default connect<{}, {}, IPPViewProps>(mapProps(getCommon), {})(withStyles(styles)(PPView)) as any;
+export default connect<{}, {}, IPPViewProps>(mapProps(getCommon),  mapActions(sourceActions))(withStyles(styles)(PPView)) as any;

@@ -4,7 +4,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IFile, IParseNode } from "@lib/idl/parser/IParser";
-import { EPassDrawMode, IFxPresetProperty, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { EPassDrawMode, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { Analyzer, Context, ICompileValidator, parseUintLiteral } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
@@ -13,8 +13,8 @@ import { IntInstruction } from "./instructions/IntInstruction";
 import { DrawInstruction } from "./instructions/part/DrawInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
-import { PresetInstruction } from "./instructions/part/Preset";
-import { PresetProperty } from "./instructions/part/PresetProperty";
+import { PresetInstruction } from "./instructions/Preset";
+import { PresetProperty } from "./instructions/PresetProperty";
 import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
 import { ProgramScope } from "./ProgramScope";
 import * as SystemScope from './SystemScope';
@@ -161,116 +161,6 @@ export class FxAnalyzer extends Analyzer {
             default:
                 return super.analyzeSimpleStmt(context, program, sourceNode);
         }
-    }
-
-    /**
-     * AST example:
-     *    PassState
-     *         T_PUNCTUATOR_59 = ';'
-     *       + PassStateExpr 
-     *         T_PUNCTUATOR_61 = '='
-     *         T_NON_TYPE_ID = 'SpawnRoutine'
-     */
-    protected analyzePartFXProperty(context: FxContext, program: ProgramScope, sourceNode: IParseNode): any {
-        const children = sourceNode.children;
-        console.log(sourceNode);
-    }
-
-
-    protected analyzePresetProperty(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IFxPresetProperty {
-
-        const children = sourceNode.children;
-        const nameNode = children[children.length - 1];
-        const propName = nameNode.value;
-        const propExprNode = children[children.length - 3];
-        const exprNode = propExprNode.children[propExprNode.children.length - 1];
-        const scope = program.currentScope;
-
-        if (isNull(exprNode.value) || isNull(propName)) {
-            console.warn('Pass state is incorrect.'); // TODO: move to warnings
-            return null;
-        }
-
-        const decl = scope.findVariable(propName);
-        if (isNull(decl)) {
-            context.warn(sourceNode, EWarnings.PresetPropertyHasNotBeenFound);
-            return null;
-        }
-
-        const type = decl.type;
-
-        /**
-         * AST example:
-         *    PassStateExpr
-         *         T_PUNCTUATOR_125 = '}'
-         *         T_UINT = '1'
-         *         T_PUNCTUATOR_44 = ','
-         *         T_KW_TRUE = 'true'
-         *         T_PUNCTUATOR_123 = '{'
-         */
-        const args: IExprInstruction[] =[];
-        if (exprNode.value === '{' && propExprNode.children.length > 3) {
-            for (let i = propExprNode.children.length - 2; i >= 1; i -= 2) {
-                const expr = this.analyzeExpr(context, program, propExprNode.children[i]);
-                // todo: use more strict check same as for InitExpr analyze
-                if (!expr.type.isEqual(type.arrayElementType)) {
-                    context.warn(propExprNode.children[i], EWarnings.ImplicitTypeConversion, 
-                        { tooltip: `${expr.type.name} => ${type.arrayElementType.name}` });
-                }
-                args.push(expr);
-            }
-        } else {
-            if (exprNode.value === '{') {
-                args.push(this.analyzeExpr(context, program, propExprNode.children[1]));
-            } else {
-                args.push(this.analyzeExpr(context, program, exprNode));
-            }
-        }
-        
-        const id = new IdInstruction({ name: propName, scope, sourceNode: nameNode });
-        return new PresetProperty({ scope, sourceNode, id, args });
-    }
-
-
-    protected analyzePresetStateBlock(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IFxPresetProperty[] {
-        const children = sourceNode.children;
-        let props = []
-        for (let i = children.length - 2; i >= 1; i--) {
-            props.push(this.analyzePresetProperty(context, program, children[i]));
-        }
-        return props;
-    }
-
-    /**
-     * AST example:
-     *    FxPreset
-     *       + PassStateBlock 
-     *         T_NON_TYPE_ID = 'X'
-     *         T_KW_FXPRESET = 'preset'
-     */
-    protected analyzeFxPresetDecl(context: FxContext, program: ProgramScope, sourceNode: IParseNode) {
-
-        const children = sourceNode.children;
-        const scope = program.currentScope;
-
-        let id: IIdInstruction = null;
-        for (let i = 0; i < children.length; ++i) {
-            if (children[i].name === "T_NON_TYPE_ID") {
-                let name = children[i].value;
-                id = new IdInstruction({ sourceNode: children[i], scope, name });
-            }
-        }
-
-        const props = this.analyzePresetStateBlock(context, program, children[0]);
-
-        const preset = new PresetInstruction({
-            scope,
-            sourceNode,
-            id,
-            props
-        });
-
-        return preset;
     }
 
 
@@ -740,6 +630,12 @@ export class FxAnalyzer extends Analyzer {
             switch (children[i].name) {
                 case 'PassDecl':
                     {
+                        // hack to support presets extension
+                        if (children[i].children[0].name === 'PresetDecl') {
+                            presets.push(this.analyzePresetDecl(context, program, children[i].children[0]));
+                            break;
+                        }
+
                         let pass = this.analyzePartFXPassDecl(context, program, children[i]);
 
                         if (!pass.isValid()) {
@@ -753,10 +649,6 @@ export class FxAnalyzer extends Analyzer {
                         passList.push(pass);
                     }
                     break;
-                case 'FxPreset':
-                    {
-                        presets.push(this.analyzeFxPresetDecl(context, program, children[i]));
-                    }
             }
         }
 

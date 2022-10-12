@@ -213,20 +213,19 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
         this.updateDecorations();
 
         // TEMP: temp solution for parser param sync
-        const parserStateNext = getParser(this.props);
-        this.validateParser(parserStateNext);
+        this.validateParser(this.props);
     }
 
     componentDidMount() {
          // TEMP: temp solution for parser param sync
-         const parserStateNext = getParser(this.props);
-         this.validateParser(parserStateNext);
+         this.validateParser(this.props);
     }
 
-    validateParser(parserStateNext: IParserState) {
+    validateParser(stateNext: IStoreState) {
+        const parserStateNext: IParserState = getParser(stateNext);
         const parserProps = [ 'flags', 'type', 'grammar', 'parsingFlags' ];
         const paramsChanges = !parserProps.every(propName => this.parserParamsCache[propName] === parserStateNext[propName]);
-
+        const defines = stateNext.sourceFile.defines.map( name => ({ name }) );
         if (paramsChanges) {
             parserProps.forEach(propName => this.parserParamsCache[propName] = parserStateNext[propName]);
 
@@ -235,7 +234,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                 provider.init({ grammar, flags, type }, parsingFlags, Comlink.proxy((name: string) => {
                     // IP: don't use closure here?
                     return Depot.makeResolver(getDepot(this.props))(name);
-                }));
+                }), defines);
             }
         }
     }

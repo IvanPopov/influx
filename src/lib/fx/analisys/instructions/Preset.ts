@@ -1,17 +1,16 @@
 import { isNull } from "@lib/common";
-import { EInstructionTypes, IExprInstruction, IIdInstruction } from "@lib/idl/IInstruction";
-import { IFxPreset, IFxPresetProperty } from "@lib/idl/part/IPartFx";
-import { DeclInstruction, IDeclInstructionSettings } from "../DeclInstruction";
-import { Instruction } from "../Instruction";
+import { EInstructionTypes, IIdInstruction, IPresetInstruction, IPresetPropertyInstruction } from "@lib/idl/IInstruction";
+import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
+import { Instruction } from "./Instruction";
 
 export interface IPresetInstructionSettings extends IDeclInstructionSettings {
     id?: IIdInstruction;
-    props: IFxPresetProperty[];
+    props: IPresetPropertyInstruction[];
 }
 
-export class PresetInstruction extends DeclInstruction implements IFxPreset {
+export class PresetInstruction extends DeclInstruction implements IPresetInstruction {
     protected _id: IIdInstruction;
-    protected _props: IFxPresetProperty[];
+    protected _props: IPresetPropertyInstruction[];
 
     constructor({ props, id = null, ...settings }: IPresetInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PresetDecl, ...settings });
@@ -33,7 +32,7 @@ export class PresetInstruction extends DeclInstruction implements IFxPreset {
     }
 
 
-    get props(): IFxPresetProperty[] {
+    get props(): IPresetPropertyInstruction[] {
         return this._props;
     }
 

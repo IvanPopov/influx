@@ -1,6 +1,6 @@
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
 import { instruction, type } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
@@ -14,6 +14,44 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
     writable?: boolean;
 }
 
+function evaluateValue(val: IInstruction) {
+    if (!val) return 0;
+    if (instruction.isLiteral(val)) return (<ILiteralInstruction<number>>val).value;
+    if (val.instructionType === EInstructionTypes.k_IdExpr) {
+        const idExpr = (<IIdExprInstruction>val);
+        if (idExpr.decl.isGlobal()) { // and is constant?
+            return evaluateConsExpr(idExpr.decl.initExpr?.args?.[0]);
+        }
+    }
+    return -1;
+}
+
+// simples possible evalator for minimal compartibility
+function evaluateConsExpr(expr: IExprInstruction): number
+{
+    const val = evaluateValue(expr);
+    if (val >= 0) return val;
+
+    if (expr.instructionType !== EInstructionTypes.k_ArithmeticExpr) return -1;
+    const { left, right, operator } = <IArithmeticExprInstruction>expr;
+    
+    let lval = evaluateConsExpr(left);
+    let rval = evaluateConsExpr(right);
+    
+    if (lval >= 0 && rval >= 0) {
+        switch (operator) {
+            // todo: use round ? check if integers only
+            case '*': return rval * lval;
+            case '/': return rval / lval;
+            case '+': return rval + lval;
+            case '-': return rval - lval;
+            default:
+                console.error('unsupported operator');
+        }
+    }
+
+    return -1;
+}
 
 export class VariableTypeInstruction extends Instruction implements IVariableTypeInstruction {
     protected _subType: ITypeInstruction;
@@ -161,8 +199,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         // arrays like float[N];
-        // TODO: try to evaluate this._arrayIndexExpr
-        return instruction.UNDEFINE_LENGTH;
+        const len = evaluateConsExpr(expr);
+        return len < 0 ? instruction.UNDEFINE_LENGTH: len;
     }
 
 
@@ -280,6 +318,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     isConst(): boolean {
         return this.hasUsage("const");
+    }
+
+
+    isUnsigned(): boolean {
+        return this.hasUsage("unsigned");
     }
 
 

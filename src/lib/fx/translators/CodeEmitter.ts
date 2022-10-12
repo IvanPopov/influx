@@ -1,6 +1,6 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction, ITypedefInstruction } from "@lib/idl/IInstruction";
 
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { BaseEmitter } from "./BaseEmitter";
@@ -228,6 +228,16 @@ export class CodeEmitter extends BaseEmitter {
         this.resolveType(instr.type);
     }
 
+    emitTypedef(instr: ITypedefInstruction) {
+        this.emitKeyword('typedef');
+        // todo: add support for typedefs like:
+        //  typedef const float4 T;
+        //          ^^^^^^^^^^^^
+        this.emitKeyword(instr.type.name);
+        this.emitKeyword(instr.alias);
+        this.emitChar(';');
+        this.emitNewline();
+    }
 
     emitExpression(expr: IExprInstruction) {
         if (!expr) {
@@ -676,6 +686,9 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_TypeDecl:
                 this.emitTypeDecl(instr as ITypeDeclInstruction);
+                break;
+            case EInstructionTypes.k_TypedefDecl:
+                this.emitTypedef(instr as ITypedefInstruction);
                 break;
             case EInstructionTypes.k_ComplexType:
             case EInstructionTypes.k_VariableType:

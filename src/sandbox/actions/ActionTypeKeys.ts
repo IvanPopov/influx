@@ -16,6 +16,8 @@ export const SOURCE_CODE_REMOVE_MARKER              = 'source-code-remove-marker
 export const SOURCE_CODE_REMOVE_MARKER_BATCH        = 'source-code-remove-marker-batch';
 export const SOURCE_CODE_ADD_BREAKPOINT             = 'source-code-add-breakpoint';
 export const SOURCE_CODE_REMOVE_BREAKPOINT          = 'source-code-remove-breakpoint';
+export const SOURCE_CODE_SET_DEFINE                 = 'source-code-set-define';
+export const SOURCE_CODE_REMOVE_DEFINE              = 'source-code-remove-define';
 
 export const SOURCE_CODE_PREPROCESSING_COMPLETE     = 'source-code-preprocessing-complete';
 

@@ -105,7 +105,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
             const rootPath = !env 
                 ? path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH) 
                 : env.Get('influx-sfx-dir');
-            await scan(rootPath, root, ['.fx', '.xfx']);
+            await scan(rootPath, root, ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps']);
 
             root.files.push(URI.fromLocalPath(DEFAULT_FILENAME));
         }

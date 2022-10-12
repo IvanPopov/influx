@@ -4,12 +4,18 @@ import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IncludeResolver } from "@lib/idl/parser/IParser";
+import { IKnownDefine } from "@lib/parser/Preprocessor";
 
 import { Analyzer, IExprSubstCallback } from "./analisys/Analyzer";
 import { createSLASTDocument } from "./SLASTDocument";
 
-export async function createSLDocument(document: ISLASTDocument | ITextDocument,  
-        opts : { flags?: number, includeResolver?: IncludeResolver } = {}): Promise<ISLDocument> {
+export interface ISLOptions {
+    flags?: number;
+    includeResolver?: IncludeResolver;
+    defines?: IKnownDefine[];
+}
+
+export async function createSLDocument(document: ISLASTDocument | ITextDocument, opts : ISLOptions = {}): Promise<ISLDocument> {
     let textDocument = <ITextDocument>document;
     let slastDocument = <ISLASTDocument>document;
 
@@ -38,7 +44,7 @@ export async function createSLDocument(document: ISLASTDocument | ITextDocument,
 
 
 export async function extendSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, 
-    opts: { flags?: number, includeResolver?: IncludeResolver } = {}): Promise<ISLDocument> {
+    opts: ISLOptions = {}): Promise<ISLDocument> {
     let addition = null;
     if (textAddition)
     {

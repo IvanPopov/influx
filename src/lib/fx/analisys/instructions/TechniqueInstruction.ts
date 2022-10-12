@@ -1,4 +1,4 @@
-import { EInstructionTypes, ETechniqueType, IPassInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ETechniqueType, IPassInstruction, IPresetInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
 
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from './Instruction';
@@ -7,6 +7,7 @@ export interface ITechniqueInstructionSettings<PassType extends IPassInstruction
     name: string;
     techniqueType: ETechniqueType;
     passList: PassType[];
+    presets: IPresetInstruction[];
 }
 
 
@@ -15,12 +16,16 @@ export class TechniqueInstruction<PassType extends IPassInstruction> extends Dec
     protected _techniqueType: ETechniqueType;
     protected _passList: PassType[];
 
-    constructor({ name, techniqueType, passList, ...settings }: ITechniqueInstructionSettings<PassType>) {
+    readonly presets: IPresetInstruction[];
+
+    constructor({ name, techniqueType, passList, presets, ...settings }: ITechniqueInstructionSettings<PassType>) {
         super({ instrType: EInstructionTypes.k_TechniqueDecl, ...settings });
         
         this._name = name;
         this._passList = passList.map(pass => Instruction.$withParent(pass, this));
         this._techniqueType = techniqueType;
+
+        this.presets = presets;
     }
 
     // todo: add id support?

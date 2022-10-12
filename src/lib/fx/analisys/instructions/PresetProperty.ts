@@ -1,13 +1,12 @@
-import { EInstructionTypes, IExprInstruction, IIdInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { IFxPresetProperty } from "@lib/idl/part/IPartFx";
-import { IInstructionSettings, Instruction } from "../Instruction";
+import { EInstructionTypes, IExprInstruction, IIdInstruction, IPresetPropertyInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IPresetInstructionSettings extends IInstructionSettings {
     id: IIdInstruction;
     args: IExprInstruction[];
 }
 
-export class PresetProperty extends Instruction implements IFxPresetProperty {
+export class PresetProperty extends Instruction implements IPresetPropertyInstruction {
     readonly id: IIdInstruction;
     readonly args: IExprInstruction[];
 

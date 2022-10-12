@@ -9,6 +9,7 @@ import { SLSignatureHelp } from './services/signatureHelp';
 import { createSLASTDocument } from '@lib/fx/SLASTDocument';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
+import { IKnownDefine } from '@lib/parser/Preprocessor';
 
 // import { SLValidation } from './services/validation';
 
@@ -16,7 +17,7 @@ import { createTextDocument } from '@lib/fx/TextDocument';
 type SelectionRange = Range;
 
 
-export function getLanguageService(opts: { flags: IASTDocumentFlags, includeResolver?: IncludeResolver }): ILanguageService {
+export function getLanguageService(opts: { flags: IASTDocumentFlags, includeResolver?: IncludeResolver, defines?: IKnownDefine[] }): ILanguageService {
     const signatureHelp = new SLSignatureHelp();
 
     //

@@ -90,6 +90,18 @@ export const sourceCode = {
 
     resetDebugger() {
         return { type: evt.DEBUGGER_RESET };
+    },
+
+    //
+    //
+    //
+
+    setDefine(name: string) {
+        return { type: evt.SOURCE_CODE_SET_DEFINE, payload: { name } };
+    },
+
+    removeDefine(name: string) {
+        return { type: evt.SOURCE_CODE_REMOVE_DEFINE, payload: { name } };
     }
 };
 

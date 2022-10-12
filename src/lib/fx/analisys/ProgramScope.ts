@@ -1,6 +1,7 @@
 ﻿import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+import { isString } from "@lib/util/s3d/type";
 
 import { fn, type } from "./helpers";
 
@@ -143,8 +144,18 @@ export class Scope implements IScope {
     }
 
 
-    addTypeAlias(typeName: string, aliasName: string): boolean {
-        const type = this.findType(typeName);
+    addTypeAlias(t: string | ITypeInstruction, aliasName: string): boolean {
+        let typeName = null;
+        let type = null;
+
+        if (isString(t)) {
+            typeName = t;
+            type = this.findType(typeName);
+        } else {
+            type = t;
+            typeName = type.name;
+        }
+        
         const alias = this.findType(aliasName);
 
         if (alias) {
@@ -155,8 +166,8 @@ export class Scope implements IScope {
             return false;
         }
 
-        // original type must be part of this scope
-        if (!this.types[typeName]) {
+        // original type must be part of this scope?
+        if (!this.findType(typeName)) {
             return false;
         }
 

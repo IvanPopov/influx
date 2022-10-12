@@ -4,7 +4,7 @@ import { ITextDocument } from '@lib/idl/ITextDocument';
 import { IMacro } from '@lib/idl/parser/IMacro';
 import { EOperationType, IASTConfig, IFile, IncludeResolver, IRange, IToken } from '@lib/idl/parser/IParser';
 import { ASTDocument } from "@lib/parser/ASTDocument";
-import { Preprocessor } from '@lib/parser/Preprocessor';
+import { IKnownDefine, Preprocessor } from '@lib/parser/Preprocessor';
 import { Diagnostics } from '@lib/util/Diagnostics';
 
 import { defaultSLParser } from './SLParser';
@@ -67,10 +67,11 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
     protected init(config: IASTConfig) {
         super.init(config);
         const { knownTypes } = this;
-        const { includeResolver } = config;
-        this.preprocessor = new Preprocessor(this.parser.lexerEngine, { knownTypes, includeResolver });
+        const { includeResolver, defines } = config;
+        this.preprocessor = new Preprocessor(this.parser.lexerEngine, { knownTypes, includeResolver, defines });
 
         this.ruleFunctions.set('addType', this._addType.bind(this));
+        this.ruleFunctions.set('addTypeDef', this._addTypeDef.bind(this));
     }
 
 
@@ -78,6 +79,14 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
         const tree = this.tree;
         const node = tree.lastNode;
         const typeId = node.children[node.children.length - 2].value;
+        this.knownTypes.add(typeId);
+        return EOperationType.k_Ok;
+    }
+
+    private _addTypeDef(): EOperationType {
+        const tree = this.tree;
+        const node = tree.lastNode;
+        const typeId = node.children[0].value;
         this.knownTypes.add(typeId);
         return EOperationType.k_Ok;
     }
@@ -102,10 +111,16 @@ export class SLASTDocument extends ASTDocument implements ISLASTDocument {
 }
 
 
-export async function createSLASTDocument(textDocument: ITextDocument, 
-    opts : { flags?: number, knownTypes?: string[], includeResolver?: IncludeResolver } = {}): Promise<ISLASTDocument> {
-    const { flags, knownTypes, includeResolver } = opts;
-    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]), includeResolver });
+export interface ISLASTOptions {
+    flags?: number;
+    knownTypes?: string[];
+    includeResolver?: IncludeResolver;
+    defines?: IKnownDefine[];
+};
+
+export async function createSLASTDocument(textDocument: ITextDocument, opts : ISLASTOptions = {}): Promise<ISLASTDocument> {
+    const { flags, knownTypes, includeResolver, defines } = opts;
+    const document = new SLASTDocument({ knownTypes: new Set([...(knownTypes || [])]), includeResolver, defines });
     // const timeLabel = `createSLASTDocument(${textDocument.uri})`;
     // console.time(timeLabel);
     await document.parse(textDocument, flags);

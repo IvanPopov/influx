@@ -64,7 +64,7 @@ const cleanupDebuggerColorization = (state) => cleanupMarkersBatch(state, DEBUGG
 
 
 async function processParsing(state: IStoreState, dispatch): Promise<void> {
-    const { depot, parserParams: { parsingFlags: flags }, sourceFile: { content: source, uri } } = state;
+    const { depot, parserParams: { parsingFlags: flags }, sourceFile: { content: source, uri, defines } } = state;
 
     // if (matchLocation(state).params.view !== PLAYGROUND_VIEW) {
     //     return;
@@ -73,9 +73,10 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
     if (!source) {
         return;
     }
+    
     const includeResolver = Depot.makeResolver(depot);
     const textDocument = await createTextDocument(uri, source);
-    const slastDocument = await createSLASTDocument(textDocument, { flags, includeResolver });
+    const slastDocument = await createSLASTDocument(textDocument, { flags, includeResolver, defines: defines.map(def => ({ name: def })) });
 
     const unreachableCode = slastDocument.unreachableCode.filter(loc => String(loc.start.file) === String(slastDocument.uri));
 
@@ -85,6 +86,16 @@ async function processParsing(state: IStoreState, dispatch): Promise<void> {
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
+    }
+
+    if (slastDocument.diagnosticReport.errors > 0) {
+        toast({
+            type: 'error',
+            title: `Parsing failed.`,
+            animation: 'scale',
+            size: 'tiny',
+            time: 2000
+        });
     }
 
     // if (!diag.errors)
@@ -105,6 +116,16 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
 
     if (!PRODUCTION) {
         // verbose(Diagnostics.stringify(diag));
+    }
+
+    if (slDocument.diagnosticReport.errors > 0) {
+        toast({
+            type: 'error',
+            title: `Analysis failed.`,
+            animation: 'scale',
+            size: 'tiny',
+            time: 2000
+        });
     }
 
     // if (!diag.errors)
@@ -267,7 +288,8 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
 async function processRaw(state: IStoreState, dispatch): Promise<void> {
     const file = getFileState(state);
     const includeResolver = Depot.makeResolver(state.depot);
-    const document = await createPPDocument(await createTextDocument(file.uri, file.content), { includeResolver });
+    const defines = file.defines.map(name => ({ name }));
+    const document = await createPPDocument(await createTextDocument(file.uri, file.content), { includeResolver, defines });
 
     dispatch({ type: evt.SOURCE_CODE_PREPROCESSING_COMPLETE, payload: { document } });
 }
@@ -377,6 +399,21 @@ const debuggerAutocompileLogic = createLogic<IStoreState>({
 });
 
 
+
+const defineLogic = createLogic<IStoreState>({
+    type: [evt.SOURCE_CODE_SET_DEFINE, evt.SOURCE_CODE_REMOVE_DEFINE],
+
+    process({ getState }, dispatch, done) {
+        const state = getState();
+        const { content } = getFileState(state);
+        // cleanupMarkers(<IDispatch>dispatch, cleanupMarkersBatch(state, 'line'));
+        dispatch({ type: evt.SOURCE_CODE_MODIFED, payload: { content } });
+        done();
+    }
+});
+
+
+
 export default [
     dropSourceFileLogic,
     updateParserLogic,
@@ -389,5 +426,6 @@ export default [
     debuggerAutocompileLogic,
     // markersAddLogic,
     // markersDelLogic
-    navigationLogicHook
+    navigationLogicHook,
+    defineLogic
 ];

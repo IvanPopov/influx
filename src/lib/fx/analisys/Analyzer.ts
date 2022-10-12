@@ -3,12 +3,13 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IFile, IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from '@lib/util/Diagnostics';
+import { isNumber } from '@lib/util/s3d/type';
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
 import { expression, instruction, type } from './helpers';
@@ -45,6 +46,8 @@ import { PassInstruction } from './instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
 import { PostfixPointInstruction } from './instructions/PostfixPointInstruction';
+import { PresetInstruction } from './instructions/Preset';
+import { PresetProperty } from './instructions/PresetProperty';
 import { ProvideInstruction } from "./instructions/ProvideInstruction";
 import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
@@ -55,11 +58,12 @@ import { StringInstruction } from './instructions/StringInstruction';
 import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
 import { TechniqueInstruction } from './instructions/TechniqueInstruction';
 import { TypeDeclInstruction } from './instructions/TypeDeclInstruction';
+import { TypedefInstruction } from './instructions/TypedefInstruction';
 import { UnaryExprInstruction } from './instructions/UnaryExprInstruction';
 import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
-import { ProgramScope, ProgramScopeEx } from './ProgramScope';
+import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
 import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
@@ -79,19 +83,24 @@ const asType = (instr: ITypedInstruction): ITypeInstruction => instr ? instr.typ
 
 
 // FIXME: refuse from the regular expressions in favor of a full typecasting graph
-const asRelaxedType = (instr: ITypedInstruction): ITypeInstruction | RegExp => {
+// relax only uint => int
+const asRelaxedType = (instr: ITypedInstruction | ITypeInstruction): ITypeInstruction | RegExp => {
     if (!instr) {
         return null;
     }
 
-    // if (instruction.isLiteral(instr)) {
-    if (instr.type.isEqual(T_INT) || instr.type.isEqual(T_UINT)) {
-        // temp workaround in order to match int to uint and etc. 
-        return /^int$|^uint$/g;
-    }
-    // }
+    const type = ((instr as any).hasField) ? <ITypeInstruction>instr : (<ITypedInstruction> instr).type;
+    //          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    //          hacky way to check if "type" instruction (not "typed")
 
-    return instr.type;
+    // allow "int" => "float" substitution
+    if (SystemScope.isIntBasedType(type) || SystemScope.isUintBasedType(type) || SystemScope.isBoolBasedType(type)) {
+        // temp workaround in order to match int to uint and etc. 
+        const n = `${type.length > 1 ? type.length : ''}`;
+        return new RegExp(`^int${n}$|^uint${n}$|^bool${n}$|^float${n}$`, "g")
+    }
+
+    return type;
 };
 
 // TODO: rework 'auto' api
@@ -106,10 +115,10 @@ function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruct
 
 
 export function parseUintLiteral(value: string) {
-    const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)(u?)$/);
+    const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)([ulUL]*)$/);
     assert(match, `cannot parse uint literal: ${value}`);
 
-    const signed = match[5] !== 'u';
+    const signed = match[5].toLowerCase().indexOf('u') === -1;
     const exp = Number(match[4] || '0');
     const base = Number(match[2]);
     assert(base !== NaN);
@@ -320,6 +329,21 @@ function addTypeDecl(context: Context, scope: IScope, typeDecl: ITypeDeclInstruc
     let isAdded = scope.addType(typeDecl.type);
     if (!isAdded) {
         context.error(typeDecl.sourceNode, EErrors.TypeRedefinition, { typeName: typeDecl.name });
+    }
+}
+
+// TODO: rework to support complex typ defenitions like 
+//  typedef const float4 TYPE_T;
+//          ^^^^^^
+// IP: at the moment type defenitions are not supported
+function addTypeAlias(context: Context, scope: IScope, typedef: ITypedefInstruction): void {
+    if (SystemScope.findType(typedef.alias)) {
+        context.error(typedef.sourceNode, EErrors.SystemTypeRedefinition, { typeName: typedef.name });
+    }
+
+    let isAdded = scope.addTypeAlias(typedef.type, typedef.alias);
+    if (!isAdded) {
+        context.error(typedef.sourceNode, EErrors.TypeRedefinition, { typeName: typedef.alias });
     }
 }
 
@@ -761,6 +785,10 @@ export class Analyzer {
         if (children.length === 1) {
             const initExpr = this.analyzeExpr(context, program, children[0]);
 
+            if (!initExpr) {
+                return null;
+            }
+
             // NOTE: exprSourceNode => source node of the whole expression like "const float name = value" for better error highlighting.
             //                                                                               ^^^^^^^^^^^^
             //       sourceNode => source node of the init expr: const float3 name = { 1, 2, 3 };
@@ -976,6 +1004,7 @@ export class Analyzer {
         const usageInout = usagesRaw.indexOf('inout') !== -1;
         const usageConst = usagesRaw.indexOf('const') !== -1;
         const usageUniform = usagesRaw.indexOf('uniform') !== -1;
+        const usageUnsigned = usagesRaw.indexOf('unsigned') !== -1;
 
         // TODO: emit errors in case of inconsistent usages
         // TODO: remplace with bitflags
@@ -1002,6 +1031,10 @@ export class Analyzer {
                     if (usageUniform) usages.push('uniform');
                 }
             }
+        }
+
+        if (usageUnsigned && !SystemScope.isIntBasedType(type)) {
+            console.error('invalid unsigned usage');
         }
 
         return new VariableTypeInstruction({ scope, sourceNode, type, usages })
@@ -1124,7 +1157,7 @@ export class Analyzer {
 
     protected analyzeUsage(sourceNode: IParseNode): IVariableUsage {
         sourceNode = sourceNode.children[0];
-        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout', 'static'];
+        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout', 'static', 'unsigned', 'precise'];
         assert(supportedUsages.indexOf(sourceNode.value) !== -1, sourceNode.value);
         return <IVariableUsage>sourceNode.value;
     }
@@ -1427,6 +1460,7 @@ export class Analyzer {
                 return this.analyzeLogicalExpr(context, program, sourceNode);
             case 'AssignmentExpr':
                 return this.analyzeAssignmentExpr(context, program, sourceNode);
+            case 'AndExpr':
             case 'ShiftExpr':
             case 'InclusiveOrExpr':
             case 'ExclusiveOrExpr':
@@ -1771,7 +1805,16 @@ export class Analyzer {
                 {
                     // TODO: validate intrinsics like 'InterlockedAdd', check that dest is UAV address
                     funcName = children[children.length - 1].value;
-                    func = globalScope.findFunction(funcName, args.map(asRelaxedType));
+                    const noStrictTypeWereProvided = args.every(arg => arg?.type != asRelaxedType(arg));
+                    // don't relax all types because it's useless
+                    // like: (0, 0, 0) => (float|int, float|int)
+                    // relax only uint => int if not strict types were provided 
+                    func = globalScope.findFunction(funcName, args.map(arg => arg.type));
+                    // still not found?
+                    if (!func) {
+                        // last resort for cases like: "sqrt(2)"
+                        func = globalScope.findFunction(funcName, args.map(asRelaxedType));
+                    }
                 }
                 break;
             // call as method
@@ -1796,6 +1839,11 @@ export class Analyzer {
             return null;
         }
 
+        func.def.params.forEach((param, i) => {
+            if (!type.equals(param.type, args[i].type)) {
+                context.warn(args[i].sourceNode, EWarnings.ImplicitTypeConversion, { info: `${args[i].type.toCode()} => ${param.type.toCode()}` });
+            }
+        });
 
         if (func.instructionType !== EInstructionTypes.k_FunctionDecl &&
             func.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
@@ -1815,31 +1863,25 @@ export class Analyzer {
                 const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
-                    return null;
                 }
                 if (!args[i].type.writable) {
                     context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
-                    return null;
                 }
             } else if (params[i].type.hasUsage('inout')) {
                 const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
-                    return null;
                 }
                 if (!args[i].type.writable) {
                     context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
-                    return null;
                 }
 
                 if (!args[i].type.readable) {
                     context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
-                    return null;
                 }
             } else {
                 if (!args[i].type.readable) {
                     context.error(args[i].sourceNode, EErrors.InvalidTypeForReading);
-                    return null;
                 }
             }
         }
@@ -1896,7 +1938,6 @@ export class Analyzer {
             for (let i = 0; i < args.length; i++) {
                 if (!args[i] || !args[i].type.readable) {
                     context.error(sourceNode, EErrors.InvalidTypeForReading);
-                    return null;
                 }
             }
         }
@@ -2191,6 +2232,11 @@ export class Analyzer {
         const scope = program.currentScope;
 
         const type = this.analyzeConstTypeDim(context, program, children[2]);
+
+        if (!type.isBase()) {
+            context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: String(type) });
+        }
+
         const sourceExpr = this.analyzeExpr(context, program, children[0]);
 
         if (isNull(sourceExpr)) {
@@ -2199,7 +2245,6 @@ export class Analyzer {
 
         if (!(<IVariableTypeInstruction>sourceExpr.type).readable) {
             context.error(sourceNode, EErrors.InvalidTypeForReading);
-            return null;
         }
 
         return new CastExprInstruction({ scope, sourceNode, sourceExpr, type });
@@ -2225,8 +2270,18 @@ export class Analyzer {
         const leftExpr = this.analyzeExpr(context, program, children[children.length - 3]);
         const rightExpr = this.analyzeExpr(context, program, children[0]);
 
-        if (isNull(conditionExpr) || isNull(leftExpr) || isNull(rightExpr)) {
-            context.error(conditionExpr ? conditionExpr.sourceNode : sourceNode, EErrors.InvalidConditionType, { typeName: '[unknown]' });
+        if (isNull(conditionExpr)) {
+            context.error(children[children.length - 1], EErrors.InvalidConditionType, { typeName: '[unknown]' });
+            return null;
+        }
+
+        if (isNull(leftExpr)) {
+            context.error(children[children.length - 3], EErrors.InvalidConditionType, { typeName: '[unknown]' });
+            return null;
+        }
+
+        if (isNull(rightExpr)) {
+            context.error(children[0], EErrors.InvalidConditionType, { typeName: '[unknown]' });
             return null;
         }
 
@@ -2250,18 +2305,15 @@ export class Analyzer {
         }
 
         if (!conditionType.readable) {
-            context.error(conditionType.sourceNode, EErrors.InvalidTypeForReading);
-            return null;
+            context.error(conditionExpr.sourceNode, EErrors.InvalidTypeForReading, { tooltip: `${conditionExpr.toCode()}` });
         }
 
         if (!leftExprType.readable) {
-            context.error(leftExprType.sourceNode, EErrors.InvalidTypeForReading);
-            return null;
+            context.error(leftExpr.sourceNode, EErrors.InvalidTypeForReading, { tooltip: `${leftExpr.toCode()}` });
         }
 
         if (!rightExprType.readable) {
-            context.error(rightExprType.sourceNode, EErrors.InvalidTypeForReading);
-            return null;
+            context.error(rightExpr.sourceNode, EErrors.InvalidTypeForReading, { tooltip: `${rightExpr.toCode()}` });
         }
 
         return new ConditionalExprInstruction({ scope, sourceNode, cond: conditionExpr, left: leftExpr, right: rightExpr });
@@ -2389,12 +2441,10 @@ export class Analyzer {
 
         if (!leftType.readable) {
             context.error(sourceNode, EErrors.InvalidTypeForReading);
-            return null;
         }
 
         if (!rightType.readable) {
             context.error(sourceNode, EErrors.InvalidTypeForReading);
-            return null;
         }
 
         return new LogicalExprInstruction({ scope, sourceNode, left, right, operator });
@@ -2415,6 +2465,10 @@ export class Analyzer {
 
         const left = this.analyzeExpr(context, program, children[children.length - 1]);
         const right = this.analyzeExpr(context, program, children[0]);
+
+        if (!left || !right) {
+            return null;
+        }
 
         const leftType = <IVariableTypeInstruction>left.type;
         const rightType = <IVariableTypeInstruction>right.type;
@@ -2570,10 +2624,6 @@ export class Analyzer {
         }
 
         const type = <IVariableTypeInstruction>(this.analyzeType(context, program, children[0]));
-
-        if (!type.isBase()) {
-            context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: String(type) });
-        }
 
         return type;
     }
@@ -3293,6 +3343,10 @@ export class Analyzer {
         let cond: IExprInstruction = null;
         let step: IExprInstruction = null;
 
+        let attributes = [];
+        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
+            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        }
 
         if (children[1].name === 'ERROR') {
             return null;
@@ -3300,23 +3354,23 @@ export class Analyzer {
 
         program.push();
 
-        init = this.analyzeForInit(context, program, children[children.length - 3]);
-        cond = this.analyzeForCond(context, program, children[children.length - 4]);
+        init = this.analyzeForInit(context, program, children[children.length - 3 - attributes.length]);
+        cond = this.analyzeForCond(context, program, children[children.length - 4 - attributes.length]);
         step = null;
 
         if (isNull(init)) {
-            context.error(children[children.length - 3], EErrors.InvalidForInitEmptyIterator);
+            context.error(children[children.length - 3 - attributes.length], EErrors.InvalidForInitEmptyIterator);
         } else if (init.instructionType !== EInstructionTypes.k_VariableDecl) {
             // EAnalyzerErrors.InvalidForInitExpr
         }
 
         if (isNull(cond)) {
-            context.error(children[children.length - 4], EErrors.InvalidForConditionEmpty);
+            context.error(children[children.length - 4 - attributes.length], EErrors.InvalidForConditionEmpty);
         } else if (cond.instructionType !== EInstructionTypes.k_RelationalExpr) {
             // EAnalyzerErrors.InvalidForConditionRelation
         }
 
-        if (children.length === 7) {
+        if (children.length === 7 + attributes.length) {
             step = this.analyzeForStep(context, program, children[2]);
             if (isNull(step)) {
                 context.error(children[2], EErrors.InvalidForStepEmpty);
@@ -3417,6 +3471,105 @@ export class Analyzer {
     }
 
 
+
+    protected analyzePresetProperty(context: Context, program: ProgramScope, sourceNode: IParseNode): IPresetPropertyInstruction {
+
+        const children = sourceNode.children;
+        const nameNode = children[children.length - 1];
+        const propName = nameNode.value;
+        const propExprNode = children[children.length - 3];
+        const exprNode = propExprNode.children[propExprNode.children.length - 1];
+        const scope = program.currentScope;
+
+        if (isNull(exprNode.value) || isNull(propName)) {
+            console.warn('Pass state is incorrect.'); // TODO: move to warnings
+            return null;
+        }
+
+        const decl = scope.findVariable(propName);
+        if (isNull(decl)) {
+            context.warn(sourceNode, EWarnings.PresetPropertyHasNotBeenFound);
+            return null;
+        }
+
+        const type = decl.type;
+
+        /**
+         * AST example:
+         *    PassStateExpr
+         *         T_PUNCTUATOR_125 = '}'
+         *         T_UINT = '1'
+         *         T_PUNCTUATOR_44 = ','
+         *         T_KW_TRUE = 'true'
+         *         T_PUNCTUATOR_123 = '{'
+         */
+            const args: IExprInstruction[] =[];
+            if (exprNode.value === '{' && propExprNode.children.length > 3) {
+                for (let i = propExprNode.children.length - 2; i >= 1; i -= 2) {
+                    const expr = this.analyzeExpr(context, program, propExprNode.children[i]);
+                    // todo: use more strict check same as for InitExpr analyze
+                    if (!expr.type.isEqual(type.arrayElementType)) {
+                        context.warn(propExprNode.children[i], EWarnings.ImplicitTypeConversion, 
+                            { tooltip: `${expr.type.name} => ${type.arrayElementType.name}` });
+                    }
+                    args.push(expr);
+                }
+            } else {
+                if (exprNode.value === '{') {
+                    args.push(this.analyzeExpr(context, program, propExprNode.children[1]));
+                } else {
+                    args.push(this.analyzeExpr(context, program, exprNode));
+                }
+            }
+            
+            const id = new IdInstruction({ name: propName, scope, sourceNode: nameNode });
+            return new PresetProperty({ scope, sourceNode, id, args });
+        }
+ 
+ 
+    protected analyzePresetStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IPresetPropertyInstruction[] {
+        const children = sourceNode.children;
+        let props = []
+        for (let i = children.length - 2; i >= 1; i--) {
+            props.push(this.analyzePresetProperty(context, program, children[i]));
+        }
+        return props;
+    }
+
+    /**
+     * AST example:
+     *    PresetDecl
+     *       + PassStateBlock 
+     *         T_NON_TYPE_ID = 'X'
+     *         T_KW_PRESET = 'preset'
+     */
+    protected analyzePresetDecl(context: Context, program: ProgramScope, sourceNode: IParseNode) {
+
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        let id: IIdInstruction = null;
+        for (let i = 0; i < children.length; ++i) {
+            if (children[i].name === "T_NON_TYPE_ID") {
+                let name = children[i].value;
+                id = new IdInstruction({ sourceNode: children[i], scope, name });
+            }
+        }
+
+        const props = this.analyzePresetStateBlock(context, program, children[0]);
+
+        const preset = new PresetInstruction({
+            scope,
+            sourceNode,
+            id,
+            props
+        });
+
+        return preset;
+    }
+
+   
+
     protected analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITechniqueInstruction {
         const children = sourceNode.children;
         const name = this.analyzeComplexName(children[children.length - 2]);
@@ -3427,6 +3580,7 @@ export class Analyzer {
         let annotation: IAnnotationInstruction = null;
         let semantic: string = null;
         let passList: IPassInstruction[] = null;
+        let presets: IPresetInstruction[] = null;
         let techniqueType: ETechniqueType = ETechniqueType.k_BasicFx;
 
         for (let i = children.length - 3; i >= 0; i--) {
@@ -3435,11 +3589,11 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else {
-                passList = this.analyzeTechnique(context, program, children[i]);
+                [passList, presets] = this.analyzeTechnique(context, program, children[i]);
             }
         }
 
-        const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantic, annotation, passList, scope });
+        const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantic, annotation, passList, scope, presets });
         Analyzer.addTechnique(context, program, technique);
         return technique;
     }
@@ -3452,15 +3606,26 @@ export class Analyzer {
      *       + PassDecl 
      *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction[] {
+    protected analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): [IPassInstruction[], IPresetInstruction[]] {
         const children = sourceNode.children;
         let passList: IPassInstruction[] = [];
+        let presetList: IPresetInstruction[] = [];
+
         for (let i = children.length - 2; i >= 1; i--) {
+            // IP: hack to support preset extension
+            if (children[i].children[0].name === 'PresetDecl') {
+                let preset = this.analyzePresetDecl(context, program, children[i].children[0]);
+                assert(!isNull(preset));
+                presetList.push(preset);
+                continue;
+            }
+
             let pass = this.analyzePassDecl(context, program, children[i]);
             assert(!isNull(pass));
             passList.push(pass);
         }
-        return passList;
+
+        return [ passList, presetList ];
     }
 
 
@@ -3611,9 +3776,9 @@ export class Analyzer {
         const children = sourceNode.children;
 
         const stateType = children[children.length - 1].value.toUpperCase();
-        const stateName = ERenderStates[stateType] || null;
+        const stateName = ERenderStates[stateType];
 
-        if (isNull(stateName)) {
+        if (!isNumber(stateName)) {
             return {};
         }
 
@@ -3774,7 +3939,48 @@ export class Analyzer {
      * AST example:
      *    TypeDecl
      *         T_PUNCTUATOR_59 = ';'
+     *       + VariableDim 
+     *       + ConstType 
+     *         T_KW_TYPEDEF = 'typedef'
+     */
+    protected analyzeTypedefDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeDeclInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        // TODO: rework to support complex typ defenitions like 
+        //  typedef const float4 TYPE_T;
+        //          ^^^^^^
+        // IP: at the moment type defenitions are not supported
+
+        const vdimNode = children[1];
+        const alias = vdimNode.children[0].value;
+        const type = this.analyzeConstTypeDim(context, program, children[2]);
+        // this.analyzeConstTypeDim() <= doesn't support 'const float' like expressions with modifiers
+
+        // const type = new TypeAlias()
+        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        // add support for typealiases
+
+        const typedef = new TypedefInstruction({ scope, sourceNode, type, alias });
+        addTypeAlias(context, scope, typedef);
+        
+        return typedef;
+    }
+
+
+    /**
+     * AST example:
+     *    TypeDecl
+     *         T_PUNCTUATOR_59 = ';'
      *       + StructDecl 
+     */
+    /**
+     * AST example:
+     *    TypeDecl
+     *         T_PUNCTUATOR_59 = ';'
+     *       + VariableDim 
+     *       + ConstType 
+     *         T_KW_TYPEDEF = 'typedef'
      */
     protected analyzeTypeDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITypeDeclInstruction {
         const children = sourceNode.children;
@@ -3783,6 +3989,9 @@ export class Analyzer {
         let type: ITypeInstruction = null;
         if (children.length === 2) {
             type = this.analyzeStructDecl(context, program, children[1]);
+        }
+        else if (children.length === 4) {
+           return this.analyzeTypedefDecl(context, program, sourceNode);
         }
         else {
             context.error(sourceNode, EErrors.UnsupportedTypeDecl);
@@ -4020,29 +4229,35 @@ export class Analyzer {
 
         if (Analyzer.isAssignmentOperator(operator)) {
             if (!leftType.writable && !isInitializing) {
-                context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
-                return null;
+                // context.error(leftSourceNode, EErrors.InvalidTypeForWriting);
+                context.warn(leftSourceNode, EWarnings.InvalidTypeForReading);
             }
 
-            if (!rightType.readable) {
-                context.error(rightSourceNode, EErrors.InvalidTypeForReading);
-                return null;
+            if (!rightType.readable) {                
+                // context.error(rightSourceNode, EErrors.InvalidTypeForReading);
+                context.warn(rightSourceNode, EWarnings.InvalidTypeForReading);
             }
 
             if (operator !== '=' && !leftType.readable) {
-                context.error(leftSourceNode, EErrors.InvalidTypeForReading);
-                return null;
+                // temp solution for cases like:
+                // void f(out int x) 
+                // {
+                //      x = 10;
+                //      x |= 1; // << allow to write here
+                // }
+                context.warn(exprSourceNode, EWarnings.InvalidTypeForReading, { tooltip: `lvalue is not readable` });
+                // context.error(leftSourceNode, EErrors.InvalidTypeForReading);
             }
         }
         else {
             if (!leftType.readable) {
-                context.error(leftSourceNode, EErrors.InvalidTypeForReading);
-                return null;
+                // context.error(leftSourceNode, EErrors.InvalidTypeForReading);
+                context.warn(leftSourceNode, EWarnings.InvalidTypeForReading);
             }
 
             if (!rightType.readable) {
-                context.error(rightSourceNode, EErrors.InvalidTypeForReading);
-                return null;
+                // context.error(rightSourceNode, EErrors.InvalidTypeForReading);
+                context.warn(rightSourceNode, EWarnings.InvalidTypeForReading);
             }
         }
 
@@ -4060,19 +4275,31 @@ export class Analyzer {
         }
 
         // FIXME: use operands' scope instead of system scope?
-        const leftBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, SystemScope.SCOPE);
-        const rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
+        let leftBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>leftType.baseType, SystemScope.SCOPE);
+        let rightBaseType = VariableTypeInstruction.wrap(<SystemTypeInstruction>rightType.baseType, SystemScope.SCOPE);
 
 
         if (Analyzer.isBitwiseOperator(operator)) {
-            if (!isIntegerType(leftType)) {
-                // TODO: emit error (cannot perfom bitwise op. on non-integers)
-                return null;
+            if (!SystemScope.isIntBasedType(leftType) && 
+                !SystemScope.isUintBasedType(leftType)) {
+                if (!SystemScope.isBoolBasedType(leftType)) {
+                    // todo: use correct error
+                    context.error(leftSourceNode, EErrors.InvalidCastUnknownType, { tooltip: `${leftType.name} => int` });
+                } else {
+                    context.warn(leftSourceNode, EWarnings.ImplicitTypeConversion, { tooltip: 'bool => int' });
+                }
+                leftBaseType = VariableTypeInstruction.wrap(T_INT, SystemScope.SCOPE);
             }
 
-            if (!isIntegerType(rightType)) {
-                // TODO: emit error (cannot perfom bitwise op. on non-integers)
-                return null;
+            if (!SystemScope.isIntBasedType(rightType) && 
+                !SystemScope.isUintBasedType(rightType)) {
+                if (!SystemScope.isBoolBasedType(rightType)) {
+                    // todo: use correct error
+                    context.error(rightSourceNode, EErrors.InvalidCastUnknownType, { tooltip: `${rightType.name} => int` });
+                } else {
+                    context.warn(rightSourceNode, EWarnings.ImplicitTypeConversion, { tooltip: 'bool => int' });
+                }
+                rightBaseType = VariableTypeInstruction.wrap(T_INT, SystemScope.SCOPE);
             }
 
             switch (operator) {
@@ -4087,7 +4314,12 @@ export class Analyzer {
             return leftBaseType;
         }
 
-        if (leftType.isEqual(rightType)) {
+        // hack to allow int/uint comparisson
+        if (type.equals(leftType, asRelaxedType(rightType))) {
+            if (!type.equals(leftType, rightType)) {
+                context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, { tooltip: `${leftType.name} [${operator}] ${rightType.name}` });
+            }
+
             if (Analyzer.isArithmeticalOperator(operator)) {
                 if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
                     return leftBaseType;
@@ -4124,7 +4356,7 @@ export class Analyzer {
             if ((isIntegerType(leftType) || isFloatType(leftType)) && (isIntegerType(rightType) || isFloatType(rightType))) {
                 if (!leftType.isEqual(rightType)) {
                     context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
-                        tooltip: `comparing values of different types: ${leftType.toCode()} ${operator} ${rightType.toCode()}`
+                        tooltip: `comparing values of different types: ${leftType.toCode()} [${operator}] ${rightType.toCode()}`
                     });
                 }
                 return constBoolType;
@@ -4238,14 +4470,12 @@ export class Analyzer {
 
         if (!type.readable) {
             context.error(sourceNode, EErrors.InvalidTypeForReading);
-            return null;
         }
 
 
         if (operator === '++' || operator === '--') {
             if (!type.writable) {
                 context.error(sourceNode, EErrors.InvalidTypeForWriting);
-                return null;
             }
 
             return type;
@@ -4278,13 +4508,14 @@ export class Analyzer {
     protected static isAssignmentOperator(operator: string): boolean {
         return operator === '+=' || operator === '-=' ||
             operator === '*=' || operator === '/=' ||
-            operator === '%=' || operator === '=';
+            operator === '%=' || operator === '=' || 
+            operator === '|=' || operator === '&=';
     }
 
     protected static isBitwiseOperator(operator: string): boolean {
         return operator === '>>' || operator === '<<' ||
-            operator === '|' || operator === '&' ||
-            operator === '^';
+            operator === '|' || operator === '&' || operator === '^' || 
+            operator === '|=' || operator === '&=';
     }
 
     protected static isArithmeticalOperator(operator: string): boolean {

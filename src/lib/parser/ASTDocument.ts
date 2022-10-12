@@ -303,7 +303,7 @@ export class ASTDocument implements IASTDocument {
         let causingErrorToken: IToken = undefinedToken;
 
         // debug mode
-        const opLimit = 64e3;
+        const opLimit = 64e5;
         let opCounter = 0;
 
         try {

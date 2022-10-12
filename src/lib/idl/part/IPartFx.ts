@@ -1,5 +1,4 @@
-import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
-import { ICompileExprInstruction, IFunctionDeclInstruction, IPassInstruction, IStructDeclInstruction, ITechniqueInstruction, ITypeInstruction, IStmtInstruction, IExprInstruction, IDeclInstruction, IInstruction, IVariableDeclInstruction, IIdInstruction } from "@lib/idl/IInstruction";
+import { ICompileExprInstruction, IExprInstruction, IPassInstruction, IStmtInstruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 
 // import { EPartFxInstructionTypes } from "./IPartFxInstruction";
 
@@ -8,16 +7,6 @@ export enum EPassDrawMode {
    k_Manual
 };
 
-export interface IFxPresetProperty extends IInstruction{ 
-   id: IIdInstruction;
-   args: IExprInstruction[];
-
-   resolveDeclaration(): IVariableDeclInstruction;
-}
-
-export interface IFxPreset extends IDeclInstruction {
-   props: IFxPresetProperty[];
-}
 
 export interface IPartFxPassInstruction extends IPassInstruction {
     readonly sorting: boolean;
@@ -39,7 +28,6 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly capacity: number;
 
     readonly passList: IPartFxPassInstruction[];
-    readonly presets: IFxPreset[];
  }
 
 

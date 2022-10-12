@@ -39,13 +39,16 @@ export type ISourceCodeRemoveMarkerBatch = IAction<typeof evt.SOURCE_CODE_REMOVE
 
 export type ISourceCodeAddBreakpoint = IAction<typeof evt.SOURCE_CODE_ADD_BREAKPOINT, { line: number }>;
 export type ISourceCodeRemoveBreakpoint = IAction<typeof evt.SOURCE_CODE_REMOVE_BREAKPOINT, { line: number }>;
+export type ISourceCodeSetDefine = IAction<typeof evt.SOURCE_CODE_SET_DEFINE, { name: string }>;
+export type ISourceCodeRemoveDefine = IAction<typeof evt.SOURCE_CODE_REMOVE_DEFINE, { name: string }>;
 
 export type ISourceFileActions =
     ISourceFileRequest | ISourceFileLoaded | ISourceFileLoadingFailed | ISourceFileDropState |
     ISourceCodeModified | ISourceCodeAddMarker | ISourceCodeRemoveMarker |
     ISourceCodeAddBreakpoint | ISourceCodeRemoveBreakpoint | ISourceCodeParsingComplete |
     ISourceCodePreprocessingComplete | 
-    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch;
+    ISourceCodeAnalysisComplete | ISourceCodeAddMarkerBatch | ISourceCodeRemoveMarkerBatch | 
+    ISourceCodeSetDefine | ISourceCodeRemoveDefine;
 
 //
 // debugger api

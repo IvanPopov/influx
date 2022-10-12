@@ -71,3 +71,17 @@ export const store = createStore<IStoreState, any, any, any>(
     applyMiddleware(...middleware)
 );
 
+
+//
+// IP: hack to preserved user-set defines
+//
+
+const BACKUP_DEFINES = "store-backup-defines";
+
+store.subscribe(()=>{
+    localStorage[BACKUP_DEFINES] = JSON.stringify(((store).getState() as IStoreState).sourceFile.defines);
+});
+
+JSON.parse(localStorage[BACKUP_DEFINES] || []).forEach(name => 
+    store.dispatch({ type: "source-code-set-define", payload: { name } })
+);

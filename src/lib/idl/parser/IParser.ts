@@ -1,6 +1,7 @@
 import { IDiagnosticReport, IDiagnostics } from '@lib/idl/IDiagnostics';
 import { IMap } from '@lib/idl/IMap';
 import { ITextDocument } from '@lib/idl/ITextDocument';
+import { IKnownDefine } from '@lib/parser/Preprocessor';
 import { StringRef } from "@lib/util/StringRef";
 
 export enum ENodeCreateMode {
@@ -188,7 +189,8 @@ export interface IASTConfig {
     parser?: IParser;
     knownTypes?: Set<string>;
     ruleFunctions?: Map<string, IRuleFunction>;
-    includeResolver?: IncludeResolver
+    includeResolver?: IncludeResolver;
+    defines?: IKnownDefine[];
 }
 
 

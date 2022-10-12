@@ -575,6 +575,7 @@ export class Lexer implements ILexer {
         let value = "";
         let isFloat = false;
         let isHex = false;
+        let isL = false;
         let chPrevious = ch;
         let isGoodFinish = false;
         let isE = false; // exponential
@@ -591,25 +592,31 @@ export class Lexer implements ILexer {
         while (true) {
             ch = this.readNextChar();
             if (ch === ".") {
-                if (isFloat || isU || isHex) {
+                if (isFloat || isU || isL || isHex) {
                     break;
                 }
                 isFloat = true;
             }
             else if (ch === "e") {
-                if (isE || isU) { // "0x100e2" is valid
+                if (isE || isU || isL) { // "0x100e2" is valid
                     break;
                 }
                 isE = true;
             }
-            else if (ch === "u") {
+            else if (ch === "u" || ch === "U") {
                 if (isFloat || isU) { // "0x02u" or "0x100e2u" are valid
                     break;
                 }
                 isU = true;
             }
+            else if (ch === "l" || ch === "L") {
+                if (isFloat || isL) { 
+                    break;
+                }
+                isL = true;
+            }
             else if (ch === "x") {
-                if (isU || isE || isFloat) {
+                if (isU || isL || isE || isFloat) {
                     break;
                 }
                 isHex = true;
@@ -617,7 +624,8 @@ export class Lexer implements ILexer {
             else if (((ch === "+" || ch === "-") && chPrevious === "e")) {
                 // nothing todo, valid case
             }
-            else if (ch === "f" && isFloat) {
+            else if (ch === "f" && (isFloat || isE)) {
+                isFloat = true;
                 ch = this.readNextChar();
                 // redundant check?
                 if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")) {
@@ -633,7 +641,7 @@ export class Lexer implements ILexer {
                 }
             }
             // Handle the case when a character is read not a number (end of numeric seq.)
-            else if (!((ch >= "0") && (ch <= "9")) || !ch || isU) {
+            else if (!((ch >= "0") && (ch <= "9")) || !ch || isU || isL) {
                 // check that the exponent completely read
                 if ((isE && chPrevious !== "+" && chPrevious !== "-" && chPrevious !== "e") || !isE) {
                     isGoodFinish = true;

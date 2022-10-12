@@ -1,8 +1,8 @@
 import { isNull } from "@lib/common";
 import { T_INT } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, ICompileExprInstruction, IInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { IDrawStmtInstruction, IFxPreset, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
+import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
 import { CodeEmitter } from "./CodeEmitter";
 
@@ -138,7 +138,7 @@ export class FxEmitter extends CodeEmitter {
     }
 
 
-    emitPresetDecl(preset: IFxPreset) {
+    emitPresetDecl(preset: IPresetInstruction) {
         this.emitKeyword('preset');
         preset.name && this.emitKeyword(preset.name);
         this.emitNewline();

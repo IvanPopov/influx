@@ -1,6 +1,6 @@
 import { EInstructionTypes, ETechniqueType, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ICompileExprInstruction } from "@lib/idl/IInstruction";
-import { IFxPreset, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
 import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
 
@@ -11,7 +11,6 @@ export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSe
     updateRoutine: ICompileExprInstruction;
     particle: ITypeInstruction;
     capacity?: number;
-    presets: IFxPreset[];
 }
 
 // var s: IPartFxInstructionSettings;
@@ -23,9 +22,8 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
     readonly updateRoutine: ICompileExprInstruction;
     readonly particle: ITypeInstruction;
     readonly capacity: number;
-    readonly presets: IFxPreset[];
 
-    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, presets, capacity = -1, ...settings }: IPartFxInstructionSettings) {
+    constructor({ spawnRoutine, initRoutine, updateRoutine, particle, capacity = -1, ...settings }: IPartFxInstructionSettings) {
         super({ instrType: EInstructionTypes.k_PartFxDecl, techniqueType: ETechniqueType.k_PartFx, ...settings });
 
         this.spawnRoutine = spawnRoutine;
@@ -33,7 +31,6 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
         this.updateRoutine = updateRoutine;
         this.particle = particle;
         this.capacity = capacity;
-        this.presets = presets;
     }
 
     isValid() {

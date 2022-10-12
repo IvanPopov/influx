@@ -229,6 +229,29 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
 }
 
 
+class StructuredBufferTemplate extends TypeTemplate {
+    constructor() {
+        super('StructuredBuffer', scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1;
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }
+}
+
+
 class RWTexture1DTemplate extends TypeTemplate {
     constructor() {
         super(RWTexture1DTemplate.TYPE_NAME, scope);
@@ -260,6 +283,37 @@ class RWTexture1DTemplate extends TypeTemplate {
 }
 
 
+class RWTexture2DTemplate extends TypeTemplate {
+    constructor() {
+        super(RWTexture2DTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1;
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }
+
+    static TYPE_NAME = 'RWTexture2D';
+}
+
+
 class Texture2DTemplate extends TypeTemplate {
     constructor() {
         super(Texture2DTemplate.TYPE_NAME, scope);
@@ -288,6 +342,36 @@ class Texture2DTemplate extends TypeTemplate {
     }
 
     static TYPE_NAME = 'Texture2D';
+}
+
+class TextureCubeTemplate extends TypeTemplate {
+    constructor() {
+        super(TextureCubeTemplate.TYPE_NAME, scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length > 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const type = args.length > 0 ? args[0] : scope.findType('float4');
+
+        if (!type.isBase()) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1;
+        const elementType = type;
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }
+
+    static TYPE_NAME = 'TextureCube';
 }
 
 class Texture3DTemplate extends TypeTemplate {
@@ -397,6 +481,7 @@ function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], s
     }
 }
 
+const USE_STRICT_HALF_TYPE = false;
 
 function addSystemTypeScalar(): void {
     generateSystemType("void", 0);
@@ -416,6 +501,7 @@ function addSystemTypeScalar(): void {
 
     // TODO: use dedicated type for half
     defineTypeAlias('float', 'half');
+    console.assert(USE_STRICT_HALF_TYPE === false);
 }
 
 
@@ -455,14 +541,11 @@ function addSystemTypeVector(): void {
     let float3 = generateSystemType("float3", -1, float, 3);
     let float4 = generateSystemType("float4", -1, float, 4);
 
-    let half2 = generateSystemType("half2", -1, half, 2);
-    let half3 = generateSystemType("half3", -1, half, 3);
-    let half4 = generateSystemType("half4", -1, half, 4);
-
-    // TODO: use dedicated types
-    // defineTypeAlias('float2', 'half2');
-    // defineTypeAlias('float3', 'half3');
-    // defineTypeAlias('float4', 'half4');
+    if (!USE_STRICT_HALF_TYPE) {
+        defineTypeAlias('float2', 'half2');
+        defineTypeAlias('float3', 'half3');
+        defineTypeAlias('float4', 'half4');
+    }
 
     let int2 = generateSystemType("int2", -1, int, 2);
     let int3 = generateSystemType("int3", -1, int, 3);
@@ -502,30 +585,36 @@ function addSystemTypeVector(): void {
         suf4f.forEach(field => float4.addField(field));
     }
 
-    {
-        let suf2f: IVariableDeclInstruction[] = [];
-        // program.push(EScopeType.k_Struct);
-        addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf2f, STSuffix, "half");
-        // program.pop();
-        suf2f.forEach(field => half2.addField(field));
-    }
+    if (USE_STRICT_HALF_TYPE) {
+        let half2 = generateSystemType("half2", -1, half, 2);
+        let half3 = generateSystemType("half3", -1, half, 3);
+        let half4 = generateSystemType("half4", -1, half, 4);
 
-    {
-        let suf3f: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, "half");
-        suf3f.forEach(field => half3.addField(field));
-    }
+        {
+            let suf2f: IVariableDeclInstruction[] = [];
+            // program.push(EScopeType.k_Struct);
+            addFieldsToVectorFromSuffixObject(suf2f, XYSuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf2f, RGSuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf2f, STSuffix, "half");
+            // program.pop();
+            suf2f.forEach(field => half2.addField(field));
+        }
 
-    {
-        let suf4f: IVariableDeclInstruction[] = [];
-        addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, "half");
-        addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, "half");
-        suf4f.forEach(field => half4.addField(field));
+        {
+            let suf3f: IVariableDeclInstruction[] = [];
+            addFieldsToVectorFromSuffixObject(suf3f, XYZSuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf3f, RGBSuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf3f, STPSuffix, "half");
+            suf3f.forEach(field => half3.addField(field));
+        }
+
+        {
+            let suf4f: IVariableDeclInstruction[] = [];
+            addFieldsToVectorFromSuffixObject(suf4f, XYZWSuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf4f, RGBASuffix, "half");
+            addFieldsToVectorFromSuffixObject(suf4f, STPQSuffix, "half");
+            suf4f.forEach(field => half4.addField(field));
+        }
     }
 
     {
@@ -887,6 +976,7 @@ function addSystemFunctions(): void {
 
     generateSystemFunction("mod", "float", ["float", "float"], null);
     generateSystemFunction("floor", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("round", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("ceil", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     // generateSystemFunction("fract", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("abs", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
@@ -971,7 +1061,8 @@ function addSystemFunctions(): void {
     generateSystemFunction("acos", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("atan", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("atan", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-
+    generateSystemFunction("atan2", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("atan2", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     // generateSystemFunction("tex2D", "float4", ["sampler", "float2"], null);
     // generateSystemFunction("tex2D", "float4", ["sampler2D", "float2"], null);
     // generateSystemFunction("tex2DProj", "float4", ["sampler", "float3"], null);
@@ -1016,41 +1107,41 @@ function addSystemFunctions(): void {
 
     generateSystemFunction("saturate", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
 
-    generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["float"/*, "uint"*/]);
-    generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int"/*, "uint"*/]);
-    generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["int2"/*, "uint2"*/]);
-    generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["int3"/*, "uint3"*/]);
-    generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["int4"/*, "uint4"*/]);
+    generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["float", "int", "bool", "uint"]);
+    generateSystemFunction("asfloat", "float2", [TEMPLATE_TYPE], ["float2", "int2", "bool2", "uint2"]);
+    generateSystemFunction("asfloat", "float3", [TEMPLATE_TYPE], ["float3", "int3", "bool3", "uint3"]);
+    generateSystemFunction("asfloat", "float4", [TEMPLATE_TYPE], ["float4", "int4", "bool4", "uint4"]);
 
-    generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "uint"]);
-    generateSystemFunction("asint", "int2", [TEMPLATE_TYPE], ["float2", "uint2"]);
-    generateSystemFunction("asint", "int3", [TEMPLATE_TYPE], ["float3", "uint3"]);
-    generateSystemFunction("asint", "int4", [TEMPLATE_TYPE], ["float4", "uint4"]);
+    generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "int", "bool", "uint"]);
+    generateSystemFunction("asint", "int2", [TEMPLATE_TYPE], ["float2", "int2", "bool2", "uint2"]);
+    generateSystemFunction("asint", "int3", [TEMPLATE_TYPE], ["float3", "int3", "bool3", "uint3"]);
+    generateSystemFunction("asint", "int4", [TEMPLATE_TYPE], ["float4", "int4", "bool4", "uint4"]);
 
-    generateSystemFunction("asuint", "uint", [TEMPLATE_TYPE], ["float", "int"]);
-    generateSystemFunction("asuint", "uint2", [TEMPLATE_TYPE], ["float2", "int2"]);
-    generateSystemFunction("asuint", "uint3", [TEMPLATE_TYPE], ["float3", "int3"]);
-    generateSystemFunction("asuint", "uint4", [TEMPLATE_TYPE], ["float4", "int4"]);
+    generateSystemFunction("asuint", "uint", [TEMPLATE_TYPE], ["float", "int", "bool", "uint"]);
+    generateSystemFunction("asuint", "uint2", [TEMPLATE_TYPE], ["float2", "int2", "bool2", "uint2"]);
+    generateSystemFunction("asuint", "uint3", [TEMPLATE_TYPE], ["float3", "int3", "bool3", "uint3"]);
+    generateSystemFunction("asuint", "uint4", [TEMPLATE_TYPE], ["float4", "int4", "bool4", "uint4"]);
 
     generateSystemFunction("InterlockedAdd", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["int"]);
     // generateSystemFunction("InterlockedAdd", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint"]);
 
-    // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
-    // generateSystemFunction("asfloat", "float", [TEMPLATE_TYPE], ["int", "int2", "int3", "int4", "uint", "uint2", "uint3", "uint4"]);
-    // generateSystemFunction("asint", "int", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4", "uint", "uint2", "uint3", "uint4"]);
-
     generateSystemFunction("f16tof32", "float", ["uint"], null);
     generateSystemFunction("f32tof16", "uint", ["float"], null);
 
-    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int", /*"uint",*/ "float", "bool"]);
+    generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int", "uint", "float", "bool"]);
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int2", "uint2", "float2", "bool2", "float2x2"]);
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int3", "uint3", "float3", "bool3", "float3x3"]);
     generateSystemFunction("any", "bool", [TEMPLATE_TYPE], ["int4", "uint4", "float4", "bool4", "float4x4"]);
 
-    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int", /*"uint",*/ "float", "bool"]);
+    generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int", "uint", "float", "bool"]);
     generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int2", "uint2", "float2", "bool2", "float2x2"]);
     generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int3", "uint3", "float3", "bool3", "float3x3"]);
     generateSystemFunction("all", "bool", [TEMPLATE_TYPE], ["int4", "uint4", "float4", "bool4", "float4x4"]);
+
+    // DX12
+
+    generateSystemFunction("WaveGetLaneIndex", "uint", [], ["void"]);
+    generateSystemFunction("WaveActiveBallot", "uint4", [TEMPLATE_TYPE], ["bool"]);
 }
 
 
@@ -1098,15 +1189,16 @@ function initSystemTypes(): void {
     scope.addTypeTemplate(new RWBufferTemplate);
     scope.addTypeTemplate(new RWStructuredBufferTemplate);
     scope.addTypeTemplate(new AppendStructuredBufferTemplate);
+    scope.addTypeTemplate(new StructuredBufferTemplate);
 
     scope.addTypeTemplate(new RWTexture1DTemplate);
-    // TODO: RWTexture2D
+    scope.addTypeTemplate(new RWTexture2DTemplate);
     // TODO: RWTexture3D
 
     // TODO: Texture1D
     scope.addTypeTemplate(new Texture2DTemplate);
     scope.addTypeTemplate(new Texture3DTemplate);
-    // TODO: TextureCube
+    scope.addTypeTemplate(new TextureCubeTemplate);
     // TODO: Texture1DArray
     scope.addTypeTemplate(new Texture2DArrayTemplate);
     // TODO: Texture3DArray
@@ -1116,6 +1208,11 @@ function initSystemTypes(): void {
     const templateTexture2D = scope.findTypeTemplate(Texture2DTemplate.TYPE_NAME);
     const typeTexture2D = templateTexture2D.produceType(scope, []);
     scope.addType(typeTexture2D);
+
+    // produce default TextureCube type
+    const templateTextureCube = scope.findTypeTemplate(TextureCubeTemplate.TYPE_NAME);
+    const typeTextureCube = templateTextureCube.produceType(scope, []);
+    scope.addType(typeTextureCube);
 
     // produce default Texture3D type
     const templateTexture3D = scope.findTypeTemplate(Texture3DTemplate.TYPE_NAME);
@@ -1136,6 +1233,11 @@ function initSystemTypes(): void {
     const templateRWTexture1D = scope.findTypeTemplate(RWTexture1DTemplate.TYPE_NAME);
     const typeRWTexture1D = templateRWTexture1D.produceType(scope, []);
     scope.addType(typeRWTexture1D);
+
+    // produce default RWTexture2D type
+    const templateRWTexture2D = scope.findTypeTemplate(RWTexture2DTemplate.TYPE_NAME);
+    const typeRWTexture2D = templateRWTexture2D.produceType(scope, []);
+    scope.addType(typeRWTexture2D);
 }
 
 

@@ -51,6 +51,8 @@ export interface IFileState {
     breakpoints: number[];
 
     debugger: IDebuggerState;
+
+    defines: string[];
 }
 
 export interface INodeConstant {

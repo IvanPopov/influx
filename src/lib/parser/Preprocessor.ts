@@ -180,6 +180,10 @@ enum EPPDocumentFlags {
     k_Include = 0x02
 }
 
+export interface IKnownDefine {
+    name: string;
+}
+
 export class Preprocessor {
     protected stack: {
         lexer: ILexer;
@@ -214,10 +218,18 @@ export class Preprocessor {
             macros = new Macros, 
             diag = new PreprocessorDiagnostics, 
             skipComments = true,
-            includeResolver = null
+            includeResolver = null,
+            defines = null
         } = {}) {
 
         this.macros = macros;
+
+        if (defines) {
+            // set as boolean macro
+            (<IKnownDefine[]>defines)
+                .forEach(({ name }) => 
+                    this.macros.set({name, tokens: [], bFunction: false, params: null, bRegionExpr: false}));
+        }
 
         this.macroState = new MacroState;
         this.includeMap = new Map;
@@ -346,7 +358,7 @@ export class Preprocessor {
 
 
     async readToken(allowMacro: boolean = true, allowStateChanging = true): Promise<IToken> {
-        const token = this.popToken() || this.lexer.getNextToken();
+        const token: IToken = this.popToken() || this.lexer.getNextToken();
 
         switch (token.name) {
             case T_MACRO:
@@ -443,7 +455,7 @@ export class Preprocessor {
 
             const lexer = await this.tokenToLexer(lineToken);
 
-            let token = lexer.getNextToken();
+            let token: IToken = lexer.getNextToken();
 
             const bOpenBracket = token.value === '(';
             const bSameLine = token.loc.start.line === name.loc.end.line;
@@ -755,7 +767,7 @@ export class Preprocessor {
         const values = <IToken[]>[];
         const opStack = <IToken[]>[];
 
-        let token = lexer.getNextToken();
+        let token: IToken = lexer.getNextToken();
 
         //
         // Transform input sequence to reverse Polish notation
@@ -869,7 +881,7 @@ export class Preprocessor {
 
 
     protected async skipUnreachableCode(startToken: IToken): Promise<IToken> {
-        let token = await this.readToken(false);
+        let token: IToken = await this.readToken(false);
         let nesting = 0;
 
         while (token.name !== END_SYMBOL) {
@@ -984,7 +996,7 @@ export class Preprocessor {
             const $lexer = this.lexer;
             const pos = this.lexer.getPosition();
 
-            const nextToken = await this.readToken();
+            const nextToken: IToken = await this.readToken();
             if (nextToken.value !== '(') {
                 this.emitMacroWarning(`for macro '${macro.name} function call signature is expected'`, token.loc);
 
@@ -996,7 +1008,7 @@ export class Preprocessor {
             let readTokens = [nextToken];
             let argRanges = <number[]>[];
 
-            let argToken = await this.readToken();
+            let argToken: IToken = await this.readToken();
             let bracketDepth = 0;
 
             let startPos = 1;
@@ -1088,7 +1100,7 @@ export class Preprocessor {
         const pp = new Preprocessor(this.lexerEngine, { knownTypes, macros, diag, includeResolver });
         pp.setTextDocument(await createTextDocument('://macro', value));
 
-        let token = await pp.readToken();
+        let token: IToken = await pp.readToken();
         let raw = null;
         while (token.name !== END_SYMBOL) {
             raw = (raw ? raw + ' ' : '') + token.value;
@@ -1114,8 +1126,8 @@ export class Preprocessor {
             console.info(`concat strings: "${left.value}##${right.value}"`);
         }
 
-        const leftRaw = this.preprocessToString(left.value, this.includeResolver);
-        const rightRaw = this.preprocessToString(right.value, this.includeResolver);
+        const leftRaw = await this.preprocessToString(left.value, this.includeResolver);
+        const rightRaw = await this.preprocessToString(right.value, this.includeResolver);
         const raw = `${leftRaw}${rightRaw}`;
 
         if (DEBUG_MACRO) {
@@ -1125,7 +1137,7 @@ export class Preprocessor {
         const loc = { start: left.loc.start, end: right.loc.end };
 
         // multiple concatenation processing: A ## B ## C ##  etc.
-        const nextToken = await this.readToken(false, false);
+        const nextToken: IToken = await this.readToken(false, false);
         if (nextToken.name === T_MACRO_CONCAT) {
             return this.applyConcatMacro(createMacroToken(raw, loc));
         }
@@ -1144,7 +1156,7 @@ export class Preprocessor {
         const macroProcessing = this.stack[this.stack.length - 1].flags & EPPDocumentFlags.k_Macro;
 
         if (macroProcessing) {
-            const nextToken = await this.readToken(false, false);
+            const nextToken: IToken = await this.readToken(false, false);
             if (nextToken.name === T_MACRO_CONCAT) {
                 return this.applyConcatMacro(token);
             }
@@ -1212,14 +1224,20 @@ export class Preprocessor {
 
 }
 
+export interface IPPOptions {
+    skipComments?: boolean;
+    includeResolver?: IncludeResolver;
+    defines?: IKnownDefine[];
+}
+
 // create preprocessed document
 export async function createPPDocument(textDocument: ITextDocument, 
-        options: { skipComments?: boolean, includeResolver?: IncludeResolver } = {}): Promise<ITextDocument> {
+        options: IPPOptions = {}): Promise<ITextDocument> {
     // TODO: try to use default lexer: new LexerEngine()
 
     const parser = defaultSLParser();
-    const { skipComments = true, includeResolver } = options;
-    const pp = new Preprocessor(parser.lexerEngine, { skipComments, includeResolver });
+    const { skipComments = true, includeResolver, defines } = options;
+    const pp = new Preprocessor(parser.lexerEngine, { skipComments, includeResolver, defines });
     pp.setTextDocument(textDocument);
 
     const newline = (from: number, to: number): string => Array(Math.min(to - from, 4)).fill('\n').join('');

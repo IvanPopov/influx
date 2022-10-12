@@ -92,7 +92,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             const i = list.map(fx => fx.name).indexOf(active);
 
             if (i == -1) {
-                return null;
+                return [ null, null ];
             }
 
             const bundle = await FxBundle.createBundle(list[i]);

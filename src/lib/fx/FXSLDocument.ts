@@ -4,6 +4,7 @@ import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { IncludeResolver } from "@lib/idl/parser/IParser";
+import { IKnownDefine } from "@lib/parser/Preprocessor";
 import { IExprSubstCallback } from "./analisys/Analyzer";
 
 import { FxAnalyzer } from "./analisys/FxAnalyzer";
@@ -11,7 +12,14 @@ import { createSLASTDocument } from "./SLASTDocument";
 
 type Opts = { flags?: number, includeResolver?: IncludeResolver };
 
-export async function createFXSLDocument(document: ISLASTDocument | ITextDocument, opts : { flags?: number, includeResolver?: IncludeResolver } = {}, parent: ISLDocument = null): Promise<ISLDocument> {
+interface IFXSLOptions {
+    flags?: number;
+    includeResolver?: IncludeResolver;
+    defines?: IKnownDefine[];
+};
+
+export async function createFXSLDocument(document: ISLASTDocument | ITextDocument, 
+    opts : IFXSLOptions = {}, parent: ISLDocument = null): Promise<ISLDocument> {
     let textDocument: ITextDocument;
     let slastDocument: ISLASTDocument;
 
@@ -30,7 +38,8 @@ export async function createFXSLDocument(document: ISLASTDocument | ITextDocumen
     return slDocument;
 }
 
-export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, opts: { flags?: number, includeResolver?: IncludeResolver } = {}): Promise<ISLDocument> {
+export async function extendFXSLDocument(textAddition: ITextDocument, base: ISLDocument, expressions?: IMap<IExprSubstCallback>, 
+    opts: IFXSLOptions = {}): Promise<ISLDocument> {
     let addition = null;
     if (textAddition)
     {

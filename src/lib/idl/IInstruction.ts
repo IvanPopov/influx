@@ -48,6 +48,7 @@ export enum EInstructionTypes {
 
     k_Decl,
     k_TypeDecl,
+    k_TypedefDecl,
     k_VariableDecl,
     k_StructDecl,
     k_FunctionDecl,
@@ -175,6 +176,7 @@ export interface IScope {
     addVariable(variable: IVariableDeclInstruction): boolean;
     addType(type: ITypeInstruction): boolean;
     addTypeAlias(typeName: string, aliasName: string): boolean;
+    addTypeAlias(type: ITypeInstruction, aliasName: string): boolean;
     addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
@@ -277,7 +279,7 @@ export interface ITypeInstruction extends IInstruction {
 }
 
 
-export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout';
+export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout' | 'unsigned';
 
 export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly usages: IVariableUsage[];
@@ -324,6 +326,12 @@ export interface IFunctionDefInstruction extends IDeclInstruction {
 
 export interface ITypeDeclInstruction extends IDeclInstruction {
     readonly type: ITypeInstruction;
+}
+
+
+export interface ITypedefInstruction extends IDeclInstruction {
+    readonly type: ITypeInstruction;
+    readonly alias: string;
 }
 
 
@@ -626,12 +634,34 @@ export enum ETechniqueType {
     k_Unknown
 }
 
+//
+// Preset extention
+//
+
+export interface IPresetPropertyInstruction extends IInstruction{ 
+    id: IIdInstruction;
+    args: IExprInstruction[];
+ 
+    resolveDeclaration(): IVariableDeclInstruction;
+ }
+ 
+ export interface IPresetInstruction extends IDeclInstruction {
+    props: IPresetPropertyInstruction[];
+ }
+
+//
+//
+//
+
 export interface ITechniqueInstruction extends IDeclInstruction {
     readonly passList: IPassInstruction[];
     readonly type: ETechniqueType;
 
     /** check if the technique is ready for runtime */
     isValid(): boolean;
+
+    // Preset extention
+    readonly presets: IPresetInstruction[];
 }
 
 

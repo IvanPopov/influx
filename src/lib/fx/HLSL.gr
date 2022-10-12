@@ -38,6 +38,8 @@ Usage : T_KW_UNIFORM
 Usage : T_KW_EXTERN
 Usage : T_KW_VOLATILE
 Usage : T_KW_INLINE
+Usage : T_KW_UNSIGNED
+Usage : T_KW_PRECISE
 Usage : ConstUsage
 
 ConstUsages : ConstUsage --expose
@@ -52,8 +54,8 @@ UsageType : Usages Type
 UsageStructDecl : StructDecl --add
 UsageStructDecl : Usages StructDecl
 
-TypeDecl : T_KW_TYPEDEF ConstType TypeDefs ';' --add
-TypeDecl : T_KW_TYPEDEF ConstStructDecl TypeDefs ';'
+TypeDecl : T_KW_TYPEDEF ConstType TypeDefs --F addTypeDef ';' --add
+TypeDecl : T_KW_TYPEDEF ConstStructDecl TypeDefs --F addTypeDef ';'
 TypeDecl : StructDecl --F addType ';'
 TypeDefs : VariableDim
 TypeDefs : VariableDim ',' TypeDefs
@@ -76,6 +78,7 @@ BaseType : ObjectType
 
 ScalarType : T_KW_BOOL --add
 ScalarType : T_KW_INT
+# ScalarType : T_KW_UNSIGNED T_KW_INT
 ScalarType : T_KW_UINT
 ScalarType : T_KW_HALF
 ScalarType : T_KW_FLOAT
@@ -115,6 +118,7 @@ ObjectType : T_KW_RWTEXTURE3D '<' Type '>'
 ObjectType : T_KW_BUFFER '<' Type '>'
 ObjectType : T_KW_RWBUFFER '<' Type '>'
 ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
+ObjectType : T_KW_STRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
 
 
@@ -229,9 +233,16 @@ ComplexNameOpt : ComplexName --add
 ComplexName : Id --expose
 ComplexName : ComplexName '.' Id
 
+#if PRESETS_EX
+PresetDecl : T_KW_PRESET Id AnnotationOpt PassStateBlock --add
+#endif
+
 PassDecls : PassDecl --expose
 PassDecls : PassDecls PassDecl
 PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --add
+#if PRESETS_EX
+PassDecl : PresetDecl
+#endif
 PassDecl : ';'
 
 PassStateBlock : '{' '}' --add
@@ -249,16 +260,11 @@ PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --
 PartFxBody : '{' '}' 
 PartFxBody : '{' PartFxProperties '}'
 
-FxPreset : T_KW_FXPRESET Id AnnotationOpt PassStateBlock --add
-
 PartFxProperties : PartFxProperty --expose
 PartFxProperties : PartFxProperties PartFxProperty
 
 PartFxProperty : PassState
 PartFxProperty : PassDecl
-PartFxProperty : PartFxPreset
-
-PartFxPreset : FxPreset
 
 #endif // FX_PART
 
@@ -325,8 +331,8 @@ IfStmt : AttributesOpt T_KW_IF '(' ERROR ')' --expose
 WhileStmt : T_KW_WHILE '(' Expr ')' --expose
 WhileStmt : T_KW_WHILE '(' ERROR ')' --expose
 
-ForStmt : For '(' ForInit ForCond ForStep ')' --expose
-ForStmt : For ERROR --expose
+ForStmt : AttributesOpt For '(' ForInit ForCond ForStep ')' --expose
+ForStmt : AttributesOpt For ERROR --expose
 
 For : T_KW_FOR
 
@@ -396,6 +402,7 @@ UnaryExpr : T_OP_DEC UnaryExpr
 # UnaryExpr : T_OP_INC ERROR
 # UnaryExpr : T_OP_DEC ERROR
 UnaryExpr : '!' CastExpr
+UnaryExpr : '~' CastExpr
 # UnaryExpr : '!' ERROR
 UnaryExpr : '-' CastExpr
 UnaryExpr : '+' CastExpr
@@ -503,6 +510,8 @@ AssignmentExpr : CastExpr T_OP_DE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_RE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
+AssignmentExpr : CastExpr T_OP_BORE AssignmentExpr
+AssignmentExpr : CastExpr T_OP_BANDE AssignmentExpr
 
 Arguments : AssignmentExpr --expose
 Arguments : Arguments ',' AssignmentExpr
@@ -560,6 +569,8 @@ AsmFragment : T_KW_ASM_FRAGMENT '{'
 
 --LEXER--
 
+T_KW_UNSIGNED : "unsigned"
+T_KW_PRECISE : "precise"
 T_KW_STATIC : "static"
 T_KW_UNIFORM : "uniform"
 T_KW_EXTERN : "extern"
@@ -603,6 +614,7 @@ T_KW_RWTEXTURE1D : "RWTexture1D"
 T_KW_RWTEXTURE2D : "RWTexture2D"
 T_KW_RWTEXTURE3D : "RWTexture3D"
 T_KW_RWBUFFER : "RWBuffer"
+T_KW_STRUCTUREDBUFFER : "StructuredBuffer"
 T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_APPENDSTRUCTUREDBUFFER : "AppendStructuredBuffer"
 T_KW_PIXELSHADER : "pixelshader"
@@ -615,9 +627,12 @@ T_KW_OUT : "out"
 T_KW_INOUT : "inout"
 T_KW_TECHNIQUE : "technique"
 
+#if PRESETS_EX
+    T_KW_PRESET : "preset"
+#endif
+
 #if FX_PART
     T_KW_FXPART : "partFx"
-    T_KW_FXPRESET : "preset"
 #endif
 
 T_KW_PASS : "pass"
@@ -666,3 +681,5 @@ T_OP_AE : "+="
 T_OP_SE : "-="
 T_OP_SR : ">>"
 T_OP_SL : "<<"
+T_OP_BORE : "|="
+T_OP_BANDE : "&="
