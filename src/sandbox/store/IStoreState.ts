@@ -6,7 +6,7 @@ import { EParserType, IParserParams, IRange } from '@lib/idl/parser/IParser';
 import { RouterState } from 'connected-react-router';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { LGraph } from 'litegraph.js';
-import { ITimeline } from '@lib/fx/timelime';
+import { ITimeline } from '@lib/fx/timeline';
 import * as S3D from '@lib/util/s3d/prjenv';
 import { ITechnique } from '@lib/idl/ITechnique';
 

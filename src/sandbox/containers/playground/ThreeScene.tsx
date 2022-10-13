@@ -14,7 +14,7 @@ import * as React from 'react';
 import { toast } from 'react-semantic-toasts';
 import * as THREE from 'three';
 
-import { ITimeline } from '@lib/fx/timelime';
+import { ITimeline } from '@lib/fx/timeline';
 
 import { Color, IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { GUI } from 'dat.gui';

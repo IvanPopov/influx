@@ -1,5 +1,5 @@
 import * as Techniques from '@lib/fx/techniques';
-import * as Timeline from '@lib/fx/timelime';
+import * as Timeline from '@lib/fx/timeline';
 import { IScope, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundActions, IPlaygroundEffectHasBeenDropped, IPlaygroundEffectHasBeenSaved, IPlaygroundSetOptionAutosave, IPlaygroundSwitchTechniqueRuntime, IPlaygroundTechniqueUpdate } from "@sandbox/actions/ActionTypes";

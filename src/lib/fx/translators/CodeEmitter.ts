@@ -1,6 +1,6 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction, ITypedefInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction, ITypedefInstruction, IForStmtInstruction } from "@lib/idl/IInstruction";
 
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { BaseEmitter } from "./BaseEmitter";
@@ -214,12 +214,11 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitCollector(instr: IInstructionCollector) {
+    emitCollector(collector: IInstructionCollector) {
         this.begin();
-        instr.instructions.forEach(instr => {
+        for (let instr of collector.instructions) {
             this.emit(instr);
-            this.emitNewline();
-        });
+        }
         this.end();
     }
 
@@ -229,14 +228,44 @@ export class CodeEmitter extends BaseEmitter {
     }
 
     emitTypedef(instr: ITypedefInstruction) {
-        this.emitKeyword('typedef');
-        // todo: add support for typedefs like:
-        //  typedef const float4 T;
-        //          ^^^^^^^^^^^^
-        this.emitKeyword(instr.type.name);
-        this.emitKeyword(instr.alias);
+        // nothing todo because current implementation implies
+        // immediate target type substitution 
+        return;
+        /*
+            this.emitKeyword('typedef');
+            // todo: add support for typedefs like:
+            //  typedef const float4 T;
+            //          ^^^^^^^^^^^^
+            this.emitKeyword(instr.type.name);
+            this.emitKeyword(instr.alias);
+            this.emitChar(';');
+            this.emitNewline();
+        */
+    }
+
+    emitForStmt(stmt: IForStmtInstruction) {
+        
+        //for(int i = 0;i < 4;++ i)
+        //{
+        //  ...
+        //}
+
+        this.emitKeyword('for');
+        this.emitChar('(');
+        this.emitNoSpace();
+        
+        this.emitStmt(stmt.init);
+        this.emitNoSpace();
+
+        this.emitExpression(stmt.cond);
         this.emitChar(';');
-        this.emitNewline();
+
+        this.emitExpression(stmt.step);
+        this.emitChar(')');
+
+        if (stmt.body.instructionType === EInstructionTypes.k_StmtBlock)
+            this.emitNewline();
+        this.emitStmt(stmt.body);
     }
 
     emitExpression(expr: IExprInstruction) {
@@ -292,6 +321,7 @@ export class CodeEmitter extends BaseEmitter {
             case EInstructionTypes.k_PostfixIndexExpr:
                 return this.emitPostfixIndex(expr as IPostfixIndexInstruction);
             default:
+                this.emitLine(`/* ... unsupported expression '${expr.instructionName}' ... */`);
                 assert(false, `unsupported instruction found: ${expr.instructionName}`);
         }
     }
@@ -582,7 +612,11 @@ export class CodeEmitter extends BaseEmitter {
             case EInstructionTypes.k_StmtBlock:
                 this.emitBlock(stmt as IStmtBlockInstruction);
                 break;
+            case EInstructionTypes.k_ForStmt:
+                this.emitForStmt(stmt as IForStmtInstruction);
+                break;
             default:
+                this.emitLine(`/* ... unsupported stmt '${stmt.instructionName}' .... */`);
                 console.warn(`unknown stmt found: '${stmt.instructionName}'`);
         }
     }
@@ -651,6 +685,7 @@ export class CodeEmitter extends BaseEmitter {
     emit(instr: IInstruction): CodeEmitter {
         if (!instr) {
             // TODO: emit error.
+            this.emitLine('/* ... empty instruction .... */');
             return this;
         }
 
@@ -698,6 +733,7 @@ export class CodeEmitter extends BaseEmitter {
                 this.end();
                 break;
             default:
+                this.emitLine(`/* ... unsupported instruction '${instr.instructionName}' .... */`);
                 assert(false, `unsupported instruction found: ${instr.instructionName}`);
         }
 

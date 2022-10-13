@@ -22,6 +22,13 @@ import { createLogic } from 'redux-logic';
 import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from './common';
 import * as Depot from '@sandbox/reducers/depot';
 
+// IP: proposal for future switching to async parsing
+
+// import * as Comlink from 'comlink';
+// import { ParsingeWorker } from './parsing/ParsingWorker'
+// import { IParsingProvider } from './parsing/ParsingProvider';
+// const provider = Comlink.wrap<IParsingProvider>(new ParsingeWorker());
+// provider.createDefaultSLParser();
 
 const DEBUGGER_COLORIZATION_PREFIX = 'debug-ln-clr';
 

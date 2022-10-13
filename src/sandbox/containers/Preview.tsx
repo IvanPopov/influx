@@ -1,5 +1,5 @@
 import * as Techniques from '@lib/fx/techniques';
-import * as Timeline from '@lib/fx/timelime';
+import * as Timeline from '@lib/fx/timeline';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import React from 'react';

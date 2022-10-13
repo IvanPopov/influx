@@ -12,7 +12,7 @@ import { createSLASTDocument } from "./SLASTDocument";
 
 type Opts = { flags?: number, includeResolver?: IncludeResolver };
 
-interface IFXSLOptions {
+export interface IFXSLOptions {
     flags?: number;
     includeResolver?: IncludeResolver;
     defines?: IKnownDefine[];
