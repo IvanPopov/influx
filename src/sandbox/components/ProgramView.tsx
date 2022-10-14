@@ -57,7 +57,7 @@ function prettifyEName(econstName: string): string {
 }
 
 
-interface IPropertyProps extends Partial<WithStylesProps<typeof styles>> {
+interface IPropertyProps extends React.PropsWithChildren, Partial<WithStylesProps<typeof styles>> {
     name?: any;
     value?: any;
     onMouseOver?: any;
@@ -72,7 +72,7 @@ interface IPropertyProps extends Partial<WithStylesProps<typeof styles>> {
 }
 
 
-type PropertyComponent = React.StatelessComponent<IPropertyProps>;
+type PropertyComponent = React.FunctionComponent<IPropertyProps>;
 
 
 

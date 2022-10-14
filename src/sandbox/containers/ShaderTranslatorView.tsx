@@ -94,9 +94,13 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         let value: string;
 
         if (match.params.pass) {
-            const pass = fx.passList.find((instr, i) => isNumber(match.params.pass)
+            const pass = fx.passList.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
                 ? i === Number(match.params.pass)
                 : instr.name === match.params.pass);
+
+                if (!pass) {
+                    return (<div>Ooops!...</div>);
+                }
 
             const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
             const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
