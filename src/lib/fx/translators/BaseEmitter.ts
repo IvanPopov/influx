@@ -33,11 +33,11 @@ export class BaseEmitter {
         this.top().pop();
     }
 
-    emitNewline() { this.top().newline(); }
-    emitKeyword(kw: string) { this.top().keyword(kw); }
-    emitNoSpace() { this.top().ignoreNextSpace(); }
+    emitNewline() { this.top()?.newline(); }
+    emitKeyword(kw: string) { this.top()?.keyword(kw); }
+    emitNoSpace() { this.top()?.ignoreNextSpace(); }
     emitSpace() { this.emitChar(' '); this.emitNoSpace(); }
-    emitChar(char: string) { this.top().add(char); }
+    emitChar(char: string) { this.top()?.add(char); }
     emitLine(line: string) { 
         this.emitChar(line);
         this.emitNewline(); 

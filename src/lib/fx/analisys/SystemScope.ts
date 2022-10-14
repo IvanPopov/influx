@@ -987,23 +987,14 @@ function addSystemFunctions(): void {
     generateSystemFunction("length", "float", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("cross", "float3", ["float3", "float3"], null);
     generateSystemFunction("reflect", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    
     generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
-
     generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
-    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "int"], ["int2", "int3", "int4"]);
-
-    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
-    // generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, "uint"], ["uint2", "uint3", "uint4"]);
+    generateSystemFunction("max", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
 
     generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
-    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
-
     generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
-    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "int"], ["int2", "int3", "int4"]);
-
-    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
-    // generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, "uint"], ["uint2", "uint3", "uint4"]);
+    generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
 
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float", "float"], ["float2", "float3", "float4"]);
