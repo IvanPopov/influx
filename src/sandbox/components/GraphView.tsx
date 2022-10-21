@@ -192,6 +192,14 @@ class GraphView extends React.Component<IGraphViewProps> {
         this.canvasRef.current.setAttribute("tabindex", '0');
     }
 
+    shouldComponentUpdate(nextProps: Readonly<IGraphViewProps>, nextState: Readonly<{}>, nextContext: any): boolean {
+        return this.divRef.current.clientHeight != this.canvasRef.current.height;
+    }
+
+    componentDidUpdate(prevProps: Readonly<IGraphViewProps>, prevState: Readonly<{}>, snapshot?: any): void {
+        this.canvas.resize();
+    }
+
     @autobind
     onKeypress(e: KeyboardEvent) {
         // ctrl+enter
