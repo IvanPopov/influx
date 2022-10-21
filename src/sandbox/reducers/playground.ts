@@ -2,7 +2,7 @@ import * as Techniques from '@lib/fx/techniques';
 import * as Timeline from '@lib/fx/timeline';
 import { IScope, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IPlaygroundActions, IPlaygroundEffectHasBeenDropped, IPlaygroundEffectHasBeenSaved, IPlaygroundSetOptionAutosave, IPlaygroundSwitchTechniqueRuntime, IPlaygroundTechniqueUpdate } from "@sandbox/actions/ActionTypes";
+import { IPlaygroundActions, IPlaygroundEffectHasBeenDropped, IPlaygroundEffectHasBeenSaved, IPlaygroundSetOptionAutosave, IPlaygroundSetShaderFormat, IPlaygroundSwitchTechniqueRuntime, IPlaygroundTechniqueUpdate } from "@sandbox/actions/ActionTypes";
 import { handleActions } from '@sandbox/reducers/handleActions';
 import IStoreState, { IPlaygroundState } from "@sandbox/store/IStoreState";
 
@@ -13,6 +13,7 @@ const initialState: IPlaygroundState = {
     presets: {},
     revision: 0,
     wasm: Techniques.isWASM(),
+    shaderFormat: 'GLSL',
 
     exportName: null, // LOCAL_SESSION_AUTOSAVE
     autosave: false
@@ -31,6 +32,8 @@ export default handleActions<IPlaygroundState, IPlaygroundActions>({
         ({ ...state, exportName: null, technique: null }),
     [evt.PLAYGROUND_SET_OPTION_AUTOSAVE]: (state, action: IPlaygroundSetOptionAutosave) =>
         ({ ...state, autosave: action.payload.enabled }),
+    [evt.PLAYGROUND_SET_SHADER_FORMAT]: (state, action: IPlaygroundSetShaderFormat) =>
+        ({ ...state, shaderFormat: action.payload.format })
 }, initialState);
 
 

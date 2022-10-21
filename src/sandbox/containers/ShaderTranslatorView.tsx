@@ -2,13 +2,14 @@
 
 import { isNumber } from '@lib/common';
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
+import * as S3D from '@lib/fx/translators/S3DEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
 import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
 import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
 // import { getCommon, mapProps, matchLocation } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
-import { filterTechniques } from '@sandbox/reducers/playground';
+import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -78,6 +79,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         const match = matchLocation(props);
         const file = getFileState(props);
         const scope = getScope(file);
+        const pg = getPlaygroundState(props);
 
         if (!scope) {
             return null;
@@ -106,7 +108,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
 
             original = Hlsl.translate(shader, { mode });
-            value = Glsl.translate(shader, { mode });
+            value = pg.shaderFormat === 'GLSL' ? Glsl.translate(shader, { mode }) : S3D.translate(shader, { mode });
         } else {
             original = FxHlsl.translate(fx);
             value = FxTranslator.translateFlat(fx);

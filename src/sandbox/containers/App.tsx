@@ -27,7 +27,7 @@ import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterTechniques } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState, { IP4Info } from '@sandbox/store/IStoreState';
+import IStoreState, { IP4Info, IPlaygroundState } from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
 // global defines from webpack's config;
@@ -41,10 +41,12 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
-import { Button, Checkbox, Container, Dropdown, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 import { packGraphToJSON } from '@sandbox/logic/nodesEx';
 
 type UnknownIcon = any;
+
+type ShaderFormat = IPlaygroundState['shaderFormat'];
 
 export const styles = {
     toastFontFix: {
@@ -397,6 +399,10 @@ class App extends React.Component<IAppProps> {
 
     setAutocompile(autocompile: boolean) {
         this.props.actions.specifyOptions({ autocompile });
+    }
+
+    setShaderFormat(format: ShaderFormat) {
+        this.props.actions.setShaderFormat(format);
     }
 
     //
@@ -794,6 +800,11 @@ class App extends React.Component<IAppProps> {
         const $pg = props.playground;
         const env = props.s3d.env;
 
+        const shaderFormats: DropdownItemProps[] = [
+            { key: 1, text: 'GLSL', value: 'GLSL' },
+            { key: 2, text: 'S3D', value: 'S3D'},
+          ]
+
         // console.log(props.match.params);
         // console.log(`/${props.match.params.view}/${props.match.params.fx}`);
 
@@ -827,6 +838,13 @@ class App extends React.Component<IAppProps> {
                             </Dropdown>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
+                                    <Dropdown text='Shader Format' 
+                                        options={shaderFormats} 
+                                        defaultValue={shaderFormats[0].value}
+                                        value={$pg.shaderFormat}
+                                        onChange={(e, data) => this.setShaderFormat(data.value as ShaderFormat)}
+                                    />
+                                    &nbsp;&nbsp;|&nbsp;&nbsp;
                                     <Checkbox label='WASM runtime'
                                         disabled={!WASM}
                                         checked={ $pg.wasm }

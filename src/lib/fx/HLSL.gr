@@ -16,7 +16,8 @@ Decl : ImportDecl
 Decl : ProvideDecl
 Decl : CbufferDecl
 Decl : TbufferDecl
-Decl : SamplerStateDecl
+# Decl : SamplerStateDecl
+# Decl : SamplerComparisonState
 Decl : ERROR
 
 #if FX_PART
@@ -34,6 +35,9 @@ Mode : T_KW_STRICT
 Usages : Usage --expose
 Usages : Usages Usage
 Usage : T_KW_STATIC --add
+Usage : T_KW_NOINTERPOLATION
+Usage : T_KW_CENTROID
+Usage : T_KW_NOPERSPECTIVE
 Usage : T_KW_UNIFORM
 Usage : T_KW_EXTERN
 Usage : T_KW_VOLATILE
@@ -106,8 +110,8 @@ ObjectType : T_KW_TEXTURECUBEARRAY
 # ObjectType : T_KW_SAMPLER3D
 # ObjectType : T_KW_SAMPLERCUBE
 # ObjectType : T_KW_STATEBLOCK
-# ObjectType : T_KW_SAMPLER_STATE
-# ObjectType : T_KW_SAMPLER_COMPARISON_STATE
+ObjectType : T_KW_SAMPLER_STATE
+ObjectType : T_KW_SAMPLER_COMPARISON_STATE
 ObjectType : T_KW_PIXELSHADER
 ObjectType : T_KW_VERTEXSHADER
 ObjectType : T_KW_PIXELFRAGMENT
@@ -159,6 +163,7 @@ Initializer : '=' AssignmentExpr --add
 Initializer : '=' ERROR --add
 Initializer : '=' '{' InitExprs '}'
 Initializer : '=' '{' InitExprs ',' '}'
+Initializer : StateBlock
 
 VariableDecl : UsageType Variables ';' --add
 VariableDecl : UsageType Variables ERROR --add
@@ -222,12 +227,6 @@ CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' 
 CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' '}' ';' --add
 TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
 TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' '}' ';' --add
-
-SamplerType : T_KW_SAMPLER_STATE --expose
-SamplerType : T_KW_SAMPLER_COMPARISON_STATE
-
-SamplerStateDecl : SamplerType VariableDim SemanticsOpt AnnotationOpt ';'
-SamplerStateDecl : SamplerType VariableDim SemanticsOpt AnnotationOpt StateBlock ';'
 
 ComplexNameOpt : ComplexName --add
 ComplexName : Id --expose
@@ -382,7 +381,8 @@ ComplexExpr : ObjectExpr
 
 ObjectExpr : T_KW_COMPILE NonTypeId '(' ArgumentsOpt ')'
 ObjectExpr : T_KW_COMPILE_FRAGMENT Target NonTypeId '(' ArgumentsOpt ')'
-ObjectExpr : T_KW_SAMPLER_STATE StateBlock
+
+# ObjectExpr : T_KW_SAMPLER_STATE StateBlock
 # ObjectExpr : T_KW_STATEBLOCK_STATE StateBlocStateBlockk
 
 PrimaryExpr : ComplexExpr
@@ -512,6 +512,8 @@ AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_BORE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_BANDE AssignmentExpr
+AssignmentExpr : CastExpr T_OP_SRE AssignmentExpr
+AssignmentExpr : CastExpr T_OP_SLE AssignmentExpr
 
 Arguments : AssignmentExpr --expose
 Arguments : Arguments ',' AssignmentExpr
@@ -572,6 +574,9 @@ AsmFragment : T_KW_ASM_FRAGMENT '{'
 T_KW_UNSIGNED : "unsigned"
 T_KW_PRECISE : "precise"
 T_KW_STATIC : "static"
+T_KW_NOINTERPOLATION : "nointerpolation"
+T_KW_CENTROID : "centroid"
+T_KW_NOPERSPECTIVE : "noperspective"
 T_KW_UNIFORM : "uniform"
 T_KW_EXTERN : "extern"
 T_KW_VOLATILE : "volatile"
@@ -683,3 +688,5 @@ T_OP_SR : ">>"
 T_OP_SL : "<<"
 T_OP_BORE : "|="
 T_OP_BANDE : "&="
+T_OP_SRE : ">>="
+T_OP_SLE : "<<="

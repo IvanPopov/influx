@@ -1,4 +1,4 @@
-export function createOutput({ tab = '\t', nl = '\n' } = {}) {
+export function createOutput({ tab = '\t', nl = '\n', name = null } = {}) {
     let data: string[] = [''];
     let nesting = [];
     let count = 0;
@@ -36,7 +36,8 @@ export function createOutput({ tab = '\t', nl = '\n' } = {}) {
         pop,
         newline,
         add,
-        toString
+        toString,
+        name
     };
 }
 

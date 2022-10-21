@@ -65,7 +65,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 
 type IErrorInfo = IMap<any>;
@@ -1157,7 +1157,7 @@ export class Analyzer {
 
     protected analyzeUsage(sourceNode: IParseNode): IVariableUsage {
         sourceNode = sourceNode.children[0];
-        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout', 'static', 'unsigned', 'precise'];
+        const supportedUsages = ['uniform', 'const', 'in', 'out', 'inout', 'static', 'unsigned', 'precise', 'inline'];
         assert(supportedUsages.indexOf(sourceNode.value) !== -1, sourceNode.value);
         return <IVariableUsage>sourceNode.value;
     }
@@ -1836,6 +1836,10 @@ export class Analyzer {
 
         if (!isDef(func)) {
             context.error(sourceNode, EErrors.CannotChooseFunction, { funcName });
+            return null;
+        }
+
+        if (args.includes(null)) {
             return null;
         }
 
@@ -4327,7 +4331,7 @@ export class Analyzer {
                 return null;
             }
             else if (Analyzer.isRelationalOperator(operator)) {
-                if (isScalarType(leftType)) {
+                if (isScalarType(leftType) || isVectorType(leftType)) {
                     return constBoolType;
                 }
 
@@ -4344,21 +4348,6 @@ export class Analyzer {
 
             // TODO: emit error (unknonw operation)
             return null;
-        }
-
-        // TODO: remove this hack
-        // temp workaround for INT/UINT comparison
-        if (Analyzer.isRelationalOperator(operator)) {
-            // int float should be compared as floats
-            // int uint should be compared as uints
-            if ((isIntegerType(leftType) || isFloatType(leftType)) && (isIntegerType(rightType) || isFloatType(rightType))) {
-                if (!leftType.isEqual(rightType)) {
-                    context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
-                        tooltip: `comparing values of different types: ${leftType.toCode()} [${operator}] ${rightType.toCode()}`
-                    });
-                }
-                return constBoolType;
-            }
         }
 
         // op: "+", "-", "*", "/"
@@ -4507,13 +4496,15 @@ export class Analyzer {
         return operator === '+=' || operator === '-=' ||
             operator === '*=' || operator === '/=' ||
             operator === '%=' || operator === '=' || 
-            operator === '|=' || operator === '&=';
+            operator === '|=' || operator === '&=' || 
+            operator === '>>=' || operator === '<<=';
     }
 
     protected static isBitwiseOperator(operator: string): boolean {
         return operator === '>>' || operator === '<<' ||
             operator === '|' || operator === '&' || operator === '^' || 
-            operator === '|=' || operator === '&=';
+            operator === '|=' || operator === '&=' ||
+            operator === '>>=' || operator === '<<=';
     }
 
     protected static isArithmeticalOperator(operator: string): boolean {

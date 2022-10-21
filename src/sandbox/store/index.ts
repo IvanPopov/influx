@@ -73,15 +73,17 @@ export const store = createStore<IStoreState, any, any, any>(
 
 
 //
-// IP: hack to preserved user-set defines
+// IP: hack to preserved some of user-set options
 //
 
 const BACKUP_DEFINES = "store-backup-defines";
+// const BACKUP_SHADER_FORMAT = "store-backup-shader-format";
 
 store.subscribe(()=>{
-    localStorage[BACKUP_DEFINES] = JSON.stringify(((store).getState() as IStoreState).sourceFile.defines);
+    const state = <IStoreState>store.getState(); 
+    localStorage[BACKUP_DEFINES] = JSON.stringify(state.sourceFile.defines);
+    // localStorage[BACKUP_SHADER_FORMAT] = state.playground.shaderFormat;
 });
 
-JSON.parse(localStorage[BACKUP_DEFINES] || []).forEach(name => 
-    store.dispatch({ type: "source-code-set-define", payload: { name } })
-);
+// store.dispatch({ type: "playground-set-shader-format", payload: { format: localStorage[BACKUP_SHADER_FORMAT] } });
+JSON.parse(localStorage[BACKUP_DEFINES] || "[]").forEach(name => store.dispatch({ type: "source-code-set-define", payload: { name } }));

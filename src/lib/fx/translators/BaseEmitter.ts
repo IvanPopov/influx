@@ -6,34 +6,43 @@ export class BaseEmitter {
 
     private top() { return this.stack[this.depth() - 1]; }
     
+    private findOrCreateOutput(name?: string) {
+        const i = this.blocks.findIndex(block => name && block.name === name);
+        const block = i !== -1
+            ? this.blocks.splice(i, 1)[0]
+            : createOutput({ name });
+        return block;
+    }
+
     protected depth() { 
         return this.stack.length;
     }
 
-    protected begin() {
-        this.stack.push(createOutput());
+    begin(block?: string) {
+        this.stack.push(this.findOrCreateOutput(block));
     }
 
     /**
      * @param prologue Move block to the beginning.
      */
-    protected end(prologue = false) {
+    end(prologue = false) {
+        const block = this.stack.pop();
         if (!prologue) {
-            this.blocks.push(this.stack.pop());
+            this.blocks.push(block);
         } else {
-            this.blocks = [ this.stack.pop(), ...this.blocks ];
+            this.blocks = [ block, ...this.blocks ];
         }
     }
 
-    protected push(pad?) {
+    push(pad?) {
         this.top().push(pad);
     }
 
-    protected pop() {
+    pop() {
         this.top().pop();
     }
 
-    emitNewline() { this.top()?.newline(); }
+    emitNewline(n = 1) { Array(n).fill(0).forEach(i => this.top()?.newline()); }
     emitKeyword(kw: string) { this.top()?.keyword(kw); }
     emitNoSpace() { this.top()?.ignoreNextSpace(); }
     emitSpace() { this.emitChar(' '); this.emitNoSpace(); }

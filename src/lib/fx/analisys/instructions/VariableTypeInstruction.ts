@@ -326,6 +326,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    isStatic(): boolean {
+        return this.hasUsage("static");
+    }
+
+
     isSampler(): boolean {
         return !this.isNotBaseArray() && this.subType.isSampler();
     }

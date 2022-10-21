@@ -16,7 +16,6 @@ export interface ICodeEmitterOptions {
     mode: 'vertex' | 'pixel' | 'raw';
 }
 
-const asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
 
 export class CodeEmitter extends BaseEmitter {
     protected knownGlobals: string[] = [];
@@ -28,6 +27,8 @@ export class CodeEmitter extends BaseEmitter {
         super();
         this.options = options;
     }
+
+    protected static asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
 
     get mode(): string {
         return this.options.mode;
@@ -137,7 +138,7 @@ export class CodeEmitter extends BaseEmitter {
 
         if (src.isGlobal())
         {
-            this.knownGlobals.push(asSTRID(src));
+            this.knownGlobals.push(CodeEmitter.asSTRID(src));
         }
     }
 
@@ -196,7 +197,7 @@ export class CodeEmitter extends BaseEmitter {
 
         this.knownFunctions.push(fn.instructionID);
 
-        const def = fn.def;
+        const { def } = fn;
         const { typeName } = this.resolveType(def.returnType);
 
         this.begin();
@@ -446,7 +447,7 @@ export class CodeEmitter extends BaseEmitter {
 
     emitAssigment(asgm: IAssignmentExprInstruction) {
         this.emitExpression(asgm.left);
-        this.emitKeyword('=');
+        this.emitKeyword(asgm.operator);
         this.emitSpace();
         assert(instruction.isExpression(asgm.right));
         this.emitExpression(asgm.right as IExprInstruction);
@@ -515,12 +516,11 @@ export class CodeEmitter extends BaseEmitter {
         const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
         if (decl.isGlobal() || isUniformArg) {
-            // assert(decl.type.isUniform());
-            if (this.knownGlobals.indexOf(asSTRID(decl)) === -1) {
+            if (this.knownGlobals.indexOf(CodeEmitter.asSTRID(decl)) === -1) {
                 this.begin();
                 this.emitStmt(decl);
                 this.end();
-                this.knownGlobals.push(asSTRID(decl));
+                this.knownGlobals.push(CodeEmitter.asSTRID(decl));
             }
         }
     }
@@ -556,11 +556,15 @@ export class CodeEmitter extends BaseEmitter {
 
 
     emitFCall(call: IFunctionCallInstruction) {
-        const decl = call.decl;
-        const args = call.args;
+        const { decl, args, callee } = call;
 
         this.emitFunction(decl);
 
+        if (callee) {
+            this.emitExpression(callee);
+            this.emitChar('.');
+            this.emitNoSpace();
+        }
         this.emitKeyword(decl.name);
         this.emitChar('(');
         this.emitNoSpace();

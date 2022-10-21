@@ -338,6 +338,150 @@ class Texture2DTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'Sample' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            const rtName = `${type.isArray() ? type.arrayElementType.name : type.name}4`;
+            let returnType = new VariableTypeInstruction({ type: getSystemType(rtName), scope });
+            let id = new IdInstruction({ scope, name: 'Gather' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f1 = getSystemType("float");
+                const type = new VariableTypeInstruction({ type: f1, scope });
+                const id = new IdInstruction({ scope, name: 'lod' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'SampleLevel' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'dx' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'dy' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'SampleGrad' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 
@@ -368,6 +512,73 @@ class TextureCubeTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f3 = getSystemType("float3");
+                const type = new VariableTypeInstruction({ type: f3, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'Sample' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f3 = getSystemType("float3");
+                const type = new VariableTypeInstruction({ type: f3, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f3 = getSystemType("float");
+                const type = new VariableTypeInstruction({ type: f3, scope });
+                const id = new IdInstruction({ scope, name: 'lod' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'SampleLevel' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 
@@ -398,6 +609,35 @@ class Texture3DTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f3 = getSystemType("float3");
+                const type = new VariableTypeInstruction({ type: f3, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'Sample' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 
@@ -506,29 +746,17 @@ function addSystemTypeScalar(): void {
 
 
 function addSystemTypeVector(): void {
-    let XYSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let XYZSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let XYZWSuffix: IMap<boolean> = <IMap<boolean>>{};
+    const XYSuffix = generateSuffixLiterals("xy");
+    const XYZSuffix = generateSuffixLiterals("xyz");
+    const XYZWSuffix = generateSuffixLiterals("xyzw");
 
-    let RGSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let RGBSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let RGBASuffix: IMap<boolean> = <IMap<boolean>>{};
+    const RGSuffix = generateSuffixLiterals("rg");
+    const RGBSuffix = generateSuffixLiterals("rgb");
+    const RGBASuffix = generateSuffixLiterals("rgba");
 
-    let STSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let STPSuffix: IMap<boolean> = <IMap<boolean>>{};
-    let STPQSuffix: IMap<boolean> = <IMap<boolean>>{};
-
-    generateSuffixLiterals(["x", "y"], XYSuffix);
-    generateSuffixLiterals(["x", "y", "z"], XYZSuffix);
-    generateSuffixLiterals(["x", "y", "z", "w"], XYZWSuffix);
-
-    generateSuffixLiterals(["r", "g"], RGSuffix);
-    generateSuffixLiterals(["r", "g", "b"], RGBSuffix);
-    generateSuffixLiterals(["r", "g", "b", "a"], RGBASuffix);
-
-    generateSuffixLiterals(["s", "t"], STSuffix);
-    generateSuffixLiterals(["s", "t", "p"], STPSuffix);
-    generateSuffixLiterals(["s", "t", "p", "q"], STPQSuffix);
+    const STSuffix = generateSuffixLiterals("st");
+    const STPSuffix = generateSuffixLiterals("stp");
+    const STPQSuffix = generateSuffixLiterals("stpq");
 
 
     let float = getSystemType("float");
@@ -746,9 +974,9 @@ function addSystemTypeMatrix(): void {
 }
 
 
-function generateSuffixLiterals(literals: string[], output: IMap<boolean>, depth: number = 0): void {
-    if (depth >= literals.length) {
-        return;
+function generateSuffixLiterals(literals: string, output: IMap<boolean> = {}, depth: number = 0): IMap<boolean> {
+    if (depth >= /*literals.length*/4) {
+        return output;
     }
 
     if (depth === 0) {
@@ -774,7 +1002,7 @@ function generateSuffixLiterals(literals: string[], output: IMap<boolean>, depth
 
     depth++;
 
-    generateSuffixLiterals(literals, output, depth);
+    return generateSuffixLiterals(literals, output, depth);
 }
 
 
@@ -996,10 +1224,13 @@ function addSystemFunctions(): void {
     generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["int", "int2", "int3", "int4"]);
     generateSystemFunction("min", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["uint", "uint2", "uint3", "uint4"]);
 
+    generateSystemFunction("fmod", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("ldexp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float", "float"], ["float2", "float3", "float4"]);
 
-    generateSystemFunction("pow", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("pow", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("mod", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "float3", "float4"]);
     generateSystemFunction("mod", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
     generateSystemFunction("exp", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
@@ -1254,6 +1485,8 @@ export const SCOPE = scope;
 
 export const T_VOID = scope.findType("void");
 export const T_STRING = scope.findType("string");
+
+export const T_SAMPLER_STATE = scope.findType("SamplerState");
 
 export const T_FLOAT = scope.findType("float");
 export const T_FLOAT2 = scope.findType("float2");

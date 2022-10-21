@@ -18,9 +18,6 @@ import { END_SYMBOL, T_MACRO, T_MACRO_CONCAT, T_NON_TYPE_ID, T_TYPE_ID } from "@
 
 let DEBUG_MACRO = false;
 
-declare const PRODUCTION: boolean;
-
-
 enum EMacroState {
     k_AllowElse,
     k_ForbidElse
@@ -311,8 +308,7 @@ export class Preprocessor {
         // if (loc) {
         //     loc.source = this.stack[this.stack.length - 1].loc;
         // }
-
-
+        
         if (flags & EPPDocumentFlags.k_Macro) {
             assert(isDefAndNotNull(macro));
             this.macros.push(macro);
@@ -528,7 +524,7 @@ export class Preprocessor {
                 token = lexer.getNextToken();
             }
         }
-
+        tokens.forEach(t => { (<any>t).synthetic = true; });
         return { name: name.value, tokens, bFunction, params, bRegionExpr };
     }
 
@@ -1096,6 +1092,7 @@ export class Preprocessor {
                 if (DEBUG_MACRO) {
                     console.log(`${macro.name}.${params[i]} => ${tokens.map(tk => tk.value).join(' ')}`);
                 }
+
                 macros.set({
                     name: params[i],
                     tokens,
@@ -1105,9 +1102,11 @@ export class Preprocessor {
                 });
             }
         } else {
+            if (DEBUG_MACRO) {
+                console.log(`${macro.name} => ${macro.tokens.map(tk => tk.value).join(' ')}`);
+            }
             this.pushDocument(this.macroToLexer(macro), token.loc, EPPDocumentFlags.k_Macro, macro);
         }
-
         return macro;
     }
 

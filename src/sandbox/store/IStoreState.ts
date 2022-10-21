@@ -39,7 +39,7 @@ export interface IFileState {
     uri: string;                    // source file's path
     content: string;                // source file's content
 
-    revision: number;          // number of updates of file
+    revision: number;               // number of updates of file
 
     error: Error;                   // source file loading's error
 
@@ -110,6 +110,7 @@ export interface IPlaygroundState {
     presets: PlaygroundPresets;
     revision: number;               // number of updates of emitter
     wasm: boolean;                  // technique's backend mode
+    shaderFormat: 'GLSL' | 'S3D';
 
     exportName: string;             // path on user disk (last 'save as' path)
     autosave: boolean;              // save file to disk on every change

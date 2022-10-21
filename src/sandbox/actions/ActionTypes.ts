@@ -4,7 +4,7 @@ import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { EParserType } from '@lib/idl/parser/IParser';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerState, IDepotFolder, IMarker, INodeConstant, IP4Info } from '@sandbox/store/IStoreState';
+import { IDebuggerState, IDepotFolder, IMarker, INodeConstant, IP4Info, IPlaygroundState } from '@sandbox/store/IStoreState';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import * as S3D from '@lib/util/s3d/prjenv';
 
@@ -74,9 +74,10 @@ export type IPlaygroundEffectHasBeenDropped = IAction<typeof evt.PLAYGROUND_EFFE
 export type IPlaygroundEffectHasBeenSaved = IAction<typeof evt.PLAYGROUND_EFFECT_HAS_BEEN_SAVED, { filename: string }>;
 export type IPlaygroundSetOptionAutosave = IAction<typeof evt.PLAYGROUND_SET_OPTION_AUTOSAVE, { enabled: boolean }>;
 export type IPlaygroundEffectSaveRequest = IAction<typeof evt.PLAYGROUND_EFFECT_SAVE_REQUEST, { silent?: boolean }>;
+export type IPlaygroundSetShaderFormat = IAction<typeof evt.PLAYGROUND_SET_SHADER_FORMAT, { format: IPlaygroundState['shaderFormat'] }>;
 export type IPlaygroundActions = IPlaygroundTechniqueUpdate | IPlaygroundSelectEffect | IPlaygroundSwitchVMRuntime | 
     IPlaygroundSwitchTechniqueRuntime | IPlaygroundEffectHasBeenSaved | IPlaygroundSetOptionAutosave | IPlaygroundEffectSaveRequest |
-    IPlaygroundEffectHasBeenDropped;
+    IPlaygroundEffectHasBeenDropped | IPlaygroundSetShaderFormat;
 
 //
 // grammar api (simplified)

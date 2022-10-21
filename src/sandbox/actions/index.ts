@@ -1,7 +1,7 @@
 import { MakeOptional } from '@lib/common';
 import { EParserType } from '@lib/idl/parser/IParser';
 import { store } from '@sandbox/store';
-import IStoreState, { IDebuggerState, INodeConstant } from '@sandbox/store/IStoreState';
+import IStoreState, { IDebuggerState, INodeConstant, IPlaygroundState } from '@sandbox/store/IStoreState';
 import { bindActionCreators, Dispatch } from 'redux';
 
 import * as evt from './ActionTypeKeys';
@@ -120,6 +120,10 @@ export const playground = {
 
     setAutosave(enabled: boolean) {
         return { type: evt.PLAYGROUND_SET_OPTION_AUTOSAVE, payload: { enabled } };
+    },
+
+    setShaderFormat(format: IPlaygroundState['shaderFormat']) {
+        return { type: evt.PLAYGROUND_SET_SHADER_FORMAT, payload: { format } };
     }
 };
 

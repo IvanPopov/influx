@@ -265,7 +265,11 @@ export namespace type {
         if (ta.isArray() && tb.isArray()) {
             if (ta.length === instruction.UNDEFINE_LENGTH ||
                 tb.length === instruction.UNDEFINE_LENGTH) {
-                return false;
+                
+                // wnen both types are undefined is valid 
+                if (ta.length !== tb.length) {
+                    return false;
+                }
             }
         }
         return signature(ta, strong) === signature(tb, strong);

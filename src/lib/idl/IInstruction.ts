@@ -279,7 +279,7 @@ export interface ITypeInstruction extends IInstruction {
 }
 
 
-export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout' | 'unsigned';
+export type IVariableUsage = 'uniform' | 'const' | 'in' | 'out' | 'inout' | 'unsigned' | 'static' | 'precise';
 
 export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly usages: IVariableUsage[];
@@ -288,6 +288,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
     readonly aligment: number;
 
     isUniform(): boolean;
+    isStatic(): boolean;
 
     hasUsage(usageName: IVariableUsage): boolean;
 
