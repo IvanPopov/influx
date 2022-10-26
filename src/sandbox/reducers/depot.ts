@@ -19,19 +19,19 @@ export default handleActions<IDepot, IDepotActions>({
 
 export function resolveName(depot: IDepot, name: string)
 {
-    const reduceFolder = (node: IDepotFolder): string => {
-        // let file = node?.files?.find(file => path.basename(file) === name);
-        let file = node?.files?.find(file => path.normalize(file).indexOf(path.normalize(name)) != -1);
-        if (!file)
-            if (node.folders)
-                for (let folder of node.folders)
-                {
-                    file = reduceFolder(folder);
-                    if (file) break;
-                }
-        return file;
-    };
-    return reduceFolder(depot.root);
+    // const reduceFolder = (node: IDepotFolder): string => {
+    //     let file = node?.files?.find(file => path.normalize(file).indexOf(path.normalize(name)) != -1);
+    //     if (!file)
+    //         if (node.folders)
+    //             for (let folder of node.folders)
+    //             {
+    //                 file = reduceFolder(folder);
+    //                 if (file) break;
+    //             }
+    //     return file;
+    // };
+    // return reduceFolder(depot.root);
+    return decodeURIComponent(name);
 }
 
 

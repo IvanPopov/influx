@@ -9,6 +9,7 @@ import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
 import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { StringInstruction } from "../analisys/instructions/StringInstruction";
+import { VariableTypeInstruction } from "../analisys/instructions/VariableTypeInstruction";
 
 import { FxEmitter } from "./FxEmitter";
 
@@ -34,8 +35,7 @@ export interface IPassReflection {
     renderStates: { [key: number/* ERenderStates */]: ERenderStateValues };
 }
 
-export interface IPartFxPassReflection extends IPassReflection
-{
+export interface IPartFxPassReflection extends IPassReflection {
     sorting: boolean;
     geometry: string;
     instanceCount: number;
@@ -60,6 +60,8 @@ export interface IPartFxReflection {
 export interface ITechniqueReflection {
     name: string;
     passes: IPassReflection[];
+    controls: IUIControl[];
+    presets: IPreset[];
 }
 
 
@@ -130,7 +132,7 @@ export class FxTranslator extends FxEmitter {
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
-        const init = stmt.scope.findFunction(stmt.name, 
+        const init = stmt.scope.findFunction(stmt.name,
             [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
 
         let guid = this.knownSpawnCtors.findIndex(ctor => ctor === init) + 1;
@@ -309,7 +311,7 @@ export class FxTranslator extends FxEmitter {
 
                             let n = type.size / T_FLOAT.size;
                             for (let i = 0; i < n; ++i) {
-                                this.emitLine(`${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}] = asfloat(${param.name}${type.isArray()? `[${i % 4}]`: ``});`);
+                                this.emitLine(`${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}] = asfloat(${param.name}${type.isArray() ? `[${i % 4}]` : ``});`);
                                 nfloat++;
                             }
                         });
@@ -335,13 +337,12 @@ export class FxTranslator extends FxEmitter {
     */
 
     emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        super.emitVariableDecl(src, rename);
         let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
 
         if (src.annotation) {
             src.annotation.decls.forEach(decl => {
                 switch (decl.name) {
-                    case 'UIType': 
+                    case 'UIType':
                         const type = <StringInstruction>decl.initExpr.args[0];
                         ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
                         console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
@@ -370,7 +371,7 @@ export class FxTranslator extends FxEmitter {
             let offset = 0;
 
             src.initExpr.args.forEach(arg => {
-                const instr = arg.instructionType === EInstructionTypes.k_InitExpr 
+                const instr = arg.instructionType === EInstructionTypes.k_InitExpr
                     ? ((arg as IInitExprInstruction).args[0])
                     : (<ILiteralInstruction<number>>arg);
                 switch (instr.instructionType) {
@@ -393,15 +394,21 @@ export class FxTranslator extends FxEmitter {
             ctrl.name = src.id.name;
 
             // todo: validate controls
-            if (ctrl.UIType)
+            if (ctrl.UIType) {
                 this.controls.push(ctrl);
+
+                // quick way to promote uniform qualifier to GLSL code
+                (this.emitKeyword('uniform'), super.emitVariableDeclNoInit(src, rename));
+                return;
+            }
         }
+
+        super.emitVariableDecl(src, rename);
     }
 
     protected emitSpawnShader(): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
-        if (!fx.spawnRoutine)
-        {
+        if (!fx.spawnRoutine) {
             return null;
         }
 
@@ -543,13 +550,13 @@ export class FxTranslator extends FxEmitter {
                             if (isFloatBasedType(type)) { interpreter = 'asfloat'; }
                             if (isIntBasedType(type)) { interpreter = 'asint'; }
                             if (isUintBasedType(type)) { interpreter = 'asuint'; }
-                            
+
                             let n = type.size / T_FLOAT.size;
                             for (let i = 0; i < n; ++i) {
-                                this.emitLine(`${param.name}${type.isArray() ? `[${i % 4}]`: ``} = ${interpreter}(${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}]);`);
+                                this.emitLine(`${param.name}${type.isArray() ? `[${i % 4}]` : ``} = ${interpreter}(${request}.payload[${Math.floor(nfloat / 4)}][${nfloat % 4}]);`);
                                 nfloat++;
                             }
-                            
+
 
                             this.emitNewline();
                         });
@@ -682,17 +689,15 @@ export class FxTranslator extends FxEmitter {
             {
                 uavs.push(this.emitUav(`RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
 
-                if (pass.sorting)
-                {
+                if (pass.sorting) {
                     uavs.push(this.emitUav(`RWStructuredBuffer<int2>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
                 }
 
                 this.emitLine(`uint PrerenderId = ${FxTranslator.UAV_PRERENDERED}${i}.IncrementCounter();`);
-                if (pass.sorting)
-                {
+                if (pass.sorting) {
                     this.emitLine(`uint SerialId = ${FxTranslator.UAV_SERIALS}${i}.IncrementCounter();`);
                 }
-                
+
                 if (pass.instanceCount > 1) {
                     this.emitLine(`for(int InstanceId = 0; InstanceId < ${pass.instanceCount}; InstanceId++)`);
                     this.emitChar('{');
@@ -709,25 +714,20 @@ export class FxTranslator extends FxEmitter {
                     args[inputIndex] = `Prerendered`;
                     args[partndex] = `Particle`;
 
-                    if (insidIndex !== -1)
-                    {
+                    if (insidIndex !== -1) {
                         args[insidIndex] = `InstanceId`;
                     }
 
-                    if (type.equals(prerenderFn.def.returnType, T_VOID))
-                    {
+                    if (type.equals(prerenderFn.def.returnType, T_VOID)) {
                         this.emitLine(`int SortIndex = 0;`);
                         this.emitLine(`${prerenderFn.name}(${args.join(', ')});`);
                     }
-                    else
-                    {
+                    else {
                         this.emitLine(`int SortIndex = ${prerenderFn.name}(${args.join(', ')});`);
                     }
 
-                    if (pass.sorting)
-                    {
-                        if (pass.instanceCount > 1)
-                        {
+                    if (pass.sorting) {
+                        if (pass.instanceCount > 1) {
                             this.emitLine(`if (InstanceId == 0)`);
                             this.push();
                             this.emitLine(`${FxTranslator.UAV_SERIALS}${i}[SerialId] = int2(SortIndex, PrerenderId);`);
@@ -737,15 +737,13 @@ export class FxTranslator extends FxEmitter {
                         }
                     }
 
-                    if (pass.instanceCount > 1)
-                    {
+                    if (pass.instanceCount > 1) {
                         this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId * ${pass.instanceCount} + InstanceId] = Prerendered;`);
                     }
-                    else
-                    {
+                    else {
                         this.emitLine(`${FxTranslator.UAV_PRERENDERED}${i}[PrerenderId] = Prerendered;`);
                     }
-                    
+
                 }
 
                 if (pass.instanceCount > 1) {
@@ -836,11 +834,47 @@ export class FxTranslator extends FxEmitter {
         this.end(true);
     }
 
-   
+
+    parsePresets(fx: ITechniqueInstruction): IPreset[] {
+        return fx.presets.map((preset, i): IPreset => {
+            const name = preset.name;
+            const desc = null; // todo
+            const data = preset.props.map((prop): IPresetEntry => {
+                const decl = prop.resolveDeclaration();
+                const type = decl.type;
+                const name = decl.name;
+                const value = new Uint8Array(16); // todo: don't use fixed size
+                const view = new DataView(value.buffer);
+                switch (type.name) {
+                    case 'float':
+                    case 'float2':
+                    case 'float3':
+                    case 'float4':
+                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
+                        break;
+                    case 'int':
+                    case 'int2':
+                    case 'int3':
+                    case 'int4':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
+                    case 'uint':
+                    case 'uint2':
+                    case 'uint3':
+                    case 'uint4':
+                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
+                    case 'bool':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
+                        break;
+                }
+                return { name, value };
+            });
+            return { name, desc, data };
+        });
+    }
+
 
     emitPartFxDecl(fx: IPartFxInstruction): IPartFxReflection {
-        if (!fx.particle)
-        {
+        if (!fx.particle) {
             return null;
         }
 
@@ -891,41 +925,7 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
-        const presets = fx.presets.map((preset, i): IPreset => {
-            const name = preset.name;
-            const desc = null; // todo
-            const data = preset.props.map((prop): IPresetEntry => {
-                const decl = prop.resolveDeclaration();
-                const type = decl.type;
-                const name = decl.name;
-                const value = new Uint8Array(16); // todo: don't use fixed size
-                const view = new DataView(value.buffer);
-                switch (type.name) {
-                    case 'float': 
-                    case 'float2':
-                    case 'float3':
-                    case 'float4':
-                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
-                        break;
-                    case 'int':
-                    case 'int2':
-                    case 'int3':
-                    case 'int4':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
-                    case 'uint':
-                    case 'uint2':
-                    case 'uint3':
-                    case 'uint4':
-                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
-                    case 'bool':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
-                        break;
-                }
-                return { name, value };
-            });
-            return { name, desc, data };
-        });
-
+        const presets = this.parsePresets(fx);
         this.emitSpawnOpContainer();
 
         const { typeName: particle } = this.resolveType(fx.particle);
@@ -981,9 +981,14 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
+        const controls = this.controls;
+        const presets = this.parsePresets(tech);
+
         return {
             name,
-            passes
+            passes,
+            controls,
+            presets
         };
     }
 }
@@ -991,7 +996,7 @@ export class FxTranslator extends FxEmitter {
 
 export function translateFlat(fx: ITechniqueInstruction): string {
     const emitter = new FxTranslator();
-    switch(fx.instructionType) {
+    switch (fx.instructionType) {
         case EInstructionTypes.k_PartFxDecl:
             emitter.emitPartFxDecl(<IPartFxInstruction>fx);
             break;

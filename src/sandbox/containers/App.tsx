@@ -70,7 +70,8 @@ export const styles = {
     },
     fileBrowserSidebarFix: {
         padding: '10px !important',
-        background: 'rgba(255,255,255,0.95) !important'
+        background: 'rgba(255,255,255,0.95) !important',
+        minWidth: '440px'
     },
     containerMarginFix: {
         border: '0px !important',
@@ -359,6 +360,7 @@ class App extends React.Component<IAppProps> {
         confirmDialog: { open: boolean } & ConfirmDialog;
         showFileBrowser: boolean;
         testProcessing: boolean;
+        depotFilter: string;
     };
 
     private expressionRef = React.createRef<Input>();
@@ -368,7 +370,8 @@ class App extends React.Component<IAppProps> {
         this.state = {
             showFileBrowser: false,
             testProcessing: false,
-            confirmDialog: { open: false, title: null, message: null, onAccept: null, onReject: null }
+            confirmDialog: { open: false, title: null, message: null, onAccept: null, onReject: null },
+            depotFilter: ''
         };
     }
 
@@ -550,7 +553,7 @@ class App extends React.Component<IAppProps> {
 
     @autobind
     openFile(file: string) {
-        const doOpen = () => history.push(`/${this.props.match.params.view}/${path.basename(file)}`);
+        const doOpen = () => history.push(`/${this.props.match.params.view}/${encodeURIComponent(file)}`);
 
         if (!this.isEdited() || !ipc.isElectron())
         {
@@ -780,7 +783,7 @@ class App extends React.Component<IAppProps> {
         }
 
         const links: string[] = [];
-        const basepath = `/playground/${path.basename(file.uri)}`;
+        const basepath = `/playground/${encodeURIComponent(file.uri)}`;
         for (const fx of list) {
             links.push(`${fx.name}`);
             links.push(...fx.passList
@@ -1215,12 +1218,23 @@ class App extends React.Component<IAppProps> {
                         visible={ this.state.showFileBrowser }
                         className={ this.props.classes.fileBrowserSidebarFix }
                     >
+                    <Form style={{ marginBottom: '10px' }}>
+                        <Form.Field>
+                            <Input
+                                size='small'
+                                iconPosition='left'
+                                placeholder='Filter...'
+                                onChange={(e) => { this.setState({ depotFilter: e.target.value }) }}
+                            />
+                        </Form.Field>
+                    </Form>
                     <FileListView  
                         root={ this.props.depot.root }  
                         onFileClick={ this.openFile }
                         desc={ env?.Get('game-name') || 'Development' }
                         expanded={true}
                         filters={ [ '.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.cs' ] }
+                        search={ this.state.depotFilter }
                     />
                     </Sidebar>
                     <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>

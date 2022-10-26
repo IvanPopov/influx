@@ -50,12 +50,15 @@ function feedFakeDepot(root: IDepotFolder) {
 
 
 
-function scan(dir: string, node: IDepotFolder, filters?: string[]) {
+function scan(dir: string, node: IDepotFolder, filters?: string[], excludes?: string[]) {
     try {
         node.path = URI.fromLocalPath(dir);
 
         let stats = fs.statSync(dir);
         if (!stats.isDirectory()) {
+            return;
+        }
+        if (excludes?.includes(path.basename(dir))) {
             return;
         }
 
@@ -75,7 +78,7 @@ function scan(dir: string, node: IDepotFolder, filters?: string[]) {
                 node.folders = node.folders || [];
 
                 let subfolder = { path: URI.fromLocalPath(filepath), totalFiles: 0 };
-                scan(filepath, subfolder, filters);
+                scan(filepath, subfolder, filters, excludes);
 
                 node.folders.push(subfolder);
                 node.totalFiles += subfolder.totalFiles;
@@ -86,26 +89,37 @@ function scan(dir: string, node: IDepotFolder, filters?: string[]) {
     }
 }
 
+const depotNode = (): IDepotFolder => ({ path: null, files: [], folders: [], totalFiles: 0 });
+
+
 const depotUpdateRequestLogic = createLogic<IStoreState>({
     type: evt.DEPOT_UPDATE_REQUEST,
     latest: true,
 
     async process({ getState, action }, dispatch, done) {
         let { s3d: { env } } = getState();
-        let root: IDepotFolder = {
-            path: null,
-            files: [],
-            folders: [],
-            totalFiles: 0
-        };
+        let root = depotNode();
 
         if (!ipc.isElectron()) {
             feedFakeDepot(root);
         } else {
-            const rootPath = !env 
-                ? path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH) 
-                : env.Get('influx-sfx-dir');
-            await scan(rootPath, root, ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps']);
+
+            const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps'];
+            
+            if (env) {
+                let sfxFolder = depotNode();
+                await scan(env.Get('influx-sfx-dir'), sfxFolder, EXT_FILTER);
+
+                let shaderFolder = depotNode();
+                await scan(env.Get('sdrproj-dir'), shaderFolder, EXT_FILTER, ['maya_fx', 'deploy_test']);
+
+                root.path = URI.fromLocalPath(path.dirname(env.Get('project-dir')));
+                root.folders = [ sfxFolder, shaderFolder ];
+                root.totalFiles = sfxFolder.totalFiles + shaderFolder.totalFiles;
+            } else {
+                let rootPath = path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH); 
+                await scan(rootPath, root, EXT_FILTER);
+            }
 
             root.files.push(URI.fromLocalPath(DEFAULT_FILENAME));
         }

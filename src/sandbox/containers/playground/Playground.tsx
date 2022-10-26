@@ -269,7 +269,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 <MaterialScene   
                                     style={threeStylesHotfix}
                                     timeline={timeline}
-                                    controls={null}
+                                    controls={controls}
                                     material={technique as ITechnique}
                                 />
                             }

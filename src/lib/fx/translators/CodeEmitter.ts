@@ -5,6 +5,7 @@ import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, 
 import { IntInstruction } from "../analisys/instructions/IntInstruction";
 import { BaseEmitter } from "./BaseEmitter";
 import { ISLDocument } from "@lib/idl/ISLDocument";
+import { isDef } from "@lib/util/s3d/type";
 
 export interface ITypeInfo {
     typeName: string;
@@ -124,22 +125,27 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+    emitVariableDeclNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         const { typeName, length, usage } = this.resolveType(src.type);
         const name = rename ? rename(src) : src.name;
-
-        usage && this.emitKeyword(usage);
-        this.emitKeyword(typeName);
-        this.emitKeyword(name);
-        length && this.emitChar(`[${length}]`);
-        src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
-        src.semantic && this.emitSemantic(src.semantic);
-        src.annotation && this.emitAnnotation(src.annotation);
 
         if (src.isGlobal())
         {
             this.knownGlobals.push(CodeEmitter.asSTRID(src));
         }
+
+        usage && this.emitKeyword(usage);
+        this.emitKeyword(typeName);
+        this.emitKeyword(name);
+        length && this.emitChar(`[${length}]`);
+        src.semantic && this.emitSemantic(src.semantic);
+        src.annotation && this.emitAnnotation(src.annotation);
+    }
+    
+
+    emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        this.emitVariableDeclNoInit(src, rename);
+        src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
     }
 
 

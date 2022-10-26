@@ -259,5 +259,5 @@ export function fromLocalPath(filepath: string | ReturnType<typeof path.parse>) 
 }
 
 export function toLocalPath(uri: string | URI): string {
-    return parse(uri).path.substring(1);
+    return parse(uri).path?.substring(1) || '';
 }

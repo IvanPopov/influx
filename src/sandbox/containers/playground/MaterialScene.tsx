@@ -157,6 +157,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     componentDidUpdate(prevProps: any, prevState: any): void {
+        super.componentDidUpdate(prevProps, prevState);
+
         const mat = this.props.material;
 
         this.scene.remove(...this.groups);
@@ -191,8 +193,15 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             const group = groups[iPass];
             const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(iPass).getDesc();
 
+            const uniforms = this.uniforms;
+            const controls = this.props.controls;
+
+            for (let name in controls.values) {
+                uniforms[name] = { value: controls.values[name] };
+            }
+
             const material = new THREE.RawShaderMaterial({
-                uniforms: this.uniforms,
+                uniforms,
                 vertexShader: vertexShader,
                 fragmentShader: pixelShader,
                 blending: THREE.NormalBlending,
@@ -226,15 +235,21 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         }
     }
 
-    protected feedScene(time: number): void {
+    protected fillScene(time: number): void {
         const timeline = this.props.timeline;
         const uniforms = this.uniforms;
+        const controls = this.props.controls;
 
         let constants = timeline.getConstants();
         uniforms.elapsedTime.value = constants.elapsedTime;
         uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
 
-        timeline.tick();
+        for (let name in controls.values) {
+            if (uniforms[name])
+                uniforms[name].value = controls.values[name];
+        }
+
+        timeline.tick(); 
     }
 
     protected renderScene(time) {

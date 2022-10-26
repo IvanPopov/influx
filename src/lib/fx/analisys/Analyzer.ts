@@ -1843,6 +1843,11 @@ export class Analyzer {
             return null;
         }
 
+        if (func.def.params.length != args.length) {
+            context.error(sourceNode, EErrors.UnsupportedExpr, { funcName });
+            return null;
+        }
+
         func.def.params.forEach((param, i) => {
             if (!type.equals(param.type, args[i].type)) {
                 context.warn(args[i].sourceNode, EWarnings.ImplicitTypeConversion, { info: `${args[i].type.toCode()} => ${param.type.toCode()}` });
@@ -4497,14 +4502,14 @@ export class Analyzer {
             operator === '*=' || operator === '/=' ||
             operator === '%=' || operator === '=' || 
             operator === '|=' || operator === '&=' || 
-            operator === '>>=' || operator === '<<=';
+            operator === '>>=' || operator === '<<=' || operator === '^=';
     }
 
     protected static isBitwiseOperator(operator: string): boolean {
         return operator === '>>' || operator === '<<' ||
             operator === '|' || operator === '&' || operator === '^' || 
             operator === '|=' || operator === '&=' ||
-            operator === '>>=' || operator === '<<=';
+            operator === '>>=' || operator === '<<=' || operator === '^=';
     }
 
     protected static isArithmeticalOperator(operator: string): boolean {

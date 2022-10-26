@@ -12,6 +12,7 @@ interface IFileListViewProps {
     expanded?: boolean;
     desc?: string;
     filters?: string[];
+    search?: string;
 }
 
 const FileDirectoryIcon: any = 'file directory';
@@ -49,9 +50,9 @@ class FileListView extends React.Component<IFileListViewProps, {}> {
             return null;
         }
 
-        const { filters } = this.props;
+        const { filters, search } = this.props;
 
-        if (filters?.indexOf(path.extname(file)) == -1)
+        if (filters?.indexOf(path.extname(file)) == -1 || (search && file.indexOf(search) == -1))
         {
             return null;
         }

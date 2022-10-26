@@ -3,7 +3,7 @@ import { EInstructionTypes, IAssignmentExprInstruction, IExprInstruction, ITyped
 import { ExprInstruction } from "./ExprInstruction";
 import { IInstructionSettings, Instruction } from "./Instruction";
 
-export type AssigmentOperator = "=" | "+=" | "-=" | "/=" | "*=" | "%=" | "|=" | "&=" | ">>=" | "<<=";
+export type AssigmentOperator = "=" | "+=" | "-=" | "/=" | "*=" | "%=" | "|=" | "&=" | ">>=" | "<<=" | "^=";
 
 export interface IAssignmentExprInstructionSettings extends IInstructionSettings {
     left: IExprInstruction;

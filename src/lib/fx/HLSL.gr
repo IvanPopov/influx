@@ -512,6 +512,7 @@ AssignmentExpr : CastExpr T_OP_AE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_BORE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_BANDE AssignmentExpr
+AssignmentExpr : CastExpr T_OP_XORE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SRE AssignmentExpr
 AssignmentExpr : CastExpr T_OP_SLE AssignmentExpr
 
@@ -688,5 +689,6 @@ T_OP_SR : ">>"
 T_OP_SL : "<<"
 T_OP_BORE : "|="
 T_OP_BANDE : "&="
+T_OP_XORE : "^="
 T_OP_SRE : ">>="
 T_OP_SLE : "<<="

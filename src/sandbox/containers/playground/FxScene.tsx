@@ -92,7 +92,8 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         leftWall?: THREE.Mesh,
         rightWall?: THREE.Mesh,
         backWall?: THREE.Mesh,
-        ceiling?: THREE.Mesh
+        ceiling?: THREE.Mesh,
+        lights?: THREE.Light[]
     } = null;
 
 
@@ -465,7 +466,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
 
-    feedScene (time: DOMHighResTimeStamp) {
+    fillScene (time: DOMHighResTimeStamp) {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
         const controls = this.props.controls;
@@ -518,7 +519,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         emitter.prerender(uniforms);
         emitter.serialize(); // feed render buffer with instance data
 
-        const lights = [];
+        const lights = this.env.lights = [];
 
         for (let iPass = 0; iPass < this.passes.length; ++iPass) {
             const rendPass = this.passes[iPass];
@@ -557,10 +558,13 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             // emitPass.dump();
         }
         if (lights.length) this.scene.add(...lights);
-        if (lights.length) this.scene.remove(...lights);
         this.setState({ nParticles: emitter.getNumParticles() });
 
         // emitter.dump();
+    }
+
+    protected override cleanScene(time: number): void {
+        if (this.env.lights.length) this.scene.remove(...this.env.lights);
     }
 
 

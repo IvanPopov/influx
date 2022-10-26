@@ -259,8 +259,11 @@ async function createMatFxBundle(tech: ITechniqueInstruction, options: BundleOpt
     const passes = reflection.passes.map(pass => createMatFxGLSLRenderPass(slDocument, pass));
     const mat = new MatBundleT(passes);
 
+    const controls = createFxControls(reflection.controls);
+    const presets = createFxPresets(reflection.presets);
+
     const { meta } = options;
-    const bundle = createFxBundle(name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source)); 
+    const bundle = createFxBundle(name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source), controls, presets); 
 
     return finalizeBundle(bundle, options);
 }
