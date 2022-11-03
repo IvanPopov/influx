@@ -104,14 +104,14 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
             feedFakeDepot(root);
         } else {
 
-            const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps'];
+            const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.hlsl' ];
             
             if (env) {
                 let sfxFolder = depotNode();
                 await scan(env.Get('influx-sfx-dir'), sfxFolder, EXT_FILTER);
 
                 let shaderFolder = depotNode();
-                await scan(env.Get('sdrproj-dir'), shaderFolder, EXT_FILTER, ['maya_fx', 'deploy_test']);
+                await scan(env.Get('sdrproj-dir'), shaderFolder, EXT_FILTER, ['maya_fx', 'deploy_test', 'nrd']);
 
                 root.path = URI.fromLocalPath(path.dirname(env.Get('project-dir')));
                 root.folders = [ sfxFolder, shaderFolder ];

@@ -227,10 +227,15 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 //  float3 normal: NORMAL0;
                 //  float2 uv: TEXCOORD0;
                 // };
-
+                // console.log(mesh.geometry.attributes);
+                // sandbox
                 mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
                 mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
                 mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
+                // husky
+                mesh.geometry.attributes['a_v_position'] = mesh.geometry.attributes.position;
+                mesh.geometry.attributes['a_v_normal'] = mesh.geometry.attributes.normal;
+                mesh.geometry.attributes['a_v_texcoord0'] = mesh.geometry.attributes.uv;
             }
         }
     }

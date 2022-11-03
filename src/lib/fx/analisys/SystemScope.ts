@@ -116,7 +116,7 @@ class BufferTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
@@ -245,7 +245,7 @@ class StructuredBufferTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
 
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
@@ -337,7 +337,7 @@ class Texture2DTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
 
         {
             const paramList = [];
@@ -511,7 +511,7 @@ class TextureCubeTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
 
         {
             const paramList = [];
@@ -668,7 +668,54 @@ class Texture2DArrayTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
+
+        {
+            const paramList = [];
+
+            {
+                let samplerState = getSystemType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f3 = getSystemType("float3");
+                const type = new VariableTypeInstruction({ type: f3, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'dx' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = getSystemType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'dy' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'SampleGrad' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 
@@ -699,7 +746,7 @@ class TextureCubeArrayTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const uav = false;
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 

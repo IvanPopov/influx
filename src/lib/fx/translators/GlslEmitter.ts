@@ -1,11 +1,24 @@
 import { assert, isDef } from "@lib/common";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
-import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { type } from "os";
 
 import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
 
 const GlslTypeNames = {
+    'void': 'void',
+    'uint': 'uint',
+    'uint2': 'uvec2',
+    'uint3': 'uvec3',
+    'uint4': 'uvec4',
+    'bool': 'bool',
+    'bool2': 'bvec2',
+    'bool3': 'bvec3',
+    'bool4': 'bvec4',
     'int': 'int',
+    'int2': 'ivec2',
+    'int3': 'ivec3',
+    'int4': 'ivec4',
     'float': 'float',
     'float2': 'vec2',
     'float3': 'vec3',
@@ -13,6 +26,8 @@ const GlslTypeNames = {
     'float4x4': 'mat4',
     'float3x4': 'mat3x4'
 }
+
+const HlslTypeNames = Object.fromEntries(Object.entries(GlslTypeNames).map(([k, v]) => [v, k]));
  
 
 const sname = {
@@ -25,15 +40,16 @@ const sname = {
     // uniform: (decl: IVariableDeclInstruction) => `u_${decl.name}`
 };
 
-
+const IS_POSITION = (semantic: string) => ['POSITION', 'SV_Position'].indexOf(semantic) !== -1;
+const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_InstanceID'].indexOf(semantic) !== -1;
 
 export class GlslEmitter extends CodeEmitter {
     
     protected resolveTypeName(type: ITypeInstruction): string {
         const typeName = GlslTypeNames[type.name];
         if (!isDef(typeName)) {
-            assert(false, 'unknown built in type found');
-            return null;
+            assert(false, `unknown built in type found '${type.name}'`);
+            return type.name;
         }
 
         return typeName;
@@ -52,16 +68,67 @@ export class GlslEmitter extends CodeEmitter {
         return false;
     }
 
+
     emitSemantic(semantic: string) {
         // disabling of semantics emission.
+    }
+
+
+    emitPostfixIndex(pfidx: IPostfixIndexInstruction)
+    {
+        if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(pfidx.element.type.name)) {
+            // this.emitLine(`texelFetch(`, texelCoord, 0).x`);
+            this.emitKeyword('texelFetch');
+            this.emitChar('(');
+                this.emitNoSpace();
+                this.emitExpression(pfidx.element);
+                this.emitChar(',');
+                this.emitKeyword(`ivec2`);
+                this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitExpression(pfidx.index);
+                    this.emitChar(',');
+                    this.emitKeyword('0');
+                this.emitChar(')');
+                this.emitChar(',');
+                this.emitKeyword('0');
+            this.emitChar(')');
+            return;
+        }
+        super.emitPostfixIndex(pfidx);
+    }
+
+    emitVariableDeclNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        const { type } = src;
+        if (src.isGlobal()) {
+            // IP: hack for fake compartibility with GLSL 3.00 ES
+            // convert buffers to samplers
+            if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+                const { typeName } = this.resolveType(type.arrayElementType);
+
+                this.emitKeyword('uniform highp');
+                if (['ivec4'].includes(typeName)) {
+                    this.emitKeyword('isampler2D');
+                } else if (['uvec4'].includes(typeName)) {
+                    this.emitKeyword('usampler2D');
+                } else {
+                    this.emitKeyword('sampler2D');
+                }
+                this.emitKeyword(src.name);
+                return;
+            }
+        }
+        super.emitVariableDeclNoInit(src, rename);
     }
 
     protected emitPrologue(def: IFunctionDefInstruction): void {
         this.begin();
         {
-            // this.emitLine(`#version 150`);
+            this.emitLine(`#version 300 es`);
+
             this.emitLine(`precision highp float;`);
-            this.emitLine(`precision highp int;`);
+            // this.emitLine(`precision highp int;`);
+            // this.emitLine(`precision highp unsigned int;`);
         }
         this.end();
         this.begin();
@@ -77,7 +144,6 @@ export class GlslEmitter extends CodeEmitter {
                 this.emitNewline();
 
                 if (!type.isComplex()) {
-                    assert(type.isNotBaseArray());
                     this.emitVaryingOrAttribute(param);
                     continue;
                 }
@@ -109,22 +175,48 @@ export class GlslEmitter extends CodeEmitter {
                 const retType = def.returnType;
                 assert(retType.isComplex(), 'basic types unsupported yet');
 
-                retType.fields.forEach(field => {
-                    assert(!field.type.isNotBaseArray() && !field.type.isComplex());
-                    this.emitVarying(field);
-                });
+                retType.fields.forEach(field => this.emitVarying(field));
             }
+            this.end();
+        }
+
+        if (this.mode === 'pixel') {
+            this.begin();
+            this.emitLine(`out vec4 outColor;`);
             this.end();
         }
     }
 
-    protected emitAttribute(decl: IVariableDeclInstruction) {
-        return (this.emitKeyword('attribute'), this.emitVariableDecl(decl, sname.attr), this.emitChar(';'), this.emitNewline());
+    emitKeyword(kw: string) {
+        // IP: temp fix for reserved GLSL keyword
+        if (kw === 'input') kw = 'input1';
+        super.emitKeyword(kw);
     }
 
-    protected emitVarying(decl: IVariableDeclInstruction) {
-        return (this.emitKeyword('varying'), this.emitVariableDecl(decl, sname.varying), this.emitChar(';'), this.emitNewline());
+    private loc = 0;
+    protected emitAttribute(decl: IVariableDeclInstruction) {
+        // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
+        if (IS_INSTANCEID(decl.semantic)) return;
+
+        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariableDecl(decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
+
+
+    protected emitVarying(decl: IVariableDeclInstruction) {
+        const { type } = decl;
+        if (type.isComplex()) {
+            type.fields.forEach(field => this.emitVarying(field));
+            return;
+        }
+
+        const usage = {
+            vertex: 'out',
+            pixel: 'in'
+        };
+
+        (this.emitKeyword(usage[this.mode]), this.emitVariableDecl(decl, sname.varying), this.emitChar(';'), this.emitNewline());
+    }
+
 
     protected emitVaryingOrAttribute(decl: IVariableDeclInstruction) {
         switch(this.mode) {
@@ -135,20 +227,53 @@ export class GlslEmitter extends CodeEmitter {
         }
     }
 
+
+    emitCbuffer(cbuf: ICbufferInstruction) {
+        this.begin();
+        this.emitComment(`size: ${cbuf.type.size}`);
+        this.emitKeyword('uniform');
+        if (cbuf.id) {
+            this.emitKeyword(cbuf.name);
+        }
+        this.emitNewline();
+        this.emitChar('{');
+        this.push();
+        {
+            cbuf.type.fields.forEach(field => {
+                this.emitVariableDecl(field);
+                this.emitChar(';');
+                this.emitChar('\t')
+                this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
+            });
+        }
+        this.pop();
+        this.emitChar('}');
+        this.emitChar(';');
+        this.end();
+    }
+
+
     emitFloat(lit: ILiteralInstruction<number>) {
         const sval = String(lit.value);
         this.emitKeyword(sval);
         (sval.indexOf('.') === -1) && this.emitChar('.0');
     }
 
+
+    attr(decl: IVariableDeclInstruction) {
+        return this.mode === 'vertex' ? sname.attr(decl) : sname.varying(decl);
+    }
+
+
     emitPostfixPoint(pfxp: IPostfixPointInstruction) {
-        if (this.isVaryingOrAttributeAlias(pfxp)) {
-            this.emitKeyword(this.mode === 'vertex' ? sname.attr(pfxp.postfix.decl) : sname.varying(pfxp.postfix.decl));
-            return;
-        }
-        
+        // if (IS_INSTANCEID(pfxp.postfix.decl.semantic)) {
+        //     this.emitKeyword(`gl_InstanceID`);
+        //     return;
+        // }
+
         super.emitPostfixPoint(pfxp);
     }
+
 
     emitIdentifier(id: IIdExprInstruction) {
         super.emitIdentifier(id);
@@ -164,9 +289,52 @@ export class GlslEmitter extends CodeEmitter {
                 assert(args.length == 2);
                 this.emitMulIntrinsic(args[0], args[1]);
                 return;
+            case 'frac':
+                super.emitFCall(call, (decl) => 'fract');
+                return;
+            case 'asuint':
+                // call.decl.def.params[0].type.name === 'float' ? 'floatBitsToUint' : 'floatBitsToUint'
+                super.emitFCall(call, (decl) => 'floatBitsToUint');
+                return;
         }
         
         super.emitFCall(call);
+    }
+
+
+    emitCast(cast: ICastExprInstruction): void {
+        if (cast.isUseless()) {
+            return;
+        }
+
+        // replace '(vec3)value' to 'vec3(value)'
+        if (GlslTypeNames[cast.type.name]) {
+            const { typeName } = this.resolveType(cast.type);
+            this.emitKeyword(typeName);
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitExpression(cast.expr);
+            this.emitChar(')');
+            return;
+        }
+
+        super.emitCast(cast);
+    }
+
+
+    emitInitExpr(init: IInitExprInstruction) {
+        // replaced '{1, 2, 3}' to 'ivec3(1, 2, 3)'
+        if (GlslTypeNames[init.type.name]) {
+            const { typeName } = this.resolveType(init.type);
+            this.emitKeyword(typeName);
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitExpressionList(init.args);
+            this.emitChar(')');
+            return;
+        }
+
+        super.emitInitExpr(init);
     }
 
 
@@ -178,17 +346,7 @@ export class GlslEmitter extends CodeEmitter {
             this.emitPrologue(fn.def);
             const { typeName } = this.resolveType(def.returnType);
 
-            // emit original function witout parameters
-            this.begin();
-            {
-                this.emitKeyword(typeName);
-                this.emitKeyword(fn.name);
-                this.emitChar('(');
-                this.emitChar(')');
-                this.emitNewline();
-                this.emitBlock(fn.impl);
-            }
-            this.end();
+            super.emitFunction(fn);
 
             // emit main()
             this.begin();
@@ -197,39 +355,96 @@ export class GlslEmitter extends CodeEmitter {
                 this.emitNewline();
                 this.emitChar('{');
                 this.push();
+                const params = fn.def.params.filter(p => p.type.size !== 0);
                 {
+                    for (let p of params)
+                    {
+                        const pname = p.name;
+                        const { typeName } = this.resolveType(p.type);
+
+                        this.emitKeyword(typeName);
+                        this.emitKeyword(pname);
+                        this.emitChar(';');
+                        this.emitNewline();
+
+                        const fline = (decl: IVariableDeclInstruction, ids: string[]) => {
+                            if (decl.type.isComplex() && !decl.type.isBase()) {
+                                decl.type.fields.forEach(field => fline(field, [ ...ids, decl.name ]));
+                                return;
+                            }
+                            for (let id of ids) {
+                                this.emitKeyword(id);
+                                this.emitChar('.');
+                                this.emitNoSpace();
+                            }
+                            this.emitKeyword(decl.name);
+                            this.emitSpace();
+                            this.emitChar('=');
+                            this.emitKeyword(IS_INSTANCEID(decl.semantic) ? 'uint(gl_InstanceID)' : this.attr(decl));
+                            this.emitChar(';');
+                            this.emitNewline();
+                        }
+
+                        fline(p, [ ]);
+                    }
+
                     const tempName = 'temp';
 
                     this.emitKeyword(typeName);
                     this.emitKeyword(tempName);
                     this.emitKeyword('=');
                     this.emitKeyword(fn.name);
-                    this.emitChar('()');
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    params.forEach((param, i, list) => {
+                        this.emitKeyword(param.name);
+                        (i + 1 != list.length) && this.emitChar(',');
+                    });
+                    this.emitChar(')');
                     this.emitChar(';');
                     this.emitNewline();
 
                     if (this.mode === 'vertex') {
-                        retType.fields.forEach(field => {
-                            const varyingName = sname.varying(field);
-                            this.emitKeyword(varyingName);
-                            this.emitKeyword('=');
-                            this.emitKeyword(tempName);
-                            this.emitChar('.');
-                            this.emitChar(field.name);
-                            this.emitChar(';');
-                            this.emitNewline();
-                        });
 
-                        const fieldPos = retType.fields.filter(field => (field.semantic === 'POSITION'))[0];
+                        // emit prologue like:
+                        // v_name = temp.name;
+                        {
+                            let fline; // emit field line
+                            let cdown; // breakdown and emit complex decl
+
+                            fline = (decl: IVariableDeclInstruction, ids: string[]) => {
+                                if (decl.type.isComplex() && !decl.type.isBase()) {
+                                    cdown(decl.type, [ ...ids, decl.name ]);
+                                    return;
+                                }
+                                this.emitKeyword(sname.varying(decl));
+                                this.emitSpace();
+                                this.emitChar('=');
+                                for (let id of ids) {
+                                    this.emitKeyword(id);
+                                    this.emitChar('.');
+                                    this.emitNoSpace();
+                                }
+                                this.emitKeyword(decl.name);
+                                this.emitChar(';');
+                                this.emitNewline();
+                            }
+
+                            cdown = (type: ITypeInstruction, ids: string[]) => type.fields.forEach(field => fline(field, ids)); 
+                            cdown(retType, [ tempName ]);
+
+                        }
+
+                        const fieldPos = retType.fields.filter(field => (IS_POSITION(field.semantic)))[0];
                         this.emitKeyword('gl_Position');
                         this.emitKeyword('=');
                         this.emitKeyword(tempName);
                         this.emitChar('.');
-                        this.emitChar(fieldPos.name);
+                        this.emitChar(fieldPos?.name);
                         this.emitChar(';');
                         this.emitNewline();
                     } else { // pixel
-                        this.emitKeyword('gl_FragColor');
+                        this.emitKeyword('outColor');
                         this.emitKeyword('=');
                         this.emitKeyword(tempName);
                         this.emitChar(';');
@@ -260,6 +475,7 @@ export class GlslEmitter extends CodeEmitter {
     }
 
 
+    // is used in Bundle.ts
     static $declToAttributeName(decl: IVariableDeclInstruction) {
         return sname.attr(decl);
     }
@@ -267,5 +483,5 @@ export class GlslEmitter extends CodeEmitter {
 
 
 export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
-    return (new GlslEmitter(options)).emit(instr).toString();
+    return (new GlslEmitter({ ...options, omitInUsage: true, omitEmptyParams: true })).emit(instr).toString();
 }

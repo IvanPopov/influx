@@ -442,7 +442,8 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
 
     if (returnType.isComplex()) {
         if (returnType.hasFieldWithoutSemantics()) {
-            return false;
+            // todo: emit warning
+            // return false;
         }
 
         if (!returnType.hasAllUniqueSemantics()) {
@@ -462,7 +463,7 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
         // Forbid fileds with user-defined types
         // or any other complex types.
         if (returnType.isContainComplexType()) {
-            return false;
+            //return false;
         }
     } else {
         if (!returnType.isEqual(T_FLOAT4)) {
@@ -496,7 +497,8 @@ function checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean
     }
 
     if (funcDef.semantic !== "COLOR") {
-        return false;
+        // todo: emit warning
+        // return false;
     }
 
     return true;
@@ -601,7 +603,8 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
         }
         else if (isVaryingsByParams) {
             if (param.semantic === "") {
-                return false;
+                // todo: emit warning
+                // return false;
             }
 
             if (param.type.isContainSampler()
@@ -783,7 +786,7 @@ export class Analyzer {
         let type = expectedType;
 
         if (children.length === 1) {
-            const initExpr = this.analyzeExpr(context, program, children[0]);
+            let initExpr = this.analyzeExpr(context, program, children[0]);
 
             if (!initExpr) {
                 return null;
@@ -804,6 +807,13 @@ export class Analyzer {
                 // omit error, all errors must be already fired above (inside checkTwoOperandExprTypes)
                 return null;
             }
+
+            // // IP: quick hack to avoid future conversions
+            // if (initExpr.instructionType === EInstructionTypes.k_IntExpr && !initExpr.type.isEqual(expectedType)) {
+            //     let { scope, sourceNode, base, exp, signed, heximal } = <IntInstruction>initExpr;
+            //     signed = expectedType.name === 'int';
+            //     initExpr = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+            // }
 
             args.push(initExpr);
         }

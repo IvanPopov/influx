@@ -1,31 +1,27 @@
 import { assert } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { ERenderStates } from "@lib/idl/ERenderStates";
-import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
-import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
-import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
-import { IntInstruction } from "../analisys/instructions/IntInstruction";
-import { StringInstruction } from "../analisys/instructions/StringInstruction";
-import { VariableTypeInstruction } from "../analisys/instructions/VariableTypeInstruction";
+import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
+import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
+import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
+import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
+import { ICSShaderReflection, IUavReflection } from "./CodeEmitter";
 
 import { FxEmitter } from "./FxEmitter";
+import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 
-export interface IUavReflection {
-    register: number;
-    name: string;
-    type: string;
-    uavType: string;
-    elementType: string;
-};
 
-export interface ICSShaderReflection {
+export interface IPresetEntry { name: string; value: Uint8Array; }
+
+
+export interface IPreset {
     name: string;
-    numthreads: number[];
-    uavs: IUavReflection[];
+    desc: string;
+    data: IPresetEntry[];
 }
+
 
 export interface IPassReflection {
     instance: string;
@@ -34,6 +30,16 @@ export interface IPassReflection {
 
     renderStates: { [key: number/* ERenderStates */]: ERenderStateValues };
 }
+
+
+export interface ITechniqueReflection {
+    name: string;
+    passes: IPassReflection[];
+    controls: IUIControl[];
+    presets: IPreset[];
+}
+
+
 
 export interface IPartFxPassReflection extends IPassReflection {
     sorting: boolean;
@@ -47,6 +53,7 @@ export interface IPartFxReflection {
     name: string;
     capacity: number;
     particle: string; // << particle type name
+
     CSParticlesSpawnRoutine: ICSShaderReflection;
     CSParticlesResetRoutine: ICSShaderReflection;
     CSParticlesInitRoutine: ICSShaderReflection;
@@ -57,18 +64,14 @@ export interface IPartFxReflection {
     presets: IPreset[];
 }
 
-export interface ITechniqueReflection {
-    name: string;
-    passes: IPassReflection[];
-    controls: IUIControl[];
-    presets: IPreset[];
-}
 
 
 export interface IDrawOpReflection {
     name: string;
     uavs: IUavReflection[];
 }
+
+
 
 interface IUIControlBase {
     UIName: string;
@@ -78,6 +81,7 @@ interface IUIControlBase {
     value: Uint8Array;
 }
 
+
 export interface IUISpinner extends IUIControlBase {
     UIType: 'FloatSpinner' | 'Spinner';
     UIMin?: number;
@@ -85,23 +89,20 @@ export interface IUISpinner extends IUIControlBase {
     UIStep?: number;
 }
 
+
 export interface IUIVector extends IUIControlBase {
     UIType: 'Float3' | 'Color';
 }
+
 
 export interface IUIConstant extends IUIControlBase {
     UIType: 'Float' | 'Int' | 'Uint';
 }
 
+
 export type IUIControl = IUISpinner | IUIConstant | IUIVector;
 
-export interface IPresetEntry { name: string; value: Uint8Array; }
 
-export interface IPreset {
-    name: string;
-    desc: string;
-    data: IPresetEntry[];
-}
 
 export class FxTranslator extends FxEmitter {
     static UAV_PARTICLES = 'uavParticles';
@@ -123,12 +124,34 @@ export class FxTranslator extends FxEmitter {
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
     private static DRAW_OPERATOR_POLYFILL_NAME = '__draw_op';
 
-    protected knownUAVs: IUavReflection[] = [];
+    protected knownTechniques: ITechniqueReflection[] = [];
+    protected knownControls: IUIControl[] = [];
     protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
     protected knownDrawOps: IDrawOpReflection[] = [];
 
     protected tech: ITechniqueInstruction = null;
-    protected controls: IUIControl[] = [];
+
+
+    protected addTechnique(tech: ITechniqueReflection): boolean {
+        if (!this.knownTechniques.map(t => t.name).includes(tech.name)) {
+            this.knownTechniques.push(tech);
+            return true;
+        }
+        return false;
+    }
+
+
+    // todo: remove hack with rename mutator
+    emitVariableDecl(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        if (this.addControl(decl)) {
+            // quick way to promote uniform qualifier to GLSL code
+            (this.emitKeyword('uniform'), this.emitVariableDeclNoInit(decl, rename));
+            return;
+        }
+
+        super.emitVariableDecl(decl, rename);
+    }
+
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
@@ -182,41 +205,12 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected emitUav(type: string, name: string, comment?: string): IUavReflection {
-        let register = this.knownUAVs.map(uav => uav.name).indexOf(name);
-        if (register === -1) {
-            this.begin();
-            {
-                register = this.knownUAVs.length;
-                comment && this.emitComment(comment);
-                this.emitLine(`${type} ${name}: register(u${register});`);
-
-                const regexp = /^([\w]+)<([\w0-9_]+)>$/;
-                const match = type.match(regexp);
-                assert(match);
-
-                const reflection: IUavReflection = {
-                    name,
-                    type,
-                    uavType: match[1],
-                    elementType: match[2],
-                    register
-                };
-
-                this.knownUAVs.push(reflection);
-            }
-            this.end();
-        }
-
-        return this.knownUAVs[register];
-    }
-
     protected emitResetShader(): ICSShaderReflection {
         const name = 'CSParticlesResetRoutine';
         const numthreads = [64, 1, 1];
         const uavs = [];
 
-        const reflection: ICSShaderReflection = { name, numthreads, uavs };
+        const shader: ICSShaderReflection = { name, numthreads, uavs };
         const fx = <IPartFxInstruction>this.tech;
         const capacity = fx.capacity;
 
@@ -258,7 +252,8 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        return reflection;
+        this.addCsShader(shader);
+        return shader;
     }
 
 
@@ -331,80 +326,6 @@ export class FxTranslator extends FxEmitter {
         return uavs;
     }
 
-    /*
-        https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
-        https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
-    */
-
-    emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
-
-        if (src.annotation) {
-            src.annotation.decls.forEach(decl => {
-                switch (decl.name) {
-                    case 'UIType':
-                        const type = <StringInstruction>decl.initExpr.args[0];
-                        ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                        console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
-                        break;
-                    case 'UIName':
-                        const name = <StringInstruction>decl.initExpr.args[0];
-                        ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                        break;
-                    case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
-                    case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
-                    case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
-                }
-            });
-
-            if (!ctrl.UIType) {
-                switch (src.type.name) {
-                    case 'float': ctrl.UIType = 'Float'; break;
-                    case 'float3': ctrl.UIType = 'Float3'; break;
-                    case 'int': ctrl.UIType = 'Int'; break;
-                    case 'uint': ctrl.UIType = 'Uint'; break;
-                }
-            }
-
-            let buffer = new ArrayBuffer(16); // todo: don't use fixed size
-            let view1 = new DataView(buffer);
-            let offset = 0;
-
-            src.initExpr.args.forEach(arg => {
-                const instr = arg.instructionType === EInstructionTypes.k_InitExpr
-                    ? ((arg as IInitExprInstruction).args[0])
-                    : (<ILiteralInstruction<number>>arg);
-                switch (instr.instructionType) {
-                    case EInstructionTypes.k_FloatExpr:
-                        view1.setFloat32(offset, (instr as FloatInstruction).value, true);
-                        offset += 4;
-                        break;
-                    case EInstructionTypes.k_IntExpr:
-                        view1.setInt32(offset, (instr as IntInstruction).value, true);
-                        offset += 4;
-                        break;
-                    case EInstructionTypes.k_BoolExpr:
-                        view1.setInt32(offset, +(instr as BoolInstruction).value, true);
-                        offset += 4;
-                        break;
-                }
-            });
-
-            ctrl.value = new Uint8Array(buffer);
-            ctrl.name = src.id.name;
-
-            // todo: validate controls
-            if (ctrl.UIType) {
-                this.controls.push(ctrl);
-
-                // quick way to promote uniform qualifier to GLSL code
-                (this.emitKeyword('uniform'), super.emitVariableDeclNoInit(src, rename));
-                return;
-            }
-        }
-
-        super.emitVariableDecl(src, rename);
-    }
 
     protected emitSpawnShader(): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
@@ -419,9 +340,7 @@ export class FxTranslator extends FxEmitter {
         const numthreads = [1, 1, 1];
         const uavs = [];
 
-
-
-        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
+        const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
         uavs.push(...this.emitSpawnOperator(0, null));
 
@@ -461,7 +380,8 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        return reflection;
+        this.addCsShader(shader);
+        return shader;
     }
 
 
@@ -473,7 +393,7 @@ export class FxTranslator extends FxEmitter {
         const numthreads = [64, 1, 1];
         const uavs = [];
 
-        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
+        const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
         this.begin();
         {
@@ -576,8 +496,10 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        return reflection;
+        this.addCsShader(shader);
+        return shader;
     }
+
 
     protected emitUpdateShader(): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
@@ -587,7 +509,7 @@ export class FxTranslator extends FxEmitter {
         const numthreads = [64, 1, 1];
         const uavs = [];
 
-        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
+        const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
         this.begin();
         {
@@ -645,9 +567,10 @@ export class FxTranslator extends FxEmitter {
         uavs.push(this.emitUav(`RWBuffer<uint>`,
             FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
 
-
-        return reflection;
+        this.addCsShader(shader);
+        return shader;
     }
+
 
     protected emitPrerenderRoutune(pass: IPartFxPassInstruction, i: number, uavs: IUavReflection[]) {
         const fx = <IPartFxInstruction>this.tech;
@@ -767,7 +690,7 @@ export class FxTranslator extends FxEmitter {
         const uavs = [];
         const fx = <IPartFxInstruction>this.tech;
 
-        const reflection = <ICSShaderReflection>{ name, numthreads, uavs };
+        const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
         this.begin();
         {
@@ -797,7 +720,8 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        return reflection;
+        this.addCsShader(shader);
+        return shader;
     }
 
     protected emitSpawnOpContainer() {
@@ -835,41 +759,81 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    parsePresets(fx: ITechniqueInstruction): IPreset[] {
-        return fx.presets.map((preset, i): IPreset => {
-            const name = preset.name;
-            const desc = null; // todo
-            const data = preset.props.map((prop): IPresetEntry => {
-                const decl = prop.resolveDeclaration();
-                const type = decl.type;
-                const name = decl.name;
-                const value = new Uint8Array(16); // todo: don't use fixed size
-                const view = new DataView(value.buffer);
-                switch (type.name) {
-                    case 'float':
-                    case 'float2':
-                    case 'float3':
-                    case 'float4':
-                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
-                        break;
-                    case 'int':
-                    case 'int2':
-                    case 'int3':
-                    case 'int4':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
-                    case 'uint':
-                    case 'uint2':
-                    case 'uint3':
-                    case 'uint4':
-                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
-                    case 'bool':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
-                        break;
-                }
-                return { name, value };
-            });
-            return { name, desc, data };
+    /*
+        https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
+        https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
+    */
+    protected addControl(src: IVariableDeclInstruction): boolean {
+        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
+
+        if (!src.annotation) {
+            return false;
+        }
+
+        if (!src.isGlobal()) {
+            return false;
+        }
+
+        src.annotation.decls.forEach(decl => {
+            switch (decl.name) {
+                case 'UIType':
+                    const type = <StringInstruction>decl.initExpr.args[0];
+                    ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                    console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
+                    break;
+                case 'UIName':
+                    const name = <StringInstruction>decl.initExpr.args[0];
+                    ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                    break;
+                case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
+                case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
+                case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
+            }
         });
+
+        if (!ctrl.UIType) {
+            switch (src.type.name) {
+                case 'float': ctrl.UIType = 'Float'; break;
+                case 'float3': ctrl.UIType = 'Float3'; break;
+                case 'int': ctrl.UIType = 'Int'; break;
+                case 'uint': ctrl.UIType = 'Uint'; break;
+            }
+        }
+
+        let buffer = new ArrayBuffer(16); // todo: don't use fixed size
+        let view1 = new DataView(buffer);
+        let offset = 0;
+
+        src.initExpr.args.forEach(arg => {
+            const instr = arg.instructionType === EInstructionTypes.k_InitExpr
+                ? ((arg as IInitExprInstruction).args[0])
+                : (<ILiteralInstruction<number>>arg);
+            switch (instr.instructionType) {
+                case EInstructionTypes.k_FloatExpr:
+                    view1.setFloat32(offset, (instr as FloatInstruction).value, true);
+                    offset += 4;
+                    break;
+                case EInstructionTypes.k_IntExpr:
+                    view1.setInt32(offset, (instr as IntInstruction).value, true);
+                    offset += 4;
+                    break;
+                case EInstructionTypes.k_BoolExpr:
+                    view1.setInt32(offset, +(instr as BoolInstruction).value, true);
+                    offset += 4;
+                    break;
+            }
+        });
+
+        ctrl.value = new Uint8Array(buffer);
+        ctrl.name = src.id.name;
+
+        // todo: validate controls
+        if (ctrl.UIType) {
+            this.knownControls.push(ctrl);
+            return true;
+        }
+
+        return false;
     }
 
 
@@ -925,11 +889,11 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
-        const presets = this.parsePresets(fx);
+        const presets = FxTranslator.parsePresets(fx);
         this.emitSpawnOpContainer();
 
         const { typeName: particle } = this.resolveType(fx.particle);
-        const controls = this.controls;
+        const controls = this.knownControls;
 
         return {
             name,
@@ -958,12 +922,10 @@ export class FxTranslator extends FxEmitter {
             let PSParticleShader: string = null;
 
             if (vertexShader) {
-                this.emitFunction(vertexShader);
                 VSParticleShader = vertexShader.name;
             }
 
             if (pixelShader) {
-                this.emitFunction(pixelShader);
                 PSParticleShader = pixelShader.name;
             }
 
@@ -981,15 +943,62 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
-        const controls = this.controls;
-        const presets = this.parsePresets(tech);
+        const controls = this.knownControls;
+        const presets = FxTranslator.parsePresets(tech);
 
-        return {
+        const reflection = {
             name,
             passes,
             controls,
             presets
         };
+
+        if (this.addTechnique(reflection)) {
+            tech.passList.forEach((pass, i) => {
+                const { vertexShader, pixelShader } = pass;
+                vertexShader && this.emitFunction(vertexShader);
+                pixelShader && this.emitFunction(pixelShader);
+            });
+        }
+
+        return reflection;
+    }
+
+    static parsePresets(fx: ITechniqueInstruction): IPreset[] {
+        return fx.presets.map((preset, i): IPreset => {
+            const name = preset.name;
+            const desc = null; // todo
+            const data = preset.props.map((prop): IPresetEntry => {
+                const decl = prop.resolveDeclaration();
+                const type = decl.type;
+                const name = decl.name;
+                const value = new Uint8Array(16); // todo: don't use fixed size
+                const view = new DataView(value.buffer);
+                switch (type.name) {
+                    case 'float':
+                    case 'float2':
+                    case 'float3':
+                    case 'float4':
+                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
+                        break;
+                    case 'int':
+                    case 'int2':
+                    case 'int3':
+                    case 'int4':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
+                    case 'uint':
+                    case 'uint2':
+                    case 'uint3':
+                    case 'uint4':
+                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
+                    case 'bool':
+                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
+                        break;
+                }
+                return { name, value };
+            });
+            return { name, desc, data };
+        });
     }
 }
 

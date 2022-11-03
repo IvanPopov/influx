@@ -804,14 +804,9 @@ class App extends React.Component<IAppProps> {
         const env = props.s3d.env;
 
         const shaderFormats: DropdownItemProps[] = [
-            { key: 1, text: 'GLSL', value: 'GLSL' },
-            { key: 2, text: 'S3D', value: 'S3D'},
+            { key: 1, text: 'GLSL', value: 'glsl' },
+            { key: 2, text: 'HLSL', value: 'hlsl'},
           ]
-
-        // console.log(props.match.params);
-        // console.log(`/${props.match.params.view}/${props.match.params.fx}`);
-
-        // console.log(JSON.stringify(props.match, null, '\t'));
 
         const showAutotestMenu = (sourceFile.content || '').substr(0, 40).indexOf('@autotests') !== -1;
 
@@ -843,7 +838,6 @@ class App extends React.Component<IAppProps> {
                                 <div className='ui right aligned category search item'>
                                     <Dropdown text='Shader Format' 
                                         options={shaderFormats} 
-                                        defaultValue={shaderFormats[0].value}
                                         value={$pg.shaderFormat}
                                         onChange={(e, data) => this.setShaderFormat(data.value as ShaderFormat)}
                                     />
@@ -1233,7 +1227,7 @@ class App extends React.Component<IAppProps> {
                         onFileClick={ this.openFile }
                         desc={ env?.Get('game-name') || 'Development' }
                         expanded={true}
-                        filters={ [ '.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.cs' ] }
+                        filters={ [ '.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.cs', '.hlsl' ] }
                         search={ this.state.depotFilter }
                     />
                     </Sidebar>

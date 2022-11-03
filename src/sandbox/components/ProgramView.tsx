@@ -7,7 +7,7 @@
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
@@ -17,7 +17,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
-import { Icon, List, Message } from 'semantic-ui-react';
+import { Checkbox, Icon, Input, List, Message, Segment, Table } from 'semantic-ui-react';
 
 
 const styles = {
@@ -80,17 +80,22 @@ const Property: PropertyComponent =
     ({ name, value, children, onMouseOver, onMouseOut, onClick, selected, opened, system,
         parent, onParentMouseDown, onParentMouseUp, classes }) => {
         let iconName = system ? `code` as any : (isDefAndNotNull(children) ? `chevron down` : `code`);
+
+        const isHelper = !onClick;
+        const simpleProperty = (value && !children);// && !parent;
+        const helperProperty = (!value && children) && isHelper;
+        const showIcon = !simpleProperty && !helperProperty;
+
         if (!children) {
             opened = true;
         }
+        
+        
         if (opened === false) {
             iconName = 'chevron right';
             children = null;
         }
-        const isHelper = !onClick;
-        const simpleProperty = (value && !children) && !parent;
-        const helperProperty = (!value && children) && isHelper;
-        const showIcon = !simpleProperty && !helperProperty;
+
         return (
             <List.Item
                 className='astnode'
@@ -164,6 +169,12 @@ export interface IProgramViewProps extends IFileState, WithStylesProps<typeof st
 class ProgramView extends React.Component<IProgramViewProps, {}> {
     declare state: {
         instrList: IMap<{ opened: boolean; selected: boolean; errors?: string[]; }>;
+        
+        fns: boolean;
+        vars: boolean;
+        types: boolean;
+        cbs: boolean;
+        filter: string;
     };
 
     documentCache: ISLDocument = null;
@@ -172,7 +183,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     constructor(props) {
         super(props);
         this.state = {
-            instrList: {}
+            instrList: {},
+
+            fns: true,
+            vars: true,
+            types: true,
+            cbs: true,
+            filter: null
         };
 
         this.rootRef = React.createRef();
@@ -180,8 +197,12 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     shouldComponentUpdate(nextProps: IFileState, nextState): boolean {
-        return this.documentCache !== nextProps.slDocument;
-        // return true;
+        return this.documentCache !== nextProps.slDocument || 
+            this.state.fns != nextState.fns || 
+            this.state.vars != nextState.vars || 
+            this.state.types != nextState.types || 
+            this.state.cbs != nextState.cbs ||
+            this.state.filter != nextState.filter;
     }
 
     componentDidUpdate() {
@@ -209,6 +230,21 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         return (
             <div ref={ this.rootRef }>
+                <Table compact basic='very'>
+                    <Table.Body>
+                        <Table.Row>
+                            <Table.Cell collapsing>
+                            <Input placeholder='Filter...' onChange={(e) => { this.setState({ filter: e.target.value }) }}/>
+                            </Table.Cell>
+                            <Table.Cell collapsing>
+                                <Checkbox label='Fn' defaultChecked onClick={  (e, { checked }) => this.setState({fns: checked}) } /> &nbsp;&nbsp;
+                                <Checkbox label='Var' defaultChecked onClick={  (e, { checked }) => this.setState({vars: checked}) }/> &nbsp;&nbsp;
+                                <Checkbox label='Cb' defaultChecked onClick={  (e, { checked }) => this.setState({cbs: checked}) }/> &nbsp;&nbsp;
+                                <Checkbox label='Type' defaultChecked onClick={  (e, { checked }) => this.setState({types: checked}) }/> &nbsp;&nbsp;
+                            </Table.Cell>
+                        </Table.Row>
+                    </Table.Body>
+                </Table>
                 <List style={ style } selection size='small' className='astlist'>
                     { this.InstructionCollector(root) }
                 </List>
@@ -292,7 +328,33 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     InstructionCollector(instr: IInstructionCollector) {
         return (
             <PropertyOpt { ...this.bindProps(instr, true) } name='Program' >
-                { (instr.instructions || []).map((instr) => this.Unknown(instr)) }
+                { (instr.instructions || []).map(
+                    (instr) => {
+                        const { vars, cbs, types, fns, filter } = this.state;
+                        if (filter) {
+                            if (!(instr as IDeclInstruction).name?.includes(filter)) {
+                                return null;
+                            }
+                        }
+                        switch (instr.instructionType) {
+                            case EInstructionTypes.k_VariableDecl:
+                                if (!vars) return null;
+                                break;
+                            case EInstructionTypes.k_CbufferDecl:
+                                if (!cbs) return null;
+                                break;
+                            case EInstructionTypes.k_TypeDecl:
+                            case EInstructionTypes.k_TypedefDecl:
+                                if (!types) return null;
+                                break;
+                            case EInstructionTypes.k_FunctionDecl:
+                                if (!fns) return null;
+                                break;
+                        }
+                        
+                        return this.Unknown(instr);
+                    })
+                }
             </PropertyOpt>
         );
     }
@@ -309,7 +371,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     TypeDecl(instr: ITypeDeclInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property { ...this.bindProps(instr) } name={ 'type' } >
                     { this.Unknown(instr.type) }
                 </Property>
@@ -321,7 +383,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     TypedefDecl(instr: ITypedefInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property { ...this.bindProps(instr) } name={ 'type' } >
                     { this.Unknown(instr.type) }
                 </Property>
@@ -334,7 +396,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     CbufferDecl(instr: ICbufferInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='name' value={ instr.name } />
                 <Property name='size' value={ instr.type.size } />
                 <Property name='register' value={ `${instr.register.type}${instr.register.index}` } />
@@ -407,7 +469,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     Technique(instr: ITechniqueInstruction) {
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='name' value={ instr.name } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='passes'>
@@ -419,12 +481,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     VariableDecl(instr: IVariableDeclInstruction) {
-        if (isNull(instr)) {
-            return null;
-        }
-
+        if (isNull(instr)) return null;
         return (
-            <Property { ...this.bindProps(instr) }>
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='id' value={ instr.id.toString() } />
                 { instr.isConstant() && <Property name='constant' value={ 'true' } /> }
                 <Property name='semantic' value={ instr.semantic } />
@@ -444,7 +503,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     FunctionDecl(instr: IFunctionDeclInstruction) {
         return (
-            <Property { ...this.bindProps(instr, true) } >
+            <Property { ...this.bindProps(instr, false) } value={ instr.name } >
                 <PropertyOpt name='attributes'>
                     { instr.attributes.map((attr) => this.Attribute(attr)) }
                 </PropertyOpt>

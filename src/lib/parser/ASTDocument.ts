@@ -70,7 +70,7 @@ export class ParsingDiagnostics extends Diagnostics<IMap<any>> {
     protected diagnosticMessages() {
         return {
             [EParsingErrors.SyntaxUnknownError]: "Syntax error during parsing. Token: '{token.value}'\n" +
-                "Line: {token.loc.start.line}. Column: {token.loc.start.column}.",
+                "{token.loc.start.file}:{token.loc.start.line}:{token.loc.start.column}.",
             [EParsingErrors.SyntaxUnexpectedEOF]: "Syntax error. Unexpected EOF.",
             [EParsingErrors.GeneralParsingLimitIsReached]: "Parsing limit is reached.",
             [EParsingErrors.SyntaxRecoverableStateNotFound]: "Recoverable state not found."

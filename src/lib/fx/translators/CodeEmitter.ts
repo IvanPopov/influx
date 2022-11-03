@@ -1,20 +1,44 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ICbufferInstruction, IInstructionCollector, IBitwiseExprInstruction, IPostfixIndexInstruction, ITypeDeclInstruction, ILogicalExprInstruction, ITypedefInstruction, IForStmtInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { IntInstruction } from "../analisys/instructions/IntInstruction";
-import { BaseEmitter } from "./BaseEmitter";
+import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
+import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
+import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { isDef } from "@lib/util/s3d/type";
+import { BaseEmitter } from "./BaseEmitter";
+import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
+import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
 
-export interface ITypeInfo {
+interface ITypeInfo {
     typeName: string;
     length: number;
     usage?: string;
 }
 
+export interface IUavReflection {
+    register: number;
+    name: string;
+    type: string;
+    uavType: string;
+    elementType: string;
+};
+
+
+export interface ICSShaderReflection {
+    name: string;
+    numthreads: number[];
+    uavs: IUavReflection[];
+}
+
+
+
 export interface ICodeEmitterOptions {
     mode: 'vertex' | 'pixel' | 'raw';
+    // do not print 'in' for function parameters even if it is specified
+    omitInUsage?: boolean;
+    // skip complex type parameters of zero size
+    omitEmptyParams?: boolean;
 }
 
 
@@ -22,6 +46,9 @@ export class CodeEmitter extends BaseEmitter {
     protected knownGlobals: string[] = [];
     protected knownTypes: string[] = [];
     protected knownFunctions: number[] = [];
+    protected knownUAVs: IUavReflection[] = [];
+    protected knownCsShaders: ICSShaderReflection[] = [];
+
     protected options: ICodeEmitterOptions;
 
     constructor(options: ICodeEmitterOptions = { mode: 'raw' }) {
@@ -31,13 +58,26 @@ export class CodeEmitter extends BaseEmitter {
 
     protected static asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
 
+
     get mode(): string {
         return this.options.mode;
     }
 
+
     protected isMain() {
         return this.depth() === 1;
     }
+
+
+    protected isPixel() {
+        return this.mode === 'pixel';
+    }
+
+
+    protected isVertex() {
+        return this.mode === 'vertex';
+    }
+
 
     protected resolveTypeName(type: ITypeInstruction): string {
         return type.name;
@@ -48,7 +88,7 @@ export class CodeEmitter extends BaseEmitter {
         if (!type) {
             return null;
         }
-        
+
         let complex = type.isComplex();
 
         let length: number;
@@ -61,9 +101,8 @@ export class CodeEmitter extends BaseEmitter {
         } else {
             typeName = type.name;
 
-            if (this.knownTypes.indexOf(typeName) === -1) {
+            if (this.addType(typeName)) {
                 this.emit(type);
-                this.knownTypes.push(typeName);
             }
         }
 
@@ -77,10 +116,84 @@ export class CodeEmitter extends BaseEmitter {
         }
 
         if (usages && usages.length) {
-            usage = usages.join(' ');
+            usage = usages.filter(u => !this.options.omitInUsage || u != 'in').join(' ');
         }
 
         return { typeName, length, usage };
+    }
+
+
+    // returns false if global already exists
+    protected addGlobal(name: string): boolean {
+        if (!this.knownGlobals.includes(name)) {
+            this.knownGlobals.push(name);
+            return true;
+        }
+        return false;
+    }
+
+
+    protected addFunction(id: number): boolean {
+        if (!this.knownFunctions.includes(id)) {
+            this.knownFunctions.push(id);
+            return true;
+        }
+        return false;
+    }
+
+
+    protected addType(name: string): boolean {
+        if (!this.knownTypes.includes(name)) {
+            this.knownTypes.push(name);
+            return true;
+        }
+        return false;
+    }
+
+
+    protected addUav(uav: IUavReflection): boolean {
+        if (!this.knownUAVs.map(u => u.name).includes(uav.name)) {
+            this.knownUAVs.push(uav);
+            return true;
+        }
+        return false;
+    }
+
+
+    protected addCsShader(shader: ICSShaderReflection): boolean {
+        if (!this.knownCsShaders.map(s => s.name).includes(shader.name)) {
+            this.knownCsShaders.push(shader);
+            return true;
+        }
+        return false;
+    }
+
+
+    emitUav(type: string, name: string, comment?: string): IUavReflection {
+        const register = this.knownUAVs.length;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.match(regexp);
+        assert(match);
+
+        const uav: IUavReflection = {
+            name,
+            type,
+            uavType: match[1],
+            elementType: match[2],
+            register
+        };
+
+        if (this.addUav(uav)) {
+            this.begin();
+            {
+                comment && this.emitComment(comment);
+                this.emitLine(`${type} ${name}: register(u${register});`);
+            }
+            this.end();
+            return uav;
+        }
+
+        return this.knownUAVs.find(u => u.name == name);
     }
 
 
@@ -90,6 +203,7 @@ export class CodeEmitter extends BaseEmitter {
         comment && (this.emitChar('\t'), this.emitComment(comment));
         this.emitNewline();
     }
+
 
     emitComment(comment: string) {
         //
@@ -125,24 +239,27 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitVariableDeclNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        const { typeName, length, usage } = this.resolveType(src.type);
-        const name = rename ? rename(src) : src.name;
+    // todo: remove hack with rename mutator
+    emitVariableDeclNoInit(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        const { typeName, length, usage } = this.resolveType(decl.type);
+        const name = rename ? rename(decl) : decl.name;
 
-        if (src.isGlobal())
-        {
-            this.knownGlobals.push(CodeEmitter.asSTRID(src));
+        if (decl.isGlobal()) {
+            if (!this.addGlobal(CodeEmitter.asSTRID(decl))) {
+                // do not exit here
+            }
         }
 
         usage && this.emitKeyword(usage);
         this.emitKeyword(typeName);
         this.emitKeyword(name);
         length && this.emitChar(`[${length}]`);
-        src.semantic && this.emitSemantic(src.semantic);
-        src.annotation && this.emitAnnotation(src.annotation);
+        decl.semantic && this.emitSemantic(decl.semantic);
+        decl.annotation && this.emitAnnotation(decl.annotation);
     }
-    
 
+
+    // todo: remove hack with rename mutator
     emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         this.emitVariableDeclNoInit(src, rename);
         src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
@@ -156,7 +273,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(stmt.cond);
         this.emitChar(')');
         this.emitNewline();
-        
+
         if (stmt.conseq) {
             this.emitStmt(stmt.conseq);
         } else {
@@ -176,9 +293,11 @@ export class CodeEmitter extends BaseEmitter {
         this.emitKeyword(semantic);
     }
 
+
     emitAnnotation(anno: IAnnotationInstruction) {
         // TODO: add annotation emission.
     }
+
 
     emitCompile(compile: ICompileExprInstruction) {
         this.emitFunction(compile.function);
@@ -191,17 +310,17 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar(')');
     }
 
+
     emitFunction(fn: IFunctionDeclInstruction) {
 
         if (!fn || fn.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
-           return;
-        }
-
-        if (this.knownFunctions.indexOf(fn.instructionID) !== -1) {
             return;
         }
 
-        this.knownFunctions.push(fn.instructionID);
+        if (!this.addFunction(fn.instructionID)) {
+            // function already exists
+            return;
+        }
 
         const { def } = fn;
         const { typeName } = this.resolveType(def.returnType);
@@ -234,6 +353,7 @@ export class CodeEmitter extends BaseEmitter {
         this.resolveType(instr.type);
     }
 
+
     emitTypedef(instr: ITypedefInstruction) {
         // nothing todo because current implementation implies
         // immediate target type substitution 
@@ -250,8 +370,9 @@ export class CodeEmitter extends BaseEmitter {
         */
     }
 
+
     emitForStmt(stmt: IForStmtInstruction) {
-        
+
         //for(int i = 0;i < 4;++ i)
         //{
         //  ...
@@ -260,7 +381,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitKeyword('for');
         this.emitChar('(');
         this.emitNoSpace();
-        
+
         this.emitStmt(stmt.init);
         this.emitNoSpace();
 
@@ -274,6 +395,7 @@ export class CodeEmitter extends BaseEmitter {
             this.emitNewline();
         this.emitStmt(stmt.body);
     }
+
 
     emitExpression(expr: IExprInstruction) {
         if (!expr) {
@@ -333,6 +455,7 @@ export class CodeEmitter extends BaseEmitter {
         }
     }
 
+
     emitFloat(lit: ILiteralInstruction<number>) {
         const sval = String(lit.value);
         this.emitKeyword(sval);
@@ -340,9 +463,11 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar('f');
     }
 
+
     emitBool(lit: ILiteralInstruction<boolean>) {
         this.emitKeyword(lit.value ? 'true' : 'false');
     }
+
 
     emitComplexExpr(complex: IComplexExprInstruction) {
         this.emitChar('(');
@@ -350,6 +475,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(complex.expr);
         this.emitChar(')');
     }
+
 
     emitConditionalExpr(cond: IConditionalExprInstruction) {
         this.emitExpression(cond.condition);
@@ -359,10 +485,12 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(cond.right as IExprInstruction);
     }
 
+
     emitInteger(lit: ILiteralInstruction<number>) {
-        // TODO: use IIntInstructions instead of ILiteralInstruction
-        this.emitKeyword(`${lit.value.toFixed(0)}${!(lit as IntInstruction).signed? 'u': ''}`);
+        const int = lit as IntInstruction;
+        this.emitKeyword(`${int.heximal ? '0x' + int.value.toString(16).toUpperCase() : int.value.toFixed(0)}${!int.signed ? 'u' : ''}`);
     }
+
 
     emitRelationalExpr(rel: IRelationalExprInstruction) {
         this.emitExpression(rel.left);
@@ -370,30 +498,34 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(rel.right);
     }
 
+
     emitLogicalExpr(rel: ILogicalExprInstruction) {
         this.emitExpression(rel.left);
         this.emitKeyword(rel.operator);
         this.emitExpression(rel.right);
     }
 
+
     emitUnaryExpr(unary: IUnaryExprInstruction) {
         this.emitChar(unary.operator);
         this.emitExpression(unary.expr);
     }
+
 
     emitPostfixArithmetic(par: IPostfixArithmeticInstruction) {
         this.emitExpression(par.expr);
         this.emitChar(par.operator);
     }
 
-    emitPostfixIndex(pfidx: IPostfixIndexInstruction)
-    {
+
+    emitPostfixIndex(pfidx: IPostfixIndexInstruction) {
         this.emitExpression(pfidx.element);
         this.emitChar('[');
         this.emitNoSpace();
         this.emitExpression(pfidx.index);
         this.emitChar(']');
     }
+
 
     emitExpressionList(list: IExprInstruction[]) {
         (list || []).forEach((expr, i) => {
@@ -402,12 +534,14 @@ export class CodeEmitter extends BaseEmitter {
         })
     }
 
+
     emitParams(params: IVariableDeclInstruction[]) {
-        params.forEach((param, i, list) => {
+        params.filter(p => !this.options.omitEmptyParams || p.type.size !== 0).forEach((param, i, list) => {
             this.emitVariableDecl(param);
             (i + 1 != list.length) && this.emitChar(',');
         });
     }
+
 
     emitInitExpr(init: IInitExprInstruction) {
         if (init.args.length > 1) {
@@ -420,6 +554,7 @@ export class CodeEmitter extends BaseEmitter {
 
         this.emitExpression(init.args[0]);
     }
+
 
     emitCast(cast: ICastExprInstruction) {
         if (cast.isUseless()) {
@@ -437,12 +572,14 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(cast.expr);
     }
 
+
     emitBitwise(bwise: IBitwiseExprInstruction) {
         this.emitExpression(bwise.left);
         this.emitKeyword(bwise.operator);
         this.emitSpace();
         this.emitExpression(bwise.right);
     }
+
 
     emitArithmetic(arthm: IArithmeticExprInstruction) {
         this.emitExpression(arthm.left);
@@ -451,6 +588,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitExpression(arthm.right);
     }
 
+
     emitAssigment(asgm: IAssignmentExprInstruction) {
         this.emitExpression(asgm.left);
         this.emitKeyword(asgm.operator);
@@ -458,7 +596,6 @@ export class CodeEmitter extends BaseEmitter {
         assert(instruction.isExpression(asgm.right));
         this.emitExpression(asgm.right as IExprInstruction);
     }
-
 
 
     emitPostfixPoint(pfxp: IPostfixPointInstruction) {
@@ -507,14 +644,14 @@ export class CodeEmitter extends BaseEmitter {
         }
         this.pop();
         this.emitChar('}');
+        this.emitChar(';');
         // emit annotation?
         this.end();
     }
 
 
     emitGlobal(decl: IVariableDeclInstruction) {
-        const name = decl.name;
-
+        // const name = decl.name;
         // if (isMain() && decl.isParameter() && !decl.isUniform()) {
         // TODO: add support of main arguments with basic types (attributes)
         // }
@@ -522,24 +659,32 @@ export class CodeEmitter extends BaseEmitter {
         const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
         if (decl.isGlobal() || isUniformArg) {
-            if (this.knownGlobals.indexOf(CodeEmitter.asSTRID(decl)) === -1) {
-                this.begin();
-                this.emitStmt(decl);
-                this.end();
-                this.knownGlobals.push(CodeEmitter.asSTRID(decl));
+            if (this.addGlobal(CodeEmitter.asSTRID(decl))) {
+                if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
+                    const cbufType = decl.parent;
+                    const cbuf = <ICbufferInstruction>cbufType.parent;
+                    this.begin();
+                    this.emitCbuffer(cbuf);
+                    this.end();
+                } else {
+                    this.begin();
+                    this.emitStmt(decl);
+                    this.end();
+                }
             }
         }
     }
 
+
     emitGlobalRaw(name: string, content: string) {
-        if (this.knownGlobals.indexOf(name) === -1) {
+        if (this.addGlobal(name)) {
             this.begin();
             this.emitChar(`${content};`);
             this.emitNewline();
             this.end();
-            this.knownGlobals.push(name);
         }
     }
+
 
     emitIdentifier(id: IIdExprInstruction) {
         const { decl, name } = id;
@@ -561,7 +706,8 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitFCall(call: IFunctionCallInstruction) {
+    // todo: remove hack with rename mutator
+    emitFCall(call: IFunctionCallInstruction, rename: (decl: IFunctionDeclInstruction) => string = decl => decl.name) {
         const { decl, args, callee } = call;
 
         this.emitFunction(decl);
@@ -571,7 +717,7 @@ export class CodeEmitter extends BaseEmitter {
             this.emitChar('.');
             this.emitNoSpace();
         }
-        this.emitKeyword(decl.name);
+        this.emitKeyword(rename(decl));
         this.emitChar('(');
         this.emitNoSpace();
         this.emitExpressionList(args);
@@ -631,6 +777,7 @@ export class CodeEmitter extends BaseEmitter {
         }
     }
 
+
     emitBlock(blk: IStmtBlockInstruction) {
         // if (!blk.stmtList.length)
         // {
@@ -645,6 +792,7 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar('}');
     }
 
+
     emitPass(pass: IPassInstruction) {
         this.emitKeyword('pass');
         pass.name && this.emitKeyword(pass.name);
@@ -656,7 +804,6 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar('}');
         this.emitNewline();
     }
-
 
 
     emitPassBody(pass: IPassInstruction) {
@@ -691,6 +838,7 @@ export class CodeEmitter extends BaseEmitter {
         //     console.log(ERenderStates[key], ERenderStateValues[val]);
         // });
     }
+
 
     emit(instr: IInstruction): CodeEmitter {
         if (!instr) {
@@ -767,23 +915,3 @@ export function translateDocument(document: ISLDocument): string {
 
     return translate(document.root);
 }
-
-
-// export function translateDocument(document: ISLDocument): ITextDocument {
-//     let source = '';
-//     let uri = null;
-
-//     if (isNull(document)) {
-//         return null
-//     }
-
-//     uri = document.uri;
-    
-//     if (isNull(document.root)) {
-//         return { uri, source };
-//     }
-
-//     source = translate(document.root);
-//     return { uri, source };
-// }
-

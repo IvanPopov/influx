@@ -1,13 +1,9 @@
 /* tslint:disable:typedef */
 
-import { isNumber } from '@lib/common';
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
-import * as S3D from '@lib/fx/translators/S3DEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
 import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
-// import { getCommon, mapProps, matchLocation } from '@lib/idl/parser/IParser';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
 import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
@@ -108,7 +104,14 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
 
             original = Hlsl.translate(shader, { mode });
-            value = pg.shaderFormat === 'GLSL' ? Glsl.translate(shader, { mode }) : S3D.translate(shader, { mode });
+            switch (pg.shaderFormat) {
+                case 'glsl':
+                    value = Glsl.translate(shader, { mode });
+                    break;
+                case 'hlsl':
+                   value = Hlsl.translate(shader, { mode });
+                   break;
+            }
         } else {
             original = FxHlsl.translate(fx);
             value = FxTranslator.translateFlat(fx);

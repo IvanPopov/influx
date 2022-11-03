@@ -13,7 +13,7 @@ const initialState: IPlaygroundState = {
     presets: {},
     revision: 0,
     wasm: Techniques.isWASM(),
-    shaderFormat: 'GLSL',
+    shaderFormat: 'glsl',
 
     exportName: null, // LOCAL_SESSION_AUTOSAVE
     autosave: false

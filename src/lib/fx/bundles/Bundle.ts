@@ -3,9 +3,10 @@ import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { FxTranslator, ICSShaderReflection, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
+import { ICSShaderReflection } from "@lib/fx/translators/CodeEmitter";
+import { FxTranslator, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { Bundle, BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinner, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
@@ -247,7 +248,7 @@ async function createMatFxBundle(tech: ITechniqueInstruction, options: BundleOpt
     const reflection = emitter.emitTechniqueDecl(tech);
     const { name } = reflection;
 
-    const textDocument = await createTextDocument('://raw', emitter.toString());
+    const textDocument = await createTextDocument('://mat-fx-bundle', emitter.toString());
     const slDocument = await createSLDocument(textDocument);
     const scope = slDocument.root.scope;
 
