@@ -3,7 +3,7 @@ import { ITextDocument } from "@lib/idl/ITextDocument";
 import { CodeEmitterNode } from "@sandbox/components/graphEx/GraphNode";
 import { LibLoader } from "./LibLoader";
 
-async function XHRResolveFile(uri: string): Promise<string> {
+async function XHRResolveFile(uri: string): Promise<ITextDocument> {
     try {
         const request = new XMLHttpRequest();
         request.open('GET', uri, false);
@@ -14,7 +14,7 @@ async function XHRResolveFile(uri: string): Promise<string> {
             return null;
         }
 
-        return request.responseText;
+        return createTextDocument(uri, request.responseText);
     } catch (e) {
         console.error(e);
     }

@@ -60,7 +60,7 @@ export type IFile = StringRef;
 
 export interface IPosition {
     file: IFile;
-    line: number; 
+    line: number;
     column: number;
     offset?: number;
 }
@@ -125,7 +125,7 @@ export interface IParseTree {
     addToken(pToken: IToken): void;
     reduceByRule(pRule: IRule, eCreate: ENodeCreateMode): void;
     finishTree(): void;
-    
+
     $pop(loc?: IRange): void;
 
 
@@ -183,7 +183,7 @@ export interface ILexer {
     getNextLine(): IToken;
 }
 
-export type IncludeResolver = (filename: string) => Promise<string>;
+export type IncludeResolver = (filename: string) => Promise<ITextDocument>;
 
 export interface IASTConfig {
     parser?: IParser;
@@ -250,7 +250,7 @@ export interface IParser {
 
     findFunctionByState(stateIndex: number, grammarSymbol: string): string
     getRuleCreationMode(nonTerminal: string): ENodeCreateMode;
-    getGrammarSymbols(): Map<string, string>;    
+    getGrammarSymbols(): Map<string, string>;
 }
 
 

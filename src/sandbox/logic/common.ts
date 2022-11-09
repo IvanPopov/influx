@@ -125,7 +125,7 @@ const navigationLogic = createLogic<IStoreState, LocationChangeAction['payload']
                     return done();
                 }
                 
-                const fxRequest = Depot.resolveName(depot, fx);
+                const fxRequest = await Depot.resolveName(depot, fx);
                 if (sourceFile.uri !== fxRequest) {
                     dispatch(sourceActions.openFile(fxRequest));
                 }

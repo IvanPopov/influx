@@ -19,8 +19,16 @@ export class StringRef {
     }
 
     static make(val: string | StringRef): StringRef {
+        if (!val) {
+            return null;
+        }
+
         if (!isString(val)) {
-            return <StringRef>val;
+            if (val instanceof StringRef)
+                return <StringRef>val;
+            // IP: sometimes it can be useful to restore string ref after worker transfer and so on
+            if (isString(val['content']))
+                return StringRef.make(val['content']);
         }
 
         const sval = val as string;

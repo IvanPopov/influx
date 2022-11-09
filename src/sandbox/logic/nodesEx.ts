@@ -50,12 +50,11 @@ import { ITypeInstruction } from '@lib/idl/IInstruction';
 import { CodeEmitterNode, ICodeMaterialNode, ISpawner, LGraphNodeFactory } from '@sandbox/components/graphEx/GraphNode';
 import GraphTemplateJSON from '@sandbox/components/graphEx/lib/template.json';
 import { getEnv } from '@sandbox/reducers/nodes';
-import { getPlaygroundState } from '@sandbox/reducers/playground';
 
 
 async function loadEnv(layout: string): Promise<ISLDocument> {
     // todo: don't reload library every time
-    const includeResolver = async (name) => (await fetch(name)).text();
+    const includeResolver = async (name) => createTextDocument(name, await (await fetch(name)).text());
     const libraryPath = "./assets/graph/lib.hlsl";
     const libText = await createTextDocument("", `#include "${libraryPath}"`);
     const lib = await createFXSLDocument(libText, { includeResolver });

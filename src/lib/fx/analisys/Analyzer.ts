@@ -3749,6 +3749,11 @@ export class Analyzer {
         const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
 
         const compileExpr = <CompileExprInstruction>this.analyzeExpr(context, program, exprNode);
+
+        if (!compileExpr) {
+            return null;
+        }
+
         const shaderFunc = compileExpr.function;
 
         if (shaderType === 'vertexshader') {

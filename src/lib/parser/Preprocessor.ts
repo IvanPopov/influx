@@ -958,13 +958,13 @@ export class Preprocessor {
         const file = this.readLine();
         //cuttin qoutes
         const includeURL = file.value.trim().slice(1, -1);
-        const uri = URI.resolve(includeURL, `${token.loc.start.file}`);
+        const resolvedURI = URI.resolve(includeURL, `${token.loc.start.file}`);
         const loc = util.commonRange(token.loc, file.loc);
 
-        if (this.includeMap.has(uri)) {
+        if (this.includeMap.has(resolvedURI)) {
             if (DEBUG_MACRO) {
                 const chain = this.includes.map(i => this.stack[i].lexer.document.uri.toString()).map(name => `\t> ${name}`).join('\n');
-                console.warn(`'${uri}' file has already been included previously at "${this.includeMap.get(uri).start.file}":\n${chain}`);
+                console.warn(`'${resolvedURI}' file has already been included previously at "${this.includeMap.get(resolvedURI).start.file}":\n${chain}`);
             }
 
             // TODO: prevent recursion!
@@ -972,12 +972,13 @@ export class Preprocessor {
             // return this.readToken();
         }
 
-        const source = await this.includeResolver(uri);
-        if (!source)
+        // rebuild text document in order to avoid problems if include handler was called through worker
+        const { uri, source } = await this.includeResolver(resolvedURI);
+        const textDocument = await createTextDocument(uri, source);
+        if (!textDocument)
         {
-            this.emitFileNotFound(uri, loc);
+            this.emitFileNotFound(resolvedURI, loc);
         } else {
-            const textDocument = await createTextDocument(uri, source);
             this.pushDocument(this.documentToLexer(textDocument), loc, EPPDocumentFlags.k_Include);
         }
 
