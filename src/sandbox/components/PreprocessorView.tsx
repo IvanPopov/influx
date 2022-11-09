@@ -9,6 +9,8 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Dropdown, Input, List, Popup, Select } from 'semantic-ui-react';
+import { toast } from 'react-semantic-toasts';
+import copy from 'copy-to-clipboard';
 
 const styles = {
     checkboxTiny: {
@@ -49,6 +51,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
         showUnreachableCode: boolean;
 
         filter: string;
+        custom: boolean;
+        showCopy: boolean;
     };
 
     rootRef: React.RefObject<HTMLDivElement>;
@@ -60,7 +64,9 @@ class PPView extends React.Component<IPPViewProps, {}> {
             showMacros: true,
             showMacrosOther: false,
             showUnreachableCode: false,
-            filter: null
+            filter: null,
+            custom: false,
+            showCopy: false
         };
 
         this.rootRef = React.createRef();
@@ -94,6 +100,8 @@ class PPView extends React.Component<IPPViewProps, {}> {
                     placeholder='Filter...'
                     onChange={(e) => { this.setState({ filter: e.target.value }) }}
                 />
+                &nbsp;
+                <Checkbox label='Customs' onClick={  (e, { checked }) => this.setState({ custom: checked}) } /> &nbsp;&nbsp;
                 <List style={style} selection size='small' className='astlist' >
                     <List.Item key={`pp-include-list`} className='astnode'
                         onClick={this.handleIncludesClick}
@@ -106,10 +114,15 @@ class PPView extends React.Component<IPPViewProps, {}> {
                     </List.Item>
                     <List.Item key={`pp-macros`} className='astnode'
                         onClick={this.handleMacrosClick}
+                        onMouseOver={ e => this.setState({ showCopy: true }) } 
+                        onMouseOut={ e => this.setState({ showCopy: false }) }
                     >
                         <List.Icon name={(showMacros ? `chevron down` : `chevron right`)} />
-                        <List.Content>
-                            <List.Header>{'Macro list'}</List.Header>
+                        <List.Content >
+                            <List.Header>{'Macro list'}
+                                &nbsp;
+                                { (this.state.showCopy || 1) && <a onClick={ this.handleMacroListCopyClick }>[copy customs]</a> }
+                            </List.Header>
                             {this.renderMacros(macros.concat(unresolvedMacros).sort((a, b) => a.name.localeCompare(b.name)))}
                         </List.Content>
                     </List.Item>
@@ -154,6 +167,42 @@ class PPView extends React.Component<IPPViewProps, {}> {
         );
     }
 
+
+    @autobind
+    handleMacroListCopyClick(e) {
+        e.preventDefault(); 
+        e.stopPropagation();
+        
+        const { sourceFile } = this.props;
+        const slastDocument = sourceFile.slastDocument;
+
+        if (!slastDocument) {
+            return;
+        }
+ 
+        const doFilter = (value) => sourceFile.defines.find(def => def === value);
+        const macros = slastDocument.macros.filter(macro => macro.bRegionExpr && doFilter(macro.name));
+
+        if (!macros.length) {
+            console.warn('No custom macros were defined.');
+            return;
+        }
+
+        const value = macros.map(macros => macros.name).join('\n');
+        copy(value, { debug: true });
+        console.log(value);
+        // console.log(macros.filter(macro => macro.bRegionExpr && doFilter(macro.name)));
+
+        toast({
+            size: 'tiny',
+            type: 'info',
+            title: `Macro list copied.`,
+            animation: 'bounce',
+            time: 1000
+        });
+    }
+
+
     @autobind
     handleBoolMacroClick(macro: IMacro, checked: boolean) {
         if (checked) this.props.actions.setDefine(macro.name);
@@ -173,8 +222,10 @@ class PPView extends React.Component<IPPViewProps, {}> {
         const { showMacrosOther } = this.state;
         const { sourceFile } = this.props;
         const filter = this.state.filter?.toLowerCase();
+        const custom = this.state.custom;
 
-        const doFilter = (value) => !filter || (value.toLowerCase()).indexOf(filter) !== -1;
+        const doFilter = (value) => (!custom || sourceFile.defines.find(def => def === value)) && 
+        (!filter || (value.toLowerCase()).indexOf(filter) !== -1);
 
         return (
             <List.List className='astlist'>
@@ -212,34 +263,36 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         </List.Item>
                     ))
                 }
-                <List.Item key={`pp-macros-other`} className='astnode'
-                    onClick={this.handleMacrosOtherClick}
-                >
-                    <List.Icon name={(showMacrosOther ? `chevron down` : `chevron right`)} />
-                    <List.Content>
-                        <List.Header>{'other...'}</List.Header>
-                        {
-                            showMacrosOther &&
-                            macros.filter(macro => !macro.bRegionExpr && doFilter(macro.name)).map((macro, i) => (
-                                <List.Item key={`pp-macro-${i}`}
-                                    // onClick={ this.handleNodeClick.bind(this, idx, node) }
-                                    // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
-                                    // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
-                                    className='astnode'
-                                >
-                                    <List.Content>
-                                        {/* <List.Header>{ filename }</List.Header> */}
-                                        <List.Description>
-                                            <Popup inverted
-                                                content={<span>{`${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}`}</span>}
-                                                trigger={<span>{`${macro.name}`}</span>} />
-                                        </List.Description>
-                                    </List.Content>
-                                </List.Item>
-                            ))
-                        }
-                    </List.Content>
-                </List.Item>
+                { !custom &&
+                    <List.Item key={`pp-macros-other`} className='astnode'
+                        onClick={this.handleMacrosOtherClick}
+                    >
+                        <List.Icon name={(showMacrosOther ? `chevron down` : `chevron right`)} />
+                        <List.Content>
+                            <List.Header>{'other...'}</List.Header>
+                            {
+                                showMacrosOther &&
+                                macros.filter(macro => !macro.bRegionExpr && doFilter(macro.name)).map((macro, i) => (
+                                    <List.Item key={`pp-macro-${i}`}
+                                        // onClick={ this.handleNodeClick.bind(this, idx, node) }
+                                        // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
+                                        // onMouseOut={ this.handleNodeOut.bind(this, idx, node) }
+                                        className='astnode'
+                                    >
+                                        <List.Content>
+                                            {/* <List.Header>{ filename }</List.Header> */}
+                                            <List.Description>
+                                                <Popup inverted
+                                                    content={<span>{`${macro.name}${macro.params ? `(${macro.params.join(' ,')})` : ``} ${(macro.tokens || []).map(tk => tk.value).join(' ')}`}</span>}
+                                                    trigger={<span>{`${macro.name}`}</span>} />
+                                            </List.Description>
+                                        </List.Content>
+                                    </List.Item>
+                                ))
+                            }
+                        </List.Content>
+                    </List.Item>
+                }
             </List.List>
         );
     }
