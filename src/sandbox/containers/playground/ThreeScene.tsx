@@ -328,10 +328,10 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     protected animate(time: DOMHighResTimeStamp) {
         this.begin();
 
+        this.controls.update();
         this.fillScene(time);
         this.renderScene(time);
         this.cleanScene(time);
-        this.controls.update();
         this.frameId = requestAnimationFrame(this.animate);
 
         this.end();

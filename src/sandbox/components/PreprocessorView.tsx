@@ -1,16 +1,16 @@
 import { IMacro } from '@lib/idl/parser/IMacro';
 import { IRange } from '@lib/idl/parser/IParser';
 import * as path from '@lib/path/path';
-import { getCommon, mapProps } from '@sandbox/reducers';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
+import { getCommon, mapProps } from '@sandbox/reducers';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
+import copy from 'copy-to-clipboard';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
-import { Button, Checkbox, Dropdown, Input, List, Popup, Select } from 'semantic-ui-react';
 import { toast } from 'react-semantic-toasts';
-import copy from 'copy-to-clipboard';
+import { Checkbox, Input, List, Popup } from 'semantic-ui-react';
 
 const styles = {
     checkboxTiny: {
@@ -109,7 +109,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                         <List.Icon name={(showIncludes ? `chevron down` : `chevron right`)} />
                         <List.Content>
                             <List.Header>{'Include list'}</List.Header>
-                            {this.renderIncludes([...includes.keys()])}
+                            {this.renderIncludes(includes)}
                         </List.Content>
                     </List.Item>
                     <List.Item key={`pp-macros`} className='astnode'
@@ -141,12 +141,12 @@ class PPView extends React.Component<IPPViewProps, {}> {
     }
 
 
-    renderIncludes(includes: string[]): JSX.Element {
+    renderIncludes(includes: Map<string, IRange>): JSX.Element {
         if (!this.state.showIncludes) {
             return null;
         }
 
-        const items = includes.map((filename, i) => (
+        const items = [...includes.keys()].map((filename, i) => (
             <List.Item key={`pp-include-${i}`}
                 // onClick={ this.handleNodeClick.bind(this, idx, node) }
                 // onMouseOver={ this.handleNodeOver.bind(this, idx, node) }
@@ -155,7 +155,12 @@ class PPView extends React.Component<IPPViewProps, {}> {
             >
                 <List.Content>
                     {/* <List.Header>{ filename }</List.Header> */}
-                    <List.Description>{path.normalize(filename)}</List.Description>
+                    <List.Description>
+                        { path.normalize(filename) }
+                        {/* <span>
+                            { includes.get(filename).start.file }:{includes.get(filename).start.line}
+                        </span> */}
+                    </List.Description>
                 </List.Content>
             </List.Item>
         ));

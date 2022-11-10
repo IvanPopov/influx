@@ -47,9 +47,17 @@ struct RoutineBytecodeBundle;
 struct RoutineBytecodeBundleBuilder;
 struct RoutineBytecodeBundleT;
 
-struct RoutineGLSLBundle;
-struct RoutineGLSLBundleBuilder;
-struct RoutineGLSLBundleT;
+struct RoutineGLSLSourceBundle;
+struct RoutineGLSLSourceBundleBuilder;
+struct RoutineGLSLSourceBundleT;
+
+struct RoutineHLSLSourceBundle;
+struct RoutineHLSLSourceBundleBuilder;
+struct RoutineHLSLSourceBundleT;
+
+struct RoutineShaderBundle;
+struct RoutineShaderBundleBuilder;
+struct RoutineShaderBundleT;
 
 struct PartRenderPass;
 struct PartRenderPassBuilder;
@@ -126,16 +134,16 @@ struct BundleCollectionT;
 enum RoutineBundle : uint8_t {
   RoutineBundle_NONE = 0,
   RoutineBundle_RoutineBytecodeBundle = 1,
-  RoutineBundle_RoutineGLSLBundle = 2,
+  RoutineBundle_RoutineShaderBundle = 2,
   RoutineBundle_MIN = RoutineBundle_NONE,
-  RoutineBundle_MAX = RoutineBundle_RoutineGLSLBundle
+  RoutineBundle_MAX = RoutineBundle_RoutineShaderBundle
 };
 
 inline const RoutineBundle (&EnumValuesRoutineBundle())[3] {
   static const RoutineBundle values[] = {
     RoutineBundle_NONE,
     RoutineBundle_RoutineBytecodeBundle,
-    RoutineBundle_RoutineGLSLBundle
+    RoutineBundle_RoutineShaderBundle
   };
   return values;
 }
@@ -144,14 +152,14 @@ inline const char * const *EnumNamesRoutineBundle() {
   static const char * const names[4] = {
     "NONE",
     "RoutineBytecodeBundle",
-    "RoutineGLSLBundle",
+    "RoutineShaderBundle",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameRoutineBundle(RoutineBundle e) {
-  if (flatbuffers::IsOutRange(e, RoutineBundle_NONE, RoutineBundle_RoutineGLSLBundle)) return "";
+  if (flatbuffers::IsOutRange(e, RoutineBundle_NONE, RoutineBundle_RoutineShaderBundle)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesRoutineBundle()[index];
 }
@@ -164,8 +172,8 @@ template<> struct RoutineBundleTraits<Fx::RoutineBytecodeBundle> {
   static const RoutineBundle enum_value = RoutineBundle_RoutineBytecodeBundle;
 };
 
-template<> struct RoutineBundleTraits<Fx::RoutineGLSLBundle> {
-  static const RoutineBundle enum_value = RoutineBundle_RoutineGLSLBundle;
+template<> struct RoutineBundleTraits<Fx::RoutineShaderBundle> {
+  static const RoutineBundle enum_value = RoutineBundle_RoutineShaderBundle;
 };
 
 template<typename T> struct RoutineBundleUnionTraits {
@@ -176,8 +184,8 @@ template<> struct RoutineBundleUnionTraits<Fx::RoutineBytecodeBundleT> {
   static const RoutineBundle enum_value = RoutineBundle_RoutineBytecodeBundle;
 };
 
-template<> struct RoutineBundleUnionTraits<Fx::RoutineGLSLBundleT> {
-  static const RoutineBundle enum_value = RoutineBundle_RoutineGLSLBundle;
+template<> struct RoutineBundleUnionTraits<Fx::RoutineShaderBundleT> {
+  static const RoutineBundle enum_value = RoutineBundle_RoutineShaderBundle;
 };
 
 struct RoutineBundleUnion {
@@ -218,18 +226,126 @@ struct RoutineBundleUnion {
     return type == RoutineBundle_RoutineBytecodeBundle ?
       reinterpret_cast<const Fx::RoutineBytecodeBundleT *>(value) : nullptr;
   }
-  Fx::RoutineGLSLBundleT *AsRoutineGLSLBundle() {
-    return type == RoutineBundle_RoutineGLSLBundle ?
-      reinterpret_cast<Fx::RoutineGLSLBundleT *>(value) : nullptr;
+  Fx::RoutineShaderBundleT *AsRoutineShaderBundle() {
+    return type == RoutineBundle_RoutineShaderBundle ?
+      reinterpret_cast<Fx::RoutineShaderBundleT *>(value) : nullptr;
   }
-  const Fx::RoutineGLSLBundleT *AsRoutineGLSLBundle() const {
-    return type == RoutineBundle_RoutineGLSLBundle ?
-      reinterpret_cast<const Fx::RoutineGLSLBundleT *>(value) : nullptr;
+  const Fx::RoutineShaderBundleT *AsRoutineShaderBundle() const {
+    return type == RoutineBundle_RoutineShaderBundle ?
+      reinterpret_cast<const Fx::RoutineShaderBundleT *>(value) : nullptr;
   }
 };
 
 bool VerifyRoutineBundle(flatbuffers::Verifier &verifier, const void *obj, RoutineBundle type);
 bool VerifyRoutineBundleVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
+
+enum RoutineSourceBundle : uint8_t {
+  RoutineSourceBundle_NONE = 0,
+  RoutineSourceBundle_RoutineGLSLSourceBundle = 1,
+  RoutineSourceBundle_RoutineHLSLSourceBundle = 2,
+  RoutineSourceBundle_MIN = RoutineSourceBundle_NONE,
+  RoutineSourceBundle_MAX = RoutineSourceBundle_RoutineHLSLSourceBundle
+};
+
+inline const RoutineSourceBundle (&EnumValuesRoutineSourceBundle())[3] {
+  static const RoutineSourceBundle values[] = {
+    RoutineSourceBundle_NONE,
+    RoutineSourceBundle_RoutineGLSLSourceBundle,
+    RoutineSourceBundle_RoutineHLSLSourceBundle
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesRoutineSourceBundle() {
+  static const char * const names[4] = {
+    "NONE",
+    "RoutineGLSLSourceBundle",
+    "RoutineHLSLSourceBundle",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameRoutineSourceBundle(RoutineSourceBundle e) {
+  if (flatbuffers::IsOutRange(e, RoutineSourceBundle_NONE, RoutineSourceBundle_RoutineHLSLSourceBundle)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesRoutineSourceBundle()[index];
+}
+
+template<typename T> struct RoutineSourceBundleTraits {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_NONE;
+};
+
+template<> struct RoutineSourceBundleTraits<Fx::RoutineGLSLSourceBundle> {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_RoutineGLSLSourceBundle;
+};
+
+template<> struct RoutineSourceBundleTraits<Fx::RoutineHLSLSourceBundle> {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_RoutineHLSLSourceBundle;
+};
+
+template<typename T> struct RoutineSourceBundleUnionTraits {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_NONE;
+};
+
+template<> struct RoutineSourceBundleUnionTraits<Fx::RoutineGLSLSourceBundleT> {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_RoutineGLSLSourceBundle;
+};
+
+template<> struct RoutineSourceBundleUnionTraits<Fx::RoutineHLSLSourceBundleT> {
+  static const RoutineSourceBundle enum_value = RoutineSourceBundle_RoutineHLSLSourceBundle;
+};
+
+struct RoutineSourceBundleUnion {
+  RoutineSourceBundle type;
+  void *value;
+
+  RoutineSourceBundleUnion() : type(RoutineSourceBundle_NONE), value(nullptr) {}
+  RoutineSourceBundleUnion(RoutineSourceBundleUnion&& u) FLATBUFFERS_NOEXCEPT :
+    type(RoutineSourceBundle_NONE), value(nullptr)
+    { std::swap(type, u.type); std::swap(value, u.value); }
+  RoutineSourceBundleUnion(const RoutineSourceBundleUnion &);
+  RoutineSourceBundleUnion &operator=(const RoutineSourceBundleUnion &u)
+    { RoutineSourceBundleUnion t(u); std::swap(type, t.type); std::swap(value, t.value); return *this; }
+  RoutineSourceBundleUnion &operator=(RoutineSourceBundleUnion &&u) FLATBUFFERS_NOEXCEPT
+    { std::swap(type, u.type); std::swap(value, u.value); return *this; }
+  ~RoutineSourceBundleUnion() { Reset(); }
+
+  void Reset();
+
+  template <typename T>
+  void Set(T&& val) {
+    typedef typename std::remove_reference<T>::type RT;
+    Reset();
+    type = RoutineSourceBundleUnionTraits<RT>::enum_value;
+    if (type != RoutineSourceBundle_NONE) {
+      value = new RT(std::forward<T>(val));
+    }
+  }
+
+  static void *UnPack(const void *obj, RoutineSourceBundle type, const flatbuffers::resolver_function_t *resolver);
+  flatbuffers::Offset<void> Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher = nullptr) const;
+
+  Fx::RoutineGLSLSourceBundleT *AsRoutineGLSLSourceBundle() {
+    return type == RoutineSourceBundle_RoutineGLSLSourceBundle ?
+      reinterpret_cast<Fx::RoutineGLSLSourceBundleT *>(value) : nullptr;
+  }
+  const Fx::RoutineGLSLSourceBundleT *AsRoutineGLSLSourceBundle() const {
+    return type == RoutineSourceBundle_RoutineGLSLSourceBundle ?
+      reinterpret_cast<const Fx::RoutineGLSLSourceBundleT *>(value) : nullptr;
+  }
+  Fx::RoutineHLSLSourceBundleT *AsRoutineHLSLSourceBundle() {
+    return type == RoutineSourceBundle_RoutineHLSLSourceBundle ?
+      reinterpret_cast<Fx::RoutineHLSLSourceBundleT *>(value) : nullptr;
+  }
+  const Fx::RoutineHLSLSourceBundleT *AsRoutineHLSLSourceBundle() const {
+    return type == RoutineSourceBundle_RoutineHLSLSourceBundle ?
+      reinterpret_cast<const Fx::RoutineHLSLSourceBundleT *>(value) : nullptr;
+  }
+};
+
+bool VerifyRoutineSourceBundle(flatbuffers::Verifier &verifier, const void *obj, RoutineSourceBundle type);
+bool VerifyRoutineSourceBundleVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
 enum EPartSimRoutines : int16_t {
   EPartSimRoutines_k_Reset = 0,
@@ -1419,19 +1535,19 @@ inline flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundleDir
 
 flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineBytecodeBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
-struct RoutineGLSLBundleT : public flatbuffers::NativeTable {
-  typedef RoutineGLSLBundle TableType;
+struct RoutineGLSLSourceBundleT : public flatbuffers::NativeTable {
+  typedef RoutineGLSLSourceBundle TableType;
   std::string code{};
   std::vector<std::unique_ptr<Fx::GLSLAttributeT>> attributes{};
-  RoutineGLSLBundleT() = default;
-  RoutineGLSLBundleT(const RoutineGLSLBundleT &o);
-  RoutineGLSLBundleT(RoutineGLSLBundleT&&) FLATBUFFERS_NOEXCEPT = default;
-  RoutineGLSLBundleT &operator=(RoutineGLSLBundleT o) FLATBUFFERS_NOEXCEPT;
+  RoutineGLSLSourceBundleT() = default;
+  RoutineGLSLSourceBundleT(const RoutineGLSLSourceBundleT &o);
+  RoutineGLSLSourceBundleT(RoutineGLSLSourceBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  RoutineGLSLSourceBundleT &operator=(RoutineGLSLSourceBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
-struct RoutineGLSLBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef RoutineGLSLBundleT NativeTableType;
-  typedef RoutineGLSLBundleBuilder Builder;
+struct RoutineGLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoutineGLSLSourceBundleT NativeTableType;
+  typedef RoutineGLSLSourceBundleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CODE = 4,
     VT_ATTRIBUTES = 6
@@ -1451,55 +1567,194 @@ struct RoutineGLSLBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfTables(attributes()) &&
            verifier.EndTable();
   }
-  RoutineGLSLBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  void UnPackTo(RoutineGLSLBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
-  static flatbuffers::Offset<RoutineGLSLBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+  RoutineGLSLSourceBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(RoutineGLSLSourceBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<RoutineGLSLSourceBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
-struct RoutineGLSLBundleBuilder {
-  typedef RoutineGLSLBundle Table;
+struct RoutineGLSLSourceBundleBuilder {
+  typedef RoutineGLSLSourceBundle Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_code(flatbuffers::Offset<flatbuffers::String> code) {
-    fbb_.AddOffset(RoutineGLSLBundle::VT_CODE, code);
+    fbb_.AddOffset(RoutineGLSLSourceBundle::VT_CODE, code);
   }
   void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>>> attributes) {
-    fbb_.AddOffset(RoutineGLSLBundle::VT_ATTRIBUTES, attributes);
+    fbb_.AddOffset(RoutineGLSLSourceBundle::VT_ATTRIBUTES, attributes);
   }
-  explicit RoutineGLSLBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit RoutineGLSLSourceBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  flatbuffers::Offset<RoutineGLSLBundle> Finish() {
+  flatbuffers::Offset<RoutineGLSLSourceBundle> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<RoutineGLSLBundle>(end);
+    auto o = flatbuffers::Offset<RoutineGLSLSourceBundle>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<RoutineGLSLBundle> CreateRoutineGLSLBundle(
+inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> code = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>>> attributes = 0) {
-  RoutineGLSLBundleBuilder builder_(_fbb);
+  RoutineGLSLSourceBundleBuilder builder_(_fbb);
   builder_.add_attributes(attributes);
   builder_.add_code(code);
   return builder_.Finish();
 }
 
-inline flatbuffers::Offset<RoutineGLSLBundle> CreateRoutineGLSLBundleDirect(
+inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *code = nullptr,
     const std::vector<flatbuffers::Offset<Fx::GLSLAttribute>> *attributes = nullptr) {
   auto code__ = code ? _fbb.CreateString(code) : 0;
   auto attributes__ = attributes ? _fbb.CreateVector<flatbuffers::Offset<Fx::GLSLAttribute>>(*attributes) : 0;
-  return Fx::CreateRoutineGLSLBundle(
+  return Fx::CreateRoutineGLSLSourceBundle(
       _fbb,
       code__,
       attributes__);
 }
 
-flatbuffers::Offset<RoutineGLSLBundle> CreateRoutineGLSLBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct RoutineHLSLSourceBundleT : public flatbuffers::NativeTable {
+  typedef RoutineHLSLSourceBundle TableType;
+  std::string code{};
+};
+
+struct RoutineHLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoutineHLSLSourceBundleT NativeTableType;
+  typedef RoutineHLSLSourceBundleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CODE = 4
+  };
+  const flatbuffers::String *code() const {
+    return GetPointer<const flatbuffers::String *>(VT_CODE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_CODE) &&
+           verifier.VerifyString(code()) &&
+           verifier.EndTable();
+  }
+  RoutineHLSLSourceBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(RoutineHLSLSourceBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<RoutineHLSLSourceBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct RoutineHLSLSourceBundleBuilder {
+  typedef RoutineHLSLSourceBundle Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_code(flatbuffers::Offset<flatbuffers::String> code) {
+    fbb_.AddOffset(RoutineHLSLSourceBundle::VT_CODE, code);
+  }
+  explicit RoutineHLSLSourceBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<RoutineHLSLSourceBundle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RoutineHLSLSourceBundle>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> code = 0) {
+  RoutineHLSLSourceBundleBuilder builder_(_fbb);
+  builder_.add_code(code);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundleDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *code = nullptr) {
+  auto code__ = code ? _fbb.CreateString(code) : 0;
+  return Fx::CreateRoutineHLSLSourceBundle(
+      _fbb,
+      code__);
+}
+
+flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct RoutineShaderBundleT : public flatbuffers::NativeTable {
+  typedef RoutineShaderBundle TableType;
+  std::vector<Fx::RoutineSourceBundleUnion> shaders{};
+};
+
+struct RoutineShaderBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoutineShaderBundleT NativeTableType;
+  typedef RoutineShaderBundleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SHADERS_TYPE = 4,
+    VT_SHADERS = 6
+  };
+  const flatbuffers::Vector<uint8_t> *shaders_type() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_SHADERS_TYPE);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<void>> *shaders() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<void>> *>(VT_SHADERS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_SHADERS_TYPE) &&
+           verifier.VerifyVector(shaders_type()) &&
+           VerifyOffset(verifier, VT_SHADERS) &&
+           verifier.VerifyVector(shaders()) &&
+           VerifyRoutineSourceBundleVector(verifier, shaders(), shaders_type()) &&
+           verifier.EndTable();
+  }
+  RoutineShaderBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(RoutineShaderBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<RoutineShaderBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineShaderBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct RoutineShaderBundleBuilder {
+  typedef RoutineShaderBundle Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_shaders_type(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> shaders_type) {
+    fbb_.AddOffset(RoutineShaderBundle::VT_SHADERS_TYPE, shaders_type);
+  }
+  void add_shaders(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> shaders) {
+    fbb_.AddOffset(RoutineShaderBundle::VT_SHADERS, shaders);
+  }
+  explicit RoutineShaderBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<RoutineShaderBundle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RoutineShaderBundle>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RoutineShaderBundle> CreateRoutineShaderBundle(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> shaders_type = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> shaders = 0) {
+  RoutineShaderBundleBuilder builder_(_fbb);
+  builder_.add_shaders(shaders);
+  builder_.add_shaders_type(shaders_type);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<RoutineShaderBundle> CreateRoutineShaderBundleDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *shaders_type = nullptr,
+    const std::vector<flatbuffers::Offset<void>> *shaders = nullptr) {
+  auto shaders_type__ = shaders_type ? _fbb.CreateVector<uint8_t>(*shaders_type) : 0;
+  auto shaders__ = shaders ? _fbb.CreateVector<flatbuffers::Offset<void>>(*shaders) : 0;
+  return Fx::CreateRoutineShaderBundle(
+      _fbb,
+      shaders_type__,
+      shaders__);
+}
+
+flatbuffers::Offset<RoutineShaderBundle> CreateRoutineShaderBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineShaderBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 struct PartRenderPassT : public flatbuffers::NativeTable {
   typedef PartRenderPass TableType;
@@ -1840,8 +2095,8 @@ flatbuffers::Offset<RenderState> CreateRenderState(flatbuffers::FlatBufferBuilde
 struct MatRenderPassT : public flatbuffers::NativeTable {
   typedef MatRenderPass TableType;
   std::vector<Fx::RoutineBundleUnion> routines{};
-  uint32_t stride = 0;
   std::unique_ptr<Fx::TypeLayoutT> instance{};
+  uint32_t stride = 0;
   std::vector<std::unique_ptr<Fx::RenderStateT>> renderStates{};
   MatRenderPassT() = default;
   MatRenderPassT(const MatRenderPassT &o);
@@ -1855,8 +2110,8 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROUTINES_TYPE = 4,
     VT_ROUTINES = 6,
-    VT_STRIDE = 8,
-    VT_INSTANCE = 10,
+    VT_INSTANCE = 8,
+    VT_STRIDE = 10,
     VT_RENDERSTATES = 12
   };
   const flatbuffers::Vector<uint8_t> *routines_type() const {
@@ -1865,11 +2120,11 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<flatbuffers::Offset<void>> *routines() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<void>> *>(VT_ROUTINES);
   }
-  uint32_t stride() const {
-    return GetField<uint32_t>(VT_STRIDE, 0);
-  }
   const Fx::TypeLayout *instance() const {
     return GetPointer<const Fx::TypeLayout *>(VT_INSTANCE);
+  }
+  uint32_t stride() const {
+    return GetField<uint32_t>(VT_STRIDE, 0);
   }
   const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *renderStates() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *>(VT_RENDERSTATES);
@@ -1881,9 +2136,9 @@ struct MatRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_ROUTINES) &&
            verifier.VerifyVector(routines()) &&
            VerifyRoutineBundleVector(verifier, routines(), routines_type()) &&
-           VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_INSTANCE) &&
            verifier.VerifyTable(instance()) &&
+           VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_RENDERSTATES) &&
            verifier.VerifyVector(renderStates()) &&
            verifier.VerifyVectorOfTables(renderStates()) &&
@@ -1904,11 +2159,11 @@ struct MatRenderPassBuilder {
   void add_routines(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines) {
     fbb_.AddOffset(MatRenderPass::VT_ROUTINES, routines);
   }
-  void add_stride(uint32_t stride) {
-    fbb_.AddElement<uint32_t>(MatRenderPass::VT_STRIDE, stride, 0);
-  }
   void add_instance(flatbuffers::Offset<Fx::TypeLayout> instance) {
     fbb_.AddOffset(MatRenderPass::VT_INSTANCE, instance);
+  }
+  void add_stride(uint32_t stride) {
+    fbb_.AddElement<uint32_t>(MatRenderPass::VT_STRIDE, stride, 0);
   }
   void add_renderStates(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates) {
     fbb_.AddOffset(MatRenderPass::VT_RENDERSTATES, renderStates);
@@ -1928,13 +2183,13 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> routines_type = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<void>>> routines = 0,
-    uint32_t stride = 0,
     flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    uint32_t stride = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates = 0) {
   MatRenderPassBuilder builder_(_fbb);
   builder_.add_renderStates(renderStates);
-  builder_.add_instance(instance);
   builder_.add_stride(stride);
+  builder_.add_instance(instance);
   builder_.add_routines(routines);
   builder_.add_routines_type(routines_type);
   return builder_.Finish();
@@ -1944,8 +2199,8 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPassDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const std::vector<uint8_t> *routines_type = nullptr,
     const std::vector<flatbuffers::Offset<void>> *routines = nullptr,
-    uint32_t stride = 0,
     flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    uint32_t stride = 0,
     const std::vector<flatbuffers::Offset<Fx::RenderState>> *renderStates = nullptr) {
   auto routines_type__ = routines_type ? _fbb.CreateVector<uint8_t>(*routines_type) : 0;
   auto routines__ = routines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*routines) : 0;
@@ -1954,8 +2209,8 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPassDirect(
       _fbb,
       routines_type__,
       routines__,
-      stride,
       instance,
+      stride,
       renderStates__);
 }
 
@@ -3599,45 +3854,100 @@ inline flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundle(fl
       _numthreads);
 }
 
-inline RoutineGLSLBundleT::RoutineGLSLBundleT(const RoutineGLSLBundleT &o)
+inline RoutineGLSLSourceBundleT::RoutineGLSLSourceBundleT(const RoutineGLSLSourceBundleT &o)
       : code(o.code) {
   attributes.reserve(o.attributes.size());
   for (const auto &attributes_ : o.attributes) { attributes.emplace_back((attributes_) ? new Fx::GLSLAttributeT(*attributes_) : nullptr); }
 }
 
-inline RoutineGLSLBundleT &RoutineGLSLBundleT::operator=(RoutineGLSLBundleT o) FLATBUFFERS_NOEXCEPT {
+inline RoutineGLSLSourceBundleT &RoutineGLSLSourceBundleT::operator=(RoutineGLSLSourceBundleT o) FLATBUFFERS_NOEXCEPT {
   std::swap(code, o.code);
   std::swap(attributes, o.attributes);
   return *this;
 }
 
-inline RoutineGLSLBundleT *RoutineGLSLBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
-  auto _o = std::unique_ptr<RoutineGLSLBundleT>(new RoutineGLSLBundleT());
+inline RoutineGLSLSourceBundleT *RoutineGLSLSourceBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<RoutineGLSLSourceBundleT>(new RoutineGLSLSourceBundleT());
   UnPackTo(_o.get(), _resolver);
   return _o.release();
 }
 
-inline void RoutineGLSLBundle::UnPackTo(RoutineGLSLBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+inline void RoutineGLSLSourceBundle::UnPackTo(RoutineGLSLSourceBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
   { auto _e = code(); if (_e) _o->code = _e->str(); }
   { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = std::unique_ptr<Fx::GLSLAttributeT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
-inline flatbuffers::Offset<RoutineGLSLBundle> RoutineGLSLBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
-  return CreateRoutineGLSLBundle(_fbb, _o, _rehasher);
+inline flatbuffers::Offset<RoutineGLSLSourceBundle> RoutineGLSLSourceBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateRoutineGLSLSourceBundle(_fbb, _o, _rehasher);
 }
 
-inline flatbuffers::Offset<RoutineGLSLBundle> CreateRoutineGLSLBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
   (void)_rehasher;
   (void)_o;
-  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineGLSLBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineGLSLSourceBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
   auto _attributes = _o->attributes.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::GLSLAttribute>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateGLSLAttribute(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va ) : 0;
-  return Fx::CreateRoutineGLSLBundle(
+  return Fx::CreateRoutineGLSLSourceBundle(
       _fbb,
       _code,
       _attributes);
+}
+
+inline RoutineHLSLSourceBundleT *RoutineHLSLSourceBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<RoutineHLSLSourceBundleT>(new RoutineHLSLSourceBundleT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void RoutineHLSLSourceBundle::UnPackTo(RoutineHLSLSourceBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = code(); if (_e) _o->code = _e->str(); }
+}
+
+inline flatbuffers::Offset<RoutineHLSLSourceBundle> RoutineHLSLSourceBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateRoutineHLSLSourceBundle(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineHLSLSourceBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
+  return Fx::CreateRoutineHLSLSourceBundle(
+      _fbb,
+      _code);
+}
+
+inline RoutineShaderBundleT *RoutineShaderBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<RoutineShaderBundleT>(new RoutineShaderBundleT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void RoutineShaderBundle::UnPackTo(RoutineShaderBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = shaders_type(); if (_e) { _o->shaders.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->shaders[_i].type = static_cast<Fx::RoutineSourceBundle>(_e->Get(_i)); } } }
+  { auto _e = shaders(); if (_e) { _o->shaders.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->shaders[_i].value = Fx::RoutineSourceBundleUnion::UnPack(_e->Get(_i), shaders_type()->GetEnum<RoutineSourceBundle>(_i), _resolver); } } }
+}
+
+inline flatbuffers::Offset<RoutineShaderBundle> RoutineShaderBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineShaderBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateRoutineShaderBundle(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<RoutineShaderBundle> CreateRoutineShaderBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineShaderBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineShaderBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _shaders_type = _o->shaders.size() ? _fbb.CreateVector<uint8_t>(_o->shaders.size(), [](size_t i, _VectorArgs *__va) { return static_cast<uint8_t>(__va->__o->shaders[i].type); }, &_va) : 0;
+  auto _shaders = _o->shaders.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->shaders.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->shaders[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
+  return Fx::CreateRoutineShaderBundle(
+      _fbb,
+      _shaders_type,
+      _shaders);
 }
 
 inline PartRenderPassT::PartRenderPassT(const PartRenderPassT &o)
@@ -3788,16 +4098,16 @@ inline flatbuffers::Offset<RenderState> CreateRenderState(flatbuffers::FlatBuffe
 
 inline MatRenderPassT::MatRenderPassT(const MatRenderPassT &o)
       : routines(o.routines),
-        stride(o.stride),
-        instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr) {
+        instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr),
+        stride(o.stride) {
   renderStates.reserve(o.renderStates.size());
   for (const auto &renderStates_ : o.renderStates) { renderStates.emplace_back((renderStates_) ? new Fx::RenderStateT(*renderStates_) : nullptr); }
 }
 
 inline MatRenderPassT &MatRenderPassT::operator=(MatRenderPassT o) FLATBUFFERS_NOEXCEPT {
   std::swap(routines, o.routines);
-  std::swap(stride, o.stride);
   std::swap(instance, o.instance);
+  std::swap(stride, o.stride);
   std::swap(renderStates, o.renderStates);
   return *this;
 }
@@ -3813,8 +4123,8 @@ inline void MatRenderPass::UnPackTo(MatRenderPassT *_o, const flatbuffers::resol
   (void)_resolver;
   { auto _e = routines_type(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].type = static_cast<Fx::RoutineBundle>(_e->Get(_i)); } } }
   { auto _e = routines(); if (_e) { _o->routines.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->routines[_i].value = Fx::RoutineBundleUnion::UnPack(_e->Get(_i), routines_type()->GetEnum<RoutineBundle>(_i), _resolver); } } }
-  { auto _e = stride(); _o->stride = _e; }
   { auto _e = instance(); if (_e) { if(_o->instance) { _e->UnPackTo(_o->instance.get(), _resolver); } else { _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
+  { auto _e = stride(); _o->stride = _e; }
   { auto _e = renderStates(); if (_e) { _o->renderStates.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->renderStates[_i]) { _e->Get(_i)->UnPackTo(_o->renderStates[_i].get(), _resolver); } else { _o->renderStates[_i] = std::unique_ptr<Fx::RenderStateT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
@@ -3828,15 +4138,15 @@ inline flatbuffers::Offset<MatRenderPass> CreateMatRenderPass(flatbuffers::FlatB
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const MatRenderPassT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _routines_type = _o->routines.size() ? _fbb.CreateVector<uint8_t>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return static_cast<uint8_t>(__va->__o->routines[i].type); }, &_va) : 0;
   auto _routines = _o->routines.size() ? _fbb.CreateVector<flatbuffers::Offset<void>>(_o->routines.size(), [](size_t i, _VectorArgs *__va) { return __va->__o->routines[i].Pack(*__va->__fbb, __va->__rehasher); }, &_va) : 0;
-  auto _stride = _o->stride;
   auto _instance = _o->instance ? CreateTypeLayout(_fbb, _o->instance.get(), _rehasher) : 0;
+  auto _stride = _o->stride;
   auto _renderStates = _o->renderStates.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::RenderState>> (_o->renderStates.size(), [](size_t i, _VectorArgs *__va) { return CreateRenderState(*__va->__fbb, __va->__o->renderStates[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateMatRenderPass(
       _fbb,
       _routines_type,
       _routines,
-      _stride,
       _instance,
+      _stride,
       _renderStates);
 }
 
@@ -4343,8 +4653,8 @@ inline bool VerifyRoutineBundle(flatbuffers::Verifier &verifier, const void *obj
       auto ptr = reinterpret_cast<const Fx::RoutineBytecodeBundle *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case RoutineBundle_RoutineGLSLBundle: {
-      auto ptr = reinterpret_cast<const Fx::RoutineGLSLBundle *>(obj);
+    case RoutineBundle_RoutineShaderBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineShaderBundle *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;
@@ -4370,8 +4680,8 @@ inline void *RoutineBundleUnion::UnPack(const void *obj, RoutineBundle type, con
       auto ptr = reinterpret_cast<const Fx::RoutineBytecodeBundle *>(obj);
       return ptr->UnPack(resolver);
     }
-    case RoutineBundle_RoutineGLSLBundle: {
-      auto ptr = reinterpret_cast<const Fx::RoutineGLSLBundle *>(obj);
+    case RoutineBundle_RoutineShaderBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineShaderBundle *>(obj);
       return ptr->UnPack(resolver);
     }
     default: return nullptr;
@@ -4385,9 +4695,9 @@ inline flatbuffers::Offset<void> RoutineBundleUnion::Pack(flatbuffers::FlatBuffe
       auto ptr = reinterpret_cast<const Fx::RoutineBytecodeBundleT *>(value);
       return CreateRoutineBytecodeBundle(_fbb, ptr, _rehasher).Union();
     }
-    case RoutineBundle_RoutineGLSLBundle: {
-      auto ptr = reinterpret_cast<const Fx::RoutineGLSLBundleT *>(value);
-      return CreateRoutineGLSLBundle(_fbb, ptr, _rehasher).Union();
+    case RoutineBundle_RoutineShaderBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineShaderBundleT *>(value);
+      return CreateRoutineShaderBundle(_fbb, ptr, _rehasher).Union();
     }
     default: return 0;
   }
@@ -4399,8 +4709,8 @@ inline RoutineBundleUnion::RoutineBundleUnion(const RoutineBundleUnion &u) : typ
       value = new Fx::RoutineBytecodeBundleT(*reinterpret_cast<Fx::RoutineBytecodeBundleT *>(u.value));
       break;
     }
-    case RoutineBundle_RoutineGLSLBundle: {
-      value = new Fx::RoutineGLSLBundleT(*reinterpret_cast<Fx::RoutineGLSLBundleT *>(u.value));
+    case RoutineBundle_RoutineShaderBundle: {
+      value = new Fx::RoutineShaderBundleT(*reinterpret_cast<Fx::RoutineShaderBundleT *>(u.value));
       break;
     }
     default:
@@ -4415,8 +4725,8 @@ inline void RoutineBundleUnion::Reset() {
       delete ptr;
       break;
     }
-    case RoutineBundle_RoutineGLSLBundle: {
-      auto ptr = reinterpret_cast<Fx::RoutineGLSLBundleT *>(value);
+    case RoutineBundle_RoutineShaderBundle: {
+      auto ptr = reinterpret_cast<Fx::RoutineShaderBundleT *>(value);
       delete ptr;
       break;
     }
@@ -4424,6 +4734,98 @@ inline void RoutineBundleUnion::Reset() {
   }
   value = nullptr;
   type = RoutineBundle_NONE;
+}
+
+inline bool VerifyRoutineSourceBundle(flatbuffers::Verifier &verifier, const void *obj, RoutineSourceBundle type) {
+  switch (type) {
+    case RoutineSourceBundle_NONE: {
+      return true;
+    }
+    case RoutineSourceBundle_RoutineGLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineGLSLSourceBundle *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case RoutineSourceBundle_RoutineHLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineHLSLSourceBundle *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    default: return true;
+  }
+}
+
+inline bool VerifyRoutineSourceBundleVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types) {
+  if (!values || !types) return !values && !types;
+  if (values->size() != types->size()) return false;
+  for (flatbuffers::uoffset_t i = 0; i < values->size(); ++i) {
+    if (!VerifyRoutineSourceBundle(
+        verifier,  values->Get(i), types->GetEnum<RoutineSourceBundle>(i))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline void *RoutineSourceBundleUnion::UnPack(const void *obj, RoutineSourceBundle type, const flatbuffers::resolver_function_t *resolver) {
+  (void)resolver;
+  switch (type) {
+    case RoutineSourceBundle_RoutineGLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineGLSLSourceBundle *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case RoutineSourceBundle_RoutineHLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineHLSLSourceBundle *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    default: return nullptr;
+  }
+}
+
+inline flatbuffers::Offset<void> RoutineSourceBundleUnion::Pack(flatbuffers::FlatBufferBuilder &_fbb, const flatbuffers::rehasher_function_t *_rehasher) const {
+  (void)_rehasher;
+  switch (type) {
+    case RoutineSourceBundle_RoutineGLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineGLSLSourceBundleT *>(value);
+      return CreateRoutineGLSLSourceBundle(_fbb, ptr, _rehasher).Union();
+    }
+    case RoutineSourceBundle_RoutineHLSLSourceBundle: {
+      auto ptr = reinterpret_cast<const Fx::RoutineHLSLSourceBundleT *>(value);
+      return CreateRoutineHLSLSourceBundle(_fbb, ptr, _rehasher).Union();
+    }
+    default: return 0;
+  }
+}
+
+inline RoutineSourceBundleUnion::RoutineSourceBundleUnion(const RoutineSourceBundleUnion &u) : type(u.type), value(nullptr) {
+  switch (type) {
+    case RoutineSourceBundle_RoutineGLSLSourceBundle: {
+      value = new Fx::RoutineGLSLSourceBundleT(*reinterpret_cast<Fx::RoutineGLSLSourceBundleT *>(u.value));
+      break;
+    }
+    case RoutineSourceBundle_RoutineHLSLSourceBundle: {
+      value = new Fx::RoutineHLSLSourceBundleT(*reinterpret_cast<Fx::RoutineHLSLSourceBundleT *>(u.value));
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+inline void RoutineSourceBundleUnion::Reset() {
+  switch (type) {
+    case RoutineSourceBundle_RoutineGLSLSourceBundle: {
+      auto ptr = reinterpret_cast<Fx::RoutineGLSLSourceBundleT *>(value);
+      delete ptr;
+      break;
+    }
+    case RoutineSourceBundle_RoutineHLSLSourceBundle: {
+      auto ptr = reinterpret_cast<Fx::RoutineHLSLSourceBundleT *>(value);
+      delete ptr;
+      break;
+    }
+    default: break;
+  }
+  value = nullptr;
+  type = RoutineSourceBundle_NONE;
 }
 
 inline bool VerifyBundleContent(flatbuffers::Verifier &verifier, const void *obj, BundleContent type) {

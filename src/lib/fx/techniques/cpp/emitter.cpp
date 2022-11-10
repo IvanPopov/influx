@@ -290,11 +290,17 @@ void IFX::EMITTER::ReloadBundles(void* buf)
         auto uav = find_if(begin(sharedUAVs), end(sharedUAVs), [&](const VM::BUNDLE_UAV &uav)
                             { return uav.name == UavPrerendered(i); });
 
-        std::string vertexShader = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->code;
-        std::string pixelShader = routines[Fx::EPartRenderRoutines_k_Pixel].AsRoutineGLSLBundle()->code;
+        auto vertexBundle = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineShaderBundle()->shaders[0];
+        assert(vertexBundle.type == Fx::RoutineSourceBundle_RoutineGLSLSourceBundle);
+
+        auto pixelBundle = routines[Fx::EPartRenderRoutines_k_Pixel].AsRoutineShaderBundle()->shaders[0];
+        assert(pixelBundle.type == Fx::RoutineSourceBundle_RoutineGLSLSourceBundle);
+
+        std::string vertexShader = vertexBundle.AsRoutineGLSLSourceBundle()->code;
+        std::string pixelShader = pixelBundle.AsRoutineGLSLSourceBundle()->code;
 
         // note: only GLSL routines are supported!
-        std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = routines[Fx::EPartRenderRoutines_k_Vertex].AsRoutineGLSLBundle()->attributes;
+        std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = vertexBundle.AsRoutineGLSLSourceBundle()->attributes;
 
         if (sorting) 
         {

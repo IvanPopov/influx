@@ -1,6 +1,6 @@
 {
   "name": "influx",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "UNLICENSED",
   "private": false,
   "engines": {
@@ -24,7 +24,7 @@
     "@types/redux-immutable-state-invariant": "^2.1.2",
     "@types/redux-logger": "^3.0.9",
     "@types/redux-thunk": "^2.1.32",
-    "@types/three": "^0.139.0",
+    "@types/three": "0.146.0",
     "autobind-decorator": "^2.4.0",
     "bluebird": "^3.7.2",
     "comlink": "^4.3.1",
@@ -86,7 +86,7 @@
     "source-map-loader": "^3.0.1",
     "style-loader": "^3.3.1",
     "terser-webpack-plugin": "^5.3.1",
-    "three": "^0.139.2",
+    "three": "0.146.0",
     "ts-loader": "^9.2.9",
     "tsconfig-paths-webpack-plugin": "^3.5.2",
     "tslint": "^5.20.1",

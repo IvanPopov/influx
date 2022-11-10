@@ -77,6 +77,9 @@ export class GlslEmitter extends CodeEmitter {
     emitPostfixIndex(pfidx: IPostfixIndexInstruction)
     {
         if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(pfidx.element.type.name)) {
+            // TODO: fixme
+            this.emitKeyword(`${this.resolveType(pfidx.type).typeName}(0.0, 0.0, 0.0, 0.0)`);
+            return;
             // this.emitLine(`texelFetch(`, texelCoord, 0).x`);
             this.emitKeyword('texelFetch');
             this.emitChar('(');

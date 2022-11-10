@@ -397,7 +397,7 @@ class App extends React.Component<IAppProps> {
 
     @autobind
     handleCreateNewEffect() {
-        this.openFile(DEFAULT_FILENAME);
+        this.openFile(URI.fromLocalPath(DEFAULT_FILENAME));
     }
 
     setAutocompile(autocompile: boolean) {
@@ -1073,14 +1073,14 @@ class App extends React.Component<IAppProps> {
                             />
                         }
                         &nbsp;
-                        { (add || checkout)  &&
+                        { this.isP4Connected() && (add || checkout)  &&
                                 <Button.Group size='mini'>
                                     <Button positive onClick={ this.onCheckout }>
                                         { this.isExists() ? 'Checkout' : 'Add' }
                                     </Button>
                                 </Button.Group>
                         }
-                        { (revert) &&
+                        { this.isP4Connected() && (revert) &&
                             <Button.Group size='mini'>
                                 <Button onClick={ this.onRevert }>Revert</Button>
                                 <Button.Or />

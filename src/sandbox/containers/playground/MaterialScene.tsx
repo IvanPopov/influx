@@ -6,16 +6,14 @@ import { GUI } from 'dat.gui';
 
 import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import * as THREE from 'three';
-import * as GLSL from './shaders/materials';
 import autobind from 'autobind-decorator';
 import { ITechnique } from '@lib/idl/ITechnique';
-import { isDef, isString } from '@lib/common';
+import { isString } from '@lib/common';
 import { IUniform } from 'three';
 import { IMap } from '@lib/idl/IMap';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
-const Shaders = (id: string) => GLSL[id];
 
 interface IMaterialSceneProps extends ITreeSceneProps {
     material: ITechnique;
@@ -114,7 +112,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const camera = this.camera;
         const params = this.params;
         const renderer = this.renderer;
-        const mat = this.props.material;
+        const passCount = this.props.material.getPassCount();
 
         const renderScene = new RenderPass(scene, camera);
         const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
@@ -137,7 +135,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             './assets/models/probe.obj',
             (group: THREE.Group) => {
 
-                this.groups = Array(mat.getPassCount()).fill(null).map(x => group.clone(true));
+                this.groups = Array(passCount).fill(null).map(x => group.clone(true));
                 scene.add(...this.groups);
 
                 this.reloadMaterial();
@@ -150,19 +148,194 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 this.groups = null;
             }
         );
+
+        this.createUniformGroups();
     }
 
     shouldComponentUpdate(nextProps: IMaterialSceneProps, nexState) {
         return this.props.material !== nextProps.material;
     }
 
+    uniformGroups: THREE.UniformsGroup[];
+    uniformLayout: IMap<IMap<THREE.Uniform[]>>;
+
+    // todo: read buffers layout from reflectio
+    createUniformGroups() {
+        this.uniformLayout = {};
+
+        /*
+        uniform CB_SCREEN_RECT_DATA
+        {
+            vec4 COMMON_VP_PARAMS[1];	// padding 0, size 16
+            vec4 SCREEN_RECT[1];	// padding 16, size 16
+            vec4 SCREEN_UV[1];	// padding 32, size 16
+            vec4 RECT_DEPTH[1];	// padding 48, size 16
+            uvec4 LWI_PARAMS[2];	// padding 64, size 32
+        };
+        */
+        const screenRectData = new THREE.UniformsGroup();
+        screenRectData.setName( 'CB_SCREEN_RECT_DATA' );
+        // COMMON_VP_PARAMS
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // SCREEN_RECT
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // SCREEN_UV
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // RECT_DEPTH
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // LWI_PARAMS
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+
+        /*
+        // size: 1216
+        uniform CB_OBJ_MATERIAL_DATA
+        {
+            ivec4 OBJ_GLT_UVSET_INDICES[1];	// padding 0, size 16
+            vec4 OBJ_LAYER_TILING[2];	// padding 16, size 32
+            vec4 OBJ_LAYER_TILING_BASE_INV[1];	// padding 48, size 16
+            vec4 OBJ_GLT_TRANSP_VC_MASK[2];	// padding 64, size 32
+            vec4 OBJ_MTLBLEND_LAYER_CONST[64];	// padding 96, size 1024
+            vec4 OBJ_PARALLAX_SECOND_VC_SWZ[1];	// padding 1120, size 16
+            vec4 OBJ_PARALLAX_FLATTEN_VC_SWZ[1];	// padding 1136, size 16
+            vec4 OBJ_COMPR_VERT_OFFSET[1];	// padding 1152, size 16
+            vec4 OBJ_COMPR_VERT_SCALE[1];	// padding 1168, size 16
+            vec4 OBJ_COMPR_TEX[2];	// padding 1184, size 32
+        };
+        */
+
+        const materialData = new THREE.UniformsGroup();
+        materialData.setName( 'CB_OBJ_MATERIAL_DATA' );
+        // OBJ_GLT_UVSET_INDICES
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_LAYER_TILING
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_LAYER_TILING_BASE_INV
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_GLT_TRANSP_VC_MASK
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_MTLBLEND_LAYER_CONST
+        for (let i = 0; i < 64; ++ i)
+            materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_PARALLAX_SECOND_VC_SWZ
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_PARALLAX_FLATTEN_VC_SWZ
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_COMPR_VERT_OFFSET
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_COMPR_VERT_SCALE
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // OBJ_COMPR_TEX
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+
+        /*
+        uniform CB_SPLIT_DRAW_DATA
+        {
+            uvec4 VS_REG_COMMON_OBJ_DATA;	// padding 0, size 16
+            vec4 VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG[3];	// padding 16, size 48
+        };
+        */
+
+        const splitDrawData = new THREE.UniformsGroup();
+        splitDrawData.setName( 'CB_SPLIT_DRAW_DATA' );
+        // VS_REG_COMMON_OBJ_DATA
+        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG
+        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(1, 0, 0, 0) ) );
+        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 1, 0, 0) ) );
+        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 1, 0) ) );
+
+        
+        /*
+        uniform CB_COMMON_DYN
+        {
+            vec4 COMMON_LBUF_PARAMS[1];	// padding 0, size 16
+            ivec4 PS_REG_REFLECTIONS_NELEM[1];	// padding 16, size 16
+            ivec4 PS_REG_COMMON_FOG_PARAM_SET[1];	// padding 32, size 16
+            vec4 COMMON_VIEW_POSITION[1];	// padding 48, size 16
+            vec4 COMMON_VIEW_POSITION_PREV[1];	// padding 64, size 16
+            vec4 COMMON_VIEWPROJ_MATRIX[4];	// padding 80, size 64
+            vec4 COMMON_FPMODEL_VIEWPROJ_MATRIX[4];	// padding 144, size 64
+            vec4 COMMON_FPMODEL_VIEWPROJ_MATRIX_PREV[4];	// padding 208, size 64
+            vec4 COMMON_FPMODEL_ZSCALE[1];	// padding 272, size 16
+            vec4 COMMON_VIEW_MATRIX[3];	// padding 288, size 48
+            vec4 COMMON_FPMODEL_CORRECTION_MATRIX[4];	// padding 336, size 64
+            vec4 COMMON_PROJ_MATRIX[4];	// padding 400, size 64
+        };
+        */
+        
+        this.uniformLayout['CB_COMMON_DYN'] = {};
+
+        const commonDyn = new THREE.UniformsGroup();
+        commonDyn.setName( 'CB_COMMON_DYN' );
+        // COMMON_LBUF_PARAMS
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // PS_REG_REFLECTIONS_NELEM
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // PS_REG_COMMON_FOG_PARAM_SET
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_VIEW_POSITION
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_VIEW_POSITION_PREV
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_VIEWPROJ_MATRIX
+
+        const COMMON_VIEWPROJ_MATRIX = [
+            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
+            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
+            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
+            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) )
+        ];
+
+        for (let i = 0; i < 4; ++ i)
+            commonDyn.add( COMMON_VIEWPROJ_MATRIX[i] );
+
+        this.uniformLayout['CB_COMMON_DYN']['COMMON_VIEWPROJ_MATRIX'] = COMMON_VIEWPROJ_MATRIX;
+
+        // COMMON_FPMODEL_VIEWPROJ_MATRIX
+        for (let i = 0; i < 4; ++ i)
+            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_FPMODEL_VIEWPROJ_MATRIX_PREV
+        for (let i = 0; i < 4; ++ i)
+            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_FPMODEL_ZSCALE
+        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_VIEW_MATRIX
+        for (let i = 0; i < 3; ++ i)
+            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_FPMODEL_CORRECTION_MATRIX
+        for (let i = 0; i < 4; ++ i)
+            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        // COMMON_PROJ_MATRIX
+        for (let i = 0; i < 4; ++ i)
+            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        
+
+       this.uniformGroups = [ screenRectData, materialData, splitDrawData, commonDyn ];
+    }
+
+    updateUniformsGroups() {
+        const viewMatrix = this.camera.matrixWorldInverse;
+        const projMatrix = this.camera.projectionMatrix;
+        const viewprojMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix).transpose();
+        const COMMON_VIEWPROJ_MATRIX = this.uniformLayout['CB_COMMON_DYN']['COMMON_VIEWPROJ_MATRIX'];
+        (COMMON_VIEWPROJ_MATRIX[0].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 0);
+        (COMMON_VIEWPROJ_MATRIX[1].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 4);
+        (COMMON_VIEWPROJ_MATRIX[2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
+        (COMMON_VIEWPROJ_MATRIX[3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
+
+    }
+
     componentDidUpdate(prevProps: any, prevState: any): void {
         super.componentDidUpdate(prevProps, prevState);
 
-        const mat = this.props.material;
+        const passCount = this.props.material.getPassCount();
 
         this.scene.remove(...this.groups);
-        this.groups = Array(mat.getPassCount()).fill(null).map(x => this.groups[0].clone(true));
+        this.groups = Array(passCount).fill(null).map(x => this.groups[0].clone(true));
         this.scene.add(...this.groups);
 
         this.reloadMaterial();
@@ -209,6 +382,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 depthTest: true
             });
 
+            (material as any).uniformsGroups = this.uniformGroups;
+
             if (renderStates[ERenderStates.ZENABLE]) {
                 material.depthTest = renderStates[ERenderStates.ZENABLE] === ERenderStateValues.TRUE;
             }
@@ -249,6 +424,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         uniforms.elapsedTime.value = constants.elapsedTime;
         uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
 
+        this.updateUniformsGroups()
+        
         for (let name in controls.values) {
             if (uniforms[name])
                 uniforms[name].value = controls.values[name];

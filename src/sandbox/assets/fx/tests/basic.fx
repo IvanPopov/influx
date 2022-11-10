@@ -6,7 +6,7 @@ struct DefaultShaderInput {
     float  size : SIZE;
 };
 
-
+//123
 struct Part {
     float3 pos;
     float timelife;

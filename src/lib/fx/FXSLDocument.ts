@@ -29,10 +29,13 @@ export async function createFXSLDocument(document: ISLASTDocument | ITextDocumen
     } else {
         slastDocument = <ISLASTDocument>document;
     }
+
     const timeLabel = `createFXSLDocument(${slastDocument.uri})`;
     console.time(timeLabel);
+
     const analyzer = new FxAnalyzer;
     const slDocument = await analyzer.parse(slastDocument, parent);
+    
     console.timeEnd(timeLabel);
 
     return slDocument;

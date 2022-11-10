@@ -246,7 +246,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         const scene = this.scene;
         this.env.floor = (_ => {
-            const geo = new THREE.PlaneBufferGeometry(20, 20);
+            const geo = new THREE.PlaneGeometry(20, 20);
             const mat = new THREE.MeshPhongMaterial({ shininess: 10, color: "#fff" });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.rotation.x = Math.PI * -.5;
@@ -256,7 +256,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         })();
 
         this.env.leftWall = (_ => {
-            const geo = new THREE.PlaneBufferGeometry(20, 15);
+            const geo = new THREE.PlaneGeometry(20, 15);
             const mat = new THREE.MeshPhongMaterial({ shininess: 10, color: "#fff" });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.rotation.y = Math.PI * 0.5;
@@ -267,7 +267,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         })();
 
         this.env.rightWall = (_ => {
-            const geo = new THREE.PlaneBufferGeometry(20, 15);
+            const geo = new THREE.PlaneGeometry(20, 15);
             const mat = new THREE.MeshPhongMaterial({ shininess: 10, color: "#fff" });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.rotation.y = Math.PI * -0.5;
@@ -278,7 +278,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         })();
 
         this.env.backWall = (_ => {
-            const geo = new THREE.PlaneBufferGeometry(15, 20);
+            const geo = new THREE.PlaneGeometry(15, 20);
             const mat = new THREE.MeshPhongMaterial({ shininess: 10, color: "#fff" });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.rotation.z = Math.PI * -0.5;
@@ -289,7 +289,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         })();
 
         this.env.ceiling = (_ => {
-            const geo = new THREE.PlaneBufferGeometry(20, 20);
+            const geo = new THREE.PlaneGeometry(20, 20);
             const mat = new THREE.MeshPhongMaterial({ shininess: 10, color: "#fff" });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.rotation.x = Math.PI * 0.5;
@@ -416,19 +416,19 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         let instanceGeometry: THREE.BufferGeometry = null;
         switch (geometry) {
             case "box":
-                instanceGeometry = new THREE.BoxBufferGeometry();
+                instanceGeometry = new THREE.BoxGeometry();
                 break;
             case "sphere":
-                instanceGeometry = new THREE.SphereBufferGeometry(0.5);
+                instanceGeometry = new THREE.SphereGeometry(0.5);
                 break;
             case "cylinder":
-                instanceGeometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 1.0);
+                instanceGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.0);
                 break;
             case "line":
                 console.assert(false, "line should have been handled using different code branch");
                 break;
             case "billboard":
-                instanceGeometry = new THREE.PlaneBufferGeometry();
+                instanceGeometry = new THREE.PlaneGeometry();
                 break;
             default:
                 return this.createInstinceGeometry(fallback);

@@ -2,7 +2,7 @@ import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLBundleT, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
 import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
@@ -147,11 +147,16 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const uavPrerendered = uavResources.find(uav => uav.name === UAV_PRERENDERED);
         const uavSerials = uavResources.find(uav => uav.name === UAV_SERIALS);
 
-        const vertexShader = <string>routines[EPartRenderRoutines.k_Vertex].code;
-        const pixelShader = <string>routines[EPartRenderRoutines.k_Pixel].code;
+        const vertexBundle = <RoutineShaderBundleT>routines[EPartRenderRoutines.k_Vertex];
+        const vertexGLSLBundle = <RoutineGLSLSourceBundleT>vertexBundle.shaders.find( (shader, i) => vertexBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
 
-        // note: only GLSL routines are supported!
-        const instanceLayout = (<RoutineGLSLBundleT>routines[EPartRenderRoutines.k_Vertex]).attributes;
+        const pixelBundle = <RoutineShaderBundleT>routines[EPartRenderRoutines.k_Pixel];
+        const pixelGLSLBundle = <RoutineGLSLSourceBundleT>pixelBundle.shaders.find( (shader, i) => pixelBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
+        
+        const vertexShader = <string>vertexGLSLBundle.code;
+        const pixelShader = <string>pixelGLSLBundle.code;
+        const instanceLayout = vertexGLSLBundle.attributes;
+
         const getNumRenderedParticles = () => UAV.readCounter(uavPrerendered) * instanceCount;
 
         // if no prerender bundle then all particles must be prerendered within update stage

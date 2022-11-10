@@ -1,4 +1,4 @@
-import { BundleT, EMatRenderRoutines, MatBundleT, RoutineGLSLBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { BundleT, EMatRenderRoutines, MatBundleT, RoutineGLSLSourceBundle, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle } from '@lib/idl/bundles/FxBundle_generated';
 import { ITechnique, ITechniquePassDesc } from '@lib/idl/ITechnique';
 
 // tslint:disable-next-line:max-func-body-length
@@ -14,12 +14,15 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
             renderStates
         } = pass;
 
+        const vertexBundle = <RoutineShaderBundleT>routines[EMatRenderRoutines.k_Vertex];
+        const vertexGLSLBundle = <RoutineGLSLSourceBundleT>vertexBundle.shaders.find( (shader, i) => vertexBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
 
-        const vertexShader = <string>routines[EMatRenderRoutines.k_Vertex].code;
-        const pixelShader = <string>routines[EMatRenderRoutines.k_Pixel].code;
-
-        // note: only GLSL routines are supported!
-        const instanceLayout = (<RoutineGLSLBundleT>routines[EMatRenderRoutines.k_Vertex]).attributes;
+        const pixelBundle = <RoutineShaderBundleT>routines[EMatRenderRoutines.k_Pixel];
+        const pixelGLSLBundle = <RoutineGLSLSourceBundleT>pixelBundle.shaders.find( (shader, i) => pixelBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
+        
+        const vertexShader = <string>vertexGLSLBundle.code;
+        const pixelShader = <string>pixelGLSLBundle.code;
+        const instanceLayout = vertexGLSLBundle.attributes;
         
         const states = {};
         renderStates.forEach(({ type, value }) => { states[type] = value; });

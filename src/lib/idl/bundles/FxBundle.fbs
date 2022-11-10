@@ -39,7 +39,7 @@ table UAVBundle
     type: TypeLayout;
 }
 
-union RoutineBundle { RoutineBytecodeBundle, RoutineGLSLBundle }
+union RoutineBundle { RoutineBytecodeBundle, RoutineShaderBundle }
 
 table GLSLAttribute 
 {
@@ -60,11 +60,23 @@ table RoutineBytecodeBundle
     numthreads: [ uint ];
 }
 
-table RoutineGLSLBundle
+table RoutineGLSLSourceBundle 
 {
     code: string;
     // vertex bundles also contain attribute description
     attributes: [ GLSLAttribute ];
+}
+
+table RoutineHLSLSourceBundle 
+{
+    code: string;
+}
+
+union RoutineSourceBundle { RoutineGLSLSourceBundle, RoutineHLSLSourceBundle }
+
+table RoutineShaderBundle
+{
+    shaders: [ RoutineSourceBundle ];
 }
 
 //
@@ -125,8 +137,14 @@ table RenderState {
 table MatRenderPass
 {
     routines: [ RoutineBundle ];
-    stride: uint;                           // instance stride in 32bit (integers)
+    
+    // VS_OUTPUT test_z_vs(VS_INPUT_AUTO_I _input)
+    //                     ^^^^^^^^^^^^^^^
+    //                         instance
     instance: TypeLayout;
+    // sizeof(instance) >> 2
+    stride: uint;                           // instance stride in 32bit (integers)
+    
     renderStates: [ RenderState ];
 }
 

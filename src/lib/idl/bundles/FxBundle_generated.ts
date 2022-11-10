@@ -1,34 +1,65 @@
 import * as flatbuffers from 'flatbuffers';
-import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLBundle as FxRoutineGLSLBundle, RoutineGLSLBundleT as FxRoutineGLSLBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
+import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
   NONE = 0,
   RoutineBytecodeBundle = 1,
-  RoutineGLSLBundle = 2
+  RoutineShaderBundle = 2
 }
 
 export function unionToRoutineBundle(
   type: RoutineBundle,
-  accessor: (obj:FxRoutineBytecodeBundle|FxRoutineGLSLBundle) => FxRoutineBytecodeBundle|FxRoutineGLSLBundle|null
-): FxRoutineBytecodeBundle|FxRoutineGLSLBundle|null {
+  accessor: (obj:FxRoutineBytecodeBundle|FxRoutineShaderBundle) => FxRoutineBytecodeBundle|FxRoutineShaderBundle|null
+): FxRoutineBytecodeBundle|FxRoutineShaderBundle|null {
   switch(FxRoutineBundle[type]) {
     case 'NONE': return null; 
     case 'RoutineBytecodeBundle': return accessor(new FxRoutineBytecodeBundle())! as FxRoutineBytecodeBundle;
-    case 'RoutineGLSLBundle': return accessor(new FxRoutineGLSLBundle())! as FxRoutineGLSLBundle;
+    case 'RoutineShaderBundle': return accessor(new FxRoutineShaderBundle())! as FxRoutineShaderBundle;
     default: return null;
   }
 }
 
 export function unionListToRoutineBundle(
   type: RoutineBundle, 
-  accessor: (index: number, obj:FxRoutineBytecodeBundle|FxRoutineGLSLBundle) => FxRoutineBytecodeBundle|FxRoutineGLSLBundle|null, 
+  accessor: (index: number, obj:FxRoutineBytecodeBundle|FxRoutineShaderBundle) => FxRoutineBytecodeBundle|FxRoutineShaderBundle|null, 
   index: number
-): FxRoutineBytecodeBundle|FxRoutineGLSLBundle|null {
+): FxRoutineBytecodeBundle|FxRoutineShaderBundle|null {
   switch(FxRoutineBundle[type]) {
     case 'NONE': return null; 
     case 'RoutineBytecodeBundle': return accessor(index, new FxRoutineBytecodeBundle())! as FxRoutineBytecodeBundle;
-    case 'RoutineGLSLBundle': return accessor(index, new FxRoutineGLSLBundle())! as FxRoutineGLSLBundle;
+    case 'RoutineShaderBundle': return accessor(index, new FxRoutineShaderBundle())! as FxRoutineShaderBundle;
+    default: return null;
+  }
+}
+
+export enum RoutineSourceBundle{
+  NONE = 0,
+  RoutineGLSLSourceBundle = 1,
+  RoutineHLSLSourceBundle = 2
+}
+
+export function unionToRoutineSourceBundle(
+  type: RoutineSourceBundle,
+  accessor: (obj:FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle) => FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle|null
+): FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle|null {
+  switch(FxRoutineSourceBundle[type]) {
+    case 'NONE': return null; 
+    case 'RoutineGLSLSourceBundle': return accessor(new FxRoutineGLSLSourceBundle())! as FxRoutineGLSLSourceBundle;
+    case 'RoutineHLSLSourceBundle': return accessor(new FxRoutineHLSLSourceBundle())! as FxRoutineHLSLSourceBundle;
+    default: return null;
+  }
+}
+
+export function unionListToRoutineSourceBundle(
+  type: RoutineSourceBundle, 
+  accessor: (index: number, obj:FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle) => FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle|null, 
+  index: number
+): FxRoutineGLSLSourceBundle|FxRoutineHLSLSourceBundle|null {
+  switch(FxRoutineSourceBundle[type]) {
+    case 'NONE': return null; 
+    case 'RoutineGLSLSourceBundle': return accessor(index, new FxRoutineGLSLSourceBundle())! as FxRoutineGLSLSourceBundle;
+    case 'RoutineHLSLSourceBundle': return accessor(index, new FxRoutineHLSLSourceBundle())! as FxRoutineHLSLSourceBundle;
     default: return null;
   }
 }
@@ -1029,22 +1060,22 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   return FxRoutineBytecodeBundle.endRoutineBytecodeBundle(builder);
 }
 }
-export class RoutineGLSLBundle {
+export class RoutineGLSLSourceBundle {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-__init(i:number, bb:flatbuffers.ByteBuffer):RoutineGLSLBundle {
+__init(i:number, bb:flatbuffers.ByteBuffer):RoutineGLSLSourceBundle {
   this.bb_pos = i;
   this.bb = bb;
   return this;
 }
 
-static getRootAsRoutineGLSLBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineGLSLBundle):RoutineGLSLBundle {
-  return (obj || new RoutineGLSLBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+static getRootAsRoutineGLSLSourceBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineGLSLSourceBundle):RoutineGLSLSourceBundle {
+  return (obj || new RoutineGLSLSourceBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-static getSizePrefixedRootAsRoutineGLSLBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineGLSLBundle):RoutineGLSLBundle {
+static getSizePrefixedRootAsRoutineGLSLSourceBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineGLSLSourceBundle):RoutineGLSLSourceBundle {
   bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new RoutineGLSLBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  return (obj || new RoutineGLSLSourceBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
 code():string|null
@@ -1064,7 +1095,7 @@ attributesLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
-static startRoutineGLSLBundle(builder:flatbuffers.Builder) {
+static startRoutineGLSLSourceBundle(builder:flatbuffers.Builder) {
   builder.startObject(2);
 }
 
@@ -1088,33 +1119,33 @@ static startAttributesVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
-static endRoutineGLSLBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+static endRoutineGLSLSourceBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createRoutineGLSLBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, attributesOffset:flatbuffers.Offset):flatbuffers.Offset {
-  RoutineGLSLBundle.startRoutineGLSLBundle(builder);
-  RoutineGLSLBundle.addCode(builder, codeOffset);
-  RoutineGLSLBundle.addAttributes(builder, attributesOffset);
-  return RoutineGLSLBundle.endRoutineGLSLBundle(builder);
+static createRoutineGLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, attributesOffset:flatbuffers.Offset):flatbuffers.Offset {
+  RoutineGLSLSourceBundle.startRoutineGLSLSourceBundle(builder);
+  RoutineGLSLSourceBundle.addCode(builder, codeOffset);
+  RoutineGLSLSourceBundle.addAttributes(builder, attributesOffset);
+  return RoutineGLSLSourceBundle.endRoutineGLSLSourceBundle(builder);
 }
 
-unpack(): RoutineGLSLBundleT {
-  return new RoutineGLSLBundleT(
+unpack(): RoutineGLSLSourceBundleT {
+  return new RoutineGLSLSourceBundleT(
     this.code(),
     this.bb!.createObjList(this.attributes.bind(this), this.attributesLength())
   );
 }
 
 
-unpackTo(_o: RoutineGLSLBundleT): void {
+unpackTo(_o: RoutineGLSLSourceBundleT): void {
   _o.code = this.code();
   _o.attributes = this.bb!.createObjList(this.attributes.bind(this), this.attributesLength());
 }
 }
 
-export class RoutineGLSLBundleT {
+export class RoutineGLSLSourceBundleT {
 constructor(
   public code: string|Uint8Array|null = null,
   public attributes: (GLSLAttributeT)[] = []
@@ -1123,11 +1154,225 @@ constructor(
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const code = (this.code !== null ? builder.createString(this.code!) : 0);
-  const attributes = FxRoutineGLSLBundle.createAttributesVector(builder, builder.createObjectOffsetList(this.attributes));
+  const attributes = FxRoutineGLSLSourceBundle.createAttributesVector(builder, builder.createObjectOffsetList(this.attributes));
 
-  return FxRoutineGLSLBundle.createRoutineGLSLBundle(builder,
+  return FxRoutineGLSLSourceBundle.createRoutineGLSLSourceBundle(builder,
     code,
     attributes
+  );
+}
+}
+export class RoutineHLSLSourceBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):RoutineHLSLSourceBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsRoutineHLSLSourceBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineHLSLSourceBundle):RoutineHLSLSourceBundle {
+  return (obj || new RoutineHLSLSourceBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsRoutineHLSLSourceBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineHLSLSourceBundle):RoutineHLSLSourceBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new RoutineHLSLSourceBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+code():string|null
+code(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+code(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+static startRoutineHLSLSourceBundle(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
+
+static addCode(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, codeOffset, 0);
+}
+
+static endRoutineHLSLSourceBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createRoutineHLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset):flatbuffers.Offset {
+  RoutineHLSLSourceBundle.startRoutineHLSLSourceBundle(builder);
+  RoutineHLSLSourceBundle.addCode(builder, codeOffset);
+  return RoutineHLSLSourceBundle.endRoutineHLSLSourceBundle(builder);
+}
+
+unpack(): RoutineHLSLSourceBundleT {
+  return new RoutineHLSLSourceBundleT(
+    this.code()
+  );
+}
+
+
+unpackTo(_o: RoutineHLSLSourceBundleT): void {
+  _o.code = this.code();
+}
+}
+
+export class RoutineHLSLSourceBundleT {
+constructor(
+  public code: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const code = (this.code !== null ? builder.createString(this.code!) : 0);
+
+  return FxRoutineHLSLSourceBundle.createRoutineHLSLSourceBundle(builder,
+    code
+  );
+}
+}
+export class RoutineShaderBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):RoutineShaderBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsRoutineShaderBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineShaderBundle):RoutineShaderBundle {
+  return (obj || new RoutineShaderBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsRoutineShaderBundle(bb:flatbuffers.ByteBuffer, obj?:RoutineShaderBundle):RoutineShaderBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new RoutineShaderBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+shadersType(index: number):FxRoutineSourceBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : 0;
+}
+
+shadersTypeLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+shadersTypeArray():Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
+}
+
+shaders(index: number, obj:any):any|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__union(obj, this.bb!.__vector(this.bb_pos + offset) + index * 4) : null;
+}
+
+shadersLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+static startRoutineShaderBundle(builder:flatbuffers.Builder) {
+  builder.startObject(2);
+}
+
+static addShadersType(builder:flatbuffers.Builder, shadersTypeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, shadersTypeOffset, 0);
+}
+
+static createShadersTypeVector(builder:flatbuffers.Builder, data:FxRoutineSourceBundle[]):flatbuffers.Offset {
+  builder.startVector(1, data.length, 1);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addInt8(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startShadersTypeVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(1, numElems, 1);
+}
+
+static addShaders(builder:flatbuffers.Builder, shadersOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, shadersOffset, 0);
+}
+
+static createShadersVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startShadersVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
+static endRoutineShaderBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createRoutineShaderBundle(builder:flatbuffers.Builder, shadersTypeOffset:flatbuffers.Offset, shadersOffset:flatbuffers.Offset):flatbuffers.Offset {
+  RoutineShaderBundle.startRoutineShaderBundle(builder);
+  RoutineShaderBundle.addShadersType(builder, shadersTypeOffset);
+  RoutineShaderBundle.addShaders(builder, shadersOffset);
+  return RoutineShaderBundle.endRoutineShaderBundle(builder);
+}
+
+unpack(): RoutineShaderBundleT {
+  return new RoutineShaderBundleT(
+    this.bb!.createScalarList(this.shadersType.bind(this), this.shadersTypeLength()),
+    (() => {
+    let ret = [];
+    for(let targetEnumIndex = 0; targetEnumIndex < this.shadersTypeLength(); ++targetEnumIndex) {
+      let targetEnum = this.shadersType(targetEnumIndex);
+      if(targetEnum === null || FxRoutineSourceBundle[targetEnum!] === 'NONE') { continue; }
+
+      let temp = unionListToRoutineSourceBundle(targetEnum, this.shaders.bind(this), targetEnumIndex);
+      if(temp === null) { continue; }
+      ret.push(temp.unpack());
+    }
+    return ret;
+  })()
+  );
+}
+
+
+unpackTo(_o: RoutineShaderBundleT): void {
+  _o.shadersType = this.bb!.createScalarList(this.shadersType.bind(this), this.shadersTypeLength());
+  _o.shaders = (() => {
+    let ret = [];
+    for(let targetEnumIndex = 0; targetEnumIndex < this.shadersTypeLength(); ++targetEnumIndex) {
+      let targetEnum = this.shadersType(targetEnumIndex);
+      if(targetEnum === null || FxRoutineSourceBundle[targetEnum!] === 'NONE') { continue; }
+
+      let temp = unionListToRoutineSourceBundle(targetEnum, this.shaders.bind(this), targetEnumIndex);
+      if(temp === null) { continue; }
+      ret.push(temp.unpack());
+    }
+    return ret;
+  })();
+}
+}
+
+export class RoutineShaderBundleT {
+constructor(
+  public shadersType: (FxRoutineSourceBundle)[] = [],
+  public shaders: (FxRoutineGLSLSourceBundleT|FxRoutineHLSLSourceBundleT)[] = []
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const shadersType = FxRoutineShaderBundle.createShadersTypeVector(builder, this.shadersType);
+  const shaders = FxRoutineShaderBundle.createShadersVector(builder, builder.createObjectOffsetList(this.shaders));
+
+  return FxRoutineShaderBundle.createRoutineShaderBundle(builder,
+    shadersType,
+    shaders
   );
 }
 }
@@ -1312,7 +1557,7 @@ unpackTo(_o: PartRenderPassT): void {
 export class PartRenderPassT {
 constructor(
   public routinesType: (FxRoutineBundle)[] = [],
-  public routines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = [],
+  public routines: (FxRoutineBytecodeBundleT|FxRoutineShaderBundleT)[] = [],
   public geometry: string|Uint8Array|null = null,
   public sorting: boolean = false,
   public instanceCount: number = 0,
@@ -1514,7 +1759,7 @@ export class PartBundleT {
 constructor(
   public capacity: number = 0,
   public simulationRoutinesType: (FxRoutineBundle)[] = [],
-  public simulationRoutines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = [],
+  public simulationRoutines: (FxRoutineBytecodeBundleT|FxRoutineShaderBundleT)[] = [],
   public renderPasses: (PartRenderPassT)[] = [],
   public particle: FxTypeLayoutT|null = null
 ){}
@@ -1659,14 +1904,14 @@ routinesLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
-stride():number {
+instance(obj?:FxTypeLayout):FxTypeLayout|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+  return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-instance(obj?:FxTypeLayout):FxTypeLayout|null {
+stride():number {
   const offset = this.bb!.__offset(this.bb_pos, 10);
-  return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
 }
 
 renderStates(index: number, obj?:FxRenderState):FxRenderState|null {
@@ -1715,12 +1960,12 @@ static startRoutinesVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
-static addStride(builder:flatbuffers.Builder, stride:number) {
-  builder.addFieldInt32(2, stride, 0);
+static addInstance(builder:flatbuffers.Builder, instanceOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, instanceOffset, 0);
 }
 
-static addInstance(builder:flatbuffers.Builder, instanceOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(3, instanceOffset, 0);
+static addStride(builder:flatbuffers.Builder, stride:number) {
+  builder.addFieldInt32(3, stride, 0);
 }
 
 static addRenderStates(builder:flatbuffers.Builder, renderStatesOffset:flatbuffers.Offset) {
@@ -1760,8 +2005,8 @@ unpack(): MatRenderPassT {
     }
     return ret;
   })(),
-    this.stride(),
     (this.instance() !== null ? this.instance()!.unpack() : null),
+    this.stride(),
     this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength())
   );
 }
@@ -1781,8 +2026,8 @@ unpackTo(_o: MatRenderPassT): void {
     }
     return ret;
   })();
-  _o.stride = this.stride();
   _o.instance = (this.instance() !== null ? this.instance()!.unpack() : null);
+  _o.stride = this.stride();
   _o.renderStates = this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength());
 }
 }
@@ -1790,9 +2035,9 @@ unpackTo(_o: MatRenderPassT): void {
 export class MatRenderPassT {
 constructor(
   public routinesType: (FxRoutineBundle)[] = [],
-  public routines: (FxRoutineBytecodeBundleT|FxRoutineGLSLBundleT)[] = [],
-  public stride: number = 0,
+  public routines: (FxRoutineBytecodeBundleT|FxRoutineShaderBundleT)[] = [],
   public instance: FxTypeLayoutT|null = null,
+  public stride: number = 0,
   public renderStates: (RenderStateT)[] = []
 ){}
 
@@ -1806,8 +2051,8 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   FxMatRenderPass.startMatRenderPass(builder);
   FxMatRenderPass.addRoutinesType(builder, routinesType);
   FxMatRenderPass.addRoutines(builder, routines);
-  FxMatRenderPass.addStride(builder, this.stride);
   FxMatRenderPass.addInstance(builder, instance);
+  FxMatRenderPass.addStride(builder, this.stride);
   FxMatRenderPass.addRenderStates(builder, renderStates);
 
   return FxMatRenderPass.endMatRenderPass(builder);
