@@ -9,6 +9,7 @@ import FxScene from '@sandbox/containers/playground/FxScene';
 import { IEmitter } from '@lib/idl/emitter';
 import MaterialScene from './playground/MaterialScene';
 import { ITechnique } from '@lib/idl/ITechnique';
+import { decodeBundleControls } from '@lib/fx/bundles/utils';
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',
@@ -45,15 +46,16 @@ class Preview extends React.Component<IProps> {
         // TODO: add support of material's preview
         const name = this.props.name;
         const data = new Uint8Array(fs.readFileSync(name));
+        const controls = decodeBundleControls(data);
         const tech = Techniques.create(data);
         const timeline = Timeline.make();
         timeline.start();
         console.log(`source: ${decodeBundleMeta(data).source}`);
         if (tech.getType() == 'emitter')
-            return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} />
+            return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} controls={controls}/>
         else
             // todo: pass technique
-            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} />
+            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} controls={controls}/>
     }
 }
 

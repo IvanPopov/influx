@@ -89,8 +89,10 @@ function createSandboxWindow() {
 }
 
 function createPreviewWindow() {
+    const devTools = !!argv['dev-tools'];
+
     let win = new electron.BrowserWindow({
-        show: false, width: 512, height: 512, webPreferences: {
+        show: devTools, width: 512, height: 512, webPreferences: {
             experimentalFeatures: true,
             nodeIntegration: true,
             contextIsolation: false,
@@ -104,7 +106,7 @@ function createPreviewWindow() {
         slashes: true
     }));
 
-    if (argv['dev-tools'])
+    if (devTools)
         win.webContents.openDevTools(), console.log('!!');
     
     win.removeMenu();

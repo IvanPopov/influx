@@ -379,8 +379,10 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             const uniforms = this.uniforms;
             const controls = this.props.controls;
 
-            for (let name in controls.values) {
-                uniforms[name] = { value: controls.values[name] };
+            if (controls) {
+                for (let name in controls.values) {
+                    uniforms[name] = { value: controls.values[name] };
+                }
             }
 
             const material = new THREE.RawShaderMaterial({
@@ -436,10 +438,11 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         this.updateUniformsGroups()
         
-        for (let name in controls.values) {
-            if (uniforms[name])
-                uniforms[name].value = controls.values[name];
-        }
+        if (controls)
+            for (let name in controls.values) {
+                if (uniforms[name])
+                    uniforms[name].value = controls.values[name];
+            }
 
         timeline.tick(); 
     }

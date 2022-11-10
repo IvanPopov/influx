@@ -211,7 +211,7 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
                 source: file.uri,
                 author: state.s3d?.p4?.['User name']
             },
-            omitGLSL: true,
+            omitGLSL: false,
             omitHLSL: false
         };
         
