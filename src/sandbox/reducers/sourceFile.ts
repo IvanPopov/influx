@@ -1,11 +1,15 @@
 import { assert } from '@lib/common';
+import { ConvolutionPackEx } from '@lib/fx/bundles/Bundle';
 import * as Bytecode from '@lib/fx/bytecode/VM';
 import * as Techniques from '@lib/fx/techniques';
 import { IScope } from '@lib/idl/IInstruction';
+import { ITextDocument } from '@lib/idl/ITextDocument';
+import { StringRef } from '@lib/util/StringRef';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeSetDefine, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
+import * as Depot from '@sandbox/reducers/depot';
 
 const initialState: IFileState = {
     revision: 0,
@@ -163,3 +167,16 @@ export const getDebugger = (state: IStoreState): IDebuggerState => getFileState(
 export const getScope = (file: IFileState): IScope => file.slDocument ? file.slDocument.root.scope : null;
 
 export const getRawContent = (file: IFileState): string => file.rawDocument ? file.rawDocument.source : null;
+export const asTextDocument = ({ uri, content }: IFileState): ITextDocument => ({ uri: StringRef.make(uri), source: content });
+export const asSLASTDocument = (file: IFileState) => file.slastDocument;
+
+export const asConvolutionPack = (state: IStoreState): ConvolutionPackEx => {
+    const file = state.sourceFile;
+    const depot = state.depot;
+    const textDocument = asTextDocument(file);
+    const slastDocument = asSLASTDocument(file);
+    const includeResolver = Depot.makeResolver(depot);
+    const defines = file.defines;
+
+    return new ConvolutionPackEx(textDocument, slastDocument, includeResolver, defines);
+}

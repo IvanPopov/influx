@@ -101,7 +101,7 @@ export class GlslEmitter extends CodeEmitter {
         super.emitPostfixIndex(pfidx);
     }
 
-    emitVariableDeclNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+    emitVariableNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         const { type } = src;
         if (src.isGlobal()) {
             // IP: hack for fake compartibility with GLSL 3.00 ES
@@ -121,7 +121,7 @@ export class GlslEmitter extends CodeEmitter {
                 return;
             }
         }
-        super.emitVariableDeclNoInit(src, rename);
+        super.emitVariableNoInit(src, rename);
     }
 
     protected emitPrologue(def: IFunctionDefInstruction): void {
@@ -166,7 +166,7 @@ export class GlslEmitter extends CodeEmitter {
                     continue;
                 }
 
-                this.emitVariableDecl(param);
+                this.emitVariable(param);
             }
         }
         this.end();
@@ -201,7 +201,7 @@ export class GlslEmitter extends CodeEmitter {
         // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
         if (IS_INSTANCEID(decl.semantic)) return;
 
-        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariableDecl(decl, sname.attr), this.emitChar(';'), this.emitNewline());
+        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariable(decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
 
 
@@ -217,7 +217,7 @@ export class GlslEmitter extends CodeEmitter {
             pixel: 'in'
         };
 
-        (this.emitKeyword(usage[this.mode]), this.emitVariableDecl(decl, sname.varying), this.emitChar(';'), this.emitNewline());
+        (this.emitKeyword(usage[this.mode]), this.emitVariable(decl, sname.varying), this.emitChar(';'), this.emitNewline());
     }
 
 
@@ -243,7 +243,7 @@ export class GlslEmitter extends CodeEmitter {
         this.push();
         {
             cbuf.type.fields.forEach(field => {
-                this.emitVariableDecl(field);
+                this.emitVariable(field);
                 this.emitChar(';');
                 this.emitChar('\t')
                 this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);

@@ -4,10 +4,10 @@ import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstru
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
-import { CodeEmitter } from "./CodeEmitter";
+import { CodeConvolutionEmitter, CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
 
 
-export class FxEmitter extends CodeEmitter {
+export class FxEmitter extends CodeConvolutionEmitter {
     // aux
     protected tech: ITechniqueInstruction;
 
@@ -196,8 +196,8 @@ export class FxEmitter extends CodeEmitter {
     }
 }
 
-export function translate(instr: IInstruction): string {
-    const emitter = new FxEmitter();
+export function translate(instr: IInstruction, opts?: ICodeEmitterOptions): string {
+    const emitter = new FxEmitter(null, null, opts);
     emitter.emit(instr);
     return emitter.toString();
 }

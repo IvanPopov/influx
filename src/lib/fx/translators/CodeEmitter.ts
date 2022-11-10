@@ -1,14 +1,19 @@
 import { assert, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
-import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
+import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
+import { ITextDocument } from "@lib/idl/ITextDocument";
+import { IASTDocument, IRange } from "@lib/idl/parser/IParser";
 import { BaseEmitter } from "./BaseEmitter";
-import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
-import { BoolInstruction } from "../analisys/instructions/BoolInstruction";
+
+export interface IConvolutionPack {
+    textDocument?: ITextDocument;
+    slastDocument?: ISLASTDocument;
+}
 
 interface ITypeInfo {
     typeName: string;
@@ -48,6 +53,10 @@ export class CodeEmitter extends BaseEmitter {
     protected knownFunctions: number[] = [];
     protected knownUAVs: IUavReflection[] = [];
     protected knownCsShaders: ICSShaderReflection[] = [];
+    protected knownCbuffers: string[] = [];
+
+    // list of convolute includes
+    protected includeDeps: string[] = [];
 
     protected options: ICodeEmitterOptions;
 
@@ -102,7 +111,9 @@ export class CodeEmitter extends BaseEmitter {
             typeName = type.name;
 
             if (this.addType(typeName)) {
-                this.emit(type);
+                // find original type instead of VariableType wrapper. 
+                const originalType = type.scope.findType(type.name);
+                this.emit(originalType);
             }
         }
 
@@ -142,6 +153,15 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    protected addCbuffer(name: string): boolean {
+        if (!this.knownCbuffers.includes(name)) {
+            this.knownCbuffers.push(name);
+            return true;
+        }
+        return false;
+    }
+
+
     protected addType(name: string): boolean {
         if (!this.knownTypes.includes(name)) {
             this.knownTypes.push(name);
@@ -167,6 +187,10 @@ export class CodeEmitter extends BaseEmitter {
         }
         return false;
     }
+
+
+
+
 
 
     emitUav(type: string, name: string, comment?: string): IUavReflection {
@@ -225,30 +249,30 @@ export class CodeEmitter extends BaseEmitter {
 
     emitComplexType(ctype: ITypeInstruction) {
         assert(ctype.isComplex());
-
         this.emitKeyword('struct');
         this.emitKeyword(ctype.name);
         this.emitNewline();
         this.emitChar('{');
         this.push();
 
-        ctype.fields.map(field => (this.emitStmt(field), this.emitNewline()));
+        ctype.fields.map(field => (this.emitComplexField(field), this.emitNewline()));
 
         this.pop();
         this.emitChar('}');
     }
 
 
+    emitComplexTypeDecl(ctype: ITypeInstruction) {
+        this.begin();
+        this.emitComplexType(ctype);
+        this.emitChar(';');
+        this.end();
+    }
+
     // todo: remove hack with rename mutator
-    emitVariableDeclNoInit(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+    emitVariableNoInit(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         const { typeName, length, usage } = this.resolveType(decl.type);
         const name = rename ? rename(decl) : decl.name;
-
-        if (decl.isGlobal()) {
-            if (!this.addGlobal(CodeEmitter.asSTRID(decl))) {
-                // do not exit here
-            }
-        }
 
         usage && this.emitKeyword(usage);
         this.emitKeyword(typeName);
@@ -260,8 +284,8 @@ export class CodeEmitter extends BaseEmitter {
 
 
     // todo: remove hack with rename mutator
-    emitVariableDecl(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        this.emitVariableDeclNoInit(src, rename);
+    emitVariable(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        this.emitVariableNoInit(src, rename);
         src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
     }
 
@@ -312,13 +336,7 @@ export class CodeEmitter extends BaseEmitter {
 
 
     emitFunction(fn: IFunctionDeclInstruction) {
-
-        if (!fn || fn.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
-            return;
-        }
-
-        if (!this.addFunction(fn.instructionID)) {
-            // function already exists
+        if (!fn) {
             return;
         }
 
@@ -349,12 +367,12 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitTypeDecl(instr: ITypeDeclInstruction) {
-        this.resolveType(instr.type);
+    emitTypeDecl(decl: ITypeDeclInstruction) {
+        this.resolveType(decl.type);
     }
 
 
-    emitTypedef(instr: ITypedefInstruction) {
+    emitTypedef(def: ITypedefInstruction) {
         // nothing todo because current implementation implies
         // immediate target type substitution 
         return;
@@ -363,13 +381,20 @@ export class CodeEmitter extends BaseEmitter {
             // todo: add support for typedefs like:
             //  typedef const float4 T;
             //          ^^^^^^^^^^^^
-            this.emitKeyword(instr.type.name);
-            this.emitKeyword(instr.alias);
+            this.emitKeyword(def.type.name);
+            this.emitKeyword(def.alias);
             this.emitChar(';');
             this.emitNewline();
         */
     }
 
+    emitForInit(init: ITypedInstruction) {
+        if (instruction.isExpression(init)) {
+            this.emitExpression(init as IExprInstruction);
+        } else {
+            this.emitVariable(init as IVariableDeclInstruction);
+        }
+    }
 
     emitForStmt(stmt: IForStmtInstruction) {
 
@@ -382,8 +407,8 @@ export class CodeEmitter extends BaseEmitter {
         this.emitChar('(');
         this.emitNoSpace();
 
-        this.emitStmt(stmt.init);
-        this.emitNoSpace();
+        this.emitForInit(stmt.init);
+        this.emitChar(';');
 
         this.emitExpression(stmt.cond);
         this.emitChar(';');
@@ -535,9 +560,14 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitParam(param: IVariableDeclInstruction) {
+        this.emitVariable(param);
+    }
+
+
     emitParams(params: IVariableDeclInstruction[]) {
         params.filter(p => !this.options.omitEmptyParams || p.type.size !== 0).forEach((param, i, list) => {
-            this.emitVariableDecl(param);
+            this.emitParam(param);
             (i + 1 != list.length) && this.emitChar(',');
         });
     }
@@ -614,6 +644,14 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitCbufferField(field: IVariableDeclInstruction) {
+        this.emitVariable(field);
+        this.emitChar(';');
+        this.emitChar('\t')
+        this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
+    }
+
+
     emitCbuffer(cbuf: ICbufferInstruction) {
         this.begin();
         this.emitComment(`size: ${cbuf.type.size}`);
@@ -636,10 +674,7 @@ export class CodeEmitter extends BaseEmitter {
         this.push();
         {
             cbuf.type.fields.forEach(field => {
-                this.emitVariableDecl(field);
-                this.emitChar(';');
-                this.emitChar('\t')
-                this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
+                this.emitCbufferField(field);
             });
         }
         this.pop();
@@ -650,6 +685,7 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    // request global declaration for local identifier
     emitGlobal(decl: IVariableDeclInstruction) {
         // const name = decl.name;
         // if (isMain() && decl.isParameter() && !decl.isUniform()) {
@@ -659,29 +695,21 @@ export class CodeEmitter extends BaseEmitter {
         const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
         if (decl.isGlobal() || isUniformArg) {
-            if (this.addGlobal(CodeEmitter.asSTRID(decl))) {
-                if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
-                    const cbufType = decl.parent;
-                    const cbuf = <ICbufferInstruction>cbufType.parent;
+            if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
+                const cbufType = decl.parent;
+                const cbuf = <ICbufferInstruction>cbufType.parent;
+                if (this.addCbuffer(cbuf.name)) {
                     this.begin();
                     this.emitCbuffer(cbuf);
                     this.end();
-                } else {
+                }
+            } else {
+                if (this.addGlobal(CodeEmitter.asSTRID(decl))) {
                     this.begin();
-                    this.emitStmt(decl);
+                    this.emitGlobalVariable(decl);
                     this.end();
                 }
             }
-        }
-    }
-
-
-    emitGlobalRaw(name: string, content: string) {
-        if (this.addGlobal(name)) {
-            this.begin();
-            this.emitChar(`${content};`);
-            this.emitNewline();
-            this.end();
         }
     }
 
@@ -710,7 +738,11 @@ export class CodeEmitter extends BaseEmitter {
     emitFCall(call: IFunctionCallInstruction, rename: (decl: IFunctionDeclInstruction) => string = decl => decl.name) {
         const { decl, args, callee } = call;
 
-        this.emitFunction(decl);
+        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
+            if (this.addFunction(decl.instructionID)) {
+                this.emitFunction(decl);
+            }
+        }
 
         if (callee) {
             this.emitExpression(callee);
@@ -739,6 +771,36 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitLocalVariable(stmt: IVariableDeclInstruction) {
+        this.emitVariable(stmt);
+        this.emitChar(';');
+    }
+
+
+    emitGlobalVariable(decl: IVariableDeclInstruction) {
+        this.begin();
+        this.emitVariable(decl);
+        this.emitChar(';');
+        this.end();
+    }
+
+
+    emitComplexField(instr: IVariableDeclInstruction) {
+        console.assert(instr.instructionType === EInstructionTypes.k_VariableDecl);
+
+        this.emitVariable(instr);
+        this.emitChar(';');
+    }
+
+
+    emitDeclStmt(stmt: IDeclStmtInstruction) {
+        stmt.declList.forEach(decl => {
+            console.assert(decl.instructionType === EInstructionTypes.k_VariableDecl);
+            this.emitLocalVariable(decl as IVariableDeclInstruction);
+        });
+    }
+
+
     /*
         | IStmtBlockInstruction
         | IWhileStmtInstruction
@@ -747,17 +809,13 @@ export class CodeEmitter extends BaseEmitter {
     emitStmt(stmt: IInstruction) {
         switch (stmt.instructionType) {
             case EInstructionTypes.k_DeclStmt:
-                (stmt as IDeclStmtInstruction).declList.forEach(dcl => (this.emitStmt(dcl)));
+                this.emitDeclStmt(stmt as IDeclStmtInstruction);
                 break;
             case EInstructionTypes.k_ExprStmt:
                 this.emitExpressionStmt(stmt as IExprStmtInstruction);
                 break;
             case EInstructionTypes.k_ReturnStmt:
                 this.emitReturnStmt(stmt as IReturnStmtInstruction);
-                break;
-            case EInstructionTypes.k_VariableDecl:
-                this.emitVariableDecl(stmt as IVariableDeclInstruction);
-                this.emitChar(';');
                 break;
             case EInstructionTypes.k_SemicolonStmt:
                 this.emitChar(';');
@@ -808,29 +866,33 @@ export class CodeEmitter extends BaseEmitter {
 
     emitPassBody(pass: IPassInstruction) {
         // TODO: replace with emitCompile();
-        pass.vertexShader && (
-            this.emitFunction(pass.vertexShader),
+        if (pass.vertexShader) {
+            if (this.addFunction(pass.vertexShader.instructionID)) {
+                this.emitFunction(pass.vertexShader);
+            }
 
-            this.emitKeyword('VertexShader'),
-            this.emitKeyword('='),
-            this.emitKeyword('compile'),
-            this.emitKeyword(pass.vertexShader.name),
-            this.emitChar('()'),
-            this.emitChar(';'),
-            this.emitNewline()
-        );
+            this.emitKeyword('VertexShader');
+            this.emitKeyword('=');
+            this.emitKeyword('compile');
+            this.emitKeyword(pass.vertexShader.name);
+            this.emitChar('()');
+            this.emitChar(';');
+            this.emitNewline();
+        }
 
-        pass.pixelShader && (
-            this.emitFunction(pass.pixelShader),
+        if (pass.pixelShader) {
+            if (this.addFunction(pass.pixelShader.instructionID)) {
+                this.emitFunction(pass.pixelShader);
+            }
 
-            this.emitKeyword('PixelShader'),
-            this.emitKeyword('='),
-            this.emitKeyword('compile'),
-            this.emitKeyword(pass.pixelShader.name),
-            this.emitChar('()'),
-            this.emitChar(';'),
-            this.emitNewline()
-        );
+            this.emitKeyword('PixelShader');
+            this.emitKeyword('=');
+            this.emitKeyword('compile');
+            this.emitKeyword(pass.pixelShader.name);
+            this.emitChar('()');
+            this.emitChar(';');
+            this.emitNewline();
+        }
 
         this.emitNewline();
 
@@ -869,10 +931,8 @@ export class CodeEmitter extends BaseEmitter {
                 this.emitCbuffer(instr as ICbufferInstruction);
                 break;
             case EInstructionTypes.k_VariableDecl:
-                this.begin();
-                this.emitVariableDecl(instr as IVariableDeclInstruction);
-                this.emitChar(';');
-                this.end();
+                // emit as part of InstructionCollector
+                this.emitGlobalVariable(instr as IVariableDeclInstruction);
                 break;
             case EInstructionTypes.k_Collector:
                 this.emitCollector(instr as IInstructionCollector);
@@ -885,10 +945,7 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_ComplexType:
             case EInstructionTypes.k_VariableType:
-                this.begin();
-                this.emitComplexType(instr as ITypeInstruction);
-                this.emitChar(';');
-                this.end();
+                this.emitComplexTypeDecl(instr as ITypeInstruction);
                 break;
             default:
                 this.emitLine(`/* ... unsupported instruction '${instr.instructionName}' .... */`);
@@ -900,8 +957,106 @@ export class CodeEmitter extends BaseEmitter {
 }
 
 
-export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
-    return (new CodeEmitter(options)).emit(instr).toString();
+export class CodeConvolutionEmitter extends CodeEmitter {
+    // list of convolute includes
+    protected includeDeps: string[] = [];
+
+    constructor(protected textDocument?: ITextDocument, protected slastDocument?: ISLASTDocument, opts?: ICodeEmitterOptions) {
+        super(opts);
+    }
+
+    protected convoluteToInclude(decl: IInstruction) {
+        if (!decl) {
+            return false;
+        }
+
+        if (!this.slastDocument || !this.textDocument) {
+            return false;
+        }
+
+        const src = decl.sourceNode.loc;
+
+        const resolveLocation = (src: IRange): IRange => {
+            if (!this.slastDocument) {
+                return null;
+            }
+
+            const includes = this.slastDocument.includes;
+
+            let dst = src;
+            while (dst && String(this.textDocument.uri) !== String(dst.start.file)) {
+                dst = includes.get(String(dst.start.file));
+            }
+
+            return dst;
+        }
+
+        const dst = resolveLocation(src);
+
+        // no includes are found
+        if (dst == src) {
+            return false;
+        }
+
+        // extract original include expression
+        const { start, end } = dst;
+        const include = this.textDocument.source.substring(start.offset, end.offset);
+
+        if (this.includeDeps.includes(include)) {
+            return true;
+        }
+
+        this.includeDeps.push(include);
+        return true;
+    }
+
+    emitComplexTypeDecl(ctype: ITypeInstruction) {
+        if (!this.convoluteToInclude(ctype))
+            super.emitComplexTypeDecl(ctype);
+    }
+
+    emitFunction(fn: IFunctionDeclInstruction) {
+        if (!this.convoluteToInclude(fn))
+            super.emitFunction(fn);
+    }
+
+    emitTypeDecl(decl: ITypeDeclInstruction) {
+        if (!this.convoluteToInclude(decl))
+            super.emitTypeDecl(decl);
+    }
+
+    emitTypedef(def: ITypedefInstruction) {
+        if (!this.convoluteToInclude(def))
+            super.emitTypedef(def);
+    }
+
+    emitGlobalVariable(decl: IVariableDeclInstruction) {
+        if (!this.convoluteToInclude(decl))
+            super.emitGlobalVariable(decl);
+    }
+
+    emitCbuffer(cbuf: ICbufferInstruction) {
+        if (!this.convoluteToInclude(cbuf))
+            super.emitCbuffer(cbuf);
+    }
+
+    toString(): string {
+        let code = super.toString();
+        if (!this.includeDeps.length) {
+            return code;
+        }
+
+        let includes = this.includeDeps.join('\n');
+        return `${includes}\n\n${code}`;
+    }
+}
+
+export function translateConvolute(instr: IInstruction, { textDocument, slastDocument }: IConvolutionPack, opts?: ICodeEmitterOptions): string {
+    return (new CodeConvolutionEmitter(textDocument, slastDocument, opts)).emit(instr).toString();
+}
+
+export function translate(instr: IInstruction, opts?: ICodeEmitterOptions): string {
+    return (new CodeEmitter(opts)).emit(instr).toString();
 }
 
 export function translateDocument(document: ISLDocument): string {

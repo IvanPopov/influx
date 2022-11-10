@@ -999,6 +999,7 @@ export class Analyzer {
 
         for (let i = children.length - 1; i >= 0; i--) {
             if (children[i].name === 'Type') {
+                // basically, just get type from scope
                 type = this.analyzeType(context, program, children[i]);
                 if (isNull(type)) {
                     return null
@@ -1047,6 +1048,7 @@ export class Analyzer {
             console.error('invalid unsigned usage');
         }
 
+        // wrap type with usages
         return new VariableTypeInstruction({ scope, sourceNode, type, usages })
     }
 
@@ -1853,14 +1855,16 @@ export class Analyzer {
             return null;
         }
 
-        if (func.def.params.length != args.length) {
+        if (func.def.params.filter(p => !p.initExpr).length > args.length) {
             context.error(sourceNode, EErrors.UnsupportedExpr, { funcName });
             return null;
         }
 
-        func.def.params.forEach((param, i) => {
-            if (!type.equals(param.type, args[i].type)) {
-                context.warn(args[i].sourceNode, EWarnings.ImplicitTypeConversion, { info: `${args[i].type.toCode()} => ${param.type.toCode()}` });
+        args.forEach((x, i) => {
+            const param = func.def.params[i];
+            const arg = args[i];
+            if (!type.equals(param.type, arg.type)) {
+                context.warn(arg.sourceNode, EWarnings.ImplicitTypeConversion, { info: `${arg.type.toCode()} => ${param.type.toCode()}` });
             }
         });
 
@@ -3376,18 +3380,22 @@ export class Analyzer {
 
         program.push();
 
-        init = this.analyzeForInit(context, program, children[children.length - 3 - attributes.length]);
-        cond = this.analyzeForCond(context, program, children[children.length - 4 - attributes.length]);
+        const initSourceNode = children[children.length - 3 - attributes.length];
+        const condSourceNode = children[children.length - 4 - attributes.length];
+
+        init = this.analyzeForInit(context, program, initSourceNode);
+        cond = this.analyzeForCond(context, program, condSourceNode);
         step = null;
 
-        if (isNull(init)) {
-            context.error(children[children.length - 3 - attributes.length], EErrors.InvalidForInitEmptyIterator);
+        const isEmptyInit = initSourceNode.children[0].name == 'T_PUNCTUATOR_59';
+        if (isNull(init) && !isEmptyInit) {
+            context.error(initSourceNode, EErrors.InvalidForInitEmptyIterator);
         } else if (init.instructionType !== EInstructionTypes.k_VariableDecl) {
             // EAnalyzerErrors.InvalidForInitExpr
         }
 
         if (isNull(cond)) {
-            context.error(children[children.length - 4 - attributes.length], EErrors.InvalidForConditionEmpty);
+            context.error(condSourceNode, EErrors.InvalidForConditionEmpty);
         } else if (cond.instructionType !== EInstructionTypes.k_RelationalExpr) {
             // EAnalyzerErrors.InvalidForConditionRelation
         }
@@ -3451,9 +3459,8 @@ export class Analyzer {
                 // add support for expressions like "a = 1, b = 2, c = 3"
                 return this.analyzeVariableDecl(context, program, children[0])[0] || null;
             case 'Expr':
-                // TODO: fixme!! 
-                // add support for expressions like "a = 1, b = 2, c = 3"
-                return this.analyzeExpr(context, program, children[0]);
+            case 'AssignmentExpr':
+                return this.analyzeExpr(context, program, children[1]);
         }
 
         // ForInit : ';'

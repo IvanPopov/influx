@@ -1,12 +1,15 @@
 /* tslint:disable:typedef */
 
+import { createTextDocument } from '@lib/fx/TextDocument';
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
 import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import { ITextDocument } from '@lib/idl/ITextDocument';
+import { StringRef } from '@lib/util/StringRef';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
-import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { asConvolutionPack, asTextDocument, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
@@ -91,6 +94,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         let original: string;
         let value: string;
 
+        const convPack = asConvolutionPack(props);
+
         if (match.params.pass) {
             const pass = fx.passList.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
                 ? i === Number(match.params.pass)
@@ -109,7 +114,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                     value = Glsl.translate(shader, { mode });
                     break;
                 case 'hlsl':
-                   value = Hlsl.translate(shader, { mode });
+                   value = Hlsl.translateConvolute(shader, convPack, { mode });
                    break;
             }
         } else {

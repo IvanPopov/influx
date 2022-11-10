@@ -12,12 +12,12 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as ipc from '@sandbox/ipc';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
-import { getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { asConvolutionPack, asSLASTDocument, asTextDocument, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
+import * as Depot from '@sandbox/reducers/depot';
 
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
-import { EInstructionTypes } from '@lib/idl/IInstruction';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
@@ -56,6 +56,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const file = getFileState(getState());
         const playground = getPlaygroundState(getState());
         const timeline = playground.timeline;
+        const depot = Depot.getDepot(getState());
 
         const scope = getScope(file);
         const list = filterTechniques(scope);
@@ -95,7 +96,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 return [ null, null ];
             }
 
-            const bundle = await FxBundle.createBundle(list[i]);
+            const bundle = await FxBundle.createBundle(list[i], { omitHLSL: true });
             const tech = Techniques.create(bundle);
             const controls = decodeBundleControls(bundle);
 
@@ -209,11 +210,13 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
             meta: {
                 source: file.uri,
                 author: state.s3d?.p4?.['User name']
-            }
+            },
+            omitGLSL: true,
+            omitHLSL: false
         };
         
         const techInstr = list.find((fx => fx.name == tech.getName()));
-        const data = await FxBundle.createBundle(techInstr, options) as Uint8Array;
+        const data = await FxBundle.createBundle(techInstr, options, asConvolutionPack(state)) as Uint8Array;
 
         // download unpacked version
         // -----------------------------------

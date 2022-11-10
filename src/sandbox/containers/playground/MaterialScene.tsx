@@ -173,10 +173,16 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             uvec4 LWI_PARAMS[2];	// padding 64, size 32
         };
         */
+        this.uniformLayout['CB_SCREEN_RECT_DATA'] = {};
+
         const screenRectData = new THREE.UniformsGroup();
         screenRectData.setName( 'CB_SCREEN_RECT_DATA' );
         // COMMON_VP_PARAMS
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+        const COMMON_VP_PARAMS = [
+            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) )
+        ];
+        this.uniformLayout['CB_SCREEN_RECT_DATA']['COMMON_VP_PARAMS'] = COMMON_VP_PARAMS;
+        screenRectData.add( COMMON_VP_PARAMS[0] );
         // SCREEN_RECT
         screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
         // SCREEN_UV
@@ -327,6 +333,10 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         (COMMON_VIEWPROJ_MATRIX[2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
         (COMMON_VIEWPROJ_MATRIX[3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
 
+        const COMMON_VP_PARAMS = this.uniformLayout['CB_SCREEN_RECT_DATA']['COMMON_VP_PARAMS'];
+
+        const { clientWidth, clientHeight } = this.mount;
+        (COMMON_VP_PARAMS[0].value as THREE.Vector4).fromArray([ 1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight ]);
     }
 
     componentDidUpdate(prevProps: any, prevState: any): void {
