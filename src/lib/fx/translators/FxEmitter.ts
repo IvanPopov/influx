@@ -33,7 +33,9 @@ export class FxEmitter extends CodeConvolutionEmitter {
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
         const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
-        this.emitFunction(init);
+        
+        if (this.addFunction(init.instructionID))
+            this.emitFunction(init);
 
         this.emitKeyword(`spawn(${stmt.count})`);
         this.emitKeyword(stmt.name);
