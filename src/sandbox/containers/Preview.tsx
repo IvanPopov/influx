@@ -52,10 +52,10 @@ class Preview extends React.Component<IProps> {
         timeline.start();
         console.log(`source: ${decodeBundleMeta(data).source}`);
         if (tech.getType() == 'emitter')
-            return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} controls={controls}/>
+            return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} controls={controls} />
         else
             // todo: pass technique
-            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} controls={controls}/>
+            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} controls={controls} />
     }
 }
 

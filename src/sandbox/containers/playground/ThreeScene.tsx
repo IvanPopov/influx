@@ -26,6 +26,8 @@ export interface ITreeSceneProps {
     style?: React.CSSProperties;
     timeline: ITimeline;
     controls?: IPlaygroundControls;
+
+    canvasRef?: (canvas: HTMLCanvasElement) => void;
 }
 
 export interface IThreeSceneState {
@@ -82,6 +84,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         this.renderer.domElement.style.borderBottomLeftRadius = '3px';
         this.renderer.domElement.style.borderBottomRightRadius = '3px';
         this.mount.appendChild(this.renderer.domElement);
+
+        this.props.canvasRef?.(this.renderer.domElement);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enabled = false;

@@ -21,6 +21,7 @@ import MaterialScene from './MaterialScene';
 import { IEmitter } from '@lib/idl/emitter';
 import { ETechniqueType } from '@lib/idl/IInstruction';
 import { ITechnique } from '@lib/idl/ITechnique';
+import ThreeScene from './ThreeScene';
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -59,19 +60,25 @@ const threeStylesHotfix: React.CSSProperties = {
 };
 
 
+
 const textAlignCenter: React.CSSProperties = {
     textAlign: 'center'
 };
 
-const isEmitter = tech => tech?.getType() === 'emitter';
-const isMat = tech => tech?.getType() === 'material';
 
 
 class Playground extends React.Component<IPlaygroundProps> {
-    $emitterName: string = null;
+    techniqueName: string = null;
+    // techniqueType: string = null;
+    techniqueID: string = null;
+
+    canvasRef: HTMLCanvasElement;
+    canvasSnapshot: { w: number, h: number, content: string; }
 
     constructor(props) {
         super(props);
+
+        this.canvasRef = null;
     }
 
     // static getDerivedStateFromProps(props: IPlaygroundProps, state: IPlaygroundState) {
@@ -107,7 +114,7 @@ class Playground extends React.Component<IPlaygroundProps> {
         const tech = props.playground.technique;
 
         // todo: add reset support for materials
-        if (isEmitter(tech)) {
+        if (this.ranAsEmitter()) {
             (tech as IEmitter).reset();
         }
     }
@@ -147,20 +154,79 @@ class Playground extends React.Component<IPlaygroundProps> {
 
 
     shouldComponentUpdate(nextProps: IPlaygroundProps) {
-        return nextProps.playground.exportName !== this.props.playground.exportName || 
-            nextProps.playground.autosave !== this.props.playground.autosave || 
+        return nextProps.playground.exportName !== this.props.playground.exportName ||
+            nextProps.playground.autosave !== this.props.playground.autosave ||
             nextProps.playground.technique !== this.props.playground.technique ||
-            (this.props.playground.technique && this.$emitterName !== this.props.playground.technique.getName());
+            (this.props.playground.technique && this.techniqueName !== this.props.playground.technique.getName());
     }
 
-    componentDidUpdate() {
-        if (this.props.playground.technique) {
-            this.$emitterName = this.props.playground.technique.getName();
-        } else {
-            this.$emitterName = null;
+
+    UNSAFE_componentWillUpdate(nextProps: Readonly<IPlaygroundProps>, nextState: Readonly<{}>) {
+        const nextTechnique = nextProps.playground.technique;
+        const prevTechnique = this.props.playground.technique;
+        const bEffectChanged = this.techniqueID !== nextProps.sourceFile.uri;
+        if (bEffectChanged) {
+            this.dropSnapshot();
+            return;
+        }
+        // do snapshot if next effect is broken
+        if (!nextTechnique && prevTechnique) {
+            this.makeSnapshot();
         }
     }
 
+
+    backupProps() {
+        const technique = this.props.playground.technique;
+        const sourceFile = this.props.sourceFile;
+        if (technique) {
+            this.techniqueName = technique.getName();
+            // this.techniqueType = technique.getType();
+        } else {
+            this.techniqueName = null;
+        }
+        this.techniqueID = sourceFile.uri;
+    }
+
+
+    componentDidUpdate() {
+        this.backupProps();
+    }
+
+    componentDidMount(): void {
+        this.backupProps();
+    }
+
+
+    ranAsMaterial() {
+        // return this.techniqueType === 'material' && this.props.playground.technique;
+        return this.props.playground.technique?.getType() === 'material';
+    }
+
+    ranAsEmitter() {
+        // return this.techniqueType === 'emitter' && this.props.playground.technique;
+        return this.props.playground.technique?.getType() === 'emitter';
+    }
+
+
+    dropSnapshot() {
+        this.canvasSnapshot = null;
+        console.log(`Snapshot has been dropped.`);
+    }
+
+
+    makeSnapshot() {
+        if (!this.canvasRef) {
+            return;
+        }
+
+        const content = this.canvasRef.toDataURL('image/png', 1);
+        const w = this.canvasRef.clientWidth;
+        const h = this.canvasRef.clientHeight;
+        this.canvasSnapshot = { w, h, content };
+
+        console.log(`Snapshot has been made.`);
+    }
 
     render() {
         const props = this.props;
@@ -168,14 +234,12 @@ class Playground extends React.Component<IPlaygroundProps> {
         const technique = playground.technique;
         const timeline = playground.timeline;
         const controls = playground.controls;
+        const snapshot = this.canvasSnapshot;
         const scope = getScope(props.sourceFile);
 
         const list = filterTechniques(scope);
         const active = getEmitterName(playground);
-
-        const renderAsEmitter = isEmitter(technique);
-        const renderAsMaterial = isMat(technique);
-
+        
         return (
             <div>
                 {!list.length &&
@@ -185,7 +249,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                         </Message.Content>
                     </Message>
                 }
-                {technique &&
+                {(technique || 1) &&
                     <div>
                         <List bulleted horizontal>
                             {list.map(fx => (
@@ -225,17 +289,17 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     <Table unstackable basic='very'>
                                         <Table.Body>
                                             <Table.Row>
-                                                <Table.Cell collapsing style={ { width: '100%', textAlign: 'right' } }>
+                                                <Table.Cell collapsing style={{ width: '100%', textAlign: 'right' }}>
                                                     <Popup
-                                                        content={ playground.exportName || '[save file manually for the first time]' }
-                                                        trigger={ 
-                                                            <Checkbox 
-                                                                style={ { marginRight: '-10px' } }
-                                                                label={ `auto` }
-                                                                checked={ playground.autosave } 
-                                                                disabled={ !ipc.isElectron() || !playground.exportName } 
-                                                                onClick={ this.handleAutosaveClick } 
-                                                            /> 
+                                                        content={playground.exportName || '[save file manually for the first time]'}
+                                                        trigger={
+                                                            <Checkbox
+                                                                style={{ marginRight: '-10px' }}
+                                                                label={`auto`}
+                                                                checked={playground.autosave}
+                                                                disabled={!ipc.isElectron() || !playground.exportName}
+                                                                onClick={this.handleAutosaveClick}
+                                                            />
                                                         } />
                                                 </Table.Cell>
                                                 <Table.Cell>
@@ -256,22 +320,42 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 </Grid.Column>
                             </Grid>
 
-                            { renderAsEmitter &&                             
+                            {this.ranAsEmitter() &&
                                 <FxScene
                                     style={threeStylesHotfix}
                                     emitter={technique as IEmitter}
                                     timeline={timeline}
                                     controls={controls}
-                                /> 
+                                    canvasRef={(canvas) => this.canvasRef = canvas}
+                                />
                             }
-                            
-                            { renderAsMaterial &&  
-                                <MaterialScene   
+
+                            {this.ranAsMaterial() &&
+                                <MaterialScene
                                     style={threeStylesHotfix}
                                     timeline={timeline}
                                     controls={controls}
                                     material={technique as ITechnique}
+                                    canvasRef={(canvas) => this.canvasRef = canvas}
                                 />
+                            }
+
+                            {/* todo: move snapshot preview to threescene class */}
+                            {!this.ranAsEmitter() && !this.ranAsMaterial() && snapshot &&          
+                                <div style={{
+                                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.63), rgba(0, 0, 0, 0.623)), url(${snapshot.content})`,
+                                    backgroundAttachment: 'fixed',
+                                    backgroundPosition: 'center',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundSize: 'cover',
+                                    filter: 'saturate(0)',
+                                    height: 'calc(100vh - 245px - 1em)',
+                                    position: 'relative',
+                                    left: '0',
+                                    right: '0',
+                                    margin: '1em -20px -20px -20px',
+                                    width: 'calc(100% + 40px)',
+                                }} />
                             }
                         </div>
                     </div>
