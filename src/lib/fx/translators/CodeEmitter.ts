@@ -1,4 +1,4 @@
-import { assert, isNull } from "@lib/common";
+import { assert, isDef, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
 import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
@@ -7,8 +7,8 @@ import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclI
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { IASTDocument, IRange } from "@lib/idl/parser/IParser";
 import { BaseEmitter } from "./BaseEmitter";
+import { isString } from "@lib/util/s3d/type";
 
 export interface IConvolutionPack {
     textDocument?: ITextDocument;
@@ -44,6 +44,9 @@ export interface ICodeEmitterOptions {
     omitInUsage?: boolean;
     // skip complex type parameters of zero size
     omitEmptyParams?: boolean;
+
+    // rename entry point
+    entryName?: string;
 }
 
 
@@ -54,6 +57,7 @@ export class CodeEmitter extends BaseEmitter {
     protected knownUAVs: IUavReflection[] = [];
     protected knownCsShaders: ICSShaderReflection[] = [];
     protected knownCbuffers: string[] = [];
+    protected knownUniforms: string[] = [];
 
     // list of convolute includes
     protected includeDeps: string[] = [];
@@ -85,6 +89,11 @@ export class CodeEmitter extends BaseEmitter {
 
     protected isVertex() {
         return this.mode === 'vertex';
+    }
+
+    
+    protected isRaw() {
+        return this.mode === 'raw';
     }
 
 
@@ -335,7 +344,49 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    emitFunction(fn: IFunctionDeclInstruction) {
+    protected evaluateEntryName(fn: IFunctionDeclInstruction) {
+        const fnName = fn.name;
+        const entryName = this.options.entryName;
+        if (!isString(entryName)) return fnName;
+        if (isDef(fn.scope.functions[entryName]))
+            // todo: emit correct error
+            console.error('entry point already exists'); 
+        return entryName;
+    }
+
+
+    protected emitEntryFunction(fn: IFunctionDeclInstruction) {
+        const { def } = fn;
+        const { typeName } = this.resolveType(def.returnType);
+
+        this.begin();
+        {
+            // in case of hlsl materials it's typical to swap arbitrary name for bundle name
+            // to simplify further compilation
+            let fnName = this.evaluateEntryName(fn);
+            this.emitKeyword(typeName);
+            this.emitKeyword(fnName);
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitParams(def.params);
+            this.emitChar(')');
+
+            // todo: validate complex type sematics
+            // all the output parameters of entry function must have valid semantics
+            if (!def.returnType.isComplex()) {
+                if (this.isPixel()) {
+                    this.emitChar(':');
+                    this.emitKeyword(fn.semantic || 'SV_Target0');
+                }
+            }
+            this.emitNewline();
+            this.emitBlock(fn.impl);
+        }
+        this.end();
+    }
+    
+    
+    protected emitRegularFunction(fn: IFunctionDeclInstruction) {
         if (!fn) {
             return;
         }
@@ -355,6 +406,17 @@ export class CodeEmitter extends BaseEmitter {
             this.emitBlock(fn.impl);
         }
         this.end();
+    }
+
+
+    emitFunction(fn: IFunctionDeclInstruction) {
+        if (!fn) {
+            return;
+        }
+
+        const isEntry = (this.depth() == 0) && !this.isRaw();
+        if (isEntry) this.emitEntryFunction(fn);
+        else this.emitRegularFunction(fn);
     }
 
 
@@ -694,6 +756,9 @@ export class CodeEmitter extends BaseEmitter {
 
         const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
 
+        // if (decl.type.isUniform())
+        // console.log(decl.toCode());
+
         if (decl.isGlobal() || isUniformArg) {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
@@ -960,11 +1025,12 @@ export class CodeEmitter extends BaseEmitter {
 export class CodeConvolutionEmitter extends CodeEmitter {
     // list of convolute includes
     protected includeDeps: string[] = [];
-
+    
     constructor(protected textDocument?: ITextDocument, protected slastDocument?: ISLASTDocument, opts?: ICodeEmitterOptions) {
         super(opts);
     }
 
+    // todo: add caching
     protected convoluteToInclude(decl: IInstruction) {
         if (!decl) {
             return false;
@@ -975,23 +1041,12 @@ export class CodeConvolutionEmitter extends CodeEmitter {
         }
 
         const src = decl.sourceNode.loc;
-
-        const resolveLocation = (src: IRange): IRange => {
-            if (!this.slastDocument) {
-                return null;
-            }
-
-            const includes = this.slastDocument.includes;
-
-            let dst = src;
-            while (dst && String(this.textDocument.uri) !== String(dst.start.file)) {
-                dst = includes.get(String(dst.start.file));
-            }
-
-            return dst;
+        const includes = this.slastDocument.includes;
+        
+        let dst = src;
+        while (dst && String(this.textDocument.uri) !== String(dst.start.file)) {
+            dst = includes.get(String(dst.start.file));
         }
-
-        const dst = resolveLocation(src);
 
         // no includes are found
         if (dst == src) {

@@ -1620,21 +1620,28 @@ flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(flatb
 struct RoutineHLSLSourceBundleT : public flatbuffers::NativeTable {
   typedef RoutineHLSLSourceBundle TableType;
   std::string code{};
+  std::string entryName{};
 };
 
 struct RoutineHLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef RoutineHLSLSourceBundleT NativeTableType;
   typedef RoutineHLSLSourceBundleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_CODE = 4
+    VT_CODE = 4,
+    VT_ENTRYNAME = 6
   };
   const flatbuffers::String *code() const {
     return GetPointer<const flatbuffers::String *>(VT_CODE);
+  }
+  const flatbuffers::String *entryName() const {
+    return GetPointer<const flatbuffers::String *>(VT_ENTRYNAME);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_CODE) &&
            verifier.VerifyString(code()) &&
+           VerifyOffset(verifier, VT_ENTRYNAME) &&
+           verifier.VerifyString(entryName()) &&
            verifier.EndTable();
   }
   RoutineHLSLSourceBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1649,6 +1656,9 @@ struct RoutineHLSLSourceBundleBuilder {
   void add_code(flatbuffers::Offset<flatbuffers::String> code) {
     fbb_.AddOffset(RoutineHLSLSourceBundle::VT_CODE, code);
   }
+  void add_entryName(flatbuffers::Offset<flatbuffers::String> entryName) {
+    fbb_.AddOffset(RoutineHLSLSourceBundle::VT_ENTRYNAME, entryName);
+  }
   explicit RoutineHLSLSourceBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1662,19 +1672,24 @@ struct RoutineHLSLSourceBundleBuilder {
 
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(
     flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> code = 0) {
+    flatbuffers::Offset<flatbuffers::String> code = 0,
+    flatbuffers::Offset<flatbuffers::String> entryName = 0) {
   RoutineHLSLSourceBundleBuilder builder_(_fbb);
+  builder_.add_entryName(entryName);
   builder_.add_code(code);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    const char *code = nullptr) {
+    const char *code = nullptr,
+    const char *entryName = nullptr) {
   auto code__ = code ? _fbb.CreateString(code) : 0;
+  auto entryName__ = entryName ? _fbb.CreateString(entryName) : 0;
   return Fx::CreateRoutineHLSLSourceBundle(
       _fbb,
-      code__);
+      code__,
+      entryName__);
 }
 
 flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3905,6 +3920,7 @@ inline void RoutineHLSLSourceBundle::UnPackTo(RoutineHLSLSourceBundleT *_o, cons
   (void)_o;
   (void)_resolver;
   { auto _e = code(); if (_e) _o->code = _e->str(); }
+  { auto _e = entryName(); if (_e) _o->entryName = _e->str(); }
 }
 
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> RoutineHLSLSourceBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -3916,9 +3932,11 @@ inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundl
   (void)_o;
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineHLSLSourceBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
+  auto _entryName = _o->entryName.empty() ? 0 : _fbb.CreateString(_o->entryName);
   return Fx::CreateRoutineHLSLSourceBundle(
       _fbb,
-      _code);
+      _code,
+      _entryName);
 }
 
 inline RoutineShaderBundleT *RoutineShaderBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {

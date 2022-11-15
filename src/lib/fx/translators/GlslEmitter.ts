@@ -264,7 +264,7 @@ export class GlslEmitter extends CodeEmitter {
 
 
     attr(decl: IVariableDeclInstruction) {
-        return this.mode === 'vertex' ? sname.attr(decl) : sname.varying(decl);
+        return this.isVertex() ? sname.attr(decl) : sname.varying(decl);
     }
 
 
@@ -341,15 +341,16 @@ export class GlslEmitter extends CodeEmitter {
     }
 
 
+    // todo: use emitEntryFunction instead
     emitFunction(fn: IFunctionDeclInstruction) {
         const def = fn.def;
         const retType = def.returnType;
 
-        if (this.depth() === 0 && this.mode !== 'raw') {
+        if (this.depth() === 0 && !this.isRaw()) {
             this.emitPrologue(fn.def);
             const { typeName } = this.resolveType(def.returnType);
 
-            super.emitFunction(fn);
+            super.emitRegularFunction(fn);
 
             // emit main()
             this.begin();
@@ -407,7 +408,7 @@ export class GlslEmitter extends CodeEmitter {
                     this.emitChar(';');
                     this.emitNewline();
 
-                    if (this.mode === 'vertex') {
+                    if (this.isVertex()) {
 
                         // emit prologue like:
                         // v_name = temp.name;

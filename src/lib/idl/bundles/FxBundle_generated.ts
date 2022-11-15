@@ -1187,12 +1187,23 @@ code(optionalEncoding?:any):string|Uint8Array|null {
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
+entryName():string|null
+entryName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+entryName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
 static startRoutineHLSLSourceBundle(builder:flatbuffers.Builder) {
-  builder.startObject(1);
+  builder.startObject(2);
 }
 
 static addCode(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset) {
   builder.addFieldOffset(0, codeOffset, 0);
+}
+
+static addEntryName(builder:flatbuffers.Builder, entryNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, entryNameOffset, 0);
 }
 
 static endRoutineHLSLSourceBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -1200,35 +1211,41 @@ static endRoutineHLSLSourceBundle(builder:flatbuffers.Builder):flatbuffers.Offse
   return offset;
 }
 
-static createRoutineHLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createRoutineHLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, entryNameOffset:flatbuffers.Offset):flatbuffers.Offset {
   RoutineHLSLSourceBundle.startRoutineHLSLSourceBundle(builder);
   RoutineHLSLSourceBundle.addCode(builder, codeOffset);
+  RoutineHLSLSourceBundle.addEntryName(builder, entryNameOffset);
   return RoutineHLSLSourceBundle.endRoutineHLSLSourceBundle(builder);
 }
 
 unpack(): RoutineHLSLSourceBundleT {
   return new RoutineHLSLSourceBundleT(
-    this.code()
+    this.code(),
+    this.entryName()
   );
 }
 
 
 unpackTo(_o: RoutineHLSLSourceBundleT): void {
   _o.code = this.code();
+  _o.entryName = this.entryName();
 }
 }
 
 export class RoutineHLSLSourceBundleT {
 constructor(
-  public code: string|Uint8Array|null = null
+  public code: string|Uint8Array|null = null,
+  public entryName: string|Uint8Array|null = null
 ){}
 
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const code = (this.code !== null ? builder.createString(this.code!) : 0);
+  const entryName = (this.entryName !== null ? builder.createString(this.entryName!) : 0);
 
   return FxRoutineHLSLSourceBundle.createRoutineHLSLSourceBundle(builder,
-    code
+    code,
+    entryName
   );
 }
 }

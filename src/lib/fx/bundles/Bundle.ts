@@ -35,20 +35,19 @@ function createFxBundle(name: string, type: BundleContent, data: PartBundleT | M
 }
 
 
-
-function createPartFxRenderPass(document: ISLDocument, reflection: IPartFxPassReflection, options: BundleOptions = {}): PartRenderPassT {
-    const scope = document.root.scope;
+function createPartFxRenderPass(slDocument: ISLDocument, reflection: IPartFxPassReflection, opts: BundleOptions = {}): PartRenderPassT {
+    const scope = slDocument.root.scope;
     const { geometry, sorting, instanceCount, CSParticlesPrerenderRoutine, drawMode } = reflection;
     const prerender = drawMode == EPassDrawMode.k_Auto
-        ? createFxRoutineBytecodeBundle(document, CSParticlesPrerenderRoutine)
+        ? createFxRoutineBytecodeBundle(slDocument, CSParticlesPrerenderRoutine)
         : createFxRoutineNoBytecodeBundle(); // fill dummy routine for backward compartibility
     // create GLSL attribute based instance layout
     const partType = scope.findType(reflection.instance);
     const instance = createFxTypeLayout(partType);
-    const vertex = createFxRoutineShaderBundle(document, reflection.instance, reflection.VSParticleShader, 'vertex', options);
-    const pixel = createFxRoutineShaderBundle(document, null, reflection.PSParticleShader, 'pixel', options);
+    const vertex = createFxRoutineVsShaderBundle(slDocument, reflection.instance, reflection.VSParticleShader, opts);
+    const pixel = createFxRoutinePsShaderBundle(slDocument, reflection.PSParticleShader, opts);
     const routineTypes = [RoutineBundle.RoutineBytecodeBundle, RoutineBundle.RoutineShaderBundle, RoutineBundle.RoutineShaderBundle];
-    const routines = [prerender, vertex, pixel]; // must be aligned with EPartFxRenderRoutines
+    const routines = [prerender, vertex, pixel]; // must be aligned with EPartRenderRoutines
     const instanceType = scope.findType(reflection.instance);
     const stride = instanceType.size >> 2;
 
@@ -57,26 +56,24 @@ function createPartFxRenderPass(document: ISLDocument, reflection: IPartFxPassRe
 
 
 export class ConvolutionPackEx implements IConvolutionPack {
-    textDocument?: ITextDocument;
-    slastDocument?: ISLASTDocument;
-    includeResolver?: IncludeResolver;
     defines?: IKnownDefine[];
 
-    constructor(textDocument, slasDocument, includeResolver, defines: (string | IKnownDefine)[]) {
-        this.textDocument = textDocument;
-        this.slastDocument = slasDocument;
-        this.includeResolver = includeResolver;
+    constructor(
+        public textDocument?: ITextDocument,
+        public slastDocument?: ISLASTDocument,
+        public includeResolver?: IncludeResolver,
+        defines?: (string | IKnownDefine)[]) {
         this.defines = defines?.map((name): IKnownDefine => isString(name) ? ({ name }) as IKnownDefine : name as IKnownDefine);
     }
 }
 
 
-function createMatFxRenderPass(document: ISLDocument, reflection: IPassReflection, options: BundleOptions = {}, convPack: ConvolutionPackEx = {}): MatRenderPassT {
-    const scope = document.root.scope;
-    const vertex = createFxRoutineShaderBundle(document, reflection.instance, reflection.VSParticleShader, 'vertex', options, convPack);
-    const pixel = createFxRoutineShaderBundle(document, null, reflection.PSParticleShader, 'pixel', options, convPack);
+function createMatFxRenderPass(slDocument: ISLDocument, reflection: IPassReflection, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): MatRenderPassT {
+    const scope = slDocument.root.scope;
+    const vs = createFxRoutineVsShaderBundle(slDocument, reflection.instance, reflection.VSParticleShader, opts, convPack);
+    const ps = createFxRoutinePsShaderBundle(slDocument, reflection.PSParticleShader, opts, convPack);
     const routineTypes = [RoutineBundle.RoutineShaderBundle, RoutineBundle.RoutineShaderBundle];
-    const routines = [vertex, pixel]; // must be aligned with EPartFxRenderRoutines
+    const routines = [vs, ps]; // must be aligned with EMatRenderRoutines
     const vertexType = scope.findType(reflection.instance);
     const instance = createFxTypeLayout(vertexType);
     const instanceType = scope.findType(reflection.instance);
@@ -90,20 +87,21 @@ function createFxTypeLayout(type: ITypeInstruction): TypeLayoutT {
     return typeAstToTypeLayout(type);
 }
 
+
 function createFxRoutineNoBytecodeBundle(): RoutineBytecodeBundleT {
     return new RoutineBytecodeBundleT([], new RoutineBytecodeBundleResourcesT([]), []);
 }
 
-function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSShaderReflection): RoutineBytecodeBundleT {
 
+function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSShaderReflection): RoutineBytecodeBundleT {
     const entry = reflection.name;
-    const shader = document.root.scope.findFunction(entry, null);
+    const shader = slDocument.root.scope.findFunction(entry, null);
     assert(shader);
     const numthreads = [...reflection.numthreads];
     const program = Bytecode.translate(shader);
     const code = program.code;
     const uavs = reflection.uavs.map(({ name, register: slot, elementType }) => {
-        const typeInstr = document.root.scope.findType(elementType);
+        const typeInstr = slDocument.root.scope.findType(elementType);
         const stride = typeInstr.size; // in bytes
         const type = createFxTypeLayout(typeInstr);
         return new UAVBundleT(name, slot, stride, type);
@@ -113,42 +111,82 @@ function createFxRoutineBytecodeBundle(document: ISLDocument, reflection: ICSSha
 }
 
 
+function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType: string, entryName: string, opts: BundleOptions = {}): RoutineGLSLSourceBundleT {
+    const scope = slDocument.root.scope;
 
-function createFxRoutineShaderBundle(document: ISLDocument, interpolatorsType: string, routine: string, mode: 'vertex' | 'pixel', options: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineShaderBundleT {
-    const scope = document.root.scope;
+    const partType = scope.findType(interpolatorsType);
+    const instance = createFxTypeLayout(partType);
 
-    
-    let attributesGLSL;
+    const attributesGLSL = instance.fields.map(field => {
+        let size = field.size >> 2;
+        let offset = field.padding >> 2;
+        let attrName = Glsl.GlslEmitter.$declToAttributeName(partType.getField(<string>field.name));
+        return new GLSLAttributeT(size, offset, attrName);
+    });
 
-    if (mode == 'vertex') {
-        let partType = scope.findType(interpolatorsType);
-        let instance = createFxTypeLayout(partType);
+    const codeGLSL = Glsl.translate(scope.findFunction(entryName, null), { mode: 'vertex' });
+    return new RoutineGLSLSourceBundleT(codeGLSL, attributesGLSL);
+}
 
-        attributesGLSL = instance.fields.map(field => {
-            let size = field.size >> 2;
-            let offset = field.padding >> 2;
-            let attrName = Glsl.GlslEmitter.$declToAttributeName(partType.getField(<string>field.name));
-            return new GLSLAttributeT(size, offset, attrName);
-        });
-    }
 
-    const shaderType = [];//[RoutineSourceBundle.RoutineGLSLSourceBundle, RoutineSourceBundle.RoutineHLSLSourceBundle];
-    const shaderBundles = [];//[bundleGLSL, bundleHLSL];
+function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
+    const scope = slDocument.root.scope;
+    // set entry point name according with bundle name
+    const codeHLSL = Hlsl.translateConvolute(scope.findFunction(entryName, null), convPack, { mode: 'vertex', entryName: name, omitEmptyParams: true });
+    return new RoutineHLSLSourceBundleT(codeHLSL, name);
+}
 
-    if (!options.omitGLSL) {
-        let codeGLSL = Glsl.translate(scope.findFunction(routine, null), { mode });
+
+function createFxRoutineVsShaderBundle(slDocument: ISLDocument, interpolatorsType: string, entryName: string, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineShaderBundleT {
+    const shaderType = [];
+    const shaderBundles = [];
+
+    if (!opts.omitGLSL) {
         shaderType.push(RoutineSourceBundle.RoutineGLSLSourceBundle);
-        shaderBundles.push(new RoutineGLSLSourceBundleT(codeGLSL, attributesGLSL));
+        shaderBundles.push(createFxRoutineVsGLSLBundle(slDocument, interpolatorsType, entryName, opts));
     }
 
-    if (!options.omitHLSL) {
-        let codeHLSL = Hlsl.translateConvolute(scope.findFunction(routine, null), convPack, { mode });
+    if (!opts.omitHLSL) {
         shaderType.push(RoutineSourceBundle.RoutineHLSLSourceBundle);
-        shaderBundles.push(new RoutineHLSLSourceBundleT(codeHLSL));
+        shaderBundles.push(createFxRoutineVsHLSLBundle(slDocument, entryName, opts, convPack));
     }
 
     return new RoutineShaderBundleT(shaderType, shaderBundles);
 }
+
+
+function createFxRoutinePsGLSLBundle(slDocument: ISLDocument, entryName: string, opts: BundleOptions = {}): RoutineGLSLSourceBundleT {
+    const scope = slDocument.root.scope;
+    const codeGLSL = Glsl.translate(scope.findFunction(entryName, null), { mode: 'pixel' });
+    return new RoutineGLSLSourceBundleT(codeGLSL, []);
+}
+
+
+function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
+    const scope = slDocument.root.scope;
+    // set entry point name according with bundle name
+    const codeHLSL = Hlsl.translateConvolute(scope.findFunction(entryName, null), convPack, { mode: 'pixel', entryName: name, omitEmptyParams: true });
+    return new RoutineHLSLSourceBundleT(codeHLSL, name);
+}
+
+
+function createFxRoutinePsShaderBundle(slDocument: ISLDocument, entryName: string, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineShaderBundleT {
+    const shaderType = [];
+    const shaderBundles = [];
+
+    if (!opts.omitGLSL) {
+        shaderType.push(RoutineSourceBundle.RoutineGLSLSourceBundle);
+        shaderBundles.push(createFxRoutinePsGLSLBundle(slDocument, entryName, opts));
+    }
+
+    if (!opts.omitHLSL) {
+        shaderType.push(RoutineSourceBundle.RoutineHLSLSourceBundle);
+        shaderBundles.push(createFxRoutinePsHLSLBundle(slDocument, entryName, opts, convPack));
+    }
+
+    return new RoutineShaderBundleT(shaderType, shaderBundles);
+}
+
 
 
 function createFxControls(controls: IUIControl[]): UIControlT[] {
@@ -213,14 +251,15 @@ export interface BundleOptions {
     };
     omitHLSL?: boolean;
     omitGLSL?: boolean;
+    name?: string;
 }
 
 
-function finalizeBundle(bundle: BundleT, options: BundleOptions = {}): Uint8Array | BundleT {
+function finalizeBundle(bundle: BundleT, opts: BundleOptions = {}): Uint8Array | BundleT {
     // get unpacked version
     // --------------------------------
 
-    let { packed = PACKED } = options;
+    let { packed = PACKED } = opts;
 
     if (!packed)
         return bundle;
@@ -236,10 +275,12 @@ function finalizeBundle(bundle: BundleT, options: BundleOptions = {}): Uint8Arra
 }
 
 
-async function createPartFxBundle(fx: IPartFxInstruction, options: BundleOptions = {}): Promise<Uint8Array | BundleT> {
+async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = {}): Promise<Uint8Array | BundleT> {
     const emitter = new FxTranslator();
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
+
+    opts.name ||= name;
 
     const textDocument = await createTextDocument('://raw', emitter.toString());
     const slDocument = await createSLDocument(textDocument);
@@ -267,25 +308,27 @@ async function createPartFxBundle(fx: IPartFxInstruction, options: BundleOptions
     routineTypes[EPartSimRoutines.k_Update] = RoutineBundle.RoutineBytecodeBundle;
     routines[EPartSimRoutines.k_Update] = createFxRoutineBytecodeBundle(slDocument, reflection.CSParticlesUpdateRoutine);
 
-    const passes = reflection.passes.map(pass => createPartFxRenderPass(slDocument, pass));
+    const passes = reflection.passes.map(pass => createPartFxRenderPass(slDocument, pass, opts));
     const part = new PartBundleT(capacity, routineTypes, routines, passes, particle);
 
     const controls = createFxControls(reflection.controls);
     const presets = createFxPresets(reflection.presets);
 
-    const { meta } = options;
-    const bundle = createFxBundle(name, BundleContent.PartBundle, part, new BundleMetaT(meta?.author, meta?.source), controls, presets);
+    const { meta } = opts;
+    const bundle = createFxBundle(opts.name, BundleContent.PartBundle, part, new BundleMetaT(meta?.author, meta?.source), controls, presets);
 
-    return finalizeBundle(bundle, options);
+    return finalizeBundle(bundle, opts);
 }
 
 
-async function createMatFxBundle(tech: ITechniqueInstruction, options: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
+async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
     const { textDocument, slastDocument, includeResolver, defines } = convPack;
 
     const emitter = new FxTranslator(textDocument, slastDocument);
     const reflection = emitter.emitTechniqueDecl(tech);
     const { name } = reflection;
+
+    opts.name ||= name;
 
     const textDocument3 = await createTextDocument('file://foo.bar///mat.fx', emitter.toString());
     const slastDocument3 = await createSLASTDocument(textDocument3, { includeResolver, defines });
@@ -296,16 +339,16 @@ async function createMatFxBundle(tech: ITechniqueInstruction, options: BundleOpt
         return null;
     }
 
-    const passes = reflection.passes.map(pass => createMatFxRenderPass(slDocument, pass, options, new ConvolutionPackEx(textDocument3, slastDocument3, includeResolver, defines)));
+    const passes = reflection.passes.map(pass => createMatFxRenderPass(slDocument, pass, opts, new ConvolutionPackEx(textDocument3, slastDocument3, includeResolver, defines)));
     const mat = new MatBundleT(passes);
 
     const controls = createFxControls(reflection.controls);
     const presets = createFxPresets(reflection.presets);
 
-    const { meta } = options;
-    const bundle = createFxBundle(name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source), controls, presets);
+    const { meta } = opts;
+    const bundle = createFxBundle(opts.name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source), controls, presets);
 
-    return finalizeBundle(bundle, options);
+    return finalizeBundle(bundle, opts);
 }
 
 
