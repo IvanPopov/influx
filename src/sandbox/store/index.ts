@@ -11,6 +11,7 @@ import s3dLogic from '@sandbox/logic/s3d';
 import depot from '@sandbox/reducers/depot';
 import nodes from '@sandbox/reducers/nodes';
 import parserParams from '@sandbox/reducers/parserParams';
+import translatorParams from '@sandbox/reducers/translatorParams';
 import playground from '@sandbox/reducers/playground';
 import router from '@sandbox/reducers/router';
 import s3d from '@sandbox/reducers/s3d';
@@ -24,6 +25,7 @@ import { createLogicMiddleware } from 'redux-logic';
 const reducer = combineReducers<IStoreState>({ 
     sourceFile, 
     parserParams, 
+    translatorParams,
     router, 
     playground, 
     nodes, 

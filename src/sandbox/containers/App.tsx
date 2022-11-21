@@ -821,8 +821,18 @@ class App extends React.Component<IAppProps> {
                 pane: (
                     <Route path={ `/${PLAYGROUND_VIEW}` } key="route-analysis-result">
                         <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
-                            <Dropdown item icon={<Icon className={ 'gear' as UnknownIcon } />} simple>
+                            <Dropdown item icon={<Icon className={ 'gear' as UnknownIcon } />} >
                                 <Dropdown.Menu>
+                                    <Dropdown.Item>
+                                        <Dropdown text='Options'>
+                                            <Dropdown.Menu>
+                                                {/* todo: add support of options (!) */}
+                                                <Dropdown.Item><Checkbox label="convolute" checked={ true } /></Dropdown.Item>
+                                                <Dropdown.Item><Checkbox label="gather ui" checked={ true } /></Dropdown.Item>
+                                            </Dropdown.Menu>
+                                        </Dropdown>
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
                                     {
                                         this.buildShaderMenu().map(item => (
                                             <Dropdown.Item
@@ -832,6 +842,7 @@ class App extends React.Component<IAppProps> {
                                             </Dropdown.Item>
                                         ))
                                     }
+                                    
                                 </Dropdown.Menu>
                             </Dropdown>
                             <Menu.Menu position='right'>

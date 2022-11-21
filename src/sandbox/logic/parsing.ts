@@ -21,6 +21,7 @@ import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { createLogic } from 'redux-logic';
 import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from './common';
 import * as Depot from '@sandbox/reducers/depot';
+import { Diagnostics } from '@lib/util/Diagnostics';
 
 // IP: proposal for future switching to async parsing
 
@@ -133,6 +134,11 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
             size: 'tiny',
             time: 2000
         });
+    }
+
+    // todo: highlight warning (!)
+    if (slDocument.diagnosticReport.warnings > 0) {
+        // console.warn(Diagnostics.stringify(slDocument.diagnosticReport));
     }
 
     // if (!diag.errors)

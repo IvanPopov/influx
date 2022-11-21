@@ -9,6 +9,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { BaseEmitter } from "./BaseEmitter";
 import { isString } from "@lib/util/s3d/type";
+import { UAV0_REGISTER } from "../bytecode/Bytecode";
 
 export interface IConvolutionPack {
     textDocument?: ITextDocument;
@@ -21,12 +22,19 @@ interface ITypeInfo {
     usage?: string;
 }
 
+export enum EUsages {
+    k_Vertex = 0x01,
+    k_Pixel = 0x02,
+    k_Compute = 0x04
+};
+
 export interface IUavReflection {
     register: number;
     name: string;
-    type: string;
-    uavType: string;
-    elementType: string;
+    /** @deprecated */
+    type: string;           // "RWBuffer<float4>", "AppendBuffer<int>" etc. 
+    uavType: string;        // "RWBuffer"
+    elementType: string;    // "float4"
 };
 
 
@@ -37,9 +45,14 @@ export interface ICSShaderReflection {
 }
 
 
+export interface ICbReflection {
+    register: number;
+    name: string;
+    size: number; // byte length
+}
 
 export interface ICodeEmitterOptions {
-    mode: 'vertex' | 'pixel' | 'raw';
+    mode?: 'vertex' | 'pixel' | 'compute' | 'raw' ;
     // do not print 'in' for function parameters even if it is specified
     omitInUsage?: boolean;
     // skip complex type parameters of zero size
@@ -51,22 +64,23 @@ export interface ICodeEmitterOptions {
 
 
 export class CodeEmitter extends BaseEmitter {
-    protected knownGlobals: string[] = [];
-    protected knownTypes: string[] = [];
-    protected knownFunctions: number[] = [];
-    protected knownUAVs: IUavReflection[] = [];
-    protected knownCsShaders: ICSShaderReflection[] = [];
-    protected knownCbuffers: string[] = [];
-    protected knownUniforms: string[] = [];
+    knownGlobals: string[] = [];
+    knownTypes: string[] = [];
+    knownFunctions: number[] = [];
+    knownUAVs: IUavReflection[] = [];
+    knownCsShaders: ICSShaderReflection[] = [];
+    knownCbuffers: ICbReflection[] = [];
+    knownUniforms: string[] = [];
 
     // list of convolute includes
     protected includeDeps: string[] = [];
 
     protected options: ICodeEmitterOptions;
 
-    constructor(options: ICodeEmitterOptions = { mode: 'raw' }) {
+    constructor(options: ICodeEmitterOptions = { }) {
         super();
         this.options = options;
+        this.options.mode ||= 'raw';
     }
 
     protected static asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
@@ -153,18 +167,18 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    protected addFunction(id: number): boolean {
-        if (!this.knownFunctions.includes(id)) {
-            this.knownFunctions.push(id);
+    protected addFunction(fn: IFunctionDeclInstruction): boolean {
+        if (!this.knownFunctions.includes(fn.instructionID)) {
+            this.knownFunctions.push(fn.instructionID);
             return true;
         }
         return false;
     }
 
 
-    protected addCbuffer(name: string): boolean {
-        if (!this.knownCbuffers.includes(name)) {
-            this.knownCbuffers.push(name);
+    protected addCbuffer(cbuf: ICbReflection): boolean {
+        if (!this.knownCbuffers.map(cb => cb.name).includes(cbuf.name)) {
+            this.knownCbuffers.push(cbuf);
             return true;
         }
         return false;
@@ -355,6 +369,7 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    // todo: add compute entry support
     protected emitEntryFunction(fn: IFunctionDeclInstruction) {
         const { def } = fn;
         const { typeName } = this.resolveType(def.returnType);
@@ -763,7 +778,9 @@ export class CodeEmitter extends BaseEmitter {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
                 const cbuf = <ICbufferInstruction>cbufType.parent;
-                if (this.addCbuffer(cbuf.name)) {
+                const { name, type: { size }, register: { index: register } } = cbuf;
+                const refl: ICbReflection = { name, size, register };
+                if (this.addCbuffer(refl)) {
                     this.begin();
                     this.emitCbuffer(cbuf);
                     this.end();
@@ -804,7 +821,7 @@ export class CodeEmitter extends BaseEmitter {
         const { decl, args, callee } = call;
 
         if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
-            if (this.addFunction(decl.instructionID)) {
+            if (this.addFunction(decl)) {
                 this.emitFunction(decl);
             }
         }
@@ -932,7 +949,7 @@ export class CodeEmitter extends BaseEmitter {
     emitPassBody(pass: IPassInstruction) {
         // TODO: replace with emitCompile();
         if (pass.vertexShader) {
-            if (this.addFunction(pass.vertexShader.instructionID)) {
+            if (this.addFunction(pass.vertexShader)) {
                 this.emitFunction(pass.vertexShader);
             }
 
@@ -946,7 +963,7 @@ export class CodeEmitter extends BaseEmitter {
         }
 
         if (pass.pixelShader) {
-            if (this.addFunction(pass.pixelShader.instructionID)) {
+            if (this.addFunction(pass.pixelShader)) {
                 this.emitFunction(pass.pixelShader);
             }
 

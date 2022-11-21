@@ -4,10 +4,10 @@ import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
-import { IConvolutionPack, ICSShaderReflection } from "@lib/fx/translators/CodeEmitter";
-import { FxTranslator, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
+import { CodeConvolutionEmitter, IConvolutionPack, ICSShaderReflection } from "@lib/fx/translators/CodeEmitter";
+import { FxTranslator, IFxTranslatorOptions, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { BundleContent, BundleMetaT, BundleSignatureT, BundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeFieldT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
@@ -129,11 +129,22 @@ function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType:
 }
 
 
-function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
+function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, { textDocument, slastDocument }: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
     const scope = slDocument.root.scope;
+    const fn = scope.findFunction(entryName, null);
     // set entry point name according with bundle name
-    const codeHLSL = Hlsl.translateConvolute(scope.findFunction(entryName, null), convPack, { mode: 'vertex', entryName: name, omitEmptyParams: true });
-    return new RoutineHLSLSourceBundleT(codeHLSL, name);
+    const opts: Hlsl.ICodeEmitterOptions = { mode: 'vertex', entryName: name, omitEmptyParams: true };
+    const emitter = new CodeConvolutionEmitter(textDocument, slastDocument, opts);
+    emitter.emitFunction(fn);
+    // todo: extract reflection
+    const codeHLSL = emitter.toString();
+
+    const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.type.size, f.type.padding));
+        return new CBBundleT(name, register, size, fields);
+    });
+
+    return new RoutineHLSLSourceBundleT(codeHLSL, name, cbuffers);
 }
 
 
@@ -162,11 +173,22 @@ function createFxRoutinePsGLSLBundle(slDocument: ISLDocument, entryName: string,
 }
 
 
-function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, convPack: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
+function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, { textDocument, slastDocument }: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
     const scope = slDocument.root.scope;
+    const fn = scope.findFunction(entryName, null);
     // set entry point name according with bundle name
-    const codeHLSL = Hlsl.translateConvolute(scope.findFunction(entryName, null), convPack, { mode: 'pixel', entryName: name, omitEmptyParams: true });
-    return new RoutineHLSLSourceBundleT(codeHLSL, name);
+    const opts: Hlsl.ICodeEmitterOptions = { mode: 'pixel', entryName: name, omitEmptyParams: true };
+    const emitter = new CodeConvolutionEmitter(textDocument, slastDocument, opts);
+    emitter.emitFunction(fn);
+    // todo: extract reflection
+    const codeHLSL = emitter.toString();
+
+    const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.type.size, f.type.padding));
+        return new CBBundleT(name, register, size, fields);
+    });
+
+    return new RoutineHLSLSourceBundleT(codeHLSL, name, cbuffers);
 }
 
 
@@ -212,6 +234,12 @@ function createFxControls(controls: IUIControl[]): UIControlT[] {
                     const props = new UIFloatT(ctrl.UIName, Array.from(ctrl.value));
                     return new UIControlT(ctrl.name, UIProperties.UIFloat, props);
                 }
+            case 'Float4':
+                {
+                    // const props = new UIFloat4T(ctrl.UIName, Array.from(ctrl.value));
+                    // return new UIControlT(ctrl.name, UIProperties.UIFloat4, props);
+                    return null; // todo
+                }
             case 'Float3':
                 {
                     const props = new UIFloat3T(ctrl.UIName, Array.from(ctrl.value));
@@ -252,6 +280,8 @@ export interface BundleOptions {
     omitHLSL?: boolean;
     omitGLSL?: boolean;
     name?: string;
+
+    translator?: IFxTranslatorOptions;
 }
 
 
@@ -276,7 +306,11 @@ function finalizeBundle(bundle: BundleT, opts: BundleOptions = {}): Uint8Array |
 
 
 async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = {}): Promise<Uint8Array | BundleT> {
-    const emitter = new FxTranslator();
+    // todo: add convolution
+    const tops = { ...opts.translator, uiControlsGatherToDedicatedConstantBuffer: false  };
+    //                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    //                              IP: temp solution until it will not be supported for FxScene and bytecode generator.
+    const emitter = new FxTranslator(null, null, tops);
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;
 
@@ -324,7 +358,7 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
 async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
     const { textDocument, slastDocument, includeResolver, defines } = convPack;
 
-    const emitter = new FxTranslator(textDocument, slastDocument);
+    const emitter = new FxTranslator(textDocument, slastDocument, opts.translator);
     const reflection = emitter.emitTechniqueDecl(tech);
     const { name } = reflection;
 
@@ -344,6 +378,7 @@ async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOption
 
     const controls = createFxControls(reflection.controls);
     const presets = createFxPresets(reflection.presets);
+    console.log(controls);
 
     const { meta } = opts;
     const bundle = createFxBundle(opts.name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source), controls, presets);

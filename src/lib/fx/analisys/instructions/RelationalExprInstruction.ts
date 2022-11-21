@@ -2,6 +2,7 @@ import { ExprInstruction } from "@lib/fx/analisys/instructions/ExprInstruction";
 import { IInstructionSettings } from "@lib/fx/analisys/instructions/Instruction";
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import { EInstructionTypes, IExprInstruction, IRelationalExprInstruction } from "@lib/idl/IInstruction";
+import { assert } from "console";
 
 export type RelationOperator = "==" | "!=" | "<" | ">" | "<=" | ">=";
 
@@ -21,8 +22,12 @@ export class RelationalExprInstruction extends ExprInstruction implements IRelat
     protected _operator: RelationOperator;
 
 
-    constructor({ left, right, operator, ...settings }: IRelationalExprInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_RelationalExpr, type: SystemScope.T_BOOL, ...settings });
+    constructor({ left, right, operator, instrType, ...settings }: IRelationalExprInstructionSettings) {
+        super({ 
+            instrType: EInstructionTypes.k_RelationalExpr, 
+            type: SystemScope[`T_BOOL${left.type.length > 1 ? left.type.length : ''}`], 
+            ...settings 
+        });
         this._leftOperand = left;
         this._rightOperand = right;
         this._operator = operator;

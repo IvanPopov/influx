@@ -4,7 +4,7 @@ import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstru
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
-import { CodeConvolutionEmitter, CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
+import { CodeConvolutionEmitter, CodeEmitter, ICodeEmitterOptions, IConvolutionPack } from "./CodeEmitter";
 
 
 export class FxEmitter extends CodeConvolutionEmitter {
@@ -34,7 +34,7 @@ export class FxEmitter extends CodeConvolutionEmitter {
         const fx = <IPartFxInstruction>this.tech;
         const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
         
-        if (this.addFunction(init.instructionID))
+        if (this.addFunction(init))
             this.emitFunction(init);
 
         this.emitKeyword(`spawn(${stmt.count})`);
@@ -200,6 +200,12 @@ export class FxEmitter extends CodeConvolutionEmitter {
 
 export function translate(instr: IInstruction, opts?: ICodeEmitterOptions): string {
     const emitter = new FxEmitter(null, null, opts);
+    emitter.emit(instr);
+    return emitter.toString();
+}
+
+export function translateConvolute(instr: IInstruction, { textDocument, slastDocument }: IConvolutionPack, opts?: ICodeEmitterOptions): string {
+    const emitter = new FxEmitter(textDocument, slastDocument, opts);
     emitter.emit(instr);
     return emitter.toString();
 }

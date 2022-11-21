@@ -20,6 +20,7 @@ import * as Depot from '@sandbox/reducers/depot';
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
+import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);
@@ -53,10 +54,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
     ],
 
     async process({ getState, action }, dispatch, done) {
-        const file = getFileState(getState());
-        const playground = getPlaygroundState(getState());
+        const state = getState();
+        const file = getFileState(state);
+        const playground = getPlaygroundState(state);
         const timeline = playground.timeline;
-        const depot = Depot.getDepot(getState());
+        const depot = Depot.getDepot(state);
+        const translator = asFxTranslatorOprions(state);
 
         const scope = getScope(file);
         const list = filterTechniques(scope);
@@ -96,7 +99,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 return [ null, null ];
             }
 
-            const bundle = await FxBundle.createBundle(list[i], { omitHLSL: true });
+            const bundle = await FxBundle.createBundle(list[i], { translator, omitHLSL: true });
             const tech = Techniques.create(bundle);
             const controls = decodeBundleControls(bundle);
 
@@ -197,6 +200,7 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
         const playground = getPlaygroundState(state);
         const scope = getScope(file);
         const list = filterTechniques(scope);
+        const translator = asFxTranslatorOprions(state);
 
         const tech = playground.technique;
 
@@ -212,7 +216,8 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
                 author: state.s3d?.p4?.['User name']
             },
             omitGLSL: false,
-            omitHLSL: false
+            omitHLSL: false,
+            translator
         };
         
         const techInstr = list.find((fx => fx.name == tech.getName()));

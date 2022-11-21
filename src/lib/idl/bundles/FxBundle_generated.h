@@ -35,6 +35,10 @@ struct UAVBundle;
 struct UAVBundleBuilder;
 struct UAVBundleT;
 
+struct CBBundle;
+struct CBBundleBuilder;
+struct CBBundleT;
+
 struct GLSLAttribute;
 struct GLSLAttributeBuilder;
 struct GLSLAttributeT;
@@ -1285,6 +1289,114 @@ inline flatbuffers::Offset<UAVBundle> CreateUAVBundleDirect(
 
 flatbuffers::Offset<UAVBundle> CreateUAVBundle(flatbuffers::FlatBufferBuilder &_fbb, const UAVBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct CBBundleT : public flatbuffers::NativeTable {
+  typedef CBBundle TableType;
+  std::string name{};
+  uint32_t slot = 0;
+  uint32_t size = 0;
+  std::vector<std::unique_ptr<Fx::TypeFieldT>> fields{};
+  CBBundleT() = default;
+  CBBundleT(const CBBundleT &o);
+  CBBundleT(CBBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  CBBundleT &operator=(CBBundleT o) FLATBUFFERS_NOEXCEPT;
+};
+
+struct CBBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CBBundleT NativeTableType;
+  typedef CBBundleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_SLOT = 6,
+    VT_SIZE = 8,
+    VT_FIELDS = 10
+  };
+  const flatbuffers::String *name() const {
+    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  uint32_t slot() const {
+    return GetField<uint32_t>(VT_SLOT, 0);
+  }
+  uint32_t size() const {
+    return GetField<uint32_t>(VT_SIZE, 0);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::TypeField>> *fields() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::TypeField>> *>(VT_FIELDS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<uint32_t>(verifier, VT_SLOT, 4) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
+           VerifyOffset(verifier, VT_FIELDS) &&
+           verifier.VerifyVector(fields()) &&
+           verifier.VerifyVectorOfTables(fields()) &&
+           verifier.EndTable();
+  }
+  CBBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(CBBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<CBBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const CBBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct CBBundleBuilder {
+  typedef CBBundle Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
+    fbb_.AddOffset(CBBundle::VT_NAME, name);
+  }
+  void add_slot(uint32_t slot) {
+    fbb_.AddElement<uint32_t>(CBBundle::VT_SLOT, slot, 0);
+  }
+  void add_size(uint32_t size) {
+    fbb_.AddElement<uint32_t>(CBBundle::VT_SIZE, size, 0);
+  }
+  void add_fields(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::TypeField>>> fields) {
+    fbb_.AddOffset(CBBundle::VT_FIELDS, fields);
+  }
+  explicit CBBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<CBBundle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<CBBundle>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<CBBundle> CreateCBBundle(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    uint32_t slot = 0,
+    uint32_t size = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::TypeField>>> fields = 0) {
+  CBBundleBuilder builder_(_fbb);
+  builder_.add_fields(fields);
+  builder_.add_size(size);
+  builder_.add_slot(slot);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<CBBundle> CreateCBBundleDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    uint32_t slot = 0,
+    uint32_t size = 0,
+    const std::vector<flatbuffers::Offset<Fx::TypeField>> *fields = nullptr) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto fields__ = fields ? _fbb.CreateVector<flatbuffers::Offset<Fx::TypeField>>(*fields) : 0;
+  return Fx::CreateCBBundle(
+      _fbb,
+      name__,
+      slot,
+      size,
+      fields__);
+}
+
+flatbuffers::Offset<CBBundle> CreateCBBundle(flatbuffers::FlatBufferBuilder &_fbb, const CBBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct GLSLAttributeT : public flatbuffers::NativeTable {
   typedef GLSLAttribute TableType;
   uint32_t size = 0;
@@ -1621,6 +1733,11 @@ struct RoutineHLSLSourceBundleT : public flatbuffers::NativeTable {
   typedef RoutineHLSLSourceBundle TableType;
   std::string code{};
   std::string entryName{};
+  std::vector<std::unique_ptr<Fx::CBBundleT>> cbuffers{};
+  RoutineHLSLSourceBundleT() = default;
+  RoutineHLSLSourceBundleT(const RoutineHLSLSourceBundleT &o);
+  RoutineHLSLSourceBundleT(RoutineHLSLSourceBundleT&&) FLATBUFFERS_NOEXCEPT = default;
+  RoutineHLSLSourceBundleT &operator=(RoutineHLSLSourceBundleT o) FLATBUFFERS_NOEXCEPT;
 };
 
 struct RoutineHLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1628,7 +1745,8 @@ struct RoutineHLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
   typedef RoutineHLSLSourceBundleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CODE = 4,
-    VT_ENTRYNAME = 6
+    VT_ENTRYNAME = 6,
+    VT_CBUFFERS = 8
   };
   const flatbuffers::String *code() const {
     return GetPointer<const flatbuffers::String *>(VT_CODE);
@@ -1636,12 +1754,18 @@ struct RoutineHLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
   const flatbuffers::String *entryName() const {
     return GetPointer<const flatbuffers::String *>(VT_ENTRYNAME);
   }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>> *cbuffers() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>> *>(VT_CBUFFERS);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_CODE) &&
            verifier.VerifyString(code()) &&
            VerifyOffset(verifier, VT_ENTRYNAME) &&
            verifier.VerifyString(entryName()) &&
+           VerifyOffset(verifier, VT_CBUFFERS) &&
+           verifier.VerifyVector(cbuffers()) &&
+           verifier.VerifyVectorOfTables(cbuffers()) &&
            verifier.EndTable();
   }
   RoutineHLSLSourceBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1659,6 +1783,9 @@ struct RoutineHLSLSourceBundleBuilder {
   void add_entryName(flatbuffers::Offset<flatbuffers::String> entryName) {
     fbb_.AddOffset(RoutineHLSLSourceBundle::VT_ENTRYNAME, entryName);
   }
+  void add_cbuffers(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>>> cbuffers) {
+    fbb_.AddOffset(RoutineHLSLSourceBundle::VT_CBUFFERS, cbuffers);
+  }
   explicit RoutineHLSLSourceBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1673,8 +1800,10 @@ struct RoutineHLSLSourceBundleBuilder {
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> code = 0,
-    flatbuffers::Offset<flatbuffers::String> entryName = 0) {
+    flatbuffers::Offset<flatbuffers::String> entryName = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>>> cbuffers = 0) {
   RoutineHLSLSourceBundleBuilder builder_(_fbb);
+  builder_.add_cbuffers(cbuffers);
   builder_.add_entryName(entryName);
   builder_.add_code(code);
   return builder_.Finish();
@@ -1683,13 +1812,16 @@ inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundl
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *code = nullptr,
-    const char *entryName = nullptr) {
+    const char *entryName = nullptr,
+    const std::vector<flatbuffers::Offset<Fx::CBBundle>> *cbuffers = nullptr) {
   auto code__ = code ? _fbb.CreateString(code) : 0;
   auto entryName__ = entryName ? _fbb.CreateString(entryName) : 0;
+  auto cbuffers__ = cbuffers ? _fbb.CreateVector<flatbuffers::Offset<Fx::CBBundle>>(*cbuffers) : 0;
   return Fx::CreateRoutineHLSLSourceBundle(
       _fbb,
       code__,
-      entryName__);
+      entryName__,
+      cbuffers__);
 }
 
 flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3756,6 +3888,57 @@ inline flatbuffers::Offset<UAVBundle> CreateUAVBundle(flatbuffers::FlatBufferBui
       _type);
 }
 
+inline CBBundleT::CBBundleT(const CBBundleT &o)
+      : name(o.name),
+        slot(o.slot),
+        size(o.size) {
+  fields.reserve(o.fields.size());
+  for (const auto &fields_ : o.fields) { fields.emplace_back((fields_) ? new Fx::TypeFieldT(*fields_) : nullptr); }
+}
+
+inline CBBundleT &CBBundleT::operator=(CBBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(slot, o.slot);
+  std::swap(size, o.size);
+  std::swap(fields, o.fields);
+  return *this;
+}
+
+inline CBBundleT *CBBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<CBBundleT>(new CBBundleT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void CBBundle::UnPackTo(CBBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = slot(); _o->slot = _e; }
+  { auto _e = size(); _o->size = _e; }
+  { auto _e = fields(); if (_e) { _o->fields.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->fields[_i]) { _e->Get(_i)->UnPackTo(_o->fields[_i].get(), _resolver); } else { _o->fields[_i] = std::unique_ptr<Fx::TypeFieldT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
+}
+
+inline flatbuffers::Offset<CBBundle> CBBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const CBBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateCBBundle(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<CBBundle> CreateCBBundle(flatbuffers::FlatBufferBuilder &_fbb, const CBBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const CBBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _slot = _o->slot;
+  auto _size = _o->size;
+  auto _fields = _o->fields.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::TypeField>> (_o->fields.size(), [](size_t i, _VectorArgs *__va) { return CreateTypeField(*__va->__fbb, __va->__o->fields[i].get(), __va->__rehasher); }, &_va ) : 0;
+  return Fx::CreateCBBundle(
+      _fbb,
+      _name,
+      _slot,
+      _size,
+      _fields);
+}
+
 inline GLSLAttributeT *GLSLAttribute::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<GLSLAttributeT>(new GLSLAttributeT());
   UnPackTo(_o.get(), _resolver);
@@ -3910,6 +4093,20 @@ inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundl
       _attributes);
 }
 
+inline RoutineHLSLSourceBundleT::RoutineHLSLSourceBundleT(const RoutineHLSLSourceBundleT &o)
+      : code(o.code),
+        entryName(o.entryName) {
+  cbuffers.reserve(o.cbuffers.size());
+  for (const auto &cbuffers_ : o.cbuffers) { cbuffers.emplace_back((cbuffers_) ? new Fx::CBBundleT(*cbuffers_) : nullptr); }
+}
+
+inline RoutineHLSLSourceBundleT &RoutineHLSLSourceBundleT::operator=(RoutineHLSLSourceBundleT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(code, o.code);
+  std::swap(entryName, o.entryName);
+  std::swap(cbuffers, o.cbuffers);
+  return *this;
+}
+
 inline RoutineHLSLSourceBundleT *RoutineHLSLSourceBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
   auto _o = std::unique_ptr<RoutineHLSLSourceBundleT>(new RoutineHLSLSourceBundleT());
   UnPackTo(_o.get(), _resolver);
@@ -3921,6 +4118,7 @@ inline void RoutineHLSLSourceBundle::UnPackTo(RoutineHLSLSourceBundleT *_o, cons
   (void)_resolver;
   { auto _e = code(); if (_e) _o->code = _e->str(); }
   { auto _e = entryName(); if (_e) _o->entryName = _e->str(); }
+  { auto _e = cbuffers(); if (_e) { _o->cbuffers.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->cbuffers[_i]) { _e->Get(_i)->UnPackTo(_o->cbuffers[_i].get(), _resolver); } else { _o->cbuffers[_i] = std::unique_ptr<Fx::CBBundleT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<RoutineHLSLSourceBundle> RoutineHLSLSourceBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineHLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -3933,10 +4131,12 @@ inline flatbuffers::Offset<RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundl
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineHLSLSourceBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
   auto _entryName = _o->entryName.empty() ? 0 : _fbb.CreateString(_o->entryName);
+  auto _cbuffers = _o->cbuffers.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::CBBundle>> (_o->cbuffers.size(), [](size_t i, _VectorArgs *__va) { return CreateCBBundle(*__va->__fbb, __va->__o->cbuffers[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateRoutineHLSLSourceBundle(
       _fbb,
       _code,
-      _entryName);
+      _entryName,
+      _cbuffers);
 }
 
 inline RoutineShaderBundleT *RoutineShaderBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {

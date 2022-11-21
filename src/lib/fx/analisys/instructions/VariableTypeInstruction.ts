@@ -172,7 +172,8 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             }
             return size * length;
         }
-        return type.alignSize(this.subType.size, this.aligment);
+        // return type.alignSize(this.subType.size, this.aligment);
+        return this.subType.size;
     }
 
 

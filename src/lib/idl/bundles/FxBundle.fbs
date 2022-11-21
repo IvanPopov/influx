@@ -31,12 +31,21 @@ table TypeLayout
     size: uint;                 // byte length
 }
 
+
 table UAVBundle 
 {
     name: string;
     slot: uint;
     stride: uint;
     type: TypeLayout;
+}
+
+table CBBundle
+{
+    name: string;
+    slot: uint;
+    size: uint;
+    fields: [ TypeField ];
 }
 
 union RoutineBundle { RoutineBytecodeBundle, RoutineShaderBundle }
@@ -67,10 +76,17 @@ table RoutineGLSLSourceBundle
     attributes: [ GLSLAttribute ];
 }
 
+
+
 table RoutineHLSLSourceBundle 
 {
     code: string;
     entryName: string;
+
+    // this is not complete reflection, 
+    // only cbuffers direcly used by user (!)
+    // resources from includes will not be presented here
+    cbuffers: [ CBBundle ];
 }
 
 union RoutineSourceBundle { RoutineGLSLSourceBundle, RoutineHLSLSourceBundle }

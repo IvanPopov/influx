@@ -10,7 +10,7 @@ import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { toast } from 'react-semantic-toasts';
-import { Checkbox, Input, List, Popup } from 'semantic-ui-react';
+import { Button, Checkbox, Input, List, Popup } from 'semantic-ui-react';
 
 const styles = {
     checkboxTiny: {
@@ -72,6 +72,29 @@ class PPView extends React.Component<IPPViewProps, {}> {
         this.rootRef = React.createRef();
     }
 
+
+    autosetDefines() {
+        const { content } = this.props.sourceFile;
+        const kw = `// defines:`;
+        
+        const start = content.indexOf(kw);
+        if (start == -1) return;
+
+        let pos = start + kw.length;
+        let defs = [];
+        let def = '';
+        while(true) {
+            let c = content[pos++];
+            if (c == ' ') continue;
+            if (c == ',') { defs.push(def); def = ''; continue };
+            if (c == '\n' || c == '\r' || !c) { defs.push(def); break };
+            def += c;
+        }
+        
+        defs.forEach(name => name && this.props.actions.setDefine(name));
+    }
+
+
     render(): JSX.Element {
         const slastDocument = this.props.sourceFile.slastDocument;
 
@@ -102,6 +125,7 @@ class PPView extends React.Component<IPPViewProps, {}> {
                 />
                 &nbsp;
                 <Checkbox label='Customs' onClick={  (e, { checked }) => this.setState({ custom: checked}) } /> &nbsp;&nbsp;
+                <Button basic onClick={  () => this.autosetDefines() } >scan</Button> &nbsp;&nbsp;
                 <List style={style} selection size='small' className='astlist' >
                     <List.Item key={`pp-include-list`} className='astnode'
                         onClick={this.handleIncludesClick}

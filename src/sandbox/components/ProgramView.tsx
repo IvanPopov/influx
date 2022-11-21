@@ -7,7 +7,7 @@
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, type } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
@@ -319,6 +319,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ComplexExpr(instr);
             case EInstructionTypes.k_FunctionCallExpr:
                 return this.FunctionCall(instr);
+            case EInstructionTypes.k_RelationalExpr:
+                return this.Relational(instr);
             default:
                 return this.NotImplemented(instr);
         }
@@ -670,6 +672,22 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </PropertyOpt>
             </Property>
         );
+    }
+
+
+    Relational(instr: IRelationalExprInstruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name='lval'>
+                    { this.Unknown(instr.left) }
+                </Property>
+                <Property name='operator' value={ instr.operator } />
+                <Property name='rval'>
+                    { this.Unknown(instr.right) }
+                </Property>
+                {/* { this.typeInfo(instr.type) } */}
+            </Property>
+        )
     }
 
 

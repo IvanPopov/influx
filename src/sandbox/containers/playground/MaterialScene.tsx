@@ -8,12 +8,38 @@ import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import * as THREE from 'three';
 import autobind from 'autobind-decorator';
 import { ITechnique } from '@lib/idl/ITechnique';
-import { isString } from '@lib/common';
+import { isNumber, isString } from '@lib/common';
 import { IUniform } from 'three';
 import { IMap } from '@lib/idl/IMap';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
+import { UIProperties } from '@lib/idl/bundles/FxBundle_generated';
+import { Color, ControlValue, Vector3 } from '@sandbox/store/IStoreState';
 
+function controlToThreeValue(ctrl: ControlValue, propType: string): THREE.Vector4 | THREE.Vector3 | Number {
+    const type = propType as keyof typeof UIProperties;
+    switch (type) {
+        case 'UIColor': 
+        {
+            const { r, g, b, a } = ctrl as Color;
+            return new THREE.Vector4(r, g, b, a);
+        }
+        case 'UIFloat3':
+        {
+            const { x, y, z } = ctrl as Vector3;
+            return new THREE.Vector3(x, y, z);    
+        }
+        case 'UIFloat':
+        case 'UIFloatSpinner':
+        case 'UIInt':
+        case 'UIInt':
+        case 'UISpinner': break;
+        default:
+            console.error('unsupported type found');
+    }
+
+    return ctrl as Number;
+}
 
 interface IMaterialSceneProps extends ITreeSceneProps {
     material: ITechnique;
@@ -58,7 +84,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         bloomRadius: 1.0,
     };
 
-    uniforms: IMap<IUniform> = {
+    uniforms: IMap<IUniform<THREE.Vector4 | THREE.Vector3 | Number>> = {
         elapsedTime: { value: 0 },
         elapsedTimeLevel: { value: 0 },
         // elapsedTimeThis: { value: 0 }
@@ -130,6 +156,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         composer.addPass(bloomPass);
 
         this.createSceneControls(bloomPass, renderer);
+        this.createUniformGroups();
+        this.createSingleUniforms();
 
         loader.load(
             './assets/models/probe.obj',
@@ -148,8 +176,6 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 this.groups = null;
             }
         );
-
-        this.createUniformGroups();
     }
 
     shouldComponentUpdate(nextProps: IMaterialSceneProps, nexState) {
@@ -320,7 +346,41 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
         
 
-       this.uniformGroups = [ screenRectData, materialData, splitDrawData, commonDyn ];
+        this.uniformLayout['AUTOGEN_CONTROLS'] = {};
+
+        const autogenControls = new THREE.UniformsGroup();
+        autogenControls.setName( 'AUTOGEN_CONTROLS' );
+
+        const controls = this.props.controls;
+
+
+        const AUTOGEN_CONTROLS = {};
+
+        if (controls) {
+            for (let name in controls.values) {
+                const prop = controls.props[name];
+                const val = controls.values[name];
+                AUTOGEN_CONTROLS[name] = [new THREE.Uniform( controlToThreeValue(val, prop.type) ) ];
+                autogenControls.add( AUTOGEN_CONTROLS[name][0] );
+            }
+        }
+
+        this.uniformLayout['AUTOGEN_CONTROLS'] = AUTOGEN_CONTROLS;
+
+       this.uniformGroups = [ screenRectData, materialData, splitDrawData, commonDyn, autogenControls ];
+    }
+
+    createSingleUniforms() {
+        const controls = this.props.controls;
+        const uniforms = this.uniforms;
+        
+        if (controls) {
+            for (let name in controls.values) {
+                let val = controls.values[name];
+                let prop = controls.props[name];
+                uniforms[name] = { value: controlToThreeValue(val, prop.type) };
+            }
+        }
     }
 
     updateUniformsGroups() {
@@ -337,7 +397,36 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         const { clientWidth, clientHeight } = this.mount;
         (COMMON_VP_PARAMS[0].value as THREE.Vector4).fromArray([ 1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight ]);
+
+        const AUTOGEN_CONTROLS = this.uniformLayout['AUTOGEN_CONTROLS'];
+
+        const controls = this.props.controls;
+        for (let name in AUTOGEN_CONTROLS) {
+            const prop = controls.props[name];
+            const val = controls.values[name];
+            AUTOGEN_CONTROLS[name][0].value = controlToThreeValue(val, prop.type);
+        }
     }
+
+
+    updateSingleUniforms() {
+        const controls = this.props.controls;
+        const uniforms = this.uniforms;
+        const timeline = this.props.timeline;
+        let constants = timeline.getConstants();
+        uniforms.elapsedTime.value = constants.elapsedTime;
+        uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
+        
+        if (controls) {
+            for (let name in controls.values) {
+                let val = controls.values[name];
+                let prop = controls.props[name];
+                if (uniforms[name])
+                    uniforms[name].value = controlToThreeValue(val, prop.type);
+            }
+        }
+    }
+
 
     componentDidUpdate(prevProps: any, prevState: any): void {
         super.componentDidUpdate(prevProps, prevState);
@@ -377,13 +466,6 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(iPass).getDesc();
 
             const uniforms = this.uniforms;
-            const controls = this.props.controls;
-
-            if (controls) {
-                for (let name in controls.values) {
-                    uniforms[name] = { value: controls.values[name] };
-                }
-            }
 
             const material = new THREE.RawShaderMaterial({
                 uniforms,
@@ -428,22 +510,11 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     protected fillScene(time: number): void {
-        const timeline = this.props.timeline;
-        const uniforms = this.uniforms;
-        const controls = this.props.controls;
-
-        let constants = timeline.getConstants();
-        uniforms.elapsedTime.value = constants.elapsedTime;
-        uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
-
-        this.updateUniformsGroups()
         
-        if (controls)
-            for (let name in controls.values) {
-                if (uniforms[name])
-                    uniforms[name].value = controls.values[name];
-            }
+        this.updateUniformsGroups();
+        this.updateSingleUniforms();
 
+        const timeline = this.props.timeline;
         timeline.tick(); 
     }
 

@@ -68,6 +68,15 @@ export class GlslEmitter extends CodeEmitter {
         return false;
     }
 
+    protected addFunction(fn: IFunctionDeclInstruction): boolean {
+        // // nothing todo - built in GLSL function
+        const SYSTEM_FUNCS = [ 'unpackHalf2x16' ];
+        if (SYSTEM_FUNCS.includes(fn.name)) {
+            return false;
+        }
+        return super.addFunction(fn);
+    }
+
 
     emitSemantic(semantic: string) {
         // disabling of semantics emission.
@@ -299,6 +308,10 @@ export class GlslEmitter extends CodeEmitter {
                 // call.decl.def.params[0].type.name === 'float' ? 'floatBitsToUint' : 'floatBitsToUint'
                 super.emitFCall(call, (decl) => 'floatBitsToUint');
                 return;
+            case 'asfloat':
+                super.emitFCall(call, (decl) => 'uintBitsToFloat');
+                return;
+
         }
         
         super.emitFCall(call);
@@ -346,7 +359,8 @@ export class GlslEmitter extends CodeEmitter {
         const def = fn.def;
         const retType = def.returnType;
 
-        if (this.depth() === 0 && !this.isRaw()) {
+        const isSupported = this.isVertex() || this.isPixel();
+        if (this.depth() === 0 && isSupported) {
             this.emitPrologue(fn.def);
             const { typeName } = this.resolveType(def.returnType);
 

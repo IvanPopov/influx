@@ -6,7 +6,7 @@ import { ITextDocument } from "@lib/idl/ITextDocument";
 import { EOperationType, EParserCode, IASTConfig, IASTDocument, IASTDocumentFlags as EASTParsingFlags, IFile, ILexer, IParseNode, IParser, IParseTree, IPosition, IRange, IRuleFunction, ISyntaxTable, IToken } from "@lib/idl/parser/IParser";
 import { Lexer } from "@lib/parser/Lexer";
 import { ParseTree } from "@lib/parser/ParseTree";
-import { END_SYMBOL, ERROR, UNKNOWN_TOKEN } from "@lib/parser/symbols";
+import { END_SYMBOL, ERROR, T_NON_TYPE_ID, UNKNOWN_TOKEN } from "@lib/parser/symbols";
 import { extendRange } from "@lib/parser/util";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 
@@ -22,6 +22,8 @@ export enum EParsingErrors {
 
 export enum EParsingWarnings {
     MacroUnknownWarning = 3000,
+
+    ReserveWordUsing,
 }
 
 
@@ -225,6 +227,9 @@ export class ASTDocument implements IASTDocument {
         return this.lexer.getNextToken();
     }
 
+    protected emitWarning(code: number, token: IToken) {
+        this.diag.warning(code, { token });
+    }
     
     protected emitError(code: number, token: IToken) {
         this.diag.error(code, { token });
@@ -322,12 +327,22 @@ export class ASTDocument implements IASTDocument {
 
                 if (allowErrorRecoverty) {
                     if (!op) {
+                        const ID_REGEXP = /^[_a-zA-Z][_a-zA-Z0-9]{0,30}$/;
+                        const isLikeID = this.token.name !== T_NON_TYPE_ID && ID_REGEXP.test(this.token.value);
+                        const canContinueAsID = isLikeID && syntaxTable[currStateIndex][T_NON_TYPE_ID];
+
                         // recursion prevention
                         if (causingErrorToken.index !== this.token.index) {
                             if (this.token.name === END_SYMBOL) {
                                 this.emitError(EParsingErrors.SyntaxUnexpectedEOF, this.token);
                             } else {
-                                this.emitError(EParsingErrors.SyntaxUnknownError, this.token);
+                                // a special case to bypass tokens of the same name with keywords
+                                if (canContinueAsID) {
+                                    // todo: emit warning(!)
+                                    // this.emitWarning(EParsingWarnings.ReserveWordUsing, this.token);
+                                } else {
+                                    this.emitError(EParsingErrors.SyntaxUnknownError, this.token);
+                                }
                             }
                         } else {
                             // one more attempt to recover but from the next token
@@ -339,10 +354,15 @@ export class ASTDocument implements IASTDocument {
                         }
 
                         causingErrorToken = cloneToken(this.token);
-                        // token = { ...token, name: ERROR };
-                        this.token = { ...cloneToken(this.token), name: ERROR };
-                    }
 
+                        if (canContinueAsID) {
+                            this.token = { ...cloneToken(this.token), name: T_NON_TYPE_ID };
+                        } else {
+                            // token = { ...token, name: ERROR };
+                            this.token = { ...cloneToken(this.token), name: ERROR };
+                        }
+                    }
+                    
                     op = syntaxTable[currStateIndex][this.token.name];
 
                     const errorProcessing = this.token.name === ERROR;

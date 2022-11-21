@@ -82,7 +82,9 @@ export interface IPlaygroundControlProps {
 
 export type Color = { r: number; g: number; b: number; a: number };
 export type Vector3 = { x: number; y: number; z: number };
-export type ControlValues = IMap<Vector3 | Color | Number>;
+export type Vector4 = { x: number; y: number; z: number; w: number };
+export type ControlValue = Vector3 | Vector4 | Color | Number;
+export type ControlValues = IMap<ControlValue>;
 
 export interface IPlaygroundPresetEntry {
     name: string;
@@ -124,6 +126,12 @@ export interface IParserState extends IParserParams {
     parsingFlags: number;
 }
 
+
+export interface ITranslatorParams {
+    uiControlsGatherToDedicatedConstantBuffer: boolean;
+    uiControlsConstantBufferRegister: number;
+}
+
 /*
 Case Handling: " insensitive\r"
 Client address: " 192.168.41.74\r"
@@ -143,8 +151,7 @@ ServerID: " p4_main_commit\r"
 User name: " ivan.popov\r"
 */
 
-export interface IP4Info
-{
+export interface IP4Info {
     "Case Handling": string;
     "Client address": string;
     "Client host": string;
@@ -163,8 +170,7 @@ export interface IP4Info
     "User name": string;
 }
 
-export interface IS3DState
-{
+export interface IS3DState {
     env: S3D.ProjectEnv,
     p4: IP4Info
 }
@@ -180,8 +186,7 @@ export interface IDepotFolder {
     totalFiles: number;
 }
 
-export interface IDepot
-{
+export interface IDepot {
     root: IDepotFolder;
 }
 
@@ -192,6 +197,7 @@ export interface IDepot
 export interface IStoreState {
     readonly sourceFile: IFileState;
     readonly parserParams: IParserState;
+    readonly translatorParams: ITranslatorParams;
     readonly router: RouterState;
     readonly playground: IPlaygroundState;
     readonly nodes: INodePipeline;

@@ -65,7 +65,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 
 type IErrorInfo = IMap<any>;
@@ -1232,6 +1232,8 @@ export class Analyzer {
 
         ic--;
 
+        // program.push(EScopeType.k_Cbuffer);
+
         let fields = <IVariableDeclInstruction[]>[];
         for (let i = ic; i >= 2; i--) {
             switch (children[i].name) {
@@ -1246,12 +1248,31 @@ export class Analyzer {
             }
         }
 
+        // program.pop();
+
         context.endCbuffer();
 
         const aligment = T_FLOAT4.size; // float4 aligment!
-        const name = "FIXME";
+        const name = id.name;
         const type = new ComplexTypeInstruction({ scope, sourceNode, name, fields, aligment });
-        return new CbufferInstruction({ id, type, sourceNode, semantic, annotation, scope });
+
+        {
+            let isAdded = scope.addType(type);
+            if (!isAdded) {
+                context.error(sourceNode, EErrors.TypeRedefinition, { typeName: name });
+            }
+        }
+
+        const cbuf = new CbufferInstruction({ id, type, sourceNode, semantic, annotation, scope });
+
+        {
+            let isAdded = scope.addCbuffer(cbuf);
+            if (!isAdded) {
+                context.error(sourceNode, EErrors.CbufferRedefinition, { typeName: name });
+            }
+        }
+
+        return cbuf;
     }
 
 
@@ -1393,10 +1414,12 @@ export class Analyzer {
         // IP: hucky way to not add annotation variables to real scope
         const program = new ProgramScope(SystemScope.SCOPE); 
         const scope = program.currentScope;
+        program.push(EScopeType.k_Annotation);
         const decls = [
             ...sourceNode.children.filter(node => node.name == 'AnnotationDecls').map(node => this.analyzeAnnotationDecls(context, program, node)).flat(),
             ...sourceNode.children.filter(node => node.name == 'VariableDecl').map(node => this.analyzeVariableDecl(context, program, node)).flat()
         ];
+        program.pop();
         if (!decls || !decls.length) return null;
         return new AnnotationInstruction({ scope, sourceNode, decls });
     }
@@ -2741,7 +2764,7 @@ export class Analyzer {
             aligment = T_FLOAT4.size;
         }
 
-        return new ComplexTypeInstruction({ scope, sourceNode, fields, name });
+        return new ComplexTypeInstruction({ scope, sourceNode, fields, name, aligment });
     }
 
     /**
@@ -4253,8 +4276,15 @@ export class Analyzer {
         const isArray = leftType.isNotBaseArray() || rightType.isNotBaseArray();
         // const isSampler = isSamplerType(leftType) || isSamplerType(rightType);
 
-        // const boolType = <IVariableTypeInstruction>T_BOOL;
-        const constBoolType = VariableTypeInstruction.wrapAsConst(T_BOOL, SystemScope.SCOPE);
+        
+        const constBoolType = (len: number) => {
+            if (len >= 1 && len <= 4) {
+                let ba = [ T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4 ];
+                return VariableTypeInstruction.wrapAsConst(ba[len - 1], SystemScope.SCOPE);
+            }
+            console.error('unsupported code branch');
+            return null;
+        }
 
         if (isArray/* || isSampler*/) {
             // TODO: allow expressions like: arr1 = arr2; ??
@@ -4296,7 +4326,7 @@ export class Analyzer {
             }
             // samplers and arrays can't be compared directly
             else if (Analyzer.isEqualityOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
-                return constBoolType;
+                return constBoolType(1);
             }
 
             // TODO: emit error (unsupported operation on complex values)
@@ -4359,7 +4389,7 @@ export class Analyzer {
             }
             else if (Analyzer.isRelationalOperator(operator)) {
                 if (isScalarType(leftType) || isVectorType(leftType)) {
-                    return constBoolType;
+                    return constBoolType(leftType.length);
                 }
 
                 // TODO: allow vectors? for ex: vec3 < vec3 => bool3
@@ -4367,7 +4397,7 @@ export class Analyzer {
                 return null;
             }
             else if (Analyzer.isEqualityOperator(operator)) {
-                return constBoolType;
+                return constBoolType(leftType.length);
             }
             else if (operator === '=') {
                 return leftBaseType;

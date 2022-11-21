@@ -4,6 +4,7 @@ export enum EAnalyzerErrors {
     VariableRedefinition,
     SystemVariableRedefinition,
     FunctionRedifinition,
+    CbufferRedefinition,
     SystemFunctionRedefinition,
 
     UnsupportedTypeDecl,

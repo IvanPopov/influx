@@ -55,7 +55,7 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
 
     
     get size(): number {
-        return this.calcSize();
+        return this.calculatePaddings(false);
     }
 
 
@@ -243,26 +243,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return null;
     }
 
-    
-    public calcSize(): number {
-        let aligment = this._aligment;
-        let size = 0;
-
-        for (let i = 0; i < this.fields.length; i++) {
-            const fieldSize = this.fields[i].type.size;
-            if (fieldSize === instruction.UNDEFINE_SIZE) {
-                size = instruction.UNDEFINE_SIZE;
-                break;
-            }
-            // size += type.alignSize(fieldSize, aligment);   
-            assert(fieldSize === type.alignSize(fieldSize, aligment));
-            size += fieldSize;
-        }
-
-        return size;
-    }
-
-
 
     hasFieldWithoutSemantics(): boolean {
         for (let i in this._fields) {
@@ -302,23 +282,31 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
 
-    private calculatePaddings(): void {
+    private calculatePaddings(override = true): number {
         const aligment = this._aligment;
         let padding = 0;
+
+        let aligned = (offset, align) => (offset + (align - 1)) & ~(align - 1);
 
         for (let i = 0; i < this.fields.length; i++) {
             const varType = this.fields[i].type;
             const varSize = varType.size;
 
             if (varSize === instruction.UNDEFINE_SIZE) {
-                // this._setError(EAnalyzerErrors.CannotCalcPadding, { typeName: this.name });
-                // TODO: emit error!
                 assert(false, 'cannot calc padding');
-                return;
+                return instruction.UNDEFINE_SIZE;
             }
 
-            varType.$overwritePadding(padding, aligment);
-            padding += type.alignSize(varSize, aligment);
+            let a = aligned(padding, aligment);
+            let b = aligned(padding + varSize, aligment);
+            if (b > a) {
+                padding = a;   
+            }
+            if (override)
+                varType.$overwritePadding(padding, aligment);
+            padding += varSize;   
         }
+
+        return aligned(padding, aligment);
     }
 }

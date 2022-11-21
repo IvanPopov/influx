@@ -1,7 +1,7 @@
 import { isObject } from "@lib/common";
 import { Bundle, BundleT, PresetT, UIControlT, UIProperties } from "@lib/idl/bundles/FxBundle_generated";
 import { IMap } from "@lib/idl/IMap";
-import { Color, ControlValues, IPlaygroundControlProps, IPlaygroundControls, IPlaygroundPreset, Vector3 } from "@sandbox/store/IStoreState";
+import { Color, ControlValues, IPlaygroundControlProps, IPlaygroundControls, IPlaygroundPreset, Vector3, Vector4 } from "@sandbox/store/IStoreState";
 import * as flatbuffers from 'flatbuffers';
 
 export function decodeProp(type: string, data: Uint8Array): Vector3 | Color | Number {
@@ -132,4 +132,3 @@ export function uintToColor(src: number, dst: Color) {
     dst.g = ((src >> 8) & 0xff) / 255.0;
     dst.b = ((src >> 0) & 0xff) / 255.0;
 }
-

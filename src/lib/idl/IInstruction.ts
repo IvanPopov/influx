@@ -136,6 +136,7 @@ export enum EScopeType {
     k_Global,
     k_Default,
     k_Struct,
+    k_Cbuffer,
     k_Annotation
 }
 
@@ -158,8 +159,8 @@ export interface IScope {
     readonly types: IMap<ITypeInstruction>;
     readonly functions: IMap<IFunctionDeclInstruction[]>;
     readonly typeTemplates: IMap<ITypeTemplate>;
-    
     readonly techniques: IMap<ITechniqueInstruction>;
+    readonly cbuffers: IMap<ICbufferInstruction>;
 
     /** Recursive check for all parents for strict mode */
     isStrict(): boolean;
@@ -169,6 +170,7 @@ export interface IScope {
     findTypeTemplate(typeName: string): ITypeTemplate;
     findFunction(funcName: string, args: Array<ITypeInstruction | RegExp>): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
+    findCbuffer(cbufName: string): ICbufferInstruction | null;
 
     /** @deprecated */
     findFunctionInScope(func: IFunctionDeclInstruction): IFunctionDeclInstruction;
@@ -180,6 +182,7 @@ export interface IScope {
     addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
+    addCbuffer(cbuf: ICbufferInstruction): boolean;
 }
 
 

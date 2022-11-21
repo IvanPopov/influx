@@ -184,6 +184,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             return;
         }
         
+        // remove active preset if it doesn't exist anymore
         if (this.preset && !controls.presets.find(p => p.name === this.preset)) {
             this.preset = null;
         }

@@ -1,5 +1,5 @@
 ﻿import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
-import { EScopeType, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EScopeType, ICbufferInstruction, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { isString } from "@lib/util/s3d/type";
 
@@ -24,6 +24,7 @@ export class Scope implements IScope {
     readonly functions: IMap<IFunctionDeclInstruction[]>;
     readonly techniques: IMap<ITechniqueInstruction>;
     readonly typeTemplates: IMap<ITypeTemplate>;
+    readonly cbuffers: IMap<ICbufferInstruction>;
 
     constructor(scope: Scope);
     constructor(settings: IScopeSettings);
@@ -42,6 +43,7 @@ export class Scope implements IScope {
             this.functions = { ...scope.functions };
             this.techniques = { ...scope.techniques };
             this.typeTemplates = { ...scope.typeTemplates };
+            this.cbuffers = { ...scope.cbuffers };
         } 
         else 
         {
@@ -53,6 +55,7 @@ export class Scope implements IScope {
             this.functions = {};
             this.techniques = {};
             this.typeTemplates = {};
+            this.cbuffers = {};
         }
 
         this.type = type;
@@ -96,6 +99,11 @@ export class Scope implements IScope {
 
     findTechnique(techName: string): ITechniqueInstruction {
         return this.filter(scope => scope.techniques[techName] || null);
+    }
+
+
+    findCbuffer(cbufName: string): ICbufferInstruction {
+        return this.filter(scope => scope.cbuffers[cbufName] || null);
     }
 
 
@@ -210,8 +218,22 @@ export class Scope implements IScope {
 
         this.techniques[technique.name] = technique;
         assert(technique.scope === this);
-        return false;
+        return true;
     }
+
+
+    addCbuffer(cbuf: ICbufferInstruction): boolean {
+        assert(this.type <= EScopeType.k_Global);
+
+        if (this.cbuffers[cbuf.name]) {
+            return false;
+        }
+
+        this.cbuffers[cbuf.name] = cbuf;
+        assert(cbuf.scope === this);
+        return true;
+    }
+
 
     private filter<T>(cb: (scope: IScope) => T | null): T 
     {
