@@ -385,6 +385,13 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         // instancedBuffer.setDynamic(true);
         instancedBuffer.setUsage(THREE.DynamicDrawUsage);
 
+        /*
+        struct DefaultShaderInput {
+            float3 pos : POSITION;
+            float4 color : COLOR0;
+            float  size : SIZE;
+        };
+        */
         // todo: remove hardcoded layout or check it's validity.
         geometry.attributes.offset = new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0);
         geometry.attributes.color = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3);

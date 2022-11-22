@@ -402,6 +402,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         const controls = this.props.controls;
         for (let name in AUTOGEN_CONTROLS) {
+            if (!controls.props[name]) continue;
             const prop = controls.props[name];
             const val = controls.values[name];
             AUTOGEN_CONTROLS[name][0].value = controlToThreeValue(val, prop.type);
@@ -434,8 +435,10 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const passCount = this.props.material.getPassCount();
 
         this.scene.remove(...this.groups);
-        this.groups = Array(passCount).fill(null).map(x => this.groups[0].clone(true));
-        this.scene.add(...this.groups);
+        if (passCount > 0) {
+            this.groups = Array(passCount).fill(null).map(x => this.groups[0].clone(true) || null);
+            this.scene.add(...this.groups);
+        }
 
         this.reloadMaterial();
     }
@@ -461,7 +464,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     protected reloadMaterial() {
         const groups = this.groups;
 
-        for (let iPass = 0; iPass < groups?.length; ++iPass) {
+        for (let iPass = 0; iPass < this.props.material.getPassCount(); ++iPass) {
             const group = groups[iPass];
             const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(iPass).getDesc();
 
@@ -476,6 +479,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 depthTest: true
             });
 
+            this.createUniformGroups(); // hack to avoid error: GL_INVALID_OPERATION: It is undefined behaviour to use a uniform buffer that is too small.
             (material as any).uniformsGroups = this.uniformGroups;
 
             if (renderStates[ERenderStates.ZENABLE]) {

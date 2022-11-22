@@ -378,7 +378,6 @@ async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOption
 
     const controls = createFxControls(reflection.controls);
     const presets = createFxPresets(reflection.presets);
-    console.log(controls);
 
     const { meta } = opts;
     const bundle = createFxBundle(opts.name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source), controls, presets);
