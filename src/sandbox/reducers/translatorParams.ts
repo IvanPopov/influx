@@ -3,8 +3,11 @@ import { handleActions } from '@sandbox/reducers/handleActions';
 import IStoreState, { ITranslatorParams } from '@sandbox/store/IStoreState';
 
 const initialState: ITranslatorParams = {
+    uiControlsGatherToDedicatedConstantBuffer: true,
     uiControlsConstantBufferRegister: 10,
-    uiControlsGatherToDedicatedConstantBuffer: true
+
+    globalUniformsGatherToDedicatedConstantBuffer: true,
+    globalUniformsConstantBufferRegister: 11
 };
 
 

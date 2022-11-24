@@ -31,6 +31,24 @@ struct SHADER_ATTR
     std::string name;
 };
 
+
+struct CBUFFER_FIELD 
+{
+    std::string name;
+    std::string semantic;
+    int size;
+    int offset;
+    int length;
+};
+
+struct CBUFFER 
+{
+    std::string name;
+    int size;
+    int usage;
+    std::vector<CBUFFER_FIELD> fields;
+};
+
 struct EMITTER_DESC
 {
     uint32_t stride;                             // number of float elements in the prerendered particle
@@ -43,7 +61,9 @@ struct EMITTER_DESC
     std::string pixelShader;
     std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection            
 
-    Fx::TypeLayoutT renderInstance;        
+    Fx::TypeLayoutT renderInstance;    
+
+    std::vector<CBUFFER> cbuffers;
 };
 
 class EMITTER_PASS

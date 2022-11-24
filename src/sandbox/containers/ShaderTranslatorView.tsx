@@ -102,6 +102,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             : { textDocument: null, slastDocument: null };
         const translatorOpts = asFxTranslatorOprions(props);
 
+        // TODO: sync translation with Bundle generation (!)
+
         if (match.params.pass) {
             const pass = fx.passList.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
                 ? i === Number(match.params.pass)

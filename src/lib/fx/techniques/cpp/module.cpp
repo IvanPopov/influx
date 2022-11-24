@@ -83,6 +83,19 @@ EMSCRIPTEN_BINDINGS(pipeline)
     // @sandbox/containers/playground/idl/IEmitter.ts
     //
 
+    em::value_object<IFX::CBUFFER_FIELD>("CbufferField") 
+        .field("name", &IFX::CBUFFER_FIELD::name)
+        .field("semantic", &IFX::CBUFFER_FIELD::semantic)
+        .field("size", &IFX::CBUFFER_FIELD::size)
+        .field("offset", &IFX::CBUFFER_FIELD::offset)
+        .field("length", &IFX::CBUFFER_FIELD::length);  
+
+    em::value_object<IFX::CBUFFER>("Cbuffer") 
+        .field("name", &IFX::CBUFFER::name)
+        .field("size", &IFX::CBUFFER::size)
+        .field("usage", &IFX::CBUFFER::usage);
+        // .field("fields", &IFX::CBUFFER_FIELD::fields);  
+
     em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
         .field("size", &IFX::SHADER_ATTR::size)
         .field("offset", &IFX::SHADER_ATTR::offset)
@@ -101,6 +114,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("pixelShader", desc.pixelShader);
             jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout)); 
             jsDesc.set("instanceName", desc.renderInstance.name);
+            jsDesc.set("cbuffers", em::val::array(desc.cbuffers));
             return jsDesc;  
           }))
          .function("getNumRenderedParticles", &IFX::EMITTER_PASS::GetNumRenderedParticles)

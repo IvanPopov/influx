@@ -102,7 +102,7 @@ export class FxEmitter extends CodeConvolutionEmitter {
         this.tech = fx;
         this.begin();
         {
-            this.emitKeyword('partFx');
+            this.emitKeyword('technique');
             fx.name && this.emitKeyword(fx.name);
             fx.semantic && this.emitSemantic(fx.semantic);
             fx.annotation && this.emitAnnotation(fx.annotation);

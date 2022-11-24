@@ -11,16 +11,16 @@ import * as URI from '@lib/uri/uri';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as ipc from '@sandbox/ipc';
+import * as Depot from '@sandbox/reducers/depot';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
-import { asConvolutionPack, asSLASTDocument, asTextDocument, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { asConvolutionPack, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IPlaygroundControls } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
-import * as Depot from '@sandbox/reducers/depot';
 
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
+import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
 import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
-import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
     downloadBlob(new Blob([data], { type: mimeType }), fileName);

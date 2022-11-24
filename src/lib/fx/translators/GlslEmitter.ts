@@ -1,7 +1,6 @@
 import { assert, isDef } from "@lib/common";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
 import { EInstructionTypes, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { type } from "os";
 
 import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
 
@@ -42,6 +41,7 @@ const sname = {
 
 const IS_POSITION = (semantic: string) => ['POSITION', 'SV_Position'].indexOf(semantic) !== -1;
 const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_InstanceID'].indexOf(semantic) !== -1;
+const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VertexID'].indexOf(semantic) !== -1;
 
 export class GlslEmitter extends CodeEmitter {
     
@@ -209,6 +209,7 @@ export class GlslEmitter extends CodeEmitter {
     protected emitAttribute(decl: IVariableDeclInstruction) {
         // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
         if (IS_INSTANCEID(decl.semantic)) return;
+        if (IS_VERTEXID(decl.semantic)) return;
 
         (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariable(decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
@@ -300,6 +301,9 @@ export class GlslEmitter extends CodeEmitter {
             case 'mul':
                 assert(args.length == 2);
                 this.emitMulIntrinsic(args[0], args[1]);
+                return;
+            case 'lerp':
+                super.emitFCall(call, (decl) => 'mix');
                 return;
             case 'frac':
                 super.emitFCall(call, (decl) => 'fract');
@@ -398,7 +402,13 @@ export class GlslEmitter extends CodeEmitter {
                             this.emitKeyword(decl.name);
                             this.emitSpace();
                             this.emitChar('=');
-                            this.emitKeyword(IS_INSTANCEID(decl.semantic) ? 'uint(gl_InstanceID)' : this.attr(decl));
+                            if (IS_INSTANCEID(decl.semantic)) {
+                                this.emitKeyword('uint(gl_InstanceID)');
+                            } else if(IS_VERTEXID(decl.semantic)) {
+                                this.emitKeyword('uint(gl_VertexID)');
+                            } else {
+                                this.emitKeyword(this.attr(decl));
+                            }
                             this.emitChar(';');
                             this.emitNewline();
                         }

@@ -973,6 +973,7 @@ struct TypeFieldT : public flatbuffers::NativeTable {
   typedef TypeField TableType;
   std::unique_ptr<Fx::TypeLayoutT> type{};
   std::string name{};
+  std::string semantic{};
   uint32_t size = 0;
   uint32_t padding = 0;
   TypeFieldT() = default;
@@ -987,14 +988,18 @@ struct TypeField FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TYPE = 4,
     VT_NAME = 6,
-    VT_SIZE = 8,
-    VT_PADDING = 10
+    VT_SEMANTIC = 8,
+    VT_SIZE = 10,
+    VT_PADDING = 12
   };
   const Fx::TypeLayout *type() const {
     return GetPointer<const Fx::TypeLayout *>(VT_TYPE);
   }
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
+  }
+  const flatbuffers::String *semantic() const {
+    return GetPointer<const flatbuffers::String *>(VT_SEMANTIC);
   }
   uint32_t size() const {
     return GetField<uint32_t>(VT_SIZE, 0);
@@ -1008,6 +1013,8 @@ struct TypeField FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyTable(type()) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
+           VerifyOffset(verifier, VT_SEMANTIC) &&
+           verifier.VerifyString(semantic()) &&
            VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
            VerifyField<uint32_t>(verifier, VT_PADDING, 4) &&
            verifier.EndTable();
@@ -1026,6 +1033,9 @@ struct TypeFieldBuilder {
   }
   void add_name(flatbuffers::Offset<flatbuffers::String> name) {
     fbb_.AddOffset(TypeField::VT_NAME, name);
+  }
+  void add_semantic(flatbuffers::Offset<flatbuffers::String> semantic) {
+    fbb_.AddOffset(TypeField::VT_SEMANTIC, semantic);
   }
   void add_size(uint32_t size) {
     fbb_.AddElement<uint32_t>(TypeField::VT_SIZE, size, 0);
@@ -1048,11 +1058,13 @@ inline flatbuffers::Offset<TypeField> CreateTypeField(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<Fx::TypeLayout> type = 0,
     flatbuffers::Offset<flatbuffers::String> name = 0,
+    flatbuffers::Offset<flatbuffers::String> semantic = 0,
     uint32_t size = 0,
     uint32_t padding = 0) {
   TypeFieldBuilder builder_(_fbb);
   builder_.add_padding(padding);
   builder_.add_size(size);
+  builder_.add_semantic(semantic);
   builder_.add_name(name);
   builder_.add_type(type);
   return builder_.Finish();
@@ -1062,13 +1074,16 @@ inline flatbuffers::Offset<TypeField> CreateTypeFieldDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<Fx::TypeLayout> type = 0,
     const char *name = nullptr,
+    const char *semantic = nullptr,
     uint32_t size = 0,
     uint32_t padding = 0) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto semantic__ = semantic ? _fbb.CreateString(semantic) : 0;
   return Fx::CreateTypeField(
       _fbb,
       type,
       name__,
+      semantic__,
       size,
       padding);
 }
@@ -1651,6 +1666,7 @@ struct RoutineGLSLSourceBundleT : public flatbuffers::NativeTable {
   typedef RoutineGLSLSourceBundle TableType;
   std::string code{};
   std::vector<std::unique_ptr<Fx::GLSLAttributeT>> attributes{};
+  std::vector<std::unique_ptr<Fx::CBBundleT>> cbuffers{};
   RoutineGLSLSourceBundleT() = default;
   RoutineGLSLSourceBundleT(const RoutineGLSLSourceBundleT &o);
   RoutineGLSLSourceBundleT(RoutineGLSLSourceBundleT&&) FLATBUFFERS_NOEXCEPT = default;
@@ -1662,13 +1678,17 @@ struct RoutineGLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
   typedef RoutineGLSLSourceBundleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CODE = 4,
-    VT_ATTRIBUTES = 6
+    VT_ATTRIBUTES = 6,
+    VT_CBUFFERS = 8
   };
   const flatbuffers::String *code() const {
     return GetPointer<const flatbuffers::String *>(VT_CODE);
   }
   const flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>> *attributes() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>> *>(VT_ATTRIBUTES);
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>> *cbuffers() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>> *>(VT_CBUFFERS);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1677,6 +1697,9 @@ struct RoutineGLSLSourceBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
            VerifyOffset(verifier, VT_ATTRIBUTES) &&
            verifier.VerifyVector(attributes()) &&
            verifier.VerifyVectorOfTables(attributes()) &&
+           VerifyOffset(verifier, VT_CBUFFERS) &&
+           verifier.VerifyVector(cbuffers()) &&
+           verifier.VerifyVectorOfTables(cbuffers()) &&
            verifier.EndTable();
   }
   RoutineGLSLSourceBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1694,6 +1717,9 @@ struct RoutineGLSLSourceBundleBuilder {
   void add_attributes(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>>> attributes) {
     fbb_.AddOffset(RoutineGLSLSourceBundle::VT_ATTRIBUTES, attributes);
   }
+  void add_cbuffers(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>>> cbuffers) {
+    fbb_.AddOffset(RoutineGLSLSourceBundle::VT_CBUFFERS, cbuffers);
+  }
   explicit RoutineGLSLSourceBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1708,8 +1734,10 @@ struct RoutineGLSLSourceBundleBuilder {
 inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> code = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>>> attributes = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::GLSLAttribute>>> attributes = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::CBBundle>>> cbuffers = 0) {
   RoutineGLSLSourceBundleBuilder builder_(_fbb);
+  builder_.add_cbuffers(cbuffers);
   builder_.add_attributes(attributes);
   builder_.add_code(code);
   return builder_.Finish();
@@ -1718,13 +1746,16 @@ inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundl
 inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *code = nullptr,
-    const std::vector<flatbuffers::Offset<Fx::GLSLAttribute>> *attributes = nullptr) {
+    const std::vector<flatbuffers::Offset<Fx::GLSLAttribute>> *attributes = nullptr,
+    const std::vector<flatbuffers::Offset<Fx::CBBundle>> *cbuffers = nullptr) {
   auto code__ = code ? _fbb.CreateString(code) : 0;
   auto attributes__ = attributes ? _fbb.CreateVector<flatbuffers::Offset<Fx::GLSLAttribute>>(*attributes) : 0;
+  auto cbuffers__ = cbuffers ? _fbb.CreateVector<flatbuffers::Offset<Fx::CBBundle>>(*cbuffers) : 0;
   return Fx::CreateRoutineGLSLSourceBundle(
       _fbb,
       code__,
-      attributes__);
+      attributes__,
+      cbuffers__);
 }
 
 flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3740,6 +3771,7 @@ inline flatbuffers::Offset<BundleMeta> CreateBundleMeta(flatbuffers::FlatBufferB
 inline TypeFieldT::TypeFieldT(const TypeFieldT &o)
       : type((o.type) ? new Fx::TypeLayoutT(*o.type) : nullptr),
         name(o.name),
+        semantic(o.semantic),
         size(o.size),
         padding(o.padding) {
 }
@@ -3747,6 +3779,7 @@ inline TypeFieldT::TypeFieldT(const TypeFieldT &o)
 inline TypeFieldT &TypeFieldT::operator=(TypeFieldT o) FLATBUFFERS_NOEXCEPT {
   std::swap(type, o.type);
   std::swap(name, o.name);
+  std::swap(semantic, o.semantic);
   std::swap(size, o.size);
   std::swap(padding, o.padding);
   return *this;
@@ -3763,6 +3796,7 @@ inline void TypeField::UnPackTo(TypeFieldT *_o, const flatbuffers::resolver_func
   (void)_resolver;
   { auto _e = type(); if (_e) { if(_o->type) { _e->UnPackTo(_o->type.get(), _resolver); } else { _o->type = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
   { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = semantic(); if (_e) _o->semantic = _e->str(); }
   { auto _e = size(); _o->size = _e; }
   { auto _e = padding(); _o->padding = _e; }
 }
@@ -3777,12 +3811,14 @@ inline flatbuffers::Offset<TypeField> CreateTypeField(flatbuffers::FlatBufferBui
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const TypeFieldT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _type = _o->type ? CreateTypeLayout(_fbb, _o->type.get(), _rehasher) : 0;
   auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _semantic = _o->semantic.empty() ? 0 : _fbb.CreateString(_o->semantic);
   auto _size = _o->size;
   auto _padding = _o->padding;
   return Fx::CreateTypeField(
       _fbb,
       _type,
       _name,
+      _semantic,
       _size,
       _padding);
 }
@@ -4056,11 +4092,14 @@ inline RoutineGLSLSourceBundleT::RoutineGLSLSourceBundleT(const RoutineGLSLSourc
       : code(o.code) {
   attributes.reserve(o.attributes.size());
   for (const auto &attributes_ : o.attributes) { attributes.emplace_back((attributes_) ? new Fx::GLSLAttributeT(*attributes_) : nullptr); }
+  cbuffers.reserve(o.cbuffers.size());
+  for (const auto &cbuffers_ : o.cbuffers) { cbuffers.emplace_back((cbuffers_) ? new Fx::CBBundleT(*cbuffers_) : nullptr); }
 }
 
 inline RoutineGLSLSourceBundleT &RoutineGLSLSourceBundleT::operator=(RoutineGLSLSourceBundleT o) FLATBUFFERS_NOEXCEPT {
   std::swap(code, o.code);
   std::swap(attributes, o.attributes);
+  std::swap(cbuffers, o.cbuffers);
   return *this;
 }
 
@@ -4075,6 +4114,7 @@ inline void RoutineGLSLSourceBundle::UnPackTo(RoutineGLSLSourceBundleT *_o, cons
   (void)_resolver;
   { auto _e = code(); if (_e) _o->code = _e->str(); }
   { auto _e = attributes(); if (_e) { _o->attributes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->attributes[_i]) { _e->Get(_i)->UnPackTo(_o->attributes[_i].get(), _resolver); } else { _o->attributes[_i] = std::unique_ptr<Fx::GLSLAttributeT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
+  { auto _e = cbuffers(); if (_e) { _o->cbuffers.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->cbuffers[_i]) { _e->Get(_i)->UnPackTo(_o->cbuffers[_i].get(), _resolver); } else { _o->cbuffers[_i] = std::unique_ptr<Fx::CBBundleT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<RoutineGLSLSourceBundle> RoutineGLSLSourceBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const RoutineGLSLSourceBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -4087,10 +4127,12 @@ inline flatbuffers::Offset<RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundl
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RoutineGLSLSourceBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
   auto _attributes = _o->attributes.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::GLSLAttribute>> (_o->attributes.size(), [](size_t i, _VectorArgs *__va) { return CreateGLSLAttribute(*__va->__fbb, __va->__o->attributes[i].get(), __va->__rehasher); }, &_va ) : 0;
+  auto _cbuffers = _o->cbuffers.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::CBBundle>> (_o->cbuffers.size(), [](size_t i, _VectorArgs *__va) { return CreateCBBundle(*__va->__fbb, __va->__o->cbuffers[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateRoutineGLSLSourceBundle(
       _fbb,
       _code,
-      _attributes);
+      _attributes,
+      _cbuffers);
 }
 
 inline RoutineHLSLSourceBundleT::RoutineHLSLSourceBundleT(const RoutineHLSLSourceBundleT &o)

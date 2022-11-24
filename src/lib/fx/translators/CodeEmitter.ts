@@ -10,6 +10,8 @@ import { ITextDocument } from "@lib/idl/ITextDocument";
 import { BaseEmitter } from "./BaseEmitter";
 import { isString } from "@lib/util/s3d/type";
 import { UAV0_REGISTER } from "../bytecode/Bytecode";
+import { ERenderStates } from "@lib/idl/ERenderStates";
+import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 
 export interface IConvolutionPack {
     textDocument?: ITextDocument;
@@ -176,9 +178,11 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
-    protected addCbuffer(cbuf: ICbReflection): boolean {
+    protected addCbuffer(cbuf: ICbufferInstruction): boolean {
+        const { name, type: { size }, register: { index: register } } = cbuf;
+        const refl: ICbReflection = { name, size, register };
         if (!this.knownCbuffers.map(cb => cb.name).includes(cbuf.name)) {
-            this.knownCbuffers.push(cbuf);
+            this.knownCbuffers.push(refl);
             return true;
         }
         return false;
@@ -778,12 +782,12 @@ export class CodeEmitter extends BaseEmitter {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
                 const cbuf = <ICbufferInstruction>cbufType.parent;
-                const { name, type: { size }, register: { index: register } } = cbuf;
-                const refl: ICbReflection = { name, size, register };
-                if (this.addCbuffer(refl)) {
+                if (this.addCbuffer(cbuf)) {
                     this.begin();
                     this.emitCbuffer(cbuf);
                     this.end();
+                } else {
+                    // this.findCbuffer(refl.name).name
                 }
             } else {
                 if (this.addGlobal(CodeEmitter.asSTRID(decl))) {
@@ -976,6 +980,19 @@ export class CodeEmitter extends BaseEmitter {
             this.emitNewline();
         }
 
+        if (pass.renderStates) {
+            for (let key in pass.renderStates) {
+                const state = pass.renderStates[key];
+                if (state != ERenderStateValues.UNDEF) {
+                    this.emitKeyword(ERenderStates[Number(key)]);
+                    this.emitChar('=');
+                    this.emitKeyword(ERenderStateValues[state]);
+                    this.emitChar(';');
+                    this.emitNewline();
+                }
+            }
+        }
+
         this.emitNewline();
 
         // mwalk(pass.renderStates, (val, key) => {
@@ -1007,12 +1024,15 @@ export class CodeEmitter extends BaseEmitter {
 
         switch (instr.instructionType) {
             case EInstructionTypes.k_FunctionDecl:
+                this.addFunction(instr as IFunctionDeclInstruction)
                 this.emitFunction(instr as IFunctionDeclInstruction);
                 break;
             case EInstructionTypes.k_CbufferDecl:
+                this.addCbuffer(instr as ICbufferInstruction);
                 this.emitCbuffer(instr as ICbufferInstruction);
                 break;
             case EInstructionTypes.k_VariableDecl:
+                this.addGlobal(CodeEmitter.asSTRID(instr as IVariableDeclInstruction))
                 // emit as part of InstructionCollector
                 this.emitGlobalVariable(instr as IVariableDeclInstruction);
                 break;
@@ -1027,6 +1047,7 @@ export class CodeEmitter extends BaseEmitter {
                 break;
             case EInstructionTypes.k_ComplexType:
             case EInstructionTypes.k_VariableType:
+                // todo: addComplexType ?
                 this.emitComplexTypeDecl(instr as ITypeInstruction);
                 break;
             default:

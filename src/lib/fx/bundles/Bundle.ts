@@ -7,6 +7,7 @@ import * as Hlsl from '@lib/fx/translators/CodeEmitter';
 import { CodeConvolutionEmitter, IConvolutionPack, ICSShaderReflection } from "@lib/fx/translators/CodeEmitter";
 import { FxTranslator, IFxTranslatorOptions, IPartFxPassReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import { GlslEmitter } from "@lib/fx/translators/GlslEmitter";
 import { BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeFieldT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
@@ -111,8 +112,13 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
 }
 
 
-function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType: string, entryName: string, opts: BundleOptions = {}): RoutineGLSLSourceBundleT {
+function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType: string, entryName: string, { name }: BundleOptions = {}): RoutineGLSLSourceBundleT {
     const scope = slDocument.root.scope;
+    const fn = scope.findFunction(entryName, null);
+
+    if (!fn) {
+        return new RoutineGLSLSourceBundleT();
+    }
 
     const partType = scope.findType(interpolatorsType);
     const instance = createFxTypeLayout(partType);
@@ -124,14 +130,28 @@ function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType:
         return new GLSLAttributeT(size, offset, attrName);
     });
 
-    const codeGLSL = Glsl.translate(scope.findFunction(entryName, null), { mode: 'vertex' });
-    return new RoutineGLSLSourceBundleT(codeGLSL, attributesGLSL);
+    const opts: Hlsl.ICodeEmitterOptions = { mode: 'vertex', omitInUsage: true, omitEmptyParams: true };
+    const emitter = new GlslEmitter(opts)
+    emitter.emitFunction(fn);
+    // todo: extract reflection
+    const codeGLSL = emitter.toString();
+
+    const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.semantic, f.type.size, f.type.padding));
+        return new CBBundleT(name, register, size, fields);
+    });
+
+    return new RoutineGLSLSourceBundleT(codeGLSL, attributesGLSL, cbuffers);
 }
 
 
 function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, { textDocument, slastDocument }: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
     const scope = slDocument.root.scope;
     const fn = scope.findFunction(entryName, null);
+
+    if (!fn) {
+        return new RoutineHLSLSourceBundleT();
+    }
     // set entry point name according with bundle name
     const opts: Hlsl.ICodeEmitterOptions = { mode: 'vertex', entryName: name, omitEmptyParams: true };
     const emitter = new CodeConvolutionEmitter(textDocument, slastDocument, opts);
@@ -140,7 +160,7 @@ function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string,
     const codeHLSL = emitter.toString();
 
     const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
-        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.type.size, f.type.padding));
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.semantic, f.type.size, f.type.padding));
         return new CBBundleT(name, register, size, fields);
     });
 
@@ -166,16 +186,37 @@ function createFxRoutineVsShaderBundle(slDocument: ISLDocument, interpolatorsTyp
 }
 
 
-function createFxRoutinePsGLSLBundle(slDocument: ISLDocument, entryName: string, opts: BundleOptions = {}): RoutineGLSLSourceBundleT {
+function createFxRoutinePsGLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}): RoutineGLSLSourceBundleT {
     const scope = slDocument.root.scope;
-    const codeGLSL = Glsl.translate(scope.findFunction(entryName, null), { mode: 'pixel' });
-    return new RoutineGLSLSourceBundleT(codeGLSL, []);
+    const fn = scope.findFunction(entryName, null);
+
+    if (!fn) {
+        return new RoutineGLSLSourceBundleT();
+    }
+
+    const opts: Hlsl.ICodeEmitterOptions = { mode: 'pixel', omitInUsage: true, omitEmptyParams: true };
+    const emitter = new GlslEmitter(opts)
+    emitter.emitFunction(fn);
+    // todo: extract reflection
+    const codeGLSL = emitter.toString();
+
+    const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.semantic, f.type.size, f.type.padding));
+        return new CBBundleT(name, register, size, fields);
+    });
+
+    return new RoutineGLSLSourceBundleT(codeGLSL, [], cbuffers);
 }
 
 
 function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string, { name }: BundleOptions = {}, { textDocument, slastDocument }: ConvolutionPackEx = {}): RoutineHLSLSourceBundleT {
     const scope = slDocument.root.scope;
     const fn = scope.findFunction(entryName, null);
+
+    if (!fn) {
+        return new RoutineHLSLSourceBundleT();
+    }
+
     // set entry point name according with bundle name
     const opts: Hlsl.ICodeEmitterOptions = { mode: 'pixel', entryName: name, omitEmptyParams: true };
     const emitter = new CodeConvolutionEmitter(textDocument, slastDocument, opts);
@@ -184,7 +225,7 @@ function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string,
     const codeHLSL = emitter.toString();
 
     const cbuffers = emitter.knownCbuffers.map(({ name, register, size }) => {
-        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.type.size, f.type.padding));
+        const fields = scope.findCbuffer(name).type.fields.map(f => new TypeFieldT(createFxTypeLayout(f.type), f.name, f.semantic, f.type.size, f.type.padding));
         return new CBBundleT(name, register, size, fields);
     });
 
@@ -307,9 +348,13 @@ function finalizeBundle(bundle: BundleT, opts: BundleOptions = {}): Uint8Array |
 
 async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = {}): Promise<Uint8Array | BundleT> {
     // todo: add convolution
-    const tops = { ...opts.translator, uiControlsGatherToDedicatedConstantBuffer: false  };
-    //                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    //                              IP: temp solution until it will not be supported for FxScene and bytecode generator.
+    const tops = { 
+        ...opts.translator, 
+        uiControlsGatherToDedicatedConstantBuffer: false,
+        globalUniformsGatherToDedicatedConstantBuffer: false
+      };
+    //   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    // IP: temp solution until it will not be supported for FxScene and bytecode generator.
     const emitter = new FxTranslator(null, null, tops);
     const reflection = emitter.emitPartFxDecl(fx);
     const { name, capacity } = reflection;

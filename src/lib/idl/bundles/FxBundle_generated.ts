@@ -417,18 +417,25 @@ name(optionalEncoding?:any):string|Uint8Array|null {
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
-size():number {
+semantic():string|null
+semantic(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+semantic(optionalEncoding?:any):string|Uint8Array|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
-  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
-padding():number {
+size():number {
   const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
 }
 
+padding():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
 static startTypeField(builder:flatbuffers.Builder) {
-  builder.startObject(4);
+  builder.startObject(5);
 }
 
 static addType(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset) {
@@ -439,12 +446,16 @@ static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
   builder.addFieldOffset(1, nameOffset, 0);
 }
 
+static addSemantic(builder:flatbuffers.Builder, semanticOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, semanticOffset, 0);
+}
+
 static addSize(builder:flatbuffers.Builder, size:number) {
-  builder.addFieldInt32(2, size, 0);
+  builder.addFieldInt32(3, size, 0);
 }
 
 static addPadding(builder:flatbuffers.Builder, padding:number) {
-  builder.addFieldInt32(3, padding, 0);
+  builder.addFieldInt32(4, padding, 0);
 }
 
 static endTypeField(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -452,10 +463,11 @@ static endTypeField(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
-static createTypeField(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset, nameOffset:flatbuffers.Offset, size:number, padding:number):flatbuffers.Offset {
+static createTypeField(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset, nameOffset:flatbuffers.Offset, semanticOffset:flatbuffers.Offset, size:number, padding:number):flatbuffers.Offset {
   TypeField.startTypeField(builder);
   TypeField.addType(builder, typeOffset);
   TypeField.addName(builder, nameOffset);
+  TypeField.addSemantic(builder, semanticOffset);
   TypeField.addSize(builder, size);
   TypeField.addPadding(builder, padding);
   return TypeField.endTypeField(builder);
@@ -465,6 +477,7 @@ unpack(): TypeFieldT {
   return new TypeFieldT(
     (this.type() !== null ? this.type()!.unpack() : null),
     this.name(),
+    this.semantic(),
     this.size(),
     this.padding()
   );
@@ -474,6 +487,7 @@ unpack(): TypeFieldT {
 unpackTo(_o: TypeFieldT): void {
   _o.type = (this.type() !== null ? this.type()!.unpack() : null);
   _o.name = this.name();
+  _o.semantic = this.semantic();
   _o.size = this.size();
   _o.padding = this.padding();
 }
@@ -483,6 +497,7 @@ export class TypeFieldT {
 constructor(
   public type: FxTypeLayoutT|null = null,
   public name: string|Uint8Array|null = null,
+  public semantic: string|Uint8Array|null = null,
   public size: number = 0,
   public padding: number = 0
 ){}
@@ -491,10 +506,12 @@ constructor(
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const type = (this.type !== null ? this.type!.pack(builder) : 0);
   const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const semantic = (this.semantic !== null ? builder.createString(this.semantic!) : 0);
 
   return FxTypeField.createTypeField(builder,
     type,
     name,
+    semantic,
     this.size,
     this.padding
   );
@@ -1225,8 +1242,18 @@ attributesLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+cbuffers(index: number, obj?:FxCBBundle):FxCBBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? (obj || new FxCBBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+cbuffersLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startRoutineGLSLSourceBundle(builder:flatbuffers.Builder) {
-  builder.startObject(2);
+  builder.startObject(3);
 }
 
 static addCode(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset) {
@@ -1249,22 +1276,40 @@ static startAttributesVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addCbuffers(builder:flatbuffers.Builder, cbuffersOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, cbuffersOffset, 0);
+}
+
+static createCbuffersVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startCbuffersVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endRoutineGLSLSourceBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createRoutineGLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, attributesOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createRoutineGLSLSourceBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, attributesOffset:flatbuffers.Offset, cbuffersOffset:flatbuffers.Offset):flatbuffers.Offset {
   RoutineGLSLSourceBundle.startRoutineGLSLSourceBundle(builder);
   RoutineGLSLSourceBundle.addCode(builder, codeOffset);
   RoutineGLSLSourceBundle.addAttributes(builder, attributesOffset);
+  RoutineGLSLSourceBundle.addCbuffers(builder, cbuffersOffset);
   return RoutineGLSLSourceBundle.endRoutineGLSLSourceBundle(builder);
 }
 
 unpack(): RoutineGLSLSourceBundleT {
   return new RoutineGLSLSourceBundleT(
     this.code(),
-    this.bb!.createObjList(this.attributes.bind(this), this.attributesLength())
+    this.bb!.createObjList(this.attributes.bind(this), this.attributesLength()),
+    this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength())
   );
 }
 
@@ -1272,23 +1317,27 @@ unpack(): RoutineGLSLSourceBundleT {
 unpackTo(_o: RoutineGLSLSourceBundleT): void {
   _o.code = this.code();
   _o.attributes = this.bb!.createObjList(this.attributes.bind(this), this.attributesLength());
+  _o.cbuffers = this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength());
 }
 }
 
 export class RoutineGLSLSourceBundleT {
 constructor(
   public code: string|Uint8Array|null = null,
-  public attributes: (GLSLAttributeT)[] = []
+  public attributes: (GLSLAttributeT)[] = [],
+  public cbuffers: (CBBundleT)[] = []
 ){}
 
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const code = (this.code !== null ? builder.createString(this.code!) : 0);
   const attributes = FxRoutineGLSLSourceBundle.createAttributesVector(builder, builder.createObjectOffsetList(this.attributes));
+  const cbuffers = FxRoutineGLSLSourceBundle.createCbuffersVector(builder, builder.createObjectOffsetList(this.cbuffers));
 
   return FxRoutineGLSLSourceBundle.createRoutineGLSLSourceBundle(builder,
     code,
-    attributes
+    attributes,
+    cbuffers
   );
 }
 }

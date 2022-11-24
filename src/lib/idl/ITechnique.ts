@@ -8,6 +8,30 @@ export interface IAttribute {
 }
 
 
+export enum EUsage {
+    k_Vertex = 0x01,
+    k_Pixel = 0x02,
+    k_Compute = 0x04
+};
+
+
+export interface IConstanBufferField {
+    name: string;
+    semantic: string;
+    size: number;
+    padding: number;
+    length: number;
+}
+
+
+export interface IConstantBuffer {
+    slot: number;
+    name: string;
+    size: number;
+    usage: number;
+    fields: IConstanBufferField[];
+}
+
 export interface ITechniquePassDesc
 {
     instanceName: string;
@@ -19,6 +43,8 @@ export interface ITechniquePassDesc
     pixelShader: string;
 
     renderStates: IMap<ERenderStateValues>;
+
+    cbuffers: IConstantBuffer[];
 }
 
 export interface ITechniquePass<DESC_T extends ITechniquePassDesc = ITechniquePassDesc> {

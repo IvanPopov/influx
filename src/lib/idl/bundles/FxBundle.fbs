@@ -19,6 +19,7 @@ table TypeField
 {
     type: TypeLayout;
     name: string; 
+    semantic: string;
     size: uint; 
     padding: uint;
 }
@@ -74,6 +75,11 @@ table RoutineGLSLSourceBundle
     code: string;
     // vertex bundles also contain attribute description
     attributes: [ GLSLAttribute ];
+
+    // this is not complete reflection, 
+    // only cbuffers direcly used by user (!)
+    // resources from includes will not be presented here
+    cbuffers: [ CBBundle ];
 }
 
 

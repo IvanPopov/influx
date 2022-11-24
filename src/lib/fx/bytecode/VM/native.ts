@@ -28,11 +28,6 @@ function typeLayoutArrayToBaseType({ fields, length, name, size }: TypeLayoutT):
 
 export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayoutT
 {
-    // is it needed?
-    while (type !== type.baseType) {
-        type = type.baseType;
-    }
-
     const isNotComplexOrSystem = (type: ITypeInstruction) => !type.isComplex() ||
         type.instructionType == EInstructionTypes.k_SystemType;
 
@@ -41,19 +36,16 @@ export function typeAstToTypeLayout(type: ITypeInstruction): TypeLayoutT
     let fields: TypeFieldT[] = undefined;
     let length = -1;
 
-    if (type.isArray())
-    {
-        length = type.length;
-    }
-
     if (type.isNotBaseArray())
     {
+        length = type.length;
+        
         const elementType = typeAstToTypeLayout(type.arrayElementType);
         fields = elementType.fields;
     }
     else if (!isNotComplexOrSystem(type))
     {
-        fields = type.fields.map(({ name, type }) => new TypeFieldT( typeAstToTypeLayout(type), name, type.size, type.padding ));
+        fields = type.fields.map(({ name, type, semantic }) => new TypeFieldT( typeAstToTypeLayout(type), name, semantic, type.size, type.padding ));
     }
 
     return new TypeLayoutT( fields, length, <string>name, size );

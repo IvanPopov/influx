@@ -73,7 +73,7 @@ export function decodePresets(presets: PresetT[]): IPlaygroundPreset[] {
         }));
 }
 
-export function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
+function decodeBundle(data: Uint8Array | BundleT): BundleT {
     let fx: BundleT = null;
 
     // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
@@ -83,7 +83,12 @@ export function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundCon
     } else {
         fx = <BundleT>data;
     }
-    
+
+    return fx;
+}
+
+export function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControls {
+    const fx = decodeBundle(data);
     const props = decodeProps(fx.controls);
     const values = decodeValues(fx.controls);
     const presets = decodePresets(fx.presets);

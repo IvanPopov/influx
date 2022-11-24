@@ -7,7 +7,7 @@ import { GUI } from 'dat.gui';
 import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import * as THREE from 'three';
 import autobind from 'autobind-decorator';
-import { ITechnique } from '@lib/idl/ITechnique';
+import { IConstantBuffer, ITechnique } from '@lib/idl/ITechnique';
 import { isNumber, isString } from '@lib/common';
 import { IUniform } from 'three';
 import { IMap } from '@lib/idl/IMap';
@@ -156,6 +156,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         composer.addPass(bloomPass);
 
         this.createSceneControls(bloomPass, renderer);
+
         this.createUniformGroups();
         this.createSingleUniforms();
 
@@ -182,192 +183,35 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         return this.props.material !== nextProps.material;
     }
 
-    uniformGroups: THREE.UniformsGroup[];
-    uniformLayout: IMap<IMap<THREE.Uniform[]>>;
+    // per pass x per buffer
+    uniformGroups: THREE.UniformsGroup[][];
 
     // todo: read buffers layout from reflectio
     createUniformGroups() {
-        this.uniformLayout = {};
+        const passCount = this.props.material.getPassCount();
 
-        /*
-        uniform CB_SCREEN_RECT_DATA
-        {
-            vec4 COMMON_VP_PARAMS[1];	// padding 0, size 16
-            vec4 SCREEN_RECT[1];	// padding 16, size 16
-            vec4 SCREEN_UV[1];	// padding 32, size 16
-            vec4 RECT_DEPTH[1];	// padding 48, size 16
-            uvec4 LWI_PARAMS[2];	// padding 64, size 32
-        };
-        */
-        this.uniformLayout['CB_SCREEN_RECT_DATA'] = {};
+        this.uniformGroups?.forEach(gs => gs.forEach(g => g.dispose()));
+        this.uniformGroups = [];
+        for (let p = 0; p < passCount; ++ p) {
+            const cbuffers = this.props.material?.getPass(p).getDesc().cbuffers;
 
-        const screenRectData = new THREE.UniformsGroup();
-        screenRectData.setName( 'CB_SCREEN_RECT_DATA' );
-        // COMMON_VP_PARAMS
-        const COMMON_VP_PARAMS = [
-            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) )
-        ];
-        this.uniformLayout['CB_SCREEN_RECT_DATA']['COMMON_VP_PARAMS'] = COMMON_VP_PARAMS;
-        screenRectData.add( COMMON_VP_PARAMS[0] );
-        // SCREEN_RECT
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // SCREEN_UV
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // RECT_DEPTH
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // LWI_PARAMS
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        screenRectData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+            const groups = [];
+            for (let cbuf of cbuffers) {
+                let { name, size, usage } = cbuf;
 
-        /*
-        // size: 1216
-        uniform CB_OBJ_MATERIAL_DATA
-        {
-            ivec4 OBJ_GLT_UVSET_INDICES[1];	// padding 0, size 16
-            vec4 OBJ_LAYER_TILING[2];	// padding 16, size 32
-            vec4 OBJ_LAYER_TILING_BASE_INV[1];	// padding 48, size 16
-            vec4 OBJ_GLT_TRANSP_VC_MASK[2];	// padding 64, size 32
-            vec4 OBJ_MTLBLEND_LAYER_CONST[64];	// padding 96, size 1024
-            vec4 OBJ_PARALLAX_SECOND_VC_SWZ[1];	// padding 1120, size 16
-            vec4 OBJ_PARALLAX_FLATTEN_VC_SWZ[1];	// padding 1136, size 16
-            vec4 OBJ_COMPR_VERT_OFFSET[1];	// padding 1152, size 16
-            vec4 OBJ_COMPR_VERT_SCALE[1];	// padding 1168, size 16
-            vec4 OBJ_COMPR_TEX[2];	// padding 1184, size 32
-        };
-        */
+                const nVec4 = size / 16;
+                const group = new THREE.UniformsGroup();
+                group.setName(name);
 
-        const materialData = new THREE.UniformsGroup();
-        materialData.setName( 'CB_OBJ_MATERIAL_DATA' );
-        // OBJ_GLT_UVSET_INDICES
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_LAYER_TILING
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_LAYER_TILING_BASE_INV
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_GLT_TRANSP_VC_MASK
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_MTLBLEND_LAYER_CONST
-        for (let i = 0; i < 64; ++ i)
-            materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_PARALLAX_SECOND_VC_SWZ
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_PARALLAX_FLATTEN_VC_SWZ
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_COMPR_VERT_OFFSET
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_COMPR_VERT_SCALE
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // OBJ_COMPR_TEX
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        materialData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
+                for (let i = 0; i < nVec4; ++ i) {
+                    group.add(new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ));
+                }
 
-        /*
-        uniform CB_SPLIT_DRAW_DATA
-        {
-            uvec4 VS_REG_COMMON_OBJ_DATA;	// padding 0, size 16
-            vec4 VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG[3];	// padding 16, size 48
-        };
-        */
-
-        const splitDrawData = new THREE.UniformsGroup();
-        splitDrawData.setName( 'CB_SPLIT_DRAW_DATA' );
-        // VS_REG_COMMON_OBJ_DATA
-        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG
-        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(1, 0, 0, 0) ) );
-        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 1, 0, 0) ) );
-        splitDrawData.add( new THREE.Uniform( new THREE.Vector4(0, 0, 1, 0) ) );
-
-        
-        /*
-        uniform CB_COMMON_DYN
-        {
-            vec4 COMMON_LBUF_PARAMS[1];	// padding 0, size 16
-            ivec4 PS_REG_REFLECTIONS_NELEM[1];	// padding 16, size 16
-            ivec4 PS_REG_COMMON_FOG_PARAM_SET[1];	// padding 32, size 16
-            vec4 COMMON_VIEW_POSITION[1];	// padding 48, size 16
-            vec4 COMMON_VIEW_POSITION_PREV[1];	// padding 64, size 16
-            vec4 COMMON_VIEWPROJ_MATRIX[4];	// padding 80, size 64
-            vec4 COMMON_FPMODEL_VIEWPROJ_MATRIX[4];	// padding 144, size 64
-            vec4 COMMON_FPMODEL_VIEWPROJ_MATRIX_PREV[4];	// padding 208, size 64
-            vec4 COMMON_FPMODEL_ZSCALE[1];	// padding 272, size 16
-            vec4 COMMON_VIEW_MATRIX[3];	// padding 288, size 48
-            vec4 COMMON_FPMODEL_CORRECTION_MATRIX[4];	// padding 336, size 64
-            vec4 COMMON_PROJ_MATRIX[4];	// padding 400, size 64
-        };
-        */
-        
-        this.uniformLayout['CB_COMMON_DYN'] = {};
-
-        const commonDyn = new THREE.UniformsGroup();
-        commonDyn.setName( 'CB_COMMON_DYN' );
-        // COMMON_LBUF_PARAMS
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // PS_REG_REFLECTIONS_NELEM
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // PS_REG_COMMON_FOG_PARAM_SET
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_VIEW_POSITION
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_VIEW_POSITION_PREV
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_VIEWPROJ_MATRIX
-
-        const COMMON_VIEWPROJ_MATRIX = [
-            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
-            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
-            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ),
-            new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) )
-        ];
-
-        for (let i = 0; i < 4; ++ i)
-            commonDyn.add( COMMON_VIEWPROJ_MATRIX[i] );
-
-        this.uniformLayout['CB_COMMON_DYN']['COMMON_VIEWPROJ_MATRIX'] = COMMON_VIEWPROJ_MATRIX;
-
-        // COMMON_FPMODEL_VIEWPROJ_MATRIX
-        for (let i = 0; i < 4; ++ i)
-            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_FPMODEL_VIEWPROJ_MATRIX_PREV
-        for (let i = 0; i < 4; ++ i)
-            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_FPMODEL_ZSCALE
-        commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_VIEW_MATRIX
-        for (let i = 0; i < 3; ++ i)
-            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_FPMODEL_CORRECTION_MATRIX
-        for (let i = 0; i < 4; ++ i)
-            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        // COMMON_PROJ_MATRIX
-        for (let i = 0; i < 4; ++ i)
-            commonDyn.add( new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ) );
-        
-
-        this.uniformLayout['AUTOGEN_CONTROLS'] = {};
-
-        const autogenControls = new THREE.UniformsGroup();
-        autogenControls.setName( 'AUTOGEN_CONTROLS' );
-
-        const controls = this.props.controls;
-
-
-        const AUTOGEN_CONTROLS = {};
-
-        if (controls) {
-            for (let name in controls.values) {
-                const prop = controls.props[name];
-                const val = controls.values[name];
-                AUTOGEN_CONTROLS[name] = [new THREE.Uniform( controlToThreeValue(val, prop.type) ) ];
-                autogenControls.add( AUTOGEN_CONTROLS[name][0] );
+                groups.push(group);
             }
+
+            this.uniformGroups.push(groups);
         }
-
-        this.uniformLayout['AUTOGEN_CONTROLS'] = AUTOGEN_CONTROLS;
-
-       this.uniformGroups = [ screenRectData, materialData, splitDrawData, commonDyn, autogenControls ];
     }
 
     createSingleUniforms() {
@@ -387,25 +231,84 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const viewMatrix = this.camera.matrixWorldInverse;
         const projMatrix = this.camera.projectionMatrix;
         const viewprojMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix).transpose();
-        const COMMON_VIEWPROJ_MATRIX = this.uniformLayout['CB_COMMON_DYN']['COMMON_VIEWPROJ_MATRIX'];
-        (COMMON_VIEWPROJ_MATRIX[0].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 0);
-        (COMMON_VIEWPROJ_MATRIX[1].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 4);
-        (COMMON_VIEWPROJ_MATRIX[2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
-        (COMMON_VIEWPROJ_MATRIX[3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
-
-        const COMMON_VP_PARAMS = this.uniformLayout['CB_SCREEN_RECT_DATA']['COMMON_VP_PARAMS'];
 
         const { clientWidth, clientHeight } = this.mount;
-        (COMMON_VP_PARAMS[0].value as THREE.Vector4).fromArray([ 1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight ]);
 
-        const AUTOGEN_CONTROLS = this.uniformLayout['AUTOGEN_CONTROLS'];
-
+        const passCount = this.props.material.getPassCount();
         const controls = this.props.controls;
-        for (let name in AUTOGEN_CONTROLS) {
-            if (!controls.props[name]) continue;
-            const prop = controls.props[name];
-            const val = controls.values[name];
-            AUTOGEN_CONTROLS[name][0].value = controlToThreeValue(val, prop.type);
+
+        const timeline = this.props.timeline;
+        const constants = timeline.getConstants();
+
+        for (let p = 0; p < passCount; ++ p) {
+            const cbuffers = this.props.material?.getPass(p).getDesc().cbuffers;
+            for (let c = 0; c < cbuffers.length; ++c) {
+                let cbuf = cbuffers[c];
+                let group = this.uniformGroups[p][c];
+                let { name, size, usage } = cbuf;
+            
+                switch (name) {
+                    case 'AUTOGEN_CONTROLS':
+                        {
+                            for (let { name, padding } of cbuf.fields) {
+                                const pos = (padding / 16) >>> 0; // in vector
+                                const prop = controls.props[name];
+                                const val = controls.values[name];
+                                // todo: use paddings (!)
+                                group.uniforms[pos].value = controlToThreeValue(val, prop.type);
+                            }
+                        }
+                        break;
+                    case 'GLOBAL_UNIFORMS':
+                        for (let { name, padding, semantic } of cbuf.fields) {
+                            switch (semantic) {
+                                case 'ELAPSED_TIME_LEVEL':
+                                    {
+                                        const pos = (padding / 16) >>> 0;
+                                        const pad = (padding % 16) / 4;
+                                        (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTimeLevel);
+                                    }
+                                    break;
+                                case 'ELAPSED_TIME':
+                                    {
+                                        const pos = (padding / 16) >>> 0;
+                                        const pad = (padding % 16) / 4;
+                                        (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTime);
+                                    }
+                                    break;
+                            }
+                        }
+                        break;
+                    default:
+                        for (let { name, padding, semantic } of cbuf.fields) {
+                            switch (semantic) {
+                                case 'COMMON_VIEWPROJ_MATRIX':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 0);
+                                        (group.uniforms[pos + 1].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 4);
+                                        (group.uniforms[pos + 2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
+                                        (group.uniforms[pos + 3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
+                                    }
+                                    break;
+                                case 'COMMON_VP_PARAMS':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([ 1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight ]);
+                                    }
+                                    break;
+                                case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1, 0, 0, 0]);
+                                        (group.uniforms[pos + 1].value as THREE.Vector4).fromArray([0, 1, 0, 0]);
+                                        (group.uniforms[pos + 2].value as THREE.Vector4).fromArray([0, 0, 1, 0]);
+                                        break;
+                                    }
+                            }
+                        }
+                }
+            }
         }
     }
 
@@ -464,10 +367,9 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     protected reloadMaterial() {
         const groups = this.groups;
 
-        for (let iPass = 0; iPass < this.props.material.getPassCount(); ++iPass) {
-            const group = groups[iPass];
-            const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(iPass).getDesc();
-
+        for (let p = 0; p < this.props.material.getPassCount(); ++p) {
+            const group = groups[p];
+            const { vertexShader, pixelShader, renderStates, cbuffers } = this.props.material.getPass(p).getDesc();
             const uniforms = this.uniforms;
 
             const material = new THREE.RawShaderMaterial({
@@ -480,7 +382,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
             });
 
             this.createUniformGroups(); // hack to avoid error: GL_INVALID_OPERATION: It is undefined behaviour to use a uniform buffer that is too small.
-            (material as any).uniformsGroups = this.uniformGroups;
+            (material as any).uniformsGroups = this.uniformGroups[p];
 
             if (renderStates[ERenderStates.ZENABLE]) {
                 material.depthTest = renderStates[ERenderStates.ZENABLE] === ERenderStateValues.TRUE;
@@ -514,7 +416,6 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     protected fillScene(time: number): void {
-        
         this.updateUniformsGroups();
         this.updateSingleUniforms();
 

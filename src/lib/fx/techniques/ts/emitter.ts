@@ -227,6 +227,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             }
         }
 
+        const cbuffers = [];
+
         function getData() { return asBundleMemory(sorting ? uavSortedU8 : uavNonSortedU8); }
         function getDesc() {
             const renderStates = {};
@@ -238,7 +240,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 sorting,
                 vertexShader,
                 pixelShader,
-                renderStates
+                renderStates,
+                cbuffers
             };
         }
 

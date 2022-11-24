@@ -13,6 +13,7 @@ import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { FxEmitter } from "./FxEmitter";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
+import { TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
 
 export interface IPresetEntry { name: string; value: Uint8Array; }
 
@@ -71,7 +72,6 @@ export interface IDrawOpReflection {
     name: string;
     uavs: IUavReflection[];
 }
-
 
 
 interface IUIControlBase {
@@ -143,10 +143,18 @@ export function sizeofUIControl(ctrl: IUIControl) {
     return 0;
 }
 
+
+const camelToSnakeCase = str => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
+
 export interface IFxTranslatorOptions extends ICodeEmitterOptions {
     uiControlsGatherToDedicatedConstantBuffer?: boolean;
     uiControlsConstantBufferRegister?: number;
     uiControlsConstantBufferName?: string;
+
+    globalUniformsGatherToDedicatedConstantBuffer?: boolean;
+    globalUniformsConstantBufferRegister?: number;
+    globalUniformsConstantBufferName?: string;
 }
 
 export class FxTranslator extends FxEmitter {
@@ -171,6 +179,7 @@ export class FxTranslator extends FxEmitter {
 
     protected knownTechniques: ITechniqueReflection[] = [];
     protected knownControls: IUIControl[] = [];
+    protected knownGlobalUniforms: IVariableDeclInstruction[] = [];
     protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
     protected knownDrawOps: IDrawOpReflection[] = [];
 
@@ -195,17 +204,139 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitControlVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
+    protected addGlobalUniform(src: IVariableDeclInstruction): boolean {
+        if (this.knownGlobalUniforms.includes(src)) {
+            return false;
+        }
+
+        this.knownGlobalUniforms.push(src);
+        return true;
+    }
+
+
+    /*
+        https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
+        https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
+    */
+    protected addControl(src: IVariableDeclInstruction): boolean {
+        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
+
+        if (!src.annotation) {
+            return false;
+        }
+
+        if (!src.isGlobal()) {
+            return false;
+        }
+
+        src.annotation.decls.forEach(decl => {
+            switch (decl.name) {
+                case 'UIType':
+                    const type = <StringInstruction>decl.initExpr.args[0];
+                    ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                    console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
+                    break;
+                case 'UIName':
+                    const name = <StringInstruction>decl.initExpr.args[0];
+                    ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
+                    break;
+                case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
+                case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
+                case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
+            }
+        });
+
+        if (!ctrl.UIType) {
+            switch (src.type.name) {
+                case 'float': ctrl.UIType = 'Float'; break;
+                case 'float3': ctrl.UIType = 'Float3'; break;
+                case 'int': ctrl.UIType = 'Int'; break;
+                case 'uint': ctrl.UIType = 'Uint'; break;
+            }
+        }
+
+        let buffer = new ArrayBuffer(16); // todo: don't use fixed size
+        let view1 = new DataView(buffer);
+        let offset = 0;
+
+        src.initExpr.args.forEach(arg => {
+            const instr = arg.instructionType === EInstructionTypes.k_InitExpr
+                ? ((arg as IInitExprInstruction).args[0])
+                : (<ILiteralInstruction<number>>arg);
+            switch (instr.instructionType) {
+                case EInstructionTypes.k_FloatExpr:
+                    view1.setFloat32(offset, (instr as FloatInstruction).value, true);
+                    offset += 4;
+                    break;
+                case EInstructionTypes.k_IntExpr:
+                    view1.setInt32(offset, (instr as IntInstruction).value, true);
+                    offset += 4;
+                    break;
+                case EInstructionTypes.k_BoolExpr:
+                    view1.setInt32(offset, +(instr as BoolInstruction).value, true);
+                    offset += 4;
+                    break;
+            }
+        });
+
+        ctrl.value = new Uint8Array(buffer);
+        ctrl.name = src.id.name;
+
+        // todo: validate controls
+        if (ctrl.UIType) {
+            this.knownControls.push(ctrl);
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    protected emitControlVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
         if (!this.options.uiControlsGatherToDedicatedConstantBuffer) {
             // quick way to promote uniform qualifier to GLSL code
             (this.emitKeyword('uniform'), this.emitVariableNoInit(decl, rename));
         }
     }
 
+
+    protected emitUniformVariable(decl: IVariableDeclInstruction) {
+        const KNOWN_EXTERNAL_GLOBALS = [
+            'ELAPSED_TIME',
+            'ELAPSED_TIME_LEVEL'
+        ];
+
+        const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
+        
+        if (!KNOWN_EXTERNAL_GLOBALS.includes(semantic)) {
+            super.emitVariable(decl);
+            console.warn(`Unsupported uniform has been used: ${decl.toCode()}.`);
+            return;
+        }
+
+        const isGlobal = true; // global update required
+        const isLocal = false; // per object update required
+
+        if (!this.options.globalUniformsGatherToDedicatedConstantBuffer && isGlobal) {
+            super.emitVariable(decl);
+            return;
+        }
+
+        if (isGlobal)
+            this.addGlobalUniform(decl);
+    }
+
+
     // todo: remove hack with rename mutator
     emitVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         if (this.addControl(decl)) {
             this.emitControlVariable(decl, rename);
+            return;
+        }
+
+        if (decl.type.isUniform()) {
+            this.emitUniformVariable(decl);
             return;
         }
 
@@ -842,85 +973,59 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    /*
-        https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
-        https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
-    */
-    protected addControl(src: IVariableDeclInstruction): boolean {
-        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
-
-        if (!src.annotation) {
-            return false;
-        }
-
-        if (!src.isGlobal()) {
-            return false;
-        }
-
-        src.annotation.decls.forEach(decl => {
-            switch (decl.name) {
-                case 'UIType':
-                    const type = <StringInstruction>decl.initExpr.args[0];
-                    ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                    console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
-                    break;
-                case 'UIName':
-                    const name = <StringInstruction>decl.initExpr.args[0];
-                    ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                    break;
-                case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
-                case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
-                case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
-            }
-        });
-
-        if (!ctrl.UIType) {
-            switch (src.type.name) {
-                case 'float': ctrl.UIType = 'Float'; break;
-                case 'float3': ctrl.UIType = 'Float3'; break;
-                case 'int': ctrl.UIType = 'Int'; break;
-                case 'uint': ctrl.UIType = 'Uint'; break;
-            }
-        }
-
-        let buffer = new ArrayBuffer(16); // todo: don't use fixed size
-        let view1 = new DataView(buffer);
-        let offset = 0;
-
-        src.initExpr.args.forEach(arg => {
-            const instr = arg.instructionType === EInstructionTypes.k_InitExpr
-                ? ((arg as IInitExprInstruction).args[0])
-                : (<ILiteralInstruction<number>>arg);
-            switch (instr.instructionType) {
-                case EInstructionTypes.k_FloatExpr:
-                    view1.setFloat32(offset, (instr as FloatInstruction).value, true);
-                    offset += 4;
-                    break;
-                case EInstructionTypes.k_IntExpr:
-                    view1.setInt32(offset, (instr as IntInstruction).value, true);
-                    offset += 4;
-                    break;
-                case EInstructionTypes.k_BoolExpr:
-                    view1.setInt32(offset, +(instr as BoolInstruction).value, true);
-                    offset += 4;
-                    break;
-            }
-        });
-
-        ctrl.value = new Uint8Array(buffer);
-        ctrl.name = src.id.name;
-
-        // todo: validate controls
-        if (ctrl.UIType) {
-            this.knownControls.push(ctrl);
-            return true;
-        }
-
-        return false;
-    }
-
-
     protected finalizeTechnique() {
+        if (this.options.globalUniformsGatherToDedicatedConstantBuffer) {
+            const index = this.options.globalUniformsConstantBufferRegister || -1;
+
+            // check that no one uses the same register
+            for (let name in this.tech.scope.cbuffers) {
+                let cbuf = this.tech.scope.cbuffers[name];
+                if (cbuf.register.index === index) {
+                    console.error(`register ${index} is already used by cbuffer '${cbuf.name}'`);
+                }
+            }
+
+            const name = this.options.globalUniformsConstantBufferName || 'GLOBAL_UNIFORMS';
+            this.begin();
+            {
+                this.emitKeyword('cbuffer');
+                this.emitKeyword(name);
+
+                if (index !== -1) {
+                    this.emitChar(':');
+                    this.emitKeyword('register');
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitKeyword(`b${index}`);
+                    this.emitNoSpace();
+                    this.emitChar(')');
+                }
+
+                this.emitNewline();
+                this.emitChar('{');
+                this.push();
+                {
+                    this.knownGlobalUniforms.forEach(({ name, type, semantic }) => {
+                        this.emitKeyword(type.name);
+                        this.emitKeyword(name);
+                        type.isNotBaseArray() && this.emitChar(`[${type.length}]`);
+                        if (semantic) {
+                            this.emitSemantic(semantic);
+                        } else {
+                            this.emitSemantic(camelToSnakeCase(name).toUpperCase());
+                        }
+
+                        this.emitChar(';');
+                        this.emitNewline();
+                    });
+                }
+                this.pop();
+                this.emitChar('}');
+                this.emitChar(';');
+            }
+            this.end(true); // move to prologue
+        }
+
         if (this.options.uiControlsGatherToDedicatedConstantBuffer) {
             const index = this.options.uiControlsConstantBufferRegister || -1;
 
@@ -932,11 +1037,9 @@ export class FxTranslator extends FxEmitter {
                 }
             }
 
-            const size = this.knownControls.reduce((ps, c) => ps + sizeofUIControl(c), 0);
             const name = this.options.uiControlsConstantBufferName || 'AUTOGEN_CONTROLS';
             this.begin();
             {
-                this.emitComment(`size: ${size}`);
                 this.emitKeyword('cbuffer');
                 this.emitKeyword(name);
 

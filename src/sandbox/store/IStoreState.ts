@@ -103,6 +103,8 @@ export interface IPlaygroundControls {
     presets: IPlaygroundPreset[];
 }
 
+
+
 type PlaygroundPresets = IMap<ControlValues>;
 
 export interface IPlaygroundState {
@@ -130,6 +132,9 @@ export interface IParserState extends IParserParams {
 export interface ITranslatorParams {
     uiControlsGatherToDedicatedConstantBuffer: boolean;
     uiControlsConstantBufferRegister: number;
+
+    globalUniformsGatherToDedicatedConstantBuffer: boolean;
+    globalUniformsConstantBufferRegister: number;
 }
 
 /*
