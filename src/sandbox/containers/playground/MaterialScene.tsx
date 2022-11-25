@@ -367,9 +367,11 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     protected reloadMaterial() {
         const groups = this.groups;
 
+        this.createUniformGroups(); // hack to avoid error: GL_INVALID_OPERATION: It is undefined behaviour to use a uniform buffer that is too small.
+
         for (let p = 0; p < this.props.material.getPassCount(); ++p) {
             const group = groups[p];
-            const { vertexShader, pixelShader, renderStates, cbuffers } = this.props.material.getPass(p).getDesc();
+            const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(p).getDesc();
             const uniforms = this.uniforms;
 
             const material = new THREE.RawShaderMaterial({
@@ -381,7 +383,6 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 depthTest: true
             });
 
-            this.createUniformGroups(); // hack to avoid error: GL_INVALID_OPERATION: It is undefined behaviour to use a uniform buffer that is too small.
             (material as any).uniformsGroups = this.uniformGroups[p];
 
             if (renderStates[ERenderStates.ZENABLE]) {
