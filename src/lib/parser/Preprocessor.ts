@@ -972,15 +972,16 @@ export class Preprocessor {
             // return this.readToken();
         }
 
-        // rebuild text document in order to avoid problems if include handler was called through worker
-        const { uri, source } = await this.includeResolver(resolvedURI);
-        const textDocument = await createTextDocument(uri, source);
-        if (!textDocument)
-        {
+        const textDocumentRaw = await this.includeResolver(resolvedURI);
+        if (!textDocumentRaw) {
             this.emitFileNotFound(resolvedURI, loc);
-        } else {
-            this.pushDocument(this.documentToLexer(textDocument), loc, EPPDocumentFlags.k_Include);
+            return this.readToken();
         }
+        
+        // rebuild text document in order to avoid problems if include handler was called through worker
+        const { uri, source } = textDocumentRaw;
+        const textDocument = await createTextDocument(uri, source);
+        this.pushDocument(this.documentToLexer(textDocument), loc, EPPDocumentFlags.k_Include);
 
         return this.readToken();
     }
