@@ -309,7 +309,10 @@ export class FxTranslator extends FxEmitter {
     protected emitUniformVariable(decl: IVariableDeclInstruction) {
         const KNOWN_EXTERNAL_GLOBALS = [
             'ELAPSED_TIME',
-            'ELAPSED_TIME_LEVEL'
+            'ELAPSED_TIME_LEVEL',
+            
+            'PARENT_POSITION',
+            'CAMERA_POSITION'
         ];
 
         const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
