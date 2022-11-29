@@ -192,6 +192,15 @@ void EMITTER_PASS::Serialize()
 }
 
 
+void EMITTER_PASS::PreparePrerender()
+{
+    auto* pPrerendered = UavNonSorted();
+    if (pPrerendered) pPrerendered->OverwriteCounter(0);
+
+    auto* pSerials = UavSerials();
+    if (pSerials) pSerials->OverwriteCounter(0);
+}
+
 
 void EMITTER_PASS::Prerender(const UNIFORMS& uniforms) 
 {
@@ -199,6 +208,11 @@ void EMITTER_PASS::Prerender(const UNIFORMS& uniforms)
     if (!bundle) {
         return;
     }
+
+    // simulation could be omitted (effect is paused for ex.) 
+    // but prerender counters still have to be dropped
+    // if we want to continue prerender every frame
+    PreparePrerender();
 
     bundle->SetConstants(uniforms);
     bundle->Run(Parent().GetCapacity() / bundle->numthreads.x);
@@ -408,6 +422,11 @@ void EMITTER::Emit(const UNIFORMS& uniforms)
 
 void EMITTER::Update(const UNIFORMS& uniforms)
 {
+    // drop prerender counters all the time before update
+    // because some effects may use "draw" operator
+    // which means that simulation and preprender are mixed
+    PreparePrerender();
+
     assert(m_capacity % m_updateBundle->numthreads.x == 0);
     m_updateBundle->SetConstants(uniforms);
     m_updateBundle->Run(m_capacity / m_updateBundle->numthreads.x);
@@ -416,7 +435,6 @@ void EMITTER::Update(const UNIFORMS& uniforms)
 
 void EMITTER::Prerender(const UNIFORMS& uniforms) 
 {
-    PreparePrerender(); // must be called here in case of simulation is paused
     for (int i = 0; i < m_passes.size(); ++ i)
     {
         m_passes[i].Prerender(uniforms);
@@ -434,7 +452,6 @@ void EMITTER::Serialize()
 
 void EMITTER::Simulate(const UNIFORMS& uniforms)
 {
-    PreparePrerender();
     Update(uniforms);
     Emit(uniforms);
     // dump();
@@ -444,11 +461,7 @@ void EMITTER::Simulate(const UNIFORMS& uniforms)
 void EMITTER::PreparePrerender()
 {
     for (int i = 0; i < m_passes.size(); ++i) {
-        auto* pPrerendered = Uav(UavPrerendered(i));
-        if (pPrerendered) pPrerendered->OverwriteCounter(0);
-
-        auto* pSerials = Uav(UavSerials(i));
-        if (pSerials) pSerials->OverwriteCounter(0);
+        m_passes[i].PreparePrerender();
     }
 }
 

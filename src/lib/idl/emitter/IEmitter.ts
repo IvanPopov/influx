@@ -13,6 +13,7 @@ export interface IEmitterPass extends ITechniquePass<IEmitterPassDesc> {
     getData(): IMemory;
     getNumRenderedParticles(): number;  // num alive particles multipled by the prerendered instance count
     serialize(): void;                  // fill render buffer with instance data, including sorting if needed
+    // preparePrerender();                 // drop prerender resource counters
     prerender(uniforms: Uniforms);      // update materials data per instance
     dump(): void;
 }

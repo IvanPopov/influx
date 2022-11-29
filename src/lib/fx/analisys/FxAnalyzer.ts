@@ -198,8 +198,8 @@ export class FxAnalyzer extends Analyzer {
 
         if (sorting && prerenderRoutine && type.equals(prerenderRoutine.function.def.returnType, T_VOID))
         {
-            context.warn(sourceNode, EWarnings.SortingCannotBeApplied);
-            context.warn(prerenderRoutine.function.def.sourceNode, EWarnings.SortingCannotBeApplied);
+            context.warn(sourceNode, EWarnings.PartFx_SortingCannotBeApplied);
+            context.warn(prerenderRoutine.function.def.sourceNode, EWarnings.PartFx_SortingCannotBeApplied);
         }
 
         //
@@ -693,8 +693,8 @@ export class FxAnalyzer extends Analyzer {
                     break;
 
             }
-        }
 
+        }
         //
         // draw operator finalization
         //
@@ -703,7 +703,13 @@ export class FxAnalyzer extends Analyzer {
             const { instr, ctx } = stmt;
             const pass = props.passList.find(pass => pass.id.name == instr.name);
             if (!pass) {
-                context.error(instr.sourceNode, EErrors.PartFx_RenderPassWasNotFound);
+                // emit warning not an error
+                // because in some cases it may be useful to have several effects with
+                // common update routine but different pass set
+                context.warn(instr.sourceNode, EWarnings.PartFx_RenderPassWasNotFound, { 
+                    techniqueName: name,
+                    tooltip: `The technique doesn't have pass with name <${instr.name}>`
+                 });
             }
 
             const p0Type = ctx.params[0].type;

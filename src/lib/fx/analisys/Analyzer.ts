@@ -3540,7 +3540,7 @@ export class Analyzer {
 
         const decl = scope.findVariable(propName);
         if (isNull(decl)) {
-            context.warn(sourceNode, EWarnings.PresetPropertyHasNotBeenFound);
+            context.warn(sourceNode, EWarnings.PartFx_PresetPropertyHasNotBeenFound);
             return null;
         }
 

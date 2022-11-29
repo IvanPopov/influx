@@ -80,6 +80,7 @@ public:
 
     uint32_t     GetNumRenderedParticles() const;  // num alive particles multipled by the prerendered instance count
     void         Dump() const;
+    void         PreparePrerender();
     void         Prerender(const UNIFORMS& uniforms);
     void         Serialize();
     // returns sorted data if sorting is on and unsorted otherwise 

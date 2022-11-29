@@ -292,6 +292,11 @@ export class FxTranslator extends FxEmitter {
     }
 
 
+    protected addDrawOperator()
+    {
+        // todo
+    }
+
 
     protected emitControlVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
         if (!this.options.uiControlsGatherToDedicatedConstantBuffer) {
@@ -376,11 +381,18 @@ export class FxTranslator extends FxEmitter {
 
 
     protected emitDrawStmt({ name, args }: IDrawStmtInstruction) {
-        let fx = <IPartFxInstruction>this.tech;//<IPartFxInstruction>pass.parent;
-        let pass = fx.passList.find(pass => pass.name == name);
-        let i = fx.passList.indexOf(pass);
+        const fx = <IPartFxInstruction>this.tech;//<IPartFxInstruction>pass.parent;
+        const pass = fx.passList.find(pass => pass.name == name);
+        
+        if (!pass) {
+            console.warn(`pass<${name}> for draw operator has not been found.`);
+            return;
+        }
+
+        const i = fx.passList.indexOf(pass);
+        // todo: use addDrawOperator()
         if (this.knownDrawOps.map(r => r.name).indexOf(name) == -1) {
-            let uavs = [];
+            const uavs = [];
             const prerenderFn = pass.prerenderRoutine.function;
             if (this.addFunction(prerenderFn)) {
                 this.emitFunction(prerenderFn);

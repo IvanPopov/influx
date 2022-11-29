@@ -10,6 +10,7 @@ export enum EAnalyzerWarnings {
     ImplicitTypeTruncation,
 
     // part fx
-    SortingCannotBeApplied,
-    PresetPropertyHasNotBeenFound
+    PartFx_SortingCannotBeApplied,
+    PartFx_PresetPropertyHasNotBeenFound,
+    PartFx_RenderPassWasNotFound
 }

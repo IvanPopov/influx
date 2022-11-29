@@ -117,14 +117,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
     function preparePrerender() {
         passes.forEach((p, i) => {
-            const uavPrerendered = uavResources.find(uav => uav.name === `${FxTranslator.UAV_PRERENDERED}${i}`);
-            const uavSerials = uavResources.find(uav => uav.name === `${FxTranslator.UAV_SERIALS}${i}`);
-            if (uavPrerendered) {
-                UAV.overwriteCounter(uavPrerendered, 0);
-            }
-            if (uavSerials) {
-                UAV.overwriteCounter(uavSerials, 0);
-            }
+            p.preparePrerender();
         });
     }
 
@@ -245,6 +238,15 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             };
         }
 
+        function preparePrerender()
+        {
+            if (uavPrerendered) {
+                UAV.overwriteCounter(uavPrerendered, 0);
+            }
+            if (uavSerials) {
+                UAV.overwriteCounter(uavSerials, 0);
+            }
+        }
 
         function prerender(uniforms: Uniforms)
         {
@@ -253,6 +255,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 return;
             }
 
+            // simulation could be omitted (effect is paused for ex.) 
+            // but prerender counters still have to be dropped
+            // if we want to continue prerender every frame
+            preparePrerender();
             bundle.setConstants(uniforms);
             bundle.run(Math.ceil(capacity / bundle.groupsizex));
         }
@@ -262,6 +268,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             getNumRenderedParticles,                                                                           // FIXME
             getData,
             serialize,
+            preparePrerender,
             prerender,
             dump
         };
@@ -282,14 +289,17 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
 
     function update(uniforms: Uniforms) {
+        // drop prerender counters all the time before update
+        // because some effects may use "draw" operator
+        // which means that simulation and preprender are mixed
         preparePrerender();
+
         updateBundle.setConstants(uniforms);
         updateBundle.run(Math.ceil(capacity / updateBundle.groupsizex));
     }
 
 
     function prerender(uniforms: Uniforms) {
-        preparePrerender();
         passes.forEach(pass => pass.prerender(uniforms));
     }
 
