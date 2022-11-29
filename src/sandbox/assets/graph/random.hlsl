@@ -1,4 +1,4 @@
-#ifndef __RANDOM_HLSL
+#ifndef __RANDOM_HLSL__
 #define __RANDOM_HLSL__
 
 #include "externals.hlsl"

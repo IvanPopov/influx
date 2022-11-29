@@ -70,15 +70,15 @@ export function asNativeRaw(result: Uint8Array, layout: TypeLayoutT): any {
         case 'uint2':
         case 'uint3':
         case 'uint4':
-            return asNativeVector(asUint, result, layout.length, 4);
+            return asNativeVector(asUint, result, layout.size / 4, 4);
         case 'int2':
         case 'int3':
         case 'int4':
-            return asNativeVector(asInt, result, layout.length, 4);
+            return asNativeVector(asInt, result, layout.size / 4, 4);
         case 'float2':
         case 'float3':
         case 'float4':
-            return asNativeVector(asFloat, result, layout.length, 4);
+            return asNativeVector(asFloat, result, layout.size / 4, 4);
     }
 
     // parse as array
