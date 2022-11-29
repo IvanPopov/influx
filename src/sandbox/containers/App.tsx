@@ -22,7 +22,7 @@ import SourceEditor2 from '@sandbox/containers/editor/Editor';
 import ParserParameters from '@sandbox/containers/ParserParameters';
 import Playground from '@sandbox/containers/playground/Playground';
 import ShaderTranslatorView from '@sandbox/containers/ShaderTranslatorView';
-import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, DEFAULT_FILENAME, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
+import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, DEFAULT_FILENAME, EXT_FILTER, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterTechniques } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
@@ -1238,7 +1238,7 @@ class App extends React.Component<IAppProps> {
                         onFileClick={ this.openFile }
                         desc={ env?.Get('game-name') || 'Development' }
                         expanded={true}
-                        filters={ [ '.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.cs', '.hlsl' ] }
+                        filters={ EXT_FILTER }
                         search={ this.state.depotFilter }
                     />
                     </Sidebar>

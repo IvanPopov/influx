@@ -94,7 +94,7 @@ class Pathinfo {
         return this;
     }
 
-    isAbsolute(): boolean { return this._dirname[0] === "/"; }
+    isAbsolute(): boolean { return !!(this._dirname?.[0] === "/"); }
 
 
     toString(): string {

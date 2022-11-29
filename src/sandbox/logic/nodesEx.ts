@@ -13,7 +13,7 @@ import IStoreState from '@sandbox/store/IStoreState';
 import { LGraph, LiteGraph } from 'litegraph.js';
 import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
-import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE } from './common';
+import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE, LIB_PATH } from './common';
 
 import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
 import docs from '@sandbox/components/graphEx/utils/docs';
@@ -55,7 +55,7 @@ import { getEnv } from '@sandbox/reducers/nodes';
 async function loadEnv(layout: string): Promise<ISLDocument> {
     // todo: don't reload library every time
     const includeResolver = async (name) => createTextDocument(name, await (await fetch(name)).text());
-    const libraryPath = "./assets/graph/lib.hlsl";
+    const libraryPath = `${LIB_PATH}/lib.hlsl`;
     const libText = await createTextDocument("", `#include "${libraryPath}"`);
     const lib = await createFXSLDocument(libText, { includeResolver });
 

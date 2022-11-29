@@ -79,6 +79,11 @@ export const GRAPH_KEYWORD = '@graph';
 export const LOCAL_SESSION_ID = 'last-session-id';
 export const LOCAL_SESSION_AUTOSAVE = 'local-session-autosave';
 
+export const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.hlsl' ];
+
+export const ASSETS_PATH = './assets/fx/tests';
+export const LIB_PATH = './assets/graph'; // todo: move to more suitable place
+
 
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW, GRAPH_VIEW ];
 

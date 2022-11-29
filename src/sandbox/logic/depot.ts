@@ -5,9 +5,8 @@ import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DEFAULT_FILENAME } from './common';
+import { ASSETS_PATH, DEFAULT_FILENAME, EXT_FILTER, LIB_PATH } from './common';
 
-const ASSETS_PATH = './assets/fx/tests';
 
 function feedFakeDepot(root: IDepotFolder) {
     root.files = [
@@ -97,15 +96,13 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
     latest: true,
 
     async process({ getState, action }, dispatch, done) {
-        let { s3d: { env } } = getState();
-        let root = depotNode();
+        const { s3d: { env } } = getState();
+        const root = depotNode();
+        const sandboxPath = path.dirname(window.location.pathname.substr(1));
 
         if (!ipc.isElectron()) {
             feedFakeDepot(root);
         } else {
-
-            const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.hlsl' ];
-            
             if (env) {
                 let sfxFolder = depotNode();
                 await scan(env.Get('influx-sfx-dir'), sfxFolder, EXT_FILTER);
@@ -113,11 +110,15 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
                 let shaderFolder = depotNode();
                 await scan(env.Get('sdrproj-dir'), shaderFolder, EXT_FILTER, ['maya_fx', 'deploy_test', 'nrd']);
 
+                let libFolder = depotNode();
+                let sandboxLibPath = path.join(sandboxPath, LIB_PATH); 
+                await scan(sandboxLibPath, libFolder, EXT_FILTER);
+
                 root.path = URI.fromLocalPath(path.dirname(env.Get('project-dir')));
-                root.folders = [ sfxFolder, shaderFolder ];
+                root.folders = [ sfxFolder, shaderFolder, libFolder ];
                 root.totalFiles = sfxFolder.totalFiles + shaderFolder.totalFiles;
             } else {
-                let rootPath = path.join(path.dirname(window.location.pathname.substr(1)), ASSETS_PATH); 
+                let rootPath = path.join(sandboxPath, ASSETS_PATH); 
                 await scan(rootPath, root, EXT_FILTER);
             }
 
