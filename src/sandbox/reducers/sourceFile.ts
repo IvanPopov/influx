@@ -6,7 +6,7 @@ import { IScope } from '@lib/idl/IInstruction';
 import { ITextDocument } from '@lib/idl/ITextDocument';
 import { StringRef } from '@lib/util/StringRef';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
-import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeSetDefine, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import { IDebuggerActions, IDebuggerOptionsChanged, IDebuggerStartDebug, IGraphLoaded, ISourceCodeAddBreakpoint, ISourceCodeAddMarker, ISourceCodeAddMarkerBatch, ISourceCodeAnalysisComplete, ISourceCodeModified, ISourceCodeParsingComplete, ISourceCodePreprocessingComplete, ISourceCodeRemoveBreakpoint, ISourceCodeRemoveMarker, ISourceCodeRemoveMarkerBatch, ISourceCodeSetDefine, ISourceFileActions, ISourceFileDropState, ISourceFileLoaded, ISourceFileLoadingFailed, ISourceFileRequest } from '@sandbox/actions/ActionTypes';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import { IDebuggerState, IFileState, IStoreState } from '@sandbox/store/IStoreState';
 import * as Depot from '@sandbox/reducers/depot';
@@ -35,12 +35,17 @@ const initialState: IFileState = {
 };
 
 
-export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>({
-    [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
+export default handleActions<IFileState, ISourceFileActions | IDebuggerActions | IGraphLoaded>({
+    // hack: intercept filename of graph as main filename
+    [evt.GRAPH_LOADED]: (state, action: IGraphLoaded) => 
         ({ ...state, uri: action.payload.filename }),
 
+    // don't update uri separatly from content (!)
+    // [evt.SOURCE_FILE_REQUEST]: (state, action: ISourceFileRequest) =>
+    //     ({ ...state, uri: action.payload.filename }),
+
     [evt.SOURCE_FILE_LOADED]: (state, action: ISourceFileLoaded) =>
-        ({ ...state, content: action.payload.content, revision: 0 }),
+        ({ ...state, uri: action.payload.filename, content: action.payload.content, revision: 0 }),
 
     [evt.SOURCE_FILE_LOADING_FAILED]: (state, action: ISourceFileLoadingFailed) =>
         ({
@@ -50,9 +55,8 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             content: null,
             debugger: { ...state.debugger, runtime: null },
             breakpoints: [],
-            slASTDocument: null,
+            slastDocument: null,
             slDocument: null,
-            technique: null,
             revision: 0,
             wasm: Techniques.isWASM()
         }),
@@ -63,9 +67,10 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions>(
             error: null,
             content: null,
             debugger: { ...state.debugger, runtime: null },
+            markers: {},
             breakpoints: [],
-            slASTDocument: null,
-            slDocument: null,
+            slastDocument: null,
+            slDocument: null, 
             revision: 0
         }),
 

@@ -20,7 +20,7 @@ export interface IAction<T extends String, P> extends IBaseAction<T> {
 //
 
 export type ISourceFileRequest = IAction<typeof evt.SOURCE_FILE_REQUEST, { filename: string }>;
-export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { content: string }>;
+export type ISourceFileLoaded = IAction<typeof evt.SOURCE_FILE_LOADED, { filename: string, content: string }>;
 export type ISourceFileLoadingFailed = IAction<typeof evt.SOURCE_FILE_LOADING_FAILED, { error: Error }>;
 export type ISourceFileDropState = IAction<typeof evt.SOURCE_FILE_DROP_STATE, {}>;
 export type ISourceCodeModified = IAction<typeof evt.SOURCE_CODE_MODIFED, { content: string; filename?: string }>;
@@ -103,7 +103,7 @@ export type IGraphModified = IAction<typeof evt.GRAPH_MODIFIED, {}>;
 // emits on graph node selection if docs is presened
 export type IGraphNodeDocsProvided = IAction<typeof evt.GRAPH_NODE_DOCS_PROVIDED, { docs: string }>;
 // emits on new serialized graph content has been specified
-export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { content: string, env?: ISLDocument, constants: INodeConstant[], capacity: number }>;
+export type IGraphLoaded = IAction<typeof evt.GRAPH_LOADED, { filename: string, content: string, env?: ISLDocument, constants: INodeConstant[], capacity: number }>;
 export type IGraphChangeLayout = IAction<typeof evt.GRAPH_CHANGE_LAYOUT, { layout: string, env?: ISLDocument }>;
 export type IGraphAddConstant = IAction<typeof evt.GRAPH_ADD_CONSTANT, { value: INodeConstant }>;
 export type IGraphRemoveConstant = IAction<typeof evt.GRAPH_REMOVE_CONSTANT, { name: string }>;

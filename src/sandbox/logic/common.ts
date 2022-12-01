@@ -27,32 +27,33 @@ const readFile = fname => {
 const fetchSourceFileLogic = createLogic<IStoreState, ISourceFileRequest['payload']>({
     type: evt.SOURCE_FILE_REQUEST,
     latest: true,
+
     async process({ getState, action }, dispatch, done) {
         // drop autosave params
+        dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
         dispatch({ type: evt.PLAYGROUND_EFFECT_HAS_BEEN_DROPPED, payload: { } });
 
+        const filename = action.payload.filename;
+
         try {
-            const response = await readFile(action.payload.filename);
+            const response = await readFile(filename);
             if (response.status !== 200) {
-                console.warn(`Could not find file ${action.payload.filename}.`);
-                dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
+                console.warn(`Could not find file ${filename}.`);
                 dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { } });
             } else {
-                const ext = path.ext(action.payload.filename);
+                const ext = path.ext(filename);
                 const content = await response.text();
-                dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
 
                 if (ext === 'xfx')    
                 {
-                    dispatch({ type: evt.GRAPH_LOADED, payload: { content } });
+                    dispatch({ type: evt.GRAPH_LOADED, payload: { filename, content } });
                 }
                 else {
-                    dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { content } });
+                    dispatch({ type: evt.SOURCE_FILE_LOADED, payload: { filename, content } });
                 }
             }
         } catch (error) {
-            console.warn(`Could not find file ${action.payload.filename}.`);
-            dispatch({ type: evt.SOURCE_FILE_DROP_STATE });
+            console.warn(`Could not find file ${filename}.`);
             dispatch({ type: evt.SOURCE_FILE_LOADING_FAILED, payload: { error } });
         } finally {
             done();
