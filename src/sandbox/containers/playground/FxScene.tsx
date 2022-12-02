@@ -490,6 +490,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         helper.set('parentPosition').float3(0, 0, 0);
         helper.set('cameraPosition').float3.apply(null, this.camera.position.toArray());
         helper.set('instanceTotal').int(2);
+        helper.set('frameNumber').int(constants.frameNumber);
 
         if (this.preset) {
             let preset = this.props.controls.presets.find(p => p.name == this.preset);

@@ -27,6 +27,7 @@ uniform float3 parentPosition: PARENT_POSITION;
 
 uniform float3 cameraPosition: CAMERA_POSITION;
 
+uniform uint frameNumber: FRAME_NUMBER;
 
 #endif
 

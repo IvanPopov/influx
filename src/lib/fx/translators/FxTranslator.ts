@@ -310,6 +310,7 @@ export class FxTranslator extends FxEmitter {
         const KNOWN_EXTERNAL_GLOBALS = [
             'ELAPSED_TIME',
             'ELAPSED_TIME_LEVEL',
+            'FRAME_NUMBER',
             
             'PARENT_POSITION',
             'CAMERA_POSITION'
@@ -572,7 +573,7 @@ export class FxTranslator extends FxEmitter {
             // default spawn op needed only if regulat emission is used
             this.emitSpawnOperator(0, null);
         }
-        
+
         this.begin();
         {
             this.emitLine(`[numthreads(${numthreads.join(', ')})]`);

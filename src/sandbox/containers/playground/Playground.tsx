@@ -113,6 +113,11 @@ class Playground extends React.Component<IPlaygroundProps> {
         const props = this.props;
         const tech = props.playground.technique;
 
+        if (props.playground.technique) {
+            props.playground.timeline.stop();
+            props.playground.timeline.start();
+        }
+
         // todo: add reset support for materials
         if (this.ranAsEmitter()) {
             (tech as IEmitter).reset();
