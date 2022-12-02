@@ -502,9 +502,12 @@ export class FxAnalyzer extends Analyzer {
                                     /**
                                      * Spawn routine expected as 'int spawn(void)'.
                                      */
-                                    let validator = { ret: T_INT, args: [] };
+                                    let validators = [
+                                        { ret: T_INT, args: [] },  // int f(void)
+                                        { ret: T_VOID, args: [] }, // void f(void)
+                                    ];
                                     let objectExrNode = sourceNode.children[1].children[0];
-                                    spawnRoutine = this.analyzeCompileExpr(context, program, objectExrNode, [validator]);
+                                    spawnRoutine = this.analyzeCompileExpr(context, program, objectExrNode, validators);
                                 }
                                 break;
                             case ('InitRoutine'.toUpperCase()):

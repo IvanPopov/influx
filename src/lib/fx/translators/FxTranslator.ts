@@ -354,8 +354,14 @@ export class FxTranslator extends FxEmitter {
 
     protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
-        const init = stmt.scope.findFunction(stmt.name,
-            [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
+
+        const args = [fx.particle, T_INT, ...stmt.args.map(a => a.type)];
+        const init = stmt.scope.findFunction(stmt.name, args);
+
+        if (!init) {
+            console.error(`could not find spawn inititalizer: ${stmt.name}(${args.map(a => a.name).join(', ')})`);
+            return;
+        }
 
         let guid = this.knownSpawnCtors.findIndex(ctor => ctor === init) + 1;
 
@@ -466,9 +472,7 @@ export class FxTranslator extends FxEmitter {
 
 
     // TOOD: sync groupSize with value used inside the emitInitShader();
-    protected emitSpawnOperator(guid: number, ctor: IFunctionDeclInstruction, groupSize: number = 64): IUavReflection[] {
-        const uavs = <IUavReflection[]>[];
-
+    protected emitSpawnOperator(guid: number, ctor: IFunctionDeclInstruction, groupSize: number = 64) {
         this.begin();
         {
             this.emitKeyword('void');
@@ -476,18 +480,19 @@ export class FxTranslator extends FxEmitter {
             this.emitChar('(');
             this.emitNoSpace();
             this.emitKeyword(`uint nPart`);
-            if (ctor) {
+            if (ctor && ctor.def.params.length > 2) {
                 this.emitChar(',');
                 this.emitParams(ctor.def.params.slice(2));
             }
             this.emitChar(')');
+            this.emitNewline();
             this.emitChar('{');
             this.push();
             {
-                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
-                    FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
-                uavs.push(this.emitUav(`RWBuffer<uint>`,
-                    FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
+                this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+                    FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION);
+                this.emitUav(`RWBuffer<uint>`,
+                    FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION);
 
                 this.emitLine(`int nGroups = (int)ceil((float)nPart / ${groupSize}.f);`);
                 this.emitLine(`for (int i = 0; i < nGroups; ++i)`);
@@ -530,8 +535,6 @@ export class FxTranslator extends FxEmitter {
 
         }
         this.end();
-
-        return uavs;
     }
 
 
@@ -560,8 +563,16 @@ export class FxTranslator extends FxEmitter {
 
         const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
-        uavs.push(...this.emitSpawnOperator(0, null));
+        uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+            FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
+        uavs.push(this.emitUav(`RWBuffer<uint>`,
+            FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
 
+        if (fx.initRoutine) {
+            // default spawn op needed only if regulat emission is used
+            this.emitSpawnOperator(0, null);
+        }
+        
         this.begin();
         {
             this.emitLine(`[numthreads(${numthreads.join(', ')})]`);
@@ -573,8 +584,11 @@ export class FxTranslator extends FxEmitter {
                 this.emitNewline();
 
                 this.emitLine(`// usage of 4th element of ${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS} as temp value of number of particles`);
-                if (this.addFunction(spawnFn))
+                
+                if (this.addFunction(spawnFn)) {
                     this.emitFunction(spawnFn);
+                }
+
                 if (elapsedTime) {
                     this.emitGlobal(elapsedTime);
                 } else {
@@ -582,17 +596,23 @@ export class FxTranslator extends FxEmitter {
                     this.emitGlobalRaw('elapsedTime', 'uniform float elapsedTime');
                 }
 
-                this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3]) + (float)${spawnFn.name}() * elapsedTime;`);
-                this.emitLine(`float nPartAdd = floor(nPartAddFloat);`);
-                // TODO: replace with InterlockedExchange()
-
+                // todo: move to dispatch arguments reset routine
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[0] = 0u;`);
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[1] = 1u;`);
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[2] = 1u;`);
-                this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3] = asuint(nPartAddFloat - nPartAdd);`);
-                // TODO: check the capacity
-                // this.emitLine(`nPartAdd = min(nPartAdd, )`)
-                this.emitLine(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}0__((uint)nPartAdd);`);
+                
+                if (type.equals(spawnFn.def.returnType, T_VOID)) {
+                    this.emitLine(`${spawnFn.name}();`);
+                } else {
+                    assert(type.equals(spawnFn.def.returnType, T_INT));
+
+                    this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3]) + (float)${spawnFn.name}() * elapsedTime;`);
+                    this.emitLine(`float nPartAdd = floor(nPartAddFloat);`);
+                    // TODO: replace with InterlockedExchange()
+
+                    this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3] = asuint(nPartAddFloat - nPartAdd);`);
+                    this.emitLine(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}0__((uint)nPartAdd);`);
+                }
             }
             this.pop();
             this.emitChar('}');
@@ -606,7 +626,7 @@ export class FxTranslator extends FxEmitter {
 
     protected emitInitShader(): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
-        const initFn = fx.initRoutine.function;
+        const initFn = fx.initRoutine?.function;
 
         const name = 'CSParticlesInitRoutine';
         const numthreads = [64, 1, 1];
@@ -651,27 +671,37 @@ export class FxTranslator extends FxEmitter {
                 uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
 
-                if (this.addFunction(initFn))
+                // it's ok if here is no init function found
+                // it means that generic spawner is used
+                if (initFn && this.addFunction(initFn))
                     this.emitFunction(initFn);
 
                 const request = `${FxTranslator.UAV_CREATION_REQUESTS}[GroupId]`;
 
                 this.emitLine(`uint type = ${request}.type;`);
-                this.emitLine(`if (type == 0u)`);
-                this.emitChar('{');
-                this.push();
-                {
-                    this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+
+                if (initFn) {
+                    this.emitLine(`if (type == 0u)`);
+                    this.emitChar('{');
+                    this.push();
+                    {
+                        this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+                    }
+                    this.pop();
+                    this.emitChar('}');
+                    this.emitNewline();
                 }
-                this.pop();
-                this.emitChar('}');
-                this.emitNewline();
 
                 this.knownSpawnCtors.forEach((ctor, i) => {
                     if (this.addFunction(ctor))
                         this.emitFunction(ctor);
 
-                    this.emitLine(`else if (type == ${i + 1}u)`);
+                    if (initFn || i > 0) {
+                        this.emitKeyword(`else`);
+                        this.emitSpace();
+                    }
+
+                    this.emitLine(`if (type == ${i + 1}u)`);
                     this.emitChar('{');
                     this.push();
                     {
@@ -703,7 +733,23 @@ export class FxTranslator extends FxEmitter {
 
                             this.emitNewline();
                         });
-                        this.emitLine(`${ctor.name}(Particle, PartId, ${params.map(param => param.name).join(', ')});`);
+                        
+                        this.emitKeyword(ctor.name);
+                        this.emitChar('(');
+                        this.emitNoSpace();
+                        this.emitKeyword('Particle');
+                        this.emitChar(',');
+                        this.emitKeyword('PartId');
+                        if (params.length > 0) {
+                            this.emitChar(',');
+                            params.forEach((param, i, list) => {
+                                this.emitKeyword(param.name);
+                                (i + 1 != list.length) && this.emitChar(', ');
+                            });
+                        }
+                        this.emitChar(')');
+                        this.emitChar(';');
+                        this.emitNewline();
                     }
                     this.pop();
                     this.emitChar('}');
@@ -1101,7 +1147,7 @@ export class FxTranslator extends FxEmitter {
         const CSParticlesSpawnRoutine = this.emitSpawnShader();
         const CSParticlesResetRoutine = this.emitResetShader();
         const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader();
-        const CSParticlesInitRoutine = fx.initRoutine && this.emitInitShader();
+        const CSParticlesInitRoutine = this.emitInitShader();
 
         const passes = fx.passList.map((pass, i): IPartFxPassReflection => {
             const { prerenderRoutine, vertexShader: vs, pixelShader: ps, drawMode } = pass;

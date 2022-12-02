@@ -1,6 +1,7 @@
 import { EInstructionTypes, ETechniqueType, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ICompileExprInstruction } from "@lib/idl/IInstruction";
 import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
+import { T_VOID } from "../../SystemScope";
 
 import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
 
@@ -34,10 +35,25 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
     }
 
     isValid() {
-        const routineCheck = !!this.spawnRoutine && !!this.initRoutine && !!this.updateRoutine;
+        if (!this.spawnRoutine) {
+            console.error(`no spawn routine found`);
+            return false;
+        }
+
+        if (!this.spawnRoutine.function.def.returnType.isEqual(T_VOID)) {
+            if (!this.initRoutine) {
+                console.error(`init routine must be defined if regular spawner is used`);
+                return false;
+            }
+        }
+
+        if (!this.updateRoutine) {
+            console.error(`no update routine found`);
+            return false;
+        }
+
         const particleCheck = !!this.particle;
         const passCheck = this.passList && this.passList.filter((pass: IPartFxPassInstruction) => pass.isValid()).length > 0;
-
-        return routineCheck && particleCheck && passCheck;
+        return particleCheck && passCheck;
     }
 }
