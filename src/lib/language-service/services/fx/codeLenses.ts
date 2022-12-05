@@ -1,4 +1,5 @@
 import { isNull } from "@lib/common";
+import { T_VOID } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, ETechniqueType } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IRange } from "@lib/idl/parser/IParser";
@@ -33,8 +34,17 @@ export class FXCodeLenses {
                     const partFx = <IPartFxInstruction>technique;
 
                     if (partFx.spawnRoutine) {
+                        const fn = partFx.spawnRoutine.function.def;
                         const sourceNode = partFx.spawnRoutine.function.def.sourceNode;
-                        lenses.push(createCodeLens(`[spawn routine]`, sourceNode.loc));
+                        if (fn.returnType.isEqual(T_VOID)) {
+                            if (fn.params.length > 0) {
+                                lenses.push(createCodeLens(`[extened spawn]`, sourceNode.loc));
+                            } else {
+                                lenses.push(createCodeLens(`[generic spawn]`, sourceNode.loc));
+                            }
+                        } else {
+                            lenses.push(createCodeLens(`[regular spawn]`, sourceNode.loc));
+                        }
                     }
 
                     if (partFx.initRoutine) {

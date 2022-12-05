@@ -165,13 +165,16 @@ export class FxTranslator extends FxEmitter {
     static UAV_PRERENDERED = 'uavPrerendered';
     static UAV_SERIALS = 'uavSerials';
     static UAV_SPAWN_DISPATCH_ARGUMENTS = 'uavSpawnDispatchArguments';
+    static UAV_SPAWN_EMITTER = `uavEmitter`;
 
     private static UAV_PARTICLES_DESCRIPTION = `The buffer contains user-defined particle data.`;
     private static UAV_STATES_DESCRIPTION = `The buffer contains the state of the particles, Alive or dead.`;
     private static UAV_DEAD_INDICES_DESCRIPTION = `The buffer contains indicies of dead particles.`;
     private static UAV_CREATION_REQUESTS_DESCRIPTION = 'The buffer contatins information about the number and type of particles to be created';
     private static UAV_SERIALS_DESCRIPTION = 'The buffer contains hashes are required for correct sorting during render buffer filling.';
-    private static UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION = '[no description added :/]';
+    private static UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION = 'The buffer contains arguments of dispatch required to run initialization of new particles.';
+    private static UAV_SPAWN_EMITTER_DESCRIPTION = 'The buffer containts constant data avaialble across frames.';
+    
 
     private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op';
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
@@ -377,7 +380,9 @@ export class FxTranslator extends FxEmitter {
         this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitKeyword(`${stmt.count}u`);
+        this.emitKeyword(`(uint)`);
+        this.emitNoSpace();
+        this.emitExpression(stmt.count);
         if (stmt.args.length) {
             this.emitChar(',');
             this.emitExpressionList(stmt.args);
@@ -461,6 +466,46 @@ export class FxTranslator extends FxEmitter {
                 });
 
                 this.emitLine(`${FxTranslator.UAV_PARTICLES}[tid] = Particle;`);
+
+                // reset emitter if required
+                const spawnFn = fx.spawnRoutine.function;
+                if (spawnFn.def.params.length > 0) {
+                    const p0 = spawnFn.def.params[0];
+                    this.emitLine(`if (tid == 0)`);
+                    this.emitChar('{');
+                    this.push();
+                    {
+                        uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
+                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));     
+                        
+                        this.emitLine(`${p0.type.name} ${p0.name};`);
+                        if (p0.type.isComplex()) {
+                            for (const field of p0.type.fields) {
+                                if (field.type.isComplex()) {
+                                    // todo: add support
+                                    continue;
+                                }
+
+                                if (field.initExpr) {
+                                    this.emitKeyword(`${p0.name}.${field.name} =`);
+                                    this.emitExpression(field.initExpr);
+                                    this.emitChar(';');
+                                    this.emitNewline();
+                                } else {
+                                    this.emitKeyword(`${p0.name}.${field.name} =`);
+                                    this.emitKeyword(`(${field.type.name})0`);
+                                    this.emitChar(';');
+                                    this.emitNewline();
+                                }
+                            }
+                        } else {
+                            // todo: add support of system types
+                        }
+                        this.emitLine(`${FxTranslator.UAV_SPAWN_EMITTER}[0] = ${p0.name};`);
+                    }
+                    this.pop();
+                    this.emitChar('}');
+                }
             }
             this.pop();
             this.emitChar('}');
@@ -603,7 +648,22 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[2] = 1u;`);
                 
                 if (type.equals(spawnFn.def.returnType, T_VOID)) {
-                    this.emitLine(`${spawnFn.name}();`);
+                    if (spawnFn.def.params.length == 1) {
+                        const p0 = spawnFn.def.params[0];
+
+                        uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
+                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));     
+                        
+                        this.emitChar('{');
+                        this.push();
+                        this.emitLine(`${p0.type.name} ${p0.name} = ${FxTranslator.UAV_SPAWN_EMITTER}[0];`);
+                        this.emitLine(`${spawnFn.name}(${p0.name});`);
+                        this.emitLine(`${FxTranslator.UAV_SPAWN_EMITTER}[0] = ${p0.name};`);
+                        this.pop();
+                        this.emitChar('}');
+                    } else {
+                        this.emitLine(`${spawnFn.name}();`);
+                    }
                 } else {
                     assert(type.equals(spawnFn.def.returnType, T_INT));
 

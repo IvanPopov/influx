@@ -114,6 +114,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const uavStates = uavResources.find(uav => uav.name === FxTranslator.UAV_STATES);
     const uavInitArguments = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS);
     const uavCreationRequests = uavResources.find(uav => uav.name === FxTranslator.UAV_CREATION_REQUESTS);
+    const uavSpawnEmitter = uavResources.find(uav => uav.name === FxTranslator.UAV_SPAWN_EMITTER);
 
     function preparePrerender() {
         passes.forEach((p, i) => {

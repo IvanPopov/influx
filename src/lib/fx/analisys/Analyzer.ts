@@ -628,7 +628,7 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
 
 export interface ICompileValidator {
     // validate with custom arguments ignoring statements inside compile expression.
-    args?: ITypeInstruction[];
+    args?: (RegExp | ITypeInstruction)[];
     ret?: ITypeInstruction;
 }
 
@@ -1556,7 +1556,7 @@ export class Analyzer {
 
         let compileArgs: IExprInstruction[] = null;
         let retType: ITypeInstruction = null;
-        let args: ITypeInstruction[] = null;
+        let args: (RegExp | ITypeInstruction)[] = null;
 
         if (children.length > 4) {
             compileArgs = [];

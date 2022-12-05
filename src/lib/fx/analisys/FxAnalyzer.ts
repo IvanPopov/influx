@@ -107,8 +107,12 @@ export class FxAnalyzer extends Analyzer {
             }
         }
 
-        const { base, signed, heximal, exp } = parseUintLiteral(children.slice(-3, -2)[0].value);
-        const count = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+        // const { base, signed, heximal, exp } = parseUintLiteral(children.slice(-3, -2)[0].value);
+        // const count = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+
+        const count = this.analyzeExpr(context, program, children.slice(-3, -2)[0]);
+        
+        // find function name(args)
 
         const spawnStmt = new SpawnInstruction({ sourceNode, scope, name, args, count });
         context.spawnStmts.push(spawnStmt);
@@ -503,11 +507,19 @@ export class FxAnalyzer extends Analyzer {
                                      * Spawn routine expected as 'int spawn(void)'.
                                      */
                                     let validators = [
-                                        { ret: T_INT, args: [] },  // int f(void)
-                                        { ret: T_VOID, args: [] }, // void f(void)
+                                        { ret: T_INT, args: [] },       // int f(void)
+                                        { ret: T_VOID, args: [/.*/] },  // void f(EMITTER emit)
+                                        { ret: T_VOID, args: [] },      // void f(void)
                                     ];
                                     let objectExrNode = sourceNode.children[1].children[0];
                                     spawnRoutine = this.analyzeCompileExpr(context, program, objectExrNode, validators);
+
+                                    const params = spawnRoutine.function.def.params;
+                                    if (params.length > 0) {
+                                        if (!params[0].type.hasUsage('inout')) {
+                                            context.warn(params[0].type.sourceNode, EWarnings.PartFx_EmitterPersistentDataMustBeMarkedAsInout);
+                                        }
+                                    }
                                 }
                                 break;
                             case ('InitRoutine'.toUpperCase()):

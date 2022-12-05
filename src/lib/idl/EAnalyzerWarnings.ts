@@ -12,5 +12,6 @@ export enum EAnalyzerWarnings {
     // part fx
     PartFx_SortingCannotBeApplied,
     PartFx_PresetPropertyHasNotBeenFound,
-    PartFx_RenderPassWasNotFound
+    PartFx_RenderPassWasNotFound,
+    PartFx_EmitterPersistentDataMustBeMarkedAsInout
 }
