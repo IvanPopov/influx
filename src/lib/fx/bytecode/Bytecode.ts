@@ -839,7 +839,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const assigment = expr as IAssignmentExprInstruction;
                     const size = assigment.type.size;
                     assert(size % sizeof.i32() === 0);
-                    assert(assigment.operator === '=');
+                    
 
                     // left address can be both from the registers and in the external memory
                     const leftAddr = raddr(assigment.left);
@@ -852,7 +852,36 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         debug.map(assigment.right);
                     }
 
-                    imove(leftAddr, rightAddr);
+                    const floatBased = SystemScope.isFloatBasedType(expr.type);
+                    
+                    switch (assigment.operator) {
+                        case '=':
+                            imove(leftAddr, rightAddr);
+                            break;
+                        case '+=':
+                            floatBased 
+                                ? intrinsics.addf(leftAddr, leftAddr, rightAddr)
+                                : intrinsics.addi(leftAddr, leftAddr, rightAddr);
+                            break;
+                        case '-=':
+                            floatBased 
+                                ? intrinsics.subf(leftAddr, leftAddr, rightAddr)
+                                : intrinsics.subi(leftAddr, leftAddr, rightAddr);
+                            break;
+                        case '*=':
+                            floatBased 
+                                ? intrinsics.mulf(leftAddr, leftAddr, rightAddr)
+                                : intrinsics.muli(leftAddr, leftAddr, rightAddr);
+                            break;
+                        case '/=':
+                            floatBased 
+                                ? intrinsics.divf(leftAddr, leftAddr, rightAddr)
+                                : intrinsics.divi(leftAddr, leftAddr, rightAddr);
+                            break;
+                        default:
+                            assert(false, `unsupported assigment operator has been found ${assigment.operator}`);
+                    }
+
                     debug.map(assigment);
                     // breakpoint right after assingment
                     debug.ns();

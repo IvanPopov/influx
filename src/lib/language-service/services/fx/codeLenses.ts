@@ -71,7 +71,8 @@ export class FXCodeLenses {
                             }
                             {
                                 const sourceNode = pass.particleInstance.sourceNode;
-                                lenses.push(createCodeLens(`[material]`, sourceNode.loc));
+                                if (sourceNode.loc.start.file.toString() === textDocument.uri)
+                                    lenses.push(createCodeLens(`[material]`, sourceNode.loc));
                             }
                         }
                     }

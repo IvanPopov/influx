@@ -262,7 +262,7 @@ export class FxTranslator extends FxEmitter {
         let view1 = new DataView(buffer);
         let offset = 0;
 
-        src.initExpr.args.forEach(arg => {
+        src.initExpr?.args.forEach(arg => {
             const instr = arg.instructionType === EInstructionTypes.k_InitExpr
                 ? ((arg as IInitExprInstruction).args[0])
                 : (<ILiteralInstruction<number>>arg);
@@ -282,11 +282,11 @@ export class FxTranslator extends FxEmitter {
             }
         });
 
-        ctrl.value = new Uint8Array(buffer);
-        ctrl.name = src.id.name;
-
         // todo: validate controls
         if (ctrl.UIType) {
+            ctrl.value = new Uint8Array(buffer);
+            ctrl.name = src.id.name;
+
             this.knownControls.push(ctrl);
             return true;
         }

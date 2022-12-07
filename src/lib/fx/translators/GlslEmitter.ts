@@ -315,6 +315,9 @@ export class GlslEmitter extends CodeEmitter {
             case 'asfloat':
                 super.emitFCall(call, (decl) => 'uintBitsToFloat');
                 return;
+            case 'fmod':
+                super.emitFCall(call, (decl) => 'mod');
+                return;
 
         }
         
