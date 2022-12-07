@@ -16,19 +16,20 @@ import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { UIProperties } from '@lib/idl/bundles/FxBundle_generated';
 import { Color, ControlValue, Vector3 } from '@sandbox/store/IStoreState';
 
+
 function controlToThreeValue(ctrl: ControlValue, propType: string): THREE.Vector4 | THREE.Vector3 | Number {
     const type = propType as keyof typeof UIProperties;
     switch (type) {
-        case 'UIColor': 
-        {
-            const { r, g, b, a } = ctrl as Color;
-            return new THREE.Vector4(r, g, b, a);
-        }
+        case 'UIColor':
+            {
+                const { r, g, b, a } = ctrl as Color;
+                return new THREE.Vector4(r, g, b, a);
+            }
         case 'UIFloat3':
-        {
-            const { x, y, z } = ctrl as Vector3;
-            return new THREE.Vector3(x, y, z);    
-        }
+            {
+                const { x, y, z } = ctrl as Vector3;
+                return new THREE.Vector3(x, y, z);
+            }
         case 'UIFloat':
         case 'UIFloatSpinner':
         case 'UIInt':
@@ -77,11 +78,15 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     params = {
+        // tonemap
         bloom: false,
         toneMappingExposure: 1.0,
         bloomStrength: 0.3,
         bloomThreshold: 0.0,
         bloomRadius: 1.0,
+
+        // general
+        model: 'probe'
     };
 
     uniforms: IMap<IUniform<THREE.Vector4 | THREE.Vector3 | Number>> = {
@@ -95,73 +100,57 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const gui = new GUI({ autoPlace: false });
 
         // gui.name = 'Tonemapping';
-        GUI.TEXT_OPEN = 'Show Tonemapping Options';
+        GUI.TEXT_OPEN = 'Show Options';
 
         this.mount.appendChild(gui.domElement);
         gui.domElement.style.position = 'absolute';
         gui.domElement.style.bottom = '23px';
 
-        gui.add(params, 'bloom').onChange(value => { 
-            this.saveSceneParams(); 
+        let tonemap = gui.addFolder('tonemapping');
+
+        tonemap.add(params, 'bloom').onChange(value => {
+            this.saveSceneParams();
         });
 
-        gui.add(params, 'toneMappingExposure', 0.1, 2.0).onChange((value) => {
+        tonemap.add(params, 'toneMappingExposure', 0.1, 2.0).onChange((value) => {
             renderer.toneMappingExposure = Math.pow(value, 4.0);
             this.saveSceneParams();
         }).name('exposure');
 
-        gui.add(params, 'bloomThreshold', 0.0, 1.0).onChange((value) => {
+        tonemap.add(params, 'bloomThreshold', 0.0, 1.0).onChange((value) => {
             bloomPass.threshold = Number(value);
             this.saveSceneParams();
         });
 
-        gui.add(params, 'bloomStrength', 0.0, 3.0).onChange((value) => {
+        tonemap.add(params, 'bloomStrength', 0.0, 3.0).onChange((value) => {
             bloomPass.strength = Number(value);
             this.saveSceneParams();
         });
 
-        gui.add(params, 'bloomRadius', 0.0, 1.0).step(0.01).onChange((value) => {
+        tonemap.add(params, 'bloomRadius', 0.0, 1.0).step(0.01).onChange((value) => {
             bloomPass.radius = Number(value);
             this.saveSceneParams();
+        });
+
+        tonemap.open();
+
+        gui.add(params, 'model', [ 'probe', 'cube' ]).onChange((value) => {
+            this.reloadModel();
         });
 
         gui.close();
     }
 
-    componentDidMount() {
-        super.componentDidMount({ grid: true });
-
-        this.scene.background = new THREE.Color(0x333333);
-
+    reloadModel() {
         const loader = new OBJLoader();
-        const scene = this.scene;
-        const camera = this.camera;
         const params = this.params;
-        const renderer = this.renderer;
         const passCount = this.props.material.getPassCount();
+        const scene = this.scene;
 
-        const renderScene = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-
-        this.restoreSceneParams();
-        
-        renderer.toneMappingExposure = params.toneMappingExposure;
-        bloomPass.threshold = params.bloomThreshold;
-        bloomPass.strength = params.bloomStrength;
-        bloomPass.radius = params.bloomRadius;
-
-        this.composer = new EffectComposer(renderer);
-        const composer = this.composer;
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
-
-        this.createSceneControls(bloomPass, renderer);
-
-        this.createUniformGroups();
-        this.createSingleUniforms();
+        this.scene.remove(...(this.groups || []));
 
         loader.load(
-            './assets/models/probe.obj',
+            `./assets/models/${params.model}.obj`,
             (group: THREE.Group) => {
 
                 this.groups = Array(passCount).fill(null).map(x => group.clone(true));
@@ -179,6 +168,41 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         );
     }
 
+    componentDidMount() {
+        super.componentDidMount({ grid: true });
+
+        this.scene.background = new THREE.Color(0x333333);
+
+        
+        const scene = this.scene;
+        const camera = this.camera;
+        const params = this.params;
+        const renderer = this.renderer;
+        
+
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+
+        this.restoreSceneParams();
+
+        renderer.toneMappingExposure = params.toneMappingExposure;
+        bloomPass.threshold = params.bloomThreshold;
+        bloomPass.strength = params.bloomStrength;
+        bloomPass.radius = params.bloomRadius;
+
+        this.composer = new EffectComposer(renderer);
+        const composer = this.composer;
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        this.createSceneControls(bloomPass, renderer);
+
+        this.createUniformGroups();
+        this.createSingleUniforms();
+
+        this.reloadModel();
+    }
+
     shouldComponentUpdate(nextProps: IMaterialSceneProps, nexState) {
         return this.props.material !== nextProps.material;
     }
@@ -192,7 +216,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         this.uniformGroups?.forEach(gs => gs.forEach(g => g.dispose()));
         this.uniformGroups = [];
-        for (let p = 0; p < passCount; ++ p) {
+        for (let p = 0; p < passCount; ++p) {
             const cbuffers = this.props.material?.getPass(p).getDesc().cbuffers;
 
             const groups = [];
@@ -203,8 +227,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                 const group = new THREE.UniformsGroup();
                 group.setName(name);
 
-                for (let i = 0; i < nVec4; ++ i) {
-                    group.add(new THREE.Uniform( new THREE.Vector4(0, 0, 0, 0) ));
+                for (let i = 0; i < nVec4; ++i) {
+                    group.add(new THREE.Uniform(new THREE.Vector4(0, 0, 0, 0)));
                 }
 
                 groups.push(group);
@@ -217,7 +241,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     createSingleUniforms() {
         const controls = this.props.controls;
         const uniforms = this.uniforms;
-        
+
         if (controls) {
             for (let name in controls.values) {
                 let val = controls.values[name];
@@ -240,13 +264,13 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const timeline = this.props.timeline;
         const constants = timeline.getConstants();
 
-        for (let p = 0; p < passCount; ++ p) {
+        for (let p = 0; p < passCount; ++p) {
             const cbuffers = this.props.material?.getPass(p).getDesc().cbuffers;
             for (let c = 0; c < cbuffers.length; ++c) {
                 let cbuf = cbuffers[c];
                 let group = this.uniformGroups[p][c];
                 let { name, size, usage } = cbuf;
-            
+
                 switch (name) {
                     case 'AUTOGEN_CONTROLS':
                         {
@@ -294,7 +318,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                                 case 'COMMON_VP_PARAMS':
                                     {
                                         const pos = (padding / 16) >>> 0; // in vector
-                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([ 1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight ]);
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight]);
                                     }
                                     break;
                                 case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':
@@ -320,7 +344,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         let constants = timeline.getConstants();
         uniforms.elapsedTime.value = constants.elapsedTime;
         uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
-        
+
         if (controls) {
             for (let name in controls.values) {
                 let val = controls.values[name];
@@ -361,9 +385,9 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         params.bloomThreshold = Number(localStorage.bloomThreshold || params.bloomThreshold);
         params.bloomStrength = Number(localStorage.bloomStrength || params.bloomStrength);
         params.bloomRadius = Number(localStorage.bloomRadius || params.bloomRadius);
-        
+
     }
-    
+
     protected reloadMaterial() {
         const groups = this.groups;
 
@@ -391,6 +415,20 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
             if (renderStates[ERenderStates.BLENDENABLE]) {
                 material.transparent = renderStates[ERenderStates.BLENDENABLE] === ERenderStateValues.TRUE;
+            }
+
+            if (renderStates[ERenderStates.CULLFACE]) {
+                switch (renderStates[ERenderStates.CULLFACE]) {
+                    case ERenderStateValues.FRONT:
+                        material.side = THREE.FrontSide;
+                        break;
+                    case ERenderStateValues.BACK:
+                        material.side = THREE.BackSide;
+                        break;
+                    case ERenderStateValues.FRONT_AND_BACK:
+                        material.side = THREE.DoubleSide;
+                        break;
+                }
             }
 
             for (const object of group.children) {
@@ -421,7 +459,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         this.updateSingleUniforms();
 
         const timeline = this.props.timeline;
-        timeline.tick(); 
+        timeline.tick();
     }
 
     protected renderScene(time) {
