@@ -5,15 +5,14 @@ import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IFunctionDeclInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, IPostfixPointInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
-import { ICodeEmitterOptions, IConvolutionPack, ICSShaderReflection, IUavReflection } from "./CodeEmitter";
+import { IBufferReflection, ICodeEmitterOptions, IConvolutionPack, ICSShaderReflection, IUavReflection } from "./CodeEmitter";
 
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { FxEmitter } from "./FxEmitter";
-import { ITextDocument } from "@lib/idl/ITextDocument";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
-import { TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
+import { ITextDocument } from "@lib/idl/ITextDocument";
+import { FxEmitter } from "./FxEmitter";
 
 export interface IPresetEntry { name: string; value: Uint8Array; }
 
@@ -41,6 +40,16 @@ export interface ITechniqueReflection {
     presets: IPreset[];
 }
 
+
+
+export interface ITriMeshReflection {
+    name: string; // original name
+    vertexCountUName: string;
+    faceCountUName: string;
+    verticesName: string;
+    facesName: string;
+    adjacencyName: string; // GS suitable adj info, 6 x nFaces
+}
 
 
 export interface IPartFxPassReflection extends IPassReflection {
@@ -174,7 +183,7 @@ export class FxTranslator extends FxEmitter {
     private static UAV_SERIALS_DESCRIPTION = 'The buffer contains hashes are required for correct sorting during render buffer filling.';
     private static UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION = 'The buffer contains arguments of dispatch required to run initialization of new particles.';
     private static UAV_SPAWN_EMITTER_DESCRIPTION = 'The buffer containts constant data avaialble across frames.';
-    
+
 
     private static SPAWN_OPERATOR_POLYFILL_NAME = '__spawn_op';
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
@@ -185,6 +194,7 @@ export class FxTranslator extends FxEmitter {
     protected knownGlobalUniforms: IVariableDeclInstruction[] = [];
     protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
     protected knownDrawOps: IDrawOpReflection[] = [];
+    protected knownTriMeshes: ITriMeshReflection[] = [];
 
     protected tech: ITechniqueInstruction = null;
 
@@ -295,9 +305,179 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected addDrawOperator()
-    {
+    protected addDrawOperator() {
         // todo
+    }
+
+
+    protected triMeshBaseName(name: string) {
+        return `trim${name[0].toUpperCase()}${name.slice(1)}`;
+    }
+
+    protected isTriMesh(type: IVariableTypeInstruction): boolean {
+        const TRIMESH_NAME = 'TriMesh';
+        return !!type?.name.includes(TRIMESH_NAME);
+    }
+
+    protected emitTriMeshDecl(decl: IVariableDeclInstruction): ITriMeshReflection {
+        const type = decl.type;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.name.match(regexp);
+        assert(match);
+
+        // uavType: match[1],
+        // elementType: match[2],
+
+        const elementType = decl.scope.findType(match[2]);
+        const name = decl.name;
+        const baseName = this.triMeshBaseName(name);
+        // todo: check that such a variable doesn't exists
+        const vertexCountUName = `${baseName}VertexCount`;
+        const faceCountUName = `${baseName}FaceCount`;
+        const verticesName = `${baseName}Vertices`;
+        const facesName = `${baseName}Faces`;
+        const adjacencyName = `${baseName}Adjacency`;
+
+        // todo: use addTriMesh()
+        if(this.knownTriMeshes.map(r => r.name).indexOf(name) == -1) {
+            const { typeName: elementTypeName } = this.resolveType(elementType);
+
+            // uniform uint trimesh0_vert_count;
+            // uniform uint trimesh0_face_count;
+            // StructuredBuffer<Vert> trimesh0_vert;
+            // Buffer<uint3> trimesh0_faces;
+            // Buffer<uint> trimesh0_faces_adj;
+            
+            this.emitGlobalRaw(vertexCountUName, `uniform uint ${vertexCountUName}`);
+
+            this.emitGlobalRaw(faceCountUName, `uniform uint ${faceCountUName}`);
+            
+            // if (this.addBuffer())
+            const vertices = this.emitBuffer(`StructuredBuffer<${elementTypeName}>`, verticesName);
+            // if (this.addBuffer())
+            const faces = this.emitBuffer(`Buffer<uint3>`, facesName);
+            // if (this.addBuffer())
+            const adjacency = this.emitBuffer(`Buffer<uint>`, adjacencyName);
+
+            this.begin();
+            this.emitLine(`void ${baseName}_GetDimensions(out uint vertCount, out uint faceCount)`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`vertCount = ${vertexCountUName};`);
+                this.emitLine(`faceCount = ${faceCountUName};`);
+            }
+            this.pop();
+            this.emitChar('}');
+            
+            this.emitNewline();
+            this.emitNewline();
+
+            this.emitLine(`${elementTypeName} ${baseName}_LoadVertex(uint vert)`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`return ${verticesName}[vert];`);
+            }
+            this.pop();
+            this.emitChar('}');
+
+            this.emitNewline();
+            this.emitNewline();
+
+            this.emitLine(`uint3 ${baseName}_LoadFace(uint face)`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`return ${facesName}[face];`);
+            }
+            this.pop();
+            this.emitChar('}');
+
+            this.emitNewline();
+            this.emitNewline();
+
+            this.emitLine(`void ${baseName}_LoadGSAdjacency(uint face, out uint vertices[6])`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`uint offset = face * 6u;`);
+                this.emitLine(`vertices[0] = ${adjacencyName}[offset];`);
+                this.emitLine(`vertices[1] = ${adjacencyName}[offset + 1];`);
+                this.emitLine(`vertices[2] = ${adjacencyName}[offset + 2];`);
+                this.emitLine(`vertices[3] = ${adjacencyName}[offset + 3];`);
+                this.emitLine(`vertices[4] = ${adjacencyName}[offset + 4];`);
+                this.emitLine(`vertices[5] = ${adjacencyName}[offset + 5];`);
+            }
+            this.pop();
+            this.emitChar('}');
+
+
+            this.end();
+
+            const refl: ITriMeshReflection = {
+                name,
+
+                vertexCountUName,
+                faceCountUName,
+
+                verticesName,
+                facesName,
+                adjacencyName
+            };
+            
+            this.knownTriMeshes.push(refl);
+            return refl;
+        }
+
+        return this.knownTriMeshes.find(t => t.name == name);
+    }
+
+
+    emitTriMeshCall(call: IFunctionCallInstruction) {
+        switch (call.decl.name) {
+            case 'LoadFace':
+            case 'LoadVertex':
+            case 'LoadGSAdjacency':
+            case 'GetDimensions':
+                {
+                    // note: it makes imporsible to pass tri meshes as function arguments
+                    assert(call.callee.instructionType === EInstructionTypes.k_IdExpr);
+                    const id = <IIdExprInstruction>call.callee;
+
+                    this.emitGlobalVariable(id.decl);
+                    
+                    this.emitKeyword(`${this.triMeshBaseName(id.name)}_${call.decl.name}`);
+                    this.emitNoSpace();
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitExpressionList(call.args);
+                    this.emitChar(')');
+                }
+                break;
+            default:
+                assert(false);
+        }
+    }
+
+
+    emitFCall(call: IFunctionCallInstruction, rename?) {
+       if (this.isTriMesh(call.callee?.type)) {
+            this.emitTriMeshCall(call);
+            return;
+       }
+
+       super.emitFCall(call, rename);
+    }
+
+
+    emitGlobalVariable(decl: IVariableDeclInstruction): void {
+        if (this.isTriMesh(decl.type)) {
+            this.emitTriMeshDecl(decl);
+            return;
+        }
+
+        super.emitGlobalVariable(decl);
     }
 
 
@@ -314,13 +494,13 @@ export class FxTranslator extends FxEmitter {
             'ELAPSED_TIME',
             'ELAPSED_TIME_LEVEL',
             'FRAME_NUMBER',
-            
+
             'PARENT_POSITION',
             'CAMERA_POSITION'
         ];
 
         const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
-        
+
         if (!KNOWN_EXTERNAL_GLOBALS.includes(semantic)) {
             super.emitVariable(decl);
             console.warn(`Unsupported uniform has been used: ${decl.toCode()}.`);
@@ -398,7 +578,7 @@ export class FxTranslator extends FxEmitter {
     protected emitDrawStmt({ name, args }: IDrawStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;//<IPartFxInstruction>pass.parent;
         const pass = fx.passList.find(pass => pass.name == name);
-        
+
         if (!pass) {
             console.warn(`pass<${name}> for draw operator has not been found.`);
             return;
@@ -476,8 +656,8 @@ export class FxTranslator extends FxEmitter {
                     this.push();
                     {
                         uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
-                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));     
-                        
+                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));
+
                         this.emitLine(`${p0.type.name} ${p0.name};`);
                         if (p0.type.isComplex()) {
                             for (const field of p0.type.fields) {
@@ -630,7 +810,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitNewline();
 
                 this.emitLine(`// usage of 4th element of ${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS} as temp value of number of particles`);
-                
+
                 if (this.addFunction(spawnFn)) {
                     this.emitFunction(spawnFn);
                 }
@@ -646,14 +826,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[0] = 0u;`);
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[1] = 1u;`);
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[2] = 1u;`);
-                
+
                 if (type.equals(spawnFn.def.returnType, T_VOID)) {
                     if (spawnFn.def.params.length == 1) {
                         const p0 = spawnFn.def.params[0];
 
                         uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
-                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));     
-                        
+                            `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));
+
                         this.emitChar('{');
                         this.push();
                         this.emitLine(`${p0.type.name} ${p0.name} = ${FxTranslator.UAV_SPAWN_EMITTER}[0];`);
@@ -794,7 +974,7 @@ export class FxTranslator extends FxEmitter {
 
                             this.emitNewline();
                         });
-                        
+
                         this.emitKeyword(ctor.name);
                         this.emitChar('(');
                         this.emitNoSpace();

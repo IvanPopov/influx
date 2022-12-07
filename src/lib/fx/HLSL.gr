@@ -99,6 +99,9 @@ ObjectType : T_KW_TEXTURE
 ObjectType : T_KW_TEXTURE1D
 ObjectType : T_KW_TEXTURE2D
 ObjectType : T_KW_TEXTURE2D '<' Type '>'
+#if FX_PART
+ObjectType : T_KW_TRIMESH '<' Type '>'
+#endif
 ObjectType : T_KW_TEXTURE2DARRAY
 ObjectType : T_KW_TEXTURE3D
 ObjectType : T_KW_TEXTURE3D '<' Type '>'
@@ -639,6 +642,7 @@ T_KW_TECHNIQUE : "technique"
 
 #if FX_PART
     T_KW_FXPART : "partFx"
+    T_KW_TRIMESH : "TriMesh"
 #endif
 
 T_KW_PASS : "pass"

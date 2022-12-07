@@ -1,7 +1,8 @@
-import { Context, parseUintLiteral } from "@lib/fx/analisys/Analyzer";
+import { Context } from "@lib/fx/analisys/Analyzer";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
+import { parseUintLiteral } from "@lib/fx/analisys/SystemScope";
 import { IExprInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";

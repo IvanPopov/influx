@@ -1,5 +1,5 @@
 import { isNull, isString } from "@lib/common";
-import { Context, parseUintLiteral } from "@lib/fx/analisys/Analyzer";
+import { Context } from "@lib/fx/analisys/Analyzer";
 import { FxContext } from "@lib/fx/analisys/FxAnalyzer";
 import { AssignmentExprInstruction } from "@lib/fx/analisys/instructions/AssignmentExprInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
@@ -19,6 +19,7 @@ import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableD
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
+import { parseUintLiteral } from "@lib/fx/analisys/SystemScope";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IStmtInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";

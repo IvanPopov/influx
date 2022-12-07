@@ -65,7 +65,7 @@ import { VariableTypeInstruction } from './instructions/VariableTypeInstruction'
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID, parseUintLiteral } from './SystemScope';
 
 
 type IErrorInfo = IMap<any>;
@@ -111,21 +111,6 @@ function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruct
             proxy.resolve(host);
         }
     }
-}
-
-
-export function parseUintLiteral(value: string) {
-    const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)([ulUL]*)$/);
-    assert(match, `cannot parse uint literal: ${value}`);
-
-    const signed = match[5].toLowerCase().indexOf('u') === -1;
-    const exp = Number(match[4] || '0');
-    const base = Number(match[2]);
-    assert(base !== NaN);
-
-    const heximal = value[1] === 'x';
-
-    return { signed, exp, base, heximal };
 }
 
 

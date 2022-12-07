@@ -1,4 +1,4 @@
-import { parseUintLiteral } from "@lib/fx/analisys/Analyzer";
+import { parseUintLiteral } from "@lib/fx/analisys/SystemScope";
 import { ComplexTypeInstruction } from "@lib/fx/analisys/instructions/ComplexTypeInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { SpawnInstruction } from "@lib/fx/analisys/instructions/part/SpawnInstruction";

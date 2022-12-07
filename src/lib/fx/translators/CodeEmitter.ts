@@ -12,6 +12,7 @@ import { isString } from "@lib/util/s3d/type";
 import { UAV0_REGISTER } from "../bytecode/Bytecode";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
+import { ITriMeshReflection } from "./FxTranslator";
 
 export interface IConvolutionPack {
     textDocument?: ITextDocument;
@@ -40,10 +41,22 @@ export interface IUavReflection {
 };
 
 
+export interface IBufferReflection {
+    register: number;
+    name: string;
+    /** @deprecated */
+    type: string;           // "Buffer<float4>", "AppendBuffer<int>" etc. 
+    bufType: string;        // "Buffer"
+    elementType: string;    // "float4"
+}
+
+
 export interface ICSShaderReflection {
     name: string;
     numthreads: number[];
     uavs: IUavReflection[];
+    // buffers: IBufferReflection[];
+    // triMeshes: ITriMeshReflection[];
 }
 
 
@@ -54,7 +67,7 @@ export interface ICbReflection {
 }
 
 export interface ICodeEmitterOptions {
-    mode?: 'vertex' | 'pixel' | 'compute' | 'raw' ;
+    mode?: 'vertex' | 'pixel' | 'compute' | 'raw';
     // do not print 'in' for function parameters even if it is specified
     omitInUsage?: boolean;
     // skip complex type parameters of zero size
@@ -70,6 +83,7 @@ export class CodeEmitter extends BaseEmitter {
     knownTypes: string[] = [];
     knownFunctions: number[] = [];
     knownUAVs: IUavReflection[] = [];
+    knownBuffers: IBufferReflection[] = [];
     knownCsShaders: ICSShaderReflection[] = [];
     knownCbuffers: ICbReflection[] = [];
     knownUniforms: string[] = [];
@@ -79,7 +93,7 @@ export class CodeEmitter extends BaseEmitter {
 
     protected options: ICodeEmitterOptions;
 
-    constructor(options: ICodeEmitterOptions = { }) {
+    constructor(options: ICodeEmitterOptions = {}) {
         super();
         this.options = options;
         this.options.mode ||= 'raw';
@@ -107,7 +121,7 @@ export class CodeEmitter extends BaseEmitter {
         return this.mode === 'vertex';
     }
 
-    
+
     protected isRaw() {
         return this.mode === 'raw';
     }
@@ -207,6 +221,15 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    protected addBuffer(buf: IBufferReflection): boolean {
+        if (!this.knownBuffers.map(u => u.name).includes(buf.name)) {
+            this.knownBuffers.push(buf);
+            return true;
+        }
+        return false;
+    }
+
+
     protected addCsShader(shader: ICSShaderReflection): boolean {
         if (!this.knownCsShaders.map(s => s.name).includes(shader.name)) {
             this.knownCsShaders.push(shader);
@@ -216,8 +239,32 @@ export class CodeEmitter extends BaseEmitter {
     }
 
 
+    emitBuffer(type: string, name: string, comment?: string): IBufferReflection {
+        const register = this.knownBuffers.length;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.match(regexp);
+        assert(match);
 
+        const buf: IBufferReflection = {
+            name,
+            type,
+            bufType: match[1],
+            elementType: match[2],
+            register
+        };
 
+        if (this.addBuffer(buf)) {
+            this.begin();
+            {
+                comment && this.emitComment(comment);
+                this.emitLine(`${type} ${name}: register(t${register});`);
+            }
+            this.end();
+            return buf;
+        }
+
+        return this.knownBuffers.find(u => u.name == name);
+    }
 
 
     emitUav(type: string, name: string, comment?: string): IUavReflection {
@@ -313,7 +360,9 @@ export class CodeEmitter extends BaseEmitter {
     // todo: remove hack with rename mutator
     emitVariable(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         this.emitVariableNoInit(src, rename);
-        src.initExpr && (this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr));
+        if (src.initExpr) {
+            this.emitKeyword('='), this.emitSpace(), this.emitExpression(src.initExpr);
+        }
     }
 
 
@@ -368,7 +417,7 @@ export class CodeEmitter extends BaseEmitter {
         if (!isString(entryName)) return fnName;
         if (isDef(fn.scope.functions[entryName]))
             // todo: emit correct error
-            console.error('entry point already exists'); 
+            console.error('entry point already exists');
         return entryName;
     }
 
@@ -403,8 +452,8 @@ export class CodeEmitter extends BaseEmitter {
         }
         this.end();
     }
-    
-    
+
+
     protected emitRegularFunction(fn: IFunctionDeclInstruction) {
         if (!fn) {
             return;
@@ -786,8 +835,6 @@ export class CodeEmitter extends BaseEmitter {
                     this.begin();
                     this.emitCbuffer(cbuf);
                     this.end();
-                } else {
-                    // this.findCbuffer(refl.name).name
                 }
             } else {
                 if (this.addGlobal(CodeEmitter.asSTRID(decl))) {
@@ -1063,7 +1110,7 @@ export class CodeEmitter extends BaseEmitter {
 export class CodeConvolutionEmitter extends CodeEmitter {
     // list of convolute includes
     protected includeDeps: string[] = [];
-    
+
     constructor(protected textDocument?: ITextDocument, protected slastDocument?: ISLASTDocument, opts?: ICodeEmitterOptions) {
         super(opts);
     }
@@ -1080,7 +1127,7 @@ export class CodeConvolutionEmitter extends CodeEmitter {
 
         const src = decl.sourceNode.loc;
         const includes = this.slastDocument.includes;
-        
+
         let dst = src;
         while (dst && String(this.textDocument.uri) !== String(dst.start.file)) {
             dst = includes.get(String(dst.start.file));

@@ -10,6 +10,7 @@ import { Scope } from "@lib/fx/analisys/ProgramScope";
 import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IFunctionDeclInstruction, IScope, ITypedInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction, IVariableUsage } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
+import { IntInstruction } from "./instructions/IntInstruction";
 
 // TODO: use it
 // export enum ESystemTypes {
@@ -23,6 +24,19 @@ import { IMap } from "@lib/idl/IMap";
 // };
 
 
+export function parseUintLiteral(value: string) {
+    const match = value.match(/^((0x[a-fA-F0-9]{1,8}?|[0-9]+)(e([+-]?[0-9]+))?)([ulUL]*)$/);
+    assert(match, `cannot parse uint literal: ${value}`);
+
+    const signed = match[5].toLowerCase().indexOf('u') === -1;
+    const exp = Number(match[4] || '0');
+    const base = Number(match[2]);
+    assert(base !== NaN);
+
+    const heximal = value[1] === 'x';
+
+    return { signed, exp, base, heximal };
+}
 
 
 const scope = new Scope({ type: EScopeType.k_System });
@@ -250,6 +264,128 @@ class StructuredBufferTemplate extends TypeTemplate {
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
     }
 }
+
+
+class TriMeshTemplate extends TypeTemplate {
+    constructor() {
+        super('TriMesh', scope);
+    }
+    produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction {
+        if (args.length !== 1) {
+            // TODO: print error
+            return null;
+        }
+
+        const name = this.typeName(args);
+        const size = -1;
+        const elementType = args[0];
+        const length = instruction.UNDEFINE_LENGTH;
+        const fields: IVariableDeclInstruction[] = [];
+        const methods: IFunctionDeclInstruction[] = [];
+        const uav = false;
+
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'vertCount' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'faceCount' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            let id = new IdInstruction({ scope, name: 'GetDimensions' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope });
+                const id = new IdInstruction({ scope, name: 'vert' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: elementType, scope });
+            let id = new IdInstruction({ scope, name: 'LoadVertex' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope });
+                const id = new IdInstruction({ scope, name: 'face' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("uint3"), scope });
+            let id = new IdInstruction({ scope, name: 'LoadFace' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope });
+                const id = new IdInstruction({ scope, name: 'face' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            {
+                const { base, signed, heximal, exp } = parseUintLiteral("6u");
+                const arrayIndex = new IntInstruction({ scope, base, exp, signed, heximal });
+
+                const uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, arrayIndex, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'adjacency' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param2 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param2);
+            }
+
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            let id = new IdInstruction({ scope, name: 'LoadGSAdjacency' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+    }
+}
+
 
 
 class RWTexture1DTemplate extends TypeTemplate {
@@ -752,6 +888,7 @@ class TextureCubeArrayTemplate extends TypeTemplate {
 
     static TYPE_NAME = 'TextureCubeArray';
 }
+
 
 
 function addFieldsToVectorFromSuffixObject(fields: IVariableDeclInstruction[], suffixMap: IMap<boolean>, baseType: string) {
@@ -1461,6 +1598,8 @@ function initSystemTypes(): void {
     scope.addTypeTemplate(new RWStructuredBufferTemplate);
     scope.addTypeTemplate(new AppendStructuredBufferTemplate);
     scope.addTypeTemplate(new StructuredBufferTemplate);
+
+    scope.addTypeTemplate(new TriMeshTemplate);
 
     scope.addTypeTemplate(new RWTexture1DTemplate);
     scope.addTypeTemplate(new RWTexture2DTemplate);

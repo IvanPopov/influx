@@ -6,7 +6,7 @@ import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDe
 import { IFile, IParseNode } from "@lib/idl/parser/IParser";
 import { EPassDrawMode, IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
 
-import { Analyzer, Context, ICompileValidator, parseUintLiteral } from "./Analyzer";
+import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
 import { InitExprInstruction } from "./instructions/InitExprInstruction";
 import { IntInstruction } from "./instructions/IntInstruction";
