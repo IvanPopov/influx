@@ -1,27 +1,28 @@
 import { isNull } from "@lib/common";
 import { T_INT } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstruction, ITechniqueInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
-import { CodeConvolutionEmitter, CodeEmitter, ICodeEmitterOptions, IConvolutionPack } from "./CodeEmitter";
+import { CodeConvolutionEmitter } from "./CodeConvolutionEmitter";
+import { CodeEmitter, CodeReflection, ICodeEmitterOptions, IConvolutionPack } from "./CodeEmitter";
 
 
-export class FxEmitter extends CodeConvolutionEmitter {
+export class FxEmitter<CodeReflectionT extends CodeReflection> extends CodeConvolutionEmitter<CodeReflectionT> {
     // aux
     protected tech: ITechniqueInstruction;
 
-    protected emitRoutineProperty(name: string, routine: ICompileExprInstruction) {
+    protected emitRoutineProperty(cref: CodeReflectionT, name: string, routine: ICompileExprInstruction) {
         this.emitKeyword(name);
         this.emitKeyword('=');
         this.emitSpace();
-        this.emitCompile(routine);
+        this.emitCompile(cref, routine);
         this.emitChar(';');
         this.emitNewline();
     }
 
 
-    protected emitStringProperty(name: string, id: string) {
+    protected emitStringProperty(cref: CodeReflectionT, name: string, id: string) {
         this.emitKeyword(name),
         this.emitKeyword('='),
         this.emitKeyword(id),
@@ -30,19 +31,19 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
+    protected emitSpawnStmt(cref: CodeReflectionT, stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
         const init = stmt.scope.findFunction(stmt.name, [fx.particle, T_INT, ...stmt.args.map(a => a.type)]);
         
-        if (this.addFunction(init))
-            this.emitFunction(init);
+        if (cref.addFunction(init))
+            this.emitFunction(cref, init);
 
         this.emitKeyword(`spawn(${stmt.count})`);
         this.emitKeyword(stmt.name);
         this.emitChar('(');
         this.emitNoSpace();
         stmt.args.forEach((arg, i, list) => {
-            this.emitExpression(arg);
+            this.emitExpression(cref, arg);
             (i + 1 != list.length) && this.emitChar(',');
         });
         this.emitChar(')');
@@ -50,14 +51,14 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    protected emitDrawStmt(stmt: IDrawStmtInstruction) {
+    protected emitDrawStmt(cref: CodeReflectionT, stmt: IDrawStmtInstruction) {
         
         this.emitKeyword(`draw`);
         this.emitKeyword(stmt.name);
         this.emitChar('(');
         this.emitNoSpace();
         stmt.args.forEach((arg, i, list) => {
-            this.emitExpression(arg);
+            this.emitExpression(cref, arg);
             (i + 1 != list.length) && this.emitChar(',');
         });
         this.emitChar(')');
@@ -65,30 +66,30 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    emitPartFxDecl(fx: IPartFxInstruction) {
+    emitPartFxDecl(cref: CodeReflectionT, fx: IPartFxInstruction) {
         this.tech = fx;
 
         this.begin();
         {
             this.emitKeyword('partFx');
             fx.name && this.emitKeyword(fx.name);
-            fx.semantic && this.emitSemantic(fx.semantic);
-            fx.annotation && this.emitAnnotation(fx.annotation);
+            fx.semantic && this.emitSemantic(cref, fx.semantic);
+            fx.annotation && this.emitAnnotation(cref, fx.annotation);
             this.emitNewline();
             this.emitChar('{');
             this.push();
             {
-                fx.capacity && this.emitStringProperty('Capacity', String(fx.capacity));
+                fx.capacity && this.emitStringProperty(cref, 'Capacity', String(fx.capacity));
 
-                fx.spawnRoutine && this.emitRoutineProperty('SpawnRoutine', fx.spawnRoutine);
-                fx.initRoutine && this.emitRoutineProperty('InitRoutine', fx.initRoutine);
-                fx.updateRoutine && this.emitRoutineProperty('UpdateRoutine', fx.updateRoutine);
+                fx.spawnRoutine && this.emitRoutineProperty(cref, 'SpawnRoutine', fx.spawnRoutine);
+                fx.initRoutine && this.emitRoutineProperty(cref, 'InitRoutine', fx.initRoutine);
+                fx.updateRoutine && this.emitRoutineProperty(cref, 'UpdateRoutine', fx.updateRoutine);
 
                 this.emitNewline();
-                fx.passList.forEach((pass, i) => (this.emitPartFxPass(pass),
+                fx.passList.forEach((pass, i) => (this.emitPartFxPass(cref, pass),
                     i !== fx.passList.length - 1 && this.emitNewline()));
                 this.emitNewline();
-                fx.presets.forEach((preset, i) => (this.emitPresetDecl(preset),
+                fx.presets.forEach((preset, i) => (this.emitPresetDecl(cref, preset),
                     i !== fx.presets.length - 1 && this.emitNewline()));
             }
             this.pop();
@@ -98,20 +99,20 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    emitTechniqueDecl(fx: ITechniqueInstruction) {
+    emitTechniqueDecl(cref: CodeReflectionT, fx: ITechniqueInstruction) {
         this.tech = fx;
         this.begin();
         {
             this.emitKeyword('technique');
             fx.name && this.emitKeyword(fx.name);
-            fx.semantic && this.emitSemantic(fx.semantic);
-            fx.annotation && this.emitAnnotation(fx.annotation);
+            fx.semantic && this.emitSemantic(cref, fx.semantic);
+            fx.annotation && this.emitAnnotation(cref, fx.annotation);
             this.emitNewline();
             this.emitChar('{');
             this.push();
             {
                 this.emitNewline();
-                fx.passList.forEach((pass, i) => (this.emitPass(pass),
+                fx.passList.forEach((pass, i) => (this.emitPass(cref, pass),
                     i !== fx.passList.length - 1 && this.emitNewline()));
             }
             this.pop();
@@ -121,19 +122,19 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    emitPartFxPass(pass: IPartFxPassInstruction) {
+    emitPartFxPass(cref: CodeReflectionT, pass: IPartFxPassInstruction) {
         this.emitKeyword('pass');
         pass.name && this.emitKeyword(pass.name);
         this.emitNewline();
         this.emitChar('{');
         this.push();
         {
-            pass.prerenderRoutine && this.emitRoutineProperty('PrerenderRoutine', pass.prerenderRoutine);
-            pass.sorting && this.emitStringProperty('Sorting', String(pass.sorting));
-            this.emitStringProperty('Geometry', `"${pass.geometry}"`);
-            pass.instanceCount !== 1 && this.emitStringProperty('InstanceCount', String(pass.instanceCount));
+            pass.prerenderRoutine && this.emitRoutineProperty(cref, 'PrerenderRoutine', pass.prerenderRoutine);
+            pass.sorting && this.emitStringProperty(cref, 'Sorting', String(pass.sorting));
+            this.emitStringProperty(cref, 'Geometry', `"${pass.geometry}"`);
+            pass.instanceCount !== 1 && this.emitStringProperty(cref, 'InstanceCount', String(pass.instanceCount));
 
-            super.emitPassBody(pass);
+            super.emitPassBody(cref, pass);
         }
         this.pop();
         this.emitChar('}');
@@ -141,7 +142,7 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    emitPresetDecl(preset: IPresetInstruction) {
+    emitPresetDecl(cref: CodeReflectionT, preset: IPresetInstruction) {
         this.emitKeyword('preset');
         preset.name && this.emitKeyword(preset.name);
         this.emitNewline();
@@ -152,7 +153,7 @@ export class FxEmitter extends CodeConvolutionEmitter {
                 this.emitKeyword(prop.id.name);
                 this.emitKeyword('=');
                 this.emitKeyword('{');
-                this.emitExpressionList(prop.args);
+                this.emitExpressionList(cref, prop.args);
                 this.emitKeyword('}');
                 this.emitChar(';');
                 this.emitNewline();
@@ -164,34 +165,34 @@ export class FxEmitter extends CodeConvolutionEmitter {
     }
 
 
-    emitStmt(stmt: IInstruction) {
+    emitStmt(cref: CodeReflectionT, stmt: IInstruction) {
         switch (stmt.instructionType) {
             case EInstructionTypes.k_SpawnStmt:
-                this.emitSpawnStmt(stmt as ISpawnStmtInstruction);
+                this.emitSpawnStmt(cref, stmt as ISpawnStmtInstruction);
                 break;
             case EInstructionTypes.k_DrawStmt:
-                this.emitDrawStmt(stmt as IDrawStmtInstruction);
+                this.emitDrawStmt(cref, stmt as IDrawStmtInstruction);
                 break;
             default:
-                super.emitStmt(stmt);
+                super.emitStmt(cref, stmt);
         }
     }
 
 
-    emit(instr: IInstruction): CodeEmitter {
+    emit(cref: CodeReflectionT, instr: IInstruction): FxEmitter<CodeReflectionT> {
         if (!instr) {
             return this;
         }
 
         switch (instr.instructionType) {
             case EInstructionTypes.k_PartFxDecl:
-                this.emitPartFxDecl(instr as IPartFxInstruction);
+                this.emitPartFxDecl(cref, instr as IPartFxInstruction);
                 break;
             case EInstructionTypes.k_TechniqueDecl:
-                this.emitTechniqueDecl(instr as ITechniqueInstruction);
+                this.emitTechniqueDecl(cref, instr as ITechniqueInstruction);
                 break;
             default:
-                super.emit(instr)
+                super.emit(cref, instr)
         }
 
         return this;
@@ -200,13 +201,15 @@ export class FxEmitter extends CodeConvolutionEmitter {
 
 export function translate(instr: IInstruction, opts?: ICodeEmitterOptions): string {
     const emitter = new FxEmitter(null, null, opts);
-    emitter.emit(instr);
+    const cref = new CodeReflection;
+    emitter.emit(cref, instr);
     return emitter.toString();
 }
 
 export function translateConvolute(instr: IInstruction, { textDocument, slastDocument }: IConvolutionPack, opts?: ICodeEmitterOptions): string {
     const emitter = new FxEmitter(textDocument, slastDocument, opts);
-    emitter.emit(instr);
+    const cref = new CodeReflection;
+    emitter.emit(cref, instr);
     return emitter.toString();
 }
 

@@ -2,7 +2,7 @@ import { assert, isDef } from "@lib/common";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
 import { EInstructionTypes, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
-import { CodeEmitter, ICodeEmitterOptions } from "./CodeEmitter";
+import { CodeEmitter, CodeReflection, ICodeEmitterOptions } from "./CodeEmitter";
 
 const GlslTypeNames = {
     'void': 'void',
@@ -43,7 +43,20 @@ const IS_POSITION = (semantic: string) => ['POSITION', 'SV_Position'].indexOf(se
 const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_InstanceID'].indexOf(semantic) !== -1;
 const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VertexID'].indexOf(semantic) !== -1;
 
-export class GlslEmitter extends CodeEmitter {
+
+export class GlslReflection extends CodeReflection {
+    checkFunction(decl: IFunctionDeclInstruction): boolean {
+        // nothing todo - built in GLSL function
+        const SYSTEM_FUNCS = [ 'unpackHalf2x16' ];
+        if (SYSTEM_FUNCS.includes(decl.name)) {
+            return true;
+        }
+        return super.checkFunction(decl);
+    }
+}
+
+
+export class GlslEmitter<CodeReflectionT extends GlslReflection> extends CodeEmitter<CodeReflectionT> {
     
     protected resolveTypeName(type: ITypeInstruction): string {
         const typeName = GlslTypeNames[type.name];
@@ -68,37 +81,30 @@ export class GlslEmitter extends CodeEmitter {
         return false;
     }
 
-    protected addFunction(fn: IFunctionDeclInstruction): boolean {
-        // // nothing todo - built in GLSL function
-        const SYSTEM_FUNCS = [ 'unpackHalf2x16' ];
-        if (SYSTEM_FUNCS.includes(fn.name)) {
-            return false;
-        }
-        return super.addFunction(fn);
-    }
 
 
-    emitSemantic(semantic: string) {
+
+    emitSemantic(cref: CodeReflectionT, semantic: string) {
         // disabling of semantics emission.
     }
 
 
-    emitPostfixIndex(pfidx: IPostfixIndexInstruction)
+    emitPostfixIndex(cref: CodeReflectionT, pfidx: IPostfixIndexInstruction)
     {
         if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(pfidx.element.type.name)) {
             // TODO: fixme
-            this.emitKeyword(`${this.resolveType(pfidx.type).typeName}(0.0, 0.0, 0.0, 0.0)`);
+            this.emitKeyword(`${this.resolveType(cref, pfidx.type).typeName}(0.0, 0.0, 0.0, 0.0)`);
             return;
             // this.emitLine(`texelFetch(`, texelCoord, 0).x`);
             this.emitKeyword('texelFetch');
             this.emitChar('(');
                 this.emitNoSpace();
-                this.emitExpression(pfidx.element);
+                this.emitExpression(cref, pfidx.element);
                 this.emitChar(',');
                 this.emitKeyword(`ivec2`);
                 this.emitChar('(');
                     this.emitNoSpace();
-                    this.emitExpression(pfidx.index);
+                    this.emitExpression(cref, pfidx.index);
                     this.emitChar(',');
                     this.emitKeyword('0');
                 this.emitChar(')');
@@ -107,16 +113,17 @@ export class GlslEmitter extends CodeEmitter {
             this.emitChar(')');
             return;
         }
-        super.emitPostfixIndex(pfidx);
+        super.emitPostfixIndex(cref, pfidx);
     }
 
-    emitVariableNoInit(src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+
+    emitVariableNoInit(cref: CodeReflectionT, src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         const { type } = src;
         if (src.isGlobal()) {
             // IP: hack for fake compartibility with GLSL 3.00 ES
             // convert buffers to samplers
             if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
-                const { typeName } = this.resolveType(type.arrayElementType);
+                const { typeName } = this.resolveType(cref, type.arrayElementType);
 
                 this.emitKeyword('uniform highp');
                 if (['ivec4'].includes(typeName)) {
@@ -130,10 +137,11 @@ export class GlslEmitter extends CodeEmitter {
                 return;
             }
         }
-        super.emitVariableNoInit(src, rename);
+        super.emitVariableNoInit(cref, src, rename);
     }
 
-    protected emitPrologue(def: IFunctionDefInstruction): void {
+
+    protected emitPrologue(cref: CodeReflectionT, def: IFunctionDefInstruction): void {
         this.begin();
         {
             this.emitLine(`#version 300 es`);
@@ -156,13 +164,13 @@ export class GlslEmitter extends CodeEmitter {
                 this.emitNewline();
 
                 if (!type.isComplex()) {
-                    this.emitVaryingOrAttribute(param);
+                    this.emitVaryingOrAttribute(cref, param);
                     continue;
                 }
 
                 type.fields.forEach(field => {
                     assert(!field.type.isNotBaseArray() && !field.type.isComplex());
-                    this.emitVaryingOrAttribute(field);
+                    this.emitVaryingOrAttribute(cref, field);
                 });
             }
         }
@@ -175,7 +183,7 @@ export class GlslEmitter extends CodeEmitter {
                     continue;
                 }
 
-                this.emitVariable(param);
+                this.emitVariable(cref, param);
             }
         }
         this.end();
@@ -187,7 +195,7 @@ export class GlslEmitter extends CodeEmitter {
                 const retType = def.returnType;
                 assert(retType.isComplex(), 'basic types unsupported yet');
 
-                retType.fields.forEach(field => this.emitVarying(field));
+                retType.fields.forEach(field => this.emitVarying(cref, field));
             }
             this.end();
         }
@@ -199,26 +207,28 @@ export class GlslEmitter extends CodeEmitter {
         }
     }
 
+
     emitKeyword(kw: string) {
         // IP: temp fix for reserved GLSL keyword
         if (kw === 'input') kw = 'input1';
         super.emitKeyword(kw);
     }
 
+
     private loc = 0;
-    protected emitAttribute(decl: IVariableDeclInstruction) {
+    protected emitAttribute(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
         // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
         if (IS_INSTANCEID(decl.semantic)) return;
         if (IS_VERTEXID(decl.semantic)) return;
 
-        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariable(decl, sname.attr), this.emitChar(';'), this.emitNewline());
+        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariable(cref, decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
 
 
-    protected emitVarying(decl: IVariableDeclInstruction) {
+    protected emitVarying(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
         const { type } = decl;
         if (type.isComplex()) {
-            type.fields.forEach(field => this.emitVarying(field));
+            type.fields.forEach(field => this.emitVarying(cref, field));
             return;
         }
 
@@ -227,21 +237,21 @@ export class GlslEmitter extends CodeEmitter {
             pixel: 'in'
         };
 
-        (this.emitKeyword(usage[this.mode]), this.emitVariable(decl, sname.varying), this.emitChar(';'), this.emitNewline());
+        (this.emitKeyword(usage[this.mode]), this.emitVariable(cref, decl, sname.varying), this.emitChar(';'), this.emitNewline());
     }
 
 
-    protected emitVaryingOrAttribute(decl: IVariableDeclInstruction) {
+    protected emitVaryingOrAttribute(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
         switch(this.mode) {
             case 'vertex':
-                return this.emitAttribute(decl);
+                return this.emitAttribute(cref, decl);
             case 'pixel':
-                return this.emitVarying(decl);
+                return this.emitVarying(cref, decl);
         }
     }
 
 
-    emitCbuffer(cbuf: ICbufferInstruction) {
+    emitCbuffer(cref: CodeReflectionT, cbuf: ICbufferInstruction) {
         this.begin();
         this.emitComment(`size: ${cbuf.type.size}`);
         this.emitKeyword('uniform');
@@ -253,7 +263,7 @@ export class GlslEmitter extends CodeEmitter {
         this.push();
         {
             cbuf.type.fields.forEach(field => {
-                this.emitVariable(field);
+                this.emitVariable(cref, field);
                 this.emitChar(';');
                 this.emitChar('\t')
                 this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
@@ -266,7 +276,7 @@ export class GlslEmitter extends CodeEmitter {
     }
 
 
-    emitFloat(lit: ILiteralInstruction<number>) {
+    emitFloat(cref: CodeReflectionT, lit: ILiteralInstruction<number>) {
         const sval = String(lit.value);
         this.emitKeyword(sval);
         (sval.indexOf('.') === -1) && this.emitChar('.0');
@@ -278,100 +288,100 @@ export class GlslEmitter extends CodeEmitter {
     }
 
 
-    emitPostfixPoint(pfxp: IPostfixPointInstruction) {
+    emitPostfixPoint(cref: CodeReflectionT, pfxp: IPostfixPointInstruction) {
         // if (IS_INSTANCEID(pfxp.postfix.decl.semantic)) {
         //     this.emitKeyword(`gl_InstanceID`);
         //     return;
         // }
 
-        super.emitPostfixPoint(pfxp);
+        super.emitPostfixPoint(cref, pfxp);
     }
 
 
-    emitIdentifier(id: IIdExprInstruction) {
-        super.emitIdentifier(id);
+    emitIdentifier(cref: CodeReflectionT, id: IIdExprInstruction) {
+        super.emitIdentifier(cref, id);
     }
 
 
-    emitFCall(call: IFunctionCallInstruction) {
+    emitFCall(cref: CodeReflectionT, call: IFunctionCallInstruction) {
         const decl = call.decl;
         const args = call.args;
 
         switch (decl.name) {
             case 'mul':
                 assert(args.length == 2);
-                this.emitMulIntrinsic(args[0], args[1]);
+                this.emitMulIntrinsic(cref, args[0], args[1]);
                 return;
             case 'lerp':
-                super.emitFCall(call, (decl) => 'mix');
+                super.emitFCall(cref, call, (decl) => 'mix');
                 return;
             case 'frac':
-                super.emitFCall(call, (decl) => 'fract');
+                super.emitFCall(cref, call, (decl) => 'fract');
                 return;
             case 'asuint':
                 // call.decl.def.params[0].type.name === 'float' ? 'floatBitsToUint' : 'floatBitsToUint'
-                super.emitFCall(call, (decl) => 'floatBitsToUint');
+                super.emitFCall(cref, call, (decl) => 'floatBitsToUint');
                 return;
             case 'asfloat':
-                super.emitFCall(call, (decl) => 'uintBitsToFloat');
+                super.emitFCall(cref, call, (decl) => 'uintBitsToFloat');
                 return;
             case 'fmod':
-                super.emitFCall(call, (decl) => 'mod');
+                super.emitFCall(cref, call, (decl) => 'mod');
                 return;
 
         }
         
-        super.emitFCall(call);
+        super.emitFCall(cref, call);
     }
 
 
-    emitCast(cast: ICastExprInstruction): void {
+    emitCast(cref: CodeReflectionT, cast: ICastExprInstruction): void {
         if (cast.isUseless()) {
             return;
         }
 
         // replace '(vec3)value' to 'vec3(value)'
         if (GlslTypeNames[cast.type.name]) {
-            const { typeName } = this.resolveType(cast.type);
+            const { typeName } = this.resolveType(cref, cast.type);
             this.emitKeyword(typeName);
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitExpression(cast.expr);
+            this.emitExpression(cref, cast.expr);
             this.emitChar(')');
             return;
         }
 
-        super.emitCast(cast);
+        super.emitCast(cref, cast);
     }
 
 
-    emitInitExpr(init: IInitExprInstruction) {
+    emitInitExpr(cref: CodeReflectionT, init: IInitExprInstruction) {
         // replaced '{1, 2, 3}' to 'ivec3(1, 2, 3)'
         if (GlslTypeNames[init.type.name]) {
-            const { typeName } = this.resolveType(init.type);
+            const { typeName } = this.resolveType(cref, init.type);
             this.emitKeyword(typeName);
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitExpressionList(init.args);
+            this.emitExpressionList(cref, init.args);
             this.emitChar(')');
             return;
         }
 
-        super.emitInitExpr(init);
+        super.emitInitExpr(cref, init);
     }
 
 
     // todo: use emitEntryFunction instead
-    emitFunction(fn: IFunctionDeclInstruction) {
+    emitFunction(cref: CodeReflectionT, fn: IFunctionDeclInstruction) {
         const def = fn.def;
         const retType = def.returnType;
 
         const isSupported = this.isVertex() || this.isPixel();
         if (this.depth() === 0 && isSupported) {
-            this.emitPrologue(fn.def);
-            const { typeName } = this.resolveType(def.returnType);
+            this.emitPrologue(cref, fn.def);
+            const { typeName } = this.resolveType(cref, def.returnType);
 
-            super.emitRegularFunction(fn);
+            super.emitRegularFunction(cref, fn);
 
             // emit main()
             this.begin();
@@ -385,7 +395,7 @@ export class GlslEmitter extends CodeEmitter {
                     for (let p of params)
                     {
                         const pname = p.name;
-                        const { typeName } = this.resolveType(p.type);
+                        const { typeName } = this.resolveType(cref, p.type);
 
                         this.emitKeyword(typeName);
                         this.emitKeyword(pname);
@@ -489,7 +499,7 @@ export class GlslEmitter extends CodeEmitter {
             return;
         }
 
-        super.emitFunction(fn);
+        super.emitFunction(cref, fn);
     }
 
     
@@ -497,11 +507,11 @@ export class GlslEmitter extends CodeEmitter {
     // intrinsics
     //
 
-    emitMulIntrinsic(left: IExprInstruction, right: IExprInstruction) {
+    emitMulIntrinsic(cref: CodeReflectionT, left: IExprInstruction, right: IExprInstruction) {
         this.emitChar('(');
-        this.emitExpression(left);
+        this.emitExpression(cref, left);
         this.emitKeyword('*');
-        this.emitExpression(right);
+        this.emitExpression(cref, right);
         this.emitChar(')');
     }
 
@@ -514,5 +524,6 @@ export class GlslEmitter extends CodeEmitter {
 
 
 export function translate(instr: IInstruction, options?: ICodeEmitterOptions): string {
-    return (new GlslEmitter({ ...options, omitInUsage: true, omitEmptyParams: true })).emit(instr).toString();
+    const cref = new GlslReflection;
+    return (new GlslEmitter({ ...options, omitInUsage: true, omitEmptyParams: true })).emit(cref, instr).toString();
 }

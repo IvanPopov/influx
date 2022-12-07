@@ -1,15 +1,13 @@
 /* tslint:disable:typedef */
 
-import { createTextDocument } from '@lib/fx/TextDocument';
 import * as Hlsl from '@lib/fx/translators/CodeEmitter';
+import * as HlslConv from '@lib/fx/translators/CodeConvolutionEmitter';
 import * as FxHlsl from '@lib/fx/translators/FxEmitter';
 import * as FxTranslator from '@lib/fx/translators/FxTranslator';
 import * as Glsl from '@lib/fx/translators/GlslEmitter';
-import { ITextDocument } from '@lib/idl/ITextDocument';
-import { StringRef } from '@lib/util/StringRef';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
-import { asConvolutionPack, asTextDocument, getFileState, getScope } from '@sandbox/reducers/sourceFile';
+import { asConvolutionPack, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -124,7 +122,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                     break;
                 case 'hlsl':
                    // todo: show final shader instead of direct translation
-                   value = Hlsl.translateConvolute(shader, convPack, { mode });
+                   value = HlslConv.translateConvolute(shader, convPack, { mode });
                    break;
             }
         } else {

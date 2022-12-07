@@ -7,7 +7,7 @@ import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstructi
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, IPostfixPointInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
-import { IBufferReflection, ICodeEmitterOptions, IConvolutionPack, ICSShaderReflection, IUavReflection } from "./CodeEmitter";
+import { CodeReflection, IBufferReflection, ICodeEmitterOptions, IConvolutionPack, ICSShaderReflection, IUavReflection } from "./CodeEmitter";
 
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
@@ -166,7 +166,81 @@ export interface IFxTranslatorOptions extends ICodeEmitterOptions {
     globalUniformsConstantBufferName?: string;
 }
 
-export class FxTranslator extends FxEmitter {
+
+export class FxReflection extends CodeReflection {
+    techniques: ITechniqueReflection[] = [];
+    controls: IUIControl[] = [];
+    globalUniforms: IVariableDeclInstruction[] = [];
+    spawnCtors: IFunctionDeclInstruction[] = [];
+    drawOps: IDrawOpReflection[] = [];
+    triMeshes: ITriMeshReflection[] = [];
+
+
+    checkTechnique(name: string): boolean {
+        return this.techniques.map(t => t.name).includes(name);
+    }
+
+
+    addTechnique(tech: ITechniqueReflection): boolean {
+        if (!this.checkTechnique(tech.name)) {
+            this.techniques.push(tech);
+            return true;
+        }
+        return false;
+    }
+
+
+    checkGlobaluniform(name: string): boolean {
+        return this.globalUniforms.map(u => u.name).includes(name);
+    }
+
+
+    addGlobalUniform(src: IVariableDeclInstruction): boolean {
+        if (this.checkGlobaluniform(src.name)) {
+            return false;
+        }
+
+        this.globalUniforms.push(src);
+        return true;
+    }
+
+
+    checkControl(name: string): boolean {
+        return this.controls.map(c => c.name).includes(name);
+    }
+
+
+    addControl(ctrl: IUIControl): boolean {
+        if (!this.checkControl(ctrl.name)) {
+            this.controls.push(ctrl);
+            return true;
+        }
+        return false;
+    }
+
+
+
+    checkTrimesh(name: string): boolean {
+        return this.triMeshes.map(t => t.name).includes(name);
+    }
+
+
+    addTrimesh(mesh: ITriMeshReflection): boolean {
+        if (!this.checkTrimesh(mesh.name)) {
+            this.triMeshes.push(mesh);
+            return true;
+        }
+        return false;
+    }
+
+
+    addDrawOperator() {
+        // todo
+    }
+}
+
+
+export class FxTranslator<CodeReflectionT extends FxReflection> extends FxEmitter<CodeReflectionT> {
     static UAV_PARTICLES = 'uavParticles';
     static UAV_STATES = 'uavStates';
     static UAV_DEAD_INDICES = 'uavDeadIndices';
@@ -189,16 +263,6 @@ export class FxTranslator extends FxEmitter {
     private static SPAWN_OPERATOR_TYPE = '__SPAWN_T__';
     private static DRAW_OPERATOR_POLYFILL_NAME = '__draw_op';
 
-    protected knownTechniques: ITechniqueReflection[] = [];
-    protected knownControls: IUIControl[] = [];
-    protected knownGlobalUniforms: IVariableDeclInstruction[] = [];
-    protected knownSpawnCtors: IFunctionDeclInstruction[] = [];
-    protected knownDrawOps: IDrawOpReflection[] = [];
-    protected knownTriMeshes: ITriMeshReflection[] = [];
-
-    protected tech: ITechniqueInstruction = null;
-
-
     declare protected options: IFxTranslatorOptions;
 
     // todo: addDrawop
@@ -208,30 +272,12 @@ export class FxTranslator extends FxEmitter {
         super(textDocument, slastDocument, opts);
     }
 
-    protected addTechnique(tech: ITechniqueReflection): boolean {
-        if (!this.knownTechniques.map(t => t.name).includes(tech.name)) {
-            this.knownTechniques.push(tech);
-            return true;
-        }
-        return false;
-    }
-
-
-    protected addGlobalUniform(src: IVariableDeclInstruction): boolean {
-        if (this.knownGlobalUniforms.includes(src)) {
-            return false;
-        }
-
-        this.knownGlobalUniforms.push(src);
-        return true;
-    }
-
 
     /*
         https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
         https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
     */
-    protected addControl(src: IVariableDeclInstruction): boolean {
+    protected addControl(cref: CodeReflectionT, src: IVariableDeclInstruction): boolean {
         let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
 
         if (!src.annotation) {
@@ -297,7 +343,7 @@ export class FxTranslator extends FxEmitter {
             ctrl.value = new Uint8Array(buffer);
             ctrl.name = src.id.name;
 
-            this.knownControls.push(ctrl);
+            cref.addControl(ctrl);
             return true;
         }
 
@@ -305,21 +351,18 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected addDrawOperator() {
-        // todo
-    }
-
-
-    protected triMeshBaseName(name: string) {
+    protected trimeshBaseName(name: string) {
         return `trim${name[0].toUpperCase()}${name.slice(1)}`;
     }
 
-    protected isTriMesh(type: IVariableTypeInstruction): boolean {
+
+    protected isTrimesh(type: IVariableTypeInstruction): boolean {
         const TRIMESH_NAME = 'TriMesh';
         return !!type?.name.includes(TRIMESH_NAME);
     }
 
-    protected emitTriMeshDecl(decl: IVariableDeclInstruction): ITriMeshReflection {
+
+    protected emitTrimeshDecl(cref: CodeReflectionT, decl: IVariableDeclInstruction): ITriMeshReflection {
         const type = decl.type;
         const regexp = /^([\w]+)<([\w0-9_]+)>$/;
         const match = type.name.match(regexp);
@@ -330,7 +373,7 @@ export class FxTranslator extends FxEmitter {
 
         const elementType = decl.scope.findType(match[2]);
         const name = decl.name;
-        const baseName = this.triMeshBaseName(name);
+        const baseName = this.trimeshBaseName(name);
         // todo: check that such a variable doesn't exists
         const vertexCountUName = `${baseName}VertexCount`;
         const faceCountUName = `${baseName}FaceCount`;
@@ -338,9 +381,8 @@ export class FxTranslator extends FxEmitter {
         const facesName = `${baseName}Faces`;
         const adjacencyName = `${baseName}Adjacency`;
 
-        // todo: use addTriMesh()
-        if(this.knownTriMeshes.map(r => r.name).indexOf(name) == -1) {
-            const { typeName: elementTypeName } = this.resolveType(elementType);
+        if(!cref.checkTrimesh(name)) {
+            const { typeName: elementTypeName } = this.resolveType(cref, elementType);
 
             // uniform uint trimesh0_vert_count;
             // uniform uint trimesh0_face_count;
@@ -348,16 +390,16 @@ export class FxTranslator extends FxEmitter {
             // Buffer<uint3> trimesh0_faces;
             // Buffer<uint> trimesh0_faces_adj;
             
-            this.emitGlobalRaw(vertexCountUName, `uniform uint ${vertexCountUName}`);
+            this.emitGlobalRaw(cref, vertexCountUName, `uniform uint ${vertexCountUName}`);
 
-            this.emitGlobalRaw(faceCountUName, `uniform uint ${faceCountUName}`);
+            this.emitGlobalRaw(cref, faceCountUName, `uniform uint ${faceCountUName}`);
             
             // if (this.addBuffer())
-            const vertices = this.emitBuffer(`StructuredBuffer<${elementTypeName}>`, verticesName);
+            const vertices = this.emitBuffer(cref, `StructuredBuffer<${elementTypeName}>`, verticesName);
             // if (this.addBuffer())
-            const faces = this.emitBuffer(`Buffer<uint3>`, facesName);
+            const faces = this.emitBuffer(cref, `Buffer<uint3>`, facesName);
             // if (this.addBuffer())
-            const adjacency = this.emitBuffer(`Buffer<uint>`, adjacencyName);
+            const adjacency = this.emitBuffer(cref, `Buffer<uint>`, adjacencyName);
 
             this.begin();
             this.emitLine(`void ${baseName}_GetDimensions(out uint vertCount, out uint faceCount)`);
@@ -415,6 +457,7 @@ export class FxTranslator extends FxEmitter {
 
             this.end();
 
+            // todo: move to reflection
             const refl: ITriMeshReflection = {
                 name,
 
@@ -426,15 +469,15 @@ export class FxTranslator extends FxEmitter {
                 adjacencyName
             };
             
-            this.knownTriMeshes.push(refl);
+            cref.addTrimesh(refl);
             return refl;
         }
 
-        return this.knownTriMeshes.find(t => t.name == name);
+        return cref.triMeshes.find(t => t.name == name);
     }
 
 
-    emitTriMeshCall(call: IFunctionCallInstruction) {
+    emitTriMeshCall(cref: CodeReflectionT, call: IFunctionCallInstruction) {
         switch (call.decl.name) {
             case 'LoadFace':
             case 'LoadVertex':
@@ -445,13 +488,13 @@ export class FxTranslator extends FxEmitter {
                     assert(call.callee.instructionType === EInstructionTypes.k_IdExpr);
                     const id = <IIdExprInstruction>call.callee;
 
-                    this.emitGlobalVariable(id.decl);
+                    this.emitGlobalVariable(cref, id.decl);
                     
-                    this.emitKeyword(`${this.triMeshBaseName(id.name)}_${call.decl.name}`);
+                    this.emitKeyword(`${this.trimeshBaseName(id.name)}_${call.decl.name}`);
                     this.emitNoSpace();
                     this.emitChar('(');
                     this.emitNoSpace();
-                    this.emitExpressionList(call.args);
+                    this.emitExpressionList(cref, call.args);
                     this.emitChar(')');
                 }
                 break;
@@ -461,35 +504,35 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitFCall(call: IFunctionCallInstruction, rename?) {
-       if (this.isTriMesh(call.callee?.type)) {
-            this.emitTriMeshCall(call);
+    emitFCall(cref: CodeReflectionT, call: IFunctionCallInstruction, rename?) {
+       if (this.isTrimesh(call.callee?.type)) {
+            this.emitTriMeshCall(cref, call);
             return;
        }
 
-       super.emitFCall(call, rename);
+       super.emitFCall(cref, call, rename);
     }
 
 
-    emitGlobalVariable(decl: IVariableDeclInstruction): void {
-        if (this.isTriMesh(decl.type)) {
-            this.emitTriMeshDecl(decl);
+    emitGlobalVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction): void {
+        if (this.isTrimesh(decl.type)) {
+            this.emitTrimeshDecl(cref, decl);
             return;
         }
 
-        super.emitGlobalVariable(decl);
+        super.emitGlobalVariable(cref, decl);
     }
 
 
-    protected emitControlVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
+    protected emitControlVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
         if (!this.options.uiControlsGatherToDedicatedConstantBuffer) {
             // quick way to promote uniform qualifier to GLSL code
-            (this.emitKeyword('uniform'), this.emitVariableNoInit(decl, rename));
+            (this.emitKeyword('uniform'), this.emitVariableNoInit(cref, decl, rename));
         }
     }
 
 
-    protected emitUniformVariable(decl: IVariableDeclInstruction) {
+    protected emitUniformVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
         const KNOWN_EXTERNAL_GLOBALS = [
             'ELAPSED_TIME',
             'ELAPSED_TIME_LEVEL',
@@ -502,7 +545,7 @@ export class FxTranslator extends FxEmitter {
         const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
 
         if (!KNOWN_EXTERNAL_GLOBALS.includes(semantic)) {
-            super.emitVariable(decl);
+            super.emitVariable(cref, decl);
             console.warn(`Unsupported uniform has been used: ${decl.toCode()}.`);
             return;
         }
@@ -511,32 +554,32 @@ export class FxTranslator extends FxEmitter {
         const isLocal = false; // per object update required
 
         if (!this.options.globalUniformsGatherToDedicatedConstantBuffer && isGlobal) {
-            super.emitVariable(decl);
+            super.emitVariable(cref, decl);
             return;
         }
 
         if (isGlobal)
-            this.addGlobalUniform(decl);
+            cref.addGlobalUniform(decl);
     }
 
 
     // todo: remove hack with rename mutator
-    emitVariable(decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        if (this.addControl(decl)) {
-            this.emitControlVariable(decl, rename);
+    emitVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        if (this.addControl(cref, decl)) {
+            this.emitControlVariable(cref, decl, rename);
             return;
         }
 
         if (decl.type.isUniform()) {
-            this.emitUniformVariable(decl);
+            this.emitUniformVariable(cref, decl);
             return;
         }
 
-        super.emitVariable(decl, rename);
+        super.emitVariable(cref, decl, rename);
     }
 
 
-    protected emitSpawnStmt(stmt: ISpawnStmtInstruction) {
+    protected emitSpawnStmt(cref: CodeReflectionT, stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;
 
         const args = [fx.particle, T_INT, ...stmt.args.map(a => a.type)];
@@ -547,14 +590,14 @@ export class FxTranslator extends FxEmitter {
             return;
         }
 
-        let guid = this.knownSpawnCtors.findIndex(ctor => ctor === init) + 1;
+        let guid = cref.spawnCtors.findIndex(ctor => ctor === init) + 1;
 
 
         if (guid === 0) {
-            this.knownSpawnCtors.push(init);
-            guid = this.knownSpawnCtors.length;
+            cref.spawnCtors.push(init);
+            guid = cref.spawnCtors.length;
 
-            this.emitSpawnOperator(guid, init);
+            this.emitSpawnOperator(cref, guid, init);
         }
 
         this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
@@ -562,10 +605,10 @@ export class FxTranslator extends FxEmitter {
         this.emitNoSpace();
         this.emitKeyword(`(uint)`);
         this.emitNoSpace();
-        this.emitExpression(stmt.count);
+        this.emitExpression(cref, stmt.count);
         if (stmt.args.length) {
             this.emitChar(',');
-            this.emitExpressionList(stmt.args);
+            this.emitExpressionList(cref, stmt.args);
         }
         this.emitChar(')');
         this.emitChar(';');
@@ -575,7 +618,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected emitDrawStmt({ name, args }: IDrawStmtInstruction) {
+    protected emitDrawStmt(cref: CodeReflectionT, { name, args }: IDrawStmtInstruction) {
         const fx = <IPartFxInstruction>this.tech;//<IPartFxInstruction>pass.parent;
         const pass = fx.passList.find(pass => pass.name == name);
 
@@ -586,26 +629,26 @@ export class FxTranslator extends FxEmitter {
 
         const i = fx.passList.indexOf(pass);
         // todo: use addDrawOperator()
-        if (this.knownDrawOps.map(r => r.name).indexOf(name) == -1) {
+        if (cref.drawOps.map(r => r.name).indexOf(name) == -1) {
             const uavs = [];
             const prerenderFn = pass.prerenderRoutine.function;
-            if (this.addFunction(prerenderFn)) {
-                this.emitFunction(prerenderFn);
+            if (cref.addFunction(prerenderFn)) {
+                this.emitFunction(cref, prerenderFn);
             }
-            this.emitPrerenderRoutune(pass, i, uavs);
-            this.knownDrawOps.push({ name, uavs });
+            this.emitPrerenderRoutune(cref, pass, i, uavs);
+            cref.drawOps.push({ name, uavs });
         }
         this.emitKeyword(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}`);
         this.emitChar(`(`);
         this.emitNoSpace();
-        this.emitExpressionList(args);
+        this.emitExpressionList(cref, args);
         this.emitChar(`)`);
         this.emitChar(';');
         this.emitNewline();
     }
 
 
-    protected emitResetShader(): ICSShaderReflection {
+    protected emitResetShader(cref: CodeReflectionT): ICSShaderReflection {
         const name = 'CSParticlesResetRoutine';
         const numthreads = [64, 1, 1];
         const uavs = [];
@@ -624,14 +667,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`uint tid = DTid.x;`);
                 this.emitLine(`if (tid >= ${capacity}) return;`);
 
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
                 this.emitLine(`${FxTranslator.UAV_DEAD_INDICES}[tid] = tid;`);
 
-                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
                 this.emitLine(`${FxTranslator.UAV_STATES}[tid] = 0;`);
 
-                const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                const { typeName: partType } = this.resolveType(cref, fx.particle);
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
 
                 assert(fx.particle.isComplex());
@@ -655,7 +698,7 @@ export class FxTranslator extends FxEmitter {
                     this.emitChar('{');
                     this.push();
                     {
-                        uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
+                        uavs.push(this.emitUav(cref, `RWStructuredBuffer<${p0.type.name}>`,
                             `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));
 
                         this.emitLine(`${p0.type.name} ${p0.name};`);
@@ -668,7 +711,7 @@ export class FxTranslator extends FxEmitter {
 
                                 if (field.initExpr) {
                                     this.emitKeyword(`${p0.name}.${field.name} =`);
-                                    this.emitExpression(field.initExpr);
+                                    this.emitExpression(cref, field.initExpr);
                                     this.emitChar(';');
                                     this.emitNewline();
                                 } else {
@@ -692,13 +735,13 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        this.addCsShader(shader);
+        cref.addCsShader(shader);
         return shader;
     }
 
 
     // TOOD: sync groupSize with value used inside the emitInitShader();
-    protected emitSpawnOperator(guid: number, ctor: IFunctionDeclInstruction, groupSize: number = 64) {
+    protected emitSpawnOperator(cref: CodeReflectionT, guid: number, ctor: IFunctionDeclInstruction, groupSize: number = 64) {
         this.begin();
         {
             this.emitKeyword('void');
@@ -708,16 +751,16 @@ export class FxTranslator extends FxEmitter {
             this.emitKeyword(`uint nPart`);
             if (ctor && ctor.def.params.length > 2) {
                 this.emitChar(',');
-                this.emitParams(ctor.def.params.slice(2));
+                this.emitParams(cref, ctor.def.params.slice(2));
             }
             this.emitChar(')');
             this.emitNewline();
             this.emitChar('{');
             this.push();
             {
-                this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+                this.emitUav(cref, `RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
                     FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION);
-                this.emitUav(`RWBuffer<uint>`,
+                this.emitUav(cref, `RWBuffer<uint>`,
                     FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION);
 
                 this.emitLine(`int nGroups = (int)ceil((float)nPart / ${groupSize}.f);`);
@@ -764,8 +807,8 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected emitGlobalRaw(name: string, content: string) {
-        if (this.addGlobal(name)) {
+    protected emitGlobalRaw(cref: CodeReflectionT, name: string, content: string) {
+        if (cref.addGlobal(name)) {
             this.begin();
             this.emitChar(`${content};`);
             this.emitNewline();
@@ -774,7 +817,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected emitSpawnShader(): ICSShaderReflection {
+    protected emitSpawnShader(cref: CodeReflectionT): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
         if (!fx.spawnRoutine) {
             return null;
@@ -789,14 +832,14 @@ export class FxTranslator extends FxEmitter {
 
         const shader = <ICSShaderReflection>{ name, numthreads, uavs };
 
-        uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+        uavs.push(this.emitUav(cref, `RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
             FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
-        uavs.push(this.emitUav(`RWBuffer<uint>`,
+        uavs.push(this.emitUav(cref, `RWBuffer<uint>`,
             FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
 
         if (fx.initRoutine) {
             // default spawn op needed only if regulat emission is used
-            this.emitSpawnOperator(0, null);
+            this.emitSpawnOperator(cref, 0, null);
         }
 
         this.begin();
@@ -811,15 +854,15 @@ export class FxTranslator extends FxEmitter {
 
                 this.emitLine(`// usage of 4th element of ${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS} as temp value of number of particles`);
 
-                if (this.addFunction(spawnFn)) {
-                    this.emitFunction(spawnFn);
+                if (cref.addFunction(spawnFn)) {
+                    this.emitFunction(cref, spawnFn);
                 }
 
                 if (elapsedTime) {
-                    this.emitGlobal(elapsedTime);
+                    this.emitGlobal(cref, elapsedTime);
                 } else {
                     // IP: remove this hack
-                    this.emitGlobalRaw('elapsedTime', 'uniform float elapsedTime');
+                    this.emitGlobalRaw(cref, 'elapsedTime', 'uniform float elapsedTime');
                 }
 
                 // todo: move to dispatch arguments reset routine
@@ -831,7 +874,7 @@ export class FxTranslator extends FxEmitter {
                     if (spawnFn.def.params.length == 1) {
                         const p0 = spawnFn.def.params[0];
 
-                        uavs.push(this.emitUav(`RWStructuredBuffer<${p0.type.name}>`,
+                        uavs.push(this.emitUav(cref, `RWStructuredBuffer<${p0.type.name}>`,
                             `${FxTranslator.UAV_SPAWN_EMITTER}`, FxTranslator.UAV_SPAWN_EMITTER_DESCRIPTION));
 
                         this.emitChar('{');
@@ -860,12 +903,12 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        this.addCsShader(shader);
+        cref.addCsShader(shader);
         return shader;
     }
 
 
-    protected emitInitShader(): ICSShaderReflection {
+    protected emitInitShader(cref: CodeReflectionT): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
         const initFn = fx.initRoutine?.function;
 
@@ -885,12 +928,12 @@ export class FxTranslator extends FxEmitter {
                 this.emitLine(`uint GroupId = Gid.x;`);
                 this.emitLine(`uint ThreadId = GTid.x;`);
                 // TODO: emit operator instead!
-                uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`, FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`, FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
                 this.emitLine(`uint nPart = ${FxTranslator.UAV_CREATION_REQUESTS}[GroupId].count;`);
                 this.emitNewline();
                 this.emitLine(`if (ThreadId >= nPart) return;`);
                 this.emitNewline();
-                uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
                 this.emitLine(`int n = (int)${FxTranslator.UAV_DEAD_INDICES}.DecrementCounter();`);
                 this.emitComment(`a bit confusing way to check for particles running out`);
                 this.emitLine(`if (n <= 0)`);
@@ -908,14 +951,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitNewline();
                 this.emitLine(`uint PartId = ${FxTranslator.UAV_DEAD_INDICES}[n];`);
 
-                const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                const { typeName: partType } = this.resolveType(cref, fx.particle);
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle;`);
 
                 // it's ok if here is no init function found
                 // it means that generic spawner is used
-                if (initFn && this.addFunction(initFn))
-                    this.emitFunction(initFn);
+                if (initFn && cref.addFunction(initFn))
+                    this.emitFunction(cref, initFn);
 
                 const request = `${FxTranslator.UAV_CREATION_REQUESTS}[GroupId]`;
 
@@ -933,9 +976,9 @@ export class FxTranslator extends FxEmitter {
                     this.emitNewline();
                 }
 
-                this.knownSpawnCtors.forEach((ctor, i) => {
-                    if (this.addFunction(ctor))
-                        this.emitFunction(ctor);
+                cref.spawnCtors.forEach((ctor, i) => {
+                    if (cref.addFunction(ctor))
+                        this.emitFunction(cref, ctor);
 
                     if (initFn || i > 0) {
                         this.emitKeyword(`else`);
@@ -951,7 +994,7 @@ export class FxTranslator extends FxEmitter {
                         let nfloat = 0;
                         let params = ctor.def.params.slice(2);
                         params.forEach(param => {
-                            this.emitVariable(param);
+                            this.emitVariable(cref, param);
                             this.emitChar(';');
                             this.emitNewline();
 
@@ -998,7 +1041,7 @@ export class FxTranslator extends FxEmitter {
                 });
                 this.emitLine(`${FxTranslator.UAV_PARTICLES}[PartId] = Particle;`);
                 this.emitComment('set particles\'s state as \'Alive\'');
-                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
                 this.emitLine(`${FxTranslator.UAV_STATES}[PartId] = 1;`);
             }
             this.pop();
@@ -1006,12 +1049,12 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        this.addCsShader(shader);
+        cref.addCsShader(shader);
         return shader;
     }
 
 
-    protected emitUpdateShader(): ICSShaderReflection {
+    protected emitUpdateShader(cref: CodeReflectionT): ICSShaderReflection {
         const fx = <IPartFxInstruction>this.tech;
         const updateFn = fx.updateRoutine.function;
 
@@ -1029,20 +1072,20 @@ export class FxTranslator extends FxEmitter {
             this.push();
             {
                 this.emitLine(`uint PartId = DTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
                 this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
                 this.emitNewline();
                 this.emitLine(`[branch]`);
                 this.emitLine(`if(!Alive) return;`);
                 this.emitNewline();
 
-                const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                const { typeName: partType } = this.resolveType(cref, fx.particle);
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
                 this.emitNewline();
 
-                if (this.addFunction(updateFn)) {
-                    this.emitFunction(updateFn);
+                if (cref.addFunction(updateFn)) {
+                    this.emitFunction(cref, updateFn);
                 }
 
                 this.emitLine(`[branch]`);
@@ -1050,7 +1093,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitChar('{');
                 this.push();
                 {
-                    uavs.push(this.emitUav(`RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
+                    uavs.push(this.emitUav(cref, `RWStructuredBuffer<uint>`, FxTranslator.UAV_DEAD_INDICES, FxTranslator.UAV_DEAD_INDICES_DESCRIPTION));
                     this.emitComment('returning the particle index to the list of the dead');
                     this.emitLine(`uint n = ${FxTranslator.UAV_DEAD_INDICES}.IncrementCounter();`);
                     this.emitLine(`${FxTranslator.UAV_DEAD_INDICES}[n] = PartId;`);
@@ -1072,24 +1115,24 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        uavs.push(...this.knownDrawOps.map(r => r.uavs).flat());
+        uavs.push(...cref.drawOps.map(r => r.uavs).flat());
 
         // hack
-        uavs.push(this.emitUav(`RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
+        uavs.push(this.emitUav(cref, `RWStructuredBuffer<${FxTranslator.SPAWN_OPERATOR_TYPE}>`,
             FxTranslator.UAV_CREATION_REQUESTS, FxTranslator.UAV_CREATION_REQUESTS_DESCRIPTION));
-        uavs.push(this.emitUav(`RWBuffer<uint>`,
+        uavs.push(this.emitUav(cref, `RWBuffer<uint>`,
             FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION));
 
-        this.addCsShader(shader);
+        cref.addCsShader(shader);
         return shader;
     }
 
 
-    protected emitPrerenderRoutune(pass: IPartFxPassInstruction, i: number, uavs: IUavReflection[]) {
+    protected emitPrerenderRoutune(cref: CodeReflectionT, pass: IPartFxPassInstruction, i: number, uavs: IUavReflection[]) {
         const fx = <IPartFxInstruction>this.tech;
         const prerenderFn = pass.prerenderRoutine.function;
-        const { typeName: prerenderedType } = this.resolveType(prerenderFn.def.params[1].type);
-        const { typeName: partType } = this.resolveType(fx.particle);
+        const { typeName: prerenderedType } = this.resolveType(cref, prerenderFn.def.params[1].type);
+        const { typeName: partType } = this.resolveType(cref, fx.particle);
         this.begin();
         {
             this.emitLine(`void ${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(${partType} Particle)`);
@@ -1123,10 +1166,10 @@ export class FxTranslator extends FxEmitter {
             */
 
             {
-                uavs.push(this.emitUav(`RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${prerenderedType}>`, `${FxTranslator.UAV_PRERENDERED}${i}`));
 
                 if (pass.sorting) {
-                    uavs.push(this.emitUav(`RWStructuredBuffer<int2>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
+                    uavs.push(this.emitUav(cref, `RWStructuredBuffer<int2>`, `${FxTranslator.UAV_SERIALS}${i}`, FxTranslator.UAV_SERIALS_DESCRIPTION));
                 }
 
                 this.emitLine(`uint PrerenderId = ${FxTranslator.UAV_PRERENDERED}${i}.IncrementCounter();`);
@@ -1195,7 +1238,8 @@ export class FxTranslator extends FxEmitter {
         this.end();
     }
 
-    protected emitPrerenderShader(pass: IPartFxPassInstruction, i: number): ICSShaderReflection {
+
+    protected emitPrerenderShader(cref: CodeReflectionT, pass: IPartFxPassInstruction, i: number): ICSShaderReflection {
         const prerenderFn = pass.prerenderRoutine.function;
 
         const name = `CSParticlesPrerenderShader${i}`;
@@ -1213,22 +1257,22 @@ export class FxTranslator extends FxEmitter {
             this.push();
             {
                 this.emitLine(`uint PartId = DTid.x;`);
-                uavs.push(this.emitUav(`RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
+                uavs.push(this.emitUav(cref, `RWBuffer<uint>`, FxTranslator.UAV_STATES, FxTranslator.UAV_STATES_DESCRIPTION));
                 this.emitLine(`bool Alive = (bool)${FxTranslator.UAV_STATES}[PartId];`);
                 this.emitNewline();
                 this.emitLine(`[branch]`);
                 this.emitLine(`if(!Alive) return;`);
                 this.emitNewline();
 
-                if (this.addFunction(prerenderFn)) {
-                    this.emitFunction(prerenderFn);
+                if (cref.addFunction(prerenderFn)) {
+                    this.emitFunction(cref, prerenderFn);
                 }
 
-                const { typeName: partType } = this.resolveType(fx.particle);
-                uavs.push(this.emitUav(`RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
+                const { typeName: partType } = this.resolveType(cref, fx.particle);
+                uavs.push(this.emitUav(cref, `RWStructuredBuffer<${partType}>`, FxTranslator.UAV_PARTICLES, FxTranslator.UAV_PARTICLES_DESCRIPTION));
                 this.emitLine(`${partType} Particle = ${FxTranslator.UAV_PARTICLES}[PartId];`);
 
-                this.emitPrerenderRoutune(pass, i, uavs);
+                this.emitPrerenderRoutune(cref, pass, i, uavs);
                 this.emitLine(`${FxTranslator.DRAW_OPERATOR_POLYFILL_NAME}${i}(Particle);`);
             }
             this.pop();
@@ -1236,12 +1280,13 @@ export class FxTranslator extends FxEmitter {
         }
         this.end();
 
-        this.addCsShader(shader);
+        cref.addCsShader(shader);
         return shader;
     }
 
-    protected emitSpawnOpContainer() {
-        const payloadSize = this.knownSpawnCtors.map(
+
+    protected emitSpawnOpContainer(cref: CodeReflectionT) {
+        const payloadSize = cref.spawnCtors.map(
             // slice 1 or 2 depending on necessity of partID
             ctor => ctor.def.params.slice(2).map(param => param.type.size).reduce((size, summ) => summ + size, 0))
             .reduce((size, summ) => summ + size, 0);
@@ -1275,7 +1320,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    protected finalizeTechnique() {
+    protected finalizeTechnique(cref: CodeReflectionT) {
         if (this.options.globalUniformsGatherToDedicatedConstantBuffer) {
             const index = this.options.globalUniformsConstantBufferRegister || -1;
 
@@ -1307,14 +1352,14 @@ export class FxTranslator extends FxEmitter {
                 this.emitChar('{');
                 this.push();
                 {
-                    this.knownGlobalUniforms.forEach(({ name, type, semantic }) => {
+                    cref.globalUniforms.forEach(({ name, type, semantic }) => {
                         this.emitKeyword(type.name);
                         this.emitKeyword(name);
                         type.isNotBaseArray() && this.emitChar(`[${type.length}]`);
                         if (semantic) {
-                            this.emitSemantic(semantic);
+                            this.emitSemantic(cref, semantic);
                         } else {
-                            this.emitSemantic(camelToSnakeCase(name).toUpperCase());
+                            this.emitSemantic(cref, camelToSnakeCase(name).toUpperCase());
                         }
 
                         this.emitChar(';');
@@ -1359,7 +1404,7 @@ export class FxTranslator extends FxEmitter {
                 this.emitChar('{');
                 this.push();
                 {
-                    this.knownControls.forEach(ctrl => {
+                    cref.controls.forEach(ctrl => {
                         this.emitKeyword(typeNameOfUIControl(ctrl));
                         this.emitKeyword(ctrl.name);
                         this.emitChar(';');
@@ -1375,7 +1420,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitPartFxDecl(fx: IPartFxInstruction): IPartFxReflection {
+    emitPartFxDecl(cref: CodeReflectionT, fx: IPartFxInstruction): IPartFxReflection {
         if (!fx.particle) {
             return null;
         }
@@ -1385,10 +1430,10 @@ export class FxTranslator extends FxEmitter {
 
         const { name, capacity } = fx;
 
-        const CSParticlesSpawnRoutine = this.emitSpawnShader();
-        const CSParticlesResetRoutine = this.emitResetShader();
-        const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader();
-        const CSParticlesInitRoutine = this.emitInitShader();
+        const CSParticlesSpawnRoutine = this.emitSpawnShader(cref);
+        const CSParticlesResetRoutine = this.emitResetShader(cref);
+        const CSParticlesUpdateRoutine = fx.updateRoutine && this.emitUpdateShader(cref);
+        const CSParticlesInitRoutine = this.emitInitShader(cref);
 
         const passes = fx.passList.map((pass, i): IPartFxPassReflection => {
             const { prerenderRoutine, vertexShader: vs, pixelShader: ps, drawMode } = pass;
@@ -1399,20 +1444,20 @@ export class FxTranslator extends FxEmitter {
             let renderStates = pass.renderStates;
 
             if (prerenderRoutine && drawMode === EPassDrawMode.k_Auto) {
-                CSParticlesPrerenderRoutine = this.emitPrerenderShader(pass, i);
+                CSParticlesPrerenderRoutine = this.emitPrerenderShader(cref, pass, i);
             }
 
-            if (vs && this.addFunction(vs)) {
-                this.emitFunction(vs);
+            if (vs && cref.addFunction(vs)) {
+                this.emitFunction(cref, vs);
                 VSParticleShader = vs.name;
             }
 
-            if (ps && this.addFunction(ps)) {
-                this.emitFunction(ps);
+            if (ps && cref.addFunction(ps)) {
+                this.emitFunction(cref, ps);
                 PSParticleShader = ps.name;
             }
 
-            const { typeName: instance } = this.resolveType(pass.particleInstance);
+            const { typeName: instance } = this.resolveType(cref, pass.particleInstance);
 
             return {
                 instance,
@@ -1428,12 +1473,12 @@ export class FxTranslator extends FxEmitter {
         });
 
         const presets = FxTranslator.parsePresets(fx);
-        this.emitSpawnOpContainer();
+        this.emitSpawnOpContainer(cref);
 
-        const { typeName: particle } = this.resolveType(fx.particle);
-        const controls = this.knownControls;
+        const { typeName: particle } = this.resolveType(cref, fx.particle);
+        const controls = cref.controls;
 
-        this.finalizeTechnique();
+        this.finalizeTechnique(cref);
 
         return {
             name,
@@ -1450,7 +1495,7 @@ export class FxTranslator extends FxEmitter {
     }
 
 
-    emitTechniqueDecl(tech: ITechniqueInstruction): ITechniqueReflection {
+    emitTechniqueDecl(cref: CodeReflectionT, tech: ITechniqueInstruction): ITechniqueReflection {
         // note: only one effect can be tranclated at a time 
         this.tech = tech;
         const { name } = tech;
@@ -1471,7 +1516,7 @@ export class FxTranslator extends FxEmitter {
 
             // todo: 
             const matInstance = vertexShader?.def.params[0].type;
-            const { typeName: instance } = this.resolveType(matInstance);
+            const { typeName: instance } = this.resolveType(cref, matInstance);
 
             const renderStates = pass.renderStates;
 
@@ -1483,7 +1528,7 @@ export class FxTranslator extends FxEmitter {
             };
         });
 
-        const controls = this.knownControls;
+        const controls = cref.controls;
         const presets = FxTranslator.parsePresets(tech);
 
         const reflection = {
@@ -1493,23 +1538,23 @@ export class FxTranslator extends FxEmitter {
             presets
         };
 
-        if (this.addTechnique(reflection)) {
+        if (cref.addTechnique(reflection)) {
             tech.passList.forEach((pass, i) => {
                 const { vertexShader: vs, pixelShader: ps } = pass;
                 if (vs) {
-                    if (this.addFunction(vs)) {
-                        this.emitFunction(vs);
+                    if (cref.addFunction(vs)) {
+                        this.emitFunction(cref, vs);
                     }
                 }
                 if (ps) {
-                    if (this.addFunction(ps)) {
-                        this.emitFunction(ps);
+                    if (cref.addFunction(ps)) {
+                        this.emitFunction(cref, ps);
                     }
                 }
             });
         }
 
-        this.finalizeTechnique();
+        this.finalizeTechnique(cref);
 
         return reflection;
     }
@@ -1555,12 +1600,13 @@ export class FxTranslator extends FxEmitter {
 
 export function translateFlat(fx: ITechniqueInstruction, { textDocument, slastDocument }: IConvolutionPack = {}, opts: IFxTranslatorOptions = {}): string {
     const emitter = new FxTranslator(textDocument, slastDocument, opts);
+    const cref = new FxReflection;
     switch (fx.instructionType) {
         case EInstructionTypes.k_PartFxDecl:
-            emitter.emitPartFxDecl(<IPartFxInstruction>fx);
+            emitter.emitPartFxDecl(cref, <IPartFxInstruction>fx);
             break;
         case EInstructionTypes.k_TechniqueDecl:
-            emitter.emitTechniqueDecl(fx);
+            emitter.emitTechniqueDecl(cref, fx);
             break;
         default:
             console.assert(false);
