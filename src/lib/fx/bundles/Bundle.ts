@@ -362,7 +362,8 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
     // IP: temp solution until it will not be supported for FxScene and bytecode generator.
     const emitter = new FxTranslator(null, null, tops);
     const cref = new FxReflection;
-    const reflection = emitter.emitPartFxDecl(cref, fx);
+    emitter.emitPartFxDecl(cref, fx);
+    const reflection = cref.partFxs[0];
     const { name, capacity } = reflection;
 
     opts.name ||= name;
@@ -411,7 +412,8 @@ async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOption
 
     const emitter = new FxTranslator(textDocument, slastDocument, opts.translator);
     const cref = new FxReflection;
-    const reflection = emitter.emitTechniqueDecl(cref, tech);
+    emitter.emitTechniqueDecl(cref, tech);
+    const reflection = cref.techniques[0];
     const { name } = reflection;
 
     opts.name ||= name;

@@ -12,6 +12,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { isString } from "@lib/util/s3d/type";
 import { BaseEmitter } from "./BaseEmitter";
+import { IDrawOpReflection } from "./FxTranslator";
 
 export interface IConvolutionPack {
     textDocument?: ITextDocument;
@@ -50,12 +51,22 @@ export interface IBufferReflection {
 }
 
 
+export interface ITextureReflection {
+    register: number;
+    name: string;
+    /** @deprecated */
+    type: string;           // "Texture2D<float4>"
+    texType: string;        // "Texture2D"
+    elementType: string;    // "float4"
+}
+
 export interface ICSShaderReflection {
     name: string;
     numthreads: number[];
     uavs: IUavReflection[];
-    // buffers: IBufferReflection[];
-    // triMeshes: ITriMeshReflection[];
+    buffers: IBufferReflection[];
+    textures: ITextureReflection[];
+    // trimeshes: ITrimeshReflection[];
 }
 
 
@@ -76,26 +87,40 @@ export interface ICodeEmitterOptions {
     entryName?: string;
 }
 
-export class CodeReflection {
-    globals: string[] = [];
-    types: string[] = [];
-    functions: string[] = []; // signatures
-    uavs: IUavReflection[] = [];
-    buffers: IBufferReflection[] = [];
-    CSShaders: ICSShaderReflection[] = [];
-    cbuffers: ICbReflection[] = [];
-    uniforms: string[] = [];
+export interface ICodeReflectionContext {
+    shader?: ICSShaderReflection;
+    dop?: IDrawOpReflection; // draw operator
+}
 
+function pushUniq<T>(arr: Array<T>, elem: T)
+{
+    if (arr.indexOf(elem) == -1)
+        arr.push(elem);
+}
 
-    checkGlobal(name: string): boolean {
-        return this.globals.includes(name);
+export class CodeReflection<ContextT extends ICodeReflectionContext = ICodeReflectionContext> {
+    /*protected*/ globals: string[] = [];
+    /*protected*/ types: string[] = [];
+    /*protected*/ functions: string[] = []; // signatures
+    /*protected*/ uniforms: string[] = [];
+    /*protected*/ uavs: IUavReflection[] = [];
+    /*protected*/ buffers: IBufferReflection[] = [];
+    /*protected*/ cbuffers: ICbReflection[] = [];
+    /*protected*/ CSShaders: ICSShaderReflection[] = [];
+
+    protected ctx = <ContextT>{}
+
+    checkGlobal(name: string): string {
+        return this.globals.find(g => g == name);
     }
 
 
     // returns false if global already exists
     addGlobal(name: string): boolean {
-        if (!this.checkGlobal(name)) {
-            this.globals.push(name);
+        let g = this.checkGlobal(name);
+        if (!g) {
+            g = name;
+            this.globals.push(g);
             return true;
         }
         return false;
@@ -117,19 +142,27 @@ export class CodeReflection {
     }
 
 
-    checkCbuffer(name: string): boolean {
-        return this.cbuffers.map(cb => cb.name).includes(name);
+    checkCbuffer(name: string): ICbReflection {
+        return this.cbuffers.find(cb => cb.name == name);
     }
 
 
     addCbuffer(cbuf: ICbufferInstruction): boolean {
-        const { name, type: { size }, register: { index: register } } = cbuf;
-        const refl: ICbReflection = { name, size, register };
-        if (!this.checkCbuffer(cbuf.name)) {
-            this.cbuffers.push(refl);
-            return true;
+        let buf = this.checkCbuffer(cbuf.name);
+        let added = !buf;
+        if (!buf) {
+            const { name, type: { size }, register: { index: register } } = cbuf;
+            buf = { name, size, register };
+            this.cbuffers.push(buf);
         }
-        return false;
+
+        // push if not exists
+        let sh = this.ctx.shader;
+        if (sh) {
+            // pushUniq(sh.cbuffers, buf);
+        }
+
+        return added;
     }
 
 
@@ -147,45 +180,102 @@ export class CodeReflection {
     }
 
 
-    checkUav(name: string): boolean {
-        return this.uavs.map(u => u.name).includes(name);
+    checkUav(name: string): IUavReflection {
+        return this.uavs?.find(u => u.name == name);
     }
 
 
-    addUav(uav: IUavReflection): boolean {
-        if (!this.checkUav(uav.name)) {
+    addUav(type: string, name: string): boolean {
+        let uav = this.checkUav(name);
+        let added = !uav;
+        if (!uav) {
+            const register = this.uavs.length;
+            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+            const match = type.match(regexp);
+            assert(match);
+            uav = {
+                name,
+                type,
+                uavType: match[1],
+                elementType: match[2],
+                register
+            };
+
             this.uavs.push(uav);
-            return true;
         }
-        return false;
+
+        // push if not exists
+        let sh = this.ctx.shader;
+        if (sh) {
+            pushUniq(sh.uavs, uav);
+        }
+
+        return added;
     }
 
 
-    checkBuffer(name: string): boolean {
-        return this.buffers.map(u => u.name).includes(name);
+    checkBuffer(name: string): IBufferReflection {
+        return this.buffers.find(b => b.name == name);
     }
 
 
-    addBuffer(buf: IBufferReflection): boolean {
-        if (!this.checkBuffer(buf.name)) {
+    addBuffer(type: string, name: string): boolean {
+        let buf = this.checkBuffer(name);
+        let added = !buf;
+        if (!buf) {
+            const register = this.buffers.length;
+            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+            const match = type.match(regexp);
+            assert(match);
+
+            buf = {
+                name,
+                type,
+                bufType: match[1],
+                elementType: match[2],
+                register
+            };
+
             this.buffers.push(buf);
+        }
+
+        // push if not exists
+        let sh = this.ctx.shader;
+        if (sh) {
+            pushUniq(sh.buffers, buf);
+        }
+
+        return added;
+    }
+
+
+    checkCsShader(name: string): ICSShaderReflection {
+        return this.CSShaders.find(s => s.name == name);
+    }
+
+
+    protected addCsShader(shader: ICSShaderReflection): boolean {
+        let cs = this.checkCsShader(shader.name);
+        if (!cs) {
+            cs = shader;
+            this.CSShaders.push(cs);
             return true;
         }
         return false;
     }
 
-
-    checkCsShader(name: string): boolean {
-        return this.CSShaders.map(s => s.name).includes(name);
+    beginCsShader(name: string, numthreads: number[]) {
+        const uavs = [];
+        const buffers = [];
+        const textures = [];
+        this.ctx.shader = { name, numthreads, uavs, buffers, textures };
     }
 
 
-    addCsShader(shader: ICSShaderReflection): boolean {
-        if (!this.checkCsShader(shader.name)) {
-            this.CSShaders.push(shader);
-            return true;
-        }
-        return false;
+    endCsShader() {
+        assert(this.ctx.shader);
+        this.addCsShader(this.ctx.shader);
+        this.ctx.shader = null;
     }
 
     static asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
@@ -278,64 +368,32 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
 
 
     emitBuffer(cref: CodeReflectionT, type: string, name: string, comment?: string): IBufferReflection {
-        if (!cref.checkBuffer(name)) {
-            // todo: move this logic to reflection
-            const register = cref.buffers.length;
-            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
-            const match = type.match(regexp);
-            assert(match);
-
-            const buf: IBufferReflection = {
-                name,
-                type,
-                bufType: match[1],
-                elementType: match[2],
-                register
-            };
-
-            cref.addBuffer(buf);
-
+        let buf = cref.checkBuffer(name);
+        if (cref.addBuffer(type, name)) {
+            buf = cref.checkBuffer(name);
             this.begin();
             {
                 comment && this.emitComment(comment);
-                this.emitLine(`${type} ${name}: register(t${register});`);
+                this.emitLine(`${type} ${name}: register(t${buf.register});`);
             }
             this.end();
-            return buf;
         }
-
-        return cref.buffers.find(u => u.name == name);
+        return buf;
     }
 
 
     emitUav(cref: CodeReflectionT, type: string, name: string, comment?: string): IUavReflection {
-        if (!cref.checkUav(name)) {
-            // todo: move this logic to reflection
-            const register = cref.uavs.length;
-            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
-            const match = type.match(regexp);
-            assert(match);
-
-            const uav: IUavReflection = {
-                name,
-                type,
-                uavType: match[1],
-                elementType: match[2],
-                register
-            };
-
-            cref.addUav(uav);
-            
+        let uav = cref.checkUav(name);
+        if (cref.addUav(type, name)) {
+            uav = cref.checkUav(name);
             this.begin();
             {
                 comment && this.emitComment(comment);
-                this.emitLine(`${type} ${name}: register(u${register});`);
+                this.emitLine(`${type} ${name}: register(u${uav.register});`);
             }
             this.end();
-            return uav;
         }
-
-        return cref.uavs.find(u => u.name == name);
+        return uav;
     }
 
 
