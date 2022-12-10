@@ -1,3 +1,4 @@
+import { assert } from "@lib/common";
 import { createOutput, IOutput } from "./Output";
 
 export class BaseEmitter {
@@ -27,6 +28,11 @@ export class BaseEmitter {
      */
     end(prologue = false) {
         const block = this.stack.pop();
+        
+        if (block.isEmpty()) {
+            return;
+        }
+
         if (!prologue) {
             this.blocks.push(block);
         } else {
@@ -52,11 +58,18 @@ export class BaseEmitter {
         this.emitNewline(); 
     }
 
+    clear(): void {
+        assert(this.stack.length == 0);
+        this.blocks = [];
+    }
+
     toString(): string {
-        return this.blocks
+        const res = this.blocks
             .map(block => block.toString())
             .filter(code => !!code)
             .join('\n\n');
+        this.clear();
+        return res;
     }
 
     valueOf(): string {

@@ -1,32 +1,43 @@
 import { IInstruction, ITypeInstruction, IFunctionDeclInstruction, ITypeDeclInstruction, ITypedefInstruction, IVariableDeclInstruction, ICbufferInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
-import { CodeEmitter, CodeReflection, ICodeEmitterOptions, IConvolutionPack } from "./CodeEmitter";
+import { CodeEmitter, CodeContext, ICodeEmitterOptions, ICodeContextOptions } from "./CodeEmitter";
 
+export interface ICodeConvolutionContextOptions extends ICodeContextOptions {
+    textDocument?: ITextDocument;
+    slastDocument?: ISLASTDocument
+}
 
-export class CodeConvolutionEmitter<CodeReflectionT extends CodeReflection> extends CodeEmitter<CodeReflectionT> {
-    // list of convolute includes
-    protected includeDeps: string[] = [];
-
-    constructor(protected textDocument?: ITextDocument, protected slastDocument?: ISLASTDocument, opts?: ICodeEmitterOptions) {
+export class CodeConvolutionContext extends CodeContext {
+    declare readonly opts: ICodeConvolutionContextOptions;
+    
+    constructor(opts?: ICodeConvolutionContextOptions) {
         super(opts);
     }
 
+    // list of convolute includes
+    readonly includeDeps: string[] = [];
+
+    get textDocument(): ITextDocument { return this.opts.textDocument; }
+    get slastDocument(): ISLASTDocument { return this.opts.slastDocument; }
+}
+
+export class CodeConvolutionEmitter<ContextT extends CodeConvolutionContext> extends CodeEmitter<ContextT> {
     // todo: add caching
-    protected convoluteToInclude(decl: IInstruction) {
+    protected convoluteToInclude(ctx: ContextT, decl: IInstruction) {
         if (!decl) {
             return false;
         }
 
-        if (!this.slastDocument || !this.textDocument) {
+        if (!ctx.slastDocument || !ctx.textDocument) {
             return false;
         }
 
         const src = decl.sourceNode.loc;
-        const includes = this.slastDocument.includes;
+        const includes = ctx.slastDocument.includes;
 
         let dst = src;
-        while (dst && String(this.textDocument.uri) !== String(dst.start.file)) {
+        while (dst && String(ctx.textDocument.uri) !== String(dst.start.file)) {
             dst = includes.get(String(dst.start.file));
         }
 
@@ -37,59 +48,73 @@ export class CodeConvolutionEmitter<CodeReflectionT extends CodeReflection> exte
 
         // extract original include expression
         const { start, end } = dst;
-        const include = this.textDocument.source.substring(start.offset, end.offset);
+        const include = ctx.textDocument.source.substring(start.offset, end.offset);
 
-        if (this.includeDeps.includes(include)) {
+        if (ctx.includeDeps.includes(include)) {
             return true;
         }
 
-        this.includeDeps.push(include);
+        ctx.includeDeps.push(include);
         return true;
     }
 
-    emitComplexTypeDecl(cref: CodeReflectionT, ctype: ITypeInstruction) {
-        if (!this.convoluteToInclude(ctype))
-            super.emitComplexTypeDecl(cref, ctype);
+    emitComplexTypeDecl(ctx: ContextT, ctype: ITypeInstruction) {
+        if (!this.convoluteToInclude(ctx, ctype))
+            super.emitComplexTypeDecl(ctx, ctype);
     }
 
-    emitFunction(cref: CodeReflectionT, fn: IFunctionDeclInstruction) {
-        if (!this.convoluteToInclude(fn))
-            super.emitFunction(cref, fn);
+    emitFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
+        if (!this.convoluteToInclude(ctx, fn))
+            super.emitFunction(ctx, fn);
     }
 
-    emitTypeDecl(cref: CodeReflectionT, decl: ITypeDeclInstruction) {
-        if (!this.convoluteToInclude(decl))
-            super.emitTypeDecl(cref, decl);
+    emitTypeDecl(ctx: ContextT, decl: ITypeDeclInstruction) {
+        if (!this.convoluteToInclude(ctx, decl))
+            super.emitTypeDecl(ctx, decl);
     }
 
-    emitTypedef(cref: CodeReflectionT, def: ITypedefInstruction) {
-        if (!this.convoluteToInclude(def))
-            super.emitTypedef(cref, def);
+    emitTypedef(ctx: ContextT, def: ITypedefInstruction) {
+        if (!this.convoluteToInclude(ctx, def))
+            super.emitTypedef(ctx, def);
     }
 
-    emitGlobalVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
-        if (!this.convoluteToInclude(decl))
-            super.emitGlobalVariable(cref, decl);
+    emitGlobalVariable(ctx: ContextT, decl: IVariableDeclInstruction) {
+        if (!this.convoluteToInclude(ctx, decl))
+            super.emitGlobalVariable(ctx, decl);
     }
 
-    emitCbuffer(cref: CodeReflectionT, cbuf: ICbufferInstruction) {
-        if (!this.convoluteToInclude(cbuf))
-            super.emitCbuffer(cref, cbuf);
+    emitCbuffer(ctx: ContextT, cbuf: ICbufferInstruction) {
+        if (!this.convoluteToInclude(ctx, cbuf))
+            super.emitCbuffer(ctx, cbuf);
     }
 
-    toString(): string {
-        let code = super.toString();
-        if (!this.includeDeps.length) {
+    toString(ctx?: ContextT): string {
+        const code = super.toString();
+        if (!ctx) {
             return code;
         }
-
-        let includes = this.includeDeps.join('\n');
+        if (!ctx.includeDeps.length) {
+            return code;
+        }
+        const includes = ctx.includeDeps.join('\n');
         return `${includes}\n\n${code}`;
+    }
+
+
+    emit(ctx: ContextT, instr: IInstruction): CodeConvolutionEmitter<ContextT> {
+        super.emit(ctx, instr);
+        return this;
+    }
+
+
+    private static ccEmitter = new CodeConvolutionEmitter({ omitEmptyParams: true });
+
+
+    static translate(instr: IInstruction, ctx: CodeConvolutionContext = new CodeConvolutionContext): string {
+        return CodeConvolutionEmitter.ccEmitter.emit(ctx, instr).toString(ctx);
     }
 }
 
-// auxiliary version for convenience and debugging
-export function translateConvolute(instr: IInstruction, { textDocument, slastDocument }: IConvolutionPack, opts?: ICodeEmitterOptions): string {
-    const cref = new CodeReflection;
-    return (new CodeConvolutionEmitter(textDocument, slastDocument, opts)).emit(cref, instr).toString();
-}
+
+
+

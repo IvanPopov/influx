@@ -29,7 +29,13 @@ export function createOutput({ tab = '\t', nl = '\n', name = null } = {}) {
         count = 0;
     }
 
+    function isEmpty() {
+        return data.length == 1 && 
+            data[0].length == 0;
+    }
+
     return {
+        isEmpty,
         keyword,
         ignoreNextSpace,
         push,

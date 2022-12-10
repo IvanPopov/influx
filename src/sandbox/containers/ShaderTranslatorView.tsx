@@ -1,14 +1,14 @@
 /* tslint:disable:typedef */
 
-import * as Hlsl from '@lib/fx/translators/CodeEmitter';
-import * as HlslConv from '@lib/fx/translators/CodeConvolutionEmitter';
-import * as FxHlsl from '@lib/fx/translators/FxEmitter';
-import * as FxTranslator from '@lib/fx/translators/FxTranslator';
-import * as Glsl from '@lib/fx/translators/GlslEmitter';
+import { CodeEmitter as HLSLEmitter, CodeContext as HLSLContext } from '@lib/fx/translators/CodeEmitter';
+import { CodeConvolutionEmitter as HLSLConvolutionEmitter, CodeConvolutionContext as HLSLConvolutionContext, ICodeConvolutionContextOptions as IConvOptions } from '@lib/fx/translators/CodeConvolutionEmitter';
+import { FxContext, FxEmitter } from '@lib/fx/translators/FxEmitter';
+import { FxContextEx, FxTranslator } from '@lib/fx/translators/FxTranslator';
+import { GLSLEmitter, GLSLContext } from '@lib/fx/translators/GlslEmitter';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
 import { asConvolutionPack, getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
+import { asFxTranslatorOprions as asFxTranslatorOptions } from '@sandbox/reducers/translatorParams';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
 import * as monaco from 'monaco-editor';
@@ -94,11 +94,11 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         let value: string;
 
         const convolute = true;
-        const convPack: Hlsl.IConvolutionPack = convolute 
+        const convPack: IConvOptions = convolute 
             ? asConvolutionPack(props) 
             // provide no sources for convolution
             : { textDocument: null, slastDocument: null };
-        const translatorOpts = asFxTranslatorOprions(props);
+        const translatorOpts = asFxTranslatorOptions(props);
 
         // TODO: sync translation with Bundle generation (!)
 
@@ -114,20 +114,20 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
             const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
 
-            original = Hlsl.translate(shader, { mode });
+            original = HLSLEmitter.translate(shader, new HLSLContext({ mode }));
             switch (pg.shaderFormat) {
                 case 'glsl':
                     // todo: show final shader instead of direct translation
-                    value = Glsl.translate(shader, { mode });
+                    value = GLSLEmitter.translate(shader, new GLSLContext({ mode }));
                     break;
                 case 'hlsl':
                    // todo: show final shader instead of direct translation
-                   value = HlslConv.translateConvolute(shader, convPack, { mode });
+                   value = HLSLConvolutionEmitter.translate(shader, new HLSLConvolutionContext({ ...convPack, mode }));
                    break;
             }
         } else {
-            original = FxHlsl.translateConvolute(fx, convPack);
-            value = FxTranslator.translateFlat(fx, convPack, translatorOpts);
+            original = FxEmitter.translate(fx, new FxContext({ ...convPack }));
+            value = FxTranslator.translate(fx, new FxContextEx({ ...convPack, ...translatorOpts }));
         }
 
         return (

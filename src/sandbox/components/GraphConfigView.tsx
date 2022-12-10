@@ -10,7 +10,7 @@ import autobind from 'autobind-decorator';
 import { nodes as nodesActions } from '@sandbox/actions';
 import { Button, Form, Header, Input, Segment } from 'semantic-ui-react';
 import { PART_TYPE } from './graphEx/common';
-import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
+import { CodeEmitter } from '@lib/fx/translators/CodeEmitter';
 import GraphConstants from './GraphConstants';
 import { IEmitter } from '@lib/idl/emitter';
 

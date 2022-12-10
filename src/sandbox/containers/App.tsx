@@ -4,7 +4,7 @@ import * as Autotests from '@lib/fx/autotests';
 /* tslint:disable:no-single-line-block-comment */
 import * as Bytecode from '@lib/fx/bytecode';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import * as Fxmitter from '@lib/fx/translators/FxEmitter';
+import { FxEmitter } from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
@@ -1114,7 +1114,7 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={ `/${props.match.params.view}/:fx/${CODE_KEYWORD}` }>
                                             { props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
                                                 <CodeView content={
-                                                    Fxmitter.translateDocument(getFileState(this.props).slDocument) } />
+                                                    FxEmitter.translateDocument(getFileState(this.props).slDocument) } />
                                             }
                                         </Route>
                                         <Route exact path={ `/${props.match.params.view}/:fx/${RAW_KEYWORD}` }>

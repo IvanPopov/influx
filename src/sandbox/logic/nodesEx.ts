@@ -1,7 +1,7 @@
 import { type as typeHelper } from '@lib/fx/analisys/helpers';
 import { createFXSLDocument, extendFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import * as FxEmitter from '@lib/fx/translators/FxEmitter';
+import { FxEmitter } from '@lib/fx/translators/FxEmitter';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { isDefAndNotNull } from '@lib/util/s3d/type';
@@ -15,7 +15,7 @@ import { matchPath } from 'react-router-dom';
 import { createLogic } from 'redux-logic';
 import { GRAPH_KEYWORD, LOCATION_PATTERN, PATH_PARAMS_TYPE, LIB_PATH } from './common';
 
-import * as CodeEmitter from '@lib/fx/translators/CodeEmitter';
+import { CodeEmitter } from '@lib/fx/translators/CodeEmitter';
 import docs from '@sandbox/components/graphEx/utils/docs';
 
 // import all factories

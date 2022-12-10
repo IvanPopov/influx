@@ -12,12 +12,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
 import { isString } from "@lib/util/s3d/type";
 import { BaseEmitter } from "./BaseEmitter";
-import { IDrawOpReflection } from "./FxTranslator";
 
-export interface IConvolutionPack {
-    textDocument?: ITextDocument;
-    slastDocument?: ISLASTDocument;
-}
 
 interface ITypeInfo {
     typeName: string;
@@ -30,6 +25,7 @@ export enum EUsages {
     k_Pixel = 0x02,
     k_Compute = 0x04
 };
+
 
 export interface IUavReflection {
     register: number;
@@ -60,13 +56,13 @@ export interface ITextureReflection {
     elementType: string;    // "float4"
 }
 
+
 export interface ICSShaderReflection {
     name: string;
     numthreads: number[];
     uavs: IUavReflection[];
     buffers: IBufferReflection[];
     textures: ITextureReflection[];
-    // trimeshes: ITrimeshReflection[];
 }
 
 
@@ -77,20 +73,12 @@ export interface ICbReflection {
 }
 
 export interface ICodeEmitterOptions {
-    mode?: 'vertex' | 'pixel' | 'compute' | 'raw';
     // do not print 'in' for function parameters even if it is specified
     omitInUsage?: boolean;
     // skip complex type parameters of zero size
     omitEmptyParams?: boolean;
-
-    // rename entry point
-    entryName?: string;
 }
 
-export interface ICodeReflectionContext {
-    shader?: ICSShaderReflection;
-    dop?: IDrawOpReflection; // draw operator
-}
 
 function pushUniq<T>(arr: Array<T>, elem: T)
 {
@@ -98,206 +86,159 @@ function pushUniq<T>(arr: Array<T>, elem: T)
         arr.push(elem);
 }
 
-export class CodeReflection<ContextT extends ICodeReflectionContext = ICodeReflectionContext> {
-    /*protected*/ globals: string[] = [];
-    /*protected*/ types: string[] = [];
-    /*protected*/ functions: string[] = []; // signatures
-    /*protected*/ uniforms: string[] = [];
-    /*protected*/ uavs: IUavReflection[] = [];
-    /*protected*/ buffers: IBufferReflection[] = [];
-    /*protected*/ cbuffers: ICbReflection[] = [];
-    /*protected*/ CSShaders: ICSShaderReflection[] = [];
 
-    protected ctx = <ContextT>{}
-
-    checkGlobal(name: string): string {
-        return this.globals.find(g => g == name);
-    }
+export interface ICodeContextOptions {
+    mode?: 'vertex' | 'pixel' | 'compute' | 'raw';
+    // rename entry point
+    entryName?: string;
+}
 
 
-    // returns false if global already exists
-    addGlobal(name: string): boolean {
-        let g = this.checkGlobal(name);
-        if (!g) {
-            g = name;
-            this.globals.push(g);
-            return true;
-        }
-        return false;
-    }
+export class CodeContext {
+    // known globals like: functions, types, uniforms etc.
+    private knownSignatures: Set<string> = new Set();
+    
+    readonly uavs: IUavReflection[] = [];
+    readonly buffers: IBufferReflection[] = [];
+    readonly cbuffers: ICbReflection[] = [];
+    readonly CSShaders: ICSShaderReflection[] = [];
 
+    protected CSShader?: ICSShaderReflection; 
 
-    checkFunction(decl: IFunctionDeclInstruction): boolean {
-        const sign = fn.signature(decl.def);
-        return this.functions.includes(sign);
-    }
+    readonly opts: ICodeContextOptions;
 
-
-    addFunction(decl: IFunctionDeclInstruction): boolean {
-        if (!this.checkFunction(decl)) {
-            this.functions.push(fn.signature(decl.def));
-            return true;
-        }
-        return false;
-    }
-
-
-    checkCbuffer(name: string): ICbReflection {
-        return this.cbuffers.find(cb => cb.name == name);
-    }
-
-
-    addCbuffer(cbuf: ICbufferInstruction): boolean {
-        let buf = this.checkCbuffer(cbuf.name);
-        let added = !buf;
-        if (!buf) {
-            const { name, type: { size }, register: { index: register } } = cbuf;
-            buf = { name, size, register };
-            this.cbuffers.push(buf);
-        }
-
-        // push if not exists
-        let sh = this.ctx.shader;
-        if (sh) {
-            // pushUniq(sh.cbuffers, buf);
-        }
-
-        return added;
-    }
-
-
-    checkType(name: string): boolean {
-        return this.types.includes(name);
+    constructor(opts: ICodeContextOptions = {}) {
+        this.opts = opts;
+        this.opts.mode ||= 'raw';
     }
     
+    get entryName(): string { return this.opts.entryName; }
+    get mode(): string { return this.opts.mode; }
+    isPixel() { return this.mode === 'pixel'; }
+    isVertex() { return this.mode === 'vertex'; }
+    isRaw() { return this.mode === 'raw'; }
 
-    addType(name: string): boolean {
-        if (!this.checkType(name)) {
-            this.types.push(name);
-            return true;
-        }
-        return false;
+    
+    has(signature: string): boolean {
+        return this.knownSignatures.has(signature);
     }
 
 
-    checkUav(name: string): IUavReflection {
-        return this.uavs?.find(u => u.name == name);
+    add(signature: string): void {
+        assert(!this.has(signature));
+        this.knownSignatures.add(signature);
     }
 
 
-    addUav(type: string, name: string): boolean {
-        let uav = this.checkUav(name);
-        let added = !uav;
-        if (!uav) {
-            const register = this.uavs.length;
-            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
-            const match = type.match(regexp);
-            assert(match);
-            uav = {
-                name,
-                type,
-                uavType: match[1],
-                elementType: match[2],
-                register
-            };
+    addCbuffer(cbuf: ICbufferInstruction): ICbReflection {
+        assert(!this.has(cbuf.name));
+        this.add(cbuf.name);
 
-            this.uavs.push(uav);
-        }
-
-        // push if not exists
-        let sh = this.ctx.shader;
-        if (sh) {
-            pushUniq(sh.uavs, uav);
-        }
-
-        return added;
+        const { name, type: { size }, register: { index: register } } = cbuf;
+        const buf = { name, size, register };
+        this.cbuffers.push(buf);
+    
+        return buf;
     }
 
 
-    checkBuffer(name: string): IBufferReflection {
-        return this.buffers.find(b => b.name == name);
+
+    addUav(type: string, name: string): IUavReflection {
+        assert(!this.has(name));
+        this.add(name);
+
+        const register = this.uavs.length;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.match(regexp);
+        assert(match);
+        const uav = {
+            name,
+            type,
+            uavType: match[1],
+            elementType: match[2],
+            register
+        };
+
+        this.uavs.push(uav);
+        return uav;
     }
 
 
-    addBuffer(type: string, name: string): boolean {
-        let buf = this.checkBuffer(name);
-        let added = !buf;
-        if (!buf) {
-            const register = this.buffers.length;
-            const regexp = /^([\w]+)<([\w0-9_]+)>$/;
-            const match = type.match(regexp);
-            assert(match);
 
-            buf = {
-                name,
-                type,
-                bufType: match[1],
-                elementType: match[2],
-                register
-            };
+    addBuffer(type: string, name: string): IBufferReflection {
+        assert(!this.has(name));
+        this.add(name);
 
-            this.buffers.push(buf);
-        }
+        const register = this.buffers.length;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.match(regexp);
+        assert(match);
 
-        // push if not exists
-        let sh = this.ctx.shader;
-        if (sh) {
-            pushUniq(sh.buffers, buf);
-        }
+        const buf = {
+            name,
+            type,
+            bufType: match[1],
+            elementType: match[2],
+            register
+        };
 
-        return added;
+        this.buffers.push(buf);
+        return buf;
     }
 
-
-    checkCsShader(name: string): ICSShaderReflection {
-        return this.CSShaders.find(s => s.name == name);
-    }
-
-
-    protected addCsShader(shader: ICSShaderReflection): boolean {
-        let cs = this.checkCsShader(shader.name);
-        if (!cs) {
-            cs = shader;
-            this.CSShaders.push(cs);
-            return true;
-        }
-        return false;
-    }
 
     beginCsShader(name: string, numthreads: number[]) {
         const uavs = [];
         const buffers = [];
         const textures = [];
-        this.ctx.shader = { name, numthreads, uavs, buffers, textures };
+        this.CSShader = { name, numthreads, uavs, buffers, textures };
     }
 
 
     endCsShader() {
-        assert(this.ctx.shader);
-        this.addCsShader(this.ctx.shader);
-        this.ctx.shader = null;
+        const sh = this.CSShader;
+        assert(sh);
+        assert(!this.has(sh.name));
+        this.add(sh.name);
+        this.CSShaders.push(sh);
+
+        this.CSShader = null;
     }
 
-    static asSTRID = (decl: IVariableDeclInstruction) => `${decl.name}${decl.instructionID}`;
+
+    linkBuffer(name: string) {
+        assert(this.has(name));
+        // push if not exists
+        let sh = this.CSShader;
+        if (sh) {
+            pushUniq(sh.buffers, this.buffers.find(b => b.name == name));
+        }
+    }
+
+
+    linkCbuffer(name: string) {
+        assert(this.has(name));
+        // push if not exists
+        let sh = this.CSShader;
+        if (sh) {
+            // pushUniq(sh.cbuffers, this.cbuffers.find(b => b.name == name));
+        }
+    }
+
+
+    linkUav(name: string) {
+        assert(this.has(name));
+        // push if not exists
+        let sh = this.CSShader;
+        if (sh) {
+            pushUniq(sh.uavs, this.uavs.find(u => u.name == name));
+        }
+    }
 }
 
-export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmitter {
-
-    // list of convolute includes
-    protected includeDeps: string[] = [];
-
-    protected options: ICodeEmitterOptions;
-
-    constructor(options: ICodeEmitterOptions = {}) {
+export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
+    constructor(protected options: ICodeEmitterOptions = {}) {
         super();
-        this.options = options;
-        this.options.mode ||= 'raw';
-    }
-
-
-
-    get mode(): string {
-        return this.options.mode;
     }
 
 
@@ -306,27 +247,12 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    protected isPixel() {
-        return this.mode === 'pixel';
-    }
-
-
-    protected isVertex() {
-        return this.mode === 'vertex';
-    }
-
-
-    protected isRaw() {
-        return this.mode === 'raw';
-    }
-
-
     protected resolveTypeName(type: ITypeInstruction): string {
         return type.name;
     }
 
 
-    protected resolveType(cref: CodeReflectionT, type: ITypeInstruction): ITypeInfo {
+    protected resolveType(ctx: ContextT, type: ITypeInstruction): ITypeInfo {
         if (!type) {
             return null;
         }
@@ -342,12 +268,9 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
             typeName = this.resolveTypeName(type);
         } else {
             typeName = type.name;
-
-            if (cref.addType(typeName)) {
-                // find original type instead of VariableType wrapper. 
-                const originalType = type.scope.findType(type.name);
-                this.emit(cref, originalType);
-            }
+            // find original type instead of VariableType wrapper. 
+            const originalType = type.scope.findType(type.name);
+            this.emit(ctx, originalType);
         }
 
         if (type.instructionType === EInstructionTypes.k_VariableType) {
@@ -367,10 +290,9 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitBuffer(cref: CodeReflectionT, type: string, name: string, comment?: string): IBufferReflection {
-        let buf = cref.checkBuffer(name);
-        if (cref.addBuffer(type, name)) {
-            buf = cref.checkBuffer(name);
+    emitBuffer(ctx: ContextT, type: string, name: string, comment?: string): void {
+        if (!ctx.has(name)) {
+            const buf = ctx.addBuffer(type, name);
             this.begin();
             {
                 comment && this.emitComment(comment);
@@ -378,14 +300,13 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
             }
             this.end();
         }
-        return buf;
+        ctx.linkBuffer(name);
     }
 
 
-    emitUav(cref: CodeReflectionT, type: string, name: string, comment?: string): IUavReflection {
-        let uav = cref.checkUav(name);
-        if (cref.addUav(type, name)) {
-            uav = cref.checkUav(name);
+    emitUav(ctx: ContextT, type: string, name: string, comment?: string): void {
+        if (!ctx.has(name)) {
+            const uav = ctx.addUav(type, name);
             this.begin();
             {
                 comment && this.emitComment(comment);
@@ -393,7 +314,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
             }
             this.end();
         }
-        return uav;
+        ctx.linkUav(name);
     }
 
 
@@ -423,7 +344,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitComplexType(cref: CodeReflectionT, type: ITypeInstruction) {
+    emitComplexType(ctx: ContextT, type: ITypeInstruction) {
         assert(type.isComplex());
         this.emitKeyword('struct');
         this.emitKeyword(type.name);
@@ -431,53 +352,59 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         this.emitChar('{');
         this.push();
 
-        type.fields.map(field => (this.emitComplexField(cref, field), this.emitNewline()));
+        type.fields.map(field => (this.emitComplexField(ctx, field), this.emitNewline()));
 
         this.pop();
         this.emitChar('}');
     }
 
 
-    emitComplexTypeDecl(cref: CodeReflectionT, ctype: ITypeInstruction) {
+    emitComplexTypeDecl(ctx: ContextT, ctype: ITypeInstruction) {
+        if (ctx.has(ctype.name)) {
+            return;
+        }
+
+        ctx.add(ctype.name);
+
         this.begin();
-        this.emitComplexType(cref, ctype);
+        this.emitComplexType(ctx, ctype);
         this.emitChar(';');
         this.end();
     }
 
     // todo: remove hack with rename mutator
-    emitVariableNoInit(cref: CodeReflectionT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        const { typeName, length, usage } = this.resolveType(cref, decl.type);
+    emitVariableNoInit(ctx: ContextT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        const { typeName, length, usage } = this.resolveType(ctx, decl.type);
         const name = rename ? rename(decl) : decl.name;
 
         usage && this.emitKeyword(usage);
         this.emitKeyword(typeName);
         this.emitKeyword(name);
         length && this.emitChar(`[${length}]`);
-        decl.semantic && this.emitSemantic(cref, decl.semantic);
-        decl.annotation && this.emitAnnotation(cref, decl.annotation);
+        decl.semantic && this.emitSemantic(ctx, decl.semantic);
+        decl.annotation && this.emitAnnotation(ctx, decl.annotation);
     }
 
 
     // todo: remove hack with rename mutator
-    emitVariable(cref: CodeReflectionT, src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
-        this.emitVariableNoInit(cref, src, rename);
+    emitVariable(ctx: ContextT, src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        this.emitVariableNoInit(ctx, src, rename);
         if (src.initExpr) {
-            this.emitKeyword('='), this.emitSpace(), this.emitExpression(cref, src.initExpr);
+            this.emitKeyword('='), this.emitSpace(), this.emitExpression(ctx, src.initExpr);
         }
     }
 
 
-    emitIfStmt(cref: CodeReflectionT, stmt: IIfStmtInstruction): void {
+    emitIfStmt(ctx: ContextT, stmt: IIfStmtInstruction): void {
         this.emitKeyword('if');
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitExpression(cref, stmt.cond);
+        this.emitExpression(ctx, stmt.cond);
         this.emitChar(')');
         this.emitNewline();
 
         if (stmt.conseq) {
-            this.emitStmt(cref, stmt.conseq);
+            this.emitStmt(ctx, stmt.conseq);
         } else {
             this.emitChar(';');
         }
@@ -485,37 +412,37 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         if (stmt.contrary) {
             this.emitNewline();
             this.emitKeyword('else');
-            this.emitStmt(cref, stmt.contrary);
+            this.emitStmt(ctx, stmt.contrary);
         }
     }
 
 
-    emitSemantic(cref: CodeReflectionT, semantic: string) {
+    emitSemantic(ctx: ContextT, semantic: string) {
         this.emitChar(':');
         this.emitKeyword(semantic);
     }
 
 
-    emitAnnotation(cref: CodeReflectionT, anno: IAnnotationInstruction) {
+    emitAnnotation(ctx: ContextT, anno: IAnnotationInstruction) {
         // TODO: add annotation emission.
     }
 
 
-    emitCompile(cref: CodeReflectionT, compile: ICompileExprInstruction) {
-        this.emitFunction(cref, compile.function);
+    emitCompile(ctx: ContextT, compile: ICompileExprInstruction) {
+        this.emitFunction(ctx, compile.function);
 
         this.emitKeyword('compile');
         this.emitKeyword(compile.function.name);
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitExpressionList(cref, compile.args);
+        this.emitExpressionList(ctx, compile.args);
         this.emitChar(')');
     }
 
 
-    protected evaluateEntryName(fn: IFunctionDeclInstruction) {
+    protected evaluateEntryName(ctx: ContextT, fn: IFunctionDeclInstruction) {
         const fnName = fn.name;
-        const entryName = this.options.entryName;
+        const entryName = ctx.entryName;
         if (!isString(entryName)) return fnName;
         if (isDef(fn.scope.functions[entryName]))
             // todo: emit correct error
@@ -525,44 +452,44 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
 
 
     // todo: add compute entry support
-    protected emitEntryFunction(cref: CodeReflectionT, fn: IFunctionDeclInstruction) {
+    protected emitEntryFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
         const { def } = fn;
-        const { typeName } = this.resolveType(cref, def.returnType);
+        const { typeName } = this.resolveType(ctx, def.returnType);
 
         this.begin();
         {
             // in case of hlsl materials it's typical to swap arbitrary name for bundle name
             // to simplify further compilation
-            let fnName = this.evaluateEntryName(fn);
+            let fnName = this.evaluateEntryName(ctx, fn);
             this.emitKeyword(typeName);
             this.emitKeyword(fnName);
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitParams(cref, def.params);
+            this.emitParams(ctx, def.params);
             this.emitChar(')');
 
             // todo: validate complex type sematics
             // all the output parameters of entry function must have valid semantics
             if (!def.returnType.isComplex()) {
-                if (this.isPixel()) {
+                if (ctx.isPixel()) {
                     this.emitChar(':');
                     this.emitKeyword(fn.semantic || 'SV_Target0');
                 }
             }
             this.emitNewline();
-            this.emitBlock(cref, fn.impl);
+            this.emitBlock(ctx, fn.impl);
         }
         this.end();
     }
 
 
-    protected emitRegularFunction(cref: CodeReflectionT, fn: IFunctionDeclInstruction) {
+    protected emitRegularFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
         if (!fn) {
             return;
         }
 
         const { def } = fn;
-        const { typeName } = this.resolveType(cref, def.returnType);
+        const { typeName } = this.resolveType(ctx, def.returnType);
 
         this.begin();
         {
@@ -570,41 +497,48 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
             this.emitKeyword(fn.name);
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitParams(cref, def.params);
+            this.emitParams(ctx, def.params);
             this.emitChar(')');
             this.emitNewline();
-            this.emitBlock(cref, fn.impl);
+            this.emitBlock(ctx, fn.impl);
         }
         this.end();
     }
 
 
-    emitFunction(cref: CodeReflectionT, fn: IFunctionDeclInstruction) {
-        if (!fn) {
+    emitFunction(ctx: ContextT, decl: IFunctionDeclInstruction) {
+        if (!decl) {
             return;
         }
 
-        const isEntry = (this.depth() == 0) && !this.isRaw();
-        if (isEntry) this.emitEntryFunction(cref, fn);
-        else this.emitRegularFunction(cref, fn);
+        const sign = fn.signature(decl.def);
+        if (ctx.has(sign)) {
+            return;
+        }
+
+        ctx.add(sign);
+
+        const isEntry = (this.depth() == 0) && !ctx.isRaw();
+        if (isEntry) this.emitEntryFunction(ctx, decl);
+        else this.emitRegularFunction(ctx, decl);
     }
 
 
-    emitCollector(cref: CodeReflectionT, collector: IInstructionCollector) {
+    emitCollector(ctx: ContextT, collector: IInstructionCollector) {
         this.begin();
         for (let instr of collector.instructions) {
-            this.emit(cref, instr);
+            this.emit(ctx, instr);
         }
         this.end();
     }
 
 
-    emitTypeDecl(cref: CodeReflectionT, decl: ITypeDeclInstruction) {
-        this.resolveType(cref, decl.type);
+    emitTypeDecl(ctx: ContextT, decl: ITypeDeclInstruction) {
+        this.resolveType(ctx, decl.type);
     }
 
 
-    emitTypedef(cref: CodeReflectionT, def: ITypedefInstruction) {
+    emitTypedef(ctx: ContextT, def: ITypedefInstruction) {
         // nothing todo because current implementation implies
         // immediate target type substitution 
         return;
@@ -620,15 +554,15 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         */
     }
 
-    emitForInit(cref: CodeReflectionT, init: ITypedInstruction) {
+    emitForInit(ctx: ContextT, init: ITypedInstruction) {
         if (instruction.isExpression(init)) {
-            this.emitExpression(cref, init as IExprInstruction);
+            this.emitExpression(ctx, init as IExprInstruction);
         } else {
-            this.emitVariable(cref, init as IVariableDeclInstruction);
+            this.emitVariable(ctx, init as IVariableDeclInstruction);
         }
     }
 
-    emitForStmt(cref: CodeReflectionT, stmt: IForStmtInstruction) {
+    emitForStmt(ctx: ContextT, stmt: IForStmtInstruction) {
 
         //for(int i = 0;i < 4;++ i)
         //{
@@ -639,22 +573,22 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         this.emitChar('(');
         this.emitNoSpace();
 
-        this.emitForInit(cref, stmt.init);
+        this.emitForInit(ctx, stmt.init);
         this.emitChar(';');
 
-        this.emitExpression(cref, stmt.cond);
+        this.emitExpression(ctx, stmt.cond);
         this.emitChar(';');
 
-        this.emitExpression(cref, stmt.step);
+        this.emitExpression(ctx, stmt.step);
         this.emitChar(')');
 
         if (stmt.body.instructionType === EInstructionTypes.k_StmtBlock)
             this.emitNewline();
-        this.emitStmt(cref, stmt.body);
+        this.emitStmt(ctx, stmt.body);
     }
 
 
-    emitExpression(cref: CodeReflectionT, expr: IExprInstruction) {
+    emitExpression(ctx: ContextT, expr: IExprInstruction) {
         if (!expr) {
             return;
         }
@@ -667,45 +601,45 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         */
         switch (expr.instructionType) {
             case EInstructionTypes.k_ArithmeticExpr:
-                return this.emitArithmetic(cref, expr as IArithmeticExprInstruction);
+                return this.emitArithmetic(ctx, expr as IArithmeticExprInstruction);
             case EInstructionTypes.k_AssignmentExpr:
-                return this.emitAssigment(cref, expr as IAssignmentExprInstruction);
+                return this.emitAssigment(ctx, expr as IAssignmentExprInstruction);
             case EInstructionTypes.k_PostfixPointExpr:
-                return this.emitPostfixPoint(cref, expr as IPostfixPointInstruction);
+                return this.emitPostfixPoint(ctx, expr as IPostfixPointInstruction);
             case EInstructionTypes.k_IdExpr:
-                return this.emitIdentifier(cref, expr as IIdExprInstruction);
+                return this.emitIdentifier(ctx, expr as IIdExprInstruction);
             case EInstructionTypes.k_FunctionCallExpr:
-                return this.emitFCall(cref, expr as IFunctionCallInstruction);
+                return this.emitFCall(ctx, expr as IFunctionCallInstruction);
             case EInstructionTypes.k_ConstructorCallExpr:
-                return this.emitCCall(cref, expr as IConstructorCallInstruction);
+                return this.emitCCall(ctx, expr as IConstructorCallInstruction);
             case EInstructionTypes.k_FloatExpr:
-                return this.emitFloat(cref, expr as ILiteralInstruction<number>);
+                return this.emitFloat(ctx, expr as ILiteralInstruction<number>);
             case EInstructionTypes.k_IntExpr:
-                return this.emitInteger(cref, expr as ILiteralInstruction<number>);
+                return this.emitInteger(ctx, expr as ILiteralInstruction<number>);
             case EInstructionTypes.k_BoolExpr:
-                return this.emitBool(cref, expr as ILiteralInstruction<boolean>);
+                return this.emitBool(ctx, expr as ILiteralInstruction<boolean>);
             case EInstructionTypes.k_ComplexExpr:
-                return this.emitComplexExpr(cref, expr as IComplexExprInstruction);
+                return this.emitComplexExpr(ctx, expr as IComplexExprInstruction);
             case EInstructionTypes.k_CompileExpr:
-                return this.emitCompile(cref, expr as ICompileExprInstruction);
+                return this.emitCompile(ctx, expr as ICompileExprInstruction);
             case EInstructionTypes.k_ConditionalExpr:
-                return this.emitConditionalExpr(cref, expr as IConditionalExprInstruction);
+                return this.emitConditionalExpr(ctx, expr as IConditionalExprInstruction);
             case EInstructionTypes.k_RelationalExpr:
-                return this.emitRelationalExpr(cref, expr as IRelationalExprInstruction);
+                return this.emitRelationalExpr(ctx, expr as IRelationalExprInstruction);
             case EInstructionTypes.k_LogicalExpr:
-                return this.emitLogicalExpr(cref, expr as ILogicalExprInstruction);
+                return this.emitLogicalExpr(ctx, expr as ILogicalExprInstruction);
             case EInstructionTypes.k_UnaryExpr:
-                return this.emitUnaryExpr(cref, expr as IUnaryExprInstruction);
+                return this.emitUnaryExpr(ctx, expr as IUnaryExprInstruction);
             case EInstructionTypes.k_PostfixArithmeticExpr:
-                return this.emitPostfixArithmetic(cref, expr as IPostfixArithmeticInstruction);
+                return this.emitPostfixArithmetic(ctx, expr as IPostfixArithmeticInstruction);
             case EInstructionTypes.k_InitExpr:
-                return this.emitInitExpr(cref, expr as IInitExprInstruction);
+                return this.emitInitExpr(ctx, expr as IInitExprInstruction);
             case EInstructionTypes.k_CastExpr:
-                return this.emitCast(cref, expr as ICastExprInstruction);
+                return this.emitCast(ctx, expr as ICastExprInstruction);
             case EInstructionTypes.k_BitwiseExpr:
-                return this.emitBitwise(cref, expr as IBitwiseExprInstruction);
+                return this.emitBitwise(ctx, expr as IBitwiseExprInstruction);
             case EInstructionTypes.k_PostfixIndexExpr:
-                return this.emitPostfixIndex(cref, expr as IPostfixIndexInstruction);
+                return this.emitPostfixIndex(ctx, expr as IPostfixIndexInstruction);
             default:
                 this.emitLine(`/* ... unsupported expression '${expr.instructionName}' ... */`);
                 assert(false, `unsupported instruction found: ${expr.instructionName}`);
@@ -713,7 +647,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitFloat(cref: CodeReflectionT, lit: ILiteralInstruction<number>) {
+    emitFloat(ctx: ContextT, lit: ILiteralInstruction<number>) {
         const sval = String(lit.value);
         this.emitKeyword(sval);
         (sval.indexOf('.') === -1) && this.emitChar('.');
@@ -721,104 +655,104 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitBool(cref: CodeReflectionT, lit: ILiteralInstruction<boolean>) {
+    emitBool(ctx: ContextT, lit: ILiteralInstruction<boolean>) {
         this.emitKeyword(lit.value ? 'true' : 'false');
     }
 
 
-    emitComplexExpr(cref: CodeReflectionT, complex: IComplexExprInstruction) {
+    emitComplexExpr(ctx: ContextT, complex: IComplexExprInstruction) {
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitExpression(cref, complex.expr);
+        this.emitExpression(ctx, complex.expr);
         this.emitChar(')');
     }
 
 
-    emitConditionalExpr(cref: CodeReflectionT, cond: IConditionalExprInstruction) {
-        this.emitExpression(cref, cond.condition);
+    emitConditionalExpr(ctx: ContextT, cond: IConditionalExprInstruction) {
+        this.emitExpression(ctx, cond.condition);
         this.emitKeyword('?');
-        this.emitExpression(cref, cond.left as IExprInstruction);
+        this.emitExpression(ctx, cond.left as IExprInstruction);
         this.emitKeyword(':');
-        this.emitExpression(cref, cond.right as IExprInstruction);
+        this.emitExpression(ctx, cond.right as IExprInstruction);
     }
 
 
-    emitInteger(cref: CodeReflectionT, lit: ILiteralInstruction<number>) {
+    emitInteger(ctx: ContextT, lit: ILiteralInstruction<number>) {
         const int = lit as IntInstruction;
         this.emitKeyword(`${int.heximal ? '0x' + int.value.toString(16).toUpperCase() : int.value.toFixed(0)}${!int.signed ? 'u' : ''}`);
     }
 
 
-    emitRelationalExpr(cref: CodeReflectionT, rel: IRelationalExprInstruction) {
-        this.emitExpression(cref, rel.left);
+    emitRelationalExpr(ctx: ContextT, rel: IRelationalExprInstruction) {
+        this.emitExpression(ctx, rel.left);
         this.emitKeyword(rel.operator);
-        this.emitExpression(cref, rel.right);
+        this.emitExpression(ctx, rel.right);
     }
 
 
-    emitLogicalExpr(cref: CodeReflectionT, rel: ILogicalExprInstruction) {
-        this.emitExpression(cref, rel.left);
+    emitLogicalExpr(ctx: ContextT, rel: ILogicalExprInstruction) {
+        this.emitExpression(ctx, rel.left);
         this.emitKeyword(rel.operator);
-        this.emitExpression(cref, rel.right);
+        this.emitExpression(ctx, rel.right);
     }
 
 
-    emitUnaryExpr(cref: CodeReflectionT, unary: IUnaryExprInstruction) {
+    emitUnaryExpr(ctx: ContextT, unary: IUnaryExprInstruction) {
         this.emitChar(unary.operator);
-        this.emitExpression(cref, unary.expr);
+        this.emitExpression(ctx, unary.expr);
     }
 
 
-    emitPostfixArithmetic(cref: CodeReflectionT, par: IPostfixArithmeticInstruction) {
-        this.emitExpression(cref, par.expr);
+    emitPostfixArithmetic(ctx: ContextT, par: IPostfixArithmeticInstruction) {
+        this.emitExpression(ctx, par.expr);
         this.emitChar(par.operator);
     }
 
 
-    emitPostfixIndex(cref: CodeReflectionT, pfidx: IPostfixIndexInstruction) {
-        this.emitExpression(cref, pfidx.element);
+    emitPostfixIndex(ctx: ContextT, pfidx: IPostfixIndexInstruction) {
+        this.emitExpression(ctx, pfidx.element);
         this.emitChar('[');
         this.emitNoSpace();
-        this.emitExpression(cref, pfidx.index);
+        this.emitExpression(ctx, pfidx.index);
         this.emitChar(']');
     }
 
 
-    emitExpressionList(cref: CodeReflectionT, list: IExprInstruction[]) {
+    emitExpressionList(ctx: ContextT, list: IExprInstruction[]) {
         (list || []).forEach((expr, i) => {
-            this.emitExpression(cref, expr);
+            this.emitExpression(ctx, expr);
             (i != list.length - 1) && this.emitChar(',');
         })
     }
 
 
-    emitParam(cref: CodeReflectionT, param: IVariableDeclInstruction) {
-        this.emitVariable(cref, param);
+    emitParam(ctx: ContextT, param: IVariableDeclInstruction) {
+        this.emitVariable(ctx, param);
     }
 
 
-    emitParams(cref: CodeReflectionT, params: IVariableDeclInstruction[]) {
+    emitParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
         params.filter(p => !this.options.omitEmptyParams || p.type.size !== 0).forEach((param, i, list) => {
-            this.emitParam(cref, param);
+            this.emitParam(ctx, param);
             (i + 1 != list.length) && this.emitChar(',');
         });
     }
 
 
-    emitInitExpr(cref: CodeReflectionT, init: IInitExprInstruction) {
+    emitInitExpr(ctx: ContextT, init: IInitExprInstruction) {
         if (init.args.length > 1) {
             this.emitChar('{');
             this.emitNoSpace();
-            this.emitExpressionList(cref, init.args);
+            this.emitExpressionList(ctx, init.args);
             this.emitChar('}');
             return;
         }
 
-        this.emitExpression(cref, init.args[0]);
+        this.emitExpression(ctx, init.args[0]);
     }
 
 
-    emitCast(cref: CodeReflectionT, cast: ICastExprInstruction) {
+    emitCast(ctx: ContextT, cast: ICastExprInstruction) {
         if (cast.isUseless()) {
             return;
         }
@@ -826,49 +760,49 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         this.emitChar('(');
         this.emitNoSpace();
 
-        const { typeName } = this.resolveType(cref, cast.type);
+        const { typeName } = this.resolveType(ctx, cast.type);
         this.emitKeyword(typeName);
 
         this.emitChar(')');
         this.emitNoSpace();
-        this.emitExpression(cref, cast.expr);
+        this.emitExpression(ctx, cast.expr);
     }
 
 
-    emitBitwise(cref: CodeReflectionT, bwise: IBitwiseExprInstruction) {
-        this.emitExpression(cref, bwise.left);
+    emitBitwise(ctx: ContextT, bwise: IBitwiseExprInstruction) {
+        this.emitExpression(ctx, bwise.left);
         this.emitKeyword(bwise.operator);
         this.emitSpace();
-        this.emitExpression(cref, bwise.right);
+        this.emitExpression(ctx, bwise.right);
     }
 
 
-    emitArithmetic(cref: CodeReflectionT, arthm: IArithmeticExprInstruction) {
-        this.emitExpression(cref, arthm.left);
+    emitArithmetic(ctx: ContextT, arthm: IArithmeticExprInstruction) {
+        this.emitExpression(ctx, arthm.left);
         this.emitKeyword(arthm.operator);
         this.emitSpace();
-        this.emitExpression(cref, arthm.right);
+        this.emitExpression(ctx, arthm.right);
     }
 
 
-    emitAssigment(cref: CodeReflectionT, asgm: IAssignmentExprInstruction) {
-        this.emitExpression(cref, asgm.left);
+    emitAssigment(ctx: ContextT, asgm: IAssignmentExprInstruction) {
+        this.emitExpression(ctx, asgm.left);
         this.emitKeyword(asgm.operator);
         this.emitSpace();
         assert(instruction.isExpression(asgm.right));
-        this.emitExpression(cref, asgm.right as IExprInstruction);
+        this.emitExpression(ctx, asgm.right as IExprInstruction);
     }
 
 
-    emitPostfixPoint(cref: CodeReflectionT, pfxp: IPostfixPointInstruction) {
+    emitPostfixPoint(ctx: ContextT, pfxp: IPostfixPointInstruction) {
         // todo: skip brackets wherever possible to avoid exprs like (a).x;
         if (pfxp.element.instructionType === EInstructionTypes.k_IdExpr ||
             pfxp.element.instructionType === EInstructionTypes.k_PostfixPointExpr) {
-            this.emitExpression(cref, pfxp.element);
+            this.emitExpression(ctx, pfxp.element);
         } else {
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitExpression(cref, pfxp.element);
+            this.emitExpression(ctx, pfxp.element);
             this.emitChar(')');
         }
         this.emitChar('.');
@@ -876,49 +810,54 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitCbufferField(cref: CodeReflectionT, field: IVariableDeclInstruction) {
-        this.emitVariable(cref, field);
+    emitCbufferField(ctx: ContextT, field: IVariableDeclInstruction) {
+        this.emitVariable(ctx, field);
         this.emitChar(';');
         this.emitChar('\t')
         this.emitComment(`padding ${field.type.padding}, size ${field.type.size}`);
     }
 
 
-    emitCbuffer(cref: CodeReflectionT, cbuf: ICbufferInstruction) {
-        this.begin();
-        this.emitComment(`size: ${cbuf.type.size}`);
-        this.emitKeyword('cbuffer');
-        if (cbuf.id) {
-            this.emitKeyword(cbuf.name);
+    emitCbuffer(ctx: ContextT, cbuf: ICbufferInstruction) {
+        if (!ctx.has(cbuf.name)) {
+            ctx.addCbuffer(cbuf);
+
+            this.begin();
+            this.emitComment(`size: ${cbuf.type.size}`);
+            this.emitKeyword('cbuffer');
+            if (cbuf.id) {
+                this.emitKeyword(cbuf.name);
+            }
+            const reg = cbuf.register;
+            if (reg.index !== -1) {
+                this.emitChar(':');
+                this.emitKeyword('register');
+                this.emitChar('(');
+                this.emitNoSpace();
+                this.emitKeyword(`${reg.type}${reg.index}`);
+                this.emitNoSpace();
+                this.emitChar(')');
+            }
+            this.emitNewline();
+            this.emitChar('{');
+            this.push();
+            {
+                cbuf.type.fields.forEach(field => {
+                    this.emitCbufferField(ctx, field);
+                });
+            }
+            this.pop();
+            this.emitChar('}');
+            this.emitChar(';');
+            // emit annotation?
+            this.end();
         }
-        const reg = cbuf.register;
-        if (reg.index !== -1) {
-            this.emitChar(':');
-            this.emitKeyword('register');
-            this.emitChar('(');
-            this.emitNoSpace();
-            this.emitKeyword(`${reg.type}${reg.index}`);
-            this.emitNoSpace();
-            this.emitChar(')');
-        }
-        this.emitNewline();
-        this.emitChar('{');
-        this.push();
-        {
-            cbuf.type.fields.forEach(field => {
-                this.emitCbufferField(cref, field);
-            });
-        }
-        this.pop();
-        this.emitChar('}');
-        this.emitChar(';');
-        // emit annotation?
-        this.end();
+        ctx.linkCbuffer(cbuf.name);
     }
 
 
     // request global declaration for local identifier
-    emitGlobal(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
+    emitGlobal(ctx: ContextT, decl: IVariableDeclInstruction) {
         // const name = decl.name;
         // if (isMain() && decl.isParameter() && !decl.isUniform()) {
         // TODO: add support of main arguments with basic types (attributes)
@@ -933,105 +872,105 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
                 const cbuf = <ICbufferInstruction>cbufType.parent;
-                if (cref.addCbuffer(cbuf)) {
-                    this.begin();
-                    this.emitCbuffer(cref, cbuf);
-                    this.end();
-                }
+                this.begin();
+                this.emitCbuffer(ctx, cbuf);
+                this.end();
             } else {
-                if (cref.addGlobal(CodeReflection.asSTRID(decl))) {
-                    this.begin();
-                    this.emitGlobalVariable(cref, decl);
-                    this.end();
-                }
-            }
+                this.begin();
+                this.emitGlobalVariable(ctx, decl);
+                this.end();
+        }
         }
     }
 
 
-    emitIdentifier(cref: CodeReflectionT, id: IIdExprInstruction) {
+    emitIdentifier(ctx: ContextT, id: IIdExprInstruction) {
         const { decl, name } = id;
 
-        this.emitGlobal(cref, decl);
+        this.emitGlobal(ctx, decl);
         this.emitKeyword(name);
     }
 
 
-    emitCCall(cref: CodeReflectionT, call: IConstructorCallInstruction) {
+    emitCCall(ctx: ContextT, call: IConstructorCallInstruction) {
         const args = call.args as IExprInstruction[];
-        const { typeName } = this.resolveType(cref, call.ctor);
+        const { typeName } = this.resolveType(ctx, call.ctor);
 
         this.emitKeyword(typeName);
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitExpressionList(cref, args);
+        this.emitExpressionList(ctx, args);
         this.emitChar(')');
     }
 
 
     // todo: remove hack with rename mutator
-    emitFCall(cref: CodeReflectionT, call: IFunctionCallInstruction, rename: (decl: IFunctionDeclInstruction) => string = decl => decl.name) {
+    emitFCall(ctx: ContextT, call: IFunctionCallInstruction, rename: (decl: IFunctionDeclInstruction) => string = decl => decl.name) {
         const { decl, args, callee } = call;
 
         if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
-            if (cref.addFunction(decl)) {
-                this.emitFunction(cref, decl);
-            }
+            this.emitFunction(ctx, decl);
         }
 
         if (callee) {
-            this.emitExpression(cref, callee);
+            this.emitExpression(ctx, callee);
             this.emitChar('.');
             this.emitNoSpace();
         }
         this.emitKeyword(rename(decl));
         this.emitChar('(');
         this.emitNoSpace();
-        this.emitExpressionList(cref, args);
+        this.emitExpressionList(ctx, args);
         this.emitChar(')');
     }
 
 
-    emitReturnStmt(cref: CodeReflectionT, stmt: IReturnStmtInstruction) {
+    emitReturnStmt(ctx: ContextT, stmt: IReturnStmtInstruction) {
         this.emitKeyword('return');
         this.emitSpace();
-        this.emitExpression(cref, stmt.expr);
+        this.emitExpression(ctx, stmt.expr);
         this.emitChar(';');
     }
 
 
-    emitExpressionStmt(cref: CodeReflectionT, stmt: IExprStmtInstruction) {
-        this.emitExpression(cref, stmt.expr);
+    emitExpressionStmt(ctx: ContextT, stmt: IExprStmtInstruction) {
+        this.emitExpression(ctx, stmt.expr);
         this.emitChar(';');
     }
 
 
-    emitLocalVariable(cref: CodeReflectionT, stmt: IVariableDeclInstruction) {
-        this.emitVariable(cref, stmt);
+    emitLocalVariable(ctx: ContextT, stmt: IVariableDeclInstruction) {
+        this.emitVariable(ctx, stmt);
         this.emitChar(';');
     }
 
 
-    emitGlobalVariable(cref: CodeReflectionT, decl: IVariableDeclInstruction) {
+    emitGlobalVariable(ctx: ContextT, decl: IVariableDeclInstruction) {
+        if (ctx.has(decl.name)) {
+            return;
+        }
+
+        ctx.add(decl.name);
+
         this.begin();
-        this.emitVariable(cref, decl);
+        this.emitVariable(ctx, decl);
         this.emitChar(';');
         this.end();
     }
 
 
-    emitComplexField(cref: CodeReflectionT, instr: IVariableDeclInstruction) {
+    emitComplexField(ctx: ContextT, instr: IVariableDeclInstruction) {
         console.assert(instr.instructionType === EInstructionTypes.k_VariableDecl);
 
-        this.emitVariable(cref, instr);
+        this.emitVariable(ctx, instr);
         this.emitChar(';');
     }
 
 
-    emitDeclStmt(cref: CodeReflectionT, stmt: IDeclStmtInstruction) {
+    emitDeclStmt(ctx: ContextT, stmt: IDeclStmtInstruction) {
         stmt.declList.forEach(decl => {
             console.assert(decl.instructionType === EInstructionTypes.k_VariableDecl);
-            this.emitLocalVariable(cref, decl as IVariableDeclInstruction);
+            this.emitLocalVariable(ctx, decl as IVariableDeclInstruction);
         });
     }
 
@@ -1041,28 +980,28 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         | IWhileStmtInstruction
         | IForStmtInstruction;
     */
-    emitStmt(cref: CodeReflectionT, stmt: IInstruction) {
+    emitStmt(ctx: ContextT, stmt: IInstruction) {
         switch (stmt.instructionType) {
             case EInstructionTypes.k_DeclStmt:
-                this.emitDeclStmt(cref, stmt as IDeclStmtInstruction);
+                this.emitDeclStmt(ctx, stmt as IDeclStmtInstruction);
                 break;
             case EInstructionTypes.k_ExprStmt:
-                this.emitExpressionStmt(cref, stmt as IExprStmtInstruction);
+                this.emitExpressionStmt(ctx, stmt as IExprStmtInstruction);
                 break;
             case EInstructionTypes.k_ReturnStmt:
-                this.emitReturnStmt(cref, stmt as IReturnStmtInstruction);
+                this.emitReturnStmt(ctx, stmt as IReturnStmtInstruction);
                 break;
             case EInstructionTypes.k_SemicolonStmt:
                 this.emitChar(';');
                 break;
             case EInstructionTypes.k_IfStmt:
-                this.emitIfStmt(cref, stmt as IIfStmtInstruction);
+                this.emitIfStmt(ctx, stmt as IIfStmtInstruction);
                 break;
             case EInstructionTypes.k_StmtBlock:
-                this.emitBlock(cref, stmt as IStmtBlockInstruction);
+                this.emitBlock(ctx, stmt as IStmtBlockInstruction);
                 break;
             case EInstructionTypes.k_ForStmt:
-                this.emitForStmt(cref, stmt as IForStmtInstruction);
+                this.emitForStmt(ctx, stmt as IForStmtInstruction);
                 break;
             default:
                 this.emitLine(`/* ... unsupported stmt '${stmt.instructionName}' .... */`);
@@ -1071,7 +1010,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emitBlock(cref: CodeReflectionT, blk: IStmtBlockInstruction) {
+    emitBlock(ctx: ContextT, blk: IStmtBlockInstruction) {
         // if (!blk.stmtList.length)
         // {
         //     this.emitChar(';');
@@ -1080,31 +1019,29 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
 
         this.emitChar('{');
         this.push();
-        blk.stmtList.forEach(stmt => (this.emitStmt(cref, stmt), this.emitNewline()));
+        blk.stmtList.forEach(stmt => (this.emitStmt(ctx, stmt), this.emitNewline()));
         this.pop();
         this.emitChar('}');
     }
 
 
-    emitPass(cref: CodeReflectionT, pass: IPassInstruction) {
+    emitPass(ctx: ContextT, pass: IPassInstruction) {
         this.emitKeyword('pass');
         pass.name && this.emitKeyword(pass.name);
         this.emitNewline();
         this.emitChar('{');
         this.push();
-        this.emitPassBody(cref, pass);
+        this.emitPassBody(ctx, pass);
         this.pop();
         this.emitChar('}');
         this.emitNewline();
     }
 
 
-    emitPassBody(cref: CodeReflectionT, pass: IPassInstruction) {
+    emitPassBody(ctx: ContextT, pass: IPassInstruction) {
         // TODO: replace with emitCompile();
         if (pass.vertexShader) {
-            if (cref.addFunction(pass.vertexShader)) {
-                this.emitFunction(cref, pass.vertexShader);
-            }
+            this.emitFunction(ctx, pass.vertexShader);
 
             this.emitKeyword('VertexShader');
             this.emitKeyword('=');
@@ -1116,9 +1053,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         }
 
         if (pass.pixelShader) {
-            if (cref.addFunction(pass.pixelShader)) {
-                this.emitFunction(cref, pass.pixelShader);
-            }
+            this.emitFunction(ctx, pass.pixelShader);
 
             this.emitKeyword('PixelShader');
             this.emitKeyword('=');
@@ -1150,7 +1085,7 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
     }
 
 
-    emit(cref: CodeReflectionT, instr: IInstruction): CodeEmitter<CodeReflectionT> {
+    emit(ctx: ContextT, instr: IInstruction): CodeEmitter<ContextT> {
         if (!instr) {
             // TODO: emit error.
             this.emitLine('/* ... empty instruction .... */');
@@ -1158,12 +1093,12 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
         }
 
         if (instruction.isExpression(instr)) {
-            this.emitExpression(cref, instr as IExprInstruction);
+            this.emitExpression(ctx, instr as IExprInstruction);
             return this;
         }
 
         if (instruction.isStatement(instr)) {
-            this.emitStmt(cref, instr);
+            this.emitStmt(ctx, instr);
             return this;
         }
 
@@ -1173,31 +1108,27 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
 
         switch (instr.instructionType) {
             case EInstructionTypes.k_FunctionDecl:
-                cref.addFunction(instr as IFunctionDeclInstruction)
-                this.emitFunction(cref, instr as IFunctionDeclInstruction);
+                this.emitFunction(ctx, instr as IFunctionDeclInstruction);
                 break;
             case EInstructionTypes.k_CbufferDecl:
-                cref.addCbuffer(instr as ICbufferInstruction);
-                this.emitCbuffer(cref, instr as ICbufferInstruction);
+                this.emitCbuffer(ctx, instr as ICbufferInstruction);
                 break;
             case EInstructionTypes.k_VariableDecl:
-                cref.addGlobal(CodeReflection.asSTRID(instr as IVariableDeclInstruction))
-                // emit as part of InstructionCollector
-                this.emitGlobalVariable(cref, instr as IVariableDeclInstruction);
+                this.emitGlobalVariable(ctx, instr as IVariableDeclInstruction);
                 break;
             case EInstructionTypes.k_Collector:
-                this.emitCollector(cref, instr as IInstructionCollector);
+                this.emitCollector(ctx, instr as IInstructionCollector);
                 break;
             case EInstructionTypes.k_TypeDecl:
-                this.emitTypeDecl(cref, instr as ITypeDeclInstruction);
+                this.emitTypeDecl(ctx, instr as ITypeDeclInstruction);
                 break;
             case EInstructionTypes.k_TypedefDecl:
-                this.emitTypedef(cref, instr as ITypedefInstruction);
+                this.emitTypedef(ctx, instr as ITypedefInstruction);
                 break;
             case EInstructionTypes.k_ComplexType:
             case EInstructionTypes.k_VariableType:
                 // todo: addComplexType ?
-                this.emitComplexTypeDecl(cref, instr as ITypeInstruction);
+                this.emitComplexTypeDecl(ctx, instr as ITypeInstruction);
                 break;
             default:
                 this.emitLine(`/* ... unsupported instruction '${instr.instructionName}' .... */`);
@@ -1206,15 +1137,15 @@ export class CodeEmitter<CodeReflectionT extends CodeReflection> extends BaseEmi
 
         return this;
     }
-}
 
 
-export function translate(instr: IInstruction, opts?: ICodeEmitterOptions): string {
-    const cref = new CodeReflection;
-    return (new CodeEmitter(opts)).emit(cref, instr).toString();
-}
+    private static cEmitter = new CodeEmitter({ omitEmptyParams: true });
 
-export function translateDocument(document: ISLDocument): string {
+    static translate(instr: IInstruction, ctx: CodeContext = new CodeContext): string {
+        return CodeEmitter.cEmitter.emit(ctx, instr).toString();
+    }
+
+    static translateDocument(document: ISLDocument, ctx: CodeContext = new CodeContext): string {
     if (isNull(document)) {
         return '';
     }
@@ -1223,5 +1154,8 @@ export function translateDocument(document: ISLDocument): string {
         return '';
     }
 
-    return translate(document.root);
+    return CodeEmitter.translate(document.root, ctx);
 }
+
+}
+

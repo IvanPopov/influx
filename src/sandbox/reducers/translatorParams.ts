@@ -1,4 +1,4 @@
-import { IFxTranslatorOptions } from '@lib/fx/translators/FxTranslator';
+import { IFxContextExOptions } from '@lib/fx/translators/FxTranslator';
 import { handleActions } from '@sandbox/reducers/handleActions';
 import IStoreState, { ITranslatorParams } from '@sandbox/store/IStoreState';
 
@@ -19,6 +19,6 @@ export default handleActions<ITranslatorParams, any/* todo */>({
 
 //- Selectors
 
-export const asFxTranslatorOprions = (state: IStoreState): IFxTranslatorOptions => {
+export const asFxTranslatorOprions = (state: IStoreState): IFxContextExOptions => {
     return { ...state.translatorParams };
 }
