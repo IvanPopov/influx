@@ -6,7 +6,7 @@
 /* tslint:disable:no-string-literal */
 /* tslint:disable:insecure-random */
 
-import { isDefAndNotNull, verbose } from '@lib/common';
+import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
@@ -23,6 +23,9 @@ import { Color, Vector3 } from '@sandbox/store/IStoreState';
 import * as GLSL from './shaders/fx';
 
 import '@sandbox/styles/custom/dat-gui.css';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { IMap } from '@lib/idl/IMap';
+import { prepareTrimesh } from './utils/adjacency';
 
 interface IFxSceneProps extends ITreeSceneProps {
     emitter: IEmitter;
@@ -30,8 +33,9 @@ interface IFxSceneProps extends ITreeSceneProps {
 
 
 interface IFxSceneState extends IThreeSceneState {
-    emitter: IEmitter;
-    nParticles: number;
+    emitter: IEmitter;  // completly loaded emitter
+    loading: IEmitter;  // pointer to the currently loaded emitter
+    nParticles: number; // aux. state for UI force reload
 }
 
 let desc = `
@@ -80,12 +84,10 @@ const progressStyleFix: React.CSSProperties = {
 class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     state: IFxSceneState;
 
-    
     passes: {
         mesh: THREE.Mesh | THREE.LineSegments;
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
     }[];
-
 
     env: {
         floor?: THREE.Mesh,
@@ -102,15 +104,80 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         this.state = {
             emitter: null,
+            loading: null,
             nParticles: 0,
             ...this.stateInitials()
         };
     }
 
 
+    resolveDependencies(emitter: IEmitter, onComplete: (emitter: IEmitter) => void) {
+        const KNOWN_GEOMETRIES = ['arrow'];
+
+        const geoms: Set<string> = new Set();
+        const nPass = emitter.getPassCount();
+        for (let i = 0; i < nPass; ++ i) {
+            const geometry = emitter.getPass(i).getDesc().geometry;
+            if (KNOWN_GEOMETRIES.includes(geometry)) {
+                geoms.add(geometry);
+            }
+        }
+
+        // move to implicit dependencies based on emitter's needs
+        geoms.add('cube');
+
+        if (!geoms.size) {
+            onComplete(emitter);
+            return;
+        }
+
+        // resolve dependencies
+        let depNum = 0;
+        let tryFinish = () => { 
+            depNum--;
+            if (depNum == 0) {
+                onComplete(emitter);
+            }
+        }
+        for (let geometry of geoms.values()) {
+            depNum++;
+            this.loadObjModel(geometry).then(tryFinish);
+        }
+    }
+
+
     componentDidMount() {
-        super.componentDidMount();
+        super.componentDidMount();   
         this.addEmitter(this.props.emitter);
+    }
+
+
+    models: IMap<THREE.Mesh> = {};
+    loadObjModel(name: string): Promise<THREE.Mesh> {
+        const loader = new OBJLoader();
+        return new Promise<THREE.Mesh>((resolve, reject) => {
+            
+            if (isDefAndNotNull(this.models[name])) {
+                resolve(this.models[name]);
+                return;
+            }
+
+            loader.load(
+                `./assets/models/${name}.obj`,
+                (group: THREE.Group) => {
+                    this.models[name] = group.children[0] as THREE.Mesh;
+                    console.log(`model './assets/models/${name}.obj' is loaded.`);
+                    resolve(this.models[name]);
+                },
+                (xhr) => {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                (error) => {
+                    console.log('An error happened');
+                    reject();
+                }
+            );
+        });
     }
 
     
@@ -146,7 +213,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        // verbose('emitter added.');
     }
 
 
@@ -205,7 +271,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        // verbose('emitter added.');
     }
 
 
@@ -357,7 +422,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        // verbose('emitter added.');
     }
 
 
@@ -415,7 +479,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         mesh.name = 'emitter';
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
-        verbose('emitter added.');
     }
 
 
@@ -438,6 +501,10 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 instanceGeometry = new THREE.PlaneGeometry();
                 break;
             default:
+                let mesh = this.models[geometry];
+                if (mesh) {
+                    return mesh.geometry;
+                }
                 return this.createInstinceGeometry(fallback);
         }
         return instanceGeometry;
@@ -446,29 +513,53 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     // tslint:disable-next-line:max-func-body-length
     addEmitter(emitter: IEmitter) {
-        this.passes = [];
-
         if (!isDefAndNotNull(emitter)) {
             console.warn('no emitters found.');
             return;
         }
 
-        // tslint:disable-next-line:max-func-body-length
-        let nPass = emitter.getPassCount();
-        this.hideEnv();
-        for (let i = 0; i < nPass; ++i) {
-            let pass = emitter.getPass(i);
-            let desc = pass.getDesc();
-            if (desc.vertexShader && desc.pixelShader) {
-                this.addPass(pass);
-            } else if (desc.instanceName == "DefaultShaderInput") {
-                this.addPassDefaultMat(pass);
-            } else if (desc.instanceName == "LwiInstance") {
-                this.addPassLWI(pass);
-            } else if (desc.instanceName == "PartLight") {
-                this.addPassLight();
+        verbose(`emitter '${emitter.getName()}' loading in process...`);
+        this.setState({ loading: emitter, emitter: null });
+
+        // todo: make it on demand based on emitter's needs
+        const setExplicitlyCubeGeom = (emitter) => {
+            const mesh = this.models['cube'];
+            const geometry = mesh.geometry;
+            assert(geometry);
+            const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
+            emitter.setTrimesh("geom", vertCount, faceCount, new Float32Array(vertices), new Uint32Array(faces), new Uint32Array(indicesAdj));
+
+            this.scene.add(mesh);
+            mesh.material = new THREE.MeshNormalMaterial();
+        };
+
+        const createPasses = (emitter) => {
+            this.passes = [];
+            // tslint:disable-next-line:max-func-body-length
+            let nPass = emitter.getPassCount();
+            this.hideEnv();
+            for (let i = 0; i < nPass; ++i) {
+                let pass = emitter.getPass(i);
+                let desc = pass.getDesc();
+                if (desc.vertexShader && desc.pixelShader) {
+                    this.addPass(pass);
+                } else if (desc.instanceName == "DefaultShaderInput") {
+                    this.addPassDefaultMat(pass);
+                } else if (desc.instanceName == "LwiInstance") {
+                    this.addPassLWI(pass);
+                } else if (desc.instanceName == "PartLight") {
+                    this.addPassLight();
+                }
             }
-        }
+
+            this.setState({ emitter, loading: null });
+            verbose(`emitter '${emitter.getName()}' has been loaded.`);
+        };
+
+        this.resolveDependencies(emitter, (emitter: IEmitter) => {
+            createPasses(emitter);
+            setExplicitlyCubeGeom(emitter);
+        });
     }
 
 
@@ -572,7 +663,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
     protected override cleanScene(time: number): void {
-        if (this.lights.length) this.scene.remove(...this.lights);
+        if (this.lights?.length) this.scene.remove(...this.lights);
     }
 
 
@@ -582,72 +673,47 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
     // tslint:disable-next-line:member-ordering
-    static getDerivedStateFromProps(props: IFxSceneProps, state: IFxSceneState) {
-        if (state.emitter === props.emitter) {
-            return null;
-        }
+    // static getDerivedStateFromProps(props: IFxSceneProps, state: IFxSceneState) {
+    //     if (state.emitter === props.emitter) {
+    //         return null;
+    //     }
 
-        return { emitter: props.emitter };
-    }
+    //     return { emitter: props.emitter };
+    // }
 
 
+    // this function is called because of ant state change
+    // including part count
     componentDidUpdate(prevProps, prevState) {
         super.componentDidUpdate(prevProps, prevState);
 
-        if (prevState.emitter === this.state.emitter) {
+        const reloadEmitter = () => {
+            this.passes?.forEach(pass => {
+                this.scene.remove(pass.mesh);
+                // verbose('emitter\'s pass removed.');
+            });
+    
+            if (this.props.emitter) {
+                this.addEmitter(this.props.emitter);
+            }
+        }
 
-            const emitter = this.props.emitter;
 
-            let nPass = emitter.getPassCount();
-            for (let i = 0; i < nPass; ++i) {
-                let pass = emitter.getPass(i);
-                let desc = pass.getDesc();
-                let { mesh } = this.passes[i];
-
-                if (!mesh) {
-                    continue;
-                }
-
-                let material = mesh.material as THREE.RawShaderMaterial;
-                // let geometry = mesh.geometry as THREE.InstancedBufferGeometry;
-
-                if (!desc.vertexShader || !desc.pixelShader) {
-                    return;
-                }
-
-                const { vertexShader, pixelShader: fragmentShader } = desc;
-
-                if (material.vertexShader !== vertexShader ||
-                    material.fragmentShader !== fragmentShader) {
-                    verbose('material shadow reload.');
-
-                    material.dispose();
-                    material = new THREE.RawShaderMaterial({
-                        uniforms: {},
-                        vertexShader,
-                        fragmentShader,
-                        transparent: true,
-                        blending: THREE.NormalBlending,
-                        depthTest: false
-                    });
-
-                    // this.scene.remove(mesh);
-                    mesh.material = material;
-
-                    // mesh = new THREE.Mesh(geometry, material);
-                }
-            };
+        // loading still in process - nothing todo
+        if (this.state.loading === this.props.emitter) {
             return;
         }
 
-        this.passes.forEach(pass => {
-            this.scene.remove(pass.mesh);
-            // verbose('emitter removed.');
-        });
-
-        if (this.props.emitter) {
-            this.addEmitter(this.props.emitter);
+        // new emitter has been passed - reload required
+        if (this.props.emitter !== this.state.emitter) {
+            reloadEmitter();
+            return;
         }
+
+        // if emitter is just loaded or update
+        const isLoaded = prevState.loading == this.state.emitter;
+        const isUpdated = prevState.emitter === this.state.emitter;
+        // ....
     }
 
 
@@ -659,7 +725,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             >
                 <Progress
                     value={this.state.nParticles}
-                    total={this.state.emitter.getCapacity()}
+                    total={this.props.emitter.getCapacity()}
                     attached='top'
                     size='medium'
                     indicating

@@ -27,6 +27,8 @@ export interface IEmitter extends ITechnique<IEmitterPass> {
     prerender(uniforms: Uniforms): void;    // alias for all pass prerender ((pass of passes) pass.prerender())
     serialize(): void;                      // alias for all pass serialization ((pass of passes) pass.serialize())
     reset(): void;
+
+    setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array): void;
     
     dump(): void;
 }

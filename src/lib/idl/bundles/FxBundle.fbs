@@ -41,6 +41,34 @@ table UAVBundle
     type: TypeLayout;
 }
 
+table BufferBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}
+
+table TextureBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}
+
+table TrimeshBundle
+{
+    name: string;
+    vertexCountUName: string;
+    faceCountUName: string;
+    verticesName: string;
+    facesName: string;
+    adjacencyName: string;
+    resourcePath: string;
+}
+
+
 table CBBundle
 {
     name: string;
@@ -61,6 +89,9 @@ table GLSLAttribute
 table RoutineBytecodeBundleResources
 {
     uavs: [ UAVBundle ];
+    buffers: [ BufferBundle ];
+    textures: [ TextureBundle ];
+    trimeshes: [ TrimeshBundle ];
 }
 
 table RoutineBytecodeBundle

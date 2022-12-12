@@ -7,7 +7,7 @@ import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpaw
 import { CodeConvolutionContext, CodeConvolutionEmitter } from "./CodeConvolutionEmitter";
 
 
-export class FxContext extends CodeConvolutionContext {
+export class FxConvolutionContext extends CodeConvolutionContext {
     protected technique?: ITechniqueInstruction = null;
 
 
@@ -28,7 +28,7 @@ export class FxContext extends CodeConvolutionContext {
     }
 }
 
-export class FxEmitter<ContextT extends FxContext> extends CodeConvolutionEmitter<ContextT> {
+export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvolutionEmitter<ContextT> {
     protected emitRoutineProperty(ctx: ContextT, name: string, routine: ICompileExprInstruction) {
         this.emitKeyword(name);
         this.emitKeyword('=');
@@ -221,12 +221,12 @@ export class FxEmitter<ContextT extends FxContext> extends CodeConvolutionEmitte
     private static fxEmitter = new FxEmitter({ omitEmptyParams: true });
 
 
-    static translate(instr: IInstruction, ctx: FxContext = new FxContext): string {
+    static translate(instr: IInstruction, ctx: FxConvolutionContext = new FxConvolutionContext): string {
         return FxEmitter.fxEmitter.emit(ctx, instr).toString(ctx);
     }
 
 
-    static translateDocument(document: ISLDocument, ctx: FxContext = new FxContext): string {
+    static translateDocument(document: ISLDocument, ctx: FxConvolutionContext = new FxConvolutionContext): string {
         if (isNull(document)) {
             return '';
         }
@@ -237,7 +237,7 @@ export class FxEmitter<ContextT extends FxContext> extends CodeConvolutionEmitte
     }
 
 
-    static translateTechnique(document: ISLDocument, techName: string, ctx: FxContext = new FxContext): string {
+    static translateTechnique(document: ISLDocument, techName: string, ctx: FxConvolutionContext = new FxConvolutionContext): string {
         if (isNull(document)) {
             return '';
         }

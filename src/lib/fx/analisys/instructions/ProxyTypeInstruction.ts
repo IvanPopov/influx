@@ -91,6 +91,10 @@ export class ProxyTypeInstruction extends Instruction implements ITypeInstructio
     isUAV(): boolean {
         return this.isResolved() ? this.host.isUAV() : false;
     }
+
+    isBuffer(): boolean {
+        return this.isResolved() ? this.host.isBuffer() : false;
+    }
     
     toString(): string {
         return this.isResolved() ? this.host.toString() : this.name;

@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
+import {BufferBundle as FxBufferBundle, BufferBundleT as FxBufferBundleT, Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, TextureBundle as FxTextureBundle, TextureBundleT as FxTextureBundleT, TrimeshBundle as FxTrimeshBundle, TrimeshBundleT as FxTrimeshBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIBool as FxUIBool, UIBoolT as FxUIBoolT, UIColor as FxUIColor, UIColorT as FxUIColorT, UIControl as FxUIControl, UIControlT as FxUIControlT, UIFloat as FxUIFloat, UIFloat3 as FxUIFloat3, UIFloat3T as FxUIFloat3T, UIFloatSpinner as FxUIFloatSpinner, UIFloatSpinnerT as FxUIFloatSpinnerT, UIFloatT as FxUIFloatT, UIInt as FxUIInt, UIIntT as FxUIIntT, UIProperties as FxUIProperties, UISpinner as FxUISpinner, UISpinnerT as FxUISpinnerT, UIUint as FxUIUint, UIUintT as FxUIUintT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -753,6 +753,390 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   return FxUAVBundle.endUAVBundle(builder);
 }
 }
+export class BufferBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):BufferBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsBufferBundle(bb:flatbuffers.ByteBuffer, obj?:BufferBundle):BufferBundle {
+  return (obj || new BufferBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsBufferBundle(bb:flatbuffers.ByteBuffer, obj?:BufferBundle):BufferBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new BufferBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+slot():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+stride():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+type(obj?:FxTypeLayout):FxTypeLayout|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+static startBufferBundle(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addSlot(builder:flatbuffers.Builder, slot:number) {
+  builder.addFieldInt32(1, slot, 0);
+}
+
+static addStride(builder:flatbuffers.Builder, stride:number) {
+  builder.addFieldInt32(2, stride, 0);
+}
+
+static addType(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, typeOffset, 0);
+}
+
+static endBufferBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+
+unpack(): BufferBundleT {
+  return new BufferBundleT(
+    this.name(),
+    this.slot(),
+    this.stride(),
+    (this.type() !== null ? this.type()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: BufferBundleT): void {
+  _o.name = this.name();
+  _o.slot = this.slot();
+  _o.stride = this.stride();
+  _o.type = (this.type() !== null ? this.type()!.unpack() : null);
+}
+}
+
+export class BufferBundleT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public slot: number = 0,
+  public stride: number = 0,
+  public type: FxTypeLayoutT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const type = (this.type !== null ? this.type!.pack(builder) : 0);
+
+  FxBufferBundle.startBufferBundle(builder);
+  FxBufferBundle.addName(builder, name);
+  FxBufferBundle.addSlot(builder, this.slot);
+  FxBufferBundle.addStride(builder, this.stride);
+  FxBufferBundle.addType(builder, type);
+
+  return FxBufferBundle.endBufferBundle(builder);
+}
+}
+export class TextureBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):TextureBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsTextureBundle(bb:flatbuffers.ByteBuffer, obj?:TextureBundle):TextureBundle {
+  return (obj || new TextureBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsTextureBundle(bb:flatbuffers.ByteBuffer, obj?:TextureBundle):TextureBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TextureBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+slot():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+stride():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
+type(obj?:FxTypeLayout):FxTypeLayout|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
+}
+
+static startTextureBundle(builder:flatbuffers.Builder) {
+  builder.startObject(4);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addSlot(builder:flatbuffers.Builder, slot:number) {
+  builder.addFieldInt32(1, slot, 0);
+}
+
+static addStride(builder:flatbuffers.Builder, stride:number) {
+  builder.addFieldInt32(2, stride, 0);
+}
+
+static addType(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, typeOffset, 0);
+}
+
+static endTextureBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+
+unpack(): TextureBundleT {
+  return new TextureBundleT(
+    this.name(),
+    this.slot(),
+    this.stride(),
+    (this.type() !== null ? this.type()!.unpack() : null)
+  );
+}
+
+
+unpackTo(_o: TextureBundleT): void {
+  _o.name = this.name();
+  _o.slot = this.slot();
+  _o.stride = this.stride();
+  _o.type = (this.type() !== null ? this.type()!.unpack() : null);
+}
+}
+
+export class TextureBundleT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public slot: number = 0,
+  public stride: number = 0,
+  public type: FxTypeLayoutT|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const type = (this.type !== null ? this.type!.pack(builder) : 0);
+
+  FxTextureBundle.startTextureBundle(builder);
+  FxTextureBundle.addName(builder, name);
+  FxTextureBundle.addSlot(builder, this.slot);
+  FxTextureBundle.addStride(builder, this.stride);
+  FxTextureBundle.addType(builder, type);
+
+  return FxTextureBundle.endTextureBundle(builder);
+}
+}
+export class TrimeshBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):TrimeshBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsTrimeshBundle(bb:flatbuffers.ByteBuffer, obj?:TrimeshBundle):TrimeshBundle {
+  return (obj || new TrimeshBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsTrimeshBundle(bb:flatbuffers.ByteBuffer, obj?:TrimeshBundle):TrimeshBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TrimeshBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+name():string|null
+name(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+name(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+vertexCountUName():string|null
+vertexCountUName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+vertexCountUName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+faceCountUName():string|null
+faceCountUName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+faceCountUName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+verticesName():string|null
+verticesName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+verticesName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+facesName():string|null
+facesName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+facesName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+adjacencyName():string|null
+adjacencyName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+adjacencyName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+resourcePath():string|null
+resourcePath(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+resourcePath(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 16);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+static startTrimeshBundle(builder:flatbuffers.Builder) {
+  builder.startObject(7);
+}
+
+static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, nameOffset, 0);
+}
+
+static addVertexCountUName(builder:flatbuffers.Builder, vertexCountUNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, vertexCountUNameOffset, 0);
+}
+
+static addFaceCountUName(builder:flatbuffers.Builder, faceCountUNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, faceCountUNameOffset, 0);
+}
+
+static addVerticesName(builder:flatbuffers.Builder, verticesNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, verticesNameOffset, 0);
+}
+
+static addFacesName(builder:flatbuffers.Builder, facesNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(4, facesNameOffset, 0);
+}
+
+static addAdjacencyName(builder:flatbuffers.Builder, adjacencyNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, adjacencyNameOffset, 0);
+}
+
+static addResourcePath(builder:flatbuffers.Builder, resourcePathOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(6, resourcePathOffset, 0);
+}
+
+static endTrimeshBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, vertexCountUNameOffset:flatbuffers.Offset, faceCountUNameOffset:flatbuffers.Offset, verticesNameOffset:flatbuffers.Offset, facesNameOffset:flatbuffers.Offset, adjacencyNameOffset:flatbuffers.Offset, resourcePathOffset:flatbuffers.Offset):flatbuffers.Offset {
+  TrimeshBundle.startTrimeshBundle(builder);
+  TrimeshBundle.addName(builder, nameOffset);
+  TrimeshBundle.addVertexCountUName(builder, vertexCountUNameOffset);
+  TrimeshBundle.addFaceCountUName(builder, faceCountUNameOffset);
+  TrimeshBundle.addVerticesName(builder, verticesNameOffset);
+  TrimeshBundle.addFacesName(builder, facesNameOffset);
+  TrimeshBundle.addAdjacencyName(builder, adjacencyNameOffset);
+  TrimeshBundle.addResourcePath(builder, resourcePathOffset);
+  return TrimeshBundle.endTrimeshBundle(builder);
+}
+
+unpack(): TrimeshBundleT {
+  return new TrimeshBundleT(
+    this.name(),
+    this.vertexCountUName(),
+    this.faceCountUName(),
+    this.verticesName(),
+    this.facesName(),
+    this.adjacencyName(),
+    this.resourcePath()
+  );
+}
+
+
+unpackTo(_o: TrimeshBundleT): void {
+  _o.name = this.name();
+  _o.vertexCountUName = this.vertexCountUName();
+  _o.faceCountUName = this.faceCountUName();
+  _o.verticesName = this.verticesName();
+  _o.facesName = this.facesName();
+  _o.adjacencyName = this.adjacencyName();
+  _o.resourcePath = this.resourcePath();
+}
+}
+
+export class TrimeshBundleT {
+constructor(
+  public name: string|Uint8Array|null = null,
+  public vertexCountUName: string|Uint8Array|null = null,
+  public faceCountUName: string|Uint8Array|null = null,
+  public verticesName: string|Uint8Array|null = null,
+  public facesName: string|Uint8Array|null = null,
+  public adjacencyName: string|Uint8Array|null = null,
+  public resourcePath: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const name = (this.name !== null ? builder.createString(this.name!) : 0);
+  const vertexCountUName = (this.vertexCountUName !== null ? builder.createString(this.vertexCountUName!) : 0);
+  const faceCountUName = (this.faceCountUName !== null ? builder.createString(this.faceCountUName!) : 0);
+  const verticesName = (this.verticesName !== null ? builder.createString(this.verticesName!) : 0);
+  const facesName = (this.facesName !== null ? builder.createString(this.facesName!) : 0);
+  const adjacencyName = (this.adjacencyName !== null ? builder.createString(this.adjacencyName!) : 0);
+  const resourcePath = (this.resourcePath !== null ? builder.createString(this.resourcePath!) : 0);
+
+  return FxTrimeshBundle.createTrimeshBundle(builder,
+    name,
+    vertexCountUName,
+    faceCountUName,
+    verticesName,
+    facesName,
+    adjacencyName,
+    resourcePath
+  );
+}
+}
 export class CBBundle {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -1009,8 +1393,38 @@ uavsLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+buffers(index: number, obj?:FxBufferBundle):FxBufferBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? (obj || new FxBufferBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+buffersLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+textures(index: number, obj?:FxTextureBundle):FxTextureBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? (obj || new FxTextureBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+texturesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+trimeshes(index: number, obj?:FxTrimeshBundle):FxTrimeshBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? (obj || new FxTrimeshBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+trimeshesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startRoutineBytecodeBundleResources(builder:flatbuffers.Builder) {
-  builder.startObject(1);
+  builder.startObject(4);
 }
 
 static addUavs(builder:flatbuffers.Builder, uavsOffset:flatbuffers.Offset) {
@@ -1029,40 +1443,106 @@ static startUavsVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addBuffers(builder:flatbuffers.Builder, buffersOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, buffersOffset, 0);
+}
+
+static createBuffersVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startBuffersVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
+static addTextures(builder:flatbuffers.Builder, texturesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, texturesOffset, 0);
+}
+
+static createTexturesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startTexturesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
+static addTrimeshes(builder:flatbuffers.Builder, trimeshesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(3, trimeshesOffset, 0);
+}
+
+static createTrimeshesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startTrimeshesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endRoutineBytecodeBundleResources(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createRoutineBytecodeBundleResources(builder:flatbuffers.Builder, uavsOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createRoutineBytecodeBundleResources(builder:flatbuffers.Builder, uavsOffset:flatbuffers.Offset, buffersOffset:flatbuffers.Offset, texturesOffset:flatbuffers.Offset, trimeshesOffset:flatbuffers.Offset):flatbuffers.Offset {
   RoutineBytecodeBundleResources.startRoutineBytecodeBundleResources(builder);
   RoutineBytecodeBundleResources.addUavs(builder, uavsOffset);
+  RoutineBytecodeBundleResources.addBuffers(builder, buffersOffset);
+  RoutineBytecodeBundleResources.addTextures(builder, texturesOffset);
+  RoutineBytecodeBundleResources.addTrimeshes(builder, trimeshesOffset);
   return RoutineBytecodeBundleResources.endRoutineBytecodeBundleResources(builder);
 }
 
 unpack(): RoutineBytecodeBundleResourcesT {
   return new RoutineBytecodeBundleResourcesT(
-    this.bb!.createObjList(this.uavs.bind(this), this.uavsLength())
+    this.bb!.createObjList(this.uavs.bind(this), this.uavsLength()),
+    this.bb!.createObjList(this.buffers.bind(this), this.buffersLength()),
+    this.bb!.createObjList(this.textures.bind(this), this.texturesLength()),
+    this.bb!.createObjList(this.trimeshes.bind(this), this.trimeshesLength())
   );
 }
 
 
 unpackTo(_o: RoutineBytecodeBundleResourcesT): void {
   _o.uavs = this.bb!.createObjList(this.uavs.bind(this), this.uavsLength());
+  _o.buffers = this.bb!.createObjList(this.buffers.bind(this), this.buffersLength());
+  _o.textures = this.bb!.createObjList(this.textures.bind(this), this.texturesLength());
+  _o.trimeshes = this.bb!.createObjList(this.trimeshes.bind(this), this.trimeshesLength());
 }
 }
 
 export class RoutineBytecodeBundleResourcesT {
 constructor(
-  public uavs: (UAVBundleT)[] = []
+  public uavs: (UAVBundleT)[] = [],
+  public buffers: (BufferBundleT)[] = [],
+  public textures: (TextureBundleT)[] = [],
+  public trimeshes: (TrimeshBundleT)[] = []
 ){}
 
 
 pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const uavs = FxRoutineBytecodeBundleResources.createUavsVector(builder, builder.createObjectOffsetList(this.uavs));
+  const buffers = FxRoutineBytecodeBundleResources.createBuffersVector(builder, builder.createObjectOffsetList(this.buffers));
+  const textures = FxRoutineBytecodeBundleResources.createTexturesVector(builder, builder.createObjectOffsetList(this.textures));
+  const trimeshes = FxRoutineBytecodeBundleResources.createTrimeshesVector(builder, builder.createObjectOffsetList(this.trimeshes));
 
   return FxRoutineBytecodeBundleResources.createRoutineBytecodeBundleResources(builder,
-    uavs
+    uavs,
+    buffers,
+    textures,
+    trimeshes
   );
 }
 }

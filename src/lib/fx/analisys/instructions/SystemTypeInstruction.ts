@@ -16,6 +16,7 @@ export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     complex?: boolean;
     sampler?: boolean;
     texture?: boolean;
+    buffer?: boolean;
     uav?: boolean;
 }
 
@@ -31,6 +32,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _bIsComplex: boolean;
     protected _bIsUAV: boolean;
     protected _bIsTexture: boolean;
+    protected _bIsBuffer: boolean;
     protected _bIsSampler: boolean;
     
 
@@ -46,6 +48,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         complex = false,
         sampler = false,
         texture = false,
+        buffer = false,
         uav = false,
         ...settings
     }: ISystemTypeInstructionSettings) {
@@ -60,6 +63,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._bIsWritable = writable;
         this._bIsReadable = readable;
         this._bIsComplex = complex;
+        this._bIsBuffer = buffer;
         this._bIsSampler = sampler;
         this._bIsTexture = texture;
         this._bIsUAV = uav;
@@ -159,6 +163,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         return this._bIsUAV;
     }
 
+    isBuffer(): boolean {
+        return this._bIsBuffer;
+    }
 
     /** @deprecated */
     isEqual(value: ITypeInstruction): boolean {

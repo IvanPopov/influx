@@ -7,6 +7,8 @@ import * as Bytecode from "@lib/idl/bytecode";
 import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
 
+import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
+
 
 type IUAVResource = ReturnType<typeof VM.createUAV>;
 
@@ -28,6 +30,8 @@ function createUAVsEx(bundles: UAVBundleT[], capacity: number, sharedUAVs: IUAVR
     });
 }
 
+const CTEMP_U8 = new Uint8Array(8);
+const CTEMP_DV = new DataView(CTEMP_U8.buffer);
 
 function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineBytecodeBundleT, capacity: number, sharedUAVs: IUAVResource[]) {
     const codeLength = routineBundle.code.length;
@@ -39,13 +43,49 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
     const vmBundle = VM.make(debugName, routineBundle.code);
     const uavs = createUAVsEx(routineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = routineBundle.numthreads;
-
-    // setup VM inputs
+    
     uavs.forEach(uav => { vmBundle.setInput(uav.index, uav.buffer); });
+    
+    const { buffers, textures, trimeshes } = routineBundle.resources;
+
+    function setConstant(name: string, value: Uint8Array) {
+        vmBundle.setConstant(name, value);
+    }
+
+    function setInt32Constant(name: string, value: number) {
+        CTEMP_DV.setInt32(0, value, true);
+        setConstant(name, CTEMP_U8);
+    }
+
+    function setUint32Constant(name: string, value: number) {
+        CTEMP_DV.setUint32(0, value, true);
+        setConstant(name, CTEMP_U8);
+    }
 
     function setConstants(constants: Uniforms) {
         Object.keys(constants)
-            .forEach(name => vmBundle.setConstant(name, constants[name]));
+            .forEach(name => setConstant(name, constants[name]));
+    }
+
+
+    function setBuffer(name, data: ArrayBufferView) {
+        const buf = buffers.find(buf => buf.name === name);
+        if (!buf) return;
+
+        vmBundle.setInput(buf.slot + SRV0_REGISTER, asBundleMemory(data));
+    }
+
+    // content consist of Float32Array(...f3 pos, f3 normal, f2 uv)
+    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array) {
+        const mesh = trimeshes.find(mesh => mesh.name === name);
+        if (!mesh) return;
+
+        setBuffer(mesh.verticesName, vertices);
+        setBuffer(mesh.facesName, faces);
+        setBuffer(mesh.adjacencyName, indicesAdj);
+        
+        setUint32Constant(<string>mesh.vertexCountUName, vertCount);
+        setUint32Constant(<string>mesh.faceCountUName, faceCount);
     }
 
     assert(numthreads[0] >= 1 && numthreads[1] === 1 && numthreads[2] === 1);
@@ -59,6 +99,10 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
         bundle: vmBundle,
         run,
         setConstants,
+        setInt32Constant,
+        setUint32Constant,
+        setBuffer,
+        setTrimesh,
         groupsizex: numthreads[0]
     };
 }
@@ -282,6 +326,13 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const getPass = (i: number) => passes[i];
     const getCapacity = () => capacity;
 
+    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array) {
+        spawnBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+        initBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+        updateBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+        // todo: prerender
+    }
+
     function reset() {
         // reset all available particles
         resetBundle.run(Math.ceil(capacity / resetBundle.groupsizex));
@@ -353,6 +404,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         simulate,
         prerender,
         serialize,
+
+        setTrimesh,
         
         dump
     };
@@ -400,7 +453,7 @@ export function destroyTsEmitter(emitter: IEmitter): void
         VM.destroyUAV(uav);
         // verbose(`UAV '${uav.name}' has been destroyed.`);
     });
-    verbose(`emitter '${name}' has been dropped.`);
+    verbose(`emitter '${emitter.getName()}' has been dropped.`);
 }
 
 export function createTsEmitter(bundle: BundleT)

@@ -279,6 +279,7 @@ export interface ITypeInstruction extends IInstruction {
     isUAV(): boolean;
     isSampler(): boolean;
     isTexture(): boolean;
+    isBuffer(): boolean;
 }
 
 

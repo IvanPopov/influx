@@ -1,4 +1,4 @@
-import { assert, isDef, isDefAndNotNull, isNull, isNumber, isString, MakeOptional } from "@lib/common";
+import { assert, isDef, MakeOptional } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
@@ -6,7 +6,6 @@ import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IIn
 import { IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-import { variable } from "../analisys/helpers";
 import { f32Asi32, sname } from "./common";
 import ConstanPool from "./ConstantPool";
 import debugLayout from './DebugLayout';
@@ -14,6 +13,7 @@ import InstructionList from "./InstructionList";
 import PromisedAddress, { IAddrDesc } from "./PromisedAddress";
 import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
+import { SRVPool } from "./SRVPool";
 import { UAVPool } from "./UAVPool";
 
 export enum EErrors {
@@ -82,6 +82,7 @@ export function ContextBuilder() {
     const instructions = new InstructionList;
     const constants = new ConstanPool;
     const uavs = new UAVPool;
+    const srvs = new SRVPool;
 
     const diag = new TranslatorDiagnostics; // todo: remove it?
 
@@ -592,6 +593,7 @@ export function ContextBuilder() {
         ret,
         constants,
         uavs,
+        srvs,
         depth,
         diag
     };

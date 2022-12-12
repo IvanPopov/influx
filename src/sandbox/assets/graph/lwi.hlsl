@@ -57,7 +57,12 @@ float3x4 packLwiBillboard(float3 pos, float3 dir, float size)
 float3x4 packLwiRotXToDir(float3 pos, float3 dir, float3 size)
 {
     float3 norm = normalize(dir);
-    float3 tang = normalize(cross(norm, float3(1.f, 0.f, 0.f)));
+    float3 tang;
+    if (abs(abs(norm.y) - 1.f) < 0.001f) {
+        tang = normalize(cross(norm, float3(1.f, 0.f, 0.f)));
+    } else {
+        tang = normalize(cross(norm, float3(0.f, 1.f, 0.f)));
+    }
     float3 binorm = normalize(cross(norm, tang));
 
     norm = norm * size.x;

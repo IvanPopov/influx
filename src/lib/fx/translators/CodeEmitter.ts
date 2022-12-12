@@ -66,6 +66,14 @@ export interface ICSShaderReflection {
 }
 
 
+export interface IUniformReflection {
+    name: string;
+    typeName: string;
+    semantic?: string;
+    length?: number;
+}
+
+
 export interface ICbReflection {
     register: number;
     name: string;
@@ -296,7 +304,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             this.begin();
             {
                 comment && this.emitComment(comment);
-                this.emitLine(`${type} ${name}: register(t${buf.register});`);
+                this.emitKeyword(`${type} ${name}: register(t${buf.register});`);
             }
             this.end();
         }
@@ -310,7 +318,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             this.begin();
             {
                 comment && this.emitComment(comment);
-                this.emitLine(`${type} ${name}: register(u${uav.register});`);
+                this.emitKeyword(`${type} ${name}: register(u${uav.register});`);
             }
             this.end();
         }

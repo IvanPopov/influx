@@ -111,6 +111,9 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return false;
     }
 
+    isBuffer(): boolean {
+        return false;
+    }
     
     toString(): string {
         return this.name || type.hash(this);

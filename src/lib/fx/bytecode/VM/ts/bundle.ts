@@ -14,12 +14,12 @@ interface TSBundleMemory extends Bundle.IMemory
     buffer: Int32Array;
 }
 
-export function asBundleMemory(data: Uint8Array | Uint32Array | Int32Array | Float32Array): TSBundleMemory
+export function asBundleMemory(data: ArrayBufferView): TSBundleMemory
 {
     const buffer = data instanceof Int32Array 
         ? data 
         : new Int32Array(data.buffer, data.byteOffset, data.byteLength >> 2);
-    return { buffer  };
+    return { buffer };
 }
 
 export function fromBundleMemory(mem: Bundle.IMemory)

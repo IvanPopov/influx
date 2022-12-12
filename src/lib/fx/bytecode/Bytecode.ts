@@ -18,11 +18,18 @@ import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 
+// [00 - 01) cbs
+// [01 - 17) inputs
+// [17 - 33) uavs
+// [33 - 64) srvs
+
 export const CBUFFER0_REGISTER = 0;
 export const INPUT0_REGISTER = 1;
 export const UAV0_REGISTER = 17;
+export const SRV0_REGISTER = 33;
 
-export const UAV_TOTAL = 33 - UAV0_REGISTER;
+export const SRV_TOTAL = 64 - SRV0_REGISTER;
+export const UAV_TOTAL = SRV0_REGISTER - UAV0_REGISTER;
 export const INPUT_TOTAL = UAV_TOTAL - INPUT0_REGISTER;
 export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
 
@@ -178,6 +185,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         diag,
         constants,
         uavs,
+        srvs,
         alloca,
         addr,
         debug,
@@ -488,6 +496,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 return EAddrType.k_Input;
             }
 
+            if (decl.type.isBuffer()) {
+                return EAddrType.k_Input;
+            }
+
             assert(false, `could not resolve address type for '${decl.toCode()}'`);
         }
 
@@ -776,6 +788,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                                 if (decl.type.isUAV()) {
                                     return uavs.deref(decl);
+                                }
+
+                                if (decl.type.isBuffer()) {
+                                    return srvs.deref(decl);
+                                }
+
+                                if (decl.type.isTexture()) {
+                                    return srvs.deref(decl);
                                 }
 
                                 // implies that each parameter is loaded from its stream, so 

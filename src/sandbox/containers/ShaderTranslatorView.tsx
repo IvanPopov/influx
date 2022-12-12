@@ -2,8 +2,8 @@
 
 import { CodeEmitter as HLSLEmitter, CodeContext as HLSLContext } from '@lib/fx/translators/CodeEmitter';
 import { CodeConvolutionEmitter as HLSLConvolutionEmitter, CodeConvolutionContext as HLSLConvolutionContext, ICodeConvolutionContextOptions as IConvOptions } from '@lib/fx/translators/CodeConvolutionEmitter';
-import { FxContext, FxEmitter } from '@lib/fx/translators/FxEmitter';
-import { FxContextEx, FxTranslator } from '@lib/fx/translators/FxTranslator';
+import { FxConvolutionContext, FxEmitter } from '@lib/fx/translators/FxEmitter';
+import { FxTranslatorContext, FxTranslator } from '@lib/fx/translators/FxTranslator';
 import { GLSLEmitter, GLSLContext } from '@lib/fx/translators/GlslEmitter';
 import { getCommon, mapProps, matchLocation } from '@sandbox/reducers';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
@@ -126,8 +126,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                    break;
             }
         } else {
-            original = FxEmitter.translate(fx, new FxContext({ ...convPack }));
-            value = FxTranslator.translate(fx, new FxContextEx({ ...convPack, ...translatorOpts }));
+            original = FxEmitter.translate(fx, new FxConvolutionContext({ ...convPack }));
+            value = FxTranslator.translate(fx, new FxTranslatorContext({ ...convPack, ...translatorOpts }));
         }
 
         return (

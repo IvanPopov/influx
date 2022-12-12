@@ -7,11 +7,11 @@ import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstructi
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
-import { ICSShaderReflection } from "./CodeEmitter";
+import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
-import { FxContext, FxEmitter } from "./FxEmitter";
+import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
 
 export interface IPresetEntry { name: string; value: Uint8Array; }
 
@@ -48,6 +48,8 @@ export interface ITriMeshReflection {
     verticesName: string;
     facesName: string;
     adjacencyName: string; // GS suitable adj info, 6 x nFaces
+
+    resourcePath: string;
 }
 
 
@@ -55,17 +57,17 @@ export interface IPartFxPassReflection extends IPassReflection {
     sorting: boolean;
     geometry: string;
     instanceCount: number;
-    CSParticlesPrerenderRoutine: ICSShaderReflection;
+    CSParticlesPrerenderRoutine: ICSShaderReflectionEx;
     drawMode: number; // EPassDrawMode (0 - auto, 1 - manual)
 }
 
 export interface IPartFxReflection extends ITechniqueReflection<IPartFxPassReflection> {
     capacity: number;
     particle: string; // << particle type name
-    CSParticlesSpawnRoutine: ICSShaderReflection;
-    CSParticlesResetRoutine: ICSShaderReflection;
-    CSParticlesInitRoutine: ICSShaderReflection;
-    CSParticlesUpdateRoutine: ICSShaderReflection;
+    CSParticlesSpawnRoutine: ICSShaderReflectionEx;
+    CSParticlesResetRoutine: ICSShaderReflectionEx;
+    CSParticlesInitRoutine: ICSShaderReflectionEx;
+    CSParticlesUpdateRoutine: ICSShaderReflectionEx;
 }
 
 
@@ -149,7 +151,7 @@ export interface ICSShaderReflectionEx extends ICSShaderReflection {
 }
 
 
-export class FxContextEx extends FxContext {
+export class FxTranslatorContext extends FxConvolutionContext {
     // (!) override
     declare readonly CSShaders: ICSShaderReflectionEx[];
 
@@ -157,7 +159,7 @@ export class FxContextEx extends FxContext {
     readonly controls: IUIControlReflection[] = [];
     readonly triMeshes: ITriMeshReflection[] = [];
     // todo: use reflection
-    readonly uniforms: IVariableDeclInstruction[] = [];
+    readonly uniforms: IUniformReflection[] = [];
     // todo: use reflection
     readonly spawners: IFunctionDeclInstruction[] = [];
 
@@ -183,9 +185,9 @@ export class FxContextEx extends FxContext {
     }
 
 
-    addUniform(src: IVariableDeclInstruction): IVariableDeclInstruction {
-        this.uniforms.push(src);
-        return src;
+    addUniform(uniform: IUniformReflection): IUniformReflection {
+        this.uniforms.push(uniform);
+        return uniform;
     }
 
 
@@ -222,7 +224,7 @@ export class FxContextEx extends FxContext {
 }
 
 
-export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<ContextT> {
+export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitter<ContextT> {
     static UAV_PARTICLES = 'uavParticles';
     static UAV_STATES = 'uavStates';
     static UAV_DEAD_INDICES = 'uavDeadIndices';
@@ -367,13 +369,23 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
             // Buffer<uint3> trimesh0_faces;
             // Buffer<uint> trimesh0_faces_adj;
             
-            this.emitGlobalRaw(ctx, vertexCountUName, `uniform uint ${vertexCountUName}`);
+            // if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
+            //     ctx.addUniform({ name: vertexCountUName, typeName: 'uint' });
+            // } else 
+            {
+                this.emitGlobalRaw(ctx, vertexCountUName, `uniform uint ${vertexCountUName}`);
+            }
 
-            this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
+            // if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
+            //     ctx.addUniform({ name: faceCountUName, typeName: 'uint' });
+            // } else 
+            {
+                this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
+            }
             
-            const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName);
-            const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName);
-            const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName);
+            const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
+            const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
+            const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName, "adjacency");
 
             this.begin();
             this.emitLine(`void ${baseName}_GetDimensions(out uint vertCount, out uint faceCount)`);
@@ -428,10 +440,15 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
             this.pop();
             this.emitChar('}');
 
-
             this.end();
 
-            // todo: move to reflection
+            let resourcePath = null;
+            let resource = decl.annotation.decls.find(({ name }) => name == 'resource');
+            if (resource && resource.type.name == 'string') {
+                // '<this>' resource value means "this" resource
+                resourcePath = (resource.initExpr.args[0] as StringInstruction).value.slice(1, -1); // remove quotes
+            }
+
             const mesh = {
                 name,
 
@@ -440,7 +457,9 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
 
                 verticesName,
                 facesName,
-                adjacencyName
+                adjacencyName,
+
+                resourcePath
             };
             
             ctx.addTrimesh(mesh);
@@ -529,8 +548,12 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
             return;
         }
 
-        if (isGlobal)
-            ctx.addUniform(decl);
+        if (isGlobal) {
+            let { name, semantic, type: { name: typeName, length } } = decl;
+            if (!decl.type.isNotBaseArray()) length = -1;
+            const uniform = { name, semantic, typeName, length };
+            ctx.addUniform(uniform);
+        }
     }
 
 
@@ -777,7 +800,6 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
         ctx.add(name);
         this.begin();
         this.emitChar(`${content};`);
-        this.emitNewline();
         this.end();
     }
 
@@ -1300,10 +1322,12 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
                 this.emitChar('{');
                 this.push();
                 {
-                    ctx.uniforms.forEach(({ name, type, semantic }) => {
-                        this.emitKeyword(type.name);
+                    ctx.uniforms.forEach(({ name, typeName, semantic, length }) => {
+                        this.emitKeyword(typeName);
                         this.emitKeyword(name);
-                        type.isNotBaseArray() && this.emitChar(`[${type.length}]`);
+                        if (length > 0) {
+                            this.emitChar(`[${length}]`);
+                        }
                         if (semantic) {
                             this.emitSemantic(ctx, semantic);
                         } else {
@@ -1554,7 +1578,7 @@ export class FxTranslator<ContextT extends FxContextEx> extends FxEmitter<Contex
     private static fxtTranslator = new FxTranslator({ omitEmptyParams: true });
 
 
-    static translate(fx: ITechniqueInstruction, ctx: FxContextEx = new FxContextEx): string {
+    static translate(fx: ITechniqueInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
         switch (fx.instructionType) {
             case EInstructionTypes.k_PartFxDecl:
                 FxTranslator.fxtTranslator.emitPartFxDecl(ctx, <IPartFxInstruction>fx);

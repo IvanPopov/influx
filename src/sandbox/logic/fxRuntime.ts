@@ -85,7 +85,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
         async function destroy(technique: ITechnique) {
             Techniques.destroy(technique);
-            verbose('previous technique has been dropped.');
+            // verbose('previous technique has been dropped.');
         }
 
         async function copy(next: ITechnique, prev: ITechnique) {
@@ -105,7 +105,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
 
             if (tech) {
                 if (forceRestart) timeline.start();
-                verbose('next technique has been created.');
+                // verbose('next technique has been created.');
             }
 
             return [ tech, controls ];

@@ -347,6 +347,11 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
+    isBuffer(): boolean {
+        return !this.isNotBaseArray() && this.subType.isBuffer();
+    }
+
+
     $overwritePadding(padding: number, aligment: number) {
         this._padding = padding;
         this._aligment = aligment;

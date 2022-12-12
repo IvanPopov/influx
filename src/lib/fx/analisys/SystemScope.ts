@@ -130,8 +130,8 @@ class BufferTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        const buffer = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, buffer });
     }
 }
 
@@ -158,7 +158,8 @@ class RWBufferTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        const buffer = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav, buffer });
     }
 }
 
@@ -180,6 +181,7 @@ class RWStructuredBufferTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
+        const buffer = true;
 
         {
             let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
@@ -198,7 +200,7 @@ class RWStructuredBufferTemplate extends TypeTemplate {
         }
 
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav, buffer });
     }
 }
 
@@ -220,6 +222,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
+        const buffer = true;
         {
             const paramList = [];
 
@@ -238,7 +241,7 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav, buffer });
     }
 }
 
@@ -259,9 +262,9 @@ class StructuredBufferTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
+        const buffer = true;
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, buffer });
     }
 }
 
@@ -282,7 +285,6 @@ class TriMeshTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
 
         {
             const paramList = [];
@@ -382,7 +384,7 @@ class TriMeshTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods });
     }
 }
 
@@ -412,7 +414,8 @@ class RWTexture1DTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        const texture = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav, texture });
     }
 
     static TYPE_NAME = 'RWTexture1D';
@@ -443,7 +446,8 @@ class RWTexture2DTemplate extends TypeTemplate {
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
         const uav = true;
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        const texture = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav, texture });
     }
 
     static TYPE_NAME = 'RWTexture2D';
@@ -473,7 +477,7 @@ class Texture2DTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
+        const texture = true;
 
         {
             const paramList = [];
@@ -618,7 +622,7 @@ class Texture2DTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 
     static TYPE_NAME = 'Texture2D';
@@ -647,7 +651,7 @@ class TextureCubeTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
+        const texture = true;
 
         {
             const paramList = [];
@@ -715,7 +719,7 @@ class TextureCubeTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 
     static TYPE_NAME = 'TextureCube';
@@ -744,7 +748,7 @@ class Texture3DTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = true;
+        const texture = true;
 
         {
             const paramList = [];
@@ -774,7 +778,7 @@ class Texture3DTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 
     static TYPE_NAME = 'Texture3D';
@@ -804,7 +808,7 @@ class Texture2DArrayTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
+        const texture = true;
 
         {
             const paramList = [];
@@ -852,7 +856,7 @@ class Texture2DArrayTemplate extends TypeTemplate {
             methods.push(func);
         }
 
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 
     static TYPE_NAME = 'Texture2DArray';
@@ -882,8 +886,8 @@ class TextureCubeArrayTemplate extends TypeTemplate {
         const length = instruction.UNDEFINE_LENGTH;
         const fields: IVariableDeclInstruction[] = [];
         const methods: IFunctionDeclInstruction[] = [];
-        const uav = false;
-        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, uav });
+        const texture = true;
+        return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 
     static TYPE_NAME = 'TextureCubeArray';

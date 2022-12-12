@@ -3,10 +3,9 @@ import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { ICSShaderReflection } from "@lib/fx/translators/CodeEmitter";
-import { FxContextEx, FxTranslator, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
+import { FxTranslatorContext, FxTranslator, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl, ICSShaderReflectionEx } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeFieldT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
@@ -89,11 +88,11 @@ function createFxTypeLayout(type: ITypeInstruction): TypeLayoutT {
 
 
 function createFxRoutineNoBytecodeBundle(): RoutineBytecodeBundleT {
-    return new RoutineBytecodeBundleT([], new RoutineBytecodeBundleResourcesT([]), []);
+    return new RoutineBytecodeBundleT();
 }
 
 
-function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSShaderReflection): RoutineBytecodeBundleT {
+function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSShaderReflectionEx): RoutineBytecodeBundleT {
     const entry = reflection.name;
     const shader = slDocument.root.scope.findFunction(entry, null);
     assert(shader);
@@ -106,8 +105,22 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
         const type = createFxTypeLayout(typeInstr);
         return new UAVBundleT(name, slot, stride, type);
     });
-
-    return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs), numthreads);
+    const buffers = reflection.buffers.map(({ name, register: slot, elementType }) => {
+        const typeInstr = slDocument.root.scope.findType(elementType);
+        const stride = typeInstr.size; // in bytes
+        const type = createFxTypeLayout(typeInstr);
+        return new BufferBundleT(name, slot, stride, type);
+    });
+    const textures = reflection.textures.map(({ name, register: slot, elementType }) => {
+        const typeInstr = slDocument.root.scope.findType(elementType);
+        const stride = typeInstr.size; // in bytes
+        const type = createFxTypeLayout(typeInstr);
+        return new BufferBundleT(name, slot, stride, type);
+    });
+    const trimeshes = reflection.trimeshes.map(({ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath }) => {
+        return new TrimeshBundleT(name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath);
+    });
+    return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs, buffers, textures, trimeshes), numthreads);
 }
 
 
@@ -343,7 +356,7 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
       };
     //   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     // IP: temp solution until it will not be supported for FxScene and bytecode generator.
-    const ctx = new FxContextEx({ ...tops });
+    const ctx = new FxTranslatorContext({ ...tops });
     const raw = FxTranslator.translate(fx, ctx); // raw hlsl
 
     const reflection = ctx.techniques[0] as IPartFxReflection;
@@ -394,7 +407,7 @@ async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOption
     const { includeResolver, defines } = convPack;
     
     const { textDocument, slastDocument } = convPack;
-    const ctx = new FxContextEx({ ...opts.translator, textDocument, slastDocument });
+    const ctx = new FxTranslatorContext({ ...opts.translator, textDocument, slastDocument });
     const raw = FxTranslator.translate(tech, ctx);
 
     const reflection = ctx.techniques[0];
