@@ -31,7 +31,7 @@ void DestroyEmitter(IFX::EMITTER* pEmitter)
     if (pEmitter)
     {  
         delete pEmitter;   
-    }
+    } 
 }
 
 IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
@@ -94,7 +94,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("name", &IFX::CBUFFER::name)
         .field("size", &IFX::CBUFFER::size)
         .field("usage", &IFX::CBUFFER::usage);
-        // .field("fields", &IFX::CBUFFER_FIELD::fields);  
+        // .field("fields", &IFX::CBUFFER_FIELD::fields);       
 
     em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
         .field("size", &IFX::SHADER_ATTR::size)
@@ -108,7 +108,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
             em::val jsDesc = em::val::object();
             jsDesc.set("stride", desc.stride);
             jsDesc.set("sorting", desc.sorting);
-            jsDesc.set("geometry", desc.geometry);
+            jsDesc.set("geometry", desc.geometry); 
             jsDesc.set("instanceCount", desc.instanceCount);
             jsDesc.set("vertexShader", desc.vertexShader);
             jsDesc.set("pixelShader", desc.pixelShader);
@@ -124,8 +124,8 @@ EMSCRIPTEN_BINDINGS(pipeline)
           }))
          .function("dump", &IFX::EMITTER_PASS::Dump);
    
-    em::class_<IFX::EMITTER>("Emitter")
-         .function("getName", &IFX::EMITTER::GetName)
+    em::class_<IFX::EMITTER>("Emitter") 
+         .function("getName", &IFX::EMITTER::GetName) 
          .function("getType", em::optional_override([](IFX::EMITTER& self) -> std::string { return "emitter"; }))
          .function("getCapacity", &IFX::EMITTER::GetCapacity)
          .function("getPassCount", &IFX::EMITTER::GetPassCount)
@@ -133,13 +133,24 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("getNumParticles", &IFX::EMITTER::GetNumParticles)
 
          .function("simulate", em::optional_override([](IFX::EMITTER& self, em::val val) {
-            return self.EMITTER::Simulate(UniformsFromJSObject(val)); 
-          }))
-        .function("prerender", em::optional_override([](IFX::EMITTER& self, em::val val) {
+            return self.EMITTER::Simulate(UniformsFromJSObject(val));  
+         }))
+         .function("prerender", em::optional_override([](IFX::EMITTER& self, em::val val) {
             return self.EMITTER::Prerender(UniformsFromJSObject(val)); 
-          }))
+         }))
          .function("serialize", &IFX::EMITTER::Serialize)
          .function("reset", &IFX::EMITTER::Reset) 
+         .function("setTrimesh", &IFX::EMITTER::SetTrimesh) 
+        //  .function("setTrimesh", em::optional_override([](
+        //     IFX::EMITTER& self, 
+        //     std::string name, 
+        //     uint32_t vertCount, uint32_t faceCount,
+        //     em::val vertices, em::val faces, em::val indicesAdj) {     
+        //     return self.EMITTER::SetTrimesh(name, vertCount, faceCount,
+        //         std::move(vecFromJSArray<float>(vertices)), 
+        //         std::move(vecFromJSArray<uint32_t>(faces)), 
+        //         std::move(vecFromJSArray<uint32_t>(indicesAdj))); 
+        //  }))
          .function("dump", &IFX::EMITTER::Dump);
  
     em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers());

@@ -13,7 +13,6 @@ export interface IEmitterPass extends ITechniquePass<IEmitterPassDesc> {
     getData(): IMemory;
     getNumRenderedParticles(): number;  // num alive particles multipled by the prerendered instance count
     serialize(): void;                  // fill render buffer with instance data, including sorting if needed
-    // preparePrerender();                 // drop prerender resource counters
     prerender(uniforms: Uniforms);      // update materials data per instance
     dump(): void;
 }
@@ -28,7 +27,7 @@ export interface IEmitter extends ITechnique<IEmitterPass> {
     serialize(): void;                      // alias for all pass serialization ((pass of passes) pass.serialize())
     reset(): void;
 
-    setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array): void;
+    setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory): void;
     
     dump(): void;
 }

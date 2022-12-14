@@ -1,4 +1,4 @@
-import { fromBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
+import { fromBundleMemory, asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
 import { IEmitter } from '@lib/idl/emitter';
@@ -73,12 +73,32 @@ export function memoryToU8Array(input: Bytecode.IMemory): Uint8Array {
     return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 }
 
+
 export function memoryToF32Array(input: Bytecode.IMemory): Float32Array {
     const buffer = fromBundleMemory(input);
     return new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length);
 }
 
+
 export function memoryToI32Array(input: Bytecode.IMemory): Int32Array {
     return fromBundleMemory(input);
 }
 
+/**
+ * @deprecated
+ */
+export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
+    return asBundleMemory(input);
+}
+
+/**
+ * @deprecated
+ */
+export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
+    return asBundleMemory(input);
+}
+
+
+export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+    return asBundleMemory(input);
+}

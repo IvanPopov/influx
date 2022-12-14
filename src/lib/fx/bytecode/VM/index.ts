@@ -53,10 +53,17 @@ export function memoryToF32Array(input: IMemory): Float32Array {
     return VMBundle().memoryToF32Array(input);
 }
 
+export function u32ArrayToMemory(input: Uint32Array): IMemory {
+    return VMBundle().u32ArrayToMemory(input);
+}
+
+export function f32ArrayToMemory(input: Float32Array): IMemory {
+    return VMBundle().f32ArrayToMemory(input);
+}
+
 export function createUAV(name: string, elementSize: number, length: number, register: number) {
     return VMBundle().createUAV(name, elementSize, length, register);
 }
-
 
 export function destroyUAV(uav: IUAV)
 {

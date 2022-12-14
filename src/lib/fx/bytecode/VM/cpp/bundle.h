@@ -41,6 +41,14 @@ struct BUNDLE_CONSTANT
 };
 
 
+struct RESOURCE_VIEW
+{
+    std::string name;
+    uint32_t reg;            // user defined register like "b2", "t3"
+    uint32_t index;          // reg + internal resource offset
+};
+
+
 class BUNDLE
 {
 private:
@@ -63,6 +71,10 @@ public:
 
     static BUNDLE_UAV CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
     static void DestroyUAV(BUNDLE_UAV uav);
+
+    static RESOURCE_VIEW CreateBufferView(std::string name, uint32_t reg);
+
+    // static 
 
     void Load(memory_view data);
 }; 

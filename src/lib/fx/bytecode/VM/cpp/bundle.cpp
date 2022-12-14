@@ -15,9 +15,11 @@
 namespace VM
 {
 
+// must be synced with Bytecode.ts (!)
 const int CBUFFER0_REGISTER = 0;
 const int INPUT0_REGISTER = 1;
 const int UAV0_REGISTER = 17;
+const int SRV0_REGISTER = 33;
 
 void DecodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>& chunks) 
 {
@@ -412,6 +414,11 @@ BUNDLE_UAV BUNDLE::CreateUAV(std::string name, uint32_t elementSize, uint32_t le
 void BUNDLE::DestroyUAV(BUNDLE_UAV uav)
 {
     delete[] uav.buffer.As<uint32_t>();
+}
+
+RESOURCE_VIEW BUNDLE::CreateBufferView(std::string name, uint32_t reg)
+{
+    return {name, reg, reg + SRV0_REGISTER};
 }
 
 void BUNDLE::Load(memory_view data)

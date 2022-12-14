@@ -13,18 +13,15 @@ import { ITechnique } from '@lib/idl/ITechnique';
 const forceNoWasm = () => (new URLSearchParams(window.location.search)).get('disable-wasm') === 'true';
 let useWASM = WASM && !forceNoWasm();
 
-function Pipe()
-{
+function Pipe() {
     return useWASM ? WASMPipe : TSPipe;
 }
 
-export function isWASM()
-{
+export function isWASM() {
     return useWASM;
 }
 
-export function switchRuntime(runtime?: 'wasm' | 'js')
-{
+export function switchRuntime(runtime?: 'wasm' | 'js') {
     useWASM = isDef(runtime) ? runtime === 'wasm' : !useWASM;
     console.log(`%c Technique runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
@@ -42,8 +39,7 @@ function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
 }
 // end of hack
 
-export function create(data: Uint8Array | BundleT): ITechnique
-{
+export function create(data: Uint8Array | BundleT): ITechnique {
     // hack:
     // cpp module doesn't support material bundles
     if (HACK_IsMaterialBundle(data) && isWASM()) {
@@ -56,14 +52,12 @@ export function create(data: Uint8Array | BundleT): ITechnique
 }
 
 
-export function destroy(tech: ITechnique): void
-{
+export function destroy(tech: ITechnique): void {
     Pipe().destroyTechnique(tech);
 }
 
 
-export function copy(dst: ITechnique, src: ITechnique): boolean
-{
+export function copy(dst: ITechnique, src: ITechnique): boolean {
     return Pipe().copyTechnique(dst, src);
 }
 
@@ -71,19 +65,32 @@ export function copy(dst: ITechnique, src: ITechnique): boolean
 //
 //
 
-export function memoryToU8Array(input: Bytecode.IMemory): Uint8Array
-{
+export function memoryToU8Array(input: Bytecode.IMemory): Uint8Array {
     return Pipe().memoryToU8Array(input);
 }
 
-
-export function memoryToI32Array(input: Bytecode.IMemory): Int32Array
-{
+export function memoryToI32Array(input: Bytecode.IMemory): Int32Array {
     return Pipe().memoryToI32Array(input);
 }
 
-
-export function memoryToF32Array(input: Bytecode.IMemory): Float32Array
-{
+export function memoryToF32Array(input: Bytecode.IMemory): Float32Array {
     return Pipe().memoryToF32Array(input);
+}
+
+/**
+ * @deprecated
+ */
+export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
+    return Pipe().u32ArrayToMemory(input);
+}
+
+/**
+ * @deprecated
+ */
+export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
+    return Pipe().f32ArrayToMemory(input);
+}
+
+export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+    return Pipe().viewToMemory(input);
 }

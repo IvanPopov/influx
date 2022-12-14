@@ -9,7 +9,7 @@ import { Uniforms } from '@lib/idl/Uniforms';
 
 import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
 
-
+type IMemory = Bytecode.IMemory;
 type IUAVResource = ReturnType<typeof VM.createUAV>;
 
 function createUAVEx(bundle: UAVBundleT, capacity: number): IUAVResource {
@@ -68,15 +68,15 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
     }
 
 
-    function setBuffer(name, data: ArrayBufferView) {
+    function setBuffer(name, data: IMemory) {
         const buf = buffers.find(buf => buf.name === name);
         if (!buf) return;
 
-        vmBundle.setInput(buf.slot + SRV0_REGISTER, asBundleMemory(data));
+        vmBundle.setInput(buf.slot + SRV0_REGISTER, data);
     }
 
     // content consist of Float32Array(...f3 pos, f3 normal, f2 uv)
-    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array) {
+    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory) {
         const mesh = trimeshes.find(mesh => mesh.name === name);
         if (!mesh) return;
 
@@ -310,8 +310,8 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         return {
             getDesc,
-            getNumRenderedParticles,                                                                           // FIXME
             getData,
+            getNumRenderedParticles,                                                                           // FIXME
             serialize,
             preparePrerender,
             prerender,
@@ -326,7 +326,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const getPass = (i: number) => passes[i];
     const getCapacity = () => capacity;
 
-    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: Float32Array, faces: Uint32Array, indicesAdj: Uint32Array) {
+    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory) {
         spawnBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
         initBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
         updateBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);

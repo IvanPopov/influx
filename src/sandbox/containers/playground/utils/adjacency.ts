@@ -424,7 +424,7 @@ export function prepareTrimesh(g: THREE.BufferGeometry) {
     const uvs = g.attributes.uv.array;
     const vertCount = g.attributes.position.count;
     const faceCount = vertCount / 3;
-    const indices = Array(vertCount).fill(0).map((x, i) => i);
+    const indices: number[] = Array(vertCount).fill(0).map((x, i) => i);
 
     const pointReps = GeneratePointReps(indices, faceCount, positions, vertCount);
     const adjacency = ConvertPointRepsToAdjacencyImpl(indices, faceCount, positions, vertCount, pointReps);
@@ -432,7 +432,7 @@ export function prepareTrimesh(g: THREE.BufferGeometry) {
     // console.log(pointReps, adjacency);
 
     // pos, norm, uv
-    const vertices = new Array(vertCount * (3 + 3 + 2));
+    const vertices = new Array<number>(vertCount * (3 + 3 + 2));
     for (let i = 0; i < vertCount; ++i) {
         for (let j = 0; j < 3; ++j) {
             vertices[8 * i + 0 + j] = positions[3 * i + j];

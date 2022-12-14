@@ -143,7 +143,6 @@ private:
     void Emit(const UNIFORMS& uniforms);
     void Update(const UNIFORMS& uniforms);
     void PreparePrerender();
-   
 public:
     EMITTER(void* buf);
     ~EMITTER();
@@ -162,6 +161,9 @@ public:
     void Reset();
     void Dump();
     void ReloadBundles(void* buf);
+
+    void SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
+        VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj);
     
     bool Copy(const EMITTER& src);
     bool operator == (const EMITTER& emit) const;

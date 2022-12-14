@@ -522,12 +522,19 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.setState({ loading: emitter, emitter: null });
 
         // todo: make it on demand based on emitter's needs
-        const setExplicitlyCubeGeom = (emitter) => {
+        const setExplicitlyCubeGeom = (emitter: IEmitter) => {
             const mesh = this.models['cube'];
             const geometry = mesh.geometry;
             assert(geometry);
             const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
-            emitter.setTrimesh("geom", vertCount, faceCount, new Float32Array(vertices), new Uint32Array(faces), new Uint32Array(indicesAdj));
+            
+            emitter.setTrimesh("geom", 
+                vertCount, 
+                faceCount, 
+                Techniques.viewToMemory(new Float32Array(vertices)), 
+                Techniques.viewToMemory(new Uint32Array(faces)), 
+                Techniques.viewToMemory(new Uint32Array(indicesAdj))
+            );
 
             this.scene.add(mesh);
             mesh.material = new THREE.MeshNormalMaterial();

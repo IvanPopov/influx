@@ -104,6 +104,24 @@ std::unique_ptr<BYTECODE_BUNDLE> SetupFxRoutineBytecodeBundle(
 
     auto bcBundle = std::make_unique<BYTECODE_BUNDLE>();
     bcBundle->uavs = std::move(uavs);
+
+    for (auto& buf : routineBundle->resources->buffers) {
+        bcBundle->buffers.push_back(VM::BUNDLE::CreateBufferView(buf->name, buf->slot));
+    }
+
+    for (auto& mesh : routineBundle->resources->trimeshes) {
+        auto& [ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath ] = *mesh;
+        bcBundle->trimeshes.push_back({
+            name,
+            vertexCountUName,
+            faceCountUName,
+            verticesName,
+            facesName,
+            adjacencyName
+        });
+    }
+
+
     bcBundle->vmBundle = std::move(vmBundle); // << important to copy because of circular dependencies of constants
     bcBundle->numthreads = numthreads;
     return bcBundle;
@@ -465,7 +483,13 @@ void EMITTER::PreparePrerender()
     }
 }
 
-
+void EMITTER::SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
+    VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj) 
+{
+    m_spawnBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+    m_initBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+    m_updateBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+}
 
 
 //
