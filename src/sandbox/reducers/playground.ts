@@ -9,7 +9,7 @@ import IStoreState, { IPlaygroundState } from "@sandbox/store/IStoreState";
 const initialState: IPlaygroundState = {
     technique: null,
     timeline: Timeline.make(),
-    controls: { values: {}, props: {}, presets: [] },
+    controls: { controls: {}, values: {}, presets: [] },
     presets: {},
     revision: 0,
     wasm: Techniques.isWASM(),

@@ -1,6 +1,6 @@
 import { assert, isNull } from "@lib/common";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
-import { T_BOOL, T_FLOAT, T_FLOAT3, T_FLOAT4, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { T_BOOL, T_FLOAT, T_FLOAT2, T_FLOAT3, T_FLOAT4, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EAddrType } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
@@ -83,6 +83,7 @@ export class ConstanPool {
                     case T_INT.name:
                         defaultValue = new Int32Array([ (initExpr.args[0] as IntInstruction).value ]);
                         break;
+                    case T_FLOAT2.name:
                     case T_FLOAT3.name:
                     case T_FLOAT4.name:
                         defaultValue = new Float32Array(initExpr.args.map(arg => ((arg as InitExprInstruction).args[0] as FloatInstruction).value));

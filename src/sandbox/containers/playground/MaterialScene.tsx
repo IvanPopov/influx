@@ -1,43 +1,48 @@
-import { GUI } from 'dat.gui';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { GUI } from 'dat.gui';
 
+import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
+import * as THREE from 'three';
+import autobind from 'autobind-decorator';
+import { ITechnique } from '@lib/idl/ITechnique';
 import { isString } from '@lib/common';
-import { UIProperties } from '@lib/idl/bundles/FxBundle_generated';
+import { IUniform } from 'three';
+import { IMap } from '@lib/idl/IMap';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { IMap } from '@lib/idl/IMap';
-import { ITechnique } from '@lib/idl/ITechnique';
-import { Color, ControlValue, Vector3 } from '@sandbox/store/IStoreState';
-import autobind from 'autobind-decorator';
-import * as THREE from 'three';
-import { IUniform } from 'three';
-import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
+import { Color, Vector2, Vector3, Vector4 } from '@sandbox/store/IStoreState';
+import { ControlValueType } from '@lib/fx/bundles/utils';
 import { prepareTrimesh } from './utils/adjacency';
 
 
-function controlToThreeValue(ctrl: ControlValue, propType: string): THREE.Vector4 | THREE.Vector3 | Number {
-    const type = propType as keyof typeof UIProperties;
+function controlToThreeValue(ctrl: ControlValueType, type: string): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number {
     switch (type) {
-        case 'UIColor':
-            {
-                const { r, g, b, a } = ctrl as Color;
-                return new THREE.Vector4(r, g, b, a);
-            }
-        case 'UIFloat3':
-            {
-                const { x, y, z } = ctrl as Vector3;
-                return new THREE.Vector3(x, y, z);
-            }
-        case 'UIFloat':
-        case 'UIFloatSpinner':
-        case 'UIInt':
-        case 'UIInt':
-        case 'UISpinner': break;
+        case 'color': {
+            const { r, g, b, a } = ctrl as Color;
+            return new THREE.Vector4(r, g, b, a);
+        }
+        case 'float4': {
+            const { x, y, z, w } = ctrl as Vector4;
+            return new THREE.Vector4(x, y, z, w);
+        }
+        case 'float3': {
+            const { x, y, z } = ctrl as Vector3;
+            return new THREE.Vector3(x, y, z);
+        }
+        case 'float2': {
+            const { x, y } = ctrl as Vector2;
+            return new THREE.Vector2(x, y);
+        }
+        case 'float':
+        case 'int':
+        case 'uint':
+            break;
         default:
             console.error('unsupported type found');
+            return null;
     }
 
     return ctrl as Number;
@@ -90,7 +95,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         model: 'probe'
     };
 
-    uniforms: IMap<IUniform<THREE.Vector4 | THREE.Vector3 | Number>> = {
+    uniforms: IMap<IUniform<THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number>> = {
         elapsedTime: { value: 0 },
         elapsedTimeLevel: { value: 0 },
         // elapsedTimeThis: { value: 0 }
@@ -253,8 +258,8 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         if (controls) {
             for (let name in controls.values) {
                 let val = controls.values[name];
-                let prop = controls.props[name];
-                uniforms[name] = { value: controlToThreeValue(val, prop.type) };
+                let ctrl = controls.controls[name];
+                uniforms[name] = { value: controlToThreeValue(val, ctrl.type) };
             }
         }
     }
@@ -284,10 +289,10 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                         {
                             for (let { name, padding } of cbuf.fields) {
                                 const pos = (padding / 16) >>> 0; // in vector
-                                const prop = controls.props[name];
+                                const ctrl = controls.controls[name];
                                 const val = controls.values[name];
                                 // todo: use paddings (!)
-                                group.uniforms[pos].value = controlToThreeValue(val, prop.type);
+                                group.uniforms[pos].value = controlToThreeValue(val, ctrl.type);
                             }
                         }
                         break;
@@ -356,9 +361,9 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         if (controls) {
             for (let name in controls.values) {
                 let val = controls.values[name];
-                let prop = controls.props[name];
+                let ctrl = controls.controls[name];
                 if (uniforms[name])
-                    uniforms[name].value = controlToThreeValue(val, prop.type);
+                    uniforms[name].value = controlToThreeValue(val, ctrl.type);
             }
         }
     }

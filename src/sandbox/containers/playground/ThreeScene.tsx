@@ -16,16 +16,17 @@ import * as THREE from 'three';
 
 import { ITimeline } from '@lib/fx/timeline';
 
-import { Color, IPlaygroundControls } from '@sandbox/store/IStoreState';
+import { Color, IPlaygroundControlsState } from '@sandbox/store/IStoreState';
 import { GUI } from 'dat.gui';
 
 // must be imported last
-import { colorToUint, decodeProp, encodeControlsToString, uintToColor } from '@lib/fx/bundles/utils';
+import { cloneValue, colorToUint, encodeControlsToString, uintToColor } from '@lib/fx/bundles/utils';
+import { assert } from 'console';
 
 export interface ITreeSceneProps {
     style?: React.CSSProperties;
     timeline: ITimeline;
-    controls?: IPlaygroundControls;
+    controls?: IPlaygroundControlsState;
 
     canvasRef?: (canvas: HTMLCanvasElement) => void;
 }
@@ -163,12 +164,12 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    private createGUI(controls: IPlaygroundControls) {
+    private createGUI(controls: IPlaygroundControlsState) {
         if (!controls) {
             return;
         }
 
-        const hash = JSON.stringify(controls.props) + JSON.stringify(controls.presets);
+        const hash = JSON.stringify(controls.controls) + JSON.stringify(controls.presets);
 
         if (this.state.controls != hash) {
             this.removeGUI();
@@ -192,33 +193,54 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         const gui = new GUI({ autoPlace: false });
         
         for (let name in controls.values) {
-            const props = controls.props[name];
+            let control = controls.controls[name];
+            let viewType = control.properties["__type"] as string || control.type;
+            let caption = control.properties["__caption"] as string || control.name;
             let ctrl = null;
-            switch (props.type) {
-                case 'UIColor':
-                    let colorFolder = gui.addFolder(props.name || name);
-                    let cval = controls.values[name] as Color; 
-                    colorFolder.addColor({ color: colorToUint(cval) }, 'color').onChange(value => uintToColor(value, cval));
-                    colorFolder.add({ opacity: cval.a }, 'opacity', 0, 1).onChange(value => cval.a = value);
+            switch(viewType){
+                case 'int':
+                case 'uint':
+                case 'float':
+                    ctrl = gui.add(controls.values, name);
+                    break;
+                case 'slider':
+                    let min = control.properties["__min"] as number;
+                    let max = control.properties["__max"] as number;
+                    let step = control.properties["__step"] as number;
+                    ctrl = gui.add(controls.values, name, min, max, step);
+                    break;
+                case 'color':
+                    let colorFolder = gui.addFolder(caption);
+                    let clr = controls.values[name] as Color;
+                    colorFolder.addColor({ color: colorToUint(clr) }, 'color').onChange(value => uintToColor(value, clr));
+                    colorFolder.add({ opacity: clr.a }, 'opacity', 0, 1).onChange(value => clr.a = value);
                     colorFolder.open();
                     break;
-                case 'UIFloatSpinner':
-                case 'UISpinner':
-                    ctrl = gui.add(controls.values, name, props.min, props.max, props.step);
+                case 'float2':
+                    let vec2Folder = gui.addFolder(caption);
+                    vec2Folder.add(controls.values[name], 'x');
+                    vec2Folder.add(controls.values[name], 'y');
+                    vec2Folder.open();
                     break;
-                case 'UIFloat3':
-                    let vec3Folder = gui.addFolder(props.name || name);
+                case 'float3':
+                    let vec3Folder = gui.addFolder(caption);
                     vec3Folder.add(controls.values[name], 'x');
                     vec3Folder.add(controls.values[name], 'y');
                     vec3Folder.add(controls.values[name], 'z');
                     vec3Folder.open();
                     break;
-                default:
-                    ctrl = gui.add(controls.values, name);
-            } 
+                case 'float4':
+                    let vec4Folder = gui.addFolder(caption);
+                    vec4Folder.add(controls.values[name], 'x');
+                    vec4Folder.add(controls.values[name], 'y');
+                    vec4Folder.add(controls.values[name], 'z');
+                    vec4Folder.add(controls.values[name], 'w');
+                    vec4Folder.open();
+                    break;
+            }
 
             if (ctrl) {
-                if (props.name) ctrl.name(props.name);
+                ctrl.name(caption);
             }
         }
 
@@ -228,9 +250,9 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
                 const preset = controls.presets.find(p => p.name == name);
                 if (preset) {
                     preset.data.forEach(entry => {
-                        let prop = controls.props[entry.name];
-                        if (prop) {
-                            controls.values[entry.name] = decodeProp(prop.type, entry.value);
+                        let control = controls.controls[entry.name];
+                        if (control) {
+                            controls.values[entry.name] = cloneValue(entry.type, entry.value);
                         }
                     });
                     setTimeout(() => {

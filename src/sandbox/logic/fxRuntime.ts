@@ -14,12 +14,13 @@ import * as ipc from '@sandbox/ipc';
 import * as Depot from '@sandbox/reducers/depot';
 import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
 import { asConvolutionPack, getFileState, getScope } from '@sandbox/reducers/sourceFile';
-import IStoreState, { IPlaygroundControls } from '@sandbox/store/IStoreState';
+import { IPlaygroundControlsState, IStoreState } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
 
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
 import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
 import { toast } from 'react-semantic-toasts';
+import path from 'path';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
@@ -92,7 +93,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             Techniques.copy(next, prev);
         }
 
-        async function create(forceRestart = true): Promise<[ ITechnique, IPlaygroundControls ]> {
+        async function create(forceRestart = true): Promise<[ ITechnique, IPlaygroundControlsState ]> {
             const i = list.map(fx => fx.name).indexOf(active);
 
             if (i == -1) {
@@ -274,6 +275,17 @@ const playgroundSaveFileAsLogic = createLogic<IStoreState, IPlaygroundEffectSave
             // -----------------------------------
             // downloadByteBuffer(fbb.asUint8Array(), exportName.basename, 'application/octet-stream');   
         }
+
+        let fxDir = state.s3d?.env?.Get('fx-dir');
+        if (fxDir) {
+            let fileName = path.basename(playground.exportName);
+            let sourcePath = fxDir + '\\' + fileName;
+            let sourceResourcePath = sourcePath + '.resource';
+            let destinationPath = URI.toLocalPath(URI.fromLocalPath(sourcePath));
+            let destinationResourcePath = URI.toLocalPath(URI.fromLocalPath(sourceResourcePath));
+            ipc.sync.saveFile(destinationPath, data);
+            ipc.sync.saveFile(destinationResourcePath, '__type: res_desc_bfx\nlinks: []\nbfx: ' + fileName + '\n');
+        } 
 
         done();
     }

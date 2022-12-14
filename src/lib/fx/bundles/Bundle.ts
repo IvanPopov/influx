@@ -3,9 +3,9 @@ import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
-import { FxTranslatorContext, FxTranslator, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl, ICSShaderReflectionEx } from "@lib/fx/translators/FxTranslator";
+import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIColorT, UIControlT, UIFloat3T, UIFloatSpinnerT, UIFloatT, UIIntT, UIProperties, UISpinnerT, UIUintT } from "@lib/idl/bundles/FxBundle_generated";
+import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
@@ -17,6 +17,7 @@ import { Diagnostics } from "@lib/util/Diagnostics";
 import * as flatbuffers from 'flatbuffers';
 import { createSLASTDocument } from "../SLASTDocument";
 import { CodeConvolutionContext, CodeConvolutionEmitter, ICodeConvolutionContextOptions } from "../translators/CodeConvolutionEmitter";
+import { encodeControlValue, encodePropertyValue, getFBControlType, getFBPropertyType } from "./utils";
 
 export const PACKED = true;
 
@@ -255,49 +256,16 @@ function createFxRoutinePsShaderBundle(slDocument: ISLDocument, entryName: strin
 
 function createFxControls(controls: IUIControl[]): UIControlT[] {
     return controls.map(ctrl => {
-        switch (ctrl.UIType) {
-            case 'Spinner':
-                {
-                    const props = new UISpinnerT(ctrl.UIName, ctrl.UIMin || 0, ctrl.UIMax || 1000, ctrl.UIStep || 1, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UISpinner, props);
-                }
-            case 'FloatSpinner':
-                {
-                    const props = new UIFloatSpinnerT(ctrl.UIName, ctrl.UIMin || 0, ctrl.UIMax || 1000, ctrl.UIStep || 0.01, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIFloatSpinner, props);
-                }
-            case 'Color':
-                {
-                    const props = new UIColorT(ctrl.UIName, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIColor, props);
-                }
-            case 'Float':
-                {
-                    const props = new UIFloatT(ctrl.UIName, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIFloat, props);
-                }
-            case 'Float4':
-                {
-                    // const props = new UIFloat4T(ctrl.UIName, Array.from(ctrl.value));
-                    // return new UIControlT(ctrl.name, UIProperties.UIFloat4, props);
-                    return null; // todo
-                }
-            case 'Float3':
-                {
-                    const props = new UIFloat3T(ctrl.UIName, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIFloat3, props);
-                }
-            case 'Int':
-                {
-                    const props = new UIIntT(ctrl.UIName, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIInt, props);
-                }
-            case 'Uint':
-                {
-                    const props = new UIUintT(ctrl.UIName, Array.from(ctrl.value));
-                    return new UIControlT(ctrl.name, UIProperties.UIUint, props);
-                }
-        }
+        const props = ctrl.properties.map(prop => new ViewTypePropertyT(
+            prop.name, 
+            getFBPropertyType(prop.type), 
+            encodePropertyValue(prop.type, prop.value)
+        ));
+        return new UIControlT(
+            ctrl.name, 
+            getFBControlType(ctrl.type), 
+            encodeControlValue(ctrl.type, ctrl.value), 
+            props);
     });
 }
 
@@ -307,7 +275,11 @@ function createFxPresets(presets: IPreset[]): PresetT[] {
         ({ name, desc, data }) => new PresetT(
             name,
             desc,
-            data.map(({ name, value }) => new PresetEntryT(name, Array.from(value)))
+            data.map(({ name, type, value }) => new PresetEntryT(
+                name, 
+                getFBControlType(type), 
+                encodeControlValue(type, value)
+            ))
         )
     );
 }
