@@ -45,6 +45,8 @@ const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VertexID'].indexOf(s
 
 
 export class GLSLContext extends CodeContext {
+    location: number = 0;
+
     has(signature: string): boolean {
         // nothing todo - built in GLSL function
         const SYSTEM_FUNCS = [ 'unpackHalf2x16(uint)' ];
@@ -215,13 +217,12 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
     }
 
 
-    private loc = 0;
     protected emitAttribute(ctx: ContextT, decl: IVariableDeclInstruction) {
         // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
         if (IS_INSTANCEID(decl.semantic)) return;
         if (IS_VERTEXID(decl.semantic)) return;
 
-        (this.emitKeyword(`layout(location = ${this.loc++}) in`), this.emitVariable(ctx, decl, sname.attr), this.emitChar(';'), this.emitNewline());
+        (this.emitKeyword(`layout(location = ${ctx.location++}) in`), this.emitVariable(ctx, decl, sname.attr), this.emitChar(';'), this.emitNewline());
     }
 
 

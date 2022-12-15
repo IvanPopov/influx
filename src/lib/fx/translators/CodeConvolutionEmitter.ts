@@ -50,6 +50,11 @@ export class CodeConvolutionEmitter<ContextT extends CodeConvolutionContext> ext
         const { start, end } = dst;
         const include = ctx.textDocument.source.substring(start.offset, end.offset);
 
+        // TODO: remove temp hack!
+        if (include.includes('lib.hlsl')) {
+            return false;
+        }
+
         if (ctx.includeDeps.includes(include)) {
             return true;
         }
