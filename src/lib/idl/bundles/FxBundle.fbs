@@ -209,41 +209,53 @@ table MatBundle
 
 union BundleContent { PartBundle, MatBundle }
 
-table UISpinner 
-{
-    name: string; 
-    min: int;
-    max: int;
-    step: int;
-    value: [ ubyte ];
+table  StringValue { value: string; }
+struct UintValue { value: uint; }
+struct IntValue { value: int; }
+struct FloatValue { value: float; }
+struct Float2Value { 
+    x: float;
+    y: float; 
+}
+struct Float3Value { 
+    x: float;
+    y: float;
+    z: float;
+}
+struct Float4Value { 
+    x: float;
+    y: float;
+    z: float;
+    w: float;
+}
+struct ColorValue {
+    r: ubyte;
+    g: ubyte;
+    b: ubyte;
+    a: ubyte;
 }
 
-table UIFloatSpinner 
+union PropertyValue { UintValue, IntValue, FloatValue, StringValue }
+union ControlValue { UintValue, IntValue, FloatValue, Float2Value, Float3Value, Float4Value, ColorValue }
+
+table ViewTypeProperty 
 {
-    name: string; // UIName
-    min: float;
-    max: float;
-    step: float;
-    value: [ ubyte ];
+    name: string;
+    value: PropertyValue;
 }
-
-table UIColor { name: string; value: [ ubyte ]; }
-table UIFloat3 { name: string; value: [ ubyte ]; }
-table UIFloat { name: string; value: [ ubyte ]; }
-table UIInt { name: string; value: [ ubyte ]; }
-table UIUint { name: string; value: [ ubyte ]; }
-table UIBool { name: string; value: [ ubyte ]; }
-
-union UIProperties { UISpinner, UIFloatSpinner, UIColor, UIFloat, UIFloat3, UIInt, UIUint }
 
 table UIControl
 {
     name: string;
-    props: UIProperties;
+    value: ControlValue;
+    properties: [ ViewTypeProperty ];
 }
 
-
-table PresetEntry { name: string; value: [ ubyte ]; }
+table PresetEntry
+{
+	name: string;
+	value: ControlValue;
+}
 
 table Preset 
 {

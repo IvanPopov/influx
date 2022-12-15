@@ -1,20 +1,37 @@
 import { assert, isDef } from "@lib/common";
 import { type } from "@lib/fx/analisys/helpers";
-import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
 import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
+import { ControlValueType, PropertyValueType } from "../bundles/utils";
+import { Color, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
 
-export interface IPresetEntry { name: string; value: Uint8Array; }
+export interface IViewTypeProperty {
+    name: string;
+    type: string;
+    value: PropertyValueType;
+}
 
+export interface IUIControl {
+    name: string;
+    type: string;
+    value: ControlValueType;
+    properties: IViewTypeProperty[];
+}
+
+export interface IPresetEntry {
+    name: string;
+    type: string;
+    value: ControlValueType;
+}
 
 export interface IPreset {
     name: string;
@@ -22,6 +39,7 @@ export interface IPreset {
     data: IPresetEntry[];
 }
 
+export type IUIControlReflection = IUIControl;
 
 export interface IPassReflection {
     instance: string;
@@ -70,55 +88,19 @@ export interface IPartFxReflection extends ITechniqueReflection<IPartFxPassRefle
     CSParticlesUpdateRoutine: ICSShaderReflectionEx;
 }
 
-
-
-interface IUIControlBase {
-    UIName: string;
-    UIType: string;
-
-    name: string;
-    value: Uint8Array;
-}
-
-
-export interface IUISpinner extends IUIControlBase {
-    UIType: 'FloatSpinner' | 'Spinner';
-    UIMin?: number;
-    UIMax?: number;
-    UIStep?: number;
-}
-
-
-export interface IUIVector extends IUIControlBase {
-    UIType: 'Float3' | 'Float4' | 'Color'; // Color <=> Float4
-}
-
-
-export interface IUIConstant extends IUIControlBase {
-    UIType: 'Float' | 'Int' | 'Uint';
-}
-
-
-export type IUIControl = IUISpinner | IUIConstant | IUIVector;
-export type IUIControlReflection = IUIControl;
-
 // returns hlsl system type name corresponding to ui type
 function typeNameOfUIControl(ctrl: IUIControl) {
-    const type = ctrl.UIType;
+    const type = ctrl.type;
     switch (type) {
-        case 'Color':
-        case 'Float4':
+        case 'color':
             return 'float4';
-        case 'Float3':
-            return 'float3';
-        case 'Float':
-        case 'FloatSpinner':
-            return 'float';
-        case 'Spinner':
-        case 'Int':
-            return 'int';
-        case 'Uint':
-            return 'uint';
+        case 'int':
+        case 'uint':
+        case 'float':
+        case 'float2':
+        case 'float3':
+        case 'float4':
+            return type;
         default:
             console.assert(false, `unsupported UI type: ${type}`);
     }
@@ -258,75 +240,57 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
     */
     protected addControl(ctx: ContextT, src: IVariableDeclInstruction): boolean {
-        let ctrl: IUIControl = { UIType: null, UIName: null, name: null, value: null };
-
         if (!src.annotation) {
-            return false;
+            return false; //TODO: controls without annotations
         }
 
         if (!src.isGlobal()) {
             return false;
         }
+        
+        let control : IUIControl = { name: src.id.name, type: src.type.name, value: null, properties: [] };
 
-        src.annotation.decls.forEach(decl => {
-            switch (decl.name) {
-                case 'UIType':
-                    const type = <StringInstruction>decl.initExpr.args[0];
-                    ctrl.UIType = <typeof ctrl.UIType>type.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                    console.assert(['FloatSpinner', 'Spinner', 'Color', 'Float3', 'Int', 'Uint', 'Float'].indexOf(ctrl.UIType) !== -1, 'invalid control type found');
-                    break;
-                case 'UIName':
-                    const name = <StringInstruction>decl.initExpr.args[0];
-                    ctrl.UIName = name.value.split('"').join(''); // hack to remove quotes (should have been fixed during analyze stage)
-                    break;
-                case 'UIMin': (ctrl as IUISpinner).UIMin = Number(decl.initExpr.args[0].toCode()); break;
-                case 'UIMax': (ctrl as IUISpinner).UIMax = Number(decl.initExpr.args[0].toCode()); break;
-                case 'UIStep': (ctrl as IUISpinner).UIStep = Number(decl.initExpr.args[0].toCode()); break;
-            }
-        });
+        if (src.annotation) {
+            src.annotation.decls.forEach(decl => {
+                let propertyName = decl.name;
+                let propertyType = decl.type.name;
 
-        if (!ctrl.UIType) {
-            switch (src.type.name) {
-                case 'float': ctrl.UIType = 'Float'; break;
-                case 'float3': ctrl.UIType = 'Float3'; break;
-                case 'int': ctrl.UIType = 'Int'; break;
-                case 'uint': ctrl.UIType = 'Uint'; break;
-            }
+                if (decl.initExpr.args.length !== 1) {
+                    return;
+                }
+
+                switch (propertyName) {
+                    case 'UIType': propertyName = '__type'; break;
+                    case 'UIName': propertyName = '__caption'; break;
+                    case 'UIMin': propertyName = '__min'; break;
+                    case 'UIMax': propertyName = '__max'; break;
+                    case 'UIStep': propertyName = '__step'; break;
+                }
+
+                let propertyValue = getPropertyValue(propertyType, decl.initExpr.args[0]);
+                if (['__min', '__max', '__step'].indexOf(propertyName) !== -1) {
+                    if (propertyType === 'float' && control.type === 'float' ||
+                        propertyType === 'int' && control.type === 'int' ||
+                        propertyType === 'uint' && control.type === 'uint') {
+                        control.properties.push({name: propertyName, type: propertyType, value: propertyValue});
+                    }
+                }
+                else{
+                    if (propertyName === '__type' && propertyType !== 'string') {
+                        return;
+                    }
+                    if (propertyName === '__type' && propertyValue === 'color') {
+                        control.type = 'color';
+                        return;
+                    }
+                    control.properties.push({name: propertyName, type: propertyType, value: propertyValue});
+                }
+            });
         }
-
-        let buffer = new ArrayBuffer(16); // todo: don't use fixed size
-        let view1 = new DataView(buffer);
-        let offset = 0;
-
-        src.initExpr?.args.forEach(arg => {
-            const instr = arg.instructionType === EInstructionTypes.k_InitExpr
-                ? ((arg as IInitExprInstruction).args[0])
-                : (<ILiteralInstruction<number>>arg);
-            switch (instr.instructionType) {
-                case EInstructionTypes.k_FloatExpr:
-                    view1.setFloat32(offset, (instr as FloatInstruction).value, true);
-                    offset += 4;
-                    break;
-                case EInstructionTypes.k_IntExpr:
-                    view1.setInt32(offset, (instr as IntInstruction).value, true);
-                    offset += 4;
-                    break;
-                case EInstructionTypes.k_BoolExpr:
-                    view1.setInt32(offset, +(instr as BoolInstruction).value, true);
-                    offset += 4;
-                    break;
-            }
-        });
-
-        // todo: validate controls
-        if (ctrl.UIType) {
-            ctrl.value = new Uint8Array(buffer);
-            ctrl.name = src.id.name;
-            ctx.addControl(ctrl);
-            return true;
-        }
-
-        return false;
+        
+        control.value = getControlValue(control.type, src.initExpr.args);
+        ctx.addControl(control);
+        return true;
     }
 
 
@@ -439,6 +403,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             }
             this.pop();
             this.emitChar('}');
+
 
             this.end();
 
@@ -1541,35 +1506,36 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         return fx.presets.map((preset, i): IPreset => {
             const name = preset.name;
             const desc = null; // todo
-            const data = preset.props.map((prop): IPresetEntry => {
-                const decl = prop.resolveDeclaration();
-                const type = decl.type;
-                const name = decl.name;
-                const value = new Uint8Array(16); // todo: don't use fixed size
-                const view = new DataView(value.buffer);
-                switch (type.name) {
-                    case 'float':
-                    case 'float2':
-                    case 'float3':
-                    case 'float4':
-                        prop.args.forEach((arg, i) => view.setFloat32(i * 4, (arg as FloatInstruction).value, true));
-                        break;
-                    case 'int':
-                    case 'int2':
-                    case 'int3':
-                    case 'int4':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, (arg as IntInstruction).value, true));
-                    case 'uint':
-                    case 'uint2':
-                    case 'uint3':
-                    case 'uint4':
-                        prop.args.forEach((arg, i) => view.setUint32(i * 4, (arg as IntInstruction).value, true));
-                    case 'bool':
-                        prop.args.forEach((arg, i) => view.setInt32(i * 4, +(arg as BoolInstruction).value, true));
-                        break;
+            let data : IPresetEntry[] = [];
+            preset.props.forEach(control => {
+                if (!control) {
+                    //FIX: In a case when the set of controls has changed, but the preset has remained the same.
+                    return;
                 }
-                return { name, value };
-            });
+
+                const src = control.resolveDeclaration();
+                let controlType = src.type.name;
+                if (src.annotation) {
+                    src.annotation.decls.forEach(prop => {
+                        let propertyName = prop.name;
+                        let propertyType = prop.type.name;
+        
+                        if (prop.initExpr.args.length !== 1) {
+                            return;
+                        }
+
+                        let propertyValue = getPropertyValue(propertyType, prop.initExpr.args[0]);
+                        if ((propertyName === '__type' || propertyName === 'UIType') && 
+                            propertyType === 'string' && propertyValue === 'color') {
+                            controlType = 'color';
+                            return;
+                        }
+                    });
+                }
+
+                const value = getControlValue(controlType, control.args);
+                data.push({ name: src.name, type: controlType, value: value });
+           });
             return { name, desc, data };
         });
     }
@@ -1593,5 +1559,56 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     }
 }
 
+function getPropertyValue(type : string, instr : IExprInstruction) : PropertyValueType {
+    instr = getExpr(instr);
+    switch(type) {
+        case 'int': return (instr as IntInstruction).value;
+        case 'uint': return (instr as IntInstruction).value;
+        case 'float': return (instr as FloatInstruction).value;
+        // hack to remove quotes (should have been fixed during analyze stage)
+        case 'string': return (instr as StringInstruction).value.split('"').join('');
+    }
+    assert(false, 'Unsupported type');
+    return null;
+}
 
+function getControlValue(type : string, args : IExprInstruction[]) : ControlValueType {
+    switch(type) {
+        case 'int': return (getExpr(args[0]) as IntInstruction).value;
+        case 'uint': return (getExpr(args[0]) as IntInstruction).value;
+        case 'float': return (getExpr(args[0]) as FloatInstruction).value;
+        case 'float2': {
+            let x = (getExpr(args[0]) as FloatInstruction).value;
+            let y = (getExpr(args[1]) as FloatInstruction).value;
+            return {x: x, y: y} as Vector2;
+        }
+        case 'float3': {
+            let x = (getExpr(args[0]) as FloatInstruction).value;
+            let y = (getExpr(args[1]) as FloatInstruction).value;
+            let z = (getExpr(args[2]) as FloatInstruction).value;
+            return {x: x, y: y, z: z} as Vector3;
+        }
+        case 'float4': {
+            let x = (getExpr(args[0]) as FloatInstruction).value;
+            let y = (getExpr(args[1]) as FloatInstruction).value;
+            let z = (getExpr(args[2]) as FloatInstruction).value;
+            let w = (getExpr(args[3]) as FloatInstruction).value;
+            return {x: x, y: y, z: z, w: w} as Vector4;
+        }
+        case 'color': {
+            let r = (getExpr(args[0]) as FloatInstruction).value;
+            let g = (getExpr(args[1]) as FloatInstruction).value;
+            let b = (getExpr(args[2]) as FloatInstruction).value;
+            let a = (getExpr(args[3]) as FloatInstruction).value;
+            return {r: r, g: g, b: b, a: a} as Color;
+        }
+    }
+    assert(false, 'Unsupported type');
+    return null;
+}
 
+function getExpr(expr : IExprInstruction) : IExprInstruction {
+    return expr.instructionType === EInstructionTypes.k_InitExpr 
+        ? ((expr as IInitExprInstruction).args[0])
+        : (<ILiteralInstruction<number>>expr);
+}

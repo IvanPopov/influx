@@ -18,13 +18,14 @@ import { asNativeRaw, typeAstToTypeLayout } from '@lib/fx/bytecode/VM/native';
 import * as Techniques from '@lib/fx/techniques';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
-import UniformHelper from '@lib/fx/UniformHelper';
-import { Color, Vector3 } from '@sandbox/store/IStoreState';
+import UniformHelper, { IUniformHelper } from '@lib/fx/UniformHelper';
+import { Color, Vector2, Vector3, Vector4 } from '@sandbox/store/IStoreState';
 import * as GLSL from './shaders/fx';
 
 import '@sandbox/styles/custom/dat-gui.css';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { ControlValueType } from '@lib/fx/bundles/utils';
 import { IMap } from '@lib/idl/IMap';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { prepareTrimesh } from './utils/adjacency';
 
 interface IFxSceneProps extends ITreeSceneProps {
@@ -83,7 +84,7 @@ const progressStyleFix: React.CSSProperties = {
 
 class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     state: IFxSceneState;
-
+    
     passes: {
         mesh: THREE.Mesh | THREE.LineSegments;
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
@@ -109,7 +110,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             ...this.stateInitials()
         };
     }
-
 
     resolveDependencies(emitter: IEmitter, onComplete: (emitter: IEmitter) => void) {
         const KNOWN_GEOMETRIES = ['arrow'];
@@ -145,12 +145,10 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         }
     }
 
-
     componentDidMount() {
-        super.componentDidMount();   
+        super.componentDidMount();
         this.addEmitter(this.props.emitter);
     }
-
 
     models: IMap<THREE.Mesh> = {};
     loadObjModel(name: string): Promise<THREE.Mesh> {
@@ -179,7 +177,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             );
         });
     }
-
     
     addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
@@ -214,7 +211,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.scene.add(mesh);
         this.passes.push({ mesh, instancedBuffer });
     }
-
 
     addPass(pass: IEmitterPass) {
         const desc = pass.getDesc();
@@ -592,27 +588,11 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         if (this.preset) {
             let preset = this.props.controls.presets.find(p => p.name == this.preset);
-            preset.data.forEach(entry => helper.set(entry.name).raw(entry.value));
+            preset.data.forEach(entry => this.setUniformValue(helper, entry.name, entry.type, entry.value));
         }
 
         for (let name in controls.values) {
-            switch (controls.props[name].type) {
-                case "UIFloatSpinner":
-                case "UIFloat": helper.set(name).float(controls.values[name] as number); break;
-                case "UISpinner":
-                case "UIInt":
-                case "UIUint":
-                    helper.set(name).int(controls.values[name] as number); break;
-                // todo: add alpha support!
-                case "UIFloat3":
-                    let { x, y, z } = controls.values[name] as Vector3;
-                    helper.set(name).float3(x, y, z); 
-                    break;
-                case "UIColor":
-                    let { r, g, b, a } = controls.values[name] as Color;
-                    helper.set(name).float4(r, g, b, a);
-                    break;
-            }
+            this.setUniformValue(helper, name, controls.controls[name].type, controls.values[name]);
         }
 
         let uniforms = helper.finish();
@@ -621,7 +601,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             timeline.tick();
             emitter.simulate(uniforms);
         }
-
+        
         emitter.prerender(uniforms);
         emitter.serialize(); // feed render buffer with instance data
 
@@ -667,6 +647,34 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.setState({ nParticles: emitter.getNumParticles() });
 
         // emitter.dump();
+    }
+
+    setUniformValue(helper: IUniformHelper, name: string, type: string, value: ControlValueType) {
+        switch (type) {
+            case 'int':
+            case 'uint':
+                helper.set(name).int(value as number); 
+                break;
+            case 'float':
+                helper.set(name).float(value as number); 
+                break;
+            case 'float2':
+                let v2 = value as Vector2;
+                helper.set(name).float2(v2.x, v2.y);
+                break;
+            case 'float3':
+                let v3 = value as Vector3;
+                helper.set(name).float3(v3.x, v3.y, v3.z); 
+                break;
+            case 'float4':
+                let v4 = value as Vector4;
+                helper.set(name).float4(v4.x, v4.y, v4.z, v4.w); 
+                break;
+            case 'color':
+                let color = value as Color;
+                helper.set(name).float4(color.r, color.g, color.b, color.a);
+                break;              
+        }
     }
 
     protected override cleanScene(time: number): void {

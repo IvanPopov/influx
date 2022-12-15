@@ -9,6 +9,7 @@ import { LGraph } from 'litegraph.js';
 import { ITimeline } from '@lib/fx/timeline';
 import * as S3D from '@lib/util/s3d/prjenv';
 import { ITechnique } from '@lib/idl/ITechnique';
+import { ControlValueType, PropertyValueType } from '@lib/fx/bundles/utils';
 
 export interface IMarker {
     range: IRange;
@@ -70,25 +71,16 @@ export interface INodePipeline {
     capacity: number;
 }
 
-
-export interface IPlaygroundControlProps {
-    min?: number;
-    max?: number;
-    step?: number;
-    type: string;
-    name?: string;
-    value?: Vector3 | Color | Number;
-}
-
-export type Color = { r: number; g: number; b: number; a: number };
+export type Vector2 = { x: number; y: number };
 export type Vector3 = { x: number; y: number; z: number };
 export type Vector4 = { x: number; y: number; z: number; w: number };
-export type ControlValue = Vector3 | Vector4 | Color | Number;
-export type ControlValues = IMap<ControlValue>;
+export type Color = { r: number; g: number; b: number; a: number };
+export type ControlValues = IMap<ControlValueType>;
 
 export interface IPlaygroundPresetEntry {
     name: string;
-    value: Uint8Array;
+    type: string; 
+    value: ControlValueType;
 }
 
 export interface IPlaygroundPreset {
@@ -97,9 +89,15 @@ export interface IPlaygroundPreset {
     data: IPlaygroundPresetEntry[];
 }
 
-export interface IPlaygroundControls {
+export interface IPlaygroundControl {
+    name: string;
+    type: string;
+    properties: IMap<PropertyValueType>;
+}
+
+export interface IPlaygroundControlsState {
+    controls: IMap<IPlaygroundControl>;
     values: ControlValues;
-    props: IMap<IPlaygroundControlProps>;
     presets: IPlaygroundPreset[];
 }
 
@@ -110,7 +108,7 @@ type PlaygroundPresets = IMap<ControlValues>;
 export interface IPlaygroundState {
     technique: ITechnique;
     timeline: ITimeline;
-    controls: IPlaygroundControls;
+    controls: IPlaygroundControlsState;
     presets: PlaygroundPresets;
     revision: number;               // number of updates of emitter
     wasm: boolean;                  // technique's backend mode
