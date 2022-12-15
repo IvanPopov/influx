@@ -52,11 +52,10 @@ struct PartLight {
  };
 `;
 
-interface IPartLight
-{
-    pos: [ number, number, number ];
+interface IPartLight {
+    pos: [number, number, number];
     radius: number;
-    color: [ number, number, number ];
+    color: [number, number, number];
     attenuation: number;
 }
 
@@ -84,9 +83,9 @@ const progressStyleFix: React.CSSProperties = {
 
 class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     state: IFxSceneState;
-    
+
     passes: {
-        mesh: THREE.Mesh | THREE.LineSegments;
+        meshes: (THREE.Mesh | THREE.LineSegments)[];
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
     }[];
 
@@ -99,6 +98,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     } = null;
 
     lights?: THREE.Light[];
+    models: IMap<THREE.Mesh[]> = {};
 
     constructor(props) {
         super(props);
@@ -112,11 +112,11 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
     resolveDependencies(emitter: IEmitter, onComplete: (emitter: IEmitter) => void) {
-        const KNOWN_GEOMETRIES = ['arrow'];
+        const KNOWN_GEOMETRIES = ['arrow', 'probe', 'cube'];
 
         const geoms: Set<string> = new Set();
         const nPass = emitter.getPassCount();
-        for (let i = 0; i < nPass; ++ i) {
+        for (let i = 0; i < nPass; ++i) {
             const geometry = emitter.getPass(i).getDesc().geometry;
             if (KNOWN_GEOMETRIES.includes(geometry)) {
                 geoms.add(geometry);
@@ -133,7 +133,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         // resolve dependencies
         let depNum = 0;
-        let tryFinish = () => { 
+        let tryFinish = () => {
             depNum--;
             if (depNum == 0) {
                 onComplete(emitter);
@@ -150,11 +150,11 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.addEmitter(this.props.emitter);
     }
 
-    models: IMap<THREE.Mesh> = {};
-    loadObjModel(name: string): Promise<THREE.Mesh> {
+
+    loadObjModel(name: string): Promise<THREE.Mesh[]> {
         const loader = new OBJLoader();
-        return new Promise<THREE.Mesh>((resolve, reject) => {
-            
+        return new Promise<THREE.Mesh[]>((resolve, reject) => {
+
             if (isDefAndNotNull(this.models[name])) {
                 resolve(this.models[name]);
                 return;
@@ -163,7 +163,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             loader.load(
                 `./assets/models/${name}.obj`,
                 (group: THREE.Group) => {
-                    this.models[name] = group.children[0] as THREE.Mesh;
+                    this.models[name] = group.children as THREE.Mesh[];
                     console.log(`model './assets/models/${name}.obj' is loaded.`);
                     resolve(this.models[name]);
                 },
@@ -177,7 +177,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             );
         });
     }
-    
+
     addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
@@ -206,10 +206,8 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         geometry.setDrawRange(0, pass.getNumRenderedParticles());
 
         const mesh = new THREE.LineSegments(geometry, material);
-
-        mesh.name = 'emitter';
         this.scene.add(mesh);
-        this.passes.push({ mesh, instancedBuffer });
+        this.passes.push({ meshes: [mesh], instancedBuffer });
     }
 
     addPass(pass: IEmitterPass) {
@@ -220,36 +218,15 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             return;
         }
 
-        const geometry = new THREE.InstancedBufferGeometry();
-        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry);
-
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
 
-        //
-        // Instance data
-        //
-
-        desc.instanceLayout.forEach(attr => {
-            const interleavedAttr = new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset);
-            geometry.setAttribute(attr.name, interleavedAttr);
+        const attributes = desc.instanceLayout.map(attr => {
+            return {
+                name: attr.name,
+                data: new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset)
+            };
         });
-
-        //
-        // Geometry
-        //
-
-        // FIXME: do not use hardcoded layout
-        const geometryFixedLayout = {
-            a_position0: instanceGeometry.attributes.position,
-            a_normal0: instanceGeometry.attributes.normal,
-            a_texcoord0: instanceGeometry.attributes.uv
-        };
-
-        geometry.index = instanceGeometry.index;
-        for (const attrName in geometryFixedLayout) {
-            geometry.attributes[attrName] = geometryFixedLayout[attrName];
-        }
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
@@ -262,11 +239,29 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             side: THREE.DoubleSide
         });
 
-        const mesh = new THREE.Mesh(geometry, material);
+        const meshes = this.createInstinceGeometry(desc.geometry).map(instanceGeometry => {
+            const geometry = new THREE.InstancedBufferGeometry();
+            attributes.forEach(({ name, data }) => { geometry.setAttribute(name, data); });
+            // FIXME: do not use hardcoded layout
+            const geometryFixedLayout = {
+                a_position0: instanceGeometry.attributes.position,
+                a_normal0: instanceGeometry.attributes.normal,
+                a_texcoord0: instanceGeometry.attributes.uv
+            };
+            if (instanceGeometry.index) {
+                geometry.setIndex(instanceGeometry.index);
+            } else {
+                geometry.setIndex(Array(instanceGeometry.attributes.position.array.length / 3).fill(0).map((x, i) => i));
+            }
+            // geometry.index = instanceGeometry.index;
+            for (const attrName in geometryFixedLayout) {
+                geometry.attributes[attrName] = geometryFixedLayout[attrName];
+            }
+            return new THREE.Mesh(geometry, material);
+        });
 
-        mesh.name = 'emitter';
-        this.scene.add(mesh);
-        this.passes.push({ mesh, instancedBuffer });
+        this.scene.add(...meshes);
+        this.passes.push({ meshes, instancedBuffer });
     }
 
 
@@ -364,43 +359,25 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     addPassLight() {
         this.showEnv();
-        const mesh = null;
-        const instancedBuffer = null;
-        this.passes.push({ mesh, instancedBuffer });
+        this.passes.push({ meshes: null, instancedBuffer: null });
     }
 
 
     addPassLWI(pass: IEmitterPass) {
         const desc = pass.getDesc();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
-        const geometry = new THREE.InstancedBufferGeometry();
-        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry, "box");
 
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
-
-        //
-        // Geometry
-        //
-
-        geometry.index = instanceGeometry.index;
-        geometry.attributes.position = instanceGeometry.attributes.position;
-        geometry.attributes.normal = instanceGeometry.attributes.normal;
-        geometry.attributes.uv = instanceGeometry.attributes.uv;
-        geometry.attributes.a_dynData_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 0);
-        geometry.attributes.a_dynData_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 4);
-        geometry.attributes.a_worldMat_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 8);
-        geometry.attributes.a_worldMat_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 12);
-        geometry.attributes.a_worldMat_2 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 16);
-        geometry.attributes.a_worldMatPrev_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 20);
-        geometry.attributes.a_worldMatPrev_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 24);
-        geometry.attributes.a_worldMatPrev_2 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 28);
-
-
-        // instancedBuffer.setDynamic(true);
         instancedBuffer.setUsage(THREE.DynamicDrawUsage);
-
-        geometry.instanceCount = pass.getNumRenderedParticles();
+        const a_dynData_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 0);
+        const a_dynData_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 4);
+        const a_worldMat_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 8);
+        const a_worldMat_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 12);
+        const a_worldMat_2 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 16);
+        const a_worldMatPrev_0 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 20);
+        const a_worldMatPrev_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 24);
+        const a_worldMatPrev_2 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 28);
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
@@ -413,53 +390,39 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             side: THREE.DoubleSide
         });
 
-        const mesh = new THREE.Mesh(geometry, material);
-
-        mesh.name = 'emitter';
-        this.scene.add(mesh);
-        this.passes.push({ mesh, instancedBuffer });
+        const meshes = this.createInstinceGeometry(desc.geometry, "box").map(instanceGeometry => {
+            const geometry = new THREE.InstancedBufferGeometry();
+            geometry.index = instanceGeometry.index;
+            geometry.attributes.position = instanceGeometry.attributes.position;
+            geometry.attributes.normal = instanceGeometry.attributes.normal;
+            geometry.attributes.uv = instanceGeometry.attributes.uv;
+            geometry.attributes.a_dynData_0 = a_dynData_0;
+            geometry.attributes.a_dynData_1 = a_dynData_1;
+            geometry.attributes.a_worldMat_0 = a_worldMat_0;
+            geometry.attributes.a_worldMat_1 = a_worldMat_1;
+            geometry.attributes.a_worldMat_2 = a_worldMat_2;
+            geometry.attributes.a_worldMatPrev_0 = a_worldMatPrev_0;
+            geometry.attributes.a_worldMatPrev_1 = a_worldMatPrev_1;
+            geometry.attributes.a_worldMatPrev_2 = a_worldMatPrev_2;
+            geometry.instanceCount = pass.getNumRenderedParticles();
+            return new THREE.Mesh(geometry, material);
+        });
+        this.scene.add(...meshes);
+        this.passes.push({ meshes: meshes, instancedBuffer });
     }
 
 
     addPassDefaultMat(pass: IEmitterPass) {
         const desc = pass.getDesc();
-        const geometry = new THREE.InstancedBufferGeometry();
-        const instanceGeometry: THREE.BufferGeometry = this.createInstinceGeometry(desc.geometry);
         const instanceData = Techniques.memoryToF32Array(pass.getData());
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(new Float32Array(instanceData.buffer, instanceData.byteOffset), desc.stride);
-
-        //
-        // Geometry
-        //
-
-        geometry.index = instanceGeometry.index;
-        geometry.attributes.position = instanceGeometry.attributes.position;
-        geometry.attributes.normal = instanceGeometry.attributes.normal;
-        geometry.attributes.uv = instanceGeometry.attributes.uv;
-
-        //
-        // Instanced data
-        //
-
-        // instancedBuffer.setDynamic(true);
         instancedBuffer.setUsage(THREE.DynamicDrawUsage);
-
-        /*
-        struct DefaultShaderInput {
-            float3 pos : POSITION;
-            float4 color : COLOR0;
-            float  size : SIZE;
-        };
-        */
+        // instancedBuffer.setDynamic(true);
         // todo: remove hardcoded layout or check it's validity.
-        geometry.attributes.offset = new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0);
-        geometry.attributes.color = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3);
-        geometry.attributes.size = new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7);
-
-        // geometry.maxInstancedCount = pass.length();
-        geometry.instanceCount = pass.getNumRenderedParticles();
-
+        const offset = new THREE.InterleavedBufferAttribute(instancedBuffer, 3, 0);
+        const color = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3);
+        const size = new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7);
 
         const material = new THREE.RawShaderMaterial({
             uniforms: {},
@@ -470,36 +433,46 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             depthTest: false
         });
 
-        const mesh = new THREE.Mesh(geometry, material);
+        const meshes = this.createInstinceGeometry(desc.geometry).map(instanceGeometry => {
+            const geometry = new THREE.InstancedBufferGeometry();
+            geometry.index = instanceGeometry.index;
+            geometry.attributes.position = instanceGeometry.attributes.position;
+            geometry.attributes.normal = instanceGeometry.attributes.normal;
+            geometry.attributes.uv = instanceGeometry.attributes.uv;
+            geometry.attributes.offset = offset;
+            geometry.attributes.color = color;
+            geometry.attributes.size = size;
+            geometry.instanceCount = pass.getNumRenderedParticles();
+            return new THREE.Mesh(geometry, material);
+        });
 
-        mesh.name = 'emitter';
-        this.scene.add(mesh);
-        this.passes.push({ mesh, instancedBuffer });
+        this.scene.add(...meshes);
+        this.passes.push({ meshes, instancedBuffer });
     }
 
 
-    createInstinceGeometry(geometry: string, fallback = "billboard"): THREE.BufferGeometry {
-        let instanceGeometry: THREE.BufferGeometry = null;
+    createInstinceGeometry(geometry: string, fallback = "billboard"): THREE.BufferGeometry[] {
+        let instanceGeometry: THREE.BufferGeometry[] = null;
         switch (geometry) {
             case "box":
-                instanceGeometry = new THREE.BoxGeometry();
+                instanceGeometry = [new THREE.BoxGeometry()];
                 break;
             case "sphere":
-                instanceGeometry = new THREE.SphereGeometry(0.5);
+                instanceGeometry = [new THREE.SphereGeometry(0.5)];
                 break;
             case "cylinder":
-                instanceGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.0);
+                instanceGeometry = [new THREE.CylinderGeometry(0.5, 0.5, 1.0)];
                 break;
             case "line":
                 console.assert(false, "line should have been handled using different code branch");
                 break;
             case "billboard":
-                instanceGeometry = new THREE.PlaneGeometry();
+                instanceGeometry = [new THREE.PlaneGeometry()];
                 break;
             default:
-                let mesh = this.models[geometry];
-                if (mesh) {
-                    return mesh.geometry;
+                let meshes = this.models[geometry];
+                if (meshes) {
+                    return meshes.map(mesh => mesh.geometry);
                 }
                 return this.createInstinceGeometry(fallback);
         }
@@ -519,21 +492,21 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         // todo: make it on demand based on emitter's needs
         const setExplicitlyCubeGeom = (emitter: IEmitter) => {
-            const mesh = this.models['cube'];
+            const mesh = this.models['cube'][0];
             const geometry = mesh.geometry;
             assert(geometry);
             const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
-            
-            emitter.setTrimesh("geom", 
-                vertCount, 
-                faceCount, 
-                Techniques.viewToMemory(new Float32Array(vertices)), 
-                Techniques.viewToMemory(new Uint32Array(faces)), 
+
+            emitter.setTrimesh("geom",
+                vertCount,
+                faceCount,
+                Techniques.viewToMemory(new Float32Array(vertices)),
+                Techniques.viewToMemory(new Uint32Array(faces)),
                 Techniques.viewToMemory(new Uint32Array(indicesAdj))
             );
 
-            this.scene.add(mesh);
-            mesh.material = new THREE.MeshNormalMaterial();
+            // this.scene.add(mesh);
+            // mesh.material = new THREE.MeshNormalMaterial();
         };
 
         const createPasses = (emitter) => {
@@ -567,7 +540,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
 
-    fillScene (time: DOMHighResTimeStamp) {
+    fillScene(time: DOMHighResTimeStamp) {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
         const controls = this.props.controls;
@@ -601,7 +574,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             timeline.tick();
             emitter.simulate(uniforms);
         }
-        
+
         emitter.prerender(uniforms);
         emitter.serialize(); // feed render buffer with instance data
 
@@ -612,20 +585,19 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             const emitPass = emitter.getPass(iPass);
             const passDesc = emitPass.getDesc();
 
-            if (!rendPass.mesh) {
+            if (!rendPass.meshes) {
                 console.assert(emitPass.getDesc().instanceName == "PartLight");
 
                 // is light pass
                 const instanceData = Techniques.memoryToU8Array(emitPass.getData());
-                
-                for (let iPart = 0; iPart < emitPass.getNumRenderedParticles(); ++iPart)
-                {
+
+                for (let iPart = 0; iPart < emitPass.getNumRenderedParticles(); ++iPart) {
                     const pl = asNativeRaw(instanceData.subarray(PartLightT.size * iPart, (iPart + 1) * PartLightT.size), PartLightT) as IPartLight;
                     const ci = Math.max(...pl.color);
                     const c = Math.floor(pl.color[0] / ci * 255) | (Math.floor(pl.color[1] / ci * 255) << 8) | (Math.floor(pl.color[2] / ci * 255) << 16);
-                    const light = new THREE.PointLight( c, 10, pl.radius, pl.attenuation == 0 ? 4 : pl.attenuation );
+                    const light = new THREE.PointLight(c, 10, pl.radius, pl.attenuation == 0 ? 4 : pl.attenuation);
                     const helper = new THREE.PointLightHelper(light);
-                    light.position.set( ...pl.pos );
+                    light.position.set(...pl.pos);
                     lights.push(light, helper);
                     // console.log(`${iPart}/${emitPass.getNumRenderedParticles()}`, partLight);
                 }
@@ -633,14 +605,15 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 continue;
             }
 
-            const geometry = rendPass.mesh.geometry as THREE.BufferGeometry;
-
             rendPass.instancedBuffer.needsUpdate = true;
-            if (passDesc.geometry === "line") {
-                geometry.setDrawRange(0, emitPass.getNumRenderedParticles());
-            } else {
-                (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.getNumRenderedParticles();
-            }
+            rendPass.meshes.forEach(mesh => {
+                const geometry = mesh.geometry as THREE.BufferGeometry;
+                if (passDesc.geometry === "line") {
+                    geometry.setDrawRange(0, emitPass.getNumRenderedParticles());
+                } else {
+                    (geometry as THREE.InstancedBufferGeometry).instanceCount = emitPass.getNumRenderedParticles();
+                }
+            });
             // emitPass.dump();
         }
         if (lights.length) this.scene.add(...lights);
@@ -653,10 +626,10 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         switch (type) {
             case 'int':
             case 'uint':
-                helper.set(name).int(value as number); 
+                helper.set(name).int(value as number);
                 break;
             case 'float':
-                helper.set(name).float(value as number); 
+                helper.set(name).float(value as number);
                 break;
             case 'float2':
                 let v2 = value as Vector2;
@@ -664,16 +637,16 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 break;
             case 'float3':
                 let v3 = value as Vector3;
-                helper.set(name).float3(v3.x, v3.y, v3.z); 
+                helper.set(name).float3(v3.x, v3.y, v3.z);
                 break;
             case 'float4':
                 let v4 = value as Vector4;
-                helper.set(name).float4(v4.x, v4.y, v4.z, v4.w); 
+                helper.set(name).float4(v4.x, v4.y, v4.z, v4.w);
                 break;
             case 'color':
                 let color = value as Color;
                 helper.set(name).float4(color.r, color.g, color.b, color.a);
-                break;              
+                break;
         }
     }
 
@@ -704,10 +677,11 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         const reloadEmitter = () => {
             this.passes?.forEach(pass => {
-                this.scene.remove(pass.mesh);
+                if (pass.meshes)
+                    this.scene.remove(...pass.meshes);
                 // verbose('emitter\'s pass removed.');
             });
-    
+
             if (this.props.emitter) {
                 this.addEmitter(this.props.emitter);
             }
@@ -747,9 +721,9 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                     style={progressStyleFix}
                 />
                 <div style={statsStyleFix}>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br/>
-                    simulation: CPU<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br />
+                    simulation: CPU<br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br />
                 </div>
             </div>
         );

@@ -182,10 +182,10 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     }
 
     componentDidMount() {
-        super.componentDidMount({ grid: true });
+        super.componentDidMount({ grid: true, fog: true });
 
         this.scene.background = new THREE.Color(0x333333);
-
+        this.fog.color = new THREE.Color(0x333333);
         
         const scene = this.scene;
         const camera = this.camera;

@@ -21,7 +21,6 @@ import { GUI } from 'dat.gui';
 
 // must be imported last
 import { cloneValue, colorToUint, encodeControlsToString, uintToColor } from '@lib/fx/bundles/utils';
-import { assert } from 'console';
 
 export interface ITreeSceneProps {
     style?: React.CSSProperties;
@@ -41,10 +40,11 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     // fps stats
     private frames = 0;
     private prevTime = 0;
-    
+
     protected renderer: THREE.WebGLRenderer;
     protected camera: THREE.PerspectiveCamera;
     protected scene: THREE.Scene;
+    protected fog: THREE.FogBase;
     protected controls: OrbitControls;
     protected mount: HTMLDivElement;
 
@@ -67,13 +67,21 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    componentDidMount({ grid } = { grid: true }) {
+    componentDidMount({ grid, fog } = { grid: true, fog: true }) {
         const width = this.mount.clientWidth;
         const height = this.mount.clientHeight;
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xCCCCCC);
         this.camera = this.createCamera(width, height);
+        this.fog = null;
+
+        if (fog) {
+            const color = 0xCCCCCC;  // white
+            this.fog = new THREE.FogExp2(color, 0.035);
+        }
+
+        this.scene.fog = this.fog;
 
         this.createGUI(this.props.controls);
 
@@ -92,7 +100,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         this.controls.enabled = false;
         // temp solution in order to not moving text cursor during movement
         this.controls.enableKeys = false;
-        
+
         if (grid)
             this.createGridHelper();
 
@@ -144,7 +152,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         camera.position.z = 3;
         camera.position.y = 2;
         camera.position.x = 2;
-        camera.lookAt(new THREE.Vector3(0, 0, 0)); 
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
         return camera;
     }
 
@@ -184,20 +192,20 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             // nothing todo, same controls have been requested
             return;
         }
-        
+
         // remove active preset if it doesn't exist anymore
         if (this.preset && !controls.presets.find(p => p.name === this.preset)) {
             this.preset = null;
         }
 
         const gui = new GUI({ autoPlace: false });
-        
+
         for (let name in controls.values) {
             let control = controls.controls[name];
             let viewType = control.properties["__type"] as string || control.type;
             let caption = control.properties["__caption"] as string || control.name;
             let ctrl = null;
-            switch(viewType){
+            switch (viewType) {
                 case 'int':
                 case 'uint':
                 case 'float':
@@ -245,7 +253,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         }
 
         if (controls.presets?.length) {
-            gui.add(this, 'preset', [ '', ...controls.presets.map(p => p.name) ]).onChange(name => {
+            gui.add(this, 'preset', ['', ...controls.presets.map(p => p.name)]).onChange(name => {
                 console.log('apply preset', name);
                 const preset = controls.presets.find(p => p.name == name);
                 if (preset) {
@@ -265,8 +273,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
         const copyToClipboard = '<center>copy to clipboard</center>';
         // todo: show notification
-        gui.add({ [copyToClipboard]: () => 
-            {
+        gui.add({
+            [copyToClipboard]: () => {
                 copy(encodeControlsToString(controls), { debug: true });
                 toast({
                     size: 'tiny',
@@ -282,7 +290,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         gui.open();
 
         this.mount.appendChild(gui.domElement);
-        
+
         gui.domElement.style.position = 'absolute';
         gui.domElement.style.top = '2px';
 
@@ -291,7 +299,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    private createGridHelper(size = 10, divisions = 10) {
+    private createGridHelper(size = 200, divisions = 200) {
         const gridHelper = new THREE.GridHelper(size, divisions);
         this.scene.add(gridHelper);
     }
@@ -305,7 +313,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    
+
     start = () => {
         if (!this.frameId) {
             this.frameId = requestAnimationFrame(this.animate);
@@ -317,19 +325,18 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         cancelAnimationFrame(this.frameId);
     }
 
-    
-    protected begin()
-    {
+
+    protected begin() {
         // nothing todo
     }
 
 
     protected end() {
-        this.frames ++;
-        const time = ( performance || Date ).now();
+        this.frames++;
+        const time = (performance || Date).now();
 
-        if ( time > this.prevTime + 1000 ) {
-            this.updateFps( ( this.frames * 1000 ) / ( time - this.prevTime ), 100 );
+        if (time > this.prevTime + 1000) {
+            this.updateFps((this.frames * 1000) / (time - this.prevTime), 100);
             this.prevTime = time;
             this.frames = 0;
         }
@@ -338,10 +345,10 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    private updateFps ( value, maxValue ) {
+    private updateFps(value, maxValue) {
         const fps = this.state.fps;
-        const min = Math.min( fps.min, value );
-        const max = Math.max( fps.max, value );
+        const min = Math.min(fps.min, value);
+        const max = Math.max(fps.max, value);
         this.setState({ fps: { min, max, value } });
     }
 
@@ -365,8 +372,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
-    protected fillScene(time: DOMHighResTimeStamp) {}
-    protected cleanScene(time: DOMHighResTimeStamp) {}
+    protected fillScene(time: DOMHighResTimeStamp) { }
+    protected cleanScene(time: DOMHighResTimeStamp) { }
 
     protected renderScene(time: DOMHighResTimeStamp) { this.renderer.render(this.scene, this.camera); }
 
@@ -375,7 +382,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             <div
                 style={this.props.style}
                 ref={(mount) => { this.mount = mount; }}
-             />
+            />
         );
     }
 }
