@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <vector>
+#include <string>
+#include <iostream>
 
 namespace VM
 {

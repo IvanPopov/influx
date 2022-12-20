@@ -65,7 +65,6 @@ table TrimeshBundle
     verticesName: string;
     facesName: string;
     adjacencyName: string;
-    resourcePath: string;
 }
 
 
@@ -209,7 +208,9 @@ table MatBundle
 
 union BundleContent { PartBundle, MatBundle }
 
-table  StringValue { value: string; }
+table StringValue { value: string; }
+table TextureValue { value: string; }
+table MeshValue { value: string; }
 struct UintValue { value: uint; }
 struct IntValue { value: int; }
 struct FloatValue { value: float; }
@@ -236,7 +237,7 @@ struct ColorValue {
 }
 
 union PropertyValue { UintValue, IntValue, FloatValue, StringValue }
-union ControlValue { UintValue, IntValue, FloatValue, Float2Value, Float3Value, Float4Value, ColorValue }
+union ControlValue { UintValue, IntValue, FloatValue, Float2Value, Float3Value, Float4Value, ColorValue, TextureValue, MeshValue }
 
 table ViewTypeProperty 
 {

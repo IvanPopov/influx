@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {BufferBundle as FxBufferBundle, BufferBundleT as FxBufferBundleT, Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, ColorValue as FxColorValue, ColorValueT as FxColorValueT, ControlValue as FxControlValue, Float2Value as FxFloat2Value, Float2ValueT as FxFloat2ValueT, Float3Value as FxFloat3Value, Float3ValueT as FxFloat3ValueT, Float4Value as FxFloat4Value, Float4ValueT as FxFloat4ValueT, FloatValue as FxFloatValue, FloatValueT as FxFloatValueT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, IntValue as FxIntValue, IntValueT as FxIntValueT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, PropertyValue as FxPropertyValue, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, StringValue as FxStringValue, StringValueT as FxStringValueT, TextureBundle as FxTextureBundle, TextureBundleT as FxTextureBundleT, TrimeshBundle as FxTrimeshBundle, TrimeshBundleT as FxTrimeshBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIControl as FxUIControl, UIControlT as FxUIControlT, UintValue as FxUintValue, UintValueT as FxUintValueT, ViewTypeProperty as FxViewTypeProperty, ViewTypePropertyT as FxViewTypePropertyT} from  './FxBundle_generated';
+import {BufferBundle as FxBufferBundle, BufferBundleT as FxBufferBundleT, Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, ColorValue as FxColorValue, ColorValueT as FxColorValueT, ControlValue as FxControlValue, Float2Value as FxFloat2Value, Float2ValueT as FxFloat2ValueT, Float3Value as FxFloat3Value, Float3ValueT as FxFloat3ValueT, Float4Value as FxFloat4Value, Float4ValueT as FxFloat4ValueT, FloatValue as FxFloatValue, FloatValueT as FxFloatValueT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, IntValue as FxIntValue, IntValueT as FxIntValueT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, MeshValue as FxMeshValue, MeshValueT as FxMeshValueT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, PropertyValue as FxPropertyValue, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, StringValue as FxStringValue, StringValueT as FxStringValueT, TextureBundle as FxTextureBundle, TextureBundleT as FxTextureBundleT, TextureValue as FxTextureValue, TextureValueT as FxTextureValueT, TrimeshBundle as FxTrimeshBundle, TrimeshBundleT as FxTrimeshBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIControl as FxUIControl, UIControlT as FxUIControlT, UintValue as FxUintValue, UintValueT as FxUintValueT, ViewTypeProperty as FxViewTypeProperty, ViewTypePropertyT as FxViewTypePropertyT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -161,13 +161,15 @@ export enum ControlValue{
   Float2Value = 4,
   Float3Value = 5,
   Float4Value = 6,
-  ColorValue = 7
+  ColorValue = 7,
+  TextureValue = 8,
+  MeshValue = 9
 }
 
 export function unionToControlValue(
   type: ControlValue,
-  accessor: (obj:FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue) => FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue|null
-): FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue|null {
+  accessor: (obj:FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue) => FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue|null
+): FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue|null {
   switch(FxControlValue[type]) {
     case 'NONE': return null; 
     case 'UintValue': return accessor(new FxUintValue())! as FxUintValue;
@@ -177,15 +179,17 @@ export function unionToControlValue(
     case 'Float3Value': return accessor(new FxFloat3Value())! as FxFloat3Value;
     case 'Float4Value': return accessor(new FxFloat4Value())! as FxFloat4Value;
     case 'ColorValue': return accessor(new FxColorValue())! as FxColorValue;
+    case 'TextureValue': return accessor(new FxTextureValue())! as FxTextureValue;
+    case 'MeshValue': return accessor(new FxMeshValue())! as FxMeshValue;
     default: return null;
   }
 }
 
 export function unionListToControlValue(
   type: ControlValue, 
-  accessor: (index: number, obj:FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue) => FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue|null, 
+  accessor: (index: number, obj:FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue) => FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue|null, 
   index: number
-): FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxUintValue|null {
+): FxColorValue|FxFloat2Value|FxFloat3Value|FxFloat4Value|FxFloatValue|FxIntValue|FxMeshValue|FxTextureValue|FxUintValue|null {
   switch(FxControlValue[type]) {
     case 'NONE': return null; 
     case 'UintValue': return accessor(index, new FxUintValue())! as FxUintValue;
@@ -195,6 +199,8 @@ export function unionListToControlValue(
     case 'Float3Value': return accessor(index, new FxFloat3Value())! as FxFloat3Value;
     case 'Float4Value': return accessor(index, new FxFloat4Value())! as FxFloat4Value;
     case 'ColorValue': return accessor(index, new FxColorValue())! as FxColorValue;
+    case 'TextureValue': return accessor(index, new FxTextureValue())! as FxTextureValue;
+    case 'MeshValue': return accessor(index, new FxMeshValue())! as FxMeshValue;
     default: return null;
   }
 }
@@ -1062,15 +1068,8 @@ adjacencyName(optionalEncoding?:any):string|Uint8Array|null {
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
-resourcePath():string|null
-resourcePath(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
-resourcePath(optionalEncoding?:any):string|Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 16);
-  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
-}
-
 static startTrimeshBundle(builder:flatbuffers.Builder) {
-  builder.startObject(7);
+  builder.startObject(6);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
@@ -1097,16 +1096,12 @@ static addAdjacencyName(builder:flatbuffers.Builder, adjacencyNameOffset:flatbuf
   builder.addFieldOffset(5, adjacencyNameOffset, 0);
 }
 
-static addResourcePath(builder:flatbuffers.Builder, resourcePathOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(6, resourcePathOffset, 0);
-}
-
 static endTrimeshBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, vertexCountUNameOffset:flatbuffers.Offset, faceCountUNameOffset:flatbuffers.Offset, verticesNameOffset:flatbuffers.Offset, facesNameOffset:flatbuffers.Offset, adjacencyNameOffset:flatbuffers.Offset, resourcePathOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, vertexCountUNameOffset:flatbuffers.Offset, faceCountUNameOffset:flatbuffers.Offset, verticesNameOffset:flatbuffers.Offset, facesNameOffset:flatbuffers.Offset, adjacencyNameOffset:flatbuffers.Offset):flatbuffers.Offset {
   TrimeshBundle.startTrimeshBundle(builder);
   TrimeshBundle.addName(builder, nameOffset);
   TrimeshBundle.addVertexCountUName(builder, vertexCountUNameOffset);
@@ -1114,7 +1109,6 @@ static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.O
   TrimeshBundle.addVerticesName(builder, verticesNameOffset);
   TrimeshBundle.addFacesName(builder, facesNameOffset);
   TrimeshBundle.addAdjacencyName(builder, adjacencyNameOffset);
-  TrimeshBundle.addResourcePath(builder, resourcePathOffset);
   return TrimeshBundle.endTrimeshBundle(builder);
 }
 
@@ -1125,8 +1119,7 @@ unpack(): TrimeshBundleT {
     this.faceCountUName(),
     this.verticesName(),
     this.facesName(),
-    this.adjacencyName(),
-    this.resourcePath()
+    this.adjacencyName()
   );
 }
 
@@ -1138,7 +1131,6 @@ unpackTo(_o: TrimeshBundleT): void {
   _o.verticesName = this.verticesName();
   _o.facesName = this.facesName();
   _o.adjacencyName = this.adjacencyName();
-  _o.resourcePath = this.resourcePath();
 }
 }
 
@@ -1149,8 +1141,7 @@ constructor(
   public faceCountUName: string|Uint8Array|null = null,
   public verticesName: string|Uint8Array|null = null,
   public facesName: string|Uint8Array|null = null,
-  public adjacencyName: string|Uint8Array|null = null,
-  public resourcePath: string|Uint8Array|null = null
+  public adjacencyName: string|Uint8Array|null = null
 ){}
 
 
@@ -1161,7 +1152,6 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const verticesName = (this.verticesName !== null ? builder.createString(this.verticesName!) : 0);
   const facesName = (this.facesName !== null ? builder.createString(this.facesName!) : 0);
   const adjacencyName = (this.adjacencyName !== null ? builder.createString(this.adjacencyName!) : 0);
-  const resourcePath = (this.resourcePath !== null ? builder.createString(this.resourcePath!) : 0);
 
   return FxTrimeshBundle.createTrimeshBundle(builder,
     name,
@@ -1169,8 +1159,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
     faceCountUName,
     verticesName,
     facesName,
-    adjacencyName,
-    resourcePath
+    adjacencyName
   );
 }
 }
@@ -2958,6 +2947,146 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   );
 }
 }
+export class TextureValue {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):TextureValue {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsTextureValue(bb:flatbuffers.ByteBuffer, obj?:TextureValue):TextureValue {
+  return (obj || new TextureValue()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsTextureValue(bb:flatbuffers.ByteBuffer, obj?:TextureValue):TextureValue {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new TextureValue()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+value():string|null
+value(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+value(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+static startTextureValue(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
+
+static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, valueOffset, 0);
+}
+
+static endTextureValue(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createTextureValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset):flatbuffers.Offset {
+  TextureValue.startTextureValue(builder);
+  TextureValue.addValue(builder, valueOffset);
+  return TextureValue.endTextureValue(builder);
+}
+
+unpack(): TextureValueT {
+  return new TextureValueT(
+    this.value()
+  );
+}
+
+
+unpackTo(_o: TextureValueT): void {
+  _o.value = this.value();
+}
+}
+
+export class TextureValueT {
+constructor(
+  public value: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const value = (this.value !== null ? builder.createString(this.value!) : 0);
+
+  return FxTextureValue.createTextureValue(builder,
+    value
+  );
+}
+}
+export class MeshValue {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):MeshValue {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsMeshValue(bb:flatbuffers.ByteBuffer, obj?:MeshValue):MeshValue {
+  return (obj || new MeshValue()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsMeshValue(bb:flatbuffers.ByteBuffer, obj?:MeshValue):MeshValue {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new MeshValue()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+value():string|null
+value(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+value(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
+static startMeshValue(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
+
+static addValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, valueOffset, 0);
+}
+
+static endMeshValue(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createMeshValue(builder:flatbuffers.Builder, valueOffset:flatbuffers.Offset):flatbuffers.Offset {
+  MeshValue.startMeshValue(builder);
+  MeshValue.addValue(builder, valueOffset);
+  return MeshValue.endMeshValue(builder);
+}
+
+unpack(): MeshValueT {
+  return new MeshValueT(
+    this.value()
+  );
+}
+
+
+unpackTo(_o: MeshValueT): void {
+  _o.value = this.value();
+}
+}
+
+export class MeshValueT {
+constructor(
+  public value: string|Uint8Array|null = null
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const value = (this.value !== null ? builder.createString(this.value!) : 0);
+
+  return FxMeshValue.createMeshValue(builder,
+    value
+  );
+}
+}
 export class UintValue {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -3603,7 +3732,7 @@ export class UIControlT {
 constructor(
   public name: string|Uint8Array|null = null,
   public valueType: FxControlValue = FxControlValue.NONE,
-  public value: FxColorValueT|FxFloat2ValueT|FxFloat3ValueT|FxFloat4ValueT|FxFloatValueT|FxIntValueT|FxUintValueT|null = null,
+  public value: FxColorValueT|FxFloat2ValueT|FxFloat3ValueT|FxFloat4ValueT|FxFloatValueT|FxIntValueT|FxMeshValueT|FxTextureValueT|FxUintValueT|null = null,
   public properties: (ViewTypePropertyT)[] = []
 ){}
 
@@ -3713,7 +3842,7 @@ export class PresetEntryT {
 constructor(
   public name: string|Uint8Array|null = null,
   public valueType: FxControlValue = FxControlValue.NONE,
-  public value: FxColorValueT|FxFloat2ValueT|FxFloat3ValueT|FxFloat4ValueT|FxFloatValueT|FxIntValueT|FxUintValueT|null = null
+  public value: FxColorValueT|FxFloat2ValueT|FxFloat3ValueT|FxFloat4ValueT|FxFloatValueT|FxIntValueT|FxMeshValueT|FxTextureValueT|FxUintValueT|null = null
 ){}
 
 

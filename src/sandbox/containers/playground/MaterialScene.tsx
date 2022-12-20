@@ -467,7 +467,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         }
     }
 
-    protected fillScene(time: number): void {
+    protected beginFrame(): void {
         this.updateUniformsGroups();
         this.updateSingleUniforms();
 
@@ -475,11 +475,11 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         timeline.tick();
     }
 
-    protected renderScene(time) {
+    protected renderFrame() {
         if (this.params.bloom) {
             this.composer.render();
         } else {
-            super.renderScene(time);
+            super.renderFrame();
         }
     }
 

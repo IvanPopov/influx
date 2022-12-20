@@ -13,6 +13,11 @@ import copy from 'copy-to-clipboard';
 import * as React from 'react';
 import { toast } from 'react-semantic-toasts';
 import * as THREE from 'three';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { TGALoader } from 'three/examples/jsm/loaders/TGALoader';
+import * as ipc from '@sandbox/ipc';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { ITimeline } from '@lib/fx/timeline';
 
@@ -22,6 +27,7 @@ import { GUI } from 'dat.gui';
 // must be imported last
 import { cloneValue, colorToUint, encodeControlsToString, uintToColor } from '@lib/fx/bundles/utils';
 
+
 export interface ITreeSceneProps {
     style?: React.CSSProperties;
     timeline: ITimeline;
@@ -30,11 +36,91 @@ export interface ITreeSceneProps {
     canvasRef?: (canvas: HTMLCanvasElement) => void;
 }
 
+
 export interface IThreeSceneState {
     controls: string; // hash
     fps: { min: number, max: number, value: number };
 }
 
+
+function GetAssetsTexturesPath() {
+    return "./assets/textures";
+}
+
+
+export function GetAssetsTextures() {
+    if (!ipc.isElectron()) {
+        return [ 
+            'saber-logo.png', 
+            'checker2x2.png' 
+        ];
+    } else {
+        const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        const texturePath = path.join(sandboxPath, GetAssetsTexturesPath()); 
+        return fs.readdirSync(texturePath);
+    }
+}
+
+
+function GetAssetsModelsPath() {
+    return "./assets/models";
+}
+
+
+export function GetAssetsModels() {
+    if (!ipc.isElectron()) {
+        return [ 
+            'cube.obj', 
+            'probe.obj' 
+        ];
+    } else {
+        const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        const texturePath = path.join(sandboxPath, GetAssetsModelsPath()); 
+        return fs.readdirSync(texturePath);
+    }
+}
+
+
+export function loadObjModel(name: string): Promise<THREE.Mesh[]> {
+    const loader = new OBJLoader();
+    return new Promise<THREE.Mesh[]>((resolve, reject) => {
+        loader.load(
+            `${GetAssetsModelsPath()}/${name}`,
+            (group: THREE.Group) => {
+                console.log(`model '${GetAssetsModelsPath()}/${name}.obj' is loaded.`);
+                resolve(group.children as THREE.Mesh[]);
+            },
+            (xhr) => {
+                // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            (error) => {
+                console.log('An error happened');
+                reject();
+            }
+        );
+    });
+}
+
+
+export function loadTexture(name: string): Promise<THREE.DataTexture> {
+    const loader = new THREE.TextureLoader();
+    return new Promise<THREE.DataTexture>((resolve, reject) => {
+        loader.load(
+            `${GetAssetsTexturesPath()}/${name}`,
+            ( texture: THREE.DataTexture ) => {
+                console.log(`texture '${GetAssetsTexturesPath()}/${name}.tga' is loaded.`);
+                resolve(texture);
+            },
+            ( xhr ) => {
+                // console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            },
+            ( error ) => {
+                console.log( 'An error happened' );
+                reject();
+            }
+        );
+    });
+}
 
 class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends React.Component<P, S> {
     // fps stats
@@ -54,8 +140,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
     protected preset: string = null;
 
-
-    stateInitials(): IThreeSceneState {
+    protected stateInitials(): IThreeSceneState {
         return {
             controls: null,
             fps: {
@@ -118,9 +203,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
     componentWillUnmount() {
         this.stop();
-        window.removeEventListener('resize', this.onWindowResize, false);
         this.mount.removeChild(this.renderer.domElement);
-
+        window.removeEventListener('resize', this.onWindowResize, false);
         document.removeEventListener("visibilitychange", this.handleVisibilityChange, false);
     }
 
@@ -177,7 +261,9 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             return;
         }
 
-        const hash = JSON.stringify(controls.controls) + JSON.stringify(controls.presets);
+        const hash = JSON.stringify(controls.controls) + 
+                     JSON.stringify(controls.presets) + 
+                     JSON.stringify(controls.values);
 
         if (this.state.controls != hash) {
             this.removeGUI();
@@ -244,6 +330,30 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
                     vec4Folder.add(controls.values[name], 'z');
                     vec4Folder.add(controls.values[name], 'w');
                     vec4Folder.open();
+                case 'texture2d':
+                    {
+                        const list = GetAssetsTextures();
+                        let def = controls.values[name] as string;
+                        if (!list.includes(def)) {
+                            def = list[0];
+                        }
+                        // override initial value if it does not suit available resources
+                        gui.add(controls.values, name, list).setValue(def);
+                    }
+                    break;
+                case 'mesh':
+                    {
+                        const list = GetAssetsModels();
+                        let def = controls.values[name] as string;
+                        if (!list.includes(def)) {
+                            def = list[0];
+                        }
+                        // override initial value if it does not suit available resources
+                        const folder = gui.addFolder(caption);
+                        folder.add(controls.values, name, list).setValue(def);
+                        // folder.add({ ['[visible]']: false }, '[visible]');
+                        folder.open();    
+                    }
                     break;
             }
 
@@ -363,19 +473,19 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         this.begin();
 
         this.controls.update();
-        this.fillScene(time);
-        this.renderScene(time);
-        this.cleanScene(time);
+        this.beginFrame();
+        this.renderFrame();
+        this.endFrame();
         this.frameId = requestAnimationFrame(this.animate);
 
         this.end();
     }
 
 
-    protected fillScene(time: DOMHighResTimeStamp) { }
-    protected cleanScene(time: DOMHighResTimeStamp) { }
+    protected beginFrame() { }
+    protected renderFrame() { this.renderer.render(this.scene, this.camera); }
+    protected endFrame() { }
 
-    protected renderScene(time: DOMHighResTimeStamp) { this.renderer.render(this.scene, this.camera); }
 
     render() {
         return (
@@ -385,6 +495,9 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             />
         );
     }
+
+
+    
 }
 
 export default ThreeScene;

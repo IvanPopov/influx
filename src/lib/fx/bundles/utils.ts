@@ -1,14 +1,14 @@
 import { isObject } from "@lib/common";
-import { Bundle, BundleT, ColorValueT, ControlValue, Float2ValueT, Float3ValueT, Float4ValueT, FloatValueT, IntValueT, PresetT, PropertyValue, StringValueT, UIControlT, UintValueT } from "@lib/idl/bundles/FxBundle_generated";
+import { Bundle, BundleT, ColorValueT, ControlValue, Float2ValueT, Float3ValueT, Float4ValueT, FloatValueT, IntValueT, PresetT, PropertyValue, StringValueT, UIControlT, UintValueT, TextureValueT, MeshValueT } from "@lib/idl/bundles/FxBundle_generated";
 import { IMap } from "@lib/idl/IMap";
 import { Color, ControlValues, IPlaygroundControl, IPlaygroundControlsState, IPlaygroundPreset, IPlaygroundPresetEntry, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
 import { assert } from "@lib/common";
 import * as flatbuffers from 'flatbuffers';
 
 export type PropertyValueType = number | string;
-export type ControlValueType = number | Vector2 | Vector3 | Vector4 | Color;
+export type ControlValueType = number | Vector2 | Vector3 | Vector4 | Color | string;
 export type PropertyValueT = UintValueT | IntValueT | FloatValueT | StringValueT;
-export type ControlValueT = UintValueT | IntValueT | FloatValueT | Float2ValueT | Float3ValueT | Float4ValueT | ColorValueT;
+export type ControlValueT = UintValueT | IntValueT | FloatValueT | Float2ValueT | Float3ValueT | Float4ValueT | ColorValueT | TextureValueT;
 
 // -----------------------------------------------------------------------------------------
 
@@ -21,6 +21,8 @@ export function getFBControlType(type: string) : ControlValue {
         case 'float3': return ControlValue.Float3Value;
         case 'float4': return ControlValue.Float4Value;
         case 'color': return ControlValue.ColorValue;
+        case 'texture2d': return ControlValue.TextureValue;
+        case 'mesh': return ControlValue.MeshValue;
     }
     assert(false, 'Unsupported control type');
     return null;
@@ -58,6 +60,10 @@ export function encodeControlValue(type: string, data: ControlValueType) : Contr
             let b = Math.max(0, Math.min(255, color.b * 255));
             let a = Math.max(0, Math.min(255, color.a * 255));
             return new ColorValueT(r, g, b, a);
+        case 'texture2d':
+            return new TextureValueT(data as string);
+        case 'mesh':
+            return new MeshValueT(data as string);
     }
     assert(false, 'Unsupported control type');
     return null;
@@ -85,6 +91,8 @@ export function getControlType(type: ControlValue) : string {
         case ControlValue.Float3Value: return 'float3';
         case ControlValue.Float4Value: return 'float4';
         case ControlValue.ColorValue: return 'color';
+        case ControlValue.TextureValue: return 'texture2d';
+        case ControlValue.MeshValue: return 'mesh';
     }
     assert(false, 'Unsupported control value type');
     return null;
@@ -118,6 +126,10 @@ export function decodeControlValue(type: ControlValue, data: ControlValueT) : Co
         case ControlValue.ColorValue:
             let color = data as ColorValueT;
             return {r: color.r / 255, g: color.g / 255, b: color.b / 255, a: color.a / 255} as Color;
+        case ControlValue.TextureValue:
+            return (data as TextureValueT).value as string;
+        case ControlValue.MeshValue:
+            return (data as MeshValueT).value as string;
     }
     assert(false, 'Unsupported control value type');
     return null;

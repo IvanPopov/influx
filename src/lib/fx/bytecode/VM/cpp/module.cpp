@@ -1,10 +1,10 @@
 #include <emscripten/bind.h>    
 #include "bundle.h"
-
+ 
 #include "bundle.cpp"
-#include "bundle_uav.cpp"
+#include "bundle_uav.cpp" 
 
-namespace em = emscripten;
+namespace em = emscripten;  
  
 template <typename T> 
 std::vector<T> vecFromJSArray(const em::val &v)
@@ -18,7 +18,7 @@ std::vector<T> vecFromJSArray(const em::val &v)
     memoryView.call<void>("set", v);
  
     return rv;
-}
+}  
  
 EMSCRIPTEN_BINDINGS(bundle) 
 {  
@@ -28,7 +28,7 @@ EMSCRIPTEN_BINDINGS(bundle)
     em::value_object<VM::BUNDLE_NUMGROUPS>("Numgroups")
         .field("x", &VM::BUNDLE_NUMGROUPS::x)
         .field("y", &VM::BUNDLE_NUMGROUPS::y)
-        .field("z", &VM::BUNDLE_NUMGROUPS::z);
+        .field("z", &VM::BUNDLE_NUMGROUPS::z);  
     em::value_object<VM::BUNDLE_NUMTHREADS>("Numthreads")
         .field("x", &VM::BUNDLE_NUMTHREADS::x)
         .field("y", &VM::BUNDLE_NUMTHREADS::y)
@@ -37,18 +37,18 @@ EMSCRIPTEN_BINDINGS(bundle)
         .field("name", &VM::BUNDLE_CONSTANT::name)
         .field("size", &VM::BUNDLE_CONSTANT::size)
         .field("offset", &VM::BUNDLE_CONSTANT::offset) 
-        .field("semantic", &VM::BUNDLE_CONSTANT::semantic)
+        .field("semantic", &VM::BUNDLE_CONSTANT::semantic) 
         .field("type", &VM::BUNDLE_CONSTANT::type);
     em::value_object<VM::BUNDLE_UAV>("Uav")
         .field("name", &VM::BUNDLE_UAV::name)
         .field("elementSize", &VM::BUNDLE_UAV::elementSize)
         .field("length", &VM::BUNDLE_UAV::length)
         .field("register", &VM::BUNDLE_UAV::reg)
-        .field("data", &VM::BUNDLE_UAV::data)
-        .field("buffer", &VM::BUNDLE_UAV::buffer)
+        .field("data", &VM::BUNDLE_UAV::data) 
+        .field("buffer", &VM::BUNDLE_UAV::buffer) 
         .field("index", &VM::BUNDLE_UAV::index);
-
-    em::register_vector<VM::BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>");
+ 
+    em::register_vector<VM::BUNDLE_CONSTANT>("vector<BUNDLE_CONSTANT>"); 
 
     em::class_<VM::BUNDLE>("Bundle") 
         .constructor<std::string, VM::memory_view>()

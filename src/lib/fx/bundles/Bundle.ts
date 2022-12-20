@@ -5,7 +5,7 @@ import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
+import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TextureBundleT, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
 import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
@@ -116,10 +116,11 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
         const typeInstr = slDocument.root.scope.findType(elementType);
         const stride = typeInstr.size; // in bytes
         const type = createFxTypeLayout(typeInstr);
-        return new BufferBundleT(name, slot, stride, type);
+        return new TextureBundleT(name, slot, stride, type);
     });
-    const trimeshes = reflection.trimeshes.map(({ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath }) => {
-        return new TrimeshBundleT(name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath);
+
+    const trimeshes = reflection.trimeshes.map(({ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName }) => {
+        return new TrimeshBundleT(name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName);
     });
     return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs, buffers, textures, trimeshes), numthreads);
 }

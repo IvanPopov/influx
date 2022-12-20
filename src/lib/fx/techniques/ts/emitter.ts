@@ -8,9 +8,23 @@ import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
 
 import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
+import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 
 type IMemory = Bytecode.IMemory;
 type IUAVResource = ReturnType<typeof VM.createUAV>;
+
+interface TSTrimesh extends ITrimesh {
+    vertCount: number;
+    faceCount: number;
+
+    vertices: IMemory;
+    faces: IMemory;
+    indicesAdj: IMemory;
+}
+
+interface TSTexture extends ITexture {
+    layout: IMemory;
+}
 
 function createUAVEx(bundle: UAVBundleT, capacity: number): IUAVResource {
     const uav = VM.createUAV(<string>bundle.name, bundle.stride, capacity, bundle.slot);
@@ -75,8 +89,11 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
         vmBundle.setInput(buf.slot + SRV0_REGISTER, data);
     }
 
+
     // content consist of Float32Array(...f3 pos, f3 normal, f2 uv)
-    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory) {
+    function setTrimesh(name: string, trimesh: ITrimesh) {
+        const { vertCount, faceCount, vertices, faces, indicesAdj } = <TSTrimesh>trimesh;
+
         const mesh = trimeshes.find(mesh => mesh.name === name);
         if (!mesh) return;
 
@@ -86,6 +103,13 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
         
         setUint32Constant(<string>mesh.vertexCountUName, vertCount);
         setUint32Constant(<string>mesh.faceCountUName, faceCount);
+    }
+
+    function setTexture(name: string, tex: ITexture) {
+        const { layout } = <TSTexture>tex;
+        const texture = textures.find(tex => tex.name === name);
+        if (!texture) return;
+        vmBundle.setInput(texture.slot + SRV0_REGISTER, layout);
     }
 
     assert(numthreads[0] >= 1 && numthreads[1] === 1 && numthreads[2] === 1);
@@ -101,8 +125,10 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
         setConstants,
         setInt32Constant,
         setUint32Constant,
-        setBuffer,
+
         setTrimesh,
+        setTexture,
+
         groupsizex: numthreads[0]
     };
 }
@@ -207,6 +233,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         //
 
         const uavNonSorted = uavPrerendered;
+        // share memory with WASM bundle if used
         const uavNonSortedU8 = VM.memoryToU8Array(uavNonSorted.data);
 
         let uavPrerendReflectSorted: UAVBundleT = null;
@@ -231,6 +258,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 verbose(VM.asNativeRaw(UAV.readElement(uavNonSorted, iElement), instance));
             }
         };
+
 
         function serialize() {
             if (!sorting) {
@@ -267,6 +295,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         const cbuffers = [];
 
+
         function getData() { return asBundleMemory(sorting ? uavSortedU8 : uavNonSortedU8); }
         function getDesc() {
             const renderStates = {};
@@ -283,6 +312,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             };
         }
 
+
         function preparePrerender()
         {
             if (uavPrerendered) {
@@ -292,6 +322,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 UAV.overwriteCounter(uavSerials, 0);
             }
         }
+
 
         function prerender(uniforms: Uniforms)
         {
@@ -308,10 +339,23 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             bundle.run(Math.ceil(capacity / bundle.groupsizex));
         }
 
+
+        function setTexture(name: string, tex: ITexture) {
+            bundle.setTexture(name, tex);
+        }
+
+
+        function setTrimesh(name: string, mesh: ITrimesh) {
+            bundle.setTrimesh(name, mesh);
+        }
+
+
         return {
             getDesc,
             getData,
             getNumRenderedParticles,                                                                           // FIXME
+            setTexture,
+            setTrimesh,
             serialize,
             preparePrerender,
             prerender,
@@ -326,11 +370,20 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
     const getPass = (i: number) => passes[i];
     const getCapacity = () => capacity;
 
-    function setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory) {
-        spawnBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
-        initBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
-        updateBundle.setTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
-        // todo: prerender
+
+    function setTrimesh(name: string, mesh: ITrimesh) {
+        spawnBundle.setTrimesh(name, mesh);
+        initBundle.setTrimesh(name, mesh);
+        updateBundle.setTrimesh(name, mesh);
+        passes.forEach(pass => pass.setTrimesh(name, mesh));
+    }
+
+
+    function setTexture(name: string, tex: ITexture): void {
+        spawnBundle.setTexture(name, tex);
+        initBundle.setTexture(name, tex);
+        updateBundle.setTexture(name, tex);
+        passes.forEach(pass => pass.setTexture(name, tex));
     }
 
     function reset() {
@@ -406,6 +459,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         serialize,
 
         setTrimesh,
+        setTexture,
         
         dump
     };
@@ -461,4 +515,57 @@ export function createTsEmitter(bundle: BundleT)
     let uavResources: Bytecode.IUAV[] = [];
     let newly = createEmiterFromBundle(bundle, uavResources);
     return { bundle, uavResources, ...newly };
+}
+
+
+export function createTsTexture({ width, height }: ITextureDesc, data: ArrayBufferView): TSTexture {
+    const DESCRIPTOR_SIZE = 64;
+    const bytesPerPixel = 4;
+    const size = bytesPerPixel * width * height;
+    const layout = new Uint8Array(DESCRIPTOR_SIZE + size);
+    const dest = layout.subarray(DESCRIPTOR_SIZE);
+    if (data) {
+        assert(data.byteLength === size);
+        const src = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        dest.set(src);
+    } else {
+        dest.fill(0);
+    }
+
+    const desc = new DataView(layout.buffer, 0, DESCRIPTOR_SIZE);
+    desc.setInt32(0, width, true);
+    desc.setInt32(4, height, true);
+    // set format R8G8B8A8 == 0
+    desc.setInt32(8, 0, true);
+    
+    return { layout: VM.copyViewToMemory(layout) };
+}
+
+
+export function destroyTsTexture(texture: ITexture): void 
+{
+    const { layout } = texture as TSTexture;
+    VM.releaseMemory(layout);
+    verbose(`texture has been dropped.`);
+}
+
+
+export function createTsTrimesh(desc: ITrimeshDesc, 
+    vertices: ArrayBufferView, faces: ArrayBufferView, indicesAdj: ArrayBufferView): TSTrimesh {
+    const { vertCount, faceCount } = desc;
+    return {
+        vertCount,
+        faceCount,
+        vertices: VM.copyViewToMemory(vertices),
+        faces: VM.copyViewToMemory(faces),
+        indicesAdj: VM.copyViewToMemory(indicesAdj)
+    };
+}
+
+
+export function destroyTsTrimesh(mesh: ITrimesh) {
+    const { vertices, faces, indicesAdj } = mesh as TSTrimesh;
+    VM.releaseMemory(vertices);
+    VM.releaseMemory(faces);
+    VM.releaseMemory(indicesAdj);
 }

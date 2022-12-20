@@ -90,6 +90,7 @@ struct INSTRUCTION
     PREDICATE(I32StoreInput)\
     PREDICATE(I32StoreInputPointer)\
     PREDICATE(I32SetConst)\
+    PREDICATE(I32TextureLoad)\
     PREDICATE(I32Add)\
     PREDICATE(I32Sub)\
     PREDICATE(I32Mul)\
@@ -144,7 +145,7 @@ struct INSTRUCTION
 #define I32SetConst()               iregs[a] = *((int*)&b);
 #define I32LoadRegister()           iregs[a] = iregs[b];
 // inputs
-#define I32LoadInput()              iregs[b] = iinput[a][c];
+#define I32LoadInput()              i32LoadInput(regs, iinput, a, b, c, d);
 #define I32StoreInput()             iinput[a][b] = iregs[c];
 // registers pointers    
 // a => dest
@@ -157,8 +158,9 @@ struct INSTRUCTION
 // b => dest
 // c => source pointer
 // d => offset
-#define I32LoadInputPointer()       iregs[b] = iinput[a][iregs[c] + d];
+#define I32LoadInputPointer()       i32LoadInputPointer(regs, iinput, a, b, c, d);
 #define I32StoreInputPointer()      iinput[a][iregs[b] + d] = iregs[c];
+#define I32TextureLoad()            i32TextureLoad(regs, iinput, a, b, c, d);
 //
 // Arithmetic operations
 //
@@ -217,6 +219,54 @@ struct INSTRUCTION
 // Flow controls
 //
 #define Jump()                      pc = a;
+
+// IP: R8G8B8A8 only is suported for now (!)
+// a - destination  (always float4)
+// b - texture      (input index)
+// c - arguments    (int3 uv)
+inline void i32TextureLoad(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+{
+    float_t* fregs = reinterpret_cast<float_t*>(regs);
+    uint32_t* uregs = reinterpret_cast<uint32_t*>(regs);
+
+    uint32_t* layout = iinput[b].As<uint32_t>();
+    uint32_t* desc = layout;
+    uint32_t* texels = layout + 16;
+
+    uint32_t u = uregs[c];
+    uint32_t v = uregs[c + 1];
+    uint32_t w = desc[0];
+    uint32_t h = desc[1];
+    // uint32_t fmt = desc[2];
+
+    uint32_t texel = texels[w * v + u];
+    uint8_t iR = texel;
+    uint8_t iG = texel >> 8;
+    uint8_t iB = texel >> 16;
+    uint8_t iA = texel >> 24;
+
+    float_t* value = fregs + a;
+    value[0] = float(iR) / 255.f;
+    value[1] = float(iG) / 255.f;
+    value[2] = float(iB) / 255.f;
+    value[3] = float(iA) / 255.f;
+}
+
+
+inline void i32LoadInput(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+{
+    assert(iinput[a].size > c);
+    int32_t* iregs = reinterpret_cast<int32_t*>(regs);
+    iregs[b] = iinput[a][c];
+}
+
+
+inline void i32LoadInputPointer(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+{
+    int32_t* iregs = reinterpret_cast<int32_t*>(regs);
+    assert(iinput[a].size > iregs[c] + d);
+    iregs[b] = iinput[a][iregs[c] + d];
+}
 
 
 int BUNDLE::Play()
@@ -362,7 +412,7 @@ bool BUNDLE::SetConstant(std::string name, memory_view value) {
     if (reflectionIter == m_layout.end()) {
         return false;
     }
-
+    
     const BUNDLE_CONSTANT& reflection = *reflectionIter;
     int offset = reflection.offset;
     // only float is supported for now
@@ -417,6 +467,11 @@ void BUNDLE::DestroyUAV(BUNDLE_UAV uav)
 }
 
 RESOURCE_VIEW BUNDLE::CreateBufferView(std::string name, uint32_t reg)
+{
+    return {name, reg, reg + SRV0_REGISTER};
+}
+
+RESOURCE_VIEW BUNDLE::CreateTextureView(std::string name, uint32_t reg)
 {
     return {name, reg, reg + SRV0_REGISTER};
 }

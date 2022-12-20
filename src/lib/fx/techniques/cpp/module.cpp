@@ -7,13 +7,13 @@
 #include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp" 
-
+  
 namespace em = emscripten;
 
 int main(void)  
 {
     std::cout << "Emscriptent \"Pipeline\" module........................[ LOADED ]" << std::endl;
-    return 0;
+    return 0; 
 } 
 
 IFX::EMITTER* CreateFromBundle(VM::memory_view data)
@@ -33,6 +33,7 @@ void DestroyEmitter(IFX::EMITTER* pEmitter)
         delete pEmitter;   
     } 
 }
+
 
 IFX::VECTOR3 Vec3FromJSObject(const em::val &v)
 { 
@@ -69,18 +70,19 @@ IFX::UNIFORMS UniformsFromJSObject(const em::val &v)
     }
     return unis; 
 } 
-            
+
+
 EMSCRIPTEN_BINDINGS(pipeline) 
 {  
     em::value_object<VM::memory_view>("Memory") 
         .field("size", &VM::memory_view::size)
         .field("heap", &VM::memory_view::ptr);     
 
-    em::register_map<std::string, float>("Uniforms");  
+    em::register_map<std::string, float>("Uniforms");   
     
     //
     // implementation of interfaces described in:
-    // @sandbox/containers/playground/idl/IEmitter.ts
+    // @sandbox/containers/playground/idl/IEmitter.ts 
     //
 
     em::value_object<IFX::CBUFFER_FIELD>("CbufferField") 
@@ -91,9 +93,9 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("length", &IFX::CBUFFER_FIELD::length);  
 
     em::value_object<IFX::CBUFFER>("Cbuffer") 
-        .field("name", &IFX::CBUFFER::name)
+        .field("name", &IFX::CBUFFER::name) 
         .field("size", &IFX::CBUFFER::size)
-        .field("usage", &IFX::CBUFFER::usage);
+        .field("usage", &IFX::CBUFFER::usage);   
         // .field("fields", &IFX::CBUFFER_FIELD::fields);       
 
     em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
@@ -108,9 +110,9 @@ EMSCRIPTEN_BINDINGS(pipeline)
             em::val jsDesc = em::val::object();
             jsDesc.set("stride", desc.stride);
             jsDesc.set("sorting", desc.sorting);
-            jsDesc.set("geometry", desc.geometry); 
+            jsDesc.set("geometry", desc.geometry);  
             jsDesc.set("instanceCount", desc.instanceCount);
-            jsDesc.set("vertexShader", desc.vertexShader);
+            jsDesc.set("vertexShader", desc.vertexShader); 
             jsDesc.set("pixelShader", desc.pixelShader);
             jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout)); 
             jsDesc.set("instanceName", desc.renderInstance.name);
@@ -121,40 +123,46 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("serialize", &IFX::EMITTER_PASS::Serialize)
          .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::Prerender(UniformsFromJSObject(val));
-          }))
-         .function("dump", &IFX::EMITTER_PASS::Dump);
+          })) 
+         .function("dump", &IFX::EMITTER_PASS::Dump); 
    
-    em::class_<IFX::EMITTER>("Emitter") 
+    em::class_<IFX::EMITTER>("Emitter")          
          .function("getName", &IFX::EMITTER::GetName) 
          .function("getType", em::optional_override([](IFX::EMITTER& self) -> std::string { return "emitter"; }))
          .function("getCapacity", &IFX::EMITTER::GetCapacity)
-         .function("getPassCount", &IFX::EMITTER::GetPassCount)
+         .function("getPassCount", &IFX::EMITTER::GetPassCount) 
          .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
-         .function("getNumParticles", &IFX::EMITTER::GetNumParticles)
+         .function("getNumParticles", &IFX::EMITTER::GetNumParticles) 
 
          .function("simulate", em::optional_override([](IFX::EMITTER& self, em::val val) {
-            return self.EMITTER::Simulate(UniformsFromJSObject(val));  
+            return self.EMITTER::Simulate(UniformsFromJSObject(val));   
          }))
          .function("prerender", em::optional_override([](IFX::EMITTER& self, em::val val) {
-            return self.EMITTER::Prerender(UniformsFromJSObject(val)); 
-         }))
-         .function("serialize", &IFX::EMITTER::Serialize)
+            return self.EMITTER::Prerender(UniformsFromJSObject(val));  
+         })) 
+         .function("serialize", &IFX::EMITTER::Serialize)   
          .function("reset", &IFX::EMITTER::Reset) 
-         .function("setTrimesh", &IFX::EMITTER::SetTrimesh) 
-        //  .function("setTrimesh", em::optional_override([](
-        //     IFX::EMITTER& self, 
-        //     std::string name, 
-        //     uint32_t vertCount, uint32_t faceCount,
-        //     em::val vertices, em::val faces, em::val indicesAdj) {     
-        //     return self.EMITTER::SetTrimesh(name, vertCount, faceCount,
-        //         std::move(vecFromJSArray<float>(vertices)), 
-        //         std::move(vecFromJSArray<uint32_t>(faces)), 
-        //         std::move(vecFromJSArray<uint32_t>(indicesAdj))); 
-        //  }))
+         .function("setTrimesh", &IFX::EMITTER::SetTrimesh, em::allow_raw_pointers()) 
+         .function("setTexture", &IFX::EMITTER::SetTexture, em::allow_raw_pointers())
          .function("dump", &IFX::EMITTER::Dump);
  
-    em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers());
+    em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers()); 
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
-    em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());
+    em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());   
+
+
+    em::value_object<IFX::TRIMESH_DESC>("TrimeshDesc")  
+        .field("vertCount", &IFX::TRIMESH_DESC::vertCount)   
+        .field("faceCount", &IFX::TRIMESH_DESC::faceCount); 
+    em::value_object<IFX::TEXTURE_DESC>("TextureDesc")  
+        .field("width", &IFX::TEXTURE_DESC::width)
+        .field("height", &IFX::TEXTURE_DESC::height);
+
+    em::class_<IFX::TEXTURE_RESOURCE>("Texture"); 
+    em::class_<IFX::TRIMESH_RESOURCE>("Trimesh");
+    em::function("createTexture", &IFX::CreateTexture, em::allow_raw_pointers()); 
+    em::function("createTrimesh", &IFX::CreateTrimesh, em::allow_raw_pointers());
+    em::function("destroyTexture", &IFX::DestroyTexture, em::allow_raw_pointers());  
+    em::function("destroyTrimesh", &IFX::DestroyTrimesh, em::allow_raw_pointers());
 }      
   

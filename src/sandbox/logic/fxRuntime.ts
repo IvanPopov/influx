@@ -45,6 +45,9 @@ function downloadURL(data: string, fileName: string) {
     a.remove();
 };
 
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['payload']>({
     type: [
@@ -85,12 +88,12 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         }
 
         async function destroy(technique: ITechnique) {
-            Techniques.destroy(technique);
+            Techniques.destroyTechnique(technique);
             // verbose('previous technique has been dropped.');
         }
 
         async function copy(next: ITechnique, prev: ITechnique) {
-            Techniques.copy(next, prev);
+            Techniques.copyTechnique(next, prev);
         }
 
         async function create(forceRestart = true): Promise<[ ITechnique, IPlaygroundControlsState ]> {
@@ -101,7 +104,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
 
             const bundle = await FxBundle.createBundle(list[i], { translator, omitHLSL: true });
-            const tech = Techniques.create(bundle);
+            const tech = Techniques.createTechnique(bundle);
             const controls = decodeBundleControls(bundle);
 
             if (tech) {
@@ -122,14 +125,27 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             [ technique, controls ] = await create();
         }
 
+        // fixme: move technique to playground
+        async function $hackDestroyResources() {
+            // IP: hack to notify plathground to destroy all the resources
+            // literally set null technique and thus call release of all dependent resources
+            dispatch({ type: evt.PLAYGROUND_TECHNIQUE_UPDATE, payload: { technique, controls } });
+            await sleep(10);
+            return;
+        }
+
         async function switchVMRuntime() {
-            await destroy(technique);
+            await drop();                   // destroy current technique
+            await $hackDestroyResources();  // wait for release of all it's resources
+
             VM.switchRuntime();
             [ technique, controls ] = await create();
         }
 
         async function switchTechniqueRuntime() {
-            await destroy(technique);
+            await drop();                   // destroy current technique
+            await $hackDestroyResources();  // wait for release of all it's resources
+
             Techniques.switchRuntime();
             [ technique, controls ] = await create();
         }

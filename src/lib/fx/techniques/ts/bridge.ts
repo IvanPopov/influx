@@ -2,9 +2,10 @@ import { fromBundleMemory, asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle'
 import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
 import { IEmitter } from '@lib/idl/emitter';
+import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { ITechnique } from '@lib/idl/ITechnique';
 import * as flatbuffers from 'flatbuffers';
-import { copyTsEmitter, createTsEmitter, destroyTsEmitter } from './emitter';
+import { copyTsEmitter, createTsEmitter, destroyTsEmitter, createTsTexture, createTsTrimesh, destroyTsTexture, destroyTsTrimesh } from './emitter';
 import { copyTsMaterial, createTsMaterial, destroyTsMaterial } from './mat';
 
 const isEmitter = tech => tech?.getType() === 'emitter';
@@ -54,6 +55,27 @@ export function destroyTechnique(tech: ITechnique): void {
 }
 
 
+export function createTexture(desc: ITextureDesc, initData: ArrayBufferView): ITexture {
+    return createTsTexture(desc, initData);
+}
+
+
+export function destroyTexture(texture: ITexture) {
+    destroyTsTexture(texture);
+}
+
+
+export function createTrimesh(desc: ITrimeshDesc, 
+    vertices: ArrayBufferView, faces: ArrayBufferView, indicesAdj: ArrayBufferView): ITrimesh {
+    return createTsTrimesh(desc, vertices, faces, indicesAdj);
+}
+
+
+export function destroyTrimesh(mesh: ITrimesh) {
+    destroyTsTrimesh(mesh);
+}
+
+
 export function copyTechnique(dst: ITechnique, src: ITechnique): boolean {
     if (isEmitter(dst) && isEmitter(src)) {
         return copyTsEmitter(<IEmitter>dst, <IEmitter>src);
@@ -84,21 +106,18 @@ export function memoryToI32Array(input: Bytecode.IMemory): Int32Array {
     return fromBundleMemory(input);
 }
 
-/**
- * @deprecated
- */
-export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
-    return asBundleMemory(input);
+function copy(src: ArrayBufferView): ArrayBufferView  {
+    const dst = new Uint8Array(src.byteLength);
+    dst.set(new Uint8Array(src.buffer, src.byteOffset, src.byteLength));
+    return dst;
 }
 
-/**
- * @deprecated
- */
-export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
-    return asBundleMemory(input);
+export function copyViewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+    return asBundleMemory(copy(input));
 }
 
 
-export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
-    return asBundleMemory(input);
+export function releaseMemory(mem: Bytecode.IMemory) {
+    console.error('NOT IMPLEMENTED!!!');
 }
+

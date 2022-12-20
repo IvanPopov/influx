@@ -93,6 +93,9 @@ public:
     const VM::BUNDLE_UAV* UavNonSorted() const;
     const VM::BUNDLE_UAV* UavSerials() const;
 
+    void SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh);
+    void SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTexture);
+
 private:
     const EMITTER* m_parent;
     uint32_t m_id;
@@ -162,11 +165,15 @@ public:
     void Dump();
     void ReloadBundles(void* buf);
 
-    void SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
-        VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj);
+    void SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* mesh);
+    void SetTexture(const std::string& name, const TEXTURE_RESOURCE* texture);
     
     bool Copy(const EMITTER& src);
     bool operator == (const EMITTER& emit) const;
 };
+
+// const TRIMESH_RESOURCE* CreateTrimesh(const TRIMESH_DESC& desc, 
+//     VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj);
+// const TEXTURE_RESOURCE* CreateTexture(const TEXTURE_DESC& desc, VM::memory_view initData);
 
 }

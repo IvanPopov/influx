@@ -73,6 +73,7 @@ public:
     static void DestroyUAV(BUNDLE_UAV uav);
 
     static RESOURCE_VIEW CreateBufferView(std::string name, uint32_t reg);
+    static RESOURCE_VIEW CreateTextureView(std::string name, uint32_t reg);
 
     // static 
 

@@ -11,7 +11,7 @@
 namespace IFX
 {
 
-struct TRIMESH_DESC 
+struct TRIMESH_INTERNAL_DESC 
 {
     std::string name;
     std::string vertexCountUName;
@@ -21,13 +21,48 @@ struct TRIMESH_DESC
     std::string adjacencyName;
 };
 
+struct TRIMESH_DESC
+{
+    uint32_t vertCount;
+    uint32_t faceCount;
+};
+
+
+struct TEXTURE_DESC
+{
+    uint32_t width;
+    uint32_t height;
+};
+
+
+struct TEXTURE_RESOURCE
+{
+    VM::memory_view layout;
+};
+
+struct BUFFER_RESOURCE
+{
+    VM::memory_view layout;
+};
+
+struct TRIMESH_RESOURCE
+{
+    uint32_t vertCount;
+    uint32_t faceCount;
+
+    BUFFER_RESOURCE vertices;
+    BUFFER_RESOURCE faces;
+    BUFFER_RESOURCE indicesAdj;
+};
+
+
 struct BYTECODE_BUNDLE
 {
     std::vector<VM::BUNDLE_UAV> uavs;
 
     std::vector<VM::RESOURCE_VIEW> buffers;
     std::vector<VM::RESOURCE_VIEW> textures;
-    std::vector<TRIMESH_DESC> trimeshes;
+    std::vector<TRIMESH_INTERNAL_DESC> trimeshes;
 
     VM::BUNDLE vmBundle;
     VM::BUNDLE_NUMTHREADS numthreads;
@@ -38,9 +73,9 @@ struct BYTECODE_BUNDLE
     void SetConstant(const std::string& name, int32_t value);
     void SetConstant(const std::string& name, uint32_t value);
     void SetConstant(const std::string& name, float value);
-    void SetBuffer(const std::string& name, VM::memory_view data);
-    void SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
-        VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj);
+    void SetBuffer(const std::string& name, const BUFFER_RESOURCE* data);
+    void SetTexture(const std::string& name, const TEXTURE_RESOURCE* data);
+    void SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* data);
 };
 
 }

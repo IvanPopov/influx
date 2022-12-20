@@ -622,6 +622,53 @@ class Texture2DTemplate extends TypeTemplate {
             methods.push(func);
         }
 
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'width' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'height' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            let id = new IdInstruction({ scope, name: 'GetDimensions' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        {
+            const paramList = [];
+
+            {
+                let int3 = getSystemType("int3");
+                const type = new VariableTypeInstruction({ type: int3, scope });
+                const id = new IdInstruction({ scope, name: 'location' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: elementType, scope });
+            let id = new IdInstruction({ scope, name: 'Load' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods, texture });
     }
 

@@ -109,8 +109,12 @@ std::unique_ptr<BYTECODE_BUNDLE> SetupFxRoutineBytecodeBundle(
         bcBundle->buffers.push_back(VM::BUNDLE::CreateBufferView(buf->name, buf->slot));
     }
 
+    for (auto& tex : routineBundle->resources->textures) {
+        bcBundle->textures.push_back(VM::BUNDLE::CreateTextureView(tex->name, tex->slot));
+    }
+
     for (auto& mesh : routineBundle->resources->trimeshes) {
-        auto& [ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName, resourcePath ] = *mesh;
+        auto& [ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName ] = *mesh;
         bcBundle->trimeshes.push_back({
             name,
             vertexCountUName,
@@ -150,6 +154,17 @@ VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() { return const_cast<VM::BUNDLE_UAV*>(
 const VM::BUNDLE_UAV* EMITTER_PASS::UavNonSorted() const { return Parent().Uav(UavPrerendered(m_id)); }
 const VM::BUNDLE_UAV* EMITTER_PASS::UavSorted() const { return Parent().Uav(UavPrerenderedSorted(m_id)); }
 const VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() const { return Parent().Uav(IFX::UavSerials(m_id)); }
+
+
+void EMITTER_PASS::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh)
+{
+    m_prerenderBundle->SetTrimesh(name, pMesh);
+}
+
+void EMITTER_PASS::SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTex)
+{
+    m_prerenderBundle->SetTexture(name, pTex);
+}
 
 
 const EMITTER& EMITTER_PASS::Parent() const
@@ -373,6 +388,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
 }
 
 
+
 EMITTER::~EMITTER()
 {
     for (auto& uav : m_sharedUAVs)
@@ -483,14 +499,28 @@ void EMITTER::PreparePrerender()
     }
 }
 
-void EMITTER::SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
-    VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj) 
+void EMITTER::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh) 
 {
-    m_spawnBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
-    m_initBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
-    m_updateBundle->SetTrimesh(name, vertCount, faceCount, vertices, faces, indicesAdj);
+    m_spawnBundle->SetTrimesh(name, pMesh);
+    m_initBundle->SetTrimesh(name, pMesh);
+    m_updateBundle->SetTrimesh(name, pMesh);
+        for (int i = 0; i < m_passes.size(); ++i) 
+    {
+        m_passes[i].SetTrimesh(name, pMesh);
+    }
 }
 
+
+void EMITTER::SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTex) 
+{
+    m_spawnBundle->SetTexture(name, pTex);
+    m_initBundle->SetTexture(name, pTex);
+    m_updateBundle->SetTexture(name, pTex);
+    for (int i = 0; i < m_passes.size(); ++i) 
+    {
+        m_passes[i].SetTexture(name, pTex);
+    }
+}
 
 //
 // hack to allow hot reload for similar emitters
@@ -574,6 +604,68 @@ void EMITTER::Dump()
     }
 }
 
+
+const TRIMESH_RESOURCE* CreateTrimesh(TRIMESH_DESC desc, 
+    VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj)
+{
+    float_t* pVertices = new float_t[vertices.size]; 
+    uint32_t* pFaces = new uint32_t[faces.size];
+    uint32_t* pIndicesAdj = new uint32_t[indicesAdj.size];
+
+    memcpy(pVertices, vertices.As(), vertices.size << 2);
+    memcpy(pFaces, faces.As(), faces.size << 2);
+    memcpy(pIndicesAdj, indicesAdj.As(), indicesAdj.size << 2);
+
+    auto* pMesh = new TRIMESH_RESOURCE;
+    pMesh->vertCount = desc.vertCount;
+    pMesh->faceCount = desc.faceCount;
+    pMesh->vertices.layout = VM::memory_view((uintptr_t)pVertices, vertices.size);
+    pMesh->faces.layout = VM::memory_view((uintptr_t)pFaces, faces.size);
+    pMesh->indicesAdj.layout = VM::memory_view((uintptr_t)pIndicesAdj, indicesAdj.size);
+    return pMesh;    
+}
+
+
+const TEXTURE_RESOURCE* CreateTexture(TEXTURE_DESC desc, VM::memory_view initData)
+{
+    uint32_t DESCRIPTOR_SIZE = 64;
+    uint32_t bytesPerPixel = 4;
+    uint32_t byteLength = bytesPerPixel * desc.width * desc.height;
+    uint32_t byteLengthEx = DESCRIPTOR_SIZE + byteLength;
+    uint8_t* pLayout = new uint8_t[byteLengthEx]; 
+    uint32_t* pDesc = (uint32_t*)(pLayout);
+    uint32_t* pDest = (uint32_t*)(pLayout + DESCRIPTOR_SIZE);
+
+    memset(pLayout, 0, byteLengthEx);
+
+    if (initData.size != 0) {
+        assert((initData.size << 2) == byteLength);
+        memcpy(pDest, initData.As(), byteLength);
+    }
+
+    pDesc[0] = desc.width;
+    pDesc[1] = desc.height;
+    // set format R8G8B8A8 == 0
+    pDesc[2] = 0;
+    
+    auto* pTex = new TEXTURE_RESOURCE;
+    pTex->layout = VM::memory_view((uintptr_t)pLayout, byteLengthEx >> 2);
+    return pTex;
+}
+
+void DestroyTexture(const TEXTURE_RESOURCE* pTex)
+{
+    delete[] pTex->layout.As<uint32_t>();
+    delete pTex;
+}
+
+void DestroyTrimesh(const TRIMESH_RESOURCE* pMesh)
+{
+    delete[] pMesh->vertices.layout.As<float_t>();
+    delete[] pMesh->faces.layout.As<uint32_t>();
+    delete[] pMesh->indicesAdj.layout.As<uint32_t>();
+    delete pMesh;
+}
 
 }
 

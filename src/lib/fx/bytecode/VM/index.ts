@@ -21,54 +21,76 @@ const forceNoWasm = () => (new URLSearchParams(window.location.search)).get('dis
 
 let useWASM = WASM && !forceNoWasm();
 
-function VMBundle()
-{
+function VMBundle() {
     return (useWASM ? WASMBundle : TSBundle);
 }
 
-export function isWASM()
-{
+
+export function isWASM() {
     return useWASM;
 }
 
-export function switchRuntime(runtime?: 'wasm' | 'js')
-{
+
+export function switchRuntime(runtime?: 'wasm' | 'js') {
     useWASM = isDef(runtime) ? runtime === 'wasm' : !useWASM;
     console.log(`%c VM runtime has been switched to "${(useWASM ? "WASM" : "JS")}".`, 'font-weight: bold; background: #6f0000; color: #fff');
 }
+
 
 export function make(debugName: string, code: number[] | Uint8Array): IBundle {
     return VMBundle().make(debugName, new Uint8Array(code));
 }
 
+/**
+ * Interpret memory as typed array.
+ * NOTE: no copying occurs (!)
+ * @returns Same data interpreted as typed array. 
+ */
 export function memoryToU8Array(input: IMemory): Uint8Array {
     return VMBundle().memoryToU8Array(input);
 }
 
+/**
+ * Interpret memory as typed array.
+ * NOTE: no copying occurs (!)
+ * @returns Same data interpreted as typed array. 
+ */
 export function memoryToI32Array(input: IMemory): Int32Array {
     return VMBundle().memoryToI32Array(input);
 }
 
+/**
+ * Interpret memory as typed array.
+ * NOTE: no copying occurs (!)
+ * @returns Same data interpreted as typed array. 
+ */
 export function memoryToF32Array(input: IMemory): Float32Array {
     return VMBundle().memoryToF32Array(input);
 }
 
-export function u32ArrayToMemory(input: Uint32Array): IMemory {
-    return VMBundle().u32ArrayToMemory(input);
+/**
+ * NOTE: copy view to NEW memory (!)
+ * @returns New array containing input data.
+ */
+export function copyViewToMemory(input: ArrayBufferView): IMemory {
+    return VMBundle().copyViewToMemory(input);
 }
 
-export function f32ArrayToMemory(input: Float32Array): IMemory {
-    return VMBundle().f32ArrayToMemory(input);
+
+export function releaseMemory(mem: IMemory) {
+    VMBundle().releaseMemory(mem);
 }
+
 
 export function createUAV(name: string, elementSize: number, length: number, register: number) {
     return VMBundle().createUAV(name, elementSize, length, register);
 }
 
-export function destroyUAV(uav: IUAV)
-{
+
+export function destroyUAV(uav: IUAV) {
     VMBundle().destroyUAV(uav);
 }
+
 
 /////////////////////////////////////////////////////////////////////
 

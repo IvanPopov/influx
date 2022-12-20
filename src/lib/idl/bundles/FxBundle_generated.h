@@ -99,6 +99,14 @@ struct StringValue;
 struct StringValueBuilder;
 struct StringValueT;
 
+struct TextureValue;
+struct TextureValueBuilder;
+struct TextureValueT;
+
+struct MeshValue;
+struct MeshValueBuilder;
+struct MeshValueT;
+
 struct UintValue;
 
 struct IntValue;
@@ -724,11 +732,13 @@ enum ControlValue : uint8_t {
   ControlValue_Float3Value = 5,
   ControlValue_Float4Value = 6,
   ControlValue_ColorValue = 7,
+  ControlValue_TextureValue = 8,
+  ControlValue_MeshValue = 9,
   ControlValue_MIN = ControlValue_NONE,
-  ControlValue_MAX = ControlValue_ColorValue
+  ControlValue_MAX = ControlValue_MeshValue
 };
 
-inline const ControlValue (&EnumValuesControlValue())[8] {
+inline const ControlValue (&EnumValuesControlValue())[10] {
   static const ControlValue values[] = {
     ControlValue_NONE,
     ControlValue_UintValue,
@@ -737,13 +747,15 @@ inline const ControlValue (&EnumValuesControlValue())[8] {
     ControlValue_Float2Value,
     ControlValue_Float3Value,
     ControlValue_Float4Value,
-    ControlValue_ColorValue
+    ControlValue_ColorValue,
+    ControlValue_TextureValue,
+    ControlValue_MeshValue
   };
   return values;
 }
 
 inline const char * const *EnumNamesControlValue() {
-  static const char * const names[9] = {
+  static const char * const names[11] = {
     "NONE",
     "UintValue",
     "IntValue",
@@ -752,13 +764,15 @@ inline const char * const *EnumNamesControlValue() {
     "Float3Value",
     "Float4Value",
     "ColorValue",
+    "TextureValue",
+    "MeshValue",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameControlValue(ControlValue e) {
-  if (flatbuffers::IsOutRange(e, ControlValue_NONE, ControlValue_ColorValue)) return "";
+  if (flatbuffers::IsOutRange(e, ControlValue_NONE, ControlValue_MeshValue)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesControlValue()[index];
 }
@@ -795,6 +809,14 @@ template<> struct ControlValueTraits<Fx::ColorValue> {
   static const ControlValue enum_value = ControlValue_ColorValue;
 };
 
+template<> struct ControlValueTraits<Fx::TextureValue> {
+  static const ControlValue enum_value = ControlValue_TextureValue;
+};
+
+template<> struct ControlValueTraits<Fx::MeshValue> {
+  static const ControlValue enum_value = ControlValue_MeshValue;
+};
+
 template<typename T> struct ControlValueUnionTraits {
   static const ControlValue enum_value = ControlValue_NONE;
 };
@@ -825,6 +847,14 @@ template<> struct ControlValueUnionTraits<Fx::Float4Value> {
 
 template<> struct ControlValueUnionTraits<Fx::ColorValue> {
   static const ControlValue enum_value = ControlValue_ColorValue;
+};
+
+template<> struct ControlValueUnionTraits<Fx::TextureValueT> {
+  static const ControlValue enum_value = ControlValue_TextureValue;
+};
+
+template<> struct ControlValueUnionTraits<Fx::MeshValueT> {
+  static const ControlValue enum_value = ControlValue_MeshValue;
 };
 
 struct ControlValueUnion {
@@ -912,6 +942,22 @@ struct ControlValueUnion {
   const Fx::ColorValue *AsColorValue() const {
     return type == ControlValue_ColorValue ?
       reinterpret_cast<const Fx::ColorValue *>(value) : nullptr;
+  }
+  Fx::TextureValueT *AsTextureValue() {
+    return type == ControlValue_TextureValue ?
+      reinterpret_cast<Fx::TextureValueT *>(value) : nullptr;
+  }
+  const Fx::TextureValueT *AsTextureValue() const {
+    return type == ControlValue_TextureValue ?
+      reinterpret_cast<const Fx::TextureValueT *>(value) : nullptr;
+  }
+  Fx::MeshValueT *AsMeshValue() {
+    return type == ControlValue_MeshValue ?
+      reinterpret_cast<Fx::MeshValueT *>(value) : nullptr;
+  }
+  const Fx::MeshValueT *AsMeshValue() const {
+    return type == ControlValue_MeshValue ?
+      reinterpret_cast<const Fx::MeshValueT *>(value) : nullptr;
   }
 };
 
@@ -1845,7 +1891,6 @@ struct TrimeshBundleT : public flatbuffers::NativeTable {
   std::string verticesName{};
   std::string facesName{};
   std::string adjacencyName{};
-  std::string resourcePath{};
 };
 
 struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1857,8 +1902,7 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_FACECOUNTUNAME = 8,
     VT_VERTICESNAME = 10,
     VT_FACESNAME = 12,
-    VT_ADJACENCYNAME = 14,
-    VT_RESOURCEPATH = 16
+    VT_ADJACENCYNAME = 14
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -1878,9 +1922,6 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::String *adjacencyName() const {
     return GetPointer<const flatbuffers::String *>(VT_ADJACENCYNAME);
   }
-  const flatbuffers::String *resourcePath() const {
-    return GetPointer<const flatbuffers::String *>(VT_RESOURCEPATH);
-  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
@@ -1895,8 +1936,6 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(facesName()) &&
            VerifyOffset(verifier, VT_ADJACENCYNAME) &&
            verifier.VerifyString(adjacencyName()) &&
-           VerifyOffset(verifier, VT_RESOURCEPATH) &&
-           verifier.VerifyString(resourcePath()) &&
            verifier.EndTable();
   }
   TrimeshBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1926,9 +1965,6 @@ struct TrimeshBundleBuilder {
   void add_adjacencyName(flatbuffers::Offset<flatbuffers::String> adjacencyName) {
     fbb_.AddOffset(TrimeshBundle::VT_ADJACENCYNAME, adjacencyName);
   }
-  void add_resourcePath(flatbuffers::Offset<flatbuffers::String> resourcePath) {
-    fbb_.AddOffset(TrimeshBundle::VT_RESOURCEPATH, resourcePath);
-  }
   explicit TrimeshBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -1947,10 +1983,8 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(
     flatbuffers::Offset<flatbuffers::String> faceCountUName = 0,
     flatbuffers::Offset<flatbuffers::String> verticesName = 0,
     flatbuffers::Offset<flatbuffers::String> facesName = 0,
-    flatbuffers::Offset<flatbuffers::String> adjacencyName = 0,
-    flatbuffers::Offset<flatbuffers::String> resourcePath = 0) {
+    flatbuffers::Offset<flatbuffers::String> adjacencyName = 0) {
   TrimeshBundleBuilder builder_(_fbb);
-  builder_.add_resourcePath(resourcePath);
   builder_.add_adjacencyName(adjacencyName);
   builder_.add_facesName(facesName);
   builder_.add_verticesName(verticesName);
@@ -1967,15 +2001,13 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundleDirect(
     const char *faceCountUName = nullptr,
     const char *verticesName = nullptr,
     const char *facesName = nullptr,
-    const char *adjacencyName = nullptr,
-    const char *resourcePath = nullptr) {
+    const char *adjacencyName = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto vertexCountUName__ = vertexCountUName ? _fbb.CreateString(vertexCountUName) : 0;
   auto faceCountUName__ = faceCountUName ? _fbb.CreateString(faceCountUName) : 0;
   auto verticesName__ = verticesName ? _fbb.CreateString(verticesName) : 0;
   auto facesName__ = facesName ? _fbb.CreateString(facesName) : 0;
   auto adjacencyName__ = adjacencyName ? _fbb.CreateString(adjacencyName) : 0;
-  auto resourcePath__ = resourcePath ? _fbb.CreateString(resourcePath) : 0;
   return Fx::CreateTrimeshBundle(
       _fbb,
       name__,
@@ -1983,8 +2015,7 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundleDirect(
       faceCountUName__,
       verticesName__,
       facesName__,
-      adjacencyName__,
-      resourcePath__);
+      adjacencyName__);
 }
 
 flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatBufferBuilder &_fbb, const TrimeshBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -3256,6 +3287,130 @@ inline flatbuffers::Offset<StringValue> CreateStringValueDirect(
 
 flatbuffers::Offset<StringValue> CreateStringValue(flatbuffers::FlatBufferBuilder &_fbb, const StringValueT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct TextureValueT : public flatbuffers::NativeTable {
+  typedef TextureValue TableType;
+  std::string value{};
+};
+
+struct TextureValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TextureValueT NativeTableType;
+  typedef TextureValueBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_VALUE = 4
+  };
+  const flatbuffers::String *value() const {
+    return GetPointer<const flatbuffers::String *>(VT_VALUE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_VALUE) &&
+           verifier.VerifyString(value()) &&
+           verifier.EndTable();
+  }
+  TextureValueT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(TextureValueT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<TextureValue> Pack(flatbuffers::FlatBufferBuilder &_fbb, const TextureValueT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct TextureValueBuilder {
+  typedef TextureValue Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_value(flatbuffers::Offset<flatbuffers::String> value) {
+    fbb_.AddOffset(TextureValue::VT_VALUE, value);
+  }
+  explicit TextureValueBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TextureValue> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TextureValue>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TextureValue> CreateTextureValue(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> value = 0) {
+  TextureValueBuilder builder_(_fbb);
+  builder_.add_value(value);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TextureValue> CreateTextureValueDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *value = nullptr) {
+  auto value__ = value ? _fbb.CreateString(value) : 0;
+  return Fx::CreateTextureValue(
+      _fbb,
+      value__);
+}
+
+flatbuffers::Offset<TextureValue> CreateTextureValue(flatbuffers::FlatBufferBuilder &_fbb, const TextureValueT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct MeshValueT : public flatbuffers::NativeTable {
+  typedef MeshValue TableType;
+  std::string value{};
+};
+
+struct MeshValue FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef MeshValueT NativeTableType;
+  typedef MeshValueBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_VALUE = 4
+  };
+  const flatbuffers::String *value() const {
+    return GetPointer<const flatbuffers::String *>(VT_VALUE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_VALUE) &&
+           verifier.VerifyString(value()) &&
+           verifier.EndTable();
+  }
+  MeshValueT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(MeshValueT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<MeshValue> Pack(flatbuffers::FlatBufferBuilder &_fbb, const MeshValueT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct MeshValueBuilder {
+  typedef MeshValue Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_value(flatbuffers::Offset<flatbuffers::String> value) {
+    fbb_.AddOffset(MeshValue::VT_VALUE, value);
+  }
+  explicit MeshValueBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<MeshValue> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<MeshValue>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<MeshValue> CreateMeshValue(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> value = 0) {
+  MeshValueBuilder builder_(_fbb);
+  builder_.add_value(value);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<MeshValue> CreateMeshValueDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *value = nullptr) {
+  auto value__ = value ? _fbb.CreateString(value) : 0;
+  return Fx::CreateMeshValue(
+      _fbb,
+      value__);
+}
+
+flatbuffers::Offset<MeshValue> CreateMeshValue(flatbuffers::FlatBufferBuilder &_fbb, const MeshValueT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct ViewTypePropertyT : public flatbuffers::NativeTable {
   typedef ViewTypeProperty TableType;
   std::string name{};
@@ -3424,6 +3579,12 @@ struct UIControl FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::ColorValue *value_as_ColorValue() const {
     return value_type() == Fx::ControlValue_ColorValue ? static_cast<const Fx::ColorValue *>(value()) : nullptr;
   }
+  const Fx::TextureValue *value_as_TextureValue() const {
+    return value_type() == Fx::ControlValue_TextureValue ? static_cast<const Fx::TextureValue *>(value()) : nullptr;
+  }
+  const Fx::MeshValue *value_as_MeshValue() const {
+    return value_type() == Fx::ControlValue_MeshValue ? static_cast<const Fx::MeshValue *>(value()) : nullptr;
+  }
   const flatbuffers::Vector<flatbuffers::Offset<Fx::ViewTypeProperty>> *properties() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::ViewTypeProperty>> *>(VT_PROPERTIES);
   }
@@ -3470,6 +3631,14 @@ template<> inline const Fx::Float4Value *UIControl::value_as<Fx::Float4Value>() 
 
 template<> inline const Fx::ColorValue *UIControl::value_as<Fx::ColorValue>() const {
   return value_as_ColorValue();
+}
+
+template<> inline const Fx::TextureValue *UIControl::value_as<Fx::TextureValue>() const {
+  return value_as_TextureValue();
+}
+
+template<> inline const Fx::MeshValue *UIControl::value_as<Fx::MeshValue>() const {
+  return value_as_MeshValue();
 }
 
 struct UIControlBuilder {
@@ -3576,6 +3745,12 @@ struct PresetEntry FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::ColorValue *value_as_ColorValue() const {
     return value_type() == Fx::ControlValue_ColorValue ? static_cast<const Fx::ColorValue *>(value()) : nullptr;
   }
+  const Fx::TextureValue *value_as_TextureValue() const {
+    return value_type() == Fx::ControlValue_TextureValue ? static_cast<const Fx::TextureValue *>(value()) : nullptr;
+  }
+  const Fx::MeshValue *value_as_MeshValue() const {
+    return value_type() == Fx::ControlValue_MeshValue ? static_cast<const Fx::MeshValue *>(value()) : nullptr;
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
@@ -3616,6 +3791,14 @@ template<> inline const Fx::Float4Value *PresetEntry::value_as<Fx::Float4Value>(
 
 template<> inline const Fx::ColorValue *PresetEntry::value_as<Fx::ColorValue>() const {
   return value_as_ColorValue();
+}
+
+template<> inline const Fx::TextureValue *PresetEntry::value_as<Fx::TextureValue>() const {
+  return value_as_TextureValue();
+}
+
+template<> inline const Fx::MeshValue *PresetEntry::value_as<Fx::MeshValue>() const {
+  return value_as_MeshValue();
 }
 
 struct PresetEntryBuilder {
@@ -4338,7 +4521,6 @@ inline void TrimeshBundle::UnPackTo(TrimeshBundleT *_o, const flatbuffers::resol
   { auto _e = verticesName(); if (_e) _o->verticesName = _e->str(); }
   { auto _e = facesName(); if (_e) _o->facesName = _e->str(); }
   { auto _e = adjacencyName(); if (_e) _o->adjacencyName = _e->str(); }
-  { auto _e = resourcePath(); if (_e) _o->resourcePath = _e->str(); }
 }
 
 inline flatbuffers::Offset<TrimeshBundle> TrimeshBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const TrimeshBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -4355,7 +4537,6 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatB
   auto _verticesName = _o->verticesName.empty() ? 0 : _fbb.CreateString(_o->verticesName);
   auto _facesName = _o->facesName.empty() ? 0 : _fbb.CreateString(_o->facesName);
   auto _adjacencyName = _o->adjacencyName.empty() ? 0 : _fbb.CreateString(_o->adjacencyName);
-  auto _resourcePath = _o->resourcePath.empty() ? 0 : _fbb.CreateString(_o->resourcePath);
   return Fx::CreateTrimeshBundle(
       _fbb,
       _name,
@@ -4363,8 +4544,7 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatB
       _faceCountUName,
       _verticesName,
       _facesName,
-      _adjacencyName,
-      _resourcePath);
+      _adjacencyName);
 }
 
 inline CBBundleT::CBBundleT(const CBBundleT &o)
@@ -4929,6 +5109,58 @@ inline flatbuffers::Offset<StringValue> CreateStringValue(flatbuffers::FlatBuffe
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const StringValueT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _value = _o->value.empty() ? 0 : _fbb.CreateString(_o->value);
   return Fx::CreateStringValue(
+      _fbb,
+      _value);
+}
+
+inline TextureValueT *TextureValue::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<TextureValueT>(new TextureValueT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void TextureValue::UnPackTo(TextureValueT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = value(); if (_e) _o->value = _e->str(); }
+}
+
+inline flatbuffers::Offset<TextureValue> TextureValue::Pack(flatbuffers::FlatBufferBuilder &_fbb, const TextureValueT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateTextureValue(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<TextureValue> CreateTextureValue(flatbuffers::FlatBufferBuilder &_fbb, const TextureValueT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const TextureValueT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _value = _o->value.empty() ? 0 : _fbb.CreateString(_o->value);
+  return Fx::CreateTextureValue(
+      _fbb,
+      _value);
+}
+
+inline MeshValueT *MeshValue::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<MeshValueT>(new MeshValueT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void MeshValue::UnPackTo(MeshValueT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = value(); if (_e) _o->value = _e->str(); }
+}
+
+inline flatbuffers::Offset<MeshValue> MeshValue::Pack(flatbuffers::FlatBufferBuilder &_fbb, const MeshValueT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateMeshValue(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<MeshValue> CreateMeshValue(flatbuffers::FlatBufferBuilder &_fbb, const MeshValueT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const MeshValueT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _value = _o->value.empty() ? 0 : _fbb.CreateString(_o->value);
+  return Fx::CreateMeshValue(
       _fbb,
       _value);
 }
@@ -5626,6 +5858,14 @@ inline bool VerifyControlValue(flatbuffers::Verifier &verifier, const void *obj,
     case ControlValue_ColorValue: {
       return verifier.VerifyField<Fx::ColorValue>(static_cast<const uint8_t *>(obj), 0, 1);
     }
+    case ControlValue_TextureValue: {
+      auto ptr = reinterpret_cast<const Fx::TextureValue *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case ControlValue_MeshValue: {
+      auto ptr = reinterpret_cast<const Fx::MeshValue *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
     default: return true;
   }
 }
@@ -5673,6 +5913,14 @@ inline void *ControlValueUnion::UnPack(const void *obj, ControlValue type, const
       auto ptr = reinterpret_cast<const Fx::ColorValue *>(obj);
       return new Fx::ColorValue(*ptr);
     }
+    case ControlValue_TextureValue: {
+      auto ptr = reinterpret_cast<const Fx::TextureValue *>(obj);
+      return ptr->UnPack(resolver);
+    }
+    case ControlValue_MeshValue: {
+      auto ptr = reinterpret_cast<const Fx::MeshValue *>(obj);
+      return ptr->UnPack(resolver);
+    }
     default: return nullptr;
   }
 }
@@ -5708,6 +5956,14 @@ inline flatbuffers::Offset<void> ControlValueUnion::Pack(flatbuffers::FlatBuffer
       auto ptr = reinterpret_cast<const Fx::ColorValue *>(value);
       return _fbb.CreateStruct(*ptr).Union();
     }
+    case ControlValue_TextureValue: {
+      auto ptr = reinterpret_cast<const Fx::TextureValueT *>(value);
+      return CreateTextureValue(_fbb, ptr, _rehasher).Union();
+    }
+    case ControlValue_MeshValue: {
+      auto ptr = reinterpret_cast<const Fx::MeshValueT *>(value);
+      return CreateMeshValue(_fbb, ptr, _rehasher).Union();
+    }
     default: return 0;
   }
 }
@@ -5740,6 +5996,14 @@ inline ControlValueUnion::ControlValueUnion(const ControlValueUnion &u) : type(u
     }
     case ControlValue_ColorValue: {
       value = new Fx::ColorValue(*reinterpret_cast<Fx::ColorValue *>(u.value));
+      break;
+    }
+    case ControlValue_TextureValue: {
+      value = new Fx::TextureValueT(*reinterpret_cast<Fx::TextureValueT *>(u.value));
+      break;
+    }
+    case ControlValue_MeshValue: {
+      value = new Fx::MeshValueT(*reinterpret_cast<Fx::MeshValueT *>(u.value));
       break;
     }
     default:
@@ -5781,6 +6045,16 @@ inline void ControlValueUnion::Reset() {
     }
     case ControlValue_ColorValue: {
       auto ptr = reinterpret_cast<Fx::ColorValue *>(value);
+      delete ptr;
+      break;
+    }
+    case ControlValue_TextureValue: {
+      auto ptr = reinterpret_cast<Fx::TextureValueT *>(value);
+      delete ptr;
+      break;
+    }
+    case ControlValue_MeshValue: {
+      auto ptr = reinterpret_cast<Fx::MeshValueT *>(value);
       delete ptr;
       break;
     }

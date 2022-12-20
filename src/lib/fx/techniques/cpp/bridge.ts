@@ -1,4 +1,4 @@
-import { IEmitter } from '../../../idl/emitter/IEmitter';
+import { IEmitter, ITextureDesc, ITexture, ITrimeshDesc, ITrimesh } from '@lib/idl/emitter/IEmitter';
 import loadWASM from './module.cpp';
 import * as Bytecode from '@lib/idl/bytecode';
 import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
@@ -15,31 +15,20 @@ const Module = await loadWASM();
 const isEmitter = tech => tech?.getType() === 'emitter';
 const isMat = tech => tech?.getType() === 'material';
 
-function transferU8ToHeap(module: EmscriptenModule, u8Array: Uint8Array): WASMMemory {
+/**
+ * Allocate new heap memory. (!)
+ */
+function transferU8ToHeap(module: EmscriptenModule, view: ArrayBufferView): WASMMemory {
+    const u8Array = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
     const heap = module._malloc(u8Array.length * u8Array.BYTES_PER_ELEMENT);
     const size = u8Array.length >> 2;
     module.HEAPU8.set(u8Array, heap);
     return { heap, size };
 }
 
-/**
- * @deprecated
- */
-function transferU32ToHeap(module: EmscriptenModule, u32Array: Uint32Array): WASMMemory {
-    const heap = module._malloc(u32Array.length * u32Array.BYTES_PER_ELEMENT);
-    const size = u32Array.length;
-    module.HEAPU32.set(u32Array, heap);
-    return { heap, size };
-}
 
-/**
- * @deprecated
- */
-function transferF32ToHeap(module: EmscriptenModule, f32Array: Float32Array): WASMMemory {
-    const heap = module._malloc(f32Array.length * f32Array.BYTES_PER_ELEMENT);
-    const size = f32Array.length;
-    module.HEAPF32.set(f32Array, heap);
-    return { heap, size };
+function freeHeap(module: EmscriptenModule, { heap }: WASMMemory) {
+    module._free(heap);
 }
 
 
@@ -109,6 +98,57 @@ export function copyTechnique(dst: ITechnique, src: ITechnique): boolean {
 }
 
 
+export function createTexture(desc: ITextureDesc, initData: ArrayBufferView): ITexture {
+    let textureWasm = null;
+    let mem = transferU8ToHeap(Module, initData);
+    try {
+        textureWasm = Module.createTexture(desc, mem);
+    } finally {
+        Module._free(mem.heap);
+    }
+
+    return textureWasm;
+}
+
+
+export function destroyTexture(texture: ITexture) {
+    if (texture) {
+        try {
+            Module.destroyTexture(texture);
+        } finally {};
+    }
+}
+
+
+export function createTrimesh(desc: ITrimeshDesc, 
+    vertices: ArrayBufferView, faces: ArrayBufferView, indicesAdj: ArrayBufferView): ITrimesh {
+    let trimeshWasm = null;
+    let vertMem = transferU8ToHeap(Module, vertices);
+    let faceMem = transferU8ToHeap(Module, faces);
+    let indMem = transferU8ToHeap(Module, indicesAdj);
+    try {
+        trimeshWasm = Module.createTrimesh(desc, vertMem, faceMem, indMem);
+    } finally {
+        Module._free(vertMem.heap);
+        Module._free(faceMem.heap);
+        Module._free(indMem.heap);
+    }
+    return trimeshWasm;
+}
+
+
+export function destroyTrimesh(mesh: ITrimesh) {
+    if (mesh) {
+        try {
+            Module.destroyTrimesh(mesh);
+        } finally {};
+    }
+}
+
+//
+//
+//
+
 export function memoryToU8Array(input: Bytecode.IMemory) {
     const { heap, size } = input as WASMMemory;
     return Module.HEAPU8.subarray(heap, (heap + (size << 2)));
@@ -128,20 +168,16 @@ export function memoryToF32Array(input: Bytecode.IMemory): Float32Array {
     return Module.HEAPF32.subarray(heap >> 2, ((heap >> 2) + size));
 }
 
-/**
- * @deprecated
- */
-export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
-    return transferU32ToHeap(Module, input);
-}
 
 /**
- * @deprecated
+ * NOTE: copy view to NEW memory (!)
+ * @returns New array containing input data.
  */
-export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
-    return transferF32ToHeap(Module, input);
-}
-
-export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+export function copyViewToMemory(input: ArrayBufferView): Bytecode.IMemory {
     return transferU8ToHeap(Module, new Uint8Array(input.buffer, input.byteOffset, input.byteLength));
+}
+
+
+export function releaseMemory(mem: Bytecode.IMemory) {
+    freeHeap(Module, <WASMMemory>mem);
 }

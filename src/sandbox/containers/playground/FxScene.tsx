@@ -10,7 +10,7 @@ import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
-import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
+import ThreeScene, { GetAssetsModels, GetAssetsTextures, IThreeSceneState, ITreeSceneProps, loadObjModel, loadTexture } from './ThreeScene';
 
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 
@@ -24,9 +24,10 @@ import * as GLSL from './shaders/fx';
 
 import '@sandbox/styles/custom/dat-gui.css';
 import { ControlValueType } from '@lib/fx/bundles/utils';
-import { IMap } from '@lib/idl/IMap';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { prepareTrimesh } from './utils/adjacency';
+import { IMap } from '@lib/idl/IMap';
+import { ITexture, ITrimesh } from '@lib/idl/emitter/IEmitter';
+import { Uniforms } from '@lib/idl/Uniforms';
 
 interface IFxSceneProps extends ITreeSceneProps {
     emitter: IEmitter;
@@ -51,6 +52,10 @@ struct PartLight {
     bool isAdaptiveIntensity;
  };
 `;
+
+const CHECKER_TEXTURE2D = 'checker2x2.png';
+const SABER_LOGO = 'saber-logo.png';
+const BLACK_SUN = 'black-sun-clip.png';
 
 interface IPartLight {
     pos: [number, number, number];
@@ -81,15 +86,118 @@ const progressStyleFix: React.CSSProperties = {
 };
 
 
-class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
-    state: IFxSceneState;
+function UnpackCanvasImageSource(img: CanvasImageSource): Uint8ClampedArray {
+    const width = img.width as number;
+    const height = img.height as number;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    return canvas.getContext('2d').getImageData(0, 0, width, height).data;
+}
 
-    passes: {
+
+interface IDeps {
+    models: IMap<THREE.Mesh[]>;
+    textures: IMap<THREE.DataTexture>;
+}
+
+
+interface IResources {
+    meshes: ITrimesh[];
+    textures: ITexture[];
+}
+
+
+function setUniformValue(helper: IUniformHelper, name: string, type: string, value: ControlValueType) {
+    switch (type) {
+        case 'int':
+        case 'uint':
+            helper.set(name).int(value as number);
+            break;
+        case 'float':
+            helper.set(name).float(value as number);
+            break;
+        case 'float2':
+            let v2 = value as Vector2;
+            helper.set(name).float2(v2.x, v2.y);
+            break;
+        case 'float3':
+            let v3 = value as Vector3;
+            helper.set(name).float3(v3.x, v3.y, v3.z);
+            break;
+        case 'float4':
+            let v4 = value as Vector4;
+            helper.set(name).float4(v4.x, v4.y, v4.z, v4.w);
+            break;
+        case 'color':
+            let color = value as Color;
+            helper.set(name).float4(color.r, color.g, color.b, color.a);
+            break;
+    }
+}
+
+
+function resolveExternalDependencies(
+    preloadTextures: boolean,
+    preloadMeshes: boolean,
+    deps: IDeps,
+    onComplete: (deps: IDeps) => void) {
+
+    const geoms: Set<string> = new Set();
+    const textures: Set<string> = new Set();
+
+    if (preloadTextures) {
+        // IP: quick solution - request all possible textures as sub resources
+        // if resource requires at least one texture.
+        GetAssetsTextures().forEach(fname => textures.add(fname));
+    }
+
+    if (preloadMeshes || true) {
+        // IP: quick solution - request all possible textures as sub resources
+        // if resource requires at least one texture.
+        GetAssetsModels().forEach(fname => geoms.add(fname));
+    }
+
+    let depNum = 1;
+    let tryFinish = () => {
+        depNum--;
+        if (depNum == 0) {
+            onComplete(deps);
+        }
+    }
+
+    for (let name of geoms.values()) {
+        if (!deps.models[name]) {
+            depNum++;
+            loadObjModel(name).then(meshes => {
+                deps.models[name] = meshes;
+                tryFinish();
+            });
+        }
+    }
+
+    for (let name of textures.values()) {
+        if (!deps.textures[name]) {
+            depNum++;
+            loadTexture(name).then(texture => {
+                deps.textures[name] = texture;
+                tryFinish();
+            });
+        }
+    }
+
+    tryFinish();
+}
+
+
+class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
+    private passes: {
         meshes: (THREE.Mesh | THREE.LineSegments)[];
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
     }[];
 
-    env: {
+    private env: {
         floor?: THREE.Mesh,
         leftWall?: THREE.Mesh,
         rightWall?: THREE.Mesh,
@@ -97,8 +205,15 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         ceiling?: THREE.Mesh
     } = null;
 
-    lights?: THREE.Light[];
-    models: IMap<THREE.Mesh[]> = {};
+    private lights?: THREE.Light[];
+
+    private deps: IDeps = {
+        models: {},
+        textures: {},
+    };
+
+    private textures: IMap<ITexture>;
+    private meshes: IMap<ITrimesh>;
 
     constructor(props) {
         super(props);
@@ -111,39 +226,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         };
     }
 
-    resolveDependencies(emitter: IEmitter, onComplete: (emitter: IEmitter) => void) {
-        const KNOWN_GEOMETRIES = ['arrow', 'probe', 'cube'];
-
-        const geoms: Set<string> = new Set();
-        const nPass = emitter.getPassCount();
-        for (let i = 0; i < nPass; ++i) {
-            const geometry = emitter.getPass(i).getDesc().geometry;
-            if (KNOWN_GEOMETRIES.includes(geometry)) {
-                geoms.add(geometry);
-            }
-        }
-
-        // move to implicit dependencies based on emitter's needs
-        geoms.add('cube');
-
-        if (!geoms.size) {
-            onComplete(emitter);
-            return;
-        }
-
-        // resolve dependencies
-        let depNum = 0;
-        let tryFinish = () => {
-            depNum--;
-            if (depNum == 0) {
-                onComplete(emitter);
-            }
-        }
-        for (let geometry of geoms.values()) {
-            depNum++;
-            this.loadObjModel(geometry).then(tryFinish);
-        }
-    }
 
     componentDidMount() {
         super.componentDidMount();
@@ -151,34 +233,69 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    loadObjModel(name: string): Promise<THREE.Mesh[]> {
-        const loader = new OBJLoader();
-        return new Promise<THREE.Mesh[]>((resolve, reject) => {
-
-            if (isDefAndNotNull(this.models[name])) {
-                resolve(this.models[name]);
-                return;
-            }
-
-            loader.load(
-                `./assets/models/${name}.obj`,
-                (group: THREE.Group) => {
-                    this.models[name] = group.children as THREE.Mesh[];
-                    console.log(`model './assets/models/${name}.obj' is loaded.`);
-                    resolve(this.models[name]);
-                },
-                (xhr) => {
-                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-                },
-                (error) => {
-                    console.log('An error happened');
-                    reject();
-                }
-            );
-        });
+    shouldComponentUpdate(nextProps: IFxSceneProps, nexState) {
+        return this.state.emitter !== nextProps.emitter || this.state.nParticles !== nexState.nParticles;
     }
 
-    addPassLine(pass: IEmitterPass) {
+
+    // this function is called because of ant state change
+    // including part count
+    componentDidUpdate(prevProps, prevState) {
+        super.componentDidUpdate(prevProps, prevState);
+
+        // loading still in process - nothing todo
+        if (this.state.loading === this.props.emitter) {
+            return;
+        }
+
+        // new emitter has been passed - reload required
+        if (this.props.emitter !== this.state.emitter) {
+            // reload emitter
+            this.addEmitter(this.props.emitter);
+            return;
+        }
+
+        // if emitter is just loaded or update
+        const isLoaded = prevState.loading == this.state.emitter;
+        const isUpdated = prevState.emitter === this.state.emitter;
+        // ....
+    }
+
+
+    componentWillUnmount() {
+        this.removeEmitter();
+        super.componentWillUnmount();
+    }
+
+
+    render() {
+        return (
+            <div
+                style={this.props.style}
+                ref={(mount) => { this.mount = mount; }}
+            >
+                <Progress
+                    value={this.state.nParticles}
+                    total={this.props.emitter.getCapacity()}
+                    attached='top'
+                    size='medium'
+                    indicating
+                    style={progressStyleFix}
+                />
+                <div style={statsStyleFix}>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br />
+                    simulation: CPU<br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br />
+                </div>
+            </div>
+        );
+    }
+
+
+
+
+
+    private addPassLine(pass: IEmitterPass) {
         const geometry = new THREE.BufferGeometry();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
         const desc = pass.getDesc();
@@ -210,7 +327,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.passes.push({ meshes: [mesh], instancedBuffer });
     }
 
-    addPass(pass: IEmitterPass) {
+    private addPass(pass: IEmitterPass) {
         const desc = pass.getDesc();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
         if (desc.geometry === "line") {
@@ -265,40 +382,24 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    showEnv() {
+    private showEnv() {
         if (!this.env) this.addEnv();
         Object.keys(this.env).forEach(objName => (this.env[objName].visible = true));
     }
 
 
-    hideEnv() {
+    private hideEnv() {
         if (!this.env) return;
         Object.keys(this.env).forEach(objName => (this.env[objName].visible = false));
     }
 
 
-    addEnv() {
+    private addEnv() {
         if (this.env) {
             return;
         }
 
         this.env = {};
-        // const light = new THREE.PointLight( 0x00ff00, 1, 5 );
-        // const helper = new THREE.PointLightHelper(light);
-        // light.position.set( 0, 2, 0 );
-
-        // let showLight = true;
-        // setTimeout(() => {
-        //     if (showLight)
-        //     {
-        //         this.scene.add( light, helper );
-        //     }
-        //     else {
-        //         this.scene.remove( light, helper );
-        //     }
-
-        //     showLight = !showLight;
-        // }, 1000);
 
         const scene = this.scene;
         this.env.floor = (_ => {
@@ -357,13 +458,13 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    addPassLight() {
+    private addPassLight() {
         this.showEnv();
         this.passes.push({ meshes: null, instancedBuffer: null });
     }
 
 
-    addPassLWI(pass: IEmitterPass) {
+    private addPassLWI(pass: IEmitterPass) {
         const desc = pass.getDesc();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
 
@@ -412,7 +513,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    addPassDefaultMat(pass: IEmitterPass) {
+    private addPassDefaultMat(pass: IEmitterPass) {
         const desc = pass.getDesc();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
         // tslint:disable-next-line:max-line-length
@@ -451,7 +552,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    createInstinceGeometry(geometry: string, fallback = "billboard"): THREE.BufferGeometry[] {
+    private createInstinceGeometry(geometry: string, fallback = "billboard"): THREE.BufferGeometry[] {
         let instanceGeometry: THREE.BufferGeometry[] = null;
         switch (geometry) {
             case "box":
@@ -470,9 +571,12 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 instanceGeometry = [new THREE.PlaneGeometry()];
                 break;
             default:
-                let meshes = this.models[geometry];
-                if (meshes) {
-                    return meshes.map(mesh => mesh.geometry);
+                let objName = Object.keys(this.deps.models).find(name => name.includes(geometry));
+                if (objName) {
+                    let meshes = this.deps.models[objName];
+                    if (meshes) {
+                        return meshes.map(mesh => mesh.geometry);
+                    }
                 }
                 return this.createInstinceGeometry(fallback);
         }
@@ -480,77 +584,77 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    // tslint:disable-next-line:max-func-body-length
-    addEmitter(emitter: IEmitter) {
+    private removeEmitter() {
+        this.passes?.forEach(pass => {
+            if (pass.meshes) {
+                this.scene.remove(...pass.meshes);
+            }
+            // verbose('emitter\'s pass removed.');
+        });
+
+        Object.values(this.textures || {}).forEach(tex => {
+            Techniques.destroyTexture(tex);
+        });
+
+        Object.values(this.meshes || {}).forEach(mesh => {
+            Techniques.destroyTrimesh(mesh);
+        });
+
+        this.meshes = {};
+        this.textures = {};
+    }
+
+
+    private createPasses(emitter: IEmitter) {
+        this.passes = [];
+        // tslint:disable-next-line:max-func-body-length
+        let nPass = emitter.getPassCount();
+        this.hideEnv();
+        for (let i = 0; i < nPass; ++i) {
+            let pass = emitter.getPass(i);
+            let desc = pass.getDesc();
+            if (desc.vertexShader && desc.pixelShader) {
+                this.addPass(pass);
+            } else if (desc.instanceName == "DefaultShaderInput") {
+                this.addPassDefaultMat(pass);
+            } else if (desc.instanceName == "LwiInstance") {
+                this.addPassLWI(pass);
+            } else if (desc.instanceName == "PartLight") {
+                this.addPassLight();
+            }
+        }
+
+        this.setState({ emitter, loading: null });
+        verbose(`emitter '${emitter.getName()}' has been loaded.`);
+    }
+
+
+    private addEmitter(emitter: IEmitter) {
+        this.removeEmitter();
+
         if (!isDefAndNotNull(emitter)) {
-            console.warn('no emitters found.');
             return;
         }
 
         verbose(`emitter '${emitter.getName()}' loading in process...`);
         this.setState({ loading: emitter, emitter: null });
 
-        // todo: make it on demand based on emitter's needs
-        const setExplicitlyCubeGeom = (emitter: IEmitter) => {
-            const mesh = this.models['cube'][0];
-            const geometry = mesh.geometry;
-            assert(geometry);
-            const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
+        const controls = this.props.controls;
+        const doLoadTexture = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
+        const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
 
-            emitter.setTrimesh("geom",
-                vertCount,
-                faceCount,
-                Techniques.viewToMemory(new Float32Array(vertices)),
-                Techniques.viewToMemory(new Uint32Array(faces)),
-                Techniques.viewToMemory(new Uint32Array(indicesAdj))
-            );
-
-            // this.scene.add(mesh);
-            // mesh.material = new THREE.MeshNormalMaterial();
-        };
-
-        const createPasses = (emitter) => {
-            this.passes = [];
-            // tslint:disable-next-line:max-func-body-length
-            let nPass = emitter.getPassCount();
-            this.hideEnv();
-            for (let i = 0; i < nPass; ++i) {
-                let pass = emitter.getPass(i);
-                let desc = pass.getDesc();
-                if (desc.vertexShader && desc.pixelShader) {
-                    this.addPass(pass);
-                } else if (desc.instanceName == "DefaultShaderInput") {
-                    this.addPassDefaultMat(pass);
-                } else if (desc.instanceName == "LwiInstance") {
-                    this.addPassLWI(pass);
-                } else if (desc.instanceName == "PartLight") {
-                    this.addPassLight();
-                }
-            }
-
-            this.setState({ emitter, loading: null });
-            verbose(`emitter '${emitter.getName()}' has been loaded.`);
-        };
-
-        this.resolveDependencies(emitter, (emitter: IEmitter) => {
-            createPasses(emitter);
-            setExplicitlyCubeGeom(emitter);
+        resolveExternalDependencies(doLoadTexture, doLoadMeshes, this.deps, (deps: IDeps) => {
+            this.createPasses(emitter);
         });
     }
 
 
-
-    fillScene(time: DOMHighResTimeStamp) {
-        const emitter = this.state.emitter;
-        const timeline = this.props.timeline;
+    private prerecordUniforms(): Uniforms {
         const controls = this.props.controls;
+        const timeline = this.props.timeline;
 
-        if (!emitter) {
-            return;
-        }
-
-        let constants = timeline.getConstants();
-        let helper = UniformHelper();
+        const constants = timeline.getConstants();
+        const helper = UniformHelper();
         helper.set('elapsedTime').float(constants.elapsedTime);
         helper.set('elapsedTimeLevel').float(constants.elapsedTimeLevel);
         helper.set('elapsedTimeThis').float(constants.elapsedTimeLevel);
@@ -561,14 +665,89 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         if (this.preset) {
             let preset = this.props.controls.presets.find(p => p.name == this.preset);
-            preset.data.forEach(entry => this.setUniformValue(helper, entry.name, entry.type, entry.value));
+            preset.data.forEach(entry => setUniformValue(helper, entry.name, entry.type, entry.value));
         }
 
         for (let name in controls.values) {
-            this.setUniformValue(helper, name, controls.controls[name].type, controls.values[name]);
+            const type = controls.controls[name].type;
+            const value = controls.values[name];
+            setUniformValue(helper, name, type, value);
         }
 
-        let uniforms = helper.finish();
+        return helper.finish();
+    }
+
+
+    private setupResources() {
+        const emitter = this.state.emitter;
+
+        const createTextureFromSource = (dep: THREE.DataTexture) => {
+            const img = dep.source.data as CanvasImageSource;
+            assert(img instanceof HTMLImageElement);
+
+            const width = img.width as number;
+            const height = img.height as number;
+            const data = UnpackCanvasImageSource(img);
+            return Techniques.createTexture({ width, height }, data);
+        };
+
+
+        const createMeshFromSource = (dep: THREE.Mesh[]) => {
+            const { geometry } = dep[0];
+            assert(geometry);
+
+            const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
+            return Techniques.createTrimesh(
+                {
+                    vertCount,
+                    faceCount
+                },
+                new Float32Array(vertices),
+                new Uint32Array(faces),
+                new Uint32Array(indicesAdj));
+        };
+
+        const controls = this.props.controls;
+        for (const name in controls.values) {
+            // todo: skip textrues and meshes
+            const type = controls.controls[name].type;
+            const value = controls.values[name] as string;
+
+            if (type == 'texture2d') {
+                // all the sources must be preloaded in advance (!)
+                const source = this.deps.textures[value];
+
+                if (!this.textures[value]) {
+                    this.textures[value] = createTextureFromSource(source);
+                }
+
+                emitter.setTexture(name, this.textures[value]);
+            }
+
+            if (type == 'mesh') {
+                // all the sources must be preloaded in advance (!)
+                const source = this.deps.models[value];
+
+                if (!this.meshes[value]) {
+                    this.meshes[value] = createMeshFromSource(source);
+                }
+
+                emitter.setTrimesh(name, this.meshes[value]);
+            }
+        }
+    }
+
+
+    protected beginFrame() {
+        const emitter = this.state.emitter;
+        const timeline = this.props.timeline;
+
+        if (!emitter) {
+            return;
+        }
+
+        this.setupResources();
+        const uniforms = this.prerecordUniforms();
 
         if (!timeline.isStopped()) {
             timeline.tick();
@@ -620,114 +799,17 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.setState({ nParticles: emitter.getNumParticles() });
 
         // emitter.dump();
+
+
+        // this.scene.add(new THREE.Mesh(geometry, new THREE.MeshNormalMaterial))
     }
 
-    setUniformValue(helper: IUniformHelper, name: string, type: string, value: ControlValueType) {
-        switch (type) {
-            case 'int':
-            case 'uint':
-                helper.set(name).int(value as number);
-                break;
-            case 'float':
-                helper.set(name).float(value as number);
-                break;
-            case 'float2':
-                let v2 = value as Vector2;
-                helper.set(name).float2(v2.x, v2.y);
-                break;
-            case 'float3':
-                let v3 = value as Vector3;
-                helper.set(name).float3(v3.x, v3.y, v3.z);
-                break;
-            case 'float4':
-                let v4 = value as Vector4;
-                helper.set(name).float4(v4.x, v4.y, v4.z, v4.w);
-                break;
-            case 'color':
-                let color = value as Color;
-                helper.set(name).float4(color.r, color.g, color.b, color.a);
-                break;
-        }
-    }
 
-    protected override cleanScene(time: number): void {
+
+    protected override endFrame(): void {
         if (this.lights?.length) this.scene.remove(...this.lights);
     }
 
-
-    shouldComponentUpdate(nextProps: IFxSceneProps, nexState) {
-        return this.state.emitter !== nextProps.emitter || this.state.nParticles !== nexState.nParticles;
-    }
-
-
-    // tslint:disable-next-line:member-ordering
-    // static getDerivedStateFromProps(props: IFxSceneProps, state: IFxSceneState) {
-    //     if (state.emitter === props.emitter) {
-    //         return null;
-    //     }
-
-    //     return { emitter: props.emitter };
-    // }
-
-
-    // this function is called because of ant state change
-    // including part count
-    componentDidUpdate(prevProps, prevState) {
-        super.componentDidUpdate(prevProps, prevState);
-
-        const reloadEmitter = () => {
-            this.passes?.forEach(pass => {
-                if (pass.meshes)
-                    this.scene.remove(...pass.meshes);
-                // verbose('emitter\'s pass removed.');
-            });
-
-            if (this.props.emitter) {
-                this.addEmitter(this.props.emitter);
-            }
-        }
-
-
-        // loading still in process - nothing todo
-        if (this.state.loading === this.props.emitter) {
-            return;
-        }
-
-        // new emitter has been passed - reload required
-        if (this.props.emitter !== this.state.emitter) {
-            reloadEmitter();
-            return;
-        }
-
-        // if emitter is just loaded or update
-        const isLoaded = prevState.loading == this.state.emitter;
-        const isUpdated = prevState.emitter === this.state.emitter;
-        // ....
-    }
-
-
-    render() {
-        return (
-            <div
-                style={this.props.style}
-                ref={(mount) => { this.mount = mount; }}
-            >
-                <Progress
-                    value={this.state.nParticles}
-                    total={this.props.emitter.getCapacity()}
-                    attached='top'
-                    size='medium'
-                    indicating
-                    style={progressStyleFix}
-                />
-                <div style={statsStyleFix}>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br />
-                    simulation: CPU<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br />
-                </div>
-            </div>
-        );
-    }
 }
 
 export default FxScene;

@@ -18,6 +18,26 @@ export interface IEmitterPass extends ITechniquePass<IEmitterPassDesc> {
 }
 
 
+export interface ITrimeshDesc {
+    vertCount: number;
+    faceCount: number;
+}
+
+// only R8G8B8A8 is supported for now
+export interface ITextureDesc {
+    width: number;
+    height: number;
+}
+
+
+export interface ITexture {
+
+}
+
+export interface ITrimesh {
+
+}
+
 export interface IEmitter extends ITechnique<IEmitterPass> {
     getCapacity(): number;
     getNumParticles(): number;
@@ -27,7 +47,8 @@ export interface IEmitter extends ITechnique<IEmitterPass> {
     serialize(): void;                      // alias for all pass serialization ((pass of passes) pass.serialize())
     reset(): void;
 
-    setTrimesh(name: string, vertCount: number, faceCount: number, vertices: IMemory, faces: IMemory, indicesAdj: IMemory): void;
+    setTrimesh(name: string, trimesh: ITrimesh): void;
+    setTexture(name: string, tex: ITexture): void;
     
     dump(): void;
 }

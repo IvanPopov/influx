@@ -1,6 +1,6 @@
-import { assert, isDefAndNotNull } from "@lib/common";
+import { assert, isDef, isDefAndNotNull } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import { CBUFFER0_REGISTER } from "@lib/fx/bytecode/Bytecode";
+import { CBUFFER0_REGISTER, SRV0_REGISTER, UAV0_REGISTER, SRV_TOTAL, UAV_TOTAL, CBUFFER_TOTAL } from "@lib/fx/bytecode/Bytecode";
 import { u8ArrayToI32 } from "@lib/fx/bytecode/common";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import * as Bundle from "@lib/idl/bytecode";
@@ -26,6 +26,25 @@ export function fromBundleMemory(mem: Bundle.IMemory)
 {
     return (<TSBundleMemory>mem).buffer;
 }
+
+
+function slotToShaderLikeRegister(slot: number) {
+    if (slot >= CBUFFER0_REGISTER && slot - CBUFFER0_REGISTER < CBUFFER_TOTAL) 
+        return `b${slot - CBUFFER0_REGISTER}`;
+    if (slot >= SRV0_REGISTER && slot - SRV0_REGISTER < SRV_TOTAL) 
+        return `t${slot - SRV0_REGISTER}`;
+    if (slot >= UAV0_REGISTER && slot - UAV0_REGISTER < UAV_TOTAL) 
+        return `u${slot - UAV0_REGISTER}`;
+    return `[ invalid slot | ${slot} ]`;
+}
+
+
+function exposeInvalidInputError(iinput: Int32Array[], slot: number) {
+    const reg = slotToShaderLikeRegister(slot);
+    if (isDefAndNotNull(iinput[slot])) return `resource usage out of range, register: ${reg}`;
+    return `missing resource is found, register: ${reg}`;
+}
+
 
 export class TSBundle implements Bundle.IBundle
 {
@@ -79,7 +98,7 @@ export class TSBundle implements Bundle.IBundle
             let b = ilist[i5 + 2];
             let c = ilist[i5 + 3];
             let d = ilist[i5 + 4];
-
+            
             switch (op) {
                 // registers
                 case EOperation.k_I32SetConst:
@@ -93,12 +112,12 @@ export class TSBundle implements Bundle.IBundle
                     break;
                 // inputs
                 case EOperation.k_I32LoadInput:
-                    assert(iinput[a].length > c);
+                    assert(iinput[a]?.length > c, exposeInvalidInputError(iinput, a));
                     assert(iregs.length > b);
                     iregs[b] = iinput[a][c];
                     break;
                 case EOperation.k_I32StoreInput:
-                    assert(iinput[a].length > b);
+                    assert(iinput[a]?.length > b, exposeInvalidInputError(iinput, a));
                     assert(iregs.length > c);
                     iinput[a][b] = iregs[c];
                     break;
@@ -130,6 +149,28 @@ export class TSBundle implements Bundle.IBundle
                     assert(iinput[a].length > (iregs[b] + d));
                     assert(iregs.length > c);
                     iinput[a][iregs[b] + d] = iregs[c];
+                    break;
+                
+                case EOperation.k_I32TextureLoad:
+                    // a - destination  (always float4)
+                    // b - texture      (input index)
+                    // c - arguments    (int3 uv)
+                    {
+                        const layout = iinput[b];
+                        const u = iregs[c];
+                        const v = iregs[c + 1];
+                        const w = layout[0];
+                        const h = layout[1];
+                        assert(u >= 0 && u < w, `u(${u}) is out of borders [0, ${w})`);
+                        assert(v >= 0 && v < h, `u(${v}) is out of borders [0, ${h})`);
+                        // const fmt = layout[2];
+                        const texel = layout.subarray(/*desc(64) >> 2*/16)[w * v + u] >>> 0; // todo: use unsigned inputs
+                        const iR = (texel) & 0xFF;
+                        const iG = (texel >> 8) & 0xFF;
+                        const iB = (texel >> 16) & 0xFF;
+                        const iA = (texel >> 24) & 0xFF;
+                        fregs.set([ iR / 255.0, iG / 255.0, iB / 255.0, iA / 255.0 ], a);
+                    }
                     break;
 
                 //

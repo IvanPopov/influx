@@ -13,6 +13,8 @@ export enum EOperation {
     
     k_I32SetConst,              // set constant => registers
 
+    k_I32TextureLoad,           // ...
+
     //
     // Arithemtic operations
     //

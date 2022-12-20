@@ -7,9 +7,7 @@ import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { ITextDocument } from "@lib/idl/ITextDocument";
 import { isString } from "@lib/util/s3d/type";
 import { BaseEmitter } from "./BaseEmitter";
 
@@ -88,8 +86,7 @@ export interface ICodeEmitterOptions {
 }
 
 
-function pushUniq<T>(arr: Array<T>, elem: T)
-{
+function pushUniq<T>(arr: Array<T>, elem: T) {
     if (arr.indexOf(elem) == -1)
         arr.push(elem);
 }
@@ -105,13 +102,14 @@ export interface ICodeContextOptions {
 export class CodeContext {
     // known globals like: functions, types, uniforms etc.
     private knownSignatures: Set<string> = new Set();
-    
+
     readonly uavs: IUavReflection[] = [];
+    readonly textures: ITextureReflection[] = [];
     readonly buffers: IBufferReflection[] = [];
     readonly cbuffers: ICbReflection[] = [];
     readonly CSShaders: ICSShaderReflection[] = [];
 
-    protected CSShader?: ICSShaderReflection; 
+    protected CSShader?: ICSShaderReflection;
 
     readonly opts: ICodeContextOptions;
 
@@ -119,14 +117,14 @@ export class CodeContext {
         this.opts = opts;
         this.opts.mode ||= 'raw';
     }
-    
+
     get entryName(): string { return this.opts.entryName; }
     get mode(): string { return this.opts.mode; }
     isPixel() { return this.mode === 'pixel'; }
     isVertex() { return this.mode === 'vertex'; }
     isRaw() { return this.mode === 'raw'; }
 
-    
+
     has(signature: string): boolean {
         return this.knownSignatures.has(signature);
     }
@@ -138,6 +136,7 @@ export class CodeContext {
     }
 
 
+    // note: cbuffers without predefined register are not supported yet (!)
     addCbuffer(cbuf: ICbufferInstruction): ICbReflection {
         assert(!this.has(cbuf.name));
         this.add(cbuf.name);
@@ -145,10 +144,29 @@ export class CodeContext {
         const { name, type: { size }, register: { index: register } } = cbuf;
         const buf = { name, size, register };
         this.cbuffers.push(buf);
-    
+
         return buf;
     }
 
+
+    addTexture(type: string, name: string): ITextureReflection {
+        assert(!this.has(name));
+        this.add(name);
+
+        const register = this.buffers.length + this.textures.length;
+        const regexp = /^([\w]+)<([\w0-9_]+)>$/;
+        const match = type.match(regexp) || [ `${type}<float4>`, `${type}`, `float4` ];
+        const texture = <ITextureReflection>{
+            name,
+            type,
+            texType: match[1],
+            elementType: match[2],
+            register
+        };
+
+        this.textures.push(texture);
+        return texture;
+    }
 
 
     addUav(type: string, name: string): IUavReflection {
@@ -177,7 +195,7 @@ export class CodeContext {
         assert(!this.has(name));
         this.add(name);
 
-        const register = this.buffers.length;
+        const register = this.buffers.length + this.textures.length;
         const regexp = /^([\w]+)<([\w0-9_]+)>$/;
         const match = type.match(regexp);
         assert(match);
@@ -240,6 +258,15 @@ export class CodeContext {
         let sh = this.CSShader;
         if (sh) {
             pushUniq(sh.uavs, this.uavs.find(u => u.name == name));
+        }
+    }
+
+    linkTexture(name: string) {
+        assert(this.has(name));
+        // push if not exists
+        let sh = this.CSShader;
+        if (sh) {
+            pushUniq(sh.textures, this.textures.find(t => t.name == name));
         }
     }
 }
@@ -323,6 +350,28 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             this.end();
         }
         ctx.linkUav(name);
+    }
+
+
+
+    emitTexture(ctx: ContextT, decl: IVariableDeclInstruction) {
+        const { name, type } = decl;
+        this.emitTextureRaw(ctx, type.name, name);
+    }
+
+
+
+    emitTextureRaw(ctx: ContextT, type: string, name: string, comment?: string): void {
+        if (!ctx.has(name)) {
+            const tex = ctx.addTexture(type, name);
+            this.begin();
+            {
+                comment && this.emitComment(comment);
+                this.emitKeyword(`${type} ${name}: register(t${tex.register});`);
+            }
+            this.end();
+        }
+        ctx.linkTexture(name);
     }
 
 
@@ -876,6 +925,8 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
         // if (decl.type.isUniform())
         // console.log(decl.toCode());
 
+        const { name, type } = decl;
+
         if (decl.isGlobal() || isUniformArg) {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
@@ -883,11 +934,15 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 this.begin();
                 this.emitCbuffer(ctx, cbuf);
                 this.end();
+            } else if (type.isTexture()) {
+                this.begin();
+                this.emitTexture(ctx, decl);
+                this.end();
             } else {
                 this.begin();
                 this.emitGlobalVariable(ctx, decl);
                 this.end();
-        }
+            }
         }
     }
 
@@ -1154,16 +1209,16 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
 
     static translateDocument(document: ISLDocument, ctx: CodeContext = new CodeContext): string {
-    if (isNull(document)) {
-        return '';
-    }
+        if (isNull(document)) {
+            return '';
+        }
 
-    if (isNull(document.root)) {
-        return '';
-    }
+        if (isNull(document.root)) {
+            return '';
+        }
 
-    return CodeEmitter.translate(document.root, ctx);
-}
+        return CodeEmitter.translate(document.root, ctx);
+    }
 
 }
 

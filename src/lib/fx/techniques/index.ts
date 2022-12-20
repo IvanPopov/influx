@@ -28,6 +28,7 @@ export function switchRuntime(runtime?: 'wasm' | 'js') {
 
 // hack
 import * as flatbuffers from 'flatbuffers';
+import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
     // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
     if (data instanceof Uint8Array) {
@@ -39,7 +40,7 @@ function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
 }
 // end of hack
 
-export function create(data: Uint8Array | BundleT): ITechnique {
+export function createTechnique(data: Uint8Array | BundleT): ITechnique {
     // hack:
     // cpp module doesn't support material bundles
     if (HACK_IsMaterialBundle(data) && isWASM()) {
@@ -52,14 +53,34 @@ export function create(data: Uint8Array | BundleT): ITechnique {
 }
 
 
-export function destroy(tech: ITechnique): void {
+export function destroyTechnique(tech: ITechnique): void {
     Pipe().destroyTechnique(tech);
 }
 
 
-export function copy(dst: ITechnique, src: ITechnique): boolean {
+export function copyTechnique(dst: ITechnique, src: ITechnique): boolean {
     return Pipe().copyTechnique(dst, src);
 }
+
+
+export function createTexture(desc: ITextureDesc, initData: ArrayBufferView): ITexture {
+    return Pipe().createTexture(desc, initData);
+}
+
+export function destroyTexture(texture: ITexture) {
+    Pipe().destroyTexture(texture);
+}
+
+export function createTrimesh(desc: ITrimeshDesc, vertices: ArrayBufferView, 
+    faces: ArrayBufferView, indicesAdj: ArrayBufferView): ITrimesh {
+    return Pipe().createTrimesh(desc, vertices, faces, indicesAdj);
+}
+
+
+export function destroyTrimesh(mesh: ITrimesh) {
+    Pipe().destroyTrimesh(mesh);
+}
+
 
 //
 //
@@ -69,28 +90,24 @@ export function memoryToU8Array(input: Bytecode.IMemory): Uint8Array {
     return Pipe().memoryToU8Array(input);
 }
 
+
 export function memoryToI32Array(input: Bytecode.IMemory): Int32Array {
     return Pipe().memoryToI32Array(input);
 }
+
 
 export function memoryToF32Array(input: Bytecode.IMemory): Float32Array {
     return Pipe().memoryToF32Array(input);
 }
 
 /**
- * @deprecated
+ * NOTE: copy view to NEW memory if WASM bundle is used (!)
+ * @returns New array containing input data.
  */
-export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
-    return Pipe().u32ArrayToMemory(input);
+export function copyViewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+    return Pipe().copyViewToMemory(input);
 }
 
-/**
- * @deprecated
- */
-export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
-    return Pipe().f32ArrayToMemory(input);
-}
-
-export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
-    return Pipe().viewToMemory(input);
+export function releaseMemory(mem: Bytecode.IMemory) {
+    Pipe().releaseMemory(mem);
 }

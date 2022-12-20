@@ -73,7 +73,12 @@ class InstructionList {
                 args[2] >>= 2;
                 args[3] >>= 2; // byte offset => register offset
                 break;
-                
+            case EOperation.k_I32TextureLoad:
+                assert(args.length == 3);
+                args[0] >>= 2;  // float4 sized destination address
+                args[1];        // is input index of texture
+                args[2] >>= 2;  // address of arguments
+                break;    
             case EOperation.k_I32Not:
                 assert(args.length == 2);
                 args[0] >>= 2;

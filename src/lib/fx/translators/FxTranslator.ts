@@ -67,7 +67,7 @@ export interface ITriMeshReflection {
     facesName: string;
     adjacencyName: string; // GS suitable adj info, 6 x nFaces
 
-    resourcePath: string;
+    // resourcePath: string;
 }
 
 
@@ -108,8 +108,7 @@ function typeNameOfUIControl(ctrl: IUIControl) {
 }
 
 
-function pushUniq<T>(arr: Array<T>, elem: T)
-{
+function pushUniq<T>(arr: Array<T>, elem: T) {
     if (arr.indexOf(elem) == -1)
         arr.push(elem);
 }
@@ -177,7 +176,7 @@ export class FxTranslatorContext extends FxConvolutionContext {
         assert(!this.has(mesh.name));
         this.add(mesh.name);
         this.triMeshes.push(mesh);
-        
+
         // push if not exists
         let sh = this.CSShader;
         if (sh) {
@@ -248,7 +247,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             return false;
         }
         
-        let control : IUIControl = { name: src.id.name, type: src.type.name, value: null, properties: [] };
+        let control: IUIControl = { name: src.id.name, type: src.type.name, value: null, properties: [] };
 
         if (src.annotation) {
             src.annotation.decls.forEach(decl => {
@@ -272,10 +271,10 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     if (propertyType === 'float' && control.type === 'float' ||
                         propertyType === 'int' && control.type === 'int' ||
                         propertyType === 'uint' && control.type === 'uint') {
-                        control.properties.push({name: propertyName, type: propertyType, value: propertyValue});
+                        control.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
                     }
                 }
-                else{
+                else {
                     if (propertyName === '__type' && propertyType !== 'string') {
                         return;
                     }
@@ -283,12 +282,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         control.type = 'color';
                         return;
                     }
-                    control.properties.push({name: propertyName, type: propertyType, value: propertyValue});
+                    control.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
                 }
             });
         }
-        
-        control.value = getControlValue(control.type, src.initExpr.args);
+
+        control.value = getControlValue(control.type, src.initExpr?.args);
         ctx.addControl(control);
         return true;
     }
@@ -324,7 +323,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const facesName = `${baseName}Faces`;
         const adjacencyName = `${baseName}Adjacency`;
 
-        if(!ctx.has(name)) {
+        if (!ctx.has(name)) {
             const { typeName: elementTypeName } = this.resolveType(ctx, elementType);
 
             // uniform uint trimesh0_vert_count;
@@ -332,7 +331,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             // StructuredBuffer<Vert> trimesh0_vert;
             // Buffer<uint3> trimesh0_faces;
             // Buffer<uint> trimesh0_faces_adj;
-            
+
             // if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
             //     ctx.addUniform({ name: vertexCountUName, typeName: 'uint' });
             // } else 
@@ -346,7 +345,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             {
                 this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
             }
-            
+
             const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
             const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
             const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName, "adjacency");
@@ -361,7 +360,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             }
             this.pop();
             this.emitChar('}');
-            
+
             this.emitNewline();
             this.emitNewline();
 
@@ -407,12 +406,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
             this.end();
 
-            let resourcePath = null;
-            let resource = decl.annotation.decls.find(({ name }) => name == 'resource');
-            if (resource && resource.type.name == 'string') {
-                // '<this>' resource value means "this" resource
-                resourcePath = (resource.initExpr.args[0] as StringInstruction).value.slice(1, -1); // remove quotes
-            }
+            // let resourcePath = null;
+            // let resource = decl.annotation.decls.find(({ name }) => name == 'resource');
+            // if (resource && resource.type.name == 'string') {
+            //     // '<this>' resource value means "this" resource
+            //     resourcePath = (resource.initExpr.args[0] as StringInstruction).value.slice(1, -1); // remove quotes
+            // }
 
             const mesh = {
                 name,
@@ -422,12 +421,17 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 verticesName,
                 facesName,
-                adjacencyName,
-
-                resourcePath
+                adjacencyName
             };
-            
+
             ctx.addTrimesh(mesh);
+
+            let value = (decl.annotation.decls.find(({ name }) => name == 'name')
+                ?.initExpr
+                ?.args[0] as StringInstruction)?.value;
+            value = value?.slice(1, -1) || null;
+            const control: IUIControl = { name, type: 'mesh', value, properties: [] };
+            ctx.addControl(control);
         }
     }
 
@@ -444,7 +448,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     const id = <IIdExprInstruction>call.callee;
 
                     this.emitGlobalVariable(ctx, id.decl);
-                    
+
                     this.emitKeyword(`${this.trimeshBaseName(id.name)}_${call.decl.name}`);
                     this.emitNoSpace();
                     this.emitChar('(');
@@ -460,12 +464,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
 
     emitFCall(ctx: ContextT, call: IFunctionCallInstruction, rename?) {
-       if (this.isTrimesh(call.callee?.type)) {
+        if (this.isTrimesh(call.callee?.type)) {
             this.emitTriMeshCall(ctx, call);
             return;
-       }
+        }
 
-       super.emitFCall(ctx, call, rename);
+        super.emitFCall(ctx, call, rename);
     }
 
 
@@ -535,6 +539,22 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         }
 
         super.emitVariable(ctx, decl, rename);
+    }
+
+
+    emitTexture(ctx: ContextT, decl: IVariableDeclInstruction): void {
+        const { name, type } = decl;
+
+        if (!ctx.has(name)) {
+            let value = (decl.annotation.decls.find(({ name }) => name == 'name')
+                ?.initExpr
+                ?.args[0] as StringInstruction)?.value;
+            value = value?.slice(1, -1) || null;
+            const control = <IUIControl>{ name, type: 'texture2d', value, properties: [] };
+            ctx.addControl(control);
+        }
+
+        super.emitTexture(ctx, decl);
     }
 
 
@@ -806,7 +826,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 this.emitLine(`// usage of 4th element of ${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS} as temp value of number of particles`);
                 this.emitFunction(ctx, spawnFn);
-                
+
                 if (elapsedTime) {
                     this.emitGlobal(ctx, elapsedTime);
                 } else {
@@ -1006,7 +1026,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         const name = FxTranslator.CS_PARTICLE_UPDATE_ROUTINE;
         const numthreads = [64, 1, 1];
-        
+
         ctx.beginCsShader(name, numthreads);
 
         this.begin();
@@ -1184,7 +1204,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const name = `${FxTranslator.CS_PARTICLE_PRERENDER_SHADER}${i}`;
         const numthreads = [64, 1, 1];
         const fx = <IPartFxInstruction>ctx.tech();
-        
+
         ctx.beginCsShader(name, numthreads);
 
         this.begin();
@@ -1367,7 +1387,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         this.emitSpawnShader(ctx);
         this.emitResetShader(ctx);
-        
+
         if (fx.updateRoutine) {
             this.emitUpdateShader(ctx);
         }
@@ -1413,14 +1433,14 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         this.emitSpawnOpContainer(ctx);
         this.finalizeTechnique(ctx);
-        
+
         const { name, capacity } = fx;
         const particle = this.resolveType(ctx, fx.particle).typeName;
         const CSParticlesSpawnRoutine = ctx.CSShaders.find(sh => sh.name == FxTranslator.CS_PARTICLE_SPAWN_ROUTINE);
         const CSParticlesResetRoutine = ctx.CSShaders.find(sh => sh.name == FxTranslator.CS_PARTICLE_RESET_ROUTINE);
         const CSParticlesUpdateRoutine = ctx.CSShaders.find(sh => sh.name == FxTranslator.CS_PARTICLE_UPDATE_ROUTINE);;
         const CSParticlesInitRoutine = ctx.CSShaders.find(sh => sh.name == FxTranslator.CS_PARTICLE_INIT_ROUTINE);;
-        const controls = [ ...ctx.controls ];
+        const controls = [...ctx.controls];
         const presets = FxTranslator.parsePresets(fx);
 
         const pfx: IPartFxReflection = {
@@ -1484,12 +1504,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 renderStates
             };
         });
-        
+
         // emit global uniforms and so on.
         this.finalizeTechnique(ctx);
 
-        const controls = [ ...ctx.controls ];
-        const presets = FxTranslator.parsePresets(tech);    
+        const controls = [...ctx.controls];
+        const presets = FxTranslator.parsePresets(tech);
         const refl = {
             name,
             passes,
@@ -1506,7 +1526,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         return fx.presets.map((preset, i): IPreset => {
             const name = preset.name;
             const desc = null; // todo
-            let data : IPresetEntry[] = [];
+            let data: IPresetEntry[] = [];
             preset.props.forEach(control => {
                 if (!control) {
                     //FIX: In a case when the set of controls has changed, but the preset has remained the same.
@@ -1519,13 +1539,13 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     src.annotation.decls.forEach(prop => {
                         let propertyName = prop.name;
                         let propertyType = prop.type.name;
-        
+
                         if (prop.initExpr.args.length !== 1) {
                             return;
                         }
 
                         let propertyValue = getPropertyValue(propertyType, prop.initExpr.args[0]);
-                        if ((propertyName === '__type' || propertyName === 'UIType') && 
+                        if ((propertyName === '__type' || propertyName === 'UIType') &&
                             propertyType === 'string' && propertyValue === 'color') {
                             controlType = 'color';
                             return;
@@ -1535,7 +1555,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 const value = getControlValue(controlType, control.args);
                 data.push({ name: src.name, type: controlType, value: value });
-           });
+            });
             return { name, desc, data };
         });
     }
@@ -1559,9 +1579,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     }
 }
 
-function getPropertyValue(type : string, instr : IExprInstruction) : PropertyValueType {
+function getPropertyValue(type: string, instr: IExprInstruction): PropertyValueType {
     instr = getExpr(instr);
-    switch(type) {
+    switch (type) {
         case 'int': return (instr as IntInstruction).value;
         case 'uint': return (instr as IntInstruction).value;
         case 'float': return (instr as FloatInstruction).value;
@@ -1572,43 +1592,42 @@ function getPropertyValue(type : string, instr : IExprInstruction) : PropertyVal
     return null;
 }
 
-function getControlValue(type : string, args : IExprInstruction[]) : ControlValueType {
-    switch(type) {
+function getControlValue(type: string, args: IExprInstruction[]): ControlValueType {
+    switch (type) {
         case 'int': return (getExpr(args[0]) as IntInstruction).value;
         case 'uint': return (getExpr(args[0]) as IntInstruction).value;
         case 'float': return (getExpr(args[0]) as FloatInstruction).value;
         case 'float2': {
             let x = (getExpr(args[0]) as FloatInstruction).value;
             let y = (getExpr(args[1]) as FloatInstruction).value;
-            return {x: x, y: y} as Vector2;
+            return { x: x, y: y } as Vector2;
         }
         case 'float3': {
             let x = (getExpr(args[0]) as FloatInstruction).value;
             let y = (getExpr(args[1]) as FloatInstruction).value;
             let z = (getExpr(args[2]) as FloatInstruction).value;
-            return {x: x, y: y, z: z} as Vector3;
+            return { x: x, y: y, z: z } as Vector3;
         }
         case 'float4': {
             let x = (getExpr(args[0]) as FloatInstruction).value;
             let y = (getExpr(args[1]) as FloatInstruction).value;
             let z = (getExpr(args[2]) as FloatInstruction).value;
             let w = (getExpr(args[3]) as FloatInstruction).value;
-            return {x: x, y: y, z: z, w: w} as Vector4;
+            return { x: x, y: y, z: z, w: w } as Vector4;
         }
         case 'color': {
             let r = (getExpr(args[0]) as FloatInstruction).value;
             let g = (getExpr(args[1]) as FloatInstruction).value;
             let b = (getExpr(args[2]) as FloatInstruction).value;
             let a = (getExpr(args[3]) as FloatInstruction).value;
-            return {r: r, g: g, b: b, a: a} as Color;
+            return { r: r, g: g, b: b, a: a } as Color;
         }
     }
-    assert(false, 'Unsupported type');
     return null;
 }
 
-function getExpr(expr : IExprInstruction) : IExprInstruction {
-    return expr.instructionType === EInstructionTypes.k_InitExpr 
+function getExpr(expr: IExprInstruction): IExprInstruction {
+    return expr.instructionType === EInstructionTypes.k_InitExpr
         ? ((expr as IInitExprInstruction).args[0])
         : (<ILiteralInstruction<number>>expr);
 }

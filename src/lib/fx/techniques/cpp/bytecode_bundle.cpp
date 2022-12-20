@@ -41,7 +41,7 @@ void BYTECODE_BUNDLE::SetConstant(const std::string& name, float value)
     vmBundle.SetConstant(name, VM::memory_view((uintptr_t)&value, 1));
 }
 
-void BYTECODE_BUNDLE::SetBuffer(const std::string& name, VM::memory_view data)
+void BYTECODE_BUNDLE::SetBuffer(const std::string& name, const BUFFER_RESOURCE* pBuffer)
 {
     auto it = std::find_if(buffers.begin(), buffers.end(), 
         [&name] (const VM::RESOURCE_VIEW& buf) { return buf.name == name; });
@@ -50,25 +50,36 @@ void BYTECODE_BUNDLE::SetBuffer(const std::string& name, VM::memory_view data)
         return;
     }
 
-    vmBundle.SetInput(it->index, data);
+    vmBundle.SetInput(it->index, pBuffer->layout);
 }
 
-void BYTECODE_BUNDLE:: SetTrimesh(std::string name, uint32_t vertCount, uint32_t faceCount, 
-        VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj)
+void BYTECODE_BUNDLE::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh)
 {
     auto it = std::find_if(trimeshes.begin(), trimeshes.end(), 
-        [&name] (const TRIMESH_DESC& mesh) { return mesh.name == name; });
+        [&name] (const TRIMESH_INTERNAL_DESC& mesh) { return mesh.name == name; });
     
     if (it == trimeshes.end()) {
         return;
     }
 
-    SetBuffer(it->verticesName, vertices);
-    SetBuffer(it->facesName, faces);
-    SetBuffer(it->adjacencyName, indicesAdj);
+    SetBuffer(it->verticesName, &pMesh->vertices);
+    SetBuffer(it->facesName, &pMesh->faces);
+    SetBuffer(it->adjacencyName, &pMesh->indicesAdj);
     
-    SetConstant(it->vertexCountUName, vertCount);
-    SetConstant(it->faceCountUName, faceCount);
+    SetConstant(it->vertexCountUName, pMesh->vertCount);
+    SetConstant(it->faceCountUName, pMesh->faceCount);
+}
+
+void BYTECODE_BUNDLE::SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTex)
+{
+    auto it = std::find_if(textures.begin(), textures.end(), 
+    [&name] (const VM::RESOURCE_VIEW& view) { return view.name == name; });
+
+    if (it == textures.end()) {
+        return;
+    }
+    vmBundle.SetInput(it->index, pTex->layout);
 }
 
 }
+

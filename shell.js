@@ -9,8 +9,6 @@ const logo = require('./black-sun-logo');
 const ipc = electron.ipcMain;
 const app = electron.app;
 
-console.time('loading');
-
 app.setName("FX Sandbox");
 
 function printHelp() {
@@ -159,8 +157,6 @@ function onReady()
         sandboxWin.maximize() && sandboxWin.show();
     if (previewWin && !previewWin?.isVisible())
         previewWin.show();
-
-    console.timeEnd('loading');
 }
 
 // custom 'ready' event is more precise than basic 'ready-to-show'

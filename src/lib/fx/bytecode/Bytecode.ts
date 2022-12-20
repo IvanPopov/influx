@@ -162,9 +162,9 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
 
     translateUnknown(ctx, fn);
     pop();
-    
+
     // always push ret as last instruction
-    const [ op, ] = instructions.back();
+    const [op,] = instructions.back();
     if (op != EOperation.k_Ret)
         icode(EOperation.k_Ret);
 
@@ -432,13 +432,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         },
 
         // hlsl supports float3 x float3 only
-        cross(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress)
-        {
+        cross(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress) {
             // .x = (m.y * n.z - m.z * n.y)
             // .y = (m.z * n.x - m.x * n.z)
             // .z = (m.x * n.y - m.y * n.x)
             let f32 = sizeof.f32();
-            
+
             let t1 = alloca(f32);
             let t2 = alloca(f32);
             let temp = alloca(f32 * 3);
@@ -475,9 +474,17 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     // handle global variables like: const float VALUE = 10;
     // as hidden uniform constants
     function canBePlacedInUniforms(decl: IVariableDeclInstruction): boolean {
-        return decl.isGlobal() && 
-            (decl.type.isUniform() ||                                                  // is uniform
-            (/*decl.type.isConst() && */decl.initExpr && decl.initExpr.isConst() && !decl.type.isUAV()));   // is non-uav constant 
+        // Suitable:
+        //  uniform float4x4 viewMatrix;
+        //  float4 color = float4(1, 1, 1, 1);
+        //  const float scale = 1;
+        // Not suitable:
+        //  const float;            // <= not uniform and doesn't have proper default value
+        //  RTTexture2D dynamicTex; // <= uav
+        //  Texture2D albedo;
+        return decl.isGlobal() &&
+            (decl.type.isUniform() ||
+                (decl.initExpr && decl.initExpr.isConst()));
     }
 
     function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {
@@ -489,14 +496,20 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
 
         if (decl.isGlobal()) {
+            // uniforms are placed in input 0/CBV0
             if (canBePlacedInUniforms(decl)) {
                 return EAddrType.k_Input;
             }
+            
             if (decl.type.isUAV()) {
                 return EAddrType.k_Input;
             }
 
             if (decl.type.isBuffer()) {
+                return EAddrType.k_Input;
+            }
+
+            if (decl.type.isTexture()) {
                 return EAddrType.k_Input;
             }
 
@@ -724,6 +737,67 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     return elementPointer;
                 }
                 return PromisedAddress.INVALID;
+
+            //
+            // Textures
+            //
+
+            case 'GetDimensions':
+                {
+                    const { callee: tex } = call;
+                    const texAddr = raddr(tex);
+
+                    // GetDimensions(w, h) only supported
+                    assert(tex.type.name.includes('Texture2D'));
+                    assert(args.length === 2);
+
+                    const w = addr.sub(texAddr, 0, sizeof.i32());
+                    const h = addr.sub(texAddr, sizeof.i32(), sizeof.i32());
+
+                    const wout = args[0];
+                    const hout = args[1];
+
+                    imove(wout, w);
+                    imove(hout, h);
+
+                    return PromisedAddress.INVALID;
+                }
+
+            case 'Load':
+                {
+                    const { callee } = call;
+                    const tex = raddr(callee);
+
+                    // Load(int3) only supported
+                    assert(callee.type.name.includes('Texture2D'));
+                    assert(args.length === 1);
+
+                    let uvs = args[0];
+                    if (uvs.type !== EAddrType.k_Registers) {
+                        uvs = iload(uvs);
+                    }
+
+                    //const u = addr.sub(uvs, 0, sizeof.i32());
+                    // descriptor size if 64 bytes
+                    // width  | 4 byte
+                    // height | 4 byte
+                    // format | 4 byte
+                    // unused | 52 bytes
+
+                    //const v = addr.sub(uvs, sizeof.i32(), sizeof.i32());
+                    //const w = addr.sub(tex, 0, sizeof.i32());
+                    // const h = addr.sub(texAddr, sizeof.i32(), sizeof.i32());
+
+                    // const valueAddr = alloca(sizeof.i32());
+                    // intrinsics.madi(valueAddr, u, w, v);
+
+                    // const texelSize = callee.type.arrayElementType.size;
+                    const dest = alloca(sizeof.f32() * 4);
+                    icode(EOperation.k_I32TextureLoad, dest, tex.inputIndex, uvs);
+                    // const elementPointer = addr.subPointer(dest, valueAddr, texelSize);
+                    // return elementPointer;
+                    return dest;
+                }
         }
 
         assert(false, `unsupported intrinsic found '${fdecl.name}'`);
@@ -859,7 +933,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const assigment = expr as IAssignmentExprInstruction;
                     const size = assigment.type.size;
                     assert(size % sizeof.i32() === 0);
-                    
+
 
                     // left address can be both from the registers and in the external memory
                     const leftAddr = raddr(assigment.left);
@@ -873,28 +947,28 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     }
 
                     const floatBased = SystemScope.isFloatBasedType(expr.type);
-                    
+
                     switch (assigment.operator) {
                         case '=':
                             imove(leftAddr, rightAddr);
                             break;
                         case '+=':
-                            floatBased 
+                            floatBased
                                 ? intrinsics.addf(leftAddr, leftAddr, rightAddr)
                                 : intrinsics.addi(leftAddr, leftAddr, rightAddr);
                             break;
                         case '-=':
-                            floatBased 
+                            floatBased
                                 ? intrinsics.subf(leftAddr, leftAddr, rightAddr)
                                 : intrinsics.subi(leftAddr, leftAddr, rightAddr);
                             break;
                         case '*=':
-                            floatBased 
+                            floatBased
                                 ? intrinsics.mulf(leftAddr, leftAddr, rightAddr)
                                 : intrinsics.muli(leftAddr, leftAddr, rightAddr);
                             break;
                         case '/=':
-                            floatBased 
+                            floatBased
                                 ? intrinsics.divf(leftAddr, leftAddr, rightAddr)
                                 : intrinsics.divi(leftAddr, leftAddr, rightAddr);
                             break;
@@ -1295,13 +1369,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             swizzle = swizzlePatternFromName(postfix.name);
 
                             assert(padding === instruction.UNDEFINE_PADDING, 'padding of swizzled components must be undefined');
-                            
+
                             // If loading not allowed then we are inside the recursive call to calculate the final address
                             // so in this case we just have to return address with padding added to it.
                             return addr.override(elementAddr, swizzle);
                         } else {
                             return addr.sub(elementAddr, padding, size);
-                        }   
+                        }
                     }
 
                     assert(false, 'not implemented!');
@@ -1395,7 +1469,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     unresolvedJump = pc();
                     icode(EOperation.k_Jump, UNRESOLVED_JUMP_LOCATION);
-                    
+
                     let rightAddr = raddr(right as IExprInstruction);
                     if (rightAddr.type !== EAddrType.k_Registers) {
                         rightAddr = iload(rightAddr);
@@ -1456,7 +1530,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     // convert arguments from float to int and back
                                     if (SystemScope.isFloatBasedType(args[0].type) !== SystemScope.isFloatBasedType(type)) {
                                         const op = SystemScope.isFloatBasedType(type) ? EOperation.k_I32ToF32 : EOperation.k_F32ToI32;
-                                        assert(args[0].type.size === sizeof.i32()); // <= expected float4(10) or float3(10u) or float3(true);
+                                        // expected:
+                                        //  float4(10), float3(10u), float3(true);
+                                        //  float2(int2(10, 10)) etc.
+                                        assert(args[0].type.size === sizeof.i32() || args[0].type.size === expr.type.size); 
 
                                         // don't change initial location?
                                         let temp = alloca(src.size);
@@ -1497,7 +1574,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                         if (SystemScope.isFloatBasedType(args[i].type) !== SystemScope.isFloatBasedType(type)) {
                                             const op = SystemScope.isFloatBasedType(type) ? EOperation.k_I32ToF32 : EOperation.k_F32ToI32;
                                             assert(args[i].type.size === sizeof.i32()); // <= expected float4(10) or float3(10u) or float3(true);
-                                            
+
                                             // don't change initial location?
                                             let temp = alloca(src.size);
                                             iop2(op, temp, src);

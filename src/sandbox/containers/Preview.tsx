@@ -47,7 +47,7 @@ class Preview extends React.Component<IProps> {
         const name = this.props.name;
         const data = new Uint8Array(fs.readFileSync(name));
         const controls = decodeBundleControls(data);
-        const tech = Techniques.create(data);
+        const tech = Techniques.createTechnique(data);
         const timeline = Timeline.make();
         timeline.start();
         console.log(`source: ${decodeBundleMeta(data).source}`);

@@ -10,33 +10,9 @@ function transferU8ToHeap(module: EmscriptenModule, u8Array: Uint8Array): WASMMe
 }
 
 
-function transferI32ToHeap(module: EmscriptenModule, i32Array: Int32Array): WASMMemory {
-    const heap = module._malloc(i32Array.length * i32Array.BYTES_PER_ELEMENT);
-    const size = i32Array.length;
-    module.HEAP32.set(i32Array, heap);
-    return { heap, size };
+function freeHeap(module: EmscriptenModule, { heap }: WASMMemory) {
+    module._free(heap);
 }
-
-/**
- * @deprecated
- */
-function transferU32ToHeap(module: EmscriptenModule, u32Array: Uint32Array): WASMMemory {
-    const heap = module._malloc(u32Array.length * u32Array.BYTES_PER_ELEMENT);
-    const size = u32Array.length;
-    module.HEAPU32.set(u32Array, heap);
-    return { heap, size };
-}
-
-/**
- * @deprecated
- */
-function transferF32ToHeap(module: EmscriptenModule, f32Array: Float32Array): WASMMemory {
-    const heap = module._malloc(f32Array.length * f32Array.BYTES_PER_ELEMENT);
-    const size = f32Array.length;
-    module.HEAPF32.set(f32Array, heap);
-    return { heap, size };
-}
-
 
 ///////////////////////////////////
 ///////////////////////////////////
@@ -61,6 +37,7 @@ export function make(name: string, code: Uint8Array): IBundle {
 
     return bundleWasm;
 }
+
 
 interface WASMMemory extends Bytecode.IMemory {
     heap: number; // in bytes 
@@ -97,23 +74,16 @@ export function destroyUAV(uav: Bytecode.IUAV) {
     WASMBundle.destroyUAV(uav);
 }
 
-/**
- * @deprecated
- */
-export function u32ArrayToMemory(input: Uint32Array): Bytecode.IMemory {
-    return transferU32ToHeap(BundleModule, input);
-}
 
-/**
- * @deprecated
- */
-export function f32ArrayToMemory(input: Float32Array): Bytecode.IMemory {
-    return transferF32ToHeap(BundleModule, input);
-}
-
-export function viewToMemory(input: ArrayBufferView): Bytecode.IMemory {
+export function copyViewToMemory(input: ArrayBufferView): Bytecode.IMemory {
     return transferU8ToHeap(BundleModule, new Uint8Array(input.buffer, input.byteOffset, input.byteLength));
 }
+
+
+export function releaseMemory(mem: Bytecode.IMemory) {
+    freeHeap(BundleModule, <WASMMemory>mem);
+}
+
 
 // cleanup shared registers memory
 export function debugResetRegisters() {

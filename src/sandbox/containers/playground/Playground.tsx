@@ -4,24 +4,22 @@
 /* tslint:disable:newline-per-chained-call */
 
 
-import { IPartFxInstruction } from '@lib/idl/part/IPartFx';
+import { IEmitter } from '@lib/idl/emitter';
+import { ETechniqueType } from '@lib/idl/IInstruction';
+import { ITechnique } from '@lib/idl/ITechnique';
 import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
+import * as ipc from '@sandbox/ipc';
 import { getCommon, mapProps } from '@sandbox/reducers';
 import { filterTechniques, getEmitterName } from '@sandbox/reducers/playground';
 import { getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
-import * as ipc from '@sandbox/ipc';
 import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
 import FxScene from './FxScene';
 import MaterialScene from './MaterialScene';
-import { IEmitter } from '@lib/idl/emitter';
-import { ETechniqueType } from '@lib/idl/IInstruction';
-import { ITechnique } from '@lib/idl/ITechnique';
-import ThreeScene from './ThreeScene';
 
 
 interface IPlaygroundProps extends IStoreState {
@@ -244,7 +242,7 @@ class Playground extends React.Component<IPlaygroundProps> {
 
         const list = filterTechniques(scope);
         const active = getEmitterName(playground);
-        
+
         return (
             <div>
                 {!list.length &&
@@ -346,7 +344,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             }
 
                             {/* todo: move snapshot preview to threescene class */}
-                            {!this.ranAsEmitter() && !this.ranAsMaterial() && snapshot &&          
+                            {!this.ranAsEmitter() && !this.ranAsMaterial() && snapshot &&
                                 <div style={{
                                     backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.63), rgba(0, 0, 0, 0.623)), url(${snapshot.content})`,
                                     backgroundAttachment: 'fixed',
