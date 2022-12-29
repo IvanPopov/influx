@@ -1,5 +1,5 @@
 import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common";
-import { expression, instruction, type, variable } from "@lib/fx/analisys/helpers";
+import { type } from "@lib/fx/analisys/helpers";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
@@ -8,13 +8,9 @@ import { EPassDrawMode, IPartFxInstruction, IPartFxPassInstruction } from "@lib/
 
 import { Analyzer, Context, ICompileValidator } from "./Analyzer";
 import { IdInstruction } from "./instructions/IdInstruction";
-import { InitExprInstruction } from "./instructions/InitExprInstruction";
-import { IntInstruction } from "./instructions/IntInstruction";
 import { DrawInstruction } from "./instructions/part/DrawInstruction";
 import { PartFxInstruction } from "./instructions/part/PartFxInstruction";
 import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction";
-import { PresetInstruction } from "./instructions/Preset";
-import { PresetProperty } from "./instructions/PresetProperty";
 import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
 import { ProgramScope } from "./ProgramScope";
 import * as SystemScope from './SystemScope';
@@ -526,9 +522,9 @@ export class FxAnalyzer extends Analyzer {
                                 {
                                     /** Init routine expected as 'void init(in Part part)'. */
                                     let validators: ICompileValidator[] = [
-                                        { ret: T_VOID, args: [null, T_INT] },   /* init(PART part, int partId) */
-                                        { ret: T_VOID, args: [null, T_UINT] },  /* init(PART part, int partId) */
-                                        { ret: T_VOID, args: [null] },          /* init(PART part) */
+                                        { ret: T_VOID, args: [null, /u?int/] },          /* init(PART part, int partId) */
+                                        { ret: T_VOID, args: [null, /u?int/, /u?int/] }, /* init(PART part, int partId, int spawnId) */
+                                        { ret: T_VOID, args: [null] },                   /* init(PART part) */
                                     ];
 
                                     // TODO: show error in case of both functions are found
@@ -795,18 +791,18 @@ export class FxAnalyzer extends Analyzer {
 
                 let initializer = <IFunctionDeclInstruction>null;
                 for (const fx of fxList) {
-                    // looking for Init(out Part part, int partId: PART_ID, ...parameters)
-                    let args = [fx.particle, T_INT, ...spawnStmt.args.map(asType)];
-                    initializer = scope.findFunction(spawnStmt.name, args);
+                    // looking for:
+                    // Init(out Part part, int partId: PART_ID, int spawnId: SPAWN_ID, ...parameters)
+                    // Init(out Part part, int partId: PART_ID, ...parameters)
+                    // Init(out Part part, ...parameters)
+                    let argsList = [[/u?int/, /u?int/], [/u?int/], []]
+                        .map(v => [ fx.particle, ...v, ...spawnStmt.args.map(asType) ]);
 
-                    // in case of signature not found:
-                    // looking for signature like: Init(out Part part, ...parameters)
-                    if (!initializer) {
-                        // looaking for signature like: Init(out Part part, ...parameters)
-                        // TODO: check that second parameter doesn't have PART_ID semantic in 
-                        //       order to not find false positive signature
-                        args = [fx.particle, ...spawnStmt.args.map(asType)];
+                    for (const args of argsList) {
                         initializer = scope.findFunction(spawnStmt.name, args);
+                        if (initializer) {
+                            break;
+                        }
                     }
 
                     if (initializer) {

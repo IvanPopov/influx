@@ -4,7 +4,7 @@ import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 
@@ -131,6 +131,33 @@ export interface ICSShaderReflectionEx extends ICSShaderReflection {
     trimeshes: ITriMeshReflection[];
 }
 
+
+const isPartId = (p: IVariableDeclInstruction) => 
+    (p.semantic === 'PART_ID' || p.name == 'partId') && type.equals(/u?int/, p.type);
+const isSpawnId = (p: IVariableDeclInstruction) => 
+    (p.semantic === 'SPAWN_ID' || p.name == 'spawnId') && type.equals(/u?int/, p.type);
+
+interface IOptParam {
+    name: string;
+    checker: (p: IVariableDeclInstruction) => boolean;
+}
+
+function resolveOptIndices(params: IOptParam[], def: IFunctionDefInstruction): number[] {
+    return params.map(({ checker }) => def.params.findIndex(checker));
+}
+
+function resolveOptArguments(params: IOptParam[], def: IFunctionDefInstruction): string[] {
+    const indices = resolveOptIndices(params, def);
+    const n = indices.filter(i => i !== -1).length;
+    const res = new Array(n);
+    for (let i = 0; i < indices.length; ++ i) {
+        const pos = indices[i];
+        if (pos !== -1) {
+            res[pos] = params[i].name;
+        }
+    }
+    return res;
+}
 
 export class FxTranslatorContext extends FxConvolutionContext {
     // (!) override
@@ -561,27 +588,46 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     protected emitSpawnStmt(ctx: ContextT, stmt: ISpawnStmtInstruction) {
         const fx = <IPartFxInstruction>ctx.tech();
 
-        const args = [fx.particle, T_INT, ...stmt.args.map(a => a.type)];
-        const init = stmt.scope.findFunction(stmt.name, args);
+        // looking for:
+        // Init(out Part part, int partId: PART_ID, int spawnId: SPAWN_ID, ...parameters)
+        // Init(out Part part, int partId: PART_ID, ...parameters)
+        // Init(out Part part, ...parameters)
+        let argsList = [[/u?int/, /u?int/], [/u?int/], []]
+            .map(v => [ fx.particle, ...v, ...stmt.args.map(a => a.type) ]);
+
+        let init = null;
+        for (const args of argsList) {
+            init = stmt.scope.findFunction(stmt.name, args);
+            if (init) {
+                break;
+            }
+        }
 
         if (!init) {
-            console.error(`could not find spawn inititalizer: ${stmt.name}(${args.map(a => a.name).join(', ')})`);
+            for (const args of argsList) {
+                console.error(`could not find spawn inititalizer: ${stmt.name}(${args.map(a => `${a}`).join(', ')})`);
+            }
             return;
         }
 
+
         if (!ctx.has(init.name)) {
             ctx.addSpawnCtor(init);
-            this.emitSpawnOperator(ctx, ctx.spawners.indexOf(init) + 1, init);
+
+            const guid = ctx.spawners.indexOf(init) + 1;
+            this.emitSpawnOperator(ctx, guid, init);
         }
 
-        const guid = ctx.spawners.indexOf(init) + 1
+        const guid = ctx.spawners.indexOf(init) + 1;
 
         this.emitKeyword(`${FxTranslator.SPAWN_OPERATOR_POLYFILL_NAME}${guid}__`);
         this.emitChar('(');
         this.emitNoSpace();
         this.emitKeyword(`(uint)`);
         this.emitNoSpace();
+        this.emitChar('(');
         this.emitExpression(ctx, stmt.count);
+        this.emitChar(')');
         if (stmt.args.length) {
             this.emitChar(',');
             this.emitExpressionList(ctx, stmt.args);
@@ -720,10 +766,24 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             this.emitChar('(');
             this.emitNoSpace();
             this.emitKeyword(`uint nPart`);
-            if (ctor && ctor.def.params.length > 2) {
-                this.emitChar(',');
-                this.emitParams(ctx, ctor.def.params.slice(2));
+
+            const optParams = [
+                { name: `Particle`, checker: () => true }, // always presented
+                { name: `PartId`, checker: isPartId },
+                { name: `SpawnId`, checker: isSpawnId }
+            ];
+
+            let optArgs = [];
+
+            if (ctor) {
+                optArgs = resolveOptArguments(optParams, ctor.def);
+
+                if (ctor.def.params.length > optArgs.length) {
+                    this.emitChar(',');
+                    this.emitParams(ctx, ctor.def.params.slice(optArgs.length));
+                }
             }
+
             this.emitChar(')');
             this.emitNewline();
             this.emitChar('{');
@@ -735,23 +795,24 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS, FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS_DESCRIPTION);
 
                 this.emitLine(`int nGroups = (int)ceil((float)nPart / ${groupSize}.f);`);
+                this.emitLine(`uint RequestId;`);
+                this.emitLine(`// layout: [ uint GroupCountX, uint GroupCountY, uint GroupCountZ ]`);
+                this.emitLine(`InterlockedAdd(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[0], nGroups, RequestId);`);
                 this.emitLine(`for (int i = 0; i < nGroups; ++i)`);
                 this.emitChar(`{`);
                 this.push();
                 {
-                    this.emitLine(`uint RequestId;`);
-                    this.emitLine(`// layout: [ uint GroupCountX, uint GroupCountY, uint GroupCountZ ]`);
-                    this.emitLine(`InterlockedAdd(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[0], 1u, RequestId);`);
                     // params
                     const request = `${FxTranslator.UAV_CREATION_REQUESTS}[RequestId]`;
                     this.emitLine(`${request}.count = min(nPart, ${groupSize}u);`);
+                    this.emitLine(`${request}.offset = ${groupSize}u * i;`);
                     this.emitLine(`${request}.type = ${guid}u;`);
 
                     if (ctor) {
                         const params = ctor.def.params;
                         let nfloat = 0;
                         // skip first two arguments
-                        params.slice(2).forEach(param => {
+                        params.slice(optArgs.length).forEach(param => {
                             let type = param.type;
                             if (type.isComplex()) {
                                 assert(false, 'unsupported', type.toCode());
@@ -765,7 +826,8 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         });
                     }
 
-                    this.emitLine(`nPart = nPart - ${groupSize}u;`);
+                    this.emitLine(`nPart -= ${groupSize}u;`);
+                    this.emitLine(`RequestId += 1;`);
                 }
                 this.pop();
                 this.emitChar(`}`);
@@ -930,14 +992,23 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 const request = `${FxTranslator.UAV_CREATION_REQUESTS}[GroupId]`;
 
-                this.emitLine(`uint type = ${request}.type;`);
+                this.emitLine(`uint Type = ${request}.type;`);
+                this.emitLine(`uint SpawnId = ${request}.offset + ThreadId;`);
+  
+                const optParams = [
+                    { name: `Particle`, checker: () => true }, // always presented
+                    { name: `PartId`, checker: isPartId },
+                    { name: `SpawnId`, checker: isSpawnId }
+                ];
 
                 if (initFn) {
-                    this.emitLine(`if (type == 0u)`);
+                    const optArgs = resolveOptArguments(optParams, initFn.def);
+                
+                    this.emitLine(`if (Type == 0u)`);
                     this.emitChar('{');
                     this.push();
                     {
-                        this.emitLine(`${initFn.name}(Particle${initFn.def.params.length > 1 ? ', PartId' : ''});`);
+                        this.emitLine(`${initFn.name}(${optArgs.join(', ')});`);
                     }
                     this.pop();
                     this.emitChar('}');
@@ -952,14 +1023,16 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         this.emitSpace();
                     }
 
-                    this.emitLine(`if (type == ${i + 1}u)`);
+                    this.emitLine(`if (Type == ${i + 1}u)`);
                     this.emitChar('{');
                     this.push();
                     {
+                        const optArgs = resolveOptArguments(optParams, ctor.def);
+                        
                         // TODO: move param unpacking to separate function
                         // unpack arguments
                         let nfloat = 0;
-                        let params = ctor.def.params.slice(2);
+                        let params = ctor.def.params.slice(optArgs.length);
                         params.forEach(param => {
                             this.emitVariable(ctx, param);
                             this.emitChar(';');
@@ -988,9 +1061,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         this.emitKeyword(ctor.name);
                         this.emitChar('(');
                         this.emitNoSpace();
-                        this.emitKeyword('Particle');
-                        this.emitChar(',');
-                        this.emitKeyword('PartId');
+                        
+                        this.emitKeyword(optArgs.join(', '));
+
                         if (params.length > 0) {
                             this.emitChar(',');
                             params.forEach((param, i, list) => {
@@ -1255,8 +1328,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             this.emitChar(`{`);
             this.push();
             {
-                this.emitLine(`uint count;`);
-                this.emitLine(`uint type;`);
+                this.emitLine(`uint count;      // number of particles inside group`);
+                this.emitLine(`uint offset;     // number of particles prior this group (to determ spawn id)`);
+                this.emitLine(`uint type;       // type of spawner (type of function to init)`);
 
                 // this.emitLine(`uint _pad[2];`);
                 // emit padding?
