@@ -9,6 +9,8 @@ import { Uniforms } from '@lib/idl/Uniforms';
 
 import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
 import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
+import { EUsage, IConstantBuffer } from '@lib/idl/ITechnique';
+import { IMap } from '@lib/idl/IMap';
 
 type IMemory = Bytecode.IMemory;
 type IUAVResource = ReturnType<typeof VM.createUAV>;
@@ -228,6 +230,35 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         const uavPrerendReflect: UAVBundleT = (<RoutineBytecodeBundleT>(bundle ? routines[EPartRenderRoutines.k_Prerender] : simulationRoutines[EPartSimRoutines.k_Update]))
             .resources.uavs.find(uavReflection => uavReflection.name === UAV_PRERENDERED);
 
+        const cbufs: IMap<IConstantBuffer> = {};
+        const scanCbuffer = (sharedCbufs: IMap<IConstantBuffer>, bundle: RoutineGLSLSourceBundleT, usage: EUsage) => {
+            for (let { name, slot, size, fields } of bundle.cbuffers) {
+                // skip same name buffers
+                const cbuf = sharedCbufs[`${name}`] ||= {
+                    name: `${name}`, 
+                    slot,
+                    size, 
+                    usage,
+                    fields: fields.map(({ name, semantic, size, padding, type: { length } }) => 
+                        ({ 
+                            name: `${name}`, 
+                            semantic: `${semantic || name}`, 
+                            size, 
+                            padding, 
+                            length 
+                        }))
+                };
+                cbuf.usage |= usage;
+            }
+        };
+
+        // merge VS & PS constant buffer into shared list 
+        // it's guaranteed by translator that buffers with the same name are the same
+        scanCbuffer(cbufs, vertexGLSLBundle, EUsage.k_Vertex);
+        scanCbuffer(cbufs, pixelGLSLBundle, EUsage.k_Pixel);
+
+        const cbuffers = Object.values(cbufs);
+
         //
         // Sorting
         //
@@ -292,9 +323,6 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
                 copyTo.set(from);
             }
         }
-
-        const cbuffers = [];
-
 
         function getData() { return asBundleMemory(sorting ? uavSortedU8 : uavNonSortedU8); }
         function getDesc() {

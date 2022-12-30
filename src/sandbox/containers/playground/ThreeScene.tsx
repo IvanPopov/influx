@@ -7,21 +7,24 @@
 /* tslint:disable:insecure-random */
 
 import { verbose } from '@lib/common';
+import { ControlValueType } from '@lib/fx/bundles/utils';
+import { IMap } from '@lib/idl/IMap';
+import { ITechnique } from '@lib/idl/ITechnique';
+import * as ipc from '@sandbox/ipc';
 import { OrbitControls } from '@three-ts/orbit-controls';
 import autobind from 'autobind-decorator';
 import copy from 'copy-to-clipboard';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as React from 'react';
 import { toast } from 'react-semantic-toasts';
 import * as THREE from 'three';
+import { IUniform } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
-import { TGALoader } from 'three/examples/jsm/loaders/TGALoader';
-import * as ipc from '@sandbox/ipc';
-import * as fs from 'fs';
-import * as path from 'path';
 
 import { ITimeline } from '@lib/fx/timeline';
 
-import { Color, IPlaygroundControlsState } from '@sandbox/store/IStoreState';
+import { Color, IPlaygroundControlsState, Vector2, Vector3, Vector4 } from '@sandbox/store/IStoreState';
 import { GUI } from 'dat.gui';
 
 // must be imported last
@@ -40,6 +43,12 @@ export interface ITreeSceneProps {
 export interface IThreeSceneState {
     controls: string; // hash
     fps: { min: number, max: number, value: number };
+}
+
+
+export interface IDeps {
+    models: IMap<THREE.Mesh[]>;
+    textures: IMap<THREE.DataTexture>;
 }
 
 
@@ -64,6 +73,37 @@ export function GetAssetsTextures() {
 
 function GetAssetsModelsPath() {
     return "./assets/models";
+}
+
+
+function controlToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.DataTexture {
+    switch (type) {
+        case 'color': {
+            const { r, g, b, a } = ctrl as Color;
+            return new THREE.Vector4(r, g, b, a);
+        }
+        case 'float4': {
+            const { x, y, z, w } = ctrl as Vector4;
+            return new THREE.Vector4(x, y, z, w);
+        }
+        case 'float3': {
+            const { x, y, z } = ctrl as Vector3;
+            return new THREE.Vector3(x, y, z);
+        }
+        case 'float2': {
+            const { x, y } = ctrl as Vector2;
+            return new THREE.Vector2(x, y);
+        }
+        case 'texture2d':
+            return deps.textures[ctrl as string];
+        case 'float':
+        case 'int':
+        case 'uint':
+            return ctrl as Number;
+        default:
+            console.error('unsupported type found');
+        }    
+    return null;
 }
 
 
@@ -122,6 +162,60 @@ export function loadTexture(name: string): Promise<THREE.DataTexture> {
     });
 }
 
+
+
+export function resolveExternalDependencies(
+    preloadTextures: boolean,
+    preloadMeshes: boolean,
+    deps: IDeps,
+    onComplete: (deps: IDeps) => void) {
+
+    const geoms: Set<string> = new Set();
+    const textures: Set<string> = new Set();
+
+    if (preloadTextures) {
+        // IP: quick solution - request all possible textures as sub resources
+        // if resource requires at least one texture.
+        GetAssetsTextures().forEach(fname => textures.add(fname));
+    }
+
+    if (preloadMeshes || true) {
+        // IP: quick solution - request all possible textures as sub resources
+        // if resource requires at least one texture.
+        GetAssetsModels().forEach(fname => geoms.add(fname));
+    }
+
+    let depNum = 1;
+    let tryFinish = () => {
+        depNum--;
+        if (depNum == 0) {
+            onComplete(deps);
+        }
+    }
+
+    for (let name of geoms.values()) {
+        if (!deps.models[name]) {
+            depNum++;
+            loadObjModel(name).then(meshes => {
+                deps.models[name] = meshes;
+                tryFinish();
+            });
+        }
+    }
+
+    for (let name of textures.values()) {
+        if (!deps.textures[name]) {
+            depNum++;
+            loadTexture(name).then(texture => {
+                deps.textures[name] = texture;
+                tryFinish();
+            });
+        }
+    }
+
+    tryFinish();
+}
+
 class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends React.Component<P, S> {
     // fps stats
     private frames = 0;
@@ -139,6 +233,12 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     protected gui: GUI = null;
 
     protected preset: string = null;
+
+    protected deps: IDeps = {
+        models: {},
+        textures: {},
+    };
+
 
     protected stateInitials(): IThreeSceneState {
         return {
@@ -497,7 +597,165 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
     }
 
 
+    // per pass x per buffer
+    uniformGroups: THREE.UniformsGroup[][];
     
+    uniforms: IMap<IUniform<THREE.DataTexture | THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number>> = {
+        elapsedTime: { value: 0 },
+        elapsedTimeLevel: { value: 0 },
+        // elapsedTimeThis: { value: 0 }
+    };
+
+
+    // todo: read buffers layout from reflection
+    createUniformGroups(technique: ITechnique) {
+        const passCount = technique.getPassCount();
+
+        this.uniformGroups?.forEach(gs => gs.forEach(g => g.dispose()));
+        this.uniformGroups = [];
+        for (let p = 0; p < passCount; ++p) {
+            const cbuffers = technique.getPass(p).getDesc().cbuffers;
+
+            const groups = [];
+            for (let cbuf of cbuffers) {
+                let { name, size, usage } = cbuf;
+
+                const nVec4 = size / 16;
+                const group = new THREE.UniformsGroup();
+                group.setName(name);
+
+                for (let i = 0; i < nVec4; ++i) {
+                    group.add(new THREE.Uniform(new THREE.Vector4(0, 0, 0, 0)));
+                }
+
+                groups.push(group);
+            }
+
+            this.uniformGroups.push(groups);
+        }
+    }
+    
+
+    createSingleUniforms() {
+        const controls = this.props.controls;
+        const uniforms = this.uniforms;
+        const deps = this.deps;
+
+        if (controls) {
+            for (let name in controls.values) {
+                let val = controls.values[name];
+                let ctrl = controls.controls[name];
+                uniforms[name] = { value: controlToThreeValue(val, ctrl.type, deps) };
+            }
+        }
+    }
+
+
+    updateUniformsGroups(technique: ITechnique) {
+        const viewMatrix = this.camera.matrixWorldInverse;
+        const projMatrix = this.camera.projectionMatrix;
+        const viewprojMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix).transpose();
+
+        const { clientWidth, clientHeight } = this.mount;
+
+        const passCount = technique.getPassCount();
+        const controls = this.props.controls;
+        const deps = this.deps;
+
+        const timeline = this.props.timeline;
+        const constants = timeline.getConstants();
+
+        for (let p = 0; p < passCount; ++p) {
+            const cbuffers = technique.getPass(p).getDesc().cbuffers;
+            for (let c = 0; c < cbuffers.length; ++c) {
+                let cbuf = cbuffers[c];
+                let group = this.uniformGroups[p][c];
+                let { name, size, usage } = cbuf;
+
+                switch (name) {
+                    case 'AUTOGEN_CONTROLS':
+                        {
+                            for (let { name, padding } of cbuf.fields) {
+                                const pos = (padding / 16) >>> 0; // in vector
+                                const ctrl = controls.controls[name];
+                                const val = controls.values[name];
+                                // todo: use paddings (!)
+                                group.uniforms[pos].value = controlToThreeValue(val, ctrl.type, deps);
+                            }
+                        }
+                        break;
+                    case 'GLOBAL_UNIFORMS':
+                        for (let { name, padding, semantic } of cbuf.fields) {
+                            switch (semantic) {
+                                case 'ELAPSED_TIME_LEVEL':
+                                    {
+                                        const pos = (padding / 16) >>> 0;
+                                        const pad = (padding % 16) / 4;
+                                        (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTimeLevel);
+                                    }
+                                    break;
+                                case 'ELAPSED_TIME':
+                                    {
+                                        const pos = (padding / 16) >>> 0;
+                                        const pad = (padding % 16) / 4;
+                                        (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTime);
+                                    }
+                                    break;
+                            }
+                        }
+                        break;
+                    default:
+                        for (let { name, padding, semantic } of cbuf.fields) {
+                            switch (semantic) {
+                                case 'COMMON_VIEWPROJ_MATRIX':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 0);
+                                        (group.uniforms[pos + 1].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 4);
+                                        (group.uniforms[pos + 2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
+                                        (group.uniforms[pos + 3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
+                                    }
+                                    break;
+                                case 'COMMON_VP_PARAMS':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight]);
+                                    }
+                                    break;
+                                case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':
+                                    {
+                                        const pos = (padding / 16) >>> 0; // in vector
+                                        (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1, 0, 0, 0]);
+                                        (group.uniforms[pos + 1].value as THREE.Vector4).fromArray([0, 1, 0, 0]);
+                                        (group.uniforms[pos + 2].value as THREE.Vector4).fromArray([0, 0, 1, 0]);
+                                        break;
+                                    }
+                            }
+                        }
+                }
+            }
+        }
+    }
+
+
+    updateSingleUniforms() {
+        const controls = this.props.controls;
+        const uniforms = this.uniforms;
+        const timeline = this.props.timeline;
+        const deps = this.deps;
+        const constants = timeline.getConstants();
+        uniforms.elapsedTime.value = constants.elapsedTime;
+        uniforms.elapsedTimeLevel.value = constants.elapsedTimeLevel;
+
+        if (controls) {
+            for (let name in controls.values) {
+                let val = controls.values[name];
+                let ctrl = controls.controls[name];
+                if (uniforms[name])
+                    uniforms[name].value = controlToThreeValue(val, ctrl.type, deps);
+            }
+        }
+    }
 }
 
 export default ThreeScene;

@@ -217,6 +217,20 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
     }
 
 
+    emitTextureRaw(ctx: ContextT, type: string, name: string, comment?: string): void {
+        if (!ctx.has(name)) {
+            const tex = ctx.addTexture(type, name);
+            this.begin();
+            {
+                comment && this.emitComment(comment);
+                this.emitKeyword(`uniform sampler2D ${name};`);
+            }
+            this.end();
+        }
+        ctx.linkTexture(name);
+    }
+
+
     protected emitAttribute(ctx: ContextT, decl: IVariableDeclInstruction) {
         // skip specific semantics like SV_InstanceID in favor of gl_InstanceID 
         if (IS_INSTANCEID(decl.semantic)) return;
@@ -303,14 +317,8 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
     }
 
 
-    emitIdentifier(ctx: ContextT, id: IIdExprInstruction) {
-        super.emitIdentifier(ctx, id);
-    }
-
-
     emitFCall(ctx: ContextT, call: IFunctionCallInstruction) {
-        const decl = call.decl;
-        const args = call.args;
+        const { decl, args, callee } = call;
 
         switch (decl.name) {
             case 'mul':
@@ -334,6 +342,65 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                 super.emitFCall(ctx, call, (decl) => 'mod');
                 return;
 
+        }
+
+        if (callee) {
+            const type = callee.type;
+            if (/^Texture(2D|3D|1D)?(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+                const id = callee as IIdExprInstruction;
+                this.emitGlobal(ctx, id.decl);
+
+                if (decl.name == 'Sample') {
+                    this.emitKeyword(`texture`);
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitKeyword(id.name);
+                    this.emitChar(`,`);
+                    this.emitExpressionList(ctx, args.slice(1)); // remove sampler argument
+                    this.emitChar(')');
+                }
+                
+                if (decl.name == 'GetDimensions') {
+                    this.emitChar('{');
+                    this.push();
+ 
+                    this.emitKeyword(`ivec2`);
+                    this.emitKeyword(`temp`);
+                    this.emitSpace();
+                    this.emitChar(`=`);
+                    this.emitKeyword('textureSize');
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitKeyword(id.name);
+                    this.emitChar(`,`);
+                    this.emitKeyword('int');
+                    this.emitChar('(');
+                    this.emitNoSpace();
+                    this.emitExpression(ctx, args[0]);
+                    this.emitChar(')');
+                    this.emitChar(')');
+                    this.emitChar(';');
+                    this.emitNewline();
+                    
+                    this.emitExpression(ctx, args[1]);
+                    this.emitSpace();
+                    this.emitChar(`=`);
+                    this.emitKeyword('uint(temp.x)');
+                    this.emitChar(';');
+                    this.emitNewline();
+
+                    this.emitExpression(ctx, args[2]);
+                    this.emitSpace();
+                    this.emitChar(`=`);
+                    this.emitKeyword('uint(temp.y)');
+                    this.emitChar(';');
+                    this.emitNewline();
+
+                    this.pop();
+                    this.emitChar('}');
+                }
+                return;
+            } 
         }
         
         super.emitFCall(ctx, call);

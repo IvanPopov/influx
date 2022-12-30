@@ -627,8 +627,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             {
                 let uint = getSystemType("uint");
-                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
-                const id = new IdInstruction({ scope, name: 'width' });
+                const type = new VariableTypeInstruction({ type: uint, scope });
+                const id = new IdInstruction({ scope, name: 'mipLevel' });
                 const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
                 const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
                 paramList.push(param0);
@@ -637,10 +637,19 @@ class Texture2DTemplate extends TypeTemplate {
             {
                 let uint = getSystemType("uint");
                 const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
-                const id = new IdInstruction({ scope, name: 'height' });
+                const id = new IdInstruction({ scope, name: 'width' });
                 const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
                 const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
                 paramList.push(param1);
+            }
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'height' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param2 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param2);
             }
 
             let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });

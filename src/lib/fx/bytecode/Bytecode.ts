@@ -753,9 +753,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     const w = addr.sub(texAddr, 0, sizeof.i32());
                     const h = addr.sub(texAddr, sizeof.i32(), sizeof.i32());
-
-                    const wout = args[0];
-                    const hout = args[1];
+                    // NOTE: always returns size of zero mip (!)
+                    // const mip = args[0];
+                    const wout = args[1];
+                    const hout = args[2];
 
                     imove(wout, w);
                     imove(hout, h);
