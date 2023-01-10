@@ -156,6 +156,23 @@ function prerecordUniforms(
     return helper.finish();
 }
 
+class TriangleGeometry extends THREE.BufferGeometry {
+	constructor() {
+		super();
+		this.type = 'TriangleGeometry';
+
+		const indices = [0, 1, 2];
+		const vertices = [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
+		const normals = [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ];
+		const uvs = [ 0, 0, 0, 0, 0, 0 ];
+
+		this.setIndex( indices );
+		this.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+		this.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
+		this.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
+	}
+}
+
 
 class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     private passes: {
@@ -170,8 +187,9 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         backWall?: THREE.Mesh,
         ceiling?: THREE.Mesh
     } = null;
+    
+    private helperGeom?: THREE.Object3D[] = [];
 
-    private lights?: THREE.Object3D[];
     private textures: IMap<ITexture>;
     private meshes: IMap<ITrimesh>;
 
@@ -568,6 +586,9 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             case "billboard":
                 instanceGeometry = [new THREE.PlaneGeometry()];
                 break;
+            case "triangle":
+                instanceGeometry = [ new TriangleGeometry() ];
+                break;
             default:
                 let objName = Object.keys(this.deps.models).find(name => name.includes(geometry));
                 if (objName) {
@@ -604,7 +625,6 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
     private createPasses(emitter: IEmitter) {
-        console.log("!!! create passes !!!");
         this.passes = [];
         // tslint:disable-next-line:max-func-body-length
         let nPass = emitter.getPassCount();
@@ -719,6 +739,21 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                     this.meshes[value] = createMeshFromSource(source);
                 }
 
+                // temp solution until geom is not rendered from effect
+                if (this.meshDebugDraw[name]) {
+                    this.helperGeom.push(...source.map(obj => {
+                        const mesh = obj.clone();
+                        mesh.material = new THREE.MeshBasicMaterial({ 
+                            color: 0xFF0000, 
+                            wireframe: true, 
+                            wireframeLinewidth: 1, 
+                            transparent: true,
+                            opacity: 0.25
+                        });
+                        return mesh;
+                    }));
+                }
+
                 emitter.setTrimesh(name, this.meshes[value]);
             }
         }
@@ -810,9 +845,9 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         emitter.serialize(); // feed render buffer with instance data
 
         this.setGeometryInstanceCouts();
-        
-        const lights  = this.lights = this.createLights();
-        if (lights.length) this.scene.add(...lights);
+        this.helperGeom.push(...this.createLights());
+        if (this.helperGeom.length)
+            this.scene.add(...this.helperGeom);
 
         this.setState({ 
             nParticles: emitter.getNumParticles(),
@@ -826,7 +861,8 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
     protected override endFrame(): void {
-        if (this.lights?.length) this.scene.remove(...this.lights);
+        this.scene.remove(...this.helperGeom);
+        this.helperGeom = [];
     }
 
 }

@@ -48,7 +48,7 @@ void main()
     gl_Position = projectionMatrix * viewPos;
 
     vec3 lightDir;
-    lightDir = normalize(vec3(1.0, 4.0, 0.0));
+    lightDir = normalize(vec3(1.0, -4.0, 0.0));
 
     float NdL;
     NdL = max(0.0, dot(normal, lightDir) * 0.5);

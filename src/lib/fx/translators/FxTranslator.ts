@@ -165,7 +165,7 @@ export class FxTranslatorContext extends FxConvolutionContext {
 
     readonly techniques: (ITechniqueReflection | IPartFxReflection)[] = [];
     readonly controls: IUIControlReflection[] = [];
-    readonly triMeshes: ITriMeshReflection[] = [];
+    readonly trimeshes: ITriMeshReflection[] = [];
     // todo: use reflection
     readonly uniforms: IUniformReflection[] = [];
     // todo: use reflection
@@ -202,14 +202,7 @@ export class FxTranslatorContext extends FxConvolutionContext {
     addTrimesh(mesh: ITriMeshReflection): ITriMeshReflection {
         assert(!this.has(mesh.name));
         this.add(mesh.name);
-        this.triMeshes.push(mesh);
-
-        // push if not exists
-        let sh = this.CSShader;
-        if (sh) {
-            pushUniq(sh.trimeshes, mesh);
-        }
-
+        this.trimeshes.push(mesh);
         return mesh;
     }
 
@@ -222,6 +215,16 @@ export class FxTranslatorContext extends FxConvolutionContext {
     }
 
 
+    linkTrimesh(name: string) {
+        assert(this.has(name));
+        // push if not exists
+        let sh = this.CSShader;
+        if (sh) {
+            pushUniq(sh.trimeshes, this.trimeshes.find(t => t.name == name));
+        }
+    }
+
+    // override CodeEmitterContext::beginCsShader()
     beginCsShader(name: string, numthreads: number[]) {
         const uavs = [];
         const buffers = [];
@@ -349,10 +352,14 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const verticesName = `${baseName}Vertices`;
         const facesName = `${baseName}Faces`;
         const adjacencyName = `${baseName}Adjacency`;
-
+        
+        const { typeName: elementTypeName } = this.resolveType(ctx, elementType);
+        
+        const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
+        const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
+        const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName, "adjacency");
+        
         if (!ctx.has(name)) {
-            const { typeName: elementTypeName } = this.resolveType(ctx, elementType);
-
             // uniform uint trimesh0_vert_count;
             // uniform uint trimesh0_face_count;
             // StructuredBuffer<Vert> trimesh0_vert;
@@ -370,11 +377,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             } else {
                 this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
             }
-
-            const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
-            const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
-            const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName, "adjacency");
-
+            
             this.begin();
             this.emitLine(`void ${baseName}_GetDimensions(out uint vertCount, out uint faceCount)`);
             this.emitChar('{');
@@ -458,6 +461,8 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             const control: IUIControl = { name, type: 'mesh', value, properties: [] };
             ctx.addControl(control);
         }
+
+        ctx.linkTrimesh(name);
     }
 
 

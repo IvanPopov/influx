@@ -167,7 +167,7 @@ export function GetAssetsModels() {
     } else {
         const sandboxPath = path.dirname(window.location.pathname.substr(1));
         const texturePath = path.join(sandboxPath, GetAssetsModelsPath());
-        return fs.readdirSync(texturePath);
+        return fs.readdirSync(texturePath).filter(fname => path.extname(fname) === '.obj');
     }
 }
 
@@ -311,6 +311,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         textures: {},
     };
 
+
+    protected meshDebugDraw: IMap<boolean> = {};
 
     protected stateInitials(): IThreeSceneState {
         return {
@@ -562,7 +564,12 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
                         // override initial value if it does not suit available resources
                         const folder = gui.addFolder(caption);
                         folder.add(controls.values, name, list).setValue(def);
-                        // folder.add({ ['[visible]']: false }, '[visible]');
+                        
+                        {
+                            this.meshDebugDraw[name] = this.meshDebugDraw[name] || false;
+                            folder.add(this.meshDebugDraw, name).name('show (debug)');
+                        }
+                        
                         folder.open();
                     }
                     break;

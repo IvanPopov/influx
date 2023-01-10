@@ -6,7 +6,7 @@ import { assert } from "@lib/common";
 import * as flatbuffers from 'flatbuffers';
 
 export type PropertyValueType = number | string;
-export type ControlValueType = number | Vector2 | Vector3 | Vector4 | Color | string;
+export type ControlValueType = boolean | number | Vector2 | Vector3 | Vector4 | Color | string;
 export type PropertyValueT = UintValueT | IntValueT | FloatValueT | StringValueT;
 export type ControlValueT = UintValueT | IntValueT | FloatValueT | Float2ValueT | Float3ValueT | Float4ValueT | ColorValueT | TextureValueT;
 
