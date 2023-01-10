@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <vector>
+#include <map>
 #include <iostream>
 #include <algorithm>
 #include <sstream>
@@ -135,7 +136,7 @@ std::unique_ptr<BYTECODE_BUNDLE> SetupFxRoutineBytecodeBundle(
 EMITTER_PASS::EMITTER_PASS (
     const EMITTER* pParent, 
     uint32_t id, 
-    const EMITTER_DESC& desc, 
+    const EMITTER_PASS_DESC& desc, 
     std::unique_ptr<BYTECODE_BUNDLE> bundle
 )
     : m_parent(pParent)
@@ -252,10 +253,12 @@ void EMITTER_PASS::Prerender(const UNIFORMS& uniforms)
 }
 
 
-// struct DefaultShaderInput {
-//     vec3 pos;
-//     vec4 color;
+// struct PartInstance 
+// {
+//     float pos[3];
+//     float color[4];
 //     float size;
+//     float frame;
 // };
 
 void EMITTER_PASS::Dump() const 
@@ -265,11 +268,15 @@ void EMITTER_PASS::Dump() const
 
     for (int iPart = 0; iPart < npart; ++ iPart)
     {
-        // auto& part = UavNonSorted()->data.As<DefaultShaderInput>()[iPart];
-        // std::cout << "part(" << iPart 
+        // auto& part = UavNonSorted()->data.As<PartInstance>()[iPart];
+        // std::cout 
+        // << "part(" << iPart 
         // << ") = { size: " << part.size 
-        // << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
-        // << " } " << std::endl;
+        // << ", pos: " << part.pos[0] << ", " << part.pos[1] << ", " << part.pos[2] 
+        // << ", color: " << part.color[0] << ", " << part.color[1] << ", " << part.color[2] << ", " << part.color[3] 
+        // << ", frame: " << part.frame
+        // << " } " 
+        // << std::endl;
     }
 }
 
@@ -277,6 +284,44 @@ void EMITTER_PASS::Dump() const
 EMITTER::EMITTER(void* buf)
 {
    ReloadBundles(buf);
+}
+
+
+void ScanConstanBuffers(std::map<std::string, CBUFFER>& sharedCbufs
+    , Fx::RoutineGLSLSourceBundleT* pBundle
+    , EUsage usage)
+{
+    for (auto& cbufPtr: pBundle->cbuffers) 
+    {
+        auto& [ name, slot, size, fields ] = *cbufPtr;
+
+        if (sharedCbufs.find(name) == sharedCbufs.end()) 
+        {
+            CBUFFER cb;
+            cb.slot = slot;
+            cb.name = name;
+            cb.size = size;
+
+            for (auto& fieldPtr : fields) 
+            {
+                // Fx::TypeFieldT& field;
+                auto& [type, name, semantic, size, padding] = *fieldPtr;
+                // std::unique_ptr<Fx::TypeLayoutT> type;
+                CBUFFER_FIELD field;
+                field.name = name;
+                field.semantic = semantic.empty() ? semantic : name;
+                field.size = size;
+                field.padding = padding;
+                field.length = type->length;
+                
+                cb.fields.push_back(field);
+            }
+
+            sharedCbufs[name] = cb;
+        } 
+
+        sharedCbufs[name].usage |= usage;
+    }
 }
 
 
@@ -343,11 +388,26 @@ void IFX::EMITTER::ReloadBundles(void* buf)
         auto pixelBundle = routines[Fx::EPartRenderRoutines_k_Pixel].AsRoutineShaderBundle()->shaders[0];
         assert(pixelBundle.type == Fx::RoutineSourceBundle_RoutineGLSLSourceBundle);
 
-        std::string vertexShader = vertexBundle.AsRoutineGLSLSourceBundle()->code;
-        std::string pixelShader = pixelBundle.AsRoutineGLSLSourceBundle()->code;
+        Fx::RoutineGLSLSourceBundleT* pVertexGLSLBundle = vertexBundle.AsRoutineGLSLSourceBundle();
+        Fx::RoutineGLSLSourceBundleT* pPixelGLSLBundle = pixelBundle.AsRoutineGLSLSourceBundle();
+
+        std::string vertexShader = pVertexGLSLBundle->code;
+        std::string pixelShader = pPixelGLSLBundle->code;
 
         // note: only GLSL routines are supported!
-        std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = vertexBundle.AsRoutineGLSLSourceBundle()->attributes;
+        std::vector<std::unique_ptr<Fx::GLSLAttributeT>> &attrs = pVertexGLSLBundle->attributes;
+
+        // merge VS & PS constant buffer into shared list 
+        // it's guaranteed by translator that buffers with the same name are the same
+        std::map<std::string, CBUFFER> cbufs;
+        ScanConstanBuffers(cbufs, pVertexGLSLBundle, EUsage::k_Vertex);
+        ScanConstanBuffers(cbufs, pPixelGLSLBundle, EUsage::k_Pixel);
+
+        std::vector<CBUFFER> cbuffers;
+        for (const auto &cb : cbufs) 
+        {
+            cbuffers.push_back(cb.second);
+        }
 
         if (sorting) 
         {
@@ -367,12 +427,13 @@ void IFX::EMITTER::ReloadBundles(void* buf)
         }
 
         {
-            EMITTER_DESC desc;
+            EMITTER_PASS_DESC desc;
             desc.geometry = geometry;
             desc.sorting = sorting;
             desc.stride = stride;
             desc.instanceCount = instanceCount;
             desc.renderInstance = Fx::TypeLayoutT(*instance);
+            desc.cbuffers = std::move(cbuffers);
 
             for (auto& attr : attrs)
             {
@@ -574,13 +635,17 @@ bool EMITTER::operator ==(const EMITTER& rhs) const
 // -- end of hack
 //
 
-// struct Part
+// struct float3 
 // {
-// 	vec3 speed;
-// 	vec3 pos;
-// 	float size;
-// 	float timelife;
+//     float x, y, z;
 // };
+
+// struct Part 
+// {
+//     float3 pos;
+//     float timelife;
+// };
+
 
 void EMITTER::Dump()
 {
@@ -591,12 +656,12 @@ void EMITTER::Dump()
 
     for (int iPart = 0; iPart < UavStates()->data.size; ++ iPart)
     {
-        auto alive = !!UavStates()->data[iPart];
-        if (alive)
+        uint32_t alive = !!UavStates()->data[iPart];
+        if (alive) 
         {
-            // auto& part = uavParticles()->data.As<Part>()[iPart];
+            // auto& part = UavParticles()->data.As<Part>()[iPart];
             // std::cout << "part(" << iPart 
-            // << ") = { size: " << part.size 
+            // // << ") = { size: " << part.size 
             // << ", timelife: " << part.timelife 
             // << ", pos: " << part.pos.x << ", " << part.pos.y << ", " << part.pos.z 
             // << " } " << std::endl;

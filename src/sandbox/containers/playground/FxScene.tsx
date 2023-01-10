@@ -10,7 +10,7 @@ import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
-import ThreeScene, { IDeps, IThreeSceneState, ITreeSceneProps, resolveExternalDependencies } from './ThreeScene';
+import ThreeScene, { IDeps, IThreeSceneState, ITreeSceneProps, resolveExternalDependencies, TEXTURE_PLACEHOLDER_WHITE_1X1 } from './ThreeScene';
 
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 
@@ -39,6 +39,7 @@ interface IFxSceneState extends IThreeSceneState {
     emitter: IEmitter;  // completly loaded emitter
     loading: IEmitter;  // pointer to the currently loaded emitter
     nParticles: number; // aux. state for UI force reload
+    time: string;
 }
 
 let desc = `
@@ -94,8 +95,6 @@ function UnpackCanvasImageSource(img: CanvasImageSource): Uint8ClampedArray {
 }
 
 
-
-
 function setUniformValue(helper: IUniformHelper, name: string, type: string, value: ControlValueType) {
     switch (type) {
         case 'int':
@@ -128,7 +127,7 @@ function prerecordUniforms(
     camera: THREE.PerspectiveCamera,
     timeline: ITimeline, 
     controls?: IPlaygroundControlsState,
-    preset?: string,
+    presetName?: string,
     ): Uniforms {
 
     const constants = timeline.getConstants();
@@ -142,8 +141,8 @@ function prerecordUniforms(
     helper.set('frameNumber').int(constants.frameNumber);
 
     if (controls) {
-        if (preset) {
-            const preset = controls?.presets.find(p => p.name == preset);
+        if (presetName) {
+            const preset = controls?.presets.find(p => p.name == presetName);
             preset?.data.forEach(entry => setUniformValue(helper, entry.name, entry.type, entry.value));
         }
 
@@ -183,6 +182,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             emitter: null,
             loading: null,
             nParticles: 0,
+            time: '0.00',
             ...this.stateInitials()
         };
     }
@@ -190,14 +190,16 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     componentDidMount() {
         super.componentDidMount();
-        this.createEmitter(this.props.emitter);
         this.createUniformGroups(this.props.emitter);
         this.createSingleUniforms();
+        this.createEmitter(this.props.emitter);
     }
 
 
-    shouldComponentUpdate(nextProps: IFxSceneProps, nexState) {
-        return this.state.emitter !== nextProps.emitter || this.state.nParticles !== nexState.nParticles;
+    shouldComponentUpdate(nextProps: IFxSceneProps, nextState: IFxSceneState) {
+        return this.state.emitter !== nextProps.emitter 
+            || this.state.nParticles !== nextState.nParticles 
+            || this.state.time !== nextState.time;
     }
 
 
@@ -248,7 +250,8 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 <div style={statsStyleFix}>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br />
                     simulation: CPU<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FPS: <span>{Math.round(this.state.fps.value)}</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fps: <span>{Math.round(this.state.fps.value)}</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;time: <span>{this.state.time}</span><br />
                 </div>
             </div>
         );
@@ -583,6 +586,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
 
     private createPasses(emitter: IEmitter) {
+        console.log("!!! create passes !!!");
         this.passes = [];
         // tslint:disable-next-line:max-func-body-length
         let nPass = emitter.getPassCount();
@@ -631,13 +635,19 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     private setupResources() {
         const emitter = this.state.emitter;
 
-        const createTextureFromSource = (dep: THREE.DataTexture) => {
-            const img = dep.source.data as CanvasImageSource;
-            assert(img instanceof HTMLImageElement);
+        const createTextureFromSource = (dep: THREE.Texture) => {
+            let img = dep.source.data;
+            let width = img.width as number;
+            let height = img.height as number;
+            let data = null;
 
-            const width = img.width as number;
-            const height = img.height as number;
-            const data = UnpackCanvasImageSource(img);
+            // return Techniques.createTexture({ width: 1, height: 1 }, new Uint8Array([0,0,0,0]));
+            if (img instanceof HTMLImageElement) {
+                data = UnpackCanvasImageSource(img as CanvasImageSource);
+            } else {
+                data = img.data;
+            }
+
             return Techniques.createTexture({ width, height }, data);
         };
 
@@ -666,6 +676,15 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             if (type == 'texture2d') {
                 // all the sources must be preloaded in advance (!)
                 const source = this.deps.textures[value];
+
+                // if (!source) {
+                //     const value = 'TEXTURE_PLACEHOLDER_WHITE_1X1';
+                //     if (!this.textures[value]) {
+                //         this.textures[value] = createTextureFromSource(TEXTURE_PLACEHOLDER_WHITE_1X1);
+                //     }
+                //     emitter.setTexture(name, this.textures[value]);
+                //     continue;
+                // }
 
                 if (!this.textures[value]) {
                     this.textures[value] = createTextureFromSource(source);
@@ -764,7 +783,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.setupResources();
         const uniforms = prerecordUniforms(camera, timeline, controls, preset);
 
-        if (!timeline.isStopped()) {
+        if (!timeline.isStopped() && !timeline.isPaused()) {
             timeline.tick();
             emitter.simulate(uniforms);
         }
@@ -777,7 +796,10 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const lights  = this.lights = this.createLights();
         if (lights.length) this.scene.add(...lights);
 
-        this.setState({ nParticles: emitter.getNumParticles() });
+        this.setState({ 
+            nParticles: emitter.getNumParticles(),
+            time: timeline.getConstants().elapsedTimeLevel.toFixed(2)
+         });
 
         // emitter.dump();
         // this.scene.add(new THREE.Mesh(geometry, new THREE.MeshNormalMaterial))

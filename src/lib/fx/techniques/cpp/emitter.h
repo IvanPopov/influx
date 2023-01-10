@@ -31,25 +31,31 @@ struct SHADER_ATTR
     std::string name;
 };
 
+enum EUsage {
+    k_Vertex = 0x01,
+    k_Pixel = 0x02,
+    k_Compute = 0x04
+};
 
 struct CBUFFER_FIELD 
 {
     std::string name;
     std::string semantic;
-    int size;
-    int offset;
+    uint32_t size;
+    uint32_t padding;
     int length;
 };
 
 struct CBUFFER 
 {
+    int slot;
     std::string name;
     int size;
     int usage;
     std::vector<CBUFFER_FIELD> fields;
 };
 
-struct EMITTER_DESC
+struct EMITTER_PASS_DESC
 {
     uint32_t stride;                             // number of float elements in the prerendered particle
     std::string geometry;
@@ -74,7 +80,7 @@ public:
     EMITTER_PASS (
         const EMITTER* pParent, 
         uint32_t id, 
-        const EMITTER_DESC& desc,
+        const EMITTER_PASS_DESC& desc,
         std::unique_ptr<BYTECODE_BUNDLE> prerenderBundle
     );
 
@@ -85,7 +91,7 @@ public:
     void         Serialize();
     // returns sorted data if sorting is on and unsorted otherwise 
     VM::memory_view  GetData() const;
-    const EMITTER_DESC& GetDesc() const { return m_desc; }
+    const EMITTER_PASS_DESC& GetDesc() const { return m_desc; }
 
     const EMITTER& Parent() const;
     
@@ -100,7 +106,7 @@ private:
     const EMITTER* m_parent;
     uint32_t m_id;
 
-    EMITTER_DESC m_desc;
+    EMITTER_PASS_DESC m_desc;
     std::unique_ptr<BYTECODE_BUNDLE> m_prerenderBundle;
 
     // parent shortcuts

@@ -6,10 +6,10 @@
 /* tslint:disable:no-string-literal */
 /* tslint:disable:insecure-random */
 
-import { verbose } from '@lib/common';
+import { isString, verbose } from '@lib/common';
 import { ControlValueType } from '@lib/fx/bundles/utils';
 import { IMap } from '@lib/idl/IMap';
-import { ITechnique } from '@lib/idl/ITechnique';
+import { IConstanBufferField, ITechnique } from '@lib/idl/ITechnique';
 import * as ipc from '@sandbox/ipc';
 import { OrbitControls } from '@three-ts/orbit-controls';
 import autobind from 'autobind-decorator';
@@ -21,6 +21,7 @@ import { toast } from 'react-semantic-toasts';
 import * as THREE from 'three';
 import { IUniform } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { TGALoader } from 'three/examples/jsm/loaders/TGALoader';
 
 import { ITimeline } from '@lib/fx/timeline';
 
@@ -48,7 +49,7 @@ export interface IThreeSceneState {
 
 export interface IDeps {
     models: IMap<THREE.Mesh[]>;
-    textures: IMap<THREE.DataTexture>;
+    textures: IMap<THREE.Texture>;
 }
 
 
@@ -59,13 +60,13 @@ function GetAssetsTexturesPath() {
 
 export function GetAssetsTextures() {
     if (!ipc.isElectron()) {
-        return [ 
-            'saber-logo.png', 
-            'checker2x2.png' 
+        return [
+            'saber-logo.png',
+            'checker2x2.png'
         ];
     } else {
         const sandboxPath = path.dirname(window.location.pathname.substr(1));
-        const texturePath = path.join(sandboxPath, GetAssetsTexturesPath()); 
+        const texturePath = path.join(sandboxPath, GetAssetsTexturesPath());
         return fs.readdirSync(texturePath);
     }
 }
@@ -75,8 +76,11 @@ function GetAssetsModelsPath() {
     return "./assets/models";
 }
 
+export const TEXTURE_PLACEHOLDER_WHITE_1X1 = createPlaceholderTexture(1, 1);
 
-function controlToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.DataTexture {
+function controlToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
+    let ab = new ArrayBuffer(4);
+    let dv = new DataView(ab);
     switch (type) {
         case 'color': {
             const { r, g, b, a } = ctrl as Color;
@@ -94,28 +98,75 @@ function controlToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps):
             const { x, y } = ctrl as Vector2;
             return new THREE.Vector2(x, y);
         }
+        case 'mesh':
+            // nothing todo: meshes are not supported in vs/ps shaders
+            return null;
         case 'texture2d':
-            return deps.textures[ctrl as string];
-        case 'float':
-        case 'int':
+            return deps.textures[ctrl as string] || TEXTURE_PLACEHOLDER_WHITE_1X1;
         case 'uint':
+        case 'int':
+        case 'float':
             return ctrl as Number;
         default:
             console.error('unsupported type found');
-        }    
+    }
+    return null;
+}
+
+function storeThreeValue(num: number, type: string): number {
+    let ab = new ArrayBuffer(4);
+    let dv = new DataView(ab);
+    switch (type) {
+        case 'float':
+            return num;
+        case 'int':
+            dv.setInt32(0, num);
+            return dv.getFloat32(0);
+        case 'uint':
+            dv.setUint32(0, num);
+            return dv.getFloat32(0);
+        default:
+            console.error('unsupported type found');
+    }
     return null;
 }
 
 
+function createPlaceholderTexture(width = 512, height = 512) {
+    const size = width * height;
+    const data = new Uint8Array(4 * size);
+    const color = new THREE.Color(0xffffff);
+
+    const r = Math.floor(color.r * 255);
+    const g = Math.floor(color.g * 255);
+    const b = Math.floor(color.b * 255);
+
+    for (let i = 0; i < size; i++) {
+        const stride = i * 4;
+
+        data[stride] = r;
+        data[stride + 1] = g;
+        data[stride + 2] = b;
+        data[stride + 3] = 255;
+    }
+
+    // used the buffer to create a DataTexture
+    const texture = new THREE.DataTexture(data, width, height);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+
+
 export function GetAssetsModels() {
     if (!ipc.isElectron()) {
-        return [ 
-            'cube.obj', 
-            'probe.obj' 
+        return [
+            'cube.obj',
+            'probe.obj'
         ];
     } else {
         const sandboxPath = path.dirname(window.location.pathname.substr(1));
-        const texturePath = path.join(sandboxPath, GetAssetsModelsPath()); 
+        const texturePath = path.join(sandboxPath, GetAssetsModelsPath());
         return fs.readdirSync(texturePath);
     }
 }
@@ -141,21 +192,42 @@ export function loadObjModel(name: string): Promise<THREE.Mesh[]> {
     });
 }
 
-
-export function loadTexture(name: string): Promise<THREE.DataTexture> {
-    const loader = new THREE.TextureLoader();
+export function loadTGATexture(name: string): Promise<THREE.DataTexture> {
+    const loader = new TGALoader();
     return new Promise<THREE.DataTexture>((resolve, reject) => {
         loader.load(
             `${GetAssetsTexturesPath()}/${name}`,
-            ( texture: THREE.DataTexture ) => {
-                console.log(`texture '${GetAssetsTexturesPath()}/${name}.tga' is loaded.`);
+            (texture: THREE.DataTexture) => {
+                console.log(`texture '${GetAssetsTexturesPath()}/${name}' is loaded.`);
                 resolve(texture);
             },
-            ( xhr ) => {
-                // console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            (xhr) => {
+                // console.log( `${GetAssetsTexturesPath()}/${name}` + ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
             },
-            ( error ) => {
-                console.log( 'An error happened' );
+            (error) => {
+                console.log('An error happened');
+                reject();
+            }
+        );
+    });
+}
+
+export function loadTexture(name: string): Promise<THREE.Texture> {
+    if (path.extname(name) === '.tga') return loadTGATexture(name);
+
+    const loader = new THREE.TextureLoader();
+    return new Promise<THREE.Texture>((resolve, reject) => {
+        loader.load(
+            `${GetAssetsTexturesPath()}/${name}`,
+            (texture: THREE.Texture) => {
+                console.log(`texture '${GetAssetsTexturesPath()}/${name}' is loaded.`);
+                resolve(texture);
+            },
+            (xhr) => {
+                // console.log( `${GetAssetsTexturesPath()}/${name}` + ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            },
+            (error) => {
+                console.log('An error happened');
                 reject();
             }
         );
@@ -342,8 +414,46 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
 
     protected createRenderer(width, height): THREE.WebGLRenderer {
-        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true /* to be able to save screenshots */ });
-        return renderer;
+        let WEBGL_DEBUG = false;
+        if (WEBGL_DEBUG) {
+            let WebGLDebugUtils = require('webgl-debug');
+
+            function throwOnGLError(err, funcName, args) {
+                throw WebGLDebugUtils.glEnumToString(err)
+                + "was caused by call to "
+                + funcName;
+            };
+
+            const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
+            canvas.style.display = 'block';
+
+            const contextAttributes: WebGLContextAttributes = {
+                alpha: true,
+                antialias: true,
+                depth: true,
+                failIfMajorPerformanceCaveat: false,
+                powerPreference: "default",
+                premultipliedAlpha: true,
+                preserveDrawingBuffer: true,
+                stencil: true
+            };
+
+            let context = canvas.getContext("webgl2", contextAttributes);
+            // context = WebGLDebugUtils.makeDebugContext(context, throwOnGLError);
+            const renderer = new THREE.WebGLRenderer({
+                context,
+                canvas,
+                antialias: true,
+                preserveDrawingBuffer: true /* to be able to save screenshots */
+            });
+            // console.log(context, renderer.getContext());
+            return renderer;
+        }
+
+        return new THREE.WebGLRenderer({
+            antialias: true,
+            preserveDrawingBuffer: true /* to be able to save screenshots */
+        });
     }
 
 
@@ -361,9 +471,10 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             return;
         }
 
-        const hash = JSON.stringify(controls.controls) + 
-                     JSON.stringify(controls.presets) + 
-                     JSON.stringify(controls.values);
+        const hash = JSON.stringify(controls.controls) +
+            JSON.stringify(controls.presets) +
+            // IP: hack to handle update of textures
+            JSON.stringify(Object.values(controls.values).filter(isString));
 
         if (this.state.controls != hash) {
             this.removeGUI();
@@ -452,7 +563,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
                         const folder = gui.addFolder(caption);
                         folder.add(controls.values, name, list).setValue(def);
                         // folder.add({ ['[visible]']: false }, '[visible]');
-                        folder.open();    
+                        folder.open();
                     }
                     break;
             }
@@ -599,8 +710,8 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
     // per pass x per buffer
     uniformGroups: THREE.UniformsGroup[][];
-    
-    uniforms: IMap<IUniform<THREE.DataTexture | THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number>> = {
+
+    uniforms: IMap<IUniform<THREE.Texture | THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number>> = {
         elapsedTime: { value: 0 },
         elapsedTimeLevel: { value: 0 },
         // elapsedTimeThis: { value: 0 }
@@ -634,7 +745,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             this.uniformGroups.push(groups);
         }
     }
-    
+
 
     createSingleUniforms() {
         const controls = this.props.controls;
@@ -676,11 +787,16 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
                     case 'AUTOGEN_CONTROLS':
                         {
                             for (let { name, padding } of cbuf.fields) {
-                                const pos = (padding / 16) >>> 0; // in vector
+                                const pos = (padding / 16) >>> 0;
+                                const pad = (padding % 16) / 4;
                                 const ctrl = controls.controls[name];
                                 const val = controls.values[name];
-                                // todo: use paddings (!)
-                                group.uniforms[pos].value = controlToThreeValue(val, ctrl.type, deps);
+                                if (['int', 'uint', 'float'].indexOf(ctrl.type) !== -1) {
+                                    const num = storeThreeValue(controlToThreeValue(val, ctrl.type, deps) as number, ctrl.type);
+                                    (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, num);
+                                } else {
+                                    group.uniforms[pos].value = controlToThreeValue(val, ctrl.type, deps);
+                                }
                             }
                         }
                         break;

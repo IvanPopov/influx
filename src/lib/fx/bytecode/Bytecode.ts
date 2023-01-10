@@ -11,6 +11,7 @@ import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { Diagnostics } from "@lib/util/Diagnostics";
+import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 
 import { i32ToU8Array } from "./common";
 import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
@@ -483,7 +484,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         //  RTTexture2D dynamicTex; // <= uav
         //  Texture2D albedo;
         return decl.isGlobal() &&
-            (decl.type.isUniform() ||
+            (decl.type.isUniform() || (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) != 0 ||
                 (decl.initExpr && decl.initExpr.isConst()));
     }
 

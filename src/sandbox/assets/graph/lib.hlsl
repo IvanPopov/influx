@@ -4,3 +4,4 @@
 #include "noise.hlsl"
 #include "lwi.hlsl"
 #include "defaultMat.hlsl"
+#include "seq.hlsl"

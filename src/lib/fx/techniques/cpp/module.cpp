@@ -1,9 +1,9 @@
 #include <emscripten/bind.h>
 #include "../../bytecode/VM/cpp/memory_view.h"
 
-// fixme: hack to emulate unity build       
+// fixme: hack to emulate unity build         
 #include "../../bytecode/VM/cpp/bundle.cpp"
-#include "../../bytecode/VM/cpp/bundle_uav.cpp"
+#include "../../bytecode/VM/cpp/bundle_uav.cpp" 
 #include "uniforms.cpp" 
 #include "bytecode_bundle.cpp"
 #include "emitter.cpp" 
@@ -55,7 +55,7 @@ std::vector<T> vecFromJSArray(const em::val &v)
     em::val memoryView{em::typed_memory_view(l, rv.data())};
     memoryView.call<void>("set", v);
 
-    return rv;
+    return rv;  
 }
 
 IFX::UNIFORMS UniformsFromJSObject(const em::val &v)   
@@ -71,6 +71,15 @@ IFX::UNIFORMS UniformsFromJSObject(const em::val &v)
     return unis; 
 } 
 
+  static em::val GetCbufferFields(const IFX::CBUFFER& self) 
+  { 
+    return em::val::array(self.fields.begin(), self.fields.end()); 
+  }
+
+  static void SetCbufferFields(const IFX::CBUFFER& self, const em::val &v) 
+  {
+    assert(false);
+  }
 
 EMSCRIPTEN_BINDINGS(pipeline) 
 {  
@@ -89,14 +98,14 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("name", &IFX::CBUFFER_FIELD::name)
         .field("semantic", &IFX::CBUFFER_FIELD::semantic)
         .field("size", &IFX::CBUFFER_FIELD::size)
-        .field("offset", &IFX::CBUFFER_FIELD::offset)
+        .field("padding", &IFX::CBUFFER_FIELD::padding)
         .field("length", &IFX::CBUFFER_FIELD::length);  
 
     em::value_object<IFX::CBUFFER>("Cbuffer") 
         .field("name", &IFX::CBUFFER::name) 
         .field("size", &IFX::CBUFFER::size)
-        .field("usage", &IFX::CBUFFER::usage);   
-        // .field("fields", &IFX::CBUFFER_FIELD::fields);       
+        .field("usage", &IFX::CBUFFER::usage)
+        .field("fields",  &GetCbufferFields, &SetCbufferFields);       
 
     em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
         .field("size", &IFX::SHADER_ATTR::size)
@@ -104,7 +113,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("name", &IFX::SHADER_ATTR::name);  
 
     em::class_<IFX::EMITTER_PASS>("EmitterPass")   
-         .function("getData", &IFX::EMITTER_PASS::GetData)
+         .function("getData", &IFX::EMITTER_PASS::GetData)   
          .function("getDesc", em::optional_override([](IFX::EMITTER_PASS& self) {
             auto& desc = self.EMITTER_PASS::GetDesc();
             em::val jsDesc = em::val::object();
@@ -113,8 +122,8 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("geometry", desc.geometry);  
             jsDesc.set("instanceCount", desc.instanceCount);
             jsDesc.set("vertexShader", desc.vertexShader); 
-            jsDesc.set("pixelShader", desc.pixelShader);
-            jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout)); 
+            jsDesc.set("pixelShader", desc.pixelShader); 
+            jsDesc.set("instanceLayout", em::val::array(desc.instanceLayout));  
             jsDesc.set("instanceName", desc.renderInstance.name);
             jsDesc.set("cbuffers", em::val::array(desc.cbuffers));
             return jsDesc;  
@@ -132,7 +141,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("getCapacity", &IFX::EMITTER::GetCapacity)
          .function("getPassCount", &IFX::EMITTER::GetPassCount) 
          .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
-         .function("getNumParticles", &IFX::EMITTER::GetNumParticles) 
+         .function("getNumParticles", &IFX::EMITTER::GetNumParticles)    
 
          .function("simulate", em::optional_override([](IFX::EMITTER& self, em::val val) {
             return self.EMITTER::Simulate(UniformsFromJSObject(val));   
@@ -148,10 +157,10 @@ EMSCRIPTEN_BINDINGS(pipeline)
  
     em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers()); 
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());
-    em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());   
+    em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());       
 
 
-    em::value_object<IFX::TRIMESH_DESC>("TrimeshDesc")  
+    em::value_object<IFX::TRIMESH_DESC>("TrimeshDesc")   
         .field("vertCount", &IFX::TRIMESH_DESC::vertCount)   
         .field("faceCount", &IFX::TRIMESH_DESC::faceCount); 
     em::value_object<IFX::TEXTURE_DESC>("TextureDesc")  

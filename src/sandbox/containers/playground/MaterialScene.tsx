@@ -10,7 +10,7 @@ import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { ITechnique } from '@lib/idl/ITechnique';
 import autobind from 'autobind-decorator';
 import * as THREE from 'three';
-import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
+import ThreeScene, { IDeps, IThreeSceneState, ITreeSceneProps, resolveExternalDependencies } from './ThreeScene';
 import { prepareTrimesh } from './utils/adjacency';
 
 
@@ -102,7 +102,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         tonemap.open();
 
-        gui.add(params, 'model', [ 'probe', 'cube' ]).onChange((value) => {
+        gui.add(params, 'model', [ 'probe', 'cube', 'plane' ]).onChange((value) => {
             this.reloadModel();
         });
 
@@ -118,6 +118,22 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
 
         this.scene.remove(...(this.groups || []));
 
+        switch (params.model) {
+            case 'plane': 
+            {
+                const geom = new THREE.PlaneGeometry(2, 2);
+                const mesh = new THREE.Mesh(geom, null);
+                const group = new THREE.Group();
+                group.add(mesh);
+
+                this.groups = [ group ];
+                scene.add(...this.groups);
+                this.reloadMaterial();
+                return;
+            }
+            break;
+        }
+
         loader.load(
             `./assets/models/${params.model}.obj`,
             (group: THREE.Group) => {
@@ -127,7 +143,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
                     g.children.forEach(c => {
                         const m = c as THREE.Mesh;
                         const g = m.geometry;
-                        prepareTrimesh(g);
+                        // prepareTrimesh(g);
                     });
                 });
                 scene.add(...this.groups);
@@ -224,6 +240,11 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
     protected reloadMaterial() {
         const groups = this.groups;
 
+        const controls = this.props.controls;
+        const doLoadTexture = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
+        const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
+        resolveExternalDependencies(doLoadTexture, doLoadMeshes, this.deps, (deps: IDeps) => {});
+
         this.createUniformGroups(this.props.material); // hack to avoid error: GL_INVALID_OPERATION: It is undefined behaviour to use a uniform buffer that is too small.
 
         for (let p = 0; p < this.props.material.getPassCount(); ++p) {
@@ -295,7 +316,7 @@ class MaterialScene extends ThreeScene<IMaterialSceneProps, IMaterialSceneState>
         const timeline = this.props.timeline;
         timeline.tick();
     }
-    
+
 
     protected renderFrame() {
         if (this.params.bloom) {

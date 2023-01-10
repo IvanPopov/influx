@@ -139,6 +139,13 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                 return;
             }
         }
+
+        if (/^Texture2D(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+            this.emitKeyword('sampler2D');
+            this.emitKeyword(src.name);
+            return;
+        }
+
         super.emitVariableNoInit(ctx, src, rename);
     }
 

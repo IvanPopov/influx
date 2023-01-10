@@ -87,10 +87,8 @@ class Playground extends React.Component<IPlaygroundProps> {
     handlePlayClick() {
         const props = this.props;
         if (props.playground.technique) {
-            if (props.playground.timeline.isStopped()) {
-                props.playground.timeline.start();
-                this.forceUpdate();
-            }
+            props.playground.timeline.unpause();
+            this.forceUpdate();
         }
     }
 
@@ -98,10 +96,8 @@ class Playground extends React.Component<IPlaygroundProps> {
     handlePauseClick() {
         const props = this.props;
         if (props.playground.technique) {
-            if (!props.playground.timeline.isStopped()) {
-                props.playground.timeline.stop();
-                this.forceUpdate();
-            }
+            props.playground.timeline.pause();
+            this.forceUpdate();
         }
     }
 
@@ -114,6 +110,7 @@ class Playground extends React.Component<IPlaygroundProps> {
         if (props.playground.technique) {
             props.playground.timeline.stop();
             props.playground.timeline.start();
+            this.forceUpdate();
         }
 
         // todo: add reset support for materials
@@ -272,8 +269,8 @@ class Playground extends React.Component<IPlaygroundProps> {
                                     <Button.Group compact >
                                         <Button
                                             icon={<Icon className={'playback pause'} />}
-                                            color={(timeline.isStopped() ? 'black' : null)}
-                                            disabled={timeline.isStopped()}
+                                            color={(timeline.isPaused() ? 'black' : null)}
+                                            disabled={timeline.isPaused()}
                                             onClick={this.handlePauseClick}
                                         />
                                         <Button
@@ -282,8 +279,8 @@ class Playground extends React.Component<IPlaygroundProps> {
                                         />
                                         <Button
                                             icon={<Icon className={'playback play'} />}
-                                            color={(!timeline.isStopped() ? 'black' : null)}
-                                            disabled={!timeline.isStopped()}
+                                            color={(!timeline.isPaused() ? 'black' : null)}
+                                            disabled={!timeline.isPaused()}
                                             onClick={this.handlePlayClick}
                                         />
                                     </Button.Group>

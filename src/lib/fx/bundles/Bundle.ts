@@ -97,6 +97,7 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
     const entry = reflection.name;
     const shader = slDocument.root.scope.findFunction(entry, null);
     assert(shader);
+    
     const numthreads = [...reflection.numthreads];
     const program = Bytecode.translate(shader);
     const code = program.code;
@@ -321,15 +322,7 @@ function finalizeBundle(bundle: BundleT, opts: BundleOptions = {}): Uint8Array |
 
 
 async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = {}): Promise<Uint8Array | BundleT> {
-    // todo: add convolution
-    const tops = { 
-        ...opts.translator, 
-        uiControlsGatherToDedicatedConstantBuffer: false,
-        globalUniformsGatherToDedicatedConstantBuffer: false
-      };
-    //   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    // IP: temp solution until it will not be supported for FxScene and bytecode generator.
-    const ctx = new FxTranslatorContext({ ...tops });
+    const ctx = new FxTranslatorContext({ ...opts.translator });
     const raw = FxTranslator.translate(fx, ctx); // raw hlsl
 
     const reflection = ctx.techniques[0] as IPartFxReflection;

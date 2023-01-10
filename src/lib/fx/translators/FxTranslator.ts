@@ -4,7 +4,7 @@ import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 
@@ -359,17 +359,15 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             // Buffer<uint3> trimesh0_faces;
             // Buffer<uint> trimesh0_faces_adj;
 
-            // if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
-            //     ctx.addUniform({ name: vertexCountUName, typeName: 'uint' });
-            // } else 
-            {
+            if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
+                ctx.addUniform({ name: vertexCountUName, typeName: 'uint' });
+            } else {
                 this.emitGlobalRaw(ctx, vertexCountUName, `uniform uint ${vertexCountUName}`);
             }
 
-            // if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
-            //     ctx.addUniform({ name: faceCountUName, typeName: 'uint' });
-            // } else 
-            {
+            if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
+                ctx.addUniform({ name: faceCountUName, typeName: 'uint' });
+            } else {
                 this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
             }
 
@@ -1436,6 +1434,8 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 this.push();
                 {
                     ctx.controls.forEach(ctrl => {
+                        if (ctrl.type === 'texture2d') return;
+                        if (ctrl.type === 'mesh') return;
                         this.emitKeyword(typeNameOfUIControl(ctrl));
                         this.emitKeyword(ctrl.name);
                         this.emitChar(';');
@@ -1608,7 +1608,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 }
 
                 const src = control.resolveDeclaration();
-                let controlType = src.type.name;
+                let controlType = src.type.name.toLowerCase(); // Texture2D => texture2d
                 if (src.annotation) {
                     src.annotation.decls.forEach(prop => {
                         let propertyName = prop.name;
@@ -1628,7 +1628,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 }
 
                 const value = getControlValue(controlType, control.args);
-                data.push({ name: src.name, type: controlType, value: value });
+                data.push({ name: src.name, type: controlType, value });
             });
             return { name, desc, data };
         });
@@ -1649,6 +1649,11 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             default:
                 console.assert(false);
         }
+        return FxTranslator.fxtTranslator.toString(ctx);
+    }
+
+    static translateDebug(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
+        FxTranslator.fxtTranslator.emit(ctx, instr);
         return FxTranslator.fxtTranslator.toString(ctx);
     }
 }
@@ -1695,6 +1700,10 @@ function getControlValue(type: string, args: IExprInstruction[]): ControlValueTy
             let b = (getExpr(args[2]) as FloatInstruction).value;
             let a = (getExpr(args[3]) as FloatInstruction).value;
             return { r: r, g: g, b: b, a: a } as Color;
+        }
+        case 'texture2d': {
+            // remove quotes
+            return (getExpr(args[0]) as StringInstruction).value?.slice(1, -1) || null;
         }
     }
     return null;

@@ -57,7 +57,7 @@ module.exports = async function (source) {
         "-s", "ENVIRONMENT=web", 
         "-s", "EXPORT_ES6=1", 
         "-s", "WASM=1", 
-        "-s", "TOTAL_MEMORY=32MB", 
+        "-s", "TOTAL_MEMORY=128MB", 
         "-s", "ALLOW_MEMORY_GROWTH=1",
         
         // "-fsanitize=undefined",

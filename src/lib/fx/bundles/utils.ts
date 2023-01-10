@@ -259,6 +259,7 @@ export function cloneValue(type : string, value : ControlValueType) : ControlVal
         case 'float3': return {...value as Vector3};
         case 'float4': return {...value as Vector4};
         case 'color': return {...value as Color};
+        case 'texture2d': return value as string;
     }
     assert(false, 'Unsupported control type');
     return null;

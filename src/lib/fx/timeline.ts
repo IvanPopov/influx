@@ -6,7 +6,7 @@ export function make() {
     let startTime: number;
     let elapsedTimeLevel: number;
     let active: boolean;
-    let paused: boolean;
+    let paused: number;
     let frameNumber: number;
 
     const constants = {
@@ -17,7 +17,7 @@ export function make() {
 
     function stop() {
         active = false;
-        paused = false;
+        paused = 0;
         verbose('timeline stopped');
     }
 
@@ -26,7 +26,7 @@ export function make() {
         constants.elapsedTimeLevel = 0;
         constants.frameNumber = 0;
 
-        paused = false;
+        paused = 0;
         pauseDelay = 0;
         pauseTime = 0;
         frameNumber = 0;
@@ -37,7 +37,7 @@ export function make() {
     }
 
     function tick() {
-        if (paused || !active) {
+        if (isStopped() || isPaused()) {
             return;
         }
 
@@ -53,22 +53,32 @@ export function make() {
         return !active;
     }
 
+    function isPaused() {
+        return !!paused;
+    }
+
     function pause()
     {
-        if (paused || !active)
+        if (isStopped())
             return;
         
-        paused = true;
-        pauseTime = Date.now();
+        if (!isPaused()) {
+            pauseTime = Date.now();
+        }
+
+        paused++;
     }
 
     function unpause()
     {
-        if (!paused || !active)
+        if (isStopped() || !isPaused())
             return;
         
-        pauseDelay += Date.now() - pauseTime;
-        paused = false;
+        paused--;
+
+        if (!isPaused()) {
+            pauseDelay += Date.now() - pauseTime;
+        }
     }
 
     function getConstants()
@@ -84,7 +94,8 @@ export function make() {
         isStopped,
 
         pause,
-        unpause
+        unpause,
+        isPaused
     };
 }
 
