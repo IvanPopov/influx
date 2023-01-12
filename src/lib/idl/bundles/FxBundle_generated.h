@@ -1890,7 +1890,8 @@ struct TrimeshBundleT : public flatbuffers::NativeTable {
   std::string faceCountUName{};
   std::string verticesName{};
   std::string facesName{};
-  std::string adjacencyName{};
+  std::string gsAdjecencyName{};
+  std::string faceAdjacencyName{};
 };
 
 struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -1902,7 +1903,8 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_FACECOUNTUNAME = 8,
     VT_VERTICESNAME = 10,
     VT_FACESNAME = 12,
-    VT_ADJACENCYNAME = 14
+    VT_GSADJECENCYNAME = 14,
+    VT_FACEADJACENCYNAME = 16
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -1919,8 +1921,11 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::String *facesName() const {
     return GetPointer<const flatbuffers::String *>(VT_FACESNAME);
   }
-  const flatbuffers::String *adjacencyName() const {
-    return GetPointer<const flatbuffers::String *>(VT_ADJACENCYNAME);
+  const flatbuffers::String *gsAdjecencyName() const {
+    return GetPointer<const flatbuffers::String *>(VT_GSADJECENCYNAME);
+  }
+  const flatbuffers::String *faceAdjacencyName() const {
+    return GetPointer<const flatbuffers::String *>(VT_FACEADJACENCYNAME);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1934,8 +1939,10 @@ struct TrimeshBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(verticesName()) &&
            VerifyOffset(verifier, VT_FACESNAME) &&
            verifier.VerifyString(facesName()) &&
-           VerifyOffset(verifier, VT_ADJACENCYNAME) &&
-           verifier.VerifyString(adjacencyName()) &&
+           VerifyOffset(verifier, VT_GSADJECENCYNAME) &&
+           verifier.VerifyString(gsAdjecencyName()) &&
+           VerifyOffset(verifier, VT_FACEADJACENCYNAME) &&
+           verifier.VerifyString(faceAdjacencyName()) &&
            verifier.EndTable();
   }
   TrimeshBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -1962,8 +1969,11 @@ struct TrimeshBundleBuilder {
   void add_facesName(flatbuffers::Offset<flatbuffers::String> facesName) {
     fbb_.AddOffset(TrimeshBundle::VT_FACESNAME, facesName);
   }
-  void add_adjacencyName(flatbuffers::Offset<flatbuffers::String> adjacencyName) {
-    fbb_.AddOffset(TrimeshBundle::VT_ADJACENCYNAME, adjacencyName);
+  void add_gsAdjecencyName(flatbuffers::Offset<flatbuffers::String> gsAdjecencyName) {
+    fbb_.AddOffset(TrimeshBundle::VT_GSADJECENCYNAME, gsAdjecencyName);
+  }
+  void add_faceAdjacencyName(flatbuffers::Offset<flatbuffers::String> faceAdjacencyName) {
+    fbb_.AddOffset(TrimeshBundle::VT_FACEADJACENCYNAME, faceAdjacencyName);
   }
   explicit TrimeshBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -1983,9 +1993,11 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(
     flatbuffers::Offset<flatbuffers::String> faceCountUName = 0,
     flatbuffers::Offset<flatbuffers::String> verticesName = 0,
     flatbuffers::Offset<flatbuffers::String> facesName = 0,
-    flatbuffers::Offset<flatbuffers::String> adjacencyName = 0) {
+    flatbuffers::Offset<flatbuffers::String> gsAdjecencyName = 0,
+    flatbuffers::Offset<flatbuffers::String> faceAdjacencyName = 0) {
   TrimeshBundleBuilder builder_(_fbb);
-  builder_.add_adjacencyName(adjacencyName);
+  builder_.add_faceAdjacencyName(faceAdjacencyName);
+  builder_.add_gsAdjecencyName(gsAdjecencyName);
   builder_.add_facesName(facesName);
   builder_.add_verticesName(verticesName);
   builder_.add_faceCountUName(faceCountUName);
@@ -2001,13 +2013,15 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundleDirect(
     const char *faceCountUName = nullptr,
     const char *verticesName = nullptr,
     const char *facesName = nullptr,
-    const char *adjacencyName = nullptr) {
+    const char *gsAdjecencyName = nullptr,
+    const char *faceAdjacencyName = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto vertexCountUName__ = vertexCountUName ? _fbb.CreateString(vertexCountUName) : 0;
   auto faceCountUName__ = faceCountUName ? _fbb.CreateString(faceCountUName) : 0;
   auto verticesName__ = verticesName ? _fbb.CreateString(verticesName) : 0;
   auto facesName__ = facesName ? _fbb.CreateString(facesName) : 0;
-  auto adjacencyName__ = adjacencyName ? _fbb.CreateString(adjacencyName) : 0;
+  auto gsAdjecencyName__ = gsAdjecencyName ? _fbb.CreateString(gsAdjecencyName) : 0;
+  auto faceAdjacencyName__ = faceAdjacencyName ? _fbb.CreateString(faceAdjacencyName) : 0;
   return Fx::CreateTrimeshBundle(
       _fbb,
       name__,
@@ -2015,7 +2029,8 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundleDirect(
       faceCountUName__,
       verticesName__,
       facesName__,
-      adjacencyName__);
+      gsAdjecencyName__,
+      faceAdjacencyName__);
 }
 
 flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatBufferBuilder &_fbb, const TrimeshBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -2706,6 +2721,7 @@ struct PartRenderPassT : public flatbuffers::NativeTable {
   uint32_t instanceCount = 0;
   uint32_t stride = 0;
   std::unique_ptr<Fx::TypeLayoutT> instance{};
+  std::vector<std::unique_ptr<Fx::RenderStateT>> renderStates{};
   PartRenderPassT() = default;
   PartRenderPassT(const PartRenderPassT &o);
   PartRenderPassT(PartRenderPassT&&) FLATBUFFERS_NOEXCEPT = default;
@@ -2722,7 +2738,8 @@ struct PartRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_SORTING = 10,
     VT_INSTANCECOUNT = 12,
     VT_STRIDE = 14,
-    VT_INSTANCE = 16
+    VT_INSTANCE = 16,
+    VT_RENDERSTATES = 18
   };
   const flatbuffers::Vector<uint8_t> *routines_type() const {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_ROUTINES_TYPE);
@@ -2745,6 +2762,9 @@ struct PartRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Fx::TypeLayout *instance() const {
     return GetPointer<const Fx::TypeLayout *>(VT_INSTANCE);
   }
+  const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *renderStates() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>> *>(VT_RENDERSTATES);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_ROUTINES_TYPE) &&
@@ -2759,6 +2779,9 @@ struct PartRenderPass FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint32_t>(verifier, VT_STRIDE, 4) &&
            VerifyOffset(verifier, VT_INSTANCE) &&
            verifier.VerifyTable(instance()) &&
+           VerifyOffset(verifier, VT_RENDERSTATES) &&
+           verifier.VerifyVector(renderStates()) &&
+           verifier.VerifyVectorOfTables(renderStates()) &&
            verifier.EndTable();
   }
   PartRenderPassT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
@@ -2791,6 +2814,9 @@ struct PartRenderPassBuilder {
   void add_instance(flatbuffers::Offset<Fx::TypeLayout> instance) {
     fbb_.AddOffset(PartRenderPass::VT_INSTANCE, instance);
   }
+  void add_renderStates(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates) {
+    fbb_.AddOffset(PartRenderPass::VT_RENDERSTATES, renderStates);
+  }
   explicit PartRenderPassBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -2810,8 +2836,10 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPass(
     bool sorting = false,
     uint32_t instanceCount = 0,
     uint32_t stride = 0,
-    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Fx::RenderState>>> renderStates = 0) {
   PartRenderPassBuilder builder_(_fbb);
+  builder_.add_renderStates(renderStates);
   builder_.add_instance(instance);
   builder_.add_stride(stride);
   builder_.add_instanceCount(instanceCount);
@@ -2830,10 +2858,12 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPassDirect(
     bool sorting = false,
     uint32_t instanceCount = 0,
     uint32_t stride = 0,
-    flatbuffers::Offset<Fx::TypeLayout> instance = 0) {
+    flatbuffers::Offset<Fx::TypeLayout> instance = 0,
+    const std::vector<flatbuffers::Offset<Fx::RenderState>> *renderStates = nullptr) {
   auto routines_type__ = routines_type ? _fbb.CreateVector<uint8_t>(*routines_type) : 0;
   auto routines__ = routines ? _fbb.CreateVector<flatbuffers::Offset<void>>(*routines) : 0;
   auto geometry__ = geometry ? _fbb.CreateString(geometry) : 0;
+  auto renderStates__ = renderStates ? _fbb.CreateVector<flatbuffers::Offset<Fx::RenderState>>(*renderStates) : 0;
   return Fx::CreatePartRenderPass(
       _fbb,
       routines_type__,
@@ -2842,7 +2872,8 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPassDirect(
       sorting,
       instanceCount,
       stride,
-      instance);
+      instance,
+      renderStates__);
 }
 
 flatbuffers::Offset<PartRenderPass> CreatePartRenderPass(flatbuffers::FlatBufferBuilder &_fbb, const PartRenderPassT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
@@ -4520,7 +4551,8 @@ inline void TrimeshBundle::UnPackTo(TrimeshBundleT *_o, const flatbuffers::resol
   { auto _e = faceCountUName(); if (_e) _o->faceCountUName = _e->str(); }
   { auto _e = verticesName(); if (_e) _o->verticesName = _e->str(); }
   { auto _e = facesName(); if (_e) _o->facesName = _e->str(); }
-  { auto _e = adjacencyName(); if (_e) _o->adjacencyName = _e->str(); }
+  { auto _e = gsAdjecencyName(); if (_e) _o->gsAdjecencyName = _e->str(); }
+  { auto _e = faceAdjacencyName(); if (_e) _o->faceAdjacencyName = _e->str(); }
 }
 
 inline flatbuffers::Offset<TrimeshBundle> TrimeshBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const TrimeshBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -4536,7 +4568,8 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatB
   auto _faceCountUName = _o->faceCountUName.empty() ? 0 : _fbb.CreateString(_o->faceCountUName);
   auto _verticesName = _o->verticesName.empty() ? 0 : _fbb.CreateString(_o->verticesName);
   auto _facesName = _o->facesName.empty() ? 0 : _fbb.CreateString(_o->facesName);
-  auto _adjacencyName = _o->adjacencyName.empty() ? 0 : _fbb.CreateString(_o->adjacencyName);
+  auto _gsAdjecencyName = _o->gsAdjecencyName.empty() ? 0 : _fbb.CreateString(_o->gsAdjecencyName);
+  auto _faceAdjacencyName = _o->faceAdjacencyName.empty() ? 0 : _fbb.CreateString(_o->faceAdjacencyName);
   return Fx::CreateTrimeshBundle(
       _fbb,
       _name,
@@ -4544,7 +4577,8 @@ inline flatbuffers::Offset<TrimeshBundle> CreateTrimeshBundle(flatbuffers::FlatB
       _faceCountUName,
       _verticesName,
       _facesName,
-      _adjacencyName);
+      _gsAdjecencyName,
+      _faceAdjacencyName);
 }
 
 inline CBBundleT::CBBundleT(const CBBundleT &o)
@@ -4858,6 +4892,8 @@ inline PartRenderPassT::PartRenderPassT(const PartRenderPassT &o)
         instanceCount(o.instanceCount),
         stride(o.stride),
         instance((o.instance) ? new Fx::TypeLayoutT(*o.instance) : nullptr) {
+  renderStates.reserve(o.renderStates.size());
+  for (const auto &renderStates_ : o.renderStates) { renderStates.emplace_back((renderStates_) ? new Fx::RenderStateT(*renderStates_) : nullptr); }
 }
 
 inline PartRenderPassT &PartRenderPassT::operator=(PartRenderPassT o) FLATBUFFERS_NOEXCEPT {
@@ -4867,6 +4903,7 @@ inline PartRenderPassT &PartRenderPassT::operator=(PartRenderPassT o) FLATBUFFER
   std::swap(instanceCount, o.instanceCount);
   std::swap(stride, o.stride);
   std::swap(instance, o.instance);
+  std::swap(renderStates, o.renderStates);
   return *this;
 }
 
@@ -4886,6 +4923,7 @@ inline void PartRenderPass::UnPackTo(PartRenderPassT *_o, const flatbuffers::res
   { auto _e = instanceCount(); _o->instanceCount = _e; }
   { auto _e = stride(); _o->stride = _e; }
   { auto _e = instance(); if (_e) { if(_o->instance) { _e->UnPackTo(_o->instance.get(), _resolver); } else { _o->instance = std::unique_ptr<Fx::TypeLayoutT>(_e->UnPack(_resolver)); } } }
+  { auto _e = renderStates(); if (_e) { _o->renderStates.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->renderStates[_i]) { _e->Get(_i)->UnPackTo(_o->renderStates[_i].get(), _resolver); } else { _o->renderStates[_i] = std::unique_ptr<Fx::RenderStateT>(_e->Get(_i)->UnPack(_resolver)); }; } } }
 }
 
 inline flatbuffers::Offset<PartRenderPass> PartRenderPass::Pack(flatbuffers::FlatBufferBuilder &_fbb, const PartRenderPassT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
@@ -4903,6 +4941,7 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPass(flatbuffers::Fla
   auto _instanceCount = _o->instanceCount;
   auto _stride = _o->stride;
   auto _instance = _o->instance ? CreateTypeLayout(_fbb, _o->instance.get(), _rehasher) : 0;
+  auto _renderStates = _o->renderStates.size() ? _fbb.CreateVector<flatbuffers::Offset<Fx::RenderState>> (_o->renderStates.size(), [](size_t i, _VectorArgs *__va) { return CreateRenderState(*__va->__fbb, __va->__o->renderStates[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreatePartRenderPass(
       _fbb,
       _routines_type,
@@ -4911,7 +4950,8 @@ inline flatbuffers::Offset<PartRenderPass> CreatePartRenderPass(flatbuffers::Fla
       _sorting,
       _instanceCount,
       _stride,
-      _instance);
+      _instance,
+      _renderStates);
 }
 
 inline PartBundleT::PartBundleT(const PartBundleT &o)

@@ -115,14 +115,15 @@ std::unique_ptr<BYTECODE_BUNDLE> SetupFxRoutineBytecodeBundle(
     }
 
     for (auto& mesh : routineBundle->resources->trimeshes) {
-        auto& [ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName ] = *mesh;
+        auto& [ name, vertexCountUName, faceCountUName, verticesName, facesName, gsAdjecencyName, faceAdjacencyName ] = *mesh;
         bcBundle->trimeshes.push_back({
             name,
             vertexCountUName,
             faceCountUName,
             verticesName,
             facesName,
-            adjacencyName
+            gsAdjecencyName,
+            faceAdjacencyName
         });
     }
 
@@ -159,12 +160,14 @@ const VM::BUNDLE_UAV* EMITTER_PASS::UavSerials() const { return Parent().Uav(IFX
 
 void EMITTER_PASS::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh)
 {
-    m_prerenderBundle->SetTrimesh(name, pMesh);
+    if (m_prerenderBundle)
+        m_prerenderBundle->SetTrimesh(name, pMesh);
 }
 
 void EMITTER_PASS::SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTex)
 {
-    m_prerenderBundle->SetTexture(name, pTex);
+    if (m_prerenderBundle)
+        m_prerenderBundle->SetTexture(name, pTex);
 }
 
 
@@ -369,7 +372,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
     for (int i = 0; i < renderPasses.size(); ++i)
     {
         auto &pass = renderPasses[i];
-        auto [routines, geometry, sorting, instanceCount, stride, instance] = *pass;
+        auto [routines, geometry, sorting, instanceCount, stride, instance, renderStates] = *pass;
 
         
         const Fx::RoutineBytecodeBundleT* prerender = routines[Fx::EPartRenderRoutines_k_Prerender].AsRoutineBytecodeBundle();
@@ -565,7 +568,7 @@ void EMITTER::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE* pMesh)
     m_spawnBundle->SetTrimesh(name, pMesh);
     m_initBundle->SetTrimesh(name, pMesh);
     m_updateBundle->SetTrimesh(name, pMesh);
-        for (int i = 0; i < m_passes.size(); ++i) 
+    for (int i = 0; i < m_passes.size(); ++i) 
     {
         m_passes[i].SetTrimesh(name, pMesh);
     }
@@ -671,15 +674,17 @@ void EMITTER::Dump()
 
 
 const TRIMESH_RESOURCE* CreateTrimesh(TRIMESH_DESC desc, 
-    VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj)
+    VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj, VM::memory_view facesAdj)
 {
     float_t* pVertices = new float_t[vertices.size]; 
     uint32_t* pFaces = new uint32_t[faces.size];
     uint32_t* pIndicesAdj = new uint32_t[indicesAdj.size];
+    uint32_t* pFacesAdj = new uint32_t[facesAdj.size];
 
     memcpy(pVertices, vertices.As(), vertices.size << 2);
     memcpy(pFaces, faces.As(), faces.size << 2);
     memcpy(pIndicesAdj, indicesAdj.As(), indicesAdj.size << 2);
+    memcpy(pFacesAdj, facesAdj.As(), facesAdj.size << 2);
 
     auto* pMesh = new TRIMESH_RESOURCE;
     pMesh->vertCount = desc.vertCount;
@@ -687,6 +692,7 @@ const TRIMESH_RESOURCE* CreateTrimesh(TRIMESH_DESC desc,
     pMesh->vertices.layout = VM::memory_view((uintptr_t)pVertices, vertices.size);
     pMesh->faces.layout = VM::memory_view((uintptr_t)pFaces, faces.size);
     pMesh->indicesAdj.layout = VM::memory_view((uintptr_t)pIndicesAdj, indicesAdj.size);
+    pMesh->facesAdj.layout = VM::memory_view((uintptr_t)pFacesAdj, facesAdj.size);
     return pMesh;    
 }
 
@@ -729,6 +735,7 @@ void DestroyTrimesh(const TRIMESH_RESOURCE* pMesh)
     delete[] pMesh->vertices.layout.As<float_t>();
     delete[] pMesh->faces.layout.As<uint32_t>();
     delete[] pMesh->indicesAdj.layout.As<uint32_t>();
+    delete[] pMesh->facesAdj.layout.As<uint32_t>();
     delete pMesh;
 }
 

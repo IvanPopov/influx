@@ -11,8 +11,6 @@ import { ITechnique } from '@lib/idl/ITechnique';
 import autobind from 'autobind-decorator';
 import * as THREE from 'three';
 import ThreeScene, { IDeps, IThreeSceneState, ITreeSceneProps, resolveExternalDependencies } from './ThreeScene';
-import { prepareTrimesh } from './utils/adjacency';
-
 
 
 

@@ -29,6 +29,8 @@ import { Uniforms } from '@lib/idl/Uniforms';
 import '@sandbox/styles/custom/dat-gui.css';
 import { prepareTrimesh } from './utils/adjacency';
 import { ITimeline } from '@lib/fx/timeline';
+import { ERenderStates } from '@lib/idl/ERenderStates';
+import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 
 interface IFxSceneProps extends ITreeSceneProps {
     emitter: IEmitter;
@@ -327,13 +329,15 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             return;
         }
 
+        const { stride, instanceLayout, vertexShader, pixelShader, renderStates } = desc;
+
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(
             new Float32Array(instanceData.buffer, instanceData.byteOffset, instanceData.byteLength >> 2), 
-            desc.stride
+            stride
         );
 
-        const attributes = desc.instanceLayout.map(attr => {
+        const attributes = instanceLayout.map(attr => {
             return {
                 name: attr.name,
                 data: new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset)
@@ -343,14 +347,23 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const uniforms = this.uniforms;
         const material = new THREE.RawShaderMaterial({
             uniforms,
-            vertexShader: desc.vertexShader,
-            fragmentShader: desc.pixelShader,
+            vertexShader: vertexShader,
+            fragmentShader: pixelShader,
             transparent: true,
             blending: THREE.NormalBlending,
             depthTest: false,
             // TODO: do not use for billboards
             side: THREE.DoubleSide
         });
+
+
+        if (renderStates[ERenderStates.ZENABLE]) {
+            material.depthTest = renderStates[ERenderStates.ZENABLE] === ERenderStateValues.TRUE;
+        }
+
+        if (renderStates[ERenderStates.BLENDENABLE]) {
+            material.transparent = renderStates[ERenderStates.BLENDENABLE] === ERenderStateValues.TRUE;
+        }
 
         (material as any).uniformsGroups = this.uniformGroups[passId];
 
@@ -468,6 +481,18 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const desc = pass.getDesc();
         const instanceData = Techniques.memoryToF32Array(pass.getData());
 
+        // desc.instanceName == "LwiInstance" || desc.instanceName == "LwiColoredInstance"
+        const GLSLMat = {
+            "LwiInstance": {
+                vertexShader: Shaders('lwiMatVS'),
+                fragmentShader: Shaders('lwiMatFS')
+            },
+            "LwiColoredInstance": {
+                vertexShader: Shaders('lwiColoredMatVS'),
+                fragmentShader: Shaders('lwiColoredMatFS')
+            },
+        }
+
         // tslint:disable-next-line:max-line-length
         const instancedBuffer = new THREE.InstancedInterleavedBuffer(
             new Float32Array(instanceData.buffer, instanceData.byteOffset, instanceData.byteLength >> 2), 
@@ -483,11 +508,12 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const a_worldMatPrev_1 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 24);
         const a_worldMatPrev_2 = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 28);
 
+        
+
         const uniforms = this.uniforms;
         const material = new THREE.RawShaderMaterial({
             uniforms,
-            vertexShader: Shaders('lwiMatVS'),
-            fragmentShader: Shaders('lwiMatFS'),
+            ...GLSLMat[desc.instanceName],
             transparent: true,
             blending: THREE.NormalBlending,
             depthTest: true,
@@ -636,7 +662,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 this.addPass(pass, i);
             } else if (desc.instanceName == "DefaultShaderInput") {
                 this.addPassDefaultMat(pass, i);
-            } else if (desc.instanceName == "LwiInstance") {
+            } else if (desc.instanceName == "LwiInstance" || desc.instanceName == "LwiColoredInstance") {
                 this.addPassLWI(pass, i);
             } else if (desc.instanceName == "PartLight") {
                 this.addPassLight(i);
@@ -659,7 +685,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         this.setState({ loading: emitter, emitter: null });
 
         const controls = this.props.controls;
-        const doLoadTexture = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
+        const doLoadTexture = true;//Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
         const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
 
         resolveExternalDependencies(doLoadTexture, doLoadMeshes, this.deps, (deps: IDeps) => {
@@ -694,7 +720,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             const { geometry } = dep[0];
             assert(geometry);
 
-            const { vertCount, faceCount, vertices, faces, indicesAdj } = prepareTrimesh(geometry);
+            const { vertCount, faceCount, vertices, faces, indicesAdj, facesAdj } = prepareTrimesh(geometry);
             return Techniques.createTrimesh(
                 {
                     vertCount,
@@ -702,7 +728,8 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 },
                 new Float32Array(vertices),
                 new Uint32Array(faces),
-                new Uint32Array(indicesAdj));
+                new Uint32Array(indicesAdj),
+                new Uint32Array(facesAdj));
         };
 
         const controls = this.props.controls;
@@ -743,15 +770,33 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 if (this.meshDebugDraw[name]) {
                     this.helperGeom.push(...source.map(obj => {
                         const mesh = obj.clone();
-                        mesh.material = new THREE.MeshBasicMaterial({ 
-                            color: 0xFF0000, 
-                            wireframe: true, 
-                            wireframeLinewidth: 1, 
-                            transparent: true,
-                            opacity: 0.25
-                        });
+                        // mesh.material = new THREE.MeshBasicMaterial({ 
+                        //     color: 0xFF0000, 
+                        //     wireframe: true, 
+                        //     wireframeLinewidth: 3, 
+                        //     transparent: true,
+                        //     opacity: 0.25
+                        // });
+
+                        mesh.material = new THREE.MeshNormalMaterial();
+                        // mesh.material = new THREE.MeshStandardMaterial({ map: this.deps.textures['skull.jpg'] });
                         return mesh;
                     }));
+
+                //     {
+                //         const color = 0xFFFFFF;
+                //         const intensity = 0.2;
+                //         const light = new THREE.AmbientLight(color, intensity);
+                //         this.helperGeom.push(light);
+                //     }
+
+                //     {
+                //         const color = 0xFFFFFF;
+                //         const intensity = 0.8;
+                //         const light = new THREE.PointLight(color, intensity, 10);
+                //         light.position.set(3, 3, 3);
+                //         this.helperGeom.push(light);
+                //     }
                 }
 
                 emitter.setTrimesh(name, this.meshes[value]);

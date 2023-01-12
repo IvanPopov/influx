@@ -264,6 +264,7 @@ inline void i32LoadInput(uint32_t* regs, memory_view* iinput, uint32_t a, uint32
 inline void i32LoadInputPointer(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
     int32_t* iregs = reinterpret_cast<int32_t*>(regs);
+    // std::cout << "a=" << a << ", iinput[a].size=" << iinput[a].size << ", c=" << c << ", iregs[c]=" << iregs[c] << ", d=" << d << std::endl;
     assert(iinput[a].size > iregs[c] + d);
     iregs[b] = iinput[a][iregs[c] + d];
 }
@@ -273,7 +274,7 @@ int BUNDLE::Play()
 {
     const INSTRUCTION* ilist = (INSTRUCTION*)m_instructions.data();
 
-    uint32_t  regs[8192]; // {}
+    uint32_t  regs[32768]; // {}
     int32_t*  iregs = reinterpret_cast<int32_t*>(regs);
     uint32_t* uregs = reinterpret_cast<uint32_t*>(regs);
     float_t*  fregs = reinterpret_cast<float_t*>(regs);

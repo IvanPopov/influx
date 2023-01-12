@@ -72,8 +72,8 @@ export function destroyTexture(texture: ITexture) {
 }
 
 export function createTrimesh(desc: ITrimeshDesc, vertices: ArrayBufferView, 
-    faces: ArrayBufferView, indicesAdj: ArrayBufferView): ITrimesh {
-    return Pipe().createTrimesh(desc, vertices, faces, indicesAdj);
+    faces: ArrayBufferView, indicesAdj: ArrayBufferView, facesAdj: ArrayBufferView): ITrimesh {
+    return Pipe().createTrimesh(desc, vertices, faces, indicesAdj, facesAdj);
 }
 
 

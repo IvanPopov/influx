@@ -18,7 +18,8 @@ struct TRIMESH_INTERNAL_DESC
     std::string faceCountUName;
     std::string verticesName;
     std::string facesName;
-    std::string adjacencyName;
+    std::string indicesAdjName;
+    std::string facesAdjName;
 };
 
 struct TRIMESH_DESC
@@ -53,6 +54,7 @@ struct TRIMESH_RESOURCE
     BUFFER_RESOURCE vertices;
     BUFFER_RESOURCE faces;
     BUFFER_RESOURCE indicesAdj;
+    BUFFER_RESOURCE facesAdj;
 };
 
 

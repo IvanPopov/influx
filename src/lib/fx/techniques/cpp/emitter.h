@@ -178,8 +178,4 @@ public:
     bool operator == (const EMITTER& emit) const;
 };
 
-// const TRIMESH_RESOURCE* CreateTrimesh(const TRIMESH_DESC& desc, 
-//     VM::memory_view vertices, VM::memory_view faces, VM::memory_view indicesAdj);
-// const TEXTURE_RESOURCE* CreateTexture(const TEXTURE_DESC& desc, VM::memory_view initData);
-
 }

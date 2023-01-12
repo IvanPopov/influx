@@ -12,9 +12,88 @@ class vertexHashEntry {
 };
 
 
+// <algorithm> std::make_heap doesn't match D3DX10 so we use the same algorithm here
+function MakeXHeap(
+    positions: ArrayLike<number>, nVerts: number) {
+    const index: number[] = new Array(nVerts);
+
+    const pos = vert => new THREE.Vector3(positions[vert * 3 + 0], positions[vert * 3 + 1], positions[vert * 3 + 2]);
+
+    for (let vert = 0; vert < nVerts; ++vert) {
+        index[vert] = vert;
+    }
+
+    if (nVerts > 1) {
+        // Create the heap
+        let iulLim = nVerts >>> 0;
+
+        for (let vert = (nVerts >> 1) >>> 0; ((--vert) >>> 0) != (-1 >>> 0);) {
+            // Percolate down
+            let iulI = vert;
+            let iulJ = vert + vert + 1;
+            const ulT = index[iulI];
+
+            while (iulJ < iulLim) {
+                let ulJ = index[iulJ];
+
+                if (iulJ + 1 < iulLim) {
+                    const ulJ1 = index[iulJ + 1];
+                    if (pos(ulJ1).x <= pos(ulJ).x) {
+                        iulJ++;
+                        ulJ = ulJ1;
+                    }
+                }
+
+                if (pos(ulJ).x > pos(ulT).x)
+                    break;
+
+                index[iulI] = index[iulJ];
+                iulI = iulJ;
+                iulJ += iulJ + 1;
+            }
+
+            index[iulI] = ulT;
+        }
+
+        // Sort the heap
+        while (((--iulLim) >>> 0) != (-1 >>> 0)) {
+            const ulT = index[iulLim];
+            index[iulLim] = index[0];
+
+            // Percolate down
+            let iulI = 0;
+            let iulJ = 1;
+
+            while (iulJ < iulLim) {
+                let ulJ = index[iulJ];
+
+                if (iulJ + 1 < iulLim) {
+                    const ulJ1 = index[iulJ + 1];
+                    if (pos(ulJ1).x <= pos(ulJ).x) {
+                        iulJ++;
+                        ulJ = ulJ1;
+                    }
+                }
+
+                if (pos(ulJ).x > pos(ulT).x)
+                    break;
+
+                index[iulI] = index[iulJ];
+                iulI = iulJ;
+                iulJ += iulJ + 1;
+            }
+
+            assert(iulI < nVerts);
+            index[iulI] = ulT;
+        }
+    }
+
+    return index;
+}
+
 export function GeneratePointReps(
     indices: number[], nFaces: number,
-    positions: ArrayLike<number>, nVerts: number) {
+    positions: ArrayLike<number>, nVerts: number, epsilon: number = 0) {
     const pointRep: number[] = new Array(nVerts);
     const vertexToCorner = new Array<number>(nVerts);
     const vertexCornerList = (new Array<number>(nFaces * 3));
@@ -41,53 +120,118 @@ export function GeneratePointReps(
     const hashTable: IMap<vertexHashEntry> = {};
     const pos = vert => new THREE.Vector3(positions[vert * 3 + 0], positions[vert * 3 + 1], positions[vert * 3 + 2]);
 
-    for (let vert = 0; vert < nVerts; ++vert) {
-        let px = pos(vert).x;
-        let py = pos(vert).y;
-        let pz = pos(vert).z;
+    if (epsilon == 0) {
+        for (let vert = 0; vert < nVerts; ++vert) {
+            let px = pos(vert).x;
+            let py = pos(vert).y;
+            let pz = pos(vert).z;
 
-        const hashKey = `${px.toFixed(3)}:${py.toFixed(3)}:${pz.toFixed(3)}`;
+            const hashKey = `${px.toFixed(3)}:${py.toFixed(3)}:${pz.toFixed(3)}`;
 
 
-        let found = UNUSED32;
+            let found = UNUSED32;
 
-        for (let current = hashTable[hashKey]; current != null; current = current.next) {
-            if (current.v.x == pos(vert).x
-                && current.v.y == pos(vert).y
-                && current.v.z == pos(vert).z) {
-                let head = vertexToCorner[vert];
+            for (let current = hashTable[hashKey]; current != null; current = current.next) {
+                if (current.v.x == pos(vert).x
+                    && current.v.y == pos(vert).y
+                    && current.v.z == pos(vert).z) {
+                    let head = vertexToCorner[vert];
 
-                let ispresent = false;
+                    let ispresent = false;
 
-                while (head != UNUSED32) {
-                    const face = head / 3;
-                    if ((indices[face * 3] == current.index) || (indices[face * 3 + 1] == current.index) || (indices[face * 3 + 2] == current.index)) {
-                        ispresent = true;
-                        break;
+                    while (head != UNUSED32) {
+                        const face = head / 3;
+                        if ((indices[face * 3] == current.index) || (indices[face * 3 + 1] == current.index) || (indices[face * 3 + 2] == current.index)) {
+                            ispresent = true;
+                            break;
+                        }
+
+                        head = vertexCornerList[head];
                     }
 
-                    head = vertexCornerList[head];
-                }
-
-                if (!ispresent) {
-                    found = current.index;
-                    break;
+                    if (!ispresent) {
+                        found = current.index;
+                        break;
+                    }
                 }
             }
+
+            if (found != UNUSED32) {
+                pointRep[vert] = found;
+            }
+            else {
+                let newEntry = new vertexHashEntry;
+
+                newEntry.v = pos(vert);
+                newEntry.index = vert;
+                newEntry.next = hashTable[hashKey];
+                hashTable[hashKey] = newEntry;
+
+                pointRep[vert] = vert;
+            }
         }
+    } else {
+        const xorder = MakeXHeap(positions, nVerts);
+        pointRep.fill(UNUSED32)
+        
+        const vepsilon = epsilon * epsilon;
 
-        if (found != UNUSED32) {
-            pointRep[vert] = found;
-        }
-        else {
-            let newEntry = new vertexHashEntry;
+        let head = 0;
+        let tail = 0;
 
-            newEntry.v = pos(vert);
-            newEntry.index = vert;
-            newEntry.next = hashTable[hashKey];
-            hashTable[hashKey] = newEntry;
+        while (tail < nVerts) {
+            // move head until just out of epsilon
+            while ((head < nVerts)
+                && ((pos(tail).x - pos(head).x) <= epsilon)) {
+                ++head;
+            }
 
-            pointRep[vert] = vert;
+
+            // check new tail against all points up to the head
+            let tailIndex = xorder[tail];
+            assert(tailIndex < nVerts);
+            if (pointRep[tailIndex] == UNUSED32) {
+                pointRep[tailIndex] = tailIndex;
+
+                const outer = pos(tailIndex);
+
+                for (let current = tail + 1; current < head; ++current) {
+                    let curIndex = xorder[current];
+                    assert(curIndex < nVerts);
+
+                    // if the point is already assigned, ignore it
+                    if (pointRep[curIndex] == UNUSED32) {
+                        const inner = pos(curIndex);
+                        const diff = inner.sub(outer).lengthSq();
+
+                        if (diff < vepsilon) {
+                            let headvc = vertexToCorner[tailIndex];
+
+                            let ispresent = false;
+
+                            while (headvc != UNUSED32) {
+                                const face = headvc / 3;
+                                assert(face < nFaces);
+
+                                assert((indices[face * 3] == tailIndex) || (indices[face * 3 + 1] == tailIndex) || (indices[face * 3 + 2] == tailIndex));
+
+                                if ((indices[face * 3] == curIndex) || (indices[face * 3 + 1] == curIndex) || (indices[face * 3 + 2] == curIndex)) {
+                                    ispresent = true;
+                                    break;
+                                }
+
+                                headvc = vertexCornerList[headvc];
+                            }
+
+                            if (!ispresent) {
+                                pointRep[curIndex] = tailIndex;
+                            }
+                        }
+                    }
+                }
+            }
+
+            ++tail;
         }
     }
 
@@ -426,9 +570,9 @@ export function prepareTrimesh(g: THREE.BufferGeometry) {
     const faceCount = vertCount / 3;
     const indices: number[] = Array(vertCount).fill(0).map((x, i) => i);
 
-    const pointReps = GeneratePointReps(indices, faceCount, positions, vertCount);
-    const adjacency = ConvertPointRepsToAdjacencyImpl(indices, faceCount, positions, vertCount, pointReps);
-    const indicesAdj = GenerateGSAdjacencyImpl(indices, faceCount, pointReps, adjacency, vertCount);
+    const pointReps = GeneratePointReps(indices, faceCount, positions, vertCount);//, 0.0001);
+    const facesAdj = ConvertPointRepsToAdjacencyImpl(indices, faceCount, positions, vertCount, pointReps);
+    const indicesAdj = GenerateGSAdjacencyImpl(indices, faceCount, pointReps, facesAdj, vertCount);
     // console.log(pointReps, adjacency);
 
     // pos, norm, uv
@@ -453,6 +597,7 @@ export function prepareTrimesh(g: THREE.BufferGeometry) {
         faceCount,
         vertices,
         faces,
+        facesAdj,
         indicesAdj
     };
 

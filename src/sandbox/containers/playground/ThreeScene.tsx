@@ -416,41 +416,41 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
 
 
     protected createRenderer(width, height): THREE.WebGLRenderer {
-        let WEBGL_DEBUG = false;
-        if (WEBGL_DEBUG) {
-            let WebGLDebugUtils = require('webgl-debug');
+        // let WEBGL_DEBUG = false;
+        // if (WEBGL_DEBUG) {
+        //     let WebGLDebugUtils = require('webgl-debug');
 
-            function throwOnGLError(err, funcName, args) {
-                throw WebGLDebugUtils.glEnumToString(err)
-                + "was caused by call to "
-                + funcName;
-            };
+        //     function throwOnGLError(err, funcName, args) {
+        //         throw WebGLDebugUtils.glEnumToString(err)
+        //         + "was caused by call to "
+        //         + funcName;
+        //     };
 
-            const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
-            canvas.style.display = 'block';
+        //     const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
+        //     canvas.style.display = 'block';
 
-            const contextAttributes: WebGLContextAttributes = {
-                alpha: true,
-                antialias: true,
-                depth: true,
-                failIfMajorPerformanceCaveat: false,
-                powerPreference: "default",
-                premultipliedAlpha: true,
-                preserveDrawingBuffer: true,
-                stencil: true
-            };
+        //     const contextAttributes: WebGLContextAttributes = {
+        //         alpha: true,
+        //         antialias: true,
+        //         depth: true,
+        //         failIfMajorPerformanceCaveat: false,
+        //         powerPreference: "default",
+        //         premultipliedAlpha: true,
+        //         preserveDrawingBuffer: true,
+        //         stencil: true
+        //     };
 
-            let context = canvas.getContext("webgl2", contextAttributes);
-            // context = WebGLDebugUtils.makeDebugContext(context, throwOnGLError);
-            const renderer = new THREE.WebGLRenderer({
-                context,
-                canvas,
-                antialias: true,
-                preserveDrawingBuffer: true /* to be able to save screenshots */
-            });
-            // console.log(context, renderer.getContext());
-            return renderer;
-        }
+        //     let context = canvas.getContext("webgl2", contextAttributes);
+        //     // context = WebGLDebugUtils.makeDebugContext(context, throwOnGLError);
+        //     const renderer = new THREE.WebGLRenderer({
+        //         context,
+        //         canvas,
+        //         antialias: true,
+        //         preserveDrawingBuffer: true /* to be able to save screenshots */
+        //     });
+        //     // console.log(context, renderer.getContext());
+        //     return renderer;
+        // }
 
         return new THREE.WebGLRenderer({
             antialias: true,

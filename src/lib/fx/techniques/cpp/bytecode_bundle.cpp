@@ -64,7 +64,8 @@ void BYTECODE_BUNDLE::SetTrimesh(const std::string& name, const TRIMESH_RESOURCE
 
     SetBuffer(it->verticesName, &pMesh->vertices);
     SetBuffer(it->facesName, &pMesh->faces);
-    SetBuffer(it->adjacencyName, &pMesh->indicesAdj);
+    SetBuffer(it->indicesAdjName, &pMesh->indicesAdj);
+    SetBuffer(it->facesAdjName, &pMesh->facesAdj);
     
     SetConstant(it->vertexCountUName, pMesh->vertCount);
     SetConstant(it->faceCountUName, pMesh->faceCount);

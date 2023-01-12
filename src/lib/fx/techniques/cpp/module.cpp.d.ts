@@ -15,7 +15,12 @@ interface Module extends EmscriptenModule {
     copyEmitter(dst: IEmitter, src: IEmitter): boolean;
     createTexture(desc: ITextureDesc, initData: WASMMemory): ITexture;
     destroyTexture(ptr: ITexture): void;
-    createTrimesh(desc: ITrimeshDesc, vertices: WASMMemory, faces: WASMMemory, indicesAdj: WASMMemory): ITrimesh;
+    createTrimesh(desc: ITrimeshDesc, 
+        vertices: WASMMemory, 
+        faces: WASMMemory, 
+        indicesAdj: WASMMemory, 
+        adjacency: WASMMemory)
+    : ITrimesh;
     destroyTrimesh(ptr: ITrimesh): void;
 }
 

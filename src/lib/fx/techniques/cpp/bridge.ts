@@ -121,13 +121,15 @@ export function destroyTexture(texture: ITexture) {
 
 
 export function createTrimesh(desc: ITrimeshDesc, 
-    vertices: ArrayBufferView, faces: ArrayBufferView, indicesAdj: ArrayBufferView): ITrimesh {
+    vertices: ArrayBufferView, faces: ArrayBufferView, 
+    indicesAdj: ArrayBufferView, facesAdj: ArrayBufferView): ITrimesh {
     let trimeshWasm = null;
     let vertMem = transferU8ToHeap(Module, vertices);
     let faceMem = transferU8ToHeap(Module, faces);
     let indMem = transferU8ToHeap(Module, indicesAdj);
+    let adjMem = transferU8ToHeap(Module, facesAdj);
     try {
-        trimeshWasm = Module.createTrimesh(desc, vertMem, faceMem, indMem);
+        trimeshWasm = Module.createTrimesh(desc, vertMem, faceMem, indMem, adjMem);
     } finally {
         Module._free(vertMem.heap);
         Module._free(faceMem.heap);

@@ -64,7 +64,8 @@ table TrimeshBundle
     faceCountUName: string;
     verticesName: string;
     facesName: string;
-    adjacencyName: string;
+    gsAdjecencyName: string;
+    faceAdjacencyName: string;
 }
 
 
@@ -161,6 +162,7 @@ table PartRenderPass
     instanceCount: uint;
     stride: uint;                           // instance stride in 32bit (integers)
     instance: TypeLayout;
+    renderStates: [ RenderState ];
 }
 
 table PartBundle

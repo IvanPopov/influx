@@ -384,6 +384,39 @@ class TriMeshTemplate extends TypeTemplate {
             methods.push(func);
         }
 
+
+        {
+            const paramList = [];
+
+            {
+                let uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope });
+                const id = new IdInstruction({ scope, name: 'face' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
+            }
+
+            {
+                const { base, signed, heximal, exp } = parseUintLiteral("3u");
+                const arrayIndex = new IntInstruction({ scope, base, exp, signed, heximal });
+
+                const uint = getSystemType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, arrayIndex, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'adjacency' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param2 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param2);
+            }
+
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            let id = new IdInstruction({ scope, name: 'LoadFaceAdjacency' });
+            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
         return new SystemTypeInstruction({ scope, name, elementType, length, fields, size, methods });
     }
 }

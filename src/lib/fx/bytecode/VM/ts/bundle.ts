@@ -52,7 +52,7 @@ export class TSBundle implements Bundle.IBundle
     private inputs: Int32Array[];
     private layout: Bundle.Constant[];
 
-    private static $regs = new ArrayBuffer(512 * 4);
+    private static $regs = new ArrayBuffer(512 * 16);
     private static iregs = new Int32Array(TSBundle.$regs);
     private static fregs = new Float32Array(TSBundle.$regs);
     private static regs = new Uint8Array(TSBundle.$regs);
@@ -102,23 +102,25 @@ export class TSBundle implements Bundle.IBundle
             switch (op) {
                 // registers
                 case EOperation.k_I32SetConst:
-                    assert(iregs.length > a);
+                    // assert(iregs.length > a, `[iregs.length > a] where iregs.length = ${iregs.length}, a = ${a}`);
                     iregs[a] = b;
                     break;
                 case EOperation.k_I32LoadRegister:
-                    assert(iregs.length > b);
-                    assert(iregs.length > a);
+                    // assert(iregs.length > b, `[iregs.length > b] where iregs.length = ${iregs.length}, b = ${b}`);
+                    // assert(iregs.length > a, `[iregs.length > a] where iregs.length = ${iregs.length}, a = ${a}`);
                     iregs[a] = iregs[b];
                     break;
                 // inputs
                 case EOperation.k_I32LoadInput:
-                    assert(iinput[a]?.length > c, exposeInvalidInputError(iinput, a));
-                    assert(iregs.length > b);
+                    // assert(iinput[a], exposeInvalidInputError(iinput, a));
+                    // assert(iinput[a].length > c);
+                    // assert(iregs.length > b);
                     iregs[b] = iinput[a][c];
                     break;
                 case EOperation.k_I32StoreInput:
-                    assert(iinput[a]?.length > b, exposeInvalidInputError(iinput, a));
-                    assert(iregs.length > c);
+                    // assert(iinput[a], exposeInvalidInputError(iinput, a));    
+                    // assert(iinput[a].length > b);
+                    // assert(iregs.length > c);
                     iinput[a][b] = iregs[c];
                     break;
                 // registers pointers    
@@ -126,13 +128,13 @@ export class TSBundle implements Bundle.IBundle
                 // b => source pointer
                 // c => offset
                 case EOperation.k_I32LoadRegistersPointer:
-                    assert(iregs.length > (iregs[b] + c));
-                    assert(iregs.length > a);
+                    // assert(iregs.length > (iregs[b] + c), `[iregs.length > (iregs[b] + c)] where iregs.length = ${iregs.length}, iregs[b] = ${iregs[b]}, b = ${b}, c = ${c}`);
+                    // assert(iregs.length > a);
                     iregs[a] = iregs[iregs[b] + c];
                     break;
                 case EOperation.k_I32StoreRegisterPointer:
-                    assert(iregs.length > (iregs[a] + c));
-                    assert(iregs.length > b);
+                    // assert(iregs.length > (iregs[a] + c));
+                    // assert(iregs.length > b);
                     iregs[iregs[a] + c] = iregs[b];
                     break;
                 // input pointers
@@ -141,13 +143,15 @@ export class TSBundle implements Bundle.IBundle
                 // c => source pointer
                 // d => offset
                 case EOperation.k_I32LoadInputPointer:
-                    assert(iinput[a].length > (iregs[c] + d));
-                    assert(iregs.length > b);
+                    // assert(iinput[a], exposeInvalidInputError(iinput, a));  
+                    // assert(iinput[a].length > (iregs[c] + d));
+                    // assert(iregs.length > b);
                     iregs[b] = iinput[a][iregs[c] + d];
                     break;
                 case EOperation.k_I32StoreInputPointer:
-                    assert(iinput[a].length > (iregs[b] + d));
-                    assert(iregs.length > c);
+                    // assert(iinput[a], exposeInvalidInputError(iinput, a));  
+                    // assert(iinput[a].length > (iregs[b] + d));
+                    // assert(iregs.length > c);
                     iinput[a][iregs[b] + d] = iregs[c];
                     break;
                 
@@ -161,8 +165,8 @@ export class TSBundle implements Bundle.IBundle
                         const v = iregs[c + 1];
                         const w = layout[0];
                         const h = layout[1];
-                        assert(u >= 0 && u < w, `u(${u}) is out of borders [0, ${w})`);
-                        assert(v >= 0 && v < h, `u(${v}) is out of borders [0, ${h})`);
+                        // assert(u >= 0 && u < w, `u(${u}) is out of borders [0, ${w})`);
+                        // assert(v >= 0 && v < h, `u(${v}) is out of borders [0, ${h})`);
                         // const fmt = layout[2];
                         const texel = layout.subarray(/*desc(64) >> 2*/16)[w * v + u] >>> 0; // todo: use unsigned inputs
                         const iR = (texel) & 0xFF;

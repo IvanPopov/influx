@@ -10,7 +10,7 @@
   
 namespace em = emscripten;
 
-int main(void)  
+int main(void) 
 {
     std::cout << "Emscriptent \"Pipeline\" module........................[ LOADED ]" << std::endl;
     return 0; 
@@ -28,7 +28,7 @@ bool CopyEmitter(IFX::EMITTER* dst, IFX::EMITTER* src)
 
 void DestroyEmitter(IFX::EMITTER* pEmitter)
 { 
-    if (pEmitter)
+    if (pEmitter) 
     {  
         delete pEmitter;   
     } 
@@ -105,7 +105,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
         .field("name", &IFX::CBUFFER::name) 
         .field("size", &IFX::CBUFFER::size)
         .field("usage", &IFX::CBUFFER::usage)
-        .field("fields",  &GetCbufferFields, &SetCbufferFields);       
+        .field("fields",  &GetCbufferFields, &SetCbufferFields);        
 
     em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
         .field("size", &IFX::SHADER_ATTR::size)
@@ -127,21 +127,21 @@ EMSCRIPTEN_BINDINGS(pipeline)
             jsDesc.set("instanceName", desc.renderInstance.name);
             jsDesc.set("cbuffers", em::val::array(desc.cbuffers));
             return jsDesc;  
-          }))
+          })) 
          .function("getNumRenderedParticles", &IFX::EMITTER_PASS::GetNumRenderedParticles)
          .function("serialize", &IFX::EMITTER_PASS::Serialize)
          .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::Prerender(UniformsFromJSObject(val));
-          })) 
+          }))  
          .function("dump", &IFX::EMITTER_PASS::Dump); 
    
     em::class_<IFX::EMITTER>("Emitter")          
          .function("getName", &IFX::EMITTER::GetName) 
          .function("getType", em::optional_override([](IFX::EMITTER& self) -> std::string { return "emitter"; }))
-         .function("getCapacity", &IFX::EMITTER::GetCapacity)
-         .function("getPassCount", &IFX::EMITTER::GetPassCount) 
+         .function("getCapacity", &IFX::EMITTER::GetCapacity)   
+         .function("getPassCount", &IFX::EMITTER::GetPassCount)
          .function("getPass", em::select_overload<IFX::EMITTER_PASS*(uint32_t)>(&IFX::EMITTER::GetPass), em::allow_raw_pointers())
-         .function("getNumParticles", &IFX::EMITTER::GetNumParticles)    
+         .function("getNumParticles", &IFX::EMITTER::GetNumParticles)
 
          .function("simulate", em::optional_override([](IFX::EMITTER& self, em::val val) {
             return self.EMITTER::Simulate(UniformsFromJSObject(val));   
@@ -160,14 +160,14 @@ EMSCRIPTEN_BINDINGS(pipeline)
     em::function("copyEmitter", &CopyEmitter, em::allow_raw_pointers());       
 
 
-    em::value_object<IFX::TRIMESH_DESC>("TrimeshDesc")   
+    em::value_object<IFX::TRIMESH_DESC>("TrimeshDesc")  
         .field("vertCount", &IFX::TRIMESH_DESC::vertCount)   
         .field("faceCount", &IFX::TRIMESH_DESC::faceCount); 
     em::value_object<IFX::TEXTURE_DESC>("TextureDesc")  
         .field("width", &IFX::TEXTURE_DESC::width)
         .field("height", &IFX::TEXTURE_DESC::height);
 
-    em::class_<IFX::TEXTURE_RESOURCE>("Texture"); 
+    em::class_<IFX::TEXTURE_RESOURCE>("Texture");  
     em::class_<IFX::TRIMESH_RESOURCE>("Trimesh");
     em::function("createTexture", &IFX::CreateTexture, em::allow_raw_pointers()); 
     em::function("createTrimesh", &IFX::CreateTrimesh, em::allow_raw_pointers());

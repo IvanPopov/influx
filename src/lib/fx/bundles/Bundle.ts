@@ -50,8 +50,8 @@ function createPartFxRenderPass(slDocument: ISLDocument, reflection: IPartFxPass
     const routines = [prerender, vertex, pixel]; // must be aligned with EPartRenderRoutines
     const instanceType = scope.findType(reflection.instance);
     const stride = instanceType.size >> 2;
-
-    return new PartRenderPassT(routineTypes, routines, geometry, sorting, instanceCount, stride, instance);
+    const renderStates = Object.keys(reflection.renderStates).map(key => new RenderStateT(Number(key), Number(reflection.renderStates[key])));
+    return new PartRenderPassT(routineTypes, routines, geometry, sorting, instanceCount, stride, instance, renderStates);
 }
 
 
@@ -120,8 +120,8 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
         return new TextureBundleT(name, slot, stride, type);
     });
 
-    const trimeshes = reflection.trimeshes.map(({ name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName }) => {
-        return new TrimeshBundleT(name, vertexCountUName, faceCountUName, verticesName, facesName, adjacencyName);
+    const trimeshes = reflection.trimeshes.map(({ name, vertexCountUName, faceCountUName, verticesName, facesName, indicesAdjName, faceAdjName }) => {
+        return new TrimeshBundleT(name, vertexCountUName, faceCountUName, verticesName, facesName, indicesAdjName, faceAdjName);
     });
     return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs, buffers, textures, trimeshes), numthreads);
 }

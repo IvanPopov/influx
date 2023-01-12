@@ -65,7 +65,8 @@ export interface ITriMeshReflection {
     faceCountUName: string;
     verticesName: string;
     facesName: string;
-    adjacencyName: string; // GS suitable adj info, 6 x nFaces
+    indicesAdjName: string; // GS suitable adj info, 6 x nFaces
+    faceAdjName: string;
 
     // resourcePath: string;
 }
@@ -351,13 +352,15 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const faceCountUName = `${baseName}FaceCount`;
         const verticesName = `${baseName}Vertices`;
         const facesName = `${baseName}Faces`;
-        const adjacencyName = `${baseName}Adjacency`;
+        const indicesAdjName = `${baseName}GsAdjacency`;
+        const faceAdjName = `${baseName}FaceAdjacency`;
         
         const { typeName: elementTypeName } = this.resolveType(ctx, elementType);
-        
+
         const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
         const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
-        const adjacency = this.emitBuffer(ctx, `Buffer<uint>`, adjacencyName, "adjacency");
+        const indicesAdj = this.emitBuffer(ctx, `Buffer<uint>`, indicesAdjName, "gs like adjacency");
+        const faceAdj = this.emitBuffer(ctx, `Buffer<uint>`, faceAdjName, "face adjacency");
         
         if (!ctx.has(name)) {
             // uniform uint trimesh0_vert_count;
@@ -421,12 +424,25 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             this.push();
             {
                 this.emitLine(`uint offset = face * 6u;`);
-                this.emitLine(`vertices[0] = ${adjacencyName}[offset];`);
-                this.emitLine(`vertices[1] = ${adjacencyName}[offset + 1];`);
-                this.emitLine(`vertices[2] = ${adjacencyName}[offset + 2];`);
-                this.emitLine(`vertices[3] = ${adjacencyName}[offset + 3];`);
-                this.emitLine(`vertices[4] = ${adjacencyName}[offset + 4];`);
-                this.emitLine(`vertices[5] = ${adjacencyName}[offset + 5];`);
+                this.emitLine(`vertices[0] = ${indicesAdjName}[offset];`);
+                this.emitLine(`vertices[1] = ${indicesAdjName}[offset + 1];`);
+                this.emitLine(`vertices[2] = ${indicesAdjName}[offset + 2];`);
+                this.emitLine(`vertices[3] = ${indicesAdjName}[offset + 3];`);
+                this.emitLine(`vertices[4] = ${indicesAdjName}[offset + 4];`);
+                this.emitLine(`vertices[5] = ${indicesAdjName}[offset + 5];`);
+            }
+            this.pop();
+            this.emitChar('}');
+
+
+            this.emitLine(`void ${baseName}_LoadFaceAdjacency(uint face, out uint faces[3])`);
+            this.emitChar('{');
+            this.push();
+            {
+                this.emitLine(`uint offset = face * 3u;`);
+                this.emitLine(`faces[0] = ${faceAdjName}[offset];`);
+                this.emitLine(`faces[1] = ${faceAdjName}[offset + 1];`);
+                this.emitLine(`faces[2] = ${faceAdjName}[offset + 2];`);
             }
             this.pop();
             this.emitChar('}');
@@ -449,7 +465,8 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 verticesName,
                 facesName,
-                adjacencyName
+                indicesAdjName,
+                faceAdjName
             };
 
             ctx.addTrimesh(mesh);
@@ -471,6 +488,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             case 'LoadFace':
             case 'LoadVertex':
             case 'LoadGSAdjacency':
+            case 'LoadFaceAdjacency':
             case 'GetDimensions':
                 {
                     // note: it makes imporsible to pass tri meshes as function arguments

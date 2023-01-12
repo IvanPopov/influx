@@ -1061,15 +1061,22 @@ facesName(optionalEncoding?:any):string|Uint8Array|null {
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
-adjacencyName():string|null
-adjacencyName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
-adjacencyName(optionalEncoding?:any):string|Uint8Array|null {
+gsAdjecencyName():string|null
+gsAdjecencyName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+gsAdjecencyName(optionalEncoding?:any):string|Uint8Array|null {
   const offset = this.bb!.__offset(this.bb_pos, 14);
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
+faceAdjacencyName():string|null
+faceAdjacencyName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
+faceAdjacencyName(optionalEncoding?:any):string|Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 16);
+  return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
+}
+
 static startTrimeshBundle(builder:flatbuffers.Builder) {
-  builder.startObject(6);
+  builder.startObject(7);
 }
 
 static addName(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset) {
@@ -1092,8 +1099,12 @@ static addFacesName(builder:flatbuffers.Builder, facesNameOffset:flatbuffers.Off
   builder.addFieldOffset(4, facesNameOffset, 0);
 }
 
-static addAdjacencyName(builder:flatbuffers.Builder, adjacencyNameOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(5, adjacencyNameOffset, 0);
+static addGsAdjecencyName(builder:flatbuffers.Builder, gsAdjecencyNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, gsAdjecencyNameOffset, 0);
+}
+
+static addFaceAdjacencyName(builder:flatbuffers.Builder, faceAdjacencyNameOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(6, faceAdjacencyNameOffset, 0);
 }
 
 static endTrimeshBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -1101,14 +1112,15 @@ static endTrimeshBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
-static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, vertexCountUNameOffset:flatbuffers.Offset, faceCountUNameOffset:flatbuffers.Offset, verticesNameOffset:flatbuffers.Offset, facesNameOffset:flatbuffers.Offset, adjacencyNameOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createTrimeshBundle(builder:flatbuffers.Builder, nameOffset:flatbuffers.Offset, vertexCountUNameOffset:flatbuffers.Offset, faceCountUNameOffset:flatbuffers.Offset, verticesNameOffset:flatbuffers.Offset, facesNameOffset:flatbuffers.Offset, gsAdjecencyNameOffset:flatbuffers.Offset, faceAdjacencyNameOffset:flatbuffers.Offset):flatbuffers.Offset {
   TrimeshBundle.startTrimeshBundle(builder);
   TrimeshBundle.addName(builder, nameOffset);
   TrimeshBundle.addVertexCountUName(builder, vertexCountUNameOffset);
   TrimeshBundle.addFaceCountUName(builder, faceCountUNameOffset);
   TrimeshBundle.addVerticesName(builder, verticesNameOffset);
   TrimeshBundle.addFacesName(builder, facesNameOffset);
-  TrimeshBundle.addAdjacencyName(builder, adjacencyNameOffset);
+  TrimeshBundle.addGsAdjecencyName(builder, gsAdjecencyNameOffset);
+  TrimeshBundle.addFaceAdjacencyName(builder, faceAdjacencyNameOffset);
   return TrimeshBundle.endTrimeshBundle(builder);
 }
 
@@ -1119,7 +1131,8 @@ unpack(): TrimeshBundleT {
     this.faceCountUName(),
     this.verticesName(),
     this.facesName(),
-    this.adjacencyName()
+    this.gsAdjecencyName(),
+    this.faceAdjacencyName()
   );
 }
 
@@ -1130,7 +1143,8 @@ unpackTo(_o: TrimeshBundleT): void {
   _o.faceCountUName = this.faceCountUName();
   _o.verticesName = this.verticesName();
   _o.facesName = this.facesName();
-  _o.adjacencyName = this.adjacencyName();
+  _o.gsAdjecencyName = this.gsAdjecencyName();
+  _o.faceAdjacencyName = this.faceAdjacencyName();
 }
 }
 
@@ -1141,7 +1155,8 @@ constructor(
   public faceCountUName: string|Uint8Array|null = null,
   public verticesName: string|Uint8Array|null = null,
   public facesName: string|Uint8Array|null = null,
-  public adjacencyName: string|Uint8Array|null = null
+  public gsAdjecencyName: string|Uint8Array|null = null,
+  public faceAdjacencyName: string|Uint8Array|null = null
 ){}
 
 
@@ -1151,7 +1166,8 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const faceCountUName = (this.faceCountUName !== null ? builder.createString(this.faceCountUName!) : 0);
   const verticesName = (this.verticesName !== null ? builder.createString(this.verticesName!) : 0);
   const facesName = (this.facesName !== null ? builder.createString(this.facesName!) : 0);
-  const adjacencyName = (this.adjacencyName !== null ? builder.createString(this.adjacencyName!) : 0);
+  const gsAdjecencyName = (this.gsAdjecencyName !== null ? builder.createString(this.gsAdjecencyName!) : 0);
+  const faceAdjacencyName = (this.faceAdjacencyName !== null ? builder.createString(this.faceAdjacencyName!) : 0);
 
   return FxTrimeshBundle.createTrimeshBundle(builder,
     name,
@@ -1159,7 +1175,8 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
     faceCountUName,
     verticesName,
     facesName,
-    adjacencyName
+    gsAdjecencyName,
+    faceAdjacencyName
   );
 }
 }
@@ -2180,8 +2197,18 @@ instance(obj?:FxTypeLayout):FxTypeLayout|null {
   return offset ? (obj || new FxTypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
+renderStates(index: number, obj?:FxRenderState):FxRenderState|null {
+  const offset = this.bb!.__offset(this.bb_pos, 18);
+  return offset ? (obj || new FxRenderState()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+renderStatesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 18);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startPartRenderPass(builder:flatbuffers.Builder) {
-  builder.startObject(7);
+  builder.startObject(8);
 }
 
 static addRoutinesType(builder:flatbuffers.Builder, routinesTypeOffset:flatbuffers.Offset) {
@@ -2236,6 +2263,22 @@ static addInstance(builder:flatbuffers.Builder, instanceOffset:flatbuffers.Offse
   builder.addFieldOffset(6, instanceOffset, 0);
 }
 
+static addRenderStates(builder:flatbuffers.Builder, renderStatesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(7, renderStatesOffset, 0);
+}
+
+static createRenderStatesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startRenderStatesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endPartRenderPass(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
@@ -2261,7 +2304,8 @@ unpack(): PartRenderPassT {
     this.sorting(),
     this.instanceCount(),
     this.stride(),
-    (this.instance() !== null ? this.instance()!.unpack() : null)
+    (this.instance() !== null ? this.instance()!.unpack() : null),
+    this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength())
   );
 }
 
@@ -2285,6 +2329,7 @@ unpackTo(_o: PartRenderPassT): void {
   _o.instanceCount = this.instanceCount();
   _o.stride = this.stride();
   _o.instance = (this.instance() !== null ? this.instance()!.unpack() : null);
+  _o.renderStates = this.bb!.createObjList(this.renderStates.bind(this), this.renderStatesLength());
 }
 }
 
@@ -2296,7 +2341,8 @@ constructor(
   public sorting: boolean = false,
   public instanceCount: number = 0,
   public stride: number = 0,
-  public instance: FxTypeLayoutT|null = null
+  public instance: FxTypeLayoutT|null = null,
+  public renderStates: (RenderStateT)[] = []
 ){}
 
 
@@ -2305,6 +2351,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const routines = FxPartRenderPass.createRoutinesVector(builder, builder.createObjectOffsetList(this.routines));
   const geometry = (this.geometry !== null ? builder.createString(this.geometry!) : 0);
   const instance = (this.instance !== null ? this.instance!.pack(builder) : 0);
+  const renderStates = FxPartRenderPass.createRenderStatesVector(builder, builder.createObjectOffsetList(this.renderStates));
 
   FxPartRenderPass.startPartRenderPass(builder);
   FxPartRenderPass.addRoutinesType(builder, routinesType);
@@ -2314,6 +2361,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   FxPartRenderPass.addInstanceCount(builder, this.instanceCount);
   FxPartRenderPass.addStride(builder, this.stride);
   FxPartRenderPass.addInstance(builder, instance);
+  FxPartRenderPass.addRenderStates(builder, renderStates);
 
   return FxPartRenderPass.endPartRenderPass(builder);
 }
