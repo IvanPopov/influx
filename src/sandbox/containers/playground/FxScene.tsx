@@ -357,11 +357,13 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         });
 
 
-        if (renderStates[ERenderStates.ZENABLE]) {
+        // todo: add support to technique.cpp
+        if (renderStates?.[ERenderStates.ZENABLE]) {
             material.depthTest = renderStates[ERenderStates.ZENABLE] === ERenderStateValues.TRUE;
         }
 
-        if (renderStates[ERenderStates.BLENDENABLE]) {
+        // todo: add support to technique.cpp
+        if (renderStates?.[ERenderStates.BLENDENABLE]) {
             material.transparent = renderStates[ERenderStates.BLENDENABLE] === ERenderStateValues.TRUE;
         }
 
