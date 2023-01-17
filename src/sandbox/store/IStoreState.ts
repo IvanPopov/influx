@@ -198,13 +198,24 @@ export interface IDepot {
 //
 
 export interface IStoreState {
+    // current location
+    readonly router: RouterState;
+
+    // current working file
     readonly sourceFile: IFileState;
+    readonly nodes: INodePipeline;
+
+    // derived state from actual parsed source file
+    readonly playground: IPlaygroundState;
+
+    // global params
     readonly parserParams: IParserState;
     readonly translatorParams: ITranslatorParams;
-    readonly router: RouterState;
-    readonly playground: IPlaygroundState;
-    readonly nodes: INodePipeline;
+
+    // perforce & s3d enviroment
     readonly s3d: IS3DState;
+
+    // all available data from filesystem
     readonly depot: IDepot;
 }
 

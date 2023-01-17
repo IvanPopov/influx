@@ -120,5 +120,5 @@ npm-debug.log
 /tmp/
 .vscode/
 .tscache/
-src/lib/fx/instructions/SystemFunctionInstruction.ts
 .awcache
+./shell.js

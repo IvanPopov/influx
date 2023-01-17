@@ -21,6 +21,7 @@ import { Button, Icon, Table } from 'semantic-ui-react';
 
 // todo: don't use TS specific bundle helpers
 import * as JSVM from '@lib/fx/bytecode/VM/ts/bundle';
+import { CBUFFER0_REGISTER, CBUFFER_TOTAL, SRV0_REGISTER, SRV_TOTAL, UAV0_REGISTER, UAV_TOTAL } from '@lib/fx/bytecode/Bytecode';
 
 export interface IBytecodeViewProps extends IDebuggerState {
     actions: typeof sourceActions;
@@ -84,6 +85,7 @@ const scode = (c: EOperation) => {
             return v;
     }
 };
+
 
 
 class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewState>  {
@@ -293,6 +295,17 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         const pointer = (x: number) => `%${x}`;
         const register = (x: number) => `r${x}`;
+        const shaderRegister = (x: number) =>  {
+            if (x >= CBUFFER0_REGISTER && x - CBUFFER0_REGISTER < CBUFFER_TOTAL) 
+                return `b${x - CBUFFER0_REGISTER}`;
+            if (x >= SRV0_REGISTER && x - SRV0_REGISTER < SRV_TOTAL) 
+                return `t${x - SRV0_REGISTER}`;
+            if (x >= UAV0_REGISTER && x - UAV0_REGISTER < UAV_TOTAL) 
+                return `u${x - UAV0_REGISTER}`;
+            console.error(`invalid slot: ${x}`);
+            return `${x}`;
+        }
+        
 
         // tslint:disable-next-line:switch-default
         switch (code) {
@@ -317,12 +330,14 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 sArgs[1] = register(args[1]);
                 break;
             case EOperation.k_I32LoadInput:
+                // sArgs[0] = shaderRegister(args[0]);
                 sArgs[1] = register(args[1]);
                 break;
             case EOperation.k_I32StoreInput:
                 sArgs[2] = register(args[2]);
                 break;
             case EOperation.k_I32LoadInputPointer:
+                sArgs[0] = shaderRegister(args[0]);
                 sArgs[1] = register(args[1]);
                 sArgs[2] = pointer(args[2]);
                 break;

@@ -81,8 +81,11 @@ const styles = {
 };
 
 
-interface IGraphViewProps extends IStoreState, RouteComponentProps, Partial<WithStylesProps<typeof styles>> {
-    actions: typeof nodesActions & typeof sourceActions;
+interface IGraphViewProps extends Partial<WithStylesProps<typeof styles>> {
+    graph: LGraph;
+
+    onChange: () => void;
+    onExecute: () => void;
 }
 
 @(withRouter as any)
@@ -95,7 +98,7 @@ class GraphView extends React.Component<IGraphViewProps> {
     spawnRoutine: LGraphNode;
 
     get graph(): LGraph {
-        return this.props.nodes.graph;
+        return this.props.graph;
     }
 
     constructor(props: IGraphViewProps) {
@@ -166,7 +169,7 @@ class GraphView extends React.Component<IGraphViewProps> {
         // todo: move to redux logic
         // notify store that graph have to be update
         // (this.graph as any).onNodeConnectionChange = () => { this.execute(); }
-        (this.graph as any).onAfterChange = () => { this.changed(); }
+        (this.graph as any).onAfterChange = this.props.onChange;
     }
 
     componentDidMount() {
@@ -205,20 +208,8 @@ class GraphView extends React.Component<IGraphViewProps> {
         // ctrl+enter
         if (e.ctrlKey && e.keyCode == 10) {
             e.preventDefault();
-            this.execute();
+            this.props.onExecute();
         }
-    }
-
-    @autobind
-    execute()
-    {
-        this.props.actions.recompile();
-    }
-
-    @autobind
-    changed()
-    {
-        this.props.actions.changed();
     }
 
     @autobind
@@ -248,4 +239,4 @@ class GraphView extends React.Component<IGraphViewProps> {
     }
 }
 
-export default connect<{}, {}, IGraphViewProps>(mapProps(getCommon), mapActions({ ...nodesActions, ...sourceActions }))(withStyles(styles)(GraphView)) as any;
+export default withStyles(styles)(GraphView);

@@ -483,9 +483,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         //  const float;            // <= not uniform and doesn't have proper default value
         //  RTTexture2D dynamicTex; // <= uav
         //  Texture2D albedo;
-        return decl.isGlobal() &&
-            (decl.type.isUniform() || (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) != 0 ||
-                (decl.initExpr && decl.initExpr.isConst()));
+        const isUniform = decl.type.isUniform();
+        const isCbufferField = (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) != 0;
+        const isConstant = decl.initExpr && decl.initExpr.isConst();
+        return decl.isGlobal() && (isUniform || isCbufferField || isConstant);
     }
 
     function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {

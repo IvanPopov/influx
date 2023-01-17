@@ -8,7 +8,7 @@ import { FxEmitter } from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
-import { mapActions, playground as playgroundActions, sourceCode as sourceActions, depot as depotActions } from '@sandbox/actions';
+import { mapActions, playground as playgroundActions, sourceCode as sourceActions, depot as depotActions, nodes as nodesActions } from '@sandbox/actions';
 import ASTView from '@sandbox/components/ASTView';
 import CodeView from '@sandbox/components/CodeView';
 import FileListView from '@sandbox/components/FileListView';
@@ -171,7 +171,7 @@ export const styles = {
 
 // todo: remove the inheritance of the type of data
 export interface IAppProps extends IStoreState, Partial<WithStylesProps<typeof styles>>, RouteComponentProps<any> {
-    actions: typeof sourceActions & typeof routerActions & typeof playgroundActions & typeof depotActions;
+    actions: typeof sourceActions & typeof routerActions & typeof playgroundActions & typeof depotActions & typeof nodesActions;
 }
 
 
@@ -180,14 +180,14 @@ const Version = (props) => {
         <Popup
             trigger={
                 <div>
-                    <Message warning={ MODE !== 'production' } size='tiny' compact className={ props.classes.versionFix }>
-                        { MODE } | { BRANCH }-{ VERSION }
+                    <Message warning={MODE !== 'production'} size='tiny' compact className={props.classes.versionFix}>
+                        {MODE} | {BRANCH}-{VERSION}
                     </Message>
                 </div>
             }
             // position='left center'
             size='small'
-            content={ TIMESTAMP }
+            content={TIMESTAMP}
             inverted
         />
     );
@@ -195,8 +195,8 @@ const Version = (props) => {
 
 const S3DStatus = (props) => (
     props.env &&
-    <Message size='tiny' compact className={ props.classes.versionFix }>
-        Saber / { props.env.Get('game-name') }
+    <Message size='tiny' compact className={props.classes.versionFix}>
+        Saber / {props.env.Get('game-name')}
     </Message>
 )
 
@@ -213,13 +213,13 @@ const P4Status = ({ info, classes }: { info: IP4Info } & Partial<WithStylesProps
             }
             // position='left center'
             size='small'
-            content={ 
-                 info && 
-                    <div>
-                        server: { info['Proxy address'] }
-                        <br />
-                        client: { info['Client name'] }
-                    </div> 
+            content={
+                info &&
+                <div>
+                    server: {info['Proxy address']}
+                    <br />
+                    client: {info['Client name']}
+                </div>
             }
             inverted
         />
@@ -291,12 +291,12 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
         const isGR = this.name === GRAPH_KEYWORD;
 
         return (
-            <Menu size='mini' pointing secondary inverted attached className={ this.props.classes.mebFix }>
+            <Menu size='mini' pointing secondary inverted attached className={this.props.classes.mebFix}>
                 <Menu.Item
                     className='breadcrumb'
                     name='sourcecode'
-                    active={ activeItem === 'sourcecode' }
-                    onClick={ this.handleItemClick }
+                    active={activeItem === 'sourcecode'}
+                    onClick={this.handleItemClick}
                 >
                     source code&nbsp;&nbsp;&nbsp;&nbsp;|
                 </Menu.Item>
@@ -304,36 +304,36 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
                 <Menu.Item
                     className='breadcrumb'
                     name='vertexshader'
-                    active={ activeItem === 'vertexshader' }
-                    onClick={ this.handleItemClick }
+                    active={activeItem === 'vertexshader'}
+                    onClick={this.handleItemClick}
                 >
-                    { path.name &&
+                    {path.name &&
                         <div>
-                            { path.name }&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                            {path.name}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
                         </div>
                     }
-                    { path.pass &&
+                    {path.pass &&
                         <div>
-                            { `pass[${path.pass}]` }&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                            {`pass[${path.pass}]`}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
                         </div>
                     }
-                    { path.property &&
+                    {path.property &&
                         <div>
-                            { path.property }
+                            {path.property}
                         </div>
                     }
                 </Menu.Item>
                 <Menu.Menu position='right'>
-                    <Menu.Item color={ isEd ? 'yellow' : null } active={ isEd } header={ isEd } onClick={ !isEd ? this.handleEditorClick : null }>
+                    <Menu.Item color={isEd ? 'yellow' : null} active={isEd} header={isEd} onClick={!isEd ? this.handleEditorClick : null}>
                         Editor
                     </Menu.Item>
-                    <Menu.Item color={ isPP ? 'yellow' : null } active={ isPP } header={ isPP } onClick={ !isPP ? this.handlePreprocessedClick : null }>
+                    <Menu.Item color={isPP ? 'yellow' : null} active={isPP} header={isPP} onClick={!isPP ? this.handlePreprocessedClick : null}>
                         Preprocessed
                     </Menu.Item>
-                    <Menu.Item color={ isFormatted ? 'yellow' : null } active={ isFormatted } header={ isFormatted } onClick={ !isFormatted ? this.handleFormattedClick : null }>
+                    <Menu.Item color={isFormatted ? 'yellow' : null} active={isFormatted} header={isFormatted} onClick={!isFormatted ? this.handleFormattedClick : null}>
                         Formatted
                     </Menu.Item>
-                    <Menu.Item color={ isGR ? 'yellow' : null } active={ isGR } header={ isGR } onClick={ !isGR ? this.handleGraphClick : null }>
+                    <Menu.Item color={isGR ? 'yellow' : null} active={isGR} header={isGR} onClick={!isGR ? this.handleGraphClick : null}>
                         Graph
                     </Menu.Item>
                 </Menu.Menu>
@@ -345,8 +345,7 @@ class SourceCodeMenuRaw extends React.Component<ISourceCodeMenuProps> {
 let SourceCodeMenu = withStyles(styles)(SourceCodeMenuRaw);
 
 
-interface ConfirmDialog
-{
+interface ConfirmDialog {
     title: string,
     message: string,
     onAccept: () => void;
@@ -555,8 +554,7 @@ class App extends React.Component<IAppProps> {
     openFile(file: string) {
         const doOpen = () => history.push(`/${this.props.match.params.view}/${encodeURIComponent(file)}`);
 
-        if (!this.isEdited() || !ipc.isElectron())
-        {
+        if (!this.isEdited() || !ipc.isElectron()) {
             doOpen();
             return;
         }
@@ -566,15 +564,14 @@ class App extends React.Component<IAppProps> {
         const dialog = {
             title,
             message,
-            onReject() {},
+            onReject() { },
             onAccept: doOpen
         };
 
         this.openConfirmDialog(dialog);
     }
 
-    reopenThisFile()
-    {
+    reopenThisFile() {
         this.props.actions.openFile(this.currentUri());
     }
 
@@ -582,37 +579,30 @@ class App extends React.Component<IAppProps> {
     // General info
     //
 
-    isEdited()
-    {
-        return this.props.sourceFile.revision > 1 || this.props.nodes.revision > 0;
+    isEdited() {
+        return this.props.sourceFile.revision > 1 || this.props.nodes.revision > 1;
     }
 
-    currentUri()
-    {
+    currentUri() {
         return this.props.sourceFile?.uri;
     }
 
-    isP4Connected()
-    {
+    isP4Connected() {
         return !!this.props.s3d.p4;
     }
 
-    isEnv()
-    {
+    isEnv() {
         return !!this.props.s3d.env;
     }
 
-    isExists()
-    {
+    isExists() {
         const uri = this.currentUri();
 
-        if (!uri)
-        {
+        if (!uri) {
             return false;
         }
-    
-        if (!ipc.isElectron())
-        {
+
+        if (!ipc.isElectron()) {
             // assume that we always able to edit effects in web version
             return true;
         }
@@ -622,21 +612,18 @@ class App extends React.Component<IAppProps> {
         return fs.existsSync(localPath);
     }
 
-    isReadonly()
-    {
+    isReadonly() {
         const uri = this.currentUri();
 
-        if (!uri)
-        {
+        if (!uri) {
             return false;
         }
-    
-        if (!ipc.isElectron())
-        {
+
+        if (!ipc.isElectron()) {
             // assume that we always able to edit effects in web version
             return false;
         }
-    
+
         // todo: move to ipc
         const localPath = URI.toLocalPath(uri);
         return (fs.statSync(localPath).mode & 146) == 0;
@@ -653,55 +640,48 @@ class App extends React.Component<IAppProps> {
     //
 
     @autobind
-    onCheckout()
-    {
-        if (!this.isP4Connected())
-        {
+    onCheckout() {
+        if (!this.isP4Connected()) {
             console.error('Perforce is not connected.');
             return;
         }
 
         const localPath = URI.toLocalPath(this.currentUri());
-        if (this.isExists())
-        {
+        if (this.isExists()) {
             // add to default changelist
             p4.edit(0, localPath, () => this.forceUpdate());
             return;
         }
 
         const filename = ipc.sync.saveFileDialog(
-        { 
-            defaultPath: localPath,
-            title: "Save FX", 
-            buttonLabel: "Save",
-            filters: [ 
-                { name: 'Source FX', extensions: ['fx'] },
-                { name: 'Graph FX', extensions: ['xfx'] }
-            ]
-        }
-        , this.props.sourceFile.content);
+            {
+                defaultPath: localPath,
+                title: "Save FX",
+                buttonLabel: "Save",
+                filters: [
+                    { name: 'Source FX', extensions: ['fx'] },
+                    { name: 'Graph FX', extensions: ['xfx'] }
+                ]
+            }
+            , this.props.sourceFile.content);
 
-        if (filename)
-        {
+        if (filename) {
             p4.add(0, filename, () => {
                 // request depot update
                 this.props.actions.rescan();
-                this.openFile(path.basename(filename));
+                this.openFile(URI.fromLocalPath(filename));
             });
         }
     }
 
     @autobind
-    onRevert()
-    {
-        if (!this.isP4Connected())
-        {
+    onRevert() {
+        if (!this.isP4Connected()) {
             console.error('Perforce is not connected.');
             return;
         }
 
-        const doRevert = () =>
-        {
+        const doRevert = () => {
             p4.revert(URI.toLocalPath(this.currentUri()), () => {
                 console.assert(this.isReadonly(), 'Revert failed?!');
                 // reopen file to drop revesion and other states/markers
@@ -709,8 +689,7 @@ class App extends React.Component<IAppProps> {
             });
         }
 
-        if (!this.isEdited())
-        {
+        if (!this.isEdited()) {
             doRevert();
             return;
         }
@@ -718,7 +697,7 @@ class App extends React.Component<IAppProps> {
         const dialog = {
             title: `Revert ${path.basename(URI.toLocalPath(this.currentUri()))}`,
             message: 'Drop unsaved changes?',
-            onReject() {},
+            onReject() { },
             onAccept: doRevert
         };
 
@@ -726,21 +705,18 @@ class App extends React.Component<IAppProps> {
     }
 
     @autobind
-    onSave()
-    {
-        if (!ipc.isElectron())
-        {
+    onSave() {
+        if (!ipc.isElectron()) {
             console.error('File can not be saved under web version.');
             return;
         }
 
-        if (this.isReadonly())
-        {
+        if (this.isReadonly()) {
             console.error('File is read only.');
             return;
         }
 
-        
+
         const { sourceFile, nodes: { graph } } = this.props;
         const isGraph = path.extname(URI.toLocalPath(sourceFile.uri)) == '.xfx';
         const data = !isGraph ? sourceFile.content : packGraphToJSON(this.props);
@@ -755,17 +731,16 @@ class App extends React.Component<IAppProps> {
     //
 
     openConfirmDialog(options: ConfirmDialog) {
-        this.setState({ confirmDialog: { ...options, open: true} });
+        this.setState({ confirmDialog: { ...options, open: true } });
     }
 
     closeConfirmDialog() {
         this.setState({ confirmDialog: { open: false } });
     }
 
-    processConfirmDialog(decision: boolean)
-    {
+    processConfirmDialog(decision: boolean) {
         decision ? this.state.confirmDialog.onAccept.apply(this)
-                 : this.state.confirmDialog.onReject.apply(this);
+            : this.state.confirmDialog.onReject.apply(this);
         this.closeConfirmDialog();
     }
 
@@ -805,8 +780,8 @@ class App extends React.Component<IAppProps> {
 
         const shaderFormats: DropdownItemProps[] = [
             { key: 1, text: 'GLSL', value: 'glsl' },
-            { key: 2, text: 'HLSL', value: 'hlsl'},
-          ]
+            { key: 2, text: 'HLSL', value: 'hlsl' },
+        ]
 
         const showAutotestMenu = (sourceFile.content || '').substr(0, 40).indexOf('@autotests') !== -1;
 
@@ -819,16 +794,16 @@ class App extends React.Component<IAppProps> {
                     key: PLAYGROUND_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PLAYGROUND_VIEW}` } key="route-analysis-result">
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
-                            <Dropdown item icon={<Icon className={ 'gear' as UnknownIcon } />} >
+                    <Route path={`/${PLAYGROUND_VIEW}`} key="route-analysis-result">
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
+                            <Dropdown item icon={<Icon className={'gear' as UnknownIcon} />} >
                                 <Dropdown.Menu>
                                     <Dropdown.Item>
                                         <Dropdown text='Options'>
                                             <Dropdown.Menu>
                                                 {/* todo: add support of options (!) */}
-                                                <Dropdown.Item><Checkbox label="convolute" checked={ true } /></Dropdown.Item>
-                                                <Dropdown.Item><Checkbox label="gather ui" checked={ true } /></Dropdown.Item>
+                                                <Dropdown.Item><Checkbox label="convolute" checked={true} /></Dropdown.Item>
+                                                <Dropdown.Item><Checkbox label="gather ui" checked={true} /></Dropdown.Item>
                                             </Dropdown.Menu>
                                         </Dropdown>
                                     </Dropdown.Item>
@@ -836,32 +811,32 @@ class App extends React.Component<IAppProps> {
                                     {
                                         this.buildShaderMenu().map(item => (
                                             <Dropdown.Item
-                                                key={`ddmi-${ item.name }`}
-                                                href={ `#${ item.link }` } >
-                                                { item.name }
+                                                key={`ddmi-${item.name}`}
+                                                href={`#${item.link}`} >
+                                                {item.name}
                                             </Dropdown.Item>
                                         ))
                                     }
-                                    
+
                                 </Dropdown.Menu>
                             </Dropdown>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
-                                    <Dropdown text='Shader Format' 
-                                        options={shaderFormats} 
+                                    <Dropdown text='Shader Format'
+                                        options={shaderFormats}
                                         value={$pg.shaderFormat}
                                         onChange={(e, data) => this.setShaderFormat(data.value as ShaderFormat)}
                                     />
                                     &nbsp;&nbsp;|&nbsp;&nbsp;
                                     <Checkbox label='WASM runtime'
                                         disabled={!WASM}
-                                        checked={ $pg.wasm }
-                                        onChange={ this.switchEmitterRuntime }
+                                        checked={$pg.wasm}
+                                        onChange={this.switchEmitterRuntime}
                                     />
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='playground-view'>
+                        <Tab.Pane attached={'bottom'} key='playground-view'>
                             <Playground />
                         </Tab.Pane>
                     </Route>
@@ -875,44 +850,44 @@ class App extends React.Component<IAppProps> {
                     key: BYTECODE_VIEW
                 },
                 pane: (
-                    <Route path={ `/${BYTECODE_VIEW}` } key="route-bytecode-view">
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                    <Route path={`/${BYTECODE_VIEW}`} key="route-bytecode-view">
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Bytecode Debugger
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='bytecode-view'>
-                            { showAutotestMenu &&
+                        <Tab.Pane attached={'bottom'} key='bytecode-view'>
+                            {showAutotestMenu &&
                                 <Segment color='orange'>
-                                    { !this.state.testProcessing &&
+                                    {!this.state.testProcessing &&
                                         <Button
-                                            onClick={ this.runAutotests } width={ '100%' } >
+                                            onClick={this.runAutotests} width={'100%'} >
                                             <span>Run autotests!</span>
                                         </Button>
                                     }
-                                    { this.state.testProcessing &&
+                                    {this.state.testProcessing &&
                                         <Loader active inline />
                                     }
                                 </Segment>
                             }
                             <Table size='small' basic='very' compact='very'>
                                 <Table.Body>
-                                    <Table.Row style={ { paddingTop: 0 } }>
+                                    <Table.Row style={{ paddingTop: 0 }}>
                                         <Table.Cell>
                                             <Input
                                                 fluid
                                                 size='small'
                                                 label='expression'
-                                                placeholder={ `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()` }
-                                                ref={ this.expressionRef }
+                                                placeholder={`${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`}
+                                                ref={this.expressionRef}
                                             />
                                         </Table.Cell>
                                         <Table.Cell >
                                             <Button
-                                                disabled={ ($debugger.options.autocompile || !this.canCompile()) }
-                                                onClick={ this.compile } width={ 10 } >
+                                                disabled={($debugger.options.autocompile || !this.canCompile())}
+                                                onClick={this.compile} width={10} >
                                                 Compile
                                             </Button>
                                             &nbsp;
@@ -920,15 +895,15 @@ class App extends React.Component<IAppProps> {
                                                 <Dropdown.Menu>
                                                     <Dropdown.Item key="ddmi-use-wasm">
                                                         <Checkbox label='WASM runtime' size='small'
-                                                            disabled={ !WASM }
-                                                            checked={ $debugger.options.wasm }
-                                                            onMouseDown={ this.switchVMRuntime }
-                                                            /* onChange doen't work for some reason :/ */
-                                                            />
+                                                            disabled={!WASM}
+                                                            checked={$debugger.options.wasm}
+                                                            onMouseDown={this.switchVMRuntime}
+                                                        /* onChange doen't work for some reason :/ */
+                                                        />
                                                     </Dropdown.Item>
                                                     <Dropdown.Item key="ddmi-auto-compilation">
                                                         <Checkbox label='auto compilation' size='small'
-                                                            checked={ $debugger.options.autocompile }
+                                                            checked={$debugger.options.autocompile}
                                                             onMouseDown={
                                                                 e => this.setAutocompile(!$debugger.options.autocompile)
                                                             } />
@@ -938,25 +913,25 @@ class App extends React.Component<IAppProps> {
                                                     </Dropdown.Item>
                                                     <Dropdown.Item key="ddmi-bytecode-colorization">
                                                         <Checkbox label='colorize' size='small'
-                                                            checked={ $debugger.options.colorize }
+                                                            checked={$debugger.options.colorize}
                                                             onMouseDown={
                                                                 e => this.setBytecodeColorization(!$debugger.options.colorize)
                                                             } />
                                                     </Dropdown.Item>
                                                 </Dropdown.Menu>
                                             </Dropdown>
-                                            {/* <NoOptimizations /> */ }
+                                            {/* <NoOptimizations /> */}
                                         </Table.Cell>
                                     </Table.Row>
                                 </Table.Body>
                             </Table>
-                            { $debugger.runtime ? (
+                            {$debugger.runtime ? (
                                 <div>
-                                    {/* todo: move memory view inside bytecode view; */ }
-                                    <MemoryView program={ $debugger.runtime } />
+                                    {/* todo: move memory view inside bytecode view; */}
+                                    <MemoryView program={$debugger.runtime} />
                                     <BytecodeView />
                                 </div>
-                            ) : null }
+                            ) : null}
                         </Tab.Pane>
                     </Route>
                 )
@@ -969,19 +944,19 @@ class App extends React.Component<IAppProps> {
                     key: PROGRAM_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PROGRAM_VIEW}` } key="route-program-view">
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                    <Route path={`/${PROGRAM_VIEW}`} key="route-program-view">
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Semantic Analisys
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='program-view'>
+                        <Tab.Pane attached={'bottom'} key='program-view'>
                             <ProgramView
-                                onNodeOver={ inst => this.highlightInstruction(inst, true) }
-                                onNodeOut={ inst => this.highlightInstruction(inst, false) }
-                                onNodeClick={ inst => { } }
+                                onNodeOver={inst => this.highlightInstruction(inst, true)}
+                                onNodeOut={inst => this.highlightInstruction(inst, false)}
+                                onNodeClick={inst => { }}
                             />
                         </Tab.Pane>
                     </Route>
@@ -995,18 +970,18 @@ class App extends React.Component<IAppProps> {
                     key: AST_VIEW
                 },
                 pane: (
-                    <Route path={ `/${AST_VIEW}` } key="route-ast-view">
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                    <Route path={`/${AST_VIEW}`} key="route-ast-view">
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Syntax Analysis
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='ast-view'>
+                        <Tab.Pane attached={'bottom'} key='ast-view'>
                             <ASTView
-                                onNodeOver={ (idx, node) => this.highlightPNode(idx, node, true) }
-                                onNodeOut={ idx => this.highlightPNode(idx, null, false) }
+                                onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
+                                onNodeOut={idx => this.highlightPNode(idx, null, false)}
                             />
                         </Tab.Pane>
                     </Route>
@@ -1020,15 +995,15 @@ class App extends React.Component<IAppProps> {
                     key: PREPROCESSOR_VIEW
                 },
                 pane: (
-                    <Route path={ `/${PREPROCESSOR_VIEW}` } key="route-preprocessor-view" >
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                    <Route path={`/${PREPROCESSOR_VIEW}`} key="route-preprocessor-view" >
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Preprocessor Summary
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='preprocessor-view'>
+                        <Tab.Pane attached={'bottom'} key='preprocessor-view'>
                             <PPView
                             // onNodeOver={(idx, node) => this.highlightPNode(idx, node, true)}
                             // onNodeOut={idx => this.highlightPNode(idx, null, false)}
@@ -1045,16 +1020,16 @@ class App extends React.Component<IAppProps> {
                     key: GRAPH_VIEW
                 },
                 pane: (
-                    <Route path={ `/${GRAPH_VIEW}` } key="route-graph-view" >
-                        <Menu secondary borderless attached={ 'top' } className={ props.classes.tabHeaderFix }>
+                    <Route path={`/${GRAPH_VIEW}`} key="route-graph-view" >
+                        <Menu secondary borderless attached={'top'} className={props.classes.tabHeaderFix}>
                             <Menu.Menu position='right'>
                                 <div className='ui right aligned category search item'>
                                     Graph Configuration
                                 </div>
                             </Menu.Menu>
                         </Menu>
-                        <Tab.Pane attached={ 'bottom' } key='graph-view'>
-                            <GraphConfigView/>
+                        <Tab.Pane attached={'bottom'} key='graph-view'>
+                            <GraphConfigView />
                         </Tab.Pane>
                     </Route>
                 )
@@ -1076,86 +1051,92 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key="source-file-item">
-                        { !add &&
+                        {!add &&
                             <Popup
-                                trigger={ <span>{path.basename(props.sourceFile.uri || '') + (this.isEdited() ? '*': '')}</span> }
-                                content={ props.sourceFile.uri }
+                                trigger={<span>{path.basename(props.sourceFile.uri || '') + (this.isEdited() ? '*' : '')}</span>}
+                                content={props.sourceFile.uri}
                                 basic
                             />
                         }
                         &nbsp;
-                        { this.isP4Connected() && (add || checkout)  &&
-                                <Button.Group size='mini'>
-                                    <Button positive onClick={ this.onCheckout }>
-                                        { this.isExists() ? 'Checkout' : 'Add' }
-                                    </Button>
-                                </Button.Group>
-                        }
-                        { this.isP4Connected() && (revert) &&
+                        {this.isP4Connected() && (add || checkout) &&
                             <Button.Group size='mini'>
-                                <Button onClick={ this.onRevert }>Revert</Button>
+                                <Button positive onClick={this.onCheckout}>
+                                    {this.isExists() ? 'Checkout' : 'Add'}
+                                </Button>
+                            </Button.Group>
+                        }
+                        {this.isP4Connected() && (revert) &&
+                            <Button.Group size='mini'>
+                                <Button onClick={this.onRevert}>Revert</Button>
                                 <Button.Or />
-                                <Button positive onClick={ this.onSave } disabled={!this.isEdited()} >Save</Button>
+                                <Button positive onClick={this.onSave} disabled={!this.isEdited()} >Save</Button>
                             </Button.Group>
                         }
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key='source' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
-                        <Grid divided={ false }>
-                            <Grid.Row columns={ 2 }>
-                                <Grid.Column computer='10' tablet='8' mobile='6' className={ props.classes.leftColumnFix }>
-                                    <SourceCodeMenu path={ props.match.params } />
+                    <Tab.Pane key='source' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
+                        <Grid divided={false}>
+                            <Grid.Row columns={2}>
+                                <Grid.Column computer='10' tablet='8' mobile='6' className={props.classes.leftColumnFix}>
+                                    <SourceCodeMenu path={props.match.params} />
                                     <Switch>
-                                        {/* TODO: sync all pathes with business logic */ }
-                                        <Route exact path={ `/${props.match.params.view}/:fx/${GRAPH_KEYWORD}` }>
-                                            <GraphView name='graph' />
+                                        {/* TODO: sync all pathes with business logic */}
+                                        <Route exact path={`/${props.match.params.view}/:fx/${GRAPH_KEYWORD}`}>
+                                            <GraphView
+                                                graph={props.nodes.graph}
+                                                onChange={ () => this.props.actions.changed() }
+                                                onExecute={ () => this.props.actions.recompile() } />
                                         </Route>
-                                        <Route exact path={ `/${props.match.params.view}/:fx/${CODE_KEYWORD}` }>
-                                            { props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
+                                        <Route exact path={`/${props.match.params.view}/:fx/${CODE_KEYWORD}`}>
+                                            {props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
                                                 <CodeView content={
-                                                    FxEmitter.translateDocument(getFileState(this.props).slDocument) } />
+                                                    FxEmitter.translateDocument(getFileState(this.props).slDocument)} />
                                             }
                                         </Route>
-                                        <Route exact path={ `/${props.match.params.view}/:fx/${RAW_KEYWORD}` }>
-                                            <CodeView content={ getRawContent(getFileState(this.props)) } />
+                                        <Route exact path={`/${props.match.params.view}/:fx/${RAW_KEYWORD}`}>
+                                            <CodeView content={getRawContent(getFileState(this.props))} />
                                         </Route>
-                                        <Route path={ `/${PLAYGROUND_VIEW}/:fx/:name/:pass/(vertexshader|pixelshader)` }>
+                                        <Route path={`/${PLAYGROUND_VIEW}/:fx/:name/:pass/(vertexshader|pixelshader)`}>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
-                                        <Route path={ `/${PLAYGROUND_VIEW}/:fx/:name` }>
+                                        <Route path={`/${PLAYGROUND_VIEW}/:fx/:name`}>
                                             <ShaderTranslatorView name='shader-translator-view' />
                                         </Route>
-                                        <Route exact path={ `/${PLAYGROUND_VIEW}/:fx` }>
+                                        <Route exact path={`/${PLAYGROUND_VIEW}/:fx`}>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path={ `/${BYTECODE_VIEW}/:fx` }>
+                                        <Route exact path={`/${BYTECODE_VIEW}/:fx`}>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path={ `/${PROGRAM_VIEW}/:fx` }>
+                                        <Route exact path={`/${PROGRAM_VIEW}/:fx`}>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path={ `/${AST_VIEW}/:fx` }>
+                                        <Route exact path={`/${AST_VIEW}/:fx`}>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path={ `/${PREPROCESSOR_VIEW}/:fx` }>
+                                        <Route exact path={`/${PREPROCESSOR_VIEW}/:fx`}>
                                             <SourceEditor2 name='source-code' />
                                         </Route>
-                                        <Route exact path={ `/${GRAPH_VIEW}/:fx` }>
-                                            <GraphView name='graph' />
+                                        <Route exact path={`/${GRAPH_VIEW}/:fx`}>
+                                            <GraphView
+                                                graph={props.nodes.graph}
+                                                onChange={ () => this.props.actions.changed() }
+                                                onExecute={ () => this.props.actions.recompile() } />
                                         </Route>
                                     </Switch>
                                 </Grid.Column>
-                                <Grid.Column computer='6' tablet='8' mobile='10' className={ props.classes.rightColumnFix }>
+                                <Grid.Column computer='6' tablet='8' mobile='10' className={props.classes.rightColumnFix}>
                                     <Container>
                                         <Tab
-                                            defaultActiveIndex={ defaultActiveIndex }
-                                            menu={ {
+                                            defaultActiveIndex={defaultActiveIndex}
+                                            menu={{
                                                 attached: false, secondary: true, pointing: false,
                                                 size: 'mini', className: props.classes.mainMenu
-                                            } }
-                                            panes={ analysisResults }
-                                            renderActiveOnly={ false } />
+                                            }}
+                                            panes={analysisResults}
+                                            renderActiveOnly={false} />
                                     </Container>
                                 </Grid.Column>
                             </Grid.Row>
@@ -1165,12 +1146,12 @@ class App extends React.Component<IAppProps> {
             },
             {
                 menuItem: (
-                    <Menu.Item key="grammar-item" style={ { marginBottom: ipc.isElectron() ? '-1px': '-4px' } }>
+                    <Menu.Item key="grammar-item" style={{ marginBottom: ipc.isElectron() ? '-1px' : '-4px' }}>
                         <span>Grammar</span>
                     </Menu.Item>
                 ),
                 render: () => (
-                    <Tab.Pane key='grammar' className={ `${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}` }>
+                    <Tab.Pane key='grammar' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
                         <ParserParameters />
                     </Tab.Pane>
                 )
@@ -1178,71 +1159,71 @@ class App extends React.Component<IAppProps> {
             {
                 menuItem: (
                     <Menu.Item key='ver' position='right' inverted="true" disabled color='red'>
-                        <P4Status classes={ props.classes } info={ props.s3d.p4 } />
+                        <P4Status classes={props.classes} info={props.s3d.p4} />
                         &nbsp;
                         &nbsp;
-                        <S3DStatus classes={ props.classes } env={ props.s3d.env } />
+                        <S3DStatus classes={props.classes} env={props.s3d.env} />
                         &nbsp;
                         &nbsp;
-                        <Version classes={ props.classes } />
+                        <Version classes={props.classes} />
                     </Menu.Item>),
                 render: () => null
             }
         ];
 
         return (
-            <div className={ props.classes.mainContentHotfix }>
+            <div className={props.classes.mainContentHotfix}>
                 <Modal
-                    onClose={ () => this.closeConfirmDialog() }
-                    onOpen={ () => null }
-                    open={ this.state.confirmDialog.open }
+                    onClose={() => this.closeConfirmDialog()}
+                    onOpen={() => null}
+                    open={this.state.confirmDialog.open}
                 >
                     <Header icon>
                         {/* <Icon name='archive' /> */}
-                        { this.state.confirmDialog.title }
+                        {this.state.confirmDialog.title}
                     </Header>
                     <Modal.Content>
                         <p>
-                            { this.state.confirmDialog.message }
+                            {this.state.confirmDialog.message}
                         </p>
                     </Modal.Content>
                     <Modal.Actions>
                         <Button onClick={() => this.processConfirmDialog(false)}>
                             <Icon name='remove' /> No
                         </Button>
-                        <Button onClick={ () => this.processConfirmDialog(true) }>
+                        <Button onClick={() => this.processConfirmDialog(true)}>
                             <Icon name='checkmark' /> Yes
                         </Button>
                     </Modal.Actions>
                 </Modal>
                 <Sidebar.Pushable>
                     <Sidebar
-                        as={ Segment }
+                        as={Segment}
                         animation='overlay'
                         vertical
-                        visible={ this.state.showFileBrowser }
-                        className={ this.props.classes.fileBrowserSidebarFix }
+                        visible={this.state.showFileBrowser}
+                        className={this.props.classes.fileBrowserSidebarFix}
                     >
-                    <Form style={{ marginBottom: '10px' }}>
-                        <Form.Field>
-                            <Input
-                                size='small'
-                                iconPosition='left'
-                                placeholder='Filter...'
-                                onChange={(e) => { this.setState({ depotFilter: e.target.value }) }}
-                            />
-                        </Form.Field>
-                    </Form>
-                    <FileListView  
-                        root={ this.props.depot.root }  
-                        onFileClick={ this.openFile }
-                        desc={ env?.Get('game-name') || 'Development' }
-                        expanded={true}
-                        filters={ EXT_FILTER }
-                        search={ this.state.depotFilter }
-                    />
+                        <Form style={{ marginBottom: '10px' }}>
+                            <Form.Field>
+                                <Input
+                                    size='small'
+                                    iconPosition='left'
+                                    placeholder='Filter...'
+                                    onChange={(e) => { this.setState({ depotFilter: e.target.value }) }}
+                                />
+                            </Form.Field>
+                        </Form>
+                        <FileListView
+                            root={this.props.depot.root}
+                            onFileClick={this.openFile}
+                            desc={env?.Get('game-name') || 'Development'}
+                            expanded={true}
+                            filters={EXT_FILTER}
+                            search={this.state.depotFilter}
+                        />
                     </Sidebar>
-                    <Sidebar.Pusher dimmed={ this.state.showFileBrowser }>
+                    <Sidebar.Pusher dimmed={this.state.showFileBrowser}>
                         {
                             /*
                                 NOTE: "renderActiveOnly" should always be true
@@ -1251,34 +1232,33 @@ class App extends React.Component<IAppProps> {
                             */
                         }
                         <Tab
-                            menu={ { secondary: true, pointing: true } }
-                            panes={ panes }
-                            renderActiveOnly={ true }
+                            menu={{ secondary: true, pointing: true }}
+                            panes={panes}
+                            renderActiveOnly={true}
                             size='tiny'
-                            className={ props.classes.topMenuFix } />
+                            className={props.classes.topMenuFix} />
                     </Sidebar.Pusher>
                 </Sidebar.Pushable>
 
-                <Menu size='mini' vertical icon='labeled' color='black' inverted fixed='left' className={ props.classes.sidebarLeftHotfix }>
-                    <Menu.Item name='depot' onClick={ this.handleShowFileBrowser } >
-                        <Icon className={ 'three bars' as UnknownIcon } />
+                <Menu size='mini' vertical icon='labeled' color='black' inverted fixed='left' className={props.classes.sidebarLeftHotfix}>
+                    <Menu.Item name='depot' onClick={this.handleShowFileBrowser} >
+                        <Icon className={'three bars' as UnknownIcon} />
                         Depot
                     </Menu.Item>
-                    { ipc.isElectron() &&
-                        <Menu.Item name='create' onClick={ this.handleCreateNewEffect } >
-                            <Icon className={ 'plus' as UnknownIcon } />
+                    {ipc.isElectron() &&
+                        <Menu.Item name='create' onClick={this.handleCreateNewEffect} >
+                            <Icon className={'plus' as UnknownIcon} />
                             New
                         </Menu.Item>
                     }
                 </Menu>
 
-                <SemanticToastContainer position='bottom-right' animation='fade down' className={ props.classes.toastFontFix }/>
+                <SemanticToastContainer position='bottom-right' animation='fade down' className={props.classes.toastFontFix} />
             </div>
         );
     }
 
-    async componentDidMount()
-    {
+    async componentDidMount() {
         // custom request to hide prevew window and show main when it's completely ready
         ipc.async.notifyAppReady();
     }
@@ -1289,4 +1269,12 @@ class App extends React.Component<IAppProps> {
 
 
 
-export default connect<{}, {}, IAppProps>(mapProps(getCommon), mapActions({ ...sourceActions, ...routerActions, ...playgroundActions, ...depotActions }))(withStyles(styles)(App)) as any;
+export default connect<{}, {}, IAppProps>(
+    mapProps(getCommon),
+    mapActions({
+        ...sourceActions,
+        ...routerActions,
+        ...playgroundActions,
+        ...depotActions,
+        ...nodesActions
+    }))(withStyles(styles)(App)) as any;

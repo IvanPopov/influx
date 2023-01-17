@@ -1,6 +1,6 @@
 {
   "name": "influx",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "license": "UNLICENSED",
   "private": false,
   "engines": {
@@ -101,18 +101,19 @@
   },
   "scripts": {
     "electron": "electron ./shell.js",
-    "details": "node ./dist/utils/details/entry.js",
-    "build:details": "tsc --p ./src/utils/details",
-    "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack",
-    "build:electron": "cross-env NODE_ENV=production APP_TARGET=electron webpack",
-    "dev:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack",
-    "dev:web": "cross-env NODE_ENV=development APP_TARGET=web webpack",
-    "dev-server:web": "cross-env NODE_ENV=development APP_TARGET=web webpack-dev-server",
-    "dev-server:electron": "cross-env NODE_ENV=development APP_TARGET=electron webpack --watch",
+    "details": "node ./dist/details.js",
+    "build:shell": "webpack --config ./webpack.shell.js",
+    "build:details": "webpack --config ./webpack.details.js",
+    "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack --config ./webpack.sandbox.js",
+    "build:electron": "npm run build:shell & cross-env NODE_ENV=production APP_TARGET=electron webpack --config ./webpack.sandbox.js",
+    "dev:electron": "npm run build:shell & cross-env NODE_ENV=development APP_TARGET=electron webpack --config ./webpack.sandbox.js",
+    "dev:web": "cross-env NODE_ENV=development APP_TARGET=web webpack --config ./webpack.sandbox.js",
+    "dev-server:web": "cross-env NODE_ENV=development APP_TARGET=web webpack-dev-server --config ./webpack.sandbox.js",
+    "dev-server:electron": "npm run build:shell & cross-env NODE_ENV=development APP_TARGET=electron webpack --watch --config ./webpack.sandbox.js",
     "docs:web": "typedoc --out dist/web/docs src",
     "pack:electron": "npx electron-builder -c ./electron-builder.yml",
     "clean:electron": "node -e \"let fs = require('fs-extra');fs.emptyDir('dist/electron');fs.emptyDir('release');\"",
-    "package:electron": "npm run clean:electron & npm run build:electron & npm run pack:electron"
+    "package:electron": "npm run clean:electron & npm run build:shell & npm run build:electron & npm run pack:electron"
   },
   "dependencies": {
     "minimist": "^1.2.6"

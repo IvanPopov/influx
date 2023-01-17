@@ -1,4 +1,4 @@
-import { Bundle, BundleT } from '../../lib/idl/bundles/FxBundle_generated';
+import { Bundle, BundleContent, BundleT, EMatRenderRoutines, MatBundleT, RoutineBytecodeBundle, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundle, RoutineShaderBundleT, RoutineSourceBundle } from '../../lib/idl/bundles/FxBundle_generated';
 import * as flatbuffers from 'flatbuffers';
 import fs from 'fs';
 import minimist from 'minimist';
@@ -7,9 +7,8 @@ const argv = minimist(process.argv);
 
 function printHelp() {
     let m = [
-      "OPTIONS:",
-      "\t--info",
-      ""
+      "No options needed!",
+      "Just specify path to BFX file."
     ];
 
     console.log(m.join('\n'));
@@ -35,6 +34,63 @@ function main() {
         console.log(`\n`);
         const deps = { templates: fx.content.renderPasses.map(pass => pass.geometry) };
         console.log(JSON.stringify(deps, null, '   '));   
+
+        console.log('\n');
+        console.log(fx.controls);
+
+        console.log('\n');
+        console.log(fx.presets);
+
+        if (fx.contentType === BundleContent.MatBundle) {
+            const bundle = <MatBundleT>fx.content;
+            bundle.renderPasses.forEach(pass => {
+                const { routines } = pass;
+
+                const asGLSL = (routine: RoutineBytecodeBundleT | RoutineShaderBundleT): RoutineGLSLSourceBundleT => {
+                    const bundle = <RoutineShaderBundleT>routine;
+                    return <RoutineGLSLSourceBundleT>bundle.shaders.find((shader, i) => bundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
+                }
+
+                const asHLSL = (routine: RoutineBytecodeBundleT | RoutineShaderBundleT): RoutineHLSLSourceBundleT => {
+                    const bundle = <RoutineShaderBundleT>routine;
+                    return <RoutineHLSLSourceBundleT>bundle.shaders.find((shader, i) => bundle.shadersType[i] === RoutineSourceBundle.RoutineHLSLSourceBundle);
+                }
+                
+
+                const printShader = (title: string, routine: RoutineGLSLSourceBundleT | RoutineHLSLSourceBundleT ) => {
+                    if (routine) {
+                        console.log('\n');
+                        console.log(`+---------------------------------------+`);
+                        console.log(`| ${title}                           |`);
+                        console.log(`+---------------------------------------+`);
+                        console.log(routine.code);
+                        console.log('\n');
+                    }
+                }
+
+                const printCBuffers = (title: string, shader: RoutineHLSLSourceBundleT) => {
+                    console.log('\n');
+                    console.log(`+---------------------------------------+`);
+                    console.log(`| ${title}                           |`);
+                    console.log(`+---------------------------------------+`);
+                    console.log('\n');
+
+                    shader.cbuffers.map(cb => {
+                        console.log(cb);
+                    });
+                }
+
+                
+                printShader('Vertex GLSL', asGLSL(routines[EMatRenderRoutines.k_Vertex]));
+                printShader('Pixel GLSL ', asGLSL(routines[EMatRenderRoutines.k_Pixel]));
+
+                printShader('Vertex HLSL', asHLSL(routines[EMatRenderRoutines.k_Vertex]));
+                printShader('Pixel HLSL ', asHLSL(routines[EMatRenderRoutines.k_Pixel]));
+
+                printCBuffers('Vertex HLSL - cbuffers', asHLSL(routines[EMatRenderRoutines.k_Vertex]));
+                printCBuffers('Pixel HLSL - cbuffers ', asHLSL(routines[EMatRenderRoutines.k_Pixel]));
+            });
+        }
     }
 }
 

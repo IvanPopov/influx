@@ -1,7 +1,9 @@
-const electron = require("electron");
-const path = require("path");
-const url = require("url");
-const fs = require("fs");
+import * as electron from "electron";
+import * as path from "path";
+import * as url from "url";
+import * as fs from "fs";
+import * as S3D from "../lib/util/s3d/prjenv";
+
 // skip 2 arguments if it's run unpacked like: ./electron ./shell.js [arguments]
 // otherwise it's expected to run as: app.exe [arguments]
 const argv = require('minimist')(process.argv.slice(process.argv[1] == './shell.js' ? 2 : 1));
@@ -21,6 +23,7 @@ function printHelp() {
       "",
       "OPTIONS:",
       "\t--dev-tools                        Show developer tools.",
+      "\t--disable-wasm                     To run with turned off WASM support.",
       "\t--help                             Print this message.",
       ""
     ];
@@ -31,6 +34,17 @@ function printHelp() {
 if (argv['help'] || argv['h']) {
     printHelp();
     process.exit(0);
+}
+
+if (argv['deploy']) {
+    deploy();
+    process.exit();
+}
+
+function deploy() {
+    const filename = argv['deploy'];
+    const prjenv = new S3D.ProjectEnv(filename);
+    console.log(prjenv.Get('game-name'));
 }
 
 function processCommandLineArguments() {
@@ -188,3 +202,4 @@ ipc.on('process-save-file-dialog', (event, arg) => {
 
     event.returnValue = filename;
 });
+
