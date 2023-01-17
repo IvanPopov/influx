@@ -121,4 +121,4 @@ npm-debug.log
 .vscode/
 .tscache/
 .awcache
-./shell.js
+shell.js
