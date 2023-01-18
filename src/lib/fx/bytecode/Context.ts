@@ -1,9 +1,9 @@
-import { assert, isDef, MakeOptional } from "@lib/common";
+import { assert, isDef, isDefAndNotNull, MakeOptional } from "@lib/common";
 import { EAddrType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IFunctionDeclInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { IRange } from "@lib/idl/parser/IParser";
+import { IFile, IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
 import { f32Asi32, sname } from "./common";
@@ -15,45 +15,70 @@ import sizeof from "./sizeof";
 import SymbolTable from "./SymbolTable";
 import { SRVPool } from "./SRVPool";
 import { UAVPool } from "./UAVPool";
+import { IMap } from "@lib/idl/IMap";
 
 export enum EErrors {
     k_UnsupportedConstantType,
     k_UnsupportedExprType,
     k_UnsupoortedTypeConversion,
     k_UnsupportedArithmeticExpr,
-    k_UnsupportedRelationalExpr
+    k_UnsupportedRelationalExpr,
+    k_UnsupportedIntrinsic,
+    k_UnsupportedUnaryExpression,
+    k_UnsupportedAssigmentOperator,
+    k_UnsupportedAddressType,
+    k_AddressCannotBeResolved,
+    k_EntryPointNotFound,
+
+    k_NotImplemented
 }
 
+export enum EWarnings {
 
-// FIXME: don't use 'any' type
-type ITranslatorDiagDesc = any;
+}
 
-export class TranslatorDiagnostics extends Diagnostics<ITranslatorDiagDesc> {
+interface IDiagDesc {
+    file: IFile;
+    loc: IRange;
+    info: any; // TODO: fixme
+}
+
+export class TranslatorDiagnostics extends Diagnostics<IDiagDesc> {
     constructor() {
         super("Translator Diagnostics", 'T');
     }
 
-    protected resolveFilename(code: number, desc: ITranslatorDiagDesc): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IDiagDesc): string {
         return '[unknown]';  // FIXME: return correct filename
     }
 
-    protected resolveRange(category: EDiagnosticCategory,code: number, desc: ITranslatorDiagDesc): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IDiagDesc): IRange {
         return { start: { line: 0, column: 0, file: null }, end: { line: 0, column: 0, file: null } }; // todo: fixme
     }
 
+    protected diagnosticMessages() {
+        // TODO: fill all errors.
+        // TODO: add support for warnings
+        return {};
+    }
 
     protected resolveDescription(code: number, category: EDiagnosticCategory, desc: any): string {
-        let { ...data } = desc;
-        if (category == EDiagnosticCategory.k_Warning) {
-            return `warning: ${JSON.stringify(data)}`;
+        let descList = this.diagnosticMessages();
+        if (isDefAndNotNull(descList[code])) {
+            return super.resolveDescription(code, category, desc);
         }
-        return `${EErrors[code]}: ${JSON.stringify(data)}`;
+
+        let { loc, ...data } = desc;
+        if (category == EDiagnosticCategory.k_Warning) {
+            return `${EWarnings[code]}: ${JSON.stringify(data)}`;
+        }
+        return `${EErrors[code]}:${loc?.start.line}:${loc?.start.column}: ${JSON.stringify(data)}`;
     }
 }
 
 
 
-export function ContextBuilder() {
+export function ContextBuilder(uri: IFile) {
     // occupied registers count 
     // same as stack pointer; 
     // counter grows forward;
@@ -86,6 +111,35 @@ export function ContextBuilder() {
 
     const diag = new TranslatorDiagnostics; // todo: remove it?
 
+    //
+    // copied from analyzer.
+    // ====================
+    //
+
+    type IErrorInfo = IMap<any>;
+    // type IWarningInfo = IMap<any>;
+
+    const resolveNodeSourceLocation = (sourceNode: IParseNode): IRange => {
+        if (!isDefAndNotNull(sourceNode)) return null;
+        if (isDef(sourceNode.loc)) return sourceNode.loc;
+        return resolveNodeSourceLocation(sourceNode.children[sourceNode.children.length - 1]);
+    }
+
+    const error = (sourceNode: IParseNode, code: number, info: IErrorInfo = {}) => {
+        const loc = resolveNodeSourceLocation(sourceNode);
+        const file = uri;
+        diag.error(code, { file, loc, info });
+    }
+
+    const critical = (sourceNode: IParseNode, code: number, info: IErrorInfo = {}) => {
+        const loc = resolveNodeSourceLocation(sourceNode);
+        const file = uri;
+        diag.critical(code, { file, loc, info });
+    }
+
+    //
+    // ====================
+    //
 
     /** @returns Description of the top of the callstack */
     const top = () => stack[stack.length - 1];
@@ -595,7 +649,9 @@ export function ContextBuilder() {
         uavs,
         srvs,
         depth,
-        diag
+        diag,
+        error,
+        critical
     };
 }
 

@@ -926,10 +926,10 @@ class App extends React.Component<IAppProps> {
                                     </Table.Row>
                                 </Table.Body>
                             </Table>
-                            {$debugger.runtime ? (
+                            {$debugger.bcDocument?.program ? (
                                 <div>
                                     {/* todo: move memory view inside bytecode view; */}
-                                    <MemoryView program={$debugger.runtime} />
+                                    <MemoryView bcDocumnet={$debugger.bcDocument} />
                                     <BytecodeView />
                                 </div>
                             ) : null}

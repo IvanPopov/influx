@@ -10,7 +10,7 @@ import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { Diagnostics } from "@lib/util/Diagnostics";
+import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 
 import { i32ToU8Array } from "./common";
@@ -18,6 +18,8 @@ import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Cont
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+import { IFile } from "@lib/idl/parser/IParser";
+import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 
 // [00 - 01) cbs
 // [01 - 17) inputs
@@ -37,13 +39,15 @@ export const CBUFFER_TOTAL = INPUT0_REGISTER - CBUFFER0_REGISTER;
 
 const UNRESOLVED_JUMP_LOCATION = -1;
 
-// TODO: rename as IProgramDocument
-export interface ISubProgram {
+interface ISubProgram {
     code: Uint8Array;
     cdl: CDL;
+}
 
-    // diagnosticReport: IDiagnosticReport;
-    // uri: IFile
+export interface IBCDocument {
+    uri: IFile
+    diagnosticReport: IDiagnosticReport;
+    program: ISubProgram;
 }
 
 function writeString(u8data: Uint8Array, offset: number, value: string): number {
@@ -183,7 +187,8 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
 function translateUnknown(ctx: IContext, instr: IInstruction): void {
     const {
         pc,
-        diag,
+        error,
+        critical,
         constants,
         uavs,
         srvs,
@@ -236,6 +241,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
+                    return PromisedAddress.INVALID;
                 }
             }
 
@@ -248,8 +254,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             };
 
             const op: EOperation = opFloatMap[opName];
+
             if (!isDef(op)) {
-                diag.error(EErrors.k_UnsupportedArithmeticExpr, {});
+                // todo: emit correct source location
+                error(null, EErrors.k_UnsupportedArithmeticExpr, { tooltip: `operation: ${opName}`});
                 return PromisedAddress.INVALID;
             }
 
@@ -270,6 +278,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     right = addr.override(right, Array(n).fill(0));
                 } else {
                     assert(false, 'vectors with differen length cannot be multipled');
+                    return PromisedAddress.INVALID;
                 }
             }
 
@@ -282,8 +291,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             }
 
             const op: EOperation = opIntMap[opName];
+
             if (!isDef(op)) {
-                diag.error(EErrors.k_UnsupportedArithmeticExpr, {});
+                // todo: emit correct source location
+                error(null, EErrors.k_UnsupportedArithmeticExpr, { tooltip: `operation ${opName}` });
                 return PromisedAddress.INVALID;
             }
 
@@ -522,7 +533,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 return EAddrType.k_Input;
             }
 
-            assert(false, `could not resolve address type for '${decl.toCode()}'`);
+            critical(decl.sourceNode, EErrors.k_AddressCannotBeResolved, { 
+                tooltip: `could not resolve address type for '${decl.toCode()}'`
+            });
         }
 
         assert(decl.isLocal());
@@ -595,57 +608,42 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case 'asfloat':
             case 'asint':
                 // NOTE: nothing todo
-                assert(fdef.params.length === 1);
                 return args[0];
             case 'mul':
-                assert(fdef.params.length === 2);
                 return intrinsics.mulf(dest, args[0], args[1]);
             case 'dot':
-                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
                 return intrinsics.dotf(dest, args[0], args[1]);
             case 'frac':
-                assert(fdef.params.length === 1);
                 return intrinsics.fracf(dest, args[0]);
             case 'sin':
-                assert(fdef.params.length === 1);
                 return intrinsics.sinf(dest, args[0]);
             case 'cos':
-                assert(fdef.params.length === 1);
                 return intrinsics.cosf(dest, args[0]);
             case 'abs':
-                assert(fdef.params.length === 1);
                 return intrinsics.absf(dest, args[0]);
             case 'sqrt':
-                assert(fdef.params.length === 1);
                 return intrinsics.sqrtf(dest, args[0]);
             case 'normalize':
-                assert(fdef.params.length === 1);
                 return intrinsics.normalizef(dest, args[0]);
             case 'length':
-                assert(fdef.params.length === 1);
                 return intrinsics.lengthf(dest, args[0]);
             case 'floor':
-                assert(fdef.params.length === 1);
                 return intrinsics.floorf(dest, args[0]);
             case 'ceil':
-                assert(fdef.params.length === 1);
                 return intrinsics.ceilf(dest, args[0]);
             case 'distance':
-                assert(fdef.params.length === 2 && dest.size === sizeof.f32());
                 return intrinsics.distancef(dest, args[0], args[1]);
             case 'min':
                 // TODO: separate INT/FLOAT intrisics
                 if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
-                    assert(fdef.params.length === 2);
                     return intrinsics.minf(dest, args[0], args[1]);
                 }
-                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
+                assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[1].type));
                 // handle INT/UINT params as int intrinsic
                 return intrinsics.mini(dest, args[0], args[1]);
             case 'max':
                 // TODO: separate INT/FLOAT intrisics
                 if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
-                    assert(fdef.params.length === 2);
                     return intrinsics.maxf(dest, args[0], args[1]);
                 }
                 assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
@@ -655,15 +653,12 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 assert (SystemScope.isFloatBasedType(fdef.params[0].type));
                 return intrinsics.stepf(dest, args[0], args[1]);
             case 'lerp':
-                assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
             case 'cross':
-                assert(fdef.params.length === 2);
                 return intrinsics.cross(dest, args[0], args[1]);
             case 'mod':
                 // TODO: separate INT/FLOAT intrisics
                 if (SystemScope.isFloatBasedType(fdef.params[0].type)) {
-                    assert(fdef.params.length === 2);
                     return intrinsics.modf(dest, args[0], args[1]);
                 }
                 assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
@@ -724,7 +719,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     imove(uavCounterAddr, nextValueAddr);
                     return valueAddr;
                 }
-                return PromisedAddress.INVALID;
             case 'Append':
                 {
                     const { callee: uav, args } = call;
@@ -748,8 +742,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     return elementPointer;
                 }
-                return PromisedAddress.INVALID;
-
             //
             // Textures
             //
@@ -813,7 +805,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 }
         }
 
-        assert(false, `unsupported intrinsic found '${fdecl.name}'`);
+        error(call.sourceNode, EErrors.k_UnsupportedIntrinsic, { name: call.decl.name });
         return PromisedAddress.INVALID;
     }
 
@@ -826,7 +818,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const init = expr as IInitExprInstruction;
 
                     if (init.isArray()) {
-                        diag.error(EErrors.k_UnsupportedExprType, {});
+                        // todo: add support
+                        error(expr.sourceNode, EErrors.k_UnsupportedExprType, { tooltip: 'arrays are not yet supported' });
                         return PromisedAddress.INVALID;
                     }
 
@@ -897,7 +890,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             }
                     }
 
-                    assert(false, 'unsupported branch found');
+                    critical(id.sourceNode, EErrors.k_UnsupportedAddressType, { tooltip: `type: ${addrType}` });
                     return PromisedAddress.INVALID;
                 }
             case EInstructionTypes.k_ComplexExpr:
@@ -986,7 +979,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                 : intrinsics.divi(leftAddr, leftAddr, rightAddr);
                             break;
                         default:
-                            assert(false, `unsupported assigment operator has been found ${assigment.operator}`);
+                            error(null, EErrors.k_UnsupportedAssigmentOperator, { tooltip: `operator: ${assigment.operator}` });
                     }
 
                     debug.map(assigment);
@@ -1044,7 +1037,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         }
                     }
 
-                    console.error(`unsupported type of unary expression found: '${op}'(${postfix.toCode()})`);
+                    error(postfix.sourceNode, EErrors.k_UnsupportedUnaryExpression, { 
+                        tooltip: `unsupported type of unary expression found: '${op}'(${postfix.toCode()})`
+                    });
                     return PromisedAddress.INVALID;
                 }
             case EInstructionTypes.k_UnaryExpr:
@@ -1115,7 +1110,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // fall to unsupported warning
                         }
                     }
-                    console.error(`unsupported type of unary expression found: '${op}'(${unary.toCode()})`);
+                    error(unary.sourceNode, EErrors.k_UnsupportedUnaryExpression, { 
+                        tooltip: `unsupported type of unary expression found: '${op}'(${unary.toCode()})`
+                    });
                     return PromisedAddress.INVALID;
                 }
             case EInstructionTypes.k_LogicalExpr:
@@ -1197,7 +1194,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         // print warning if right type is UINT;
                         if (!right.type.isEqual(T_INT) && !right.type.isEqual(T_UINT)) {
-                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
                     } else if (left.type.isEqual(T_UINT)) {
@@ -1205,26 +1202,26 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                         // print warning if right type is INT;
                         if (!right.type.isEqual(T_UINT) && !right.type.isEqual(T_INT)) {
-                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
                     } else if (left.type.isEqual(T_FLOAT)) {
                         op = opFloatMap[operator];
 
                         if (!right.type.isEqual(T_FLOAT)) {
-                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
                     } else if (left.type.isEqual(T_BOOL)) {
                         op = opIntMap[operator];
                         if (!right.type.isEqual(T_BOOL)) {
-                            diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                            error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
                     }
 
                     if (!op) {
-                        diag.error(EErrors.k_UnsupportedRelationalExpr, {});
+                        error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                         return PromisedAddress.INVALID;
                     }
 
@@ -1284,7 +1281,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         } else if (dstType.isEqual(T_UINT)) {
                             op = EOperation.k_F32ToU32;
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
+                            error(castExpr.sourceNode, EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
                     } else if (srcType.isEqual(T_INT)) {
@@ -1294,7 +1291,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
+                            error(castExpr.sourceNode, EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
                     } else if (srcType.isEqual(T_UINT)) {
@@ -1304,7 +1301,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
-                            diag.error(EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
+                            error(castExpr.sourceNode, EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
                     }
@@ -1327,7 +1324,6 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const { element, index } = postfixIndex;
 
                     assert(type.equals(index.type, T_INT) || type.equals(index.type, T_UINT));
-                    // assert(element.type.isNotBaseArray());
                     assert(!isNull(element.type.arrayElementType));
 
                     if (/*index.isConstExpr()*/false) {
@@ -1391,7 +1387,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         }
                     }
 
-                    assert(false, 'not implemented!');
+                    critical(expr.sourceNode, EErrors.k_NotImplemented, {});
 
                     // todo: add support for move_reg_ptr, move_ptr_ptr, move_ptr_reg
                     return elementAddr;
@@ -1835,40 +1831,48 @@ const hex4 = (v: number) => `0x${v.toString(16).padStart(4, '0')}`;
 // const reg = (v: number) => REG_NAMES[v] || `[${hex2(v >>> 0)}]`;    // register address;
 // const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
 
+/// <reference path="./webpack.d.ts" />
+export function translate(slDocument: ISLDocument, entryName: string): IBCDocument {
+    const uri = slDocument.uri;
+    const ctx = ContextBuilder(uri);
 
-export function translate(entryFunc: IFunctionDeclInstruction): ISubProgram {
-    let ctx = ContextBuilder();
-    let res: ISubProgram = null;
+    let program: ISubProgram = null;
 
+    if (!PRODUCTION) {
+        console.time('[translate program]');
+    }
+    
     try {
+        const entryFunc = slDocument.root.scope.findFunction(entryName, null);
         if (!isDefAndNotNull(entryFunc)) {
-            console.error(`Entry point '${entryFunc.name}' not found.`);
-            return null;
+            ctx.critical(entryFunc.sourceNode, EErrors.k_EntryPointNotFound, {});
         }
-        res = translateProgram(ctx, entryFunc);
-        // console.log(`${entryFunc.def.name} translated as ${res.code.byteLength} bytes`);
+        program = translateProgram(ctx, entryFunc);
     } catch (e) {
-        throw e;
-        console.error(TranslatorDiagnostics.stringify(ctx.diag.resolve()));
+        if (!(e instanceof DiagnosticException)) 
+        {
+            throw e;
+        }
     }
 
-    let report = ctx.diag.resolve();
-    if (report.errors) {
-        console.error(Diagnostics.stringify(report));
+    if (!PRODUCTION) {
+        console.timeEnd('[translate program]');
+        // console.log(`${entryFunc.def.name} translated as ${res.code.byteLength} bytes`);
     }
 
-    return res;
+    const diagnosticReport = ctx.diag.resolve();
+    return { uri, diagnosticReport, program };
 }
 
 
-export async function translateExpression(expr: string, document?: ISLDocument): Promise<ISubProgram> {
+export async function translateExpression(expr: string, context?: ISLDocument): Promise<IBCDocument> {
     const uri = `://expression`;
     const anonymousFuncName = `anonymous`;
     const source = `auto ${anonymousFuncName}() { return (${expr}); }`;
     const textDocument = await createTextDocument(uri, source);
-    const documentEx = await createFXSLDocument(textDocument, undefined, document);
+    const documentEx = await createFXSLDocument(textDocument, undefined, context);
     if (!documentEx.diagnosticReport.errors) {
-        return translate(documentEx.root.scope.findFunction(anonymousFuncName, null));
+        return translate(documentEx, anonymousFuncName);
     }
     console.error(Diagnostics.stringify(documentEx.diagnosticReport));
     return null;

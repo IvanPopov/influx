@@ -1,4 +1,4 @@
-import { ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { IBCDocument } from '@lib/fx/bytecode/Bytecode';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -32,7 +32,7 @@ export interface IDebuggerState {
     // BytecodeView shows instructions
     // with additional debug info, like colorization using
     // cdl view.
-    runtime: ISubProgram;
+    bcDocument: IBCDocument;
 }
 
 

@@ -95,12 +95,24 @@ function createFxRoutineNoBytecodeBundle(): RoutineBytecodeBundleT {
 
 function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSShaderReflectionEx): RoutineBytecodeBundleT {
     const entry = reflection.name;
-    const shader = slDocument.root.scope.findFunction(entry, null);
-    assert(shader);
-    
     const numthreads = [...reflection.numthreads];
-    const program = Bytecode.translate(shader);
-    const code = program.code;
+    const bcDocument = Bytecode.translate(slDocument, entry);
+
+    if (bcDocument.diagnosticReport.errors) {
+        // const content = CodeEmitter.translateDocument(slDocument);
+        // const step = (y, x) => x > y ? 1 : 0;
+        // const pad = (x) => Array(step(x, 1000) + step(x, 100) + step(x, 10)).fill(' ').join('') + x;
+        // console.log(content.split('\n').map((line, i) => `${pad(i + 1)}. ${line}`).join('\n'));
+        console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
+        alert('could not generate bytecode, see console log for details');
+    }
+
+    const code = bcDocument.program?.code;
+
+    if (!code) {
+        return new RoutineBytecodeBundleT();
+    }
+
     const uavs = reflection.uavs.map(({ name, register: slot, elementType }) => {
         const typeInstr = slDocument.root.scope.findType(elementType);
         const stride = typeInstr.size; // in bytes

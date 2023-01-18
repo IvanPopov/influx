@@ -6,6 +6,7 @@ import * as Bytecode from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Bundle from "@lib/idl/bytecode";
 import { TypeLayoutT, TypeFieldT } from "@lib/idl/bundles/FxBundle_generated";
+import { IBCDocument } from "../Bytecode";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {
     const vector = [];
@@ -109,9 +110,9 @@ export function asNativeViaCDL(result: Uint8Array, cdl: CDL): any {
     return asNativeRaw(result, typeAstToTypeLayout(cdl.info.layout));
 }
 
-export function asNativeFunction(fn: IFunctionDeclInstruction): Function
+export function asNativeFunction(bcDocument: IBCDocument): Function
 {
-    const { code, cdl } = Bytecode.translate(fn);
+    const { code, cdl } = bcDocument.program;
     const bundle = VM.make(`[as-native-function]`, code);
     return (...args: any[]) => {
         assert(!args || args.length === 0, 'arguments not supported');

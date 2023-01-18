@@ -112,7 +112,7 @@ export async function evaluate(param: string | Uint8Array, param2?: ISLDocument)
     if (isString(arguments[0])) {
         const expr = <string>arguments[0];
         const slDocument = <ISLDocument>arguments[1];
-        const program = await Bytecode.translateExpression(expr, slDocument);
+        const { program } = await Bytecode.translateExpression(expr, slDocument);
         if (isNull(program)) {
             return null;
         }

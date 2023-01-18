@@ -242,14 +242,14 @@ function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileStat
     // const fn = fileState.slDocument.root.scope.findFunction(debuggerState.expression, null);
     const locList = [];
 
-    if (debuggerState.runtime) {
+    if (debuggerState.bcDocument?.program) {
         // const from = fn.sourceNode.loc.start.line;
         // const to = fn.sourceNode.loc.end.line;
 
         const from = 0;
         const to = fileState.content.split('\n').length;
 
-        const cdl = cdlview(debuggerState.runtime.cdl);
+        const cdl = cdlview(debuggerState.bcDocument.program.cdl);
 
         for (let ln = from; ln <= to; ++ln) {
             const color = cdl.resolveLineColor(ln, fileState.uri);
@@ -278,13 +278,19 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
             const func = file.slDocument.root.scope.findFunction(expression, null);
             // workaround for debug purposes (interpretations of the expressions string as function name)
             if (func) {
-                const program = Bytecode.translate(func);
-                dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime: program } });
-            } else {
-                const program = await Bytecode.translateExpression(expression, file.slDocument);
-                if (!isNull(program)) {
-                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, runtime: program } });
+                const bcDocument = Bytecode.translate(file.slDocument, func.name);
+                if (bcDocument.diagnosticReport.errors == 0) {
+                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, bcDocument } });
                 } else {
+                    console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
+                    alert('could not evaluate expression, see console log for details');
+                }
+            } else {
+                const bcDocument = await Bytecode.translateExpression(expression, file.slDocument);
+                if (bcDocument.diagnosticReport.errors == 0) {
+                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, bcDocument } });
+                } else {
+                    console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
                     alert('could not evaluate expression, see console log for details');
                 }
             }

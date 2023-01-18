@@ -1,6 +1,7 @@
 import { assert, isDef } from "@lib/common";
 import { IFunctionDeclInstruction, IInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import DistinctColor from "@lib/util/DistinctColor";
+import { isDefAndNotNull } from "@lib/util/s3d/type";
 import { isNull } from "util";
 
 enum EDebugLineFlags {
@@ -57,9 +58,12 @@ function debugLine(pc: PC) {
         
         const pos = loc.start;
         const rec = lastRecord();
-        rec.line = pos.line || 0;
-        rec.column = pos.column || 0;
-        rec.file = fileToIndex(`${pos.file}`);
+
+        if (rec) {
+            rec.line = pos.line || 0;
+            rec.column = pos.column || 0;
+            rec.file = fileToIndex(`${pos.file}`);
+        }
     }
 
 
@@ -176,7 +180,7 @@ type Color = number;
  * Code Debug Layout View.
  */
 export function cdlview(cdlRaw: CDL) {
-    if (isNull(cdlRaw)) {
+    if (!isDefAndNotNull(cdlRaw)) {
         return null;
     }
 

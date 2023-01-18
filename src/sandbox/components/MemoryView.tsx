@@ -1,4 +1,4 @@
-import { CBUFFER0_REGISTER, ISubProgram } from '@lib/fx/bytecode/Bytecode';
+import { CBUFFER0_REGISTER, IBCDocument } from '@lib/fx/bytecode/Bytecode';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { Popup, Table } from 'semantic-ui-react';
@@ -13,13 +13,13 @@ export const styles = {
 };
 
 export interface IMemoryViewProps extends WithStylesProps<typeof styles> {
-    program: ISubProgram;
+    bcDocumnet: IBCDocument;
 }
 
 class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     render() {
-        if (!this.props.program) {
+        if (!this.props.bcDocumnet.program) {
             return null;
         }
         return (
@@ -34,7 +34,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
 
     renderContent(): JSX.Element[] {
         const { props } = this;
-        const bundle = VM.make(`[memory-view]`, props.program.code);
+        const bundle = VM.make(`[memory-view]`, props.bcDocumnet.program.code);
         
         // temp hack to fix problem with unset CBUFFER0_REGISTER input if wasm bundle is used
         // without it bundle.getInput(CBUFFER0_REGISTER) return no input

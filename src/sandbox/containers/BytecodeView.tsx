@@ -22,6 +22,7 @@ import { Button, Icon, Table } from 'semantic-ui-react';
 // todo: don't use TS specific bundle helpers
 import * as JSVM from '@lib/fx/bytecode/VM/ts/bundle';
 import { CBUFFER0_REGISTER, CBUFFER_TOTAL, SRV0_REGISTER, SRV_TOTAL, UAV0_REGISTER, UAV_TOTAL } from '@lib/fx/bytecode/Bytecode';
+import { isDefAndNotNull } from '@lib/util/s3d/type';
 
 export interface IBytecodeViewProps extends IDebuggerState {
     actions: typeof sourceActions;
@@ -97,16 +98,22 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
     static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
         const count = 0;
-        const cdlView = cdlview(props.runtime.cdl);
+        const cdlView = cdlview(props.bcDocument.program?.cdl);
 
         return { count, cdlView };
     }
 
     render() {
         const { props } = this;
-        const { runtime: { code, cdl } } = props;
+        const { program } = props.bcDocument;
 
-        if (isNull(code)) {
+        if (!isDefAndNotNull(program)) {
+            return null;
+        }
+
+        const { code, cdl } = program;
+
+        if (!isDefAndNotNull(code)) {
             return null;
         }
 

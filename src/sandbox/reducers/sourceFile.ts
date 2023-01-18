@@ -24,7 +24,7 @@ const initialState: IFileState = {
     defines: [],
     debugger: {
         expression: null,
-        runtime: null,
+        bcDocument: null,
         options: {
             colorize: true,
             disableOptimizations: true,
@@ -53,7 +53,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             error: action.payload.error,
             // NOTE: temp solution (clean up all info about prev file)
             content: null,
-            debugger: { ...state.debugger, runtime: null },
+            debugger: { ...state.debugger, bcDocument: null },
             breakpoints: [],
             slastDocument: null,
             slDocument: null,
@@ -66,7 +66,7 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
             ...state,
             error: null,
             content: null,
-            debugger: { ...state.debugger, runtime: null },
+            debugger: { ...state.debugger, bcDocument: null },
             markers: {},
             breakpoints: [],
             slastDocument: null,
@@ -146,13 +146,13 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.DEBUGGER_START_DEBUG]: (state, action: IDebuggerStartDebug) => {
         const options = state.debugger.options;
-        const { expression, runtime } = action.payload;
-        return { ...state, debugger: { expression, runtime, options } };
+        const { expression, bcDocument } = action.payload;
+        return { ...state, debugger: { expression, bcDocument, options } };
     },
 
     [evt.DEBUGGER_RESET]: (state) => {
         const { debugger: { options } } = state;
-        return { ...state, debugger: { expression: null, runtime: null, options, layout: 'i32' } };
+        return { ...state, debugger: { expression: null, bcDocument: null, options, layout: 'i32' } };
     },
 
     [evt.DEBUGGER_OPTIONS_CHANGED]: (state: IFileState, action: IDebuggerOptionsChanged) => {

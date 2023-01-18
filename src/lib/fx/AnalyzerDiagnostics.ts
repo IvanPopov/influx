@@ -5,23 +5,23 @@ import { EDiagnosticCategory } from "@lib/idl/IDiagnostics";
 import { IFile, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from "@lib/util/Diagnostics";
 
-interface IAnalyzerDiagDesc {
+interface IDiagDesc {
     file: IFile;
     loc: IRange;
     info: any; // TODO: fixme
 }
 
 
-export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
+export class AnalyzerDiagnostics extends Diagnostics<IDiagDesc> {
     constructor() {
         super("Analyzer Diagnostics", 'A');
     }
 
-    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IAnalyzerDiagDesc): string {
+    protected resolveFilename(category: EDiagnosticCategory, code: number, desc: IDiagDesc): string {
         return desc.file.toString();
     }
 
-    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IAnalyzerDiagDesc): IRange {
+    protected resolveRange(category: EDiagnosticCategory, code: number, desc: IDiagDesc): IRange {
         return desc.loc;
     }
 
@@ -35,12 +35,12 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
             [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.', // TODO: specify prev type and location
             [EErrors.InvalidFunctionReturnStmtNotFound]: 'Return statement expected.', // TODO: specify func name and return type details.
             [EErrors.InvalidVariableInitializing]: 'Invalid variable initializing.',
-            [EErrors.InvalidComplexNotFunction]: ({ info }: IAnalyzerDiagDesc) => 
+            [EErrors.InvalidComplexNotFunction]: ({ info }: IDiagDesc) => 
                 `Function definition for "${info.funcName}(${info.args.join(', ')})" has not been found.`
         };
     }
 
-    protected resolveDescription(code: number, category: EDiagnosticCategory, desc: IAnalyzerDiagDesc): string {
+    protected resolveDescription(code: number, category: EDiagnosticCategory, desc: IDiagDesc): string {
         let descList = this.diagnosticMessages();
         if (isDefAndNotNull(descList[code])) {
             return super.resolveDescription(code, category, desc);

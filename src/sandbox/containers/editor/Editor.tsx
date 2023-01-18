@@ -275,7 +275,7 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
 
             let { lineNumber } = e.target.position;
 
-            lineNumber = cdlview(file.debugger.runtime.cdl)
+            lineNumber = cdlview(file.debugger.bcDocument.program?.cdl)
                 .resolveBreakpointLocation(lineNumber - 1);
 
             if (lineNumber === -1) {

@@ -53,7 +53,7 @@ const reduxImmutableState = reduxImmutableStateInvariant({
     ignore: [
         'sourceFile.slastDocument',
         'sourceFile.slDocument',
-        'sourceFile.debugger.runtime',
+        'sourceFile.debugger.bcDocument',
         'playground.technique',
         'playground.timeline',
         'playground.controls',
