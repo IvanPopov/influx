@@ -28,6 +28,7 @@ import { filterTechniques } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IP4Info, IPlaygroundState } from '@sandbox/store/IStoreState';
+import * as ScopeUtils from '@lib/fx/analisys/helpers/system-scope';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
 // global defines from webpack's config;
@@ -1153,6 +1154,18 @@ class App extends React.Component<IAppProps> {
                 render: () => (
                     <Tab.Pane key='grammar' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
                         <ParserParameters />
+                    </Tab.Pane>
+                )
+            },
+            {
+                menuItem: (
+                    <Menu.Item key="system-scope-item" style={{ marginBottom: ipc.isElectron() ? '-1px' : '-4px' }}>
+                        <span>System Scope</span>
+                    </Menu.Item>
+                ),
+                render: () => (
+                    <Tab.Pane key='system-scope' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
+                        <CodeView content={ ScopeUtils.debugPrint() } />
                     </Tab.Pane>
                 )
             },
