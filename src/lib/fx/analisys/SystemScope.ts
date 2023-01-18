@@ -1602,6 +1602,9 @@ function addSystemFunctions(): void {
     generateSystemFunction("smoothstep", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("smoothstep", TEMPLATE_TYPE, ["float", "float", TEMPLATE_TYPE], ["float2", "float3", "float4"]);
 
+    generateSystemFunction("step", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction("clip", "void", [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"], false, true);
+
     generateSystemFunction("frac", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("lerp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);
     generateSystemFunction("lerp", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);

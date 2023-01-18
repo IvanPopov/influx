@@ -392,6 +392,13 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
+        // ret step(y, x)
+        // (x >= y) ? 1 : 0
+        stepf(dest: PromisedAddress, y: PromisedAddress, x: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32GreaterThanEqual, dest, x, y);
+            return dest;
+        },
+
         lengthf(dest: PromisedAddress, src: PromisedAddress): PromisedAddress {
             intrinsics.dotf(dest, src, src);
             intrinsics.sqrtf(dest, dest);
@@ -644,6 +651,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 assert(SystemScope.isIntBasedType(fdef.params[0].type) || SystemScope.isUintBasedType(fdef.params[0].type));
                 // handle INT/UINT params as int intrinsic
                 return intrinsics.maxi(dest, args[0], args[1]);
+            case 'step':
+                assert (SystemScope.isFloatBasedType(fdef.params[0].type));
+                return intrinsics.stepf(dest, args[0], args[1]);
             case 'lerp':
                 assert(fdef.params.length === 3);
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);

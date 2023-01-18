@@ -348,6 +348,9 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
             case 'fmod':
                 super.emitFCall(ctx, call, (decl) => 'mod');
                 return;
+            case 'clip':
+                this.emitClipIntrinsic(ctx, args[0]);
+                return;
 
         }
 
@@ -594,6 +597,21 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         this.emitChar(')');
     }
 
+
+    // todo: call autogen function?
+    emitClipIntrinsic(ctx: ContextT, x: IExprInstruction) {
+        this.emitKeyword('if');
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitExpression(ctx, x);
+        this.emitChar(')');
+        this.emitKeyword(`<`)
+        this.emitKeyword(`0.0`);
+        this.emitChar(')');
+        this.emitKeyword(`discard`);
+    }
 
     // is used in Bundle.ts
     static $declToAttributeName(decl: IVariableDeclInstruction) {

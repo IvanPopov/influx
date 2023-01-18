@@ -10,6 +10,7 @@ import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { isString } from "@lib/util/s3d/type";
 import { BaseEmitter } from "./BaseEmitter";
+import { BreakStmtInstruction } from "../analisys/instructions/BreakStmtInstruction";
 
 
 interface ITypeInfo {
@@ -775,6 +776,11 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
 
 
+    emitBreakStmt(ctx: ContextT, brk: BreakStmtInstruction) {
+        this.emitLine(`${brk.operator};`);
+    }
+
+
     emitExpressionList(ctx: ContextT, list: IExprInstruction[]) {
         (list || []).forEach((expr, i) => {
             this.emitExpression(ctx, expr);
@@ -1065,6 +1071,9 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 break;
             case EInstructionTypes.k_ForStmt:
                 this.emitForStmt(ctx, stmt as IForStmtInstruction);
+                break;
+            case EInstructionTypes.k_BreakStmt:
+                this.emitBreakStmt(ctx, stmt as BreakStmtInstruction);
                 break;
             default:
                 this.emitLine(`/* ... unsupported stmt '${stmt.instructionName}' .... */`);
