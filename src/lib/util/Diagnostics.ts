@@ -1,3 +1,4 @@
+import { isString } from "@lib/common";
 import { EDiagnosticCategory, IDiagnosticEntry, IDiagnosticMessage, IDiagnosticReport } from "@lib/idl/IDiagnostics";
 
 import { IMap } from "../idl/IMap";
@@ -126,10 +127,14 @@ export class Diagnostics <DESC_T>{
             return `[no description found for code '${code}']`;
         }
 
-        return fillPattern(diagMesgs[code], desc);
+        if (isString(diagMesgs[code])) {
+            return fillPattern(<string>diagMesgs[code], desc);
+        }
+
+        return (<((desc: DESC_T) => string)>diagMesgs[code])(desc);
     }
 
-    protected diagnosticMessages(): IMap<string> {
+    protected diagnosticMessages(): IMap<string | ((desc: DESC_T) => string)> {
         return null;
     }
 

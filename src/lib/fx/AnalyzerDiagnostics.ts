@@ -35,6 +35,8 @@ export class AnalyzerDiagnostics extends Diagnostics<IAnalyzerDiagDesc> {
             [EErrors.InvalidFuncDefenitionReturnType]: 'Invalid function defenition return type. Function with the same name \'{info.funcName}\' but another type already declared.', // TODO: specify prev type and location
             [EErrors.InvalidFunctionReturnStmtNotFound]: 'Return statement expected.', // TODO: specify func name and return type details.
             [EErrors.InvalidVariableInitializing]: 'Invalid variable initializing.',
+            [EErrors.InvalidComplexNotFunction]: ({ info }: IAnalyzerDiagDesc) => 
+                `Function definition for "${info.funcName}(${info.args.join(', ')})" has not been found.`
         };
     }
 
