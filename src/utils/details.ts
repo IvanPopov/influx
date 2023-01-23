@@ -1,7 +1,7 @@
-import { Bundle, BundleContent, BundleT, EMatRenderRoutines, MatBundleT, RoutineBytecodeBundle, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundle, RoutineShaderBundleT, RoutineSourceBundle } from '../../lib/idl/bundles/FxBundle_generated';
 import * as flatbuffers from 'flatbuffers';
 import fs from 'fs';
 import minimist from 'minimist';
+import { Bundle, BundleContent, BundleT, EMatRenderRoutines, MatBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle } from '@lib/idl/bundles/FxBundle_generated';
 
 const argv = minimist(process.argv);
 
@@ -21,6 +21,10 @@ if (argv['help'] || argv['h']) {
 
 function main() {
     const filename = argv['_'][2];
+    if (!filename) {
+        console.error(`[ ERROR ] Path to bfx must be specified.`);
+        return;
+    }
     // console.log(argv);
     const data = fs.readFileSync(filename);
     const fx = new BundleT();

@@ -6,9 +6,13 @@ module.exports = {
     mode: "development",
     devtool: "inline-source-map",
     entry: {
-        main: {
-            import: `./src/utils/details/entry.ts`,
+        details: {
+            import: `./src/utils/details.ts`,
             filename: `./dist/details.js`
+        },
+        deploy: {
+            import: `./src/utils/deploy.ts`,
+            filename: `./dist/deploy.js`
         }
     },
     output: {
@@ -27,5 +31,8 @@ module.exports = {
                 loader: "ts-loader"
             }
         ]
-    }
+    },
+    experiments: {
+        topLevelAwait: true
+    },
 };

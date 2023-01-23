@@ -36,16 +36,6 @@ if (argv['help'] || argv['h']) {
     process.exit(0);
 }
 
-if (argv['deploy']) {
-    deploy();
-    process.exit();
-}
-
-function deploy() {
-    const filename = argv['deploy'];
-    const prjenv = new S3D.ProjectEnv(filename);
-    console.log(prjenv.Get('game-name'));
-}
 
 function processCommandLineArguments() {
     const file = argv['_'][0];

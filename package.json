@@ -102,8 +102,9 @@
   "scripts": {
     "electron": "electron ./shell.js",
     "details": "node ./dist/details.js",
+    "deploy": "node ./dist/deploy.js",
     "build:shell": "webpack --config ./webpack.shell.js",
-    "build:details": "webpack --config ./webpack.details.js",
+    "build:utils": "webpack --config ./webpack.utils.js",
     "build:web": "cross-env NODE_ENV=production APP_TARGET=web webpack --config ./webpack.sandbox.js",
     "build:electron": "npm run build:shell & cross-env NODE_ENV=production APP_TARGET=electron webpack --config ./webpack.sandbox.js",
     "dev:electron": "npm run build:shell & cross-env NODE_ENV=development APP_TARGET=electron webpack --config ./webpack.sandbox.js",
