@@ -1,11 +1,10 @@
 import { assert } from "@lib/common";
 import { u8ArrayAsF32, u8ArrayAsI32 } from "@lib/fx/bytecode/common";
 import { CDL } from "@lib/fx/bytecode/DebugLayout";
-import { EInstructionTypes, IFunctionDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import * as Bytecode from '@lib/fx/bytecode';
 import * as VM from '@lib/fx/bytecode/VM';
+import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
 import * as Bundle from "@lib/idl/bytecode";
-import { TypeLayoutT, TypeFieldT } from "@lib/idl/bundles/FxBundle_generated";
+import { EInstructionTypes, ITypeInstruction } from "@lib/idl/IInstruction";
 import { IBCDocument } from "../Bytecode";
 
 function asNativeVector(elementDecoder: (u8: Uint8Array) => any, value: Uint8Array, length: number, stride = 4): any[] {

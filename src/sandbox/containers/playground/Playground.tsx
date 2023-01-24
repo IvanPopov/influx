@@ -5,6 +5,7 @@
 
 
 import { IEmitter } from '@lib/idl/emitter';
+import { IParticleDebugViewer } from '@lib/idl/emitter/IEmitter';
 import { ETechniqueType } from '@lib/idl/IInstruction';
 import { ITechnique } from '@lib/idl/ITechnique';
 import * as Path from '@lib/path/path';
@@ -18,9 +19,11 @@ import autobind from 'autobind-decorator';
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
+import PartView from '../PartView';
 import FxScene from './FxScene';
 import MaterialScene from './MaterialScene';
 
+const ipcRenderer = ipc.isElectron() ? require('electron').ipcRenderer : null;
 
 interface IPlaygroundProps extends IStoreState {
     actions: typeof playgroundActions;
@@ -73,10 +76,22 @@ class Playground extends React.Component<IPlaygroundProps> {
     canvasRef: HTMLCanvasElement;
     canvasSnapshot: { w: number, h: number, content: string; }
 
+    debugView: Window = null;
+    debugViewChannel: BroadcastChannel = new BroadcastChannel(PartView.CHANNEL); // consumed by PartView.tsx
+    debugViewer: IParticleDebugViewer = null;
+
     constructor(props) {
         super(props);
 
         this.canvasRef = null;
+
+        this.debugViewChannel.onmessage = (event) => {
+            switch (event.data) {
+                case PartView.CONNECT_EVENT: this.onParticleDebugViewerConnected(); break;
+                case PartView.DISCONNECT_EVENT: this.onParticleDebugViewerDisconnected(); break;
+                case PartView.UPDATE_EVENT: this.onParticleDebugViewerUpdate(); break;
+            }
+        }
     }
 
     // static getDerivedStateFromProps(props: IPlaygroundProps, state: IPlaygroundState) {
@@ -145,6 +160,48 @@ class Playground extends React.Component<IPlaygroundProps> {
             // resizedContext.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
             // downloadURL(resizedCanvas.toDataURL('image/jpeg'), exportName.basename);
             downloadURL(canvas.toDataURL('image/jpeg'), exportName.basename);
+        }
+    }
+
+    @autobind
+    async handleParticleDebugView() {
+        if (!ipc.isElectron()) {
+            // todo: not tested!
+            if (this.debugView && !this.debugView.closed) {
+                this.debugView.focus();
+                console.log('view already exist');
+                return;
+            }
+
+            this.debugView = window.open('./part-view.html');
+        } else {
+            ipcRenderer?.send('show-part-view-debug');
+        }
+
+        this.dumpParticles();
+    }
+
+    @autobind
+    onParticleDebugViewerUpdate() {
+        this.dumpParticles();
+    }
+
+    @autobind
+    onParticleDebugViewerConnected() {
+        let emitter = this.props.playground.technique as IEmitter;
+        this.debugViewer = emitter.createDebugViewer();
+        
+        this.dumpParticles();
+    }
+
+    onParticleDebugViewerDisconnected() {
+        this.debugViewer = null;
+    }
+
+    dumpParticles() {
+        if (this.debugViewer) {
+            this.debugViewer.dump();
+            this.debugViewChannel.postMessage(this.debugViewer.readParticlesJSON());
         }
     }
 
@@ -265,59 +322,65 @@ class Playground extends React.Component<IPlaygroundProps> {
                         </List>
                         <div>
                             <Grid verticalAlign="middle">
-                                <Grid.Column width={6}>
-                                    <Button.Group compact >
-                                        <Button
-                                            icon={<Icon className={'playback pause'} />}
-                                            color={(timeline.isPaused() ? 'black' : null)}
-                                            disabled={timeline.isPaused()}
-                                            onClick={this.handlePauseClick}
-                                        />
-                                        <Button
-                                            icon={<Icon className={'sync'} />}
-                                            onClick={this.handleResetClick}
-                                        />
-                                        <Button
-                                            icon={<Icon className={'playback play'} />}
-                                            color={(!timeline.isPaused() ? 'black' : null)}
-                                            disabled={!timeline.isPaused()}
-                                            onClick={this.handlePlayClick}
-                                        />
-                                    </Button.Group>
-                                </Grid.Column>
-                                <Grid.Column width={10}>
-                                    <Table unstackable basic='very'>
-                                        <Table.Body>
-                                            <Table.Row>
-                                                <Table.Cell collapsing style={{ width: '100%', textAlign: 'right' }}>
-                                                    <Popup
-                                                        content={playground.exportName || '[save file manually for the first time]'}
-                                                        trigger={
-                                                            <Checkbox
-                                                                style={{ marginRight: '-10px' }}
-                                                                label={`auto`}
-                                                                checked={playground.autosave}
-                                                                disabled={!ipc.isElectron() || !playground.exportName}
-                                                                onClick={this.handleAutosaveClick}
-                                                            />
-                                                        } />
-                                                </Table.Cell>
-                                                <Table.Cell>
-                                                    <Button.Group compact >
-                                                        <Button
-                                                            // save packed version only
-                                                            onClick={this.handleDownloadDataClick.bind(this, true, false)}
-                                                        >export</Button>
-                                                        <Button
-                                                            // save screenshot only
-                                                            onClick={this.handleDownloadDataClick.bind(this, false, true)}
-                                                        >screenshot</Button>
-                                                    </Button.Group>
-                                                </Table.Cell>
-                                            </Table.Row>
-                                        </Table.Body>
-                                    </Table>
-                                </Grid.Column>
+                                <Grid.Row>
+                                    <Grid.Column width={6}>
+                                        <Button.Group compact >
+                                            <Button
+                                                icon={<Icon className={'playback pause'} />}
+                                                color={(timeline.isPaused() ? 'black' : null)}
+                                                disabled={timeline.isPaused()}
+                                                onClick={this.handlePauseClick}
+                                            />
+                                            <Button
+                                                icon={<Icon className={'sync'} />}
+                                                onClick={this.handleResetClick}
+                                            />
+                                            <Button
+                                                icon={<Icon className={'playback play'} />}
+                                                color={(!timeline.isPaused() ? 'black' : null)}
+                                                disabled={!timeline.isPaused()}
+                                                onClick={this.handlePlayClick}
+                                            />
+                                        </Button.Group>
+                                    </Grid.Column>
+                                    <Grid.Column width={10}>
+                                        <Table unstackable basic='very'>
+                                            <Table.Body>
+                                                <Table.Row>
+                                                    <Table.Cell collapsing style={{ width: '100%', textAlign: 'right' }}>
+                                                        <Popup
+                                                            content={playground.exportName || '[save file manually for the first time]'}
+                                                            trigger={
+                                                                <Checkbox
+                                                                    style={{ marginRight: '-10px' }}
+                                                                    label={`auto`}
+                                                                    checked={playground.autosave}
+                                                                    disabled={!ipc.isElectron() || !playground.exportName}
+                                                                    onClick={this.handleAutosaveClick}
+                                                                />
+                                                            } />
+                                                    </Table.Cell>
+                                                    <Table.Cell>
+                                                        <Button.Group compact >
+                                                            <Button
+                                                                // save packed version only
+                                                                onClick={this.handleDownloadDataClick.bind(this, true, false)}
+                                                            >export</Button>
+                                                            <Button animated='vertical' onClick={this.handleParticleDebugView}>
+                                                                <Button.Content visible>debug</Button.Content>
+                                                                <Button.Content hidden>view</Button.Content>
+                                                            </Button>
+                                                            <Button
+                                                                // save screenshot only
+                                                                onClick={this.handleDownloadDataClick.bind(this, false, true)}
+                                                            >screenshot</Button>
+                                                        </Button.Group>
+                                                    </Table.Cell>
+                                                </Table.Row>
+                                            </Table.Body>
+                                        </Table>
+                                    </Grid.Column>
+                                </Grid.Row>
                             </Grid>
 
                             {this.ranAsEmitter() &&

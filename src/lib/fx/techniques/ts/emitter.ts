@@ -2,13 +2,13 @@ import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
+import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeLayout, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
 import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
 
 import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
-import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
+import { IParticleDebugViewer, ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { EUsage, IConstantBuffer } from '@lib/idl/ITechnique';
 import { IMap } from '@lib/idl/IMap';
 
@@ -50,6 +50,66 @@ function createUAVsEx(bundles: UAVBundleT[], capacity: number, sharedUAVs: IUAVR
 const CTEMP_U8 = new Uint8Array(8);
 const CTEMP_DV = new DataView(CTEMP_U8.buffer);
 
+
+
+function createParticleDebugViewer(
+    layout: TypeLayoutT,
+    capacity: number,
+    uavDeadIndices: Bytecode.IUAV,
+    uavStates: Bytecode.IUAV,
+    uavParticles: Bytecode.IUAV
+): IParticleDebugViewer {
+
+    const dataU8 = new Uint8Array(layout.size * capacity);
+    const dataIds = new Array(capacity);
+
+    function dump() {
+        const npart = getParticleCount();
+
+        // verbose(`particles total: ${npart} ( ${UAV.readCounter(uavDeadIndices)}/${capacity} )`);
+
+        const uavStatesI32 = VM.memoryToI32Array(uavStates.data);
+        const uavParticlesU8 = VM.memoryToU8Array(uavParticles.data);
+
+        let iCopy = 0;
+        uavStatesI32.forEach((alive, iPart) => {
+            if (alive) {
+                const src = new Uint8Array(uavParticlesU8.buffer, uavParticlesU8.byteOffset + iPart * layout.size, layout.size);
+                const dst = new Uint8Array(dataU8.buffer, dataU8.byteOffset + iCopy * layout.size, layout.size);
+                dst.set(src);
+                dataIds[iCopy] = iPart;
+                iCopy ++;
+            }
+        });
+    }
+
+    const getParticleCount = () => capacity - UAV.readCounter(uavDeadIndices);
+    const isDumpReady = () => true;
+    // const getLayout = () => layout;
+
+    function readParticleJSON(iPart: number): Object {
+        const src = new Uint8Array(dataU8.buffer, dataU8.byteOffset + iPart * layout.size, layout.size);
+        return VM.asNativeRaw(src, layout);
+    }
+
+    function readParticlesJSON(): Array<Object> {
+        let dst = [];
+        for (let i = 0; i < getParticleCount(); ++ i) {
+            dst.push({ ...readParticleJSON(i), [`#id`]: dataIds[i] } );
+        }
+        return dst;
+    }
+
+    return {
+        dump,
+        isDumpReady,
+        getParticleCount,
+        readParticleJSON,
+        readParticlesJSON
+    };
+}
+
+
 function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineBytecodeBundleT, capacity: number, sharedUAVs: IUAVResource[]) {
     const codeLength = routineBundle.code.length;
     if (codeLength == 0) {
@@ -60,9 +120,9 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
     const vmBundle = VM.make(debugName, routineBundle.code);
     const uavs = createUAVsEx(routineBundle.resources.uavs, capacity, sharedUAVs);
     const numthreads = routineBundle.numthreads;
-    
+
     uavs.forEach(uav => { vmBundle.setInput(uav.index, uav.buffer); });
-    
+
     const { buffers, textures, trimeshes } = routineBundle.resources;
 
     function setConstant(name: string, value: Uint8Array) {
@@ -104,7 +164,7 @@ function setupFxRoutineBytecodeBundle(debugName: string, routineBundle: RoutineB
         setBuffer(mesh.facesName, faces);
         setBuffer(mesh.gsAdjecencyName, indicesAdj);
         setBuffer(mesh.faceAdjacencyName, faceAdj);
-        
+
         setUint32Constant(<string>mesh.vertexCountUName, vertCount);
         setUint32Constant(<string>mesh.faceCountUName, faceCount);
     }
@@ -152,17 +212,15 @@ const UAV = {
         return new Uint8Array(u8a.buffer, u8a.byteOffset + iElement * elementSize, elementSize);
     },
 
-    minidump(uav: Bytecode.IUAV): void
-    {
+    minidump(uav: Bytecode.IUAV): void {
         const { name, length, elementSize, register, data } = uav;
         // std::cout << "--------------------------------------" << std::endl;
         console.log(` uav ${name}[${length}x${elementSize}:r${register}:cnt(${UAV.readCounter(uav)})]`);
-        
+
         const u8a = VM.memoryToU8Array(data);
         let n = Math.min(64, length * elementSize);
         let sout = '';
-        for (let i = 0; i < n; ++ i)
-        {
+        for (let i = 0; i < n; ++i) {
             sout += `${u8a[i].toString(16)} `;
         }
         sout += '...';
@@ -212,16 +270,16 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         const prerenderBundle = routines[EPartRenderRoutines.k_Prerender];
         const bundle = setupFxRoutineBytecodeBundle(`${name}/prerender`, <RoutineBytecodeBundleT>prerenderBundle, capacity * instanceCount, uavResources);
-        
+
         const uavPrerendered = uavResources.find(uav => uav.name === UAV_PRERENDERED);
         const uavSerials = uavResources.find(uav => uav.name === UAV_SERIALS);
 
         const vertexBundle = <RoutineShaderBundleT>routines[EPartRenderRoutines.k_Vertex];
-        const vertexGLSLBundle = <RoutineGLSLSourceBundleT>vertexBundle.shaders.find( (shader, i) => vertexBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
+        const vertexGLSLBundle = <RoutineGLSLSourceBundleT>vertexBundle.shaders.find((shader, i) => vertexBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
 
         const pixelBundle = <RoutineShaderBundleT>routines[EPartRenderRoutines.k_Pixel];
-        const pixelGLSLBundle = <RoutineGLSLSourceBundleT>pixelBundle.shaders.find( (shader, i) => pixelBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
-        
+        const pixelGLSLBundle = <RoutineGLSLSourceBundleT>pixelBundle.shaders.find((shader, i) => pixelBundle.shadersType[i] === RoutineSourceBundle.RoutineGLSLSourceBundle);
+
         const vertexShader = <string>vertexGLSLBundle.code;
         const pixelShader = <string>pixelGLSLBundle.code;
         const instanceLayout = vertexGLSLBundle.attributes;
@@ -238,18 +296,18 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             for (let { name, slot, size, fields } of bundle.cbuffers) {
                 // skip same name buffers
                 const cbuf = sharedCbufs[`${name}`] ||= {
-                    name: `${name}`, 
+                    name: `${name}`,
                     slot,
-                    size, 
+                    size,
                     usage,
-                    fields: fields.map(({ name, semantic, size, padding, type: { length } }) => 
-                        ({ 
-                            name: `${name}`, 
-                            semantic: `${semantic || name}`, 
-                            size, 
-                            padding, 
-                            length 
-                        }))
+                    fields: fields.map(({ name, semantic, size, padding, type: { length } }) =>
+                    ({
+                        name: `${name}`,
+                        semantic: `${semantic || name}`,
+                        size,
+                        padding,
+                        length
+                    }))
                 };
                 cbuf.usage |= usage;
             }
@@ -274,15 +332,14 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         let uavSorted: Bytecode.IUAV = null;
         let uavSortedU8: Uint8Array = null;
         let uavSerialsI32: Int32Array = null;
-        
-        if (sorting)
-        {
+
+        if (sorting) {
             uavPrerendReflectSorted = new UAVBundleT(`${uavPrerendReflect.name}Sorted`, uavPrerendReflect.slot, uavPrerendReflect.stride, uavPrerendReflect.type);
             uavSorted = createUAVsEx([uavPrerendReflectSorted], capacity * instanceCount, uavResources)[0];
             uavSortedU8 = VM.memoryToU8Array(uavSorted.data);
             uavSerialsI32 = VM.memoryToI32Array(uavSerials.data);
         }
-        
+
 
         // dump prerendered particles
         const dump = (): void => {
@@ -309,11 +366,10 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
             const indicies = [];
 
             // todo: sort inplace using serials pairs
-            for (let iPart = 0; iPart < UAV.readCounter(uavPrerendered); ++iPart) 
-            {
+            for (let iPart = 0; iPart < UAV.readCounter(uavPrerendered); ++iPart) {
                 const sortIndex = uavSerialsI32[iPart * 2 + 0];
                 const partIndex = uavSerialsI32[iPart * 2 + 1];
-                indicies.push([ partIndex, sortIndex ]);
+                indicies.push([partIndex, sortIndex]);
             };
             indicies.sort((a, b) => -a[1] + b[1]);
 
@@ -345,8 +401,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         }
 
 
-        function preparePrerender()
-        {
+        function preparePrerender() {
             if (uavPrerendered) {
                 UAV.overwriteCounter(uavPrerendered, 0);
             }
@@ -356,8 +411,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         }
 
 
-        function prerender(uniforms: Uniforms)
-        {
+        function prerender(uniforms: Uniforms) {
             if (!bundle) {
                 // manual prerender is used
                 return;
@@ -453,12 +507,12 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         spawnBundle.run(1);
     }
 
-    function simulate(uniforms: Uniforms)
-    {
+    function simulate(uniforms: Uniforms) {
         update(uniforms);
         emit(uniforms);
     }
 
+    /** @deprecated */
     function dump() {
         const npart = getNumParticles();
         const partSize = particle.size;
@@ -476,6 +530,16 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         });
     }
 
+    function createDebugViewer() {
+        return createParticleDebugViewer(
+            particle, 
+            capacity, 
+            uavDeadIndices, 
+            uavStates, 
+            uavParticles
+        );
+    }
+
     return {
         // abstract interface
         getType,
@@ -484,7 +548,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
         getPassCount,
         getPass,
         getNumParticles,
-        
+
         reset,
         simulate,
         prerender,
@@ -492,8 +556,9 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
         setTrimesh,
         setTexture,
-        
-        dump
+
+        dump,
+        createDebugViewer
     };
 }
 
@@ -521,10 +586,8 @@ function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
     return true;
 }
 
-export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean
-{
-    if (comparePartFxBundles((<TSEmitter>dst).bundle.content as PartBundleT, (<TSEmitter>src).bundle.content as PartBundleT)) 
-    {
+export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean {
+    if (comparePartFxBundles((<TSEmitter>dst).bundle.content as PartBundleT, (<TSEmitter>src).bundle.content as PartBundleT)) {
         (<TSEmitter>dst).uavResources.forEach((uav, i) =>
             VM.memoryToU8Array(uav.buffer).set(VM.memoryToU8Array((<TSEmitter>src).uavResources[i].buffer)));
         return true;
@@ -532,8 +595,7 @@ export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean
     return false;
 }
 
-export function destroyTsEmitter(emitter: IEmitter): void 
-{
+export function destroyTsEmitter(emitter: IEmitter): void {
     let { uavResources } = <TSEmitter>emitter;
     uavResources.forEach(uav => {
         VM.destroyUAV(uav);
@@ -542,8 +604,7 @@ export function destroyTsEmitter(emitter: IEmitter): void
     verbose(`emitter '${emitter.getName()}' has been dropped.`);
 }
 
-export function createTsEmitter(bundle: BundleT)
-{
+export function createTsEmitter(bundle: BundleT) {
     let uavResources: Bytecode.IUAV[] = [];
     let newly = createEmiterFromBundle(bundle, uavResources);
     return { bundle, uavResources, ...newly };
@@ -569,21 +630,20 @@ export function createTsTexture({ width, height }: ITextureDesc, data: ArrayBuff
     desc.setInt32(4, height, true);
     // set format R8G8B8A8 == 0
     desc.setInt32(8, 0, true);
-    
+
     return { layout: VM.copyViewToMemory(layout) };
 }
 
 
-export function destroyTsTexture(texture: ITexture): void 
-{
+export function destroyTsTexture(texture: ITexture): void {
     const { layout } = texture as TSTexture;
     VM.releaseMemory(layout);
     verbose(`texture has been dropped.`);
 }
 
 
-export function createTsTrimesh(desc: ITrimeshDesc, 
-    vertices: ArrayBufferView, faces: ArrayBufferView, 
+export function createTsTrimesh(desc: ITrimeshDesc,
+    vertices: ArrayBufferView, faces: ArrayBufferView,
     indicesAdj: ArrayBufferView, faceAdj: ArrayBufferView): TSTrimesh {
     const { vertCount, faceCount } = desc;
     return {

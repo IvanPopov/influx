@@ -166,8 +166,15 @@ export const styles = {
 
             }
         }
-    }
+    },
 
+    ///
+
+    dropdownItemFix: {
+        '& i': {
+            float: 'initial !important'
+        },
+    }
 };
 
 // todo: remove the inheritance of the type of data
@@ -800,7 +807,7 @@ class App extends React.Component<IAppProps> {
                             <Dropdown item icon={<Icon className={'gear' as UnknownIcon} />} >
                                 <Dropdown.Menu>
                                     <Dropdown.Item>
-                                        <Dropdown text='Options'>
+                                        <Dropdown className={props.classes.dropdownItemFix} text='Translation options (not supported)'>
                                             <Dropdown.Menu>
                                                 {/* todo: add support of options (!) */}
                                                 <Dropdown.Item><Checkbox label="convolute" checked={true} /></Dropdown.Item>

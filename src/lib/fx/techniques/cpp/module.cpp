@@ -153,7 +153,11 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("reset", &IFX::EMITTER::Reset) 
          .function("setTrimesh", &IFX::EMITTER::SetTrimesh, em::allow_raw_pointers()) 
          .function("setTexture", &IFX::EMITTER::SetTexture, em::allow_raw_pointers())
-         .function("dump", &IFX::EMITTER::Dump);
+         /** @deprecated */
+         .function("dump", &IFX::EMITTER::Dump)
+         .function("createDebugViewer", em::optional_override([](IFX::EMITTER& self) {
+            return nullptr;
+         }));
  
     em::function("createFromBundle", &CreateFromBundle, em::allow_raw_pointers()); 
     em::function("destroyEmitter", &DestroyEmitter, em::allow_raw_pointers());

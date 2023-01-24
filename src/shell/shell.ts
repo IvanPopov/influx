@@ -109,7 +109,7 @@ function createPreviewWindow() {
     }));
 
     if (devTools)
-        win.webContents.openDevTools(), console.log('!!');
+        win.webContents.openDevTools();
     
     win.removeMenu();
 
@@ -117,9 +117,35 @@ function createPreviewWindow() {
     return win;
 }
 
-let logoWin;
-let sandboxWin;
-let previewWin;
+function createPartViewWindow() {
+    let win = new electron.BrowserWindow({
+        show: true, width: 800, height: 600, webPreferences: {
+            experimentalFeatures: true,
+            nodeIntegration: true,
+            contextIsolation: false,
+            // webSecurity: false
+        }
+    });
+
+    win.loadURL(url.format({
+        pathname: path.join(__dirname, 'dist/electron/part-view.html'),
+        protocol: 'file:',
+        slashes: true
+    }));
+
+    // win.webContents.openDevTools();
+    win.setAlwaysOnTop(true, "normal");
+ 
+    // win.removeMenu();
+
+    win.on('closed', () => { win = null; });
+    return win;
+}
+
+let logoWin: electron.BrowserWindow;
+let sandboxWin: electron.BrowserWindow;
+let previewWin: electron.BrowserWindow;
+let partviewWin: electron.BrowserWindow;
 
 app.on('ready', () => {
     switch (argv['runtime'])
@@ -155,10 +181,13 @@ app.on('activate', () => {
 
 function onReady()
 {
-    if (logoWin && !logoWin?.isDestroyed() && logoWin?.isFocusable())
+    if (logoWin && !logoWin?.isDestroyed() && (logoWin?.isFocusable() as any))
         logoWin.close();
-    if (sandboxWin && !sandboxWin?.isVisible())
-        sandboxWin.maximize() && sandboxWin.show();
+
+    if (sandboxWin && !sandboxWin?.isVisible()) {
+        sandboxWin.maximize();
+        sandboxWin.show();
+    }
     if (previewWin && !previewWin?.isVisible())
         previewWin.show();
 }
@@ -193,3 +222,8 @@ ipc.on('process-save-file-dialog', (event, arg) => {
     event.returnValue = filename;
 });
 
+ipc.on('show-part-view-debug', (event, arg) => {
+    if (!partviewWin || partviewWin.isDestroyed()) {
+        partviewWin = createPartViewWindow();
+    }
+});

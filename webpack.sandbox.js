@@ -193,8 +193,9 @@ let options = {
     },
     output,
     entry: {
-        sandbox: `${sandboxPath}/sandbox.tsx`,
-        preview: `${sandboxPath}/preview.tsx`
+        ['sandbox']: `${sandboxPath}/sandbox.tsx`,
+        ['preview']: `${sandboxPath}/preview.tsx`,
+        ['part-view']: `${sandboxPath}/part-view.tsx`,
     },
     plugins: [
         new webpack.ProvidePlugin({
@@ -224,10 +225,16 @@ let options = {
             chunks: ['preview'],
         }),
         new HtmlWebpackPlugin({
-            template: `!!pug3-loader!${sandboxPath}/../site/code-view.pug`,
-            filename: `${outputPath}/code-view.html`,
-            minify: false
+            template: `!!pug3-loader!${sandboxPath}/../site/part-view.pug`,
+            filename: `${outputPath}/part-view.html`,
+            minify: false,
+            chunks: ['part-view']
         }),
+        // new HtmlWebpackPlugin({
+        //     template: `!!pug3-loader!${sandboxPath}/../site/code-view.pug`,
+        //     filename: `${outputPath}/code-view.html`,
+        //     minify: false
+        // }),
         new webpack.ids.HashedModuleIdsPlugin(),
         // new CheckerPlugin(),
         new MiniCssExtractPlugin(),
