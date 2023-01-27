@@ -978,6 +978,16 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     return iconst_f32(f32);
                 }
                 break;
+            case EInstructionTypes.k_StringExpr:
+                {
+                    // remove quotes
+                    const cstr = (expr as ILiteralInstruction<string>).value?.slice(1, -1);
+                    assert(cstr.length > 0);
+                    // input0, size = 4/* cstr.length */ + sizeof(cstr)
+                    const constAddr = constants.derefCString(cstr);
+                    return iconst_i32(constAddr.addr); // write to register addr of string in constant buffer 0. 
+                }
+                break;
             case EInstructionTypes.k_IdExpr:
                 {
                     let id = (expr as IIdExprInstruction);

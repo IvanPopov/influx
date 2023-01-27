@@ -2,12 +2,13 @@ import { assert, isNull } from "@lib/common";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { T_BOOL, T_FLOAT, T_FLOAT2, T_FLOAT3, T_FLOAT4, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EAddrType } from "@lib/idl/bytecode";
-import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { CBUFFER0_REGISTER } from "./Bytecode";
 import PromisedAddress from "./PromisedAddress";
 import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
 import { InitExprInstruction } from "../analisys/instructions/InitExprInstruction";
+import { i32ToU8Array } from "./common";
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;
@@ -117,8 +118,44 @@ export class ConstanPool {
         });
     }
 
+    // todo: merge with general deref
+    derefCString(value: string): PromisedAddress {
+        const align4 = (x: number) => ((x + 3) >> 2) << 2;
 
-    private addUniform(size: number, desc: string, defaultValue: Int32Array | Float32Array = null): PromisedAddress {
+        let name = `"${value}"`;
+        let size = align4(4 /* sizeof(value) */ + value.length);
+        let reflection = this._knownConstants.find(c => c.name === name);
+        let semantic = "";
+
+        if (!reflection) {
+            let u8Data = new Uint8Array(size);
+            u8Data.set([...i32ToU8Array(value.length), ...value.split('').map(c => c.charCodeAt(0))]);
+
+            let addr = this.addUniform(size, `"${value}"`, u8Data);
+            const { addr: offset } = addr;
+            const type = `string`;
+
+            reflection = {
+                name,
+                offset,
+                size,
+                type,
+                semantic
+            };
+
+            this._knownConstants.push(reflection);
+        }
+
+        return new PromisedAddress({
+            type: EAddrType.k_Input,
+            inputIndex: CBUFFER0_REGISTER,
+            addr: reflection.offset,
+            size
+        });
+    }
+
+
+    private addUniform(size: number, desc: string, defaultValue: ArrayBufferView = null): PromisedAddress {
         const addr = this._data.byteLength;
         this._data.addUniform(size, desc, 
             defaultValue ? new Uint8Array(defaultValue.buffer, defaultValue.byteOffset, defaultValue.byteLength) : null);

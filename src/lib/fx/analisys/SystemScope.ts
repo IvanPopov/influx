@@ -1006,7 +1006,7 @@ function addSystemTypeScalar(): void {
     generateSystemType("uint", 4);
     generateSystemType("bool", 4);
     generateSystemType("float", 4);
-    generateSystemType("string");
+    generateSystemType("string", 4/* pointer to string */);
 
     generateSystemType("SamplerState");
     generateSystemType("SamplerComparisonState");

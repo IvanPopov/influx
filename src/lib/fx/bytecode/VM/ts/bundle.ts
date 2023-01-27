@@ -1,7 +1,7 @@
 import { assert, isDef, isDefAndNotNull } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
 import { CBUFFER0_REGISTER, SRV0_REGISTER, UAV0_REGISTER, SRV_TOTAL, UAV_TOTAL, CBUFFER_TOTAL } from "@lib/fx/bytecode/Bytecode";
-import { u8ArrayToI32 } from "@lib/fx/bytecode/common";
+import { u8ArrayAsI32, u8ArrayToI32 } from "@lib/fx/bytecode/common";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
 import * as Bundle from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
@@ -95,6 +95,20 @@ export class TSBundle implements Bundle.IBundle
         this.ncalls = Array<Function>(this.externs.length).fill(null).map(
             (fn, id) => (this.externs[id].name === 'trace' ? traceFn : undefFn(this.externs[id]))
         );
+    }
+
+    private asNative(u8: Uint8Array, layout: TypeLayoutT): any {
+        switch (layout.name) {
+            // IP: experimental way to resolve string (useful for debug purposes like trace())
+            case 'string': {
+                let byteOffset = u8ArrayToI32(u8);
+                let i32a = this.inputs[CBUFFER0_REGISTER];
+                let len = i32a[byteOffset >> 2];
+                let u8a = new Uint8Array(i32a.buffer, i32a.byteOffset + byteOffset + 4, len);
+                return String.fromCharCode(...u8a);
+            }
+        }
+        return asNativeRaw(u8, layout);
     }
     
 
@@ -203,7 +217,7 @@ export class TSBundle implements Bundle.IBundle
                         for (let i = 0; i < params.length; ++ i) {
                             let p = params[i];
                             let u8 = regs.subarray(paramOffset, paramOffset + p.size);
-                            args[i] = asNativeRaw(u8, p);
+                            args[i] = this.asNative(u8, p);
                             paramOffset += p.size;
                             assert(p.size % 4 === 0);
                         }
