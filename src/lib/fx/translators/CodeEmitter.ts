@@ -699,6 +699,8 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 return this.emitInteger(ctx, expr as ILiteralInstruction<number>);
             case EInstructionTypes.k_BoolExpr:
                 return this.emitBool(ctx, expr as ILiteralInstruction<boolean>);
+            case EInstructionTypes.k_StringExpr:
+                return this.emitString(ctx, expr as ILiteralInstruction<string>);
             case EInstructionTypes.k_ComplexExpr:
                 return this.emitComplexExpr(ctx, expr as IComplexExprInstruction);
             case EInstructionTypes.k_CompileExpr:
@@ -738,6 +740,11 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
     emitBool(ctx: ContextT, lit: ILiteralInstruction<boolean>) {
         this.emitKeyword(lit.value ? 'true' : 'false');
+    }
+    
+
+    emitString(ctx: ContextT, lit: ILiteralInstruction<string>) {
+        this.emitKeyword(lit.value);
     }
 
 
