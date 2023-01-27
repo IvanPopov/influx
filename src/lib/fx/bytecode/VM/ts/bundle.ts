@@ -6,6 +6,8 @@ import InstructionList from "@lib/fx/bytecode/InstructionList";
 import * as Bundle from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
 import sizeof from "@lib/fx/bytecode/sizeof";
+import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
+import { asNativeRaw, fromNativeRaw } from "@lib/fx/bytecode/VM/native";
 
 let { EChunkType, EOperation } = Bundle;
 
@@ -51,6 +53,8 @@ export class TSBundle implements Bundle.IBundle
     private instructions: Uint32Array;
     private inputs: Int32Array[];
     private layout: Bundle.Constant[];
+    private externs: Bundle.Extern[];
+    private ncalls: Function[];         // native calls
 
     private static $regs = new ArrayBuffer(512 * 16);
     private static iregs = new Int32Array(TSBundle.$regs);
@@ -73,14 +77,24 @@ export class TSBundle implements Bundle.IBundle
         const codeChunk = chunks[EChunkType.k_Code];
         assert(isDefAndNotNull(codeChunk) && isDefAndNotNull(chunks[EChunkType.k_Constants]));
 
-        const constChunk = chunks[EChunkType.k_Constants];
-        const layoutChunk = chunks[EChunkType.k_Layout];
-        const constants = decodeConstChunk(constChunk);
-
+        const constants = decodeConstChunk(chunks[EChunkType.k_Constants]);
         this.instructions = decodeCodeChunk(codeChunk);
-        this.layout = decodeLayoutChunk(layoutChunk);
+        this.layout = decodeLayoutChunk(chunks[EChunkType.k_Layout]);
+        this.externs = decodeExternsChunk(chunks[EChunkType.k_Externs]);
         this.inputs = Array<Int32Array>(64).fill(null);
         this.inputs[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset, constants.length >> 2);
+
+        const undefFn = (extern: Bundle.Extern) => (a, b, c, d, e, f) => { 
+            console.error(`[native call <${extern.name}> was not provided]`, [a, b, c, d, e, f].filter(x => isDef(x))); 
+        };
+
+        const traceFn = (a, b, c, d, e, f) => { 
+            console.log.apply(null, [a, b, c, d, e, f].filter(x => isDef(x))); 
+        };
+
+        this.ncalls = Array<Function>(this.externs.length).fill(null).map(
+            (fn, id) => (this.externs[id].name === 'trace' ? traceFn : undefFn(this.externs[id]))
+        );
     }
     
 
@@ -88,6 +102,7 @@ export class TSBundle implements Bundle.IBundle
         const ilist = this.instructions;
         const iregs = TSBundle.iregs;
         const fregs = TSBundle.fregs;
+        const regs = TSBundle.regs;
         const iinput = this.inputs;
 
         let i5 = 0;                      // current instruction;
@@ -174,6 +189,29 @@ export class TSBundle implements Bundle.IBundle
                         const iB = (texel >> 16) & 0xFF;
                         const iA = (texel >> 24) & 0xFF;
                         fregs.set([ iR / 255.0, iG / 255.0, iB / 255.0, iA / 255.0 ], a);
+                    }
+                    break;
+                
+                case EOperation.k_I32ExternCall:
+                    {
+                        const id = a;
+                        const { params, ret } = this.externs[id];
+                        const retOffset = (b << 2);
+                        // todo: support out arguments
+                        let paramOffset = retOffset + ret.size;
+                        let args = new Array(params.length);
+                        for (let i = 0; i < params.length; ++ i) {
+                            let p = params[i];
+                            let u8 = regs.subarray(paramOffset, paramOffset + p.size);
+                            args[i] = asNativeRaw(u8, p);
+                            paramOffset += p.size;
+                            assert(p.size % 4 === 0);
+                        }
+                        // const args = params.map(p => asNativeRaw(regs.subarray(paramOffset, paramOffset + p.size), p));
+                        const res = this.ncalls[a].apply(null, args);
+                        if (ret.size) {
+                            regs.set(fromNativeRaw(res, ret), retOffset);
+                        }
                     }
                     break;
 
@@ -452,6 +490,14 @@ export class TSBundle implements Bundle.IBundle
         return this.layout;
     }
 
+    getExterns(): Bundle.Extern[] {
+        return this.externs;
+    }
+
+    setExtern(id: number, extern: Function): void {
+        this.ncalls[id] = extern;
+    }
+
     static resetRegisters()
     {
         TSBundle.regs.fill(0);
@@ -564,3 +610,84 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.Constant[] {
     return layout;
 }
 
+function decodeTypeField(data: Uint8Array, field: TypeFieldT): number {
+    let readed = 0;
+    field.padding = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+    field.size = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+
+    const semanticLength = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+    field.semantic = String.fromCharCode(...data.subarray(readed, readed + semanticLength));
+    readed += semanticLength;
+
+    const nameLength = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+    field.name = String.fromCharCode(...data.subarray(readed, readed + nameLength));
+    readed += nameLength;
+
+    let type: TypeLayoutT = {} as any;
+    readed += decodeTypeLayout(data.subarray(readed), type);
+    field.type = type;
+
+    return readed;
+}
+
+function decodeTypeLayout(data: Uint8Array, layout: TypeLayoutT): number {
+    let readed = 0;
+    layout.size = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+    layout.length = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+
+    const nameLength = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+    layout.name = String.fromCharCode(...data.subarray(readed, readed + nameLength));
+    readed += nameLength;
+
+    let count = u8ArrayToI32(data.subarray(readed, readed + 4));
+    readed += 4;
+
+    for (let i = 0; i < count; ++ i) {
+        let fiedl: TypeFieldT = {} as any;
+        readed += decodeTypeField(data.subarray(readed), fiedl);
+        layout.fields ||= [];
+        layout.fields.push(fiedl);
+    }
+
+    return readed;
+}
+
+export function decodeExternsChunk(externsChunk: Uint8Array): Bundle.Extern[] {
+    let readed = 0;
+    let externCount = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
+    readed += 4;
+
+    let externs: Bundle.Extern[] = [];
+    for (let i = 0; i < externCount; ++i) {
+        const id = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
+        readed += 4;
+
+        const nameLength = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const name = String.fromCharCode(...externsChunk.subarray(readed, readed + nameLength));
+        readed += nameLength;
+
+        const ret: TypeLayoutT = {} as any; // hack
+        readed += decodeTypeLayout(externsChunk.subarray(readed), ret);
+
+        let paramCount = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
+        readed += 4;
+
+        const params: TypeLayoutT[] = [];
+        for (let j = 0; j < paramCount; ++j) {
+            const param: TypeLayoutT = {} as any; // hack
+            readed += decodeTypeLayout(externsChunk.subarray(readed), param);
+            params.push(param);
+        }
+
+        externs.push({ id, name, ret, params });
+    }
+    return externs;
+}

@@ -1,3 +1,5 @@
+import { TypeLayoutT } from "../bundles/FxBundle_generated";
+
 export { EOperation } from "./EOperations"
 
 export enum EAddrType {
@@ -12,6 +14,7 @@ export enum EChunkType {
     k_Constants,
     k_Layout,
     k_Code,
+    k_Externs
 };
 
 export interface Constant
@@ -21,6 +24,14 @@ export interface Constant
     offset: number;
     semantic: string;
     type: string;
+}
+
+export interface Extern
+{
+    id: number;
+    name: string;
+    ret: TypeLayoutT;
+    params: TypeLayoutT[];
 }
 
 type error = 'error';
@@ -72,5 +83,8 @@ export interface IBundle
     getInput(slot: number): IMemory;
     setConstant(name: string, value: Uint8Array): boolean;
 
+    setExtern(id: number, extern: any): void;
+
     getLayout(): Constant[];
+    getExterns(): Extern[];
 }

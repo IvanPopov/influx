@@ -20,6 +20,8 @@ import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
 import { IFile } from "@lib/idl/parser/IParser";
 import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
+import { TypeFieldT, TypeLayout, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
+import { Console } from "console";
 
 // [00 - 01) cbs
 // [01 - 17) inputs
@@ -63,6 +65,77 @@ function writeInt(u8data: Uint8Array, offset: number, value: number): number {
     u8data.set(i32ToU8Array(value), offset);
     offset += 4;
     return offset;
+}
+
+function writeTypeField(u8data: Uint8Array, offset: number, field: TypeFieldT): number {
+    offset = writeInt(u8data, offset, field.padding);
+    offset = writeInt(u8data, offset, field.size);
+    offset = writeString(u8data, offset, <string>field.semantic);
+    offset = writeString(u8data, offset, <string>field.name);
+    offset = writeTypeLayout(u8data, offset, field.type);
+    return offset;
+}
+
+function writeTypeLayout(u8data: Uint8Array, offset: number, layout: TypeLayoutT): number {
+    offset = writeInt(u8data, offset, layout.size);
+    offset = writeInt(u8data, offset, layout.length);
+    offset = writeString(u8data, offset, <string>layout.name);
+    offset = writeInt(u8data, offset, layout.fields.length);
+    for (let field of layout.fields) {
+        offset = writeTypeField(u8data, offset, field);
+    }
+    return offset;
+}
+
+function externsChunk(ctx: IContext): ArrayBuffer {
+    const { externs } = ctx;
+    const reflection = externs.dump();
+    
+    const sizeofTypeField = (field: TypeFieldT) => {
+        return 0 +
+            4 /* padding */ +
+            4 /* size */ +
+            4 /* semantic */ + field.semantic.length +
+            4 /* name */ + field.name.length +
+            sizeofTypeLayout(field.type);
+    }
+
+    const sizeofTypeLayout = (layout: TypeLayoutT) => {
+        return 0 +
+            4 /* size */ +
+            4 /* length */ +
+            4 /* sizeof(name) */ + layout.name.length +
+            4 /* fields.length */ + layout.fields.reduce((a, tl) => a + sizeofTypeField(tl), 0);
+    };
+
+
+    const byteLength = 
+        4/* reflection.length */ +
+        reflection.reduce(
+            (s, { name, ret, params }) => s + 
+            4 /* id */+ 
+            4 /* sizeof(name) */ + name.length +
+            sizeofTypeLayout(ret) +
+            4 /* params.length */ + params.reduce((s, p) => s + sizeofTypeLayout(p), 0), 0);
+
+    const size = (byteLength + 4) >> 2;
+    const chunkHeader = [EChunkType.k_Externs, size];
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+
+    const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+    let written = writeInt(u8data, 0, reflection.length);
+    for (let i = 0; i < reflection.length; ++i) {
+        const { id, name, ret, params } = reflection[i];
+        written = writeInt(u8data, written, id);
+        written = writeString(u8data, written, name);
+        written = writeTypeLayout(u8data, written, ret);
+        written = writeInt(u8data, written, params.length);
+        for (let p of params) {
+            written = writeTypeLayout(u8data, written, p);
+        }
+    }
+    return data.buffer;
 }
 
 // TODO: rewrite with cleaner code
@@ -125,7 +198,7 @@ function codeChunk(ctx: IContext): ArrayBuffer {
 }
 
 function binary(ctx: IContext): Uint8Array {
-    const chunks = [constLayoutChunk(ctx), constChunk(ctx), codeChunk(ctx)].map(ch => new Uint8Array(ch));
+    const chunks = [constLayoutChunk(ctx), constChunk(ctx), codeChunk(ctx), externsChunk(ctx)].map(ch => new Uint8Array(ch));
     const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
     let data = new Uint8Array(byteLength);
     let offset = 0;
@@ -190,6 +263,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         error,
         critical,
         constants,
+        externs,
         uavs,
         srvs,
         alloca,
@@ -257,7 +331,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
             if (!isDef(op)) {
                 // todo: emit correct source location
-                error(null, EErrors.k_UnsupportedArithmeticExpr, { tooltip: `operation: ${opName}`});
+                error(null, EErrors.k_UnsupportedArithmeticExpr, { tooltip: `operation: ${opName}` });
                 return PromisedAddress.INVALID;
             }
 
@@ -398,6 +472,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
+        // a = max(b, c);
         maxf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
             iop3(EOperation.k_F32Max, dest, left, right);
             return dest;
@@ -407,6 +482,18 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         // (x >= y) ? 1 : 0
         stepf(dest: PromisedAddress, y: PromisedAddress, x: PromisedAddress): PromisedAddress {
             iop3(EOperation.k_F32GreaterThanEqual, dest, x, y);
+            return dest;
+        },
+
+        clampf(dest: PromisedAddress, x: PromisedAddress, min: PromisedAddress, max: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32Max, dest, x, min);
+            iop3(EOperation.k_F32Min, dest, dest, max);
+            return dest;
+        },
+
+        saturatef(dest: PromisedAddress, x: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32Max, dest, x, iconst_f32(0.0));
+            iop3(EOperation.k_F32Min, dest, dest, iconst_f32(1.0));
             return dest;
         },
 
@@ -520,7 +607,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             if (canBePlacedInUniforms(decl)) {
                 return EAddrType.k_Input;
             }
-            
+
             if (decl.type.isUAV()) {
                 return EAddrType.k_Input;
             }
@@ -533,7 +620,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 return EAddrType.k_Input;
             }
 
-            critical(decl.sourceNode, EErrors.k_AddressCannotBeResolved, { 
+            critical(decl.sourceNode, EErrors.k_AddressCannotBeResolved, {
                 tooltip: `could not resolve address type for '${decl.toCode()}'`
             });
         }
@@ -567,6 +654,58 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
     //     return [...Array(size / sizeof.i32()).keys()].map(i => i + padding / sizeof.i32());
     // };
 
+    function preloadArguments(call: IFunctionCallInstruction, forceLoad: boolean): PromisedAddress[] {
+        const fdecl = call.decl as IFunctionDeclInstruction;
+        const fdef = fdecl.def;
+        const args: PromisedAddress[] = [];
+        for (let i = 0; i < fdef.params.length; ++i) {
+            const arg = call.args[i];
+            let argAddr = raddr(arg);
+            if (argAddr.type !== EAddrType.k_Registers && forceLoad) {
+                argAddr = iload(argAddr);
+            }
+            args.push(argAddr);
+        }
+        return args;
+    }
+
+    function iextern(call: IFunctionCallInstruction): PromisedAddress {
+        const fdecl = call.decl as IFunctionDeclInstruction;
+        const fdef = fdecl.def;
+        // const retType = fdef.returnType;
+
+        // todo: do not preload all the arguemnts?
+        // const args = preloadArguments(call, true);
+
+        const dataSize = fdef.returnType.size + fdef.params.reduce((partialSum, param) => partialSum + param.type.size, 0);
+        assert(dataSize >= 0 && dataSize <= 256);
+
+        // calling convention layout
+        // dest | is needed
+        // arguments | if needed
+        const ccLayout = alloca(dataSize);
+
+        let ccParamAddr = addr.sub(ccLayout, fdef.returnType.size);
+        assert(fdef.params.length == call.args.length);
+        for (let i = 0; i < fdef.params.length; ++i) {
+            const arg = call.args[i];
+            const param = fdef.params[i];
+            const type = param.type;
+
+            assert(arg.type.size === param.type.size);
+            assert((arg.type.size % 4) == 0);
+
+            const argAddr = raddr(arg);
+            imove(addr.sub(ccParamAddr, 0, type.size), argAddr);
+            
+            if (i !== fdef.params.length - 1) // if to avoid zero sized address scalculation
+                ccParamAddr = addr.sub(ccParamAddr, type.size);
+        }
+
+        const iExtern = externs.add(fdef);
+        icode(EOperation.k_I32ExternCall, iExtern, ccLayout);
+        return addr.sub(ccLayout, 0, fdef.returnType.size);
+    }
 
     function iintrinsic(call: IFunctionCallInstruction): PromisedAddress {
         const fdecl = call.decl as IFunctionDeclInstruction;
@@ -587,21 +726,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         }
 
 
-        const args = preloadArguments(fdef, forceLoadArgumentsToRegisters);
-        // TODO: add support for INT type
+        const args = preloadArguments(call, forceLoadArgumentsToRegisters);
 
-        function preloadArguments(fdef: IFunctionDefInstruction, forceLoad: boolean): PromisedAddress[] {
-            const args: PromisedAddress[] = [];
-            for (let i = 0; i < fdef.params.length; ++i) {
-                const arg = call.args[i];
-                let argAddr = raddr(arg);
-                if (argAddr.type !== EAddrType.k_Registers && forceLoad) {
-                    argAddr = iload(argAddr);
-                }
-                args.push(argAddr);
-            }
-            return args;
-        }
 
         switch (fdecl.name) {
             case 'asuint':
@@ -650,8 +776,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 // handle INT/UINT params as int intrinsic
                 return intrinsics.maxi(dest, args[0], args[1]);
             case 'step':
-                assert (SystemScope.isFloatBasedType(fdef.params[0].type));
+                assert(SystemScope.isFloatBasedType(fdef.params[0].type));
                 return intrinsics.stepf(dest, args[0], args[1]);
+            case 'clamp':
+                assert(SystemScope.isFloatBasedType(fdef.params[0].type));
+                return intrinsics.clampf(dest, args[0], args[1], args[2]);
+            case 'saturate':
+                assert(SystemScope.isFloatBasedType(fdef.params[0].type));
+                return intrinsics.saturatef(dest, args[0]);
             case 'lerp':
                 return intrinsics.lerpf(dest, args[0], args[1], args[2]);
             case 'cross':
@@ -742,6 +874,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     return elementPointer;
                 }
+
             //
             // Textures
             //
@@ -1037,7 +1170,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         }
                     }
 
-                    error(postfix.sourceNode, EErrors.k_UnsupportedUnaryExpression, { 
+                    error(postfix.sourceNode, EErrors.k_UnsupportedUnaryExpression, {
                         tooltip: `unsupported type of unary expression found: '${op}'(${postfix.toCode()})`
                     });
                     return PromisedAddress.INVALID;
@@ -1110,7 +1243,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                             // fall to unsupported warning
                         }
                     }
-                    error(unary.sourceNode, EErrors.k_UnsupportedUnaryExpression, { 
+                    error(unary.sourceNode, EErrors.k_UnsupportedUnaryExpression, {
                         tooltip: `unsupported type of unary expression found: '${op}'(${unary.toCode()})`
                     });
                     return PromisedAddress.INVALID;
@@ -1409,6 +1542,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         return dest;
                     }
 
+                    // todo: use more precise check
+                    if (fdecl.attributes.find(({ name }) => name === 'extern')) {
+                        debug.ns();
+                        const dest = iextern(call);
+                        debug.map(call);
+                        return dest;
+                    }
+
                     const ret = alloca(retType.size);
 
                     const params = fdef.params;
@@ -1542,7 +1683,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                         // expected:
                                         //  float4(10), float3(10u), float3(true);
                                         //  float2(int2(10, 10)) etc.
-                                        assert(args[0].type.size === sizeof.i32() || args[0].type.size === expr.type.size); 
+                                        assert(args[0].type.size === sizeof.i32() || args[0].type.size === expr.type.size);
 
                                         // don't change initial location?
                                         let temp = alloca(src.size);
@@ -1841,7 +1982,7 @@ export function translate(slDocument: ISLDocument, entryName: string): IBCDocume
     if (!PRODUCTION) {
         console.time('[translate program]');
     }
-    
+
     try {
         const entryFunc = slDocument.root.scope.findFunction(entryName, null);
         if (!isDefAndNotNull(entryFunc)) {
@@ -1849,8 +1990,7 @@ export function translate(slDocument: ISLDocument, entryName: string): IBCDocume
         }
         program = translateProgram(ctx, entryFunc);
     } catch (e) {
-        if (!(e instanceof DiagnosticException)) 
-        {
+        if (!(e instanceof DiagnosticException)) {
             throw e;
         }
     }

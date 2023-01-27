@@ -101,8 +101,11 @@ function debugResetRegisters() {
 declare const MODE: string;
 
 // TODO: use bundle inside
+/** @deprecated */
 export async function evaluate(code: Uint8Array): Promise<any>;
+/** @deprecated */
 export async function evaluate(expr: string, document: ISLDocument): Promise<any>;
+/** @deprecated */
 export async function evaluate(param: string | Uint8Array, param2?: ISLDocument): Promise<any> {
     if (MODE === 'development') {
         debugResetRegisters();

@@ -1,6 +1,6 @@
 import { assert, isDef, isNull } from "@lib/common";
 import { instruction } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { fn } from "@lib/fx/analisys/helpers/fn";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
@@ -541,6 +541,25 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
 
 
+    protected emitAttributes(ctx: ContextT, attrs: IAttributeInstruction[]) {
+        attrs?.forEach(attr => {
+            this.emitChar(`[`);
+            this.emitNoSpace();
+            this.emitKeyword(attr.name);
+            this.emitNoSpace();
+            if (attr.args) {
+                this.emitChar('(');
+                this.emitNoSpace();
+                this.emitExpressionList(ctx, attr.args);
+                this.emitChar(')');
+                this.emitNoSpace();
+            }
+            this.emitChar(`]`);
+            this.emitNewline();
+        });
+    }
+    
+
     protected emitRegularFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
         if (!fn) {
             return;
@@ -551,6 +570,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
         this.begin();
         {
+            this.emitAttributes(ctx, fn.attributes);
             this.emitKeyword(typeName);
             this.emitKeyword(fn.name);
             this.emitChar('(');
@@ -558,7 +578,10 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             this.emitParams(ctx, def.params);
             this.emitChar(')');
             this.emitNewline();
-            this.emitBlock(ctx, fn.impl);
+            if (fn.impl)
+                this.emitBlock(ctx, fn.impl);
+            else 
+                this.emitChar(';');
         }
         this.end();
     }
@@ -782,7 +805,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
 
     emitExpressionList(ctx: ContextT, list: IExprInstruction[]) {
-        (list || []).forEach((expr, i) => {
+        list?.forEach((expr, i) => {
             this.emitExpression(ctx, expr);
             (i != list.length - 1) && this.emitChar(',');
         })

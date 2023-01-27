@@ -16,6 +16,7 @@ import SymbolTable from "./SymbolTable";
 import { SRVPool } from "./SRVPool";
 import { UAVPool } from "./UAVPool";
 import { IMap } from "@lib/idl/IMap";
+import { Externs } from "./Externs";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -108,6 +109,7 @@ export function ContextBuilder(uri: IFile) {
     const constants = new ConstanPool;
     const uavs = new UAVPool;
     const srvs = new SRVPool;
+    const externs = new Externs;
 
     const diag = new TranslatorDiagnostics; // todo: remove it?
 
@@ -646,6 +648,7 @@ export function ContextBuilder(uri: IFile) {
         close,
         ret,
         constants,
+        externs,
         uavs,
         srvs,
         depth,

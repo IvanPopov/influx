@@ -721,7 +721,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     Attribute(instr: IAttributeInstruction) {
         return (
             <Property { ...this.bindProps(instr) } name={ instr.name } >
-                { instr.args.map((arg) => this.Unknown(arg)) }
+                { instr.args?.map((arg) => this.Unknown(arg)) }
             </Property>
         );
     }

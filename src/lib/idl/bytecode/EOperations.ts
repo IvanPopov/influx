@@ -14,6 +14,7 @@ export enum EOperation {
     k_I32SetConst,              // set constant => registers
 
     k_I32TextureLoad,           // ...
+    k_I32ExternCall,          // call exteranl routine           
 
     //
     // Arithemtic operations

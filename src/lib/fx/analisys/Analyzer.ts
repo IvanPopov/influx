@@ -358,9 +358,14 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
             //       version with implementation
             fdecl = fdecl.scope.findFunctionInScope(fdecl);
             if (isNull(fdecl.impl)) {
-                context.error(instr.sourceNode,
-                    EErrors.InvalidFunctionImplementationNotFound,
-                    { funcName: fdecl.name });
+                if (fdecl.attributes.find(attr => attr.name === 'extern')) {
+                    // todo: use context info
+                    context.warn(instr.sourceNode, EWarnings.ExternCall);
+                } else {
+                    context.error(instr.sourceNode,
+                        EErrors.InvalidFunctionImplementationNotFound,
+                        { funcName: fdecl.name });
+                }
                 return;
             }
 
@@ -1781,6 +1786,25 @@ export class Analyzer {
     }
 
 
+    protected createTracePseudoDeclaration(context: Context, program: ProgramScope, args: IExprInstruction[]): IFunctionDeclInstruction {
+        const scope = program.globalScope; // global scope (!)
+        const attributes = [new AttributeInstruction({ scope, name: "extern", args: null })];
+        const implementation = null;
+        const returnType = VariableTypeInstruction.wrap(T_VOID, scope);
+        const id = new IdInstruction({ scope, name: "trace" });
+        const paramList = args.map((arg, i) => {
+            // todo: fully deduce base type 
+            const type = VariableTypeInstruction.wrapAsConst(arg.type.baseType, scope);
+            const id = new IdInstruction({ scope, name: `p${i}` });
+            const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+            return new VariableDeclInstruction({ scope, type, id, usageFlags });
+        });
+        const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
+        const traceFunc = new FunctionDeclInstruction({ scope, definition, implementation, attributes });
+        scope.addFunction(traceFunc);
+        return traceFunc;
+    }
+
     /**
      * AST example:
      *    ComplexExpr
@@ -1835,6 +1859,11 @@ export class Analyzer {
                         // last resort for cases like: "sqrt(2)"
                         func = globalScope.findFunction(funcName, args.map(asRelaxedType));
                     }
+
+                    // special case for debug "void trace(...)" function
+                    if (isNull(func) && funcName === 'trace') {
+                         func = this.createTracePseudoDeclaration(context, program, args);
+                    }
                 }
                 break;
             // call as method
@@ -1846,7 +1875,6 @@ export class Analyzer {
                 }
                 break;
         }
-
 
         if (isNull(func)) {
             context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => type.signature(arg?.type)) });
@@ -2800,12 +2828,14 @@ export class Analyzer {
         // looking for function with exact type signatures (that's why we cant use 'asRelaxedType' predicate here!)
         let func = globalScope.findFunction(definition.name, definition.params.map(asType));
 
+        // undedined means that there are more than one instance 
         if (!isDef(func)) {
             context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
             program.pop();
             return null;
         }
 
+        // todo: handle the case when definition without implementation is occured later than the found function with implementation
         if (!isNull(func) && func.impl) {
             context.error(sourceNode, EErrors.FunctionRedefinition, { funcName: definition.name });
             program.pop();

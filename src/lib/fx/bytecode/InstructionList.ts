@@ -79,6 +79,11 @@ class InstructionList {
                 args[1];        // is input index of texture
                 args[2] >>= 2;  // address of arguments
                 break;    
+            case EOperation.k_I32ExternCall:
+                assert(args.length == 2);
+                args[0];              // id of external routine
+                args[1] >>= 2;        // cc layout
+                break;  
             case EOperation.k_I32Not:
                 assert(args.length == 2);
                 args[0] >>= 2;

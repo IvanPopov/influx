@@ -33,6 +33,10 @@ export class CodeConvolutionEmitter<ContextT extends CodeConvolutionContext> ext
             return false;
         }
 
+        if (!decl.sourceNode) {
+            return false;
+        }
+
         const src = decl.sourceNode.loc;
         const includes = ctx.slastDocument.includes;
 

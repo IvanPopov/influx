@@ -3,10 +3,8 @@
 // tslint:disable:cyclomatic-complexity
 
 
-import { isNull } from '@lib/common';
 import { cdlview } from '@lib/fx/bytecode';
-import { i32Asf32, u32Asf32, u32Asi32, u8ArrayAsF32, u8ArrayAsI32 } from '@lib/fx/bytecode/common';
-import InstructionList from '@lib/fx/bytecode/InstructionList';
+import { u32Asf32, u32Asi32 } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { EChunkType } from '@lib/idl/bytecode';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
@@ -20,8 +18,8 @@ import { connect } from 'react-redux';
 import { Button, Icon, Table } from 'semantic-ui-react';
 
 // todo: don't use TS specific bundle helpers
-import * as JSVM from '@lib/fx/bytecode/VM/ts/bundle';
 import { CBUFFER0_REGISTER, CBUFFER_TOTAL, SRV0_REGISTER, SRV_TOTAL, UAV0_REGISTER, UAV_TOTAL } from '@lib/fx/bytecode/Bytecode';
+import * as TSVM from '@lib/fx/bytecode/VM/ts/bundle';
 import { isDefAndNotNull } from '@lib/util/s3d/type';
 
 export interface IBytecodeViewProps extends IDebuggerState {
@@ -117,8 +115,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             return null;
         }
 
-        const chunks = JSVM.decodeChunks(code);
-        const ilist = JSVM.decodeCodeChunk(chunks[EChunkType.k_Code]);
+        const chunks = TSVM.decodeChunks(code);
+        const ilist = TSVM.decodeCodeChunk(chunks[EChunkType.k_Code]);
+        const externs = TSVM.decodeExternsChunk(chunks[EChunkType.k_Externs]);
+        
 
         return (
             // fixed
@@ -144,7 +144,15 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     }
                 </Table>
                 <Button animated onClick={ async () => {
-                    const result = VM.asNativeViaCDL(await VM.evaluate(code), cdl);
+                    const bundle = VM.make("[evaluate]", code);
+
+                    function trace() {
+                        console.log(arguments);
+                    }
+
+                    bundle.getExterns().filter(({ name }) => name === 'trace').forEach(({ id }) => bundle.setExtern(id, trace));
+                    
+                    const result = VM.asNativeViaCDL(bundle.play(), cdl);
                     alert(JSON.stringify(result, null, '   '));
                 } }>
                     <Button.Content visible>Run</Button.Content>
@@ -216,6 +224,9 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 break;
             case EOperation.k_I32TextureLoad:
                 args.length = 3;
+                break;
+            case EOperation.k_I32ExternCall:
+                args.length = 2;
                 break;
 
             case EOperation.k_I32Not:
@@ -356,6 +367,10 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 sArgs[0] = register(args[0]);
                 sArgs[1] = pointer(args[1]);
                 sArgs[2] = register(args[2]);
+                break;
+            case EOperation.k_I32ExternCall:
+                sArgs[0] = constant(sArgs[0]);
+                sArgs[1] = register(args[1]);
                 break;
             case EOperation.k_Jump:
                 sArgs[0] = hex2(args[0]/* / InstructionList.STRIDE*/);
