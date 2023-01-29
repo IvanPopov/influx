@@ -123,13 +123,13 @@ export class ConstanPool {
         const align4 = (x: number) => ((x + 3) >> 2) << 2;
 
         let name = `"${value}"`;
-        let size = align4(4 /* sizeof(value) */ + value.length);
+        let size = align4(4 /* sizeof(value) */ + value.length + 1 /* trailing zero */);
         let reflection = this._knownConstants.find(c => c.name === name);
         let semantic = "";
 
         if (!reflection) {
             let u8Data = new Uint8Array(size);
-            u8Data.set([...i32ToU8Array(value.length), ...value.split('').map(c => c.charCodeAt(0))]);
+            u8Data.set([...i32ToU8Array(value.length), ...value.split('').map(c => c.charCodeAt(0)), 0]);
 
             let addr = this.addUniform(size, `"${value}"`, u8Data);
             const { addr: offset } = addr;

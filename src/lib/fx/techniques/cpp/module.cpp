@@ -104,13 +104,13 @@ EMSCRIPTEN_BINDINGS(pipeline)
     em::value_object<IFX::CBUFFER>("Cbuffer") 
         .field("name", &IFX::CBUFFER::name) 
         .field("size", &IFX::CBUFFER::size)
-        .field("usage", &IFX::CBUFFER::usage)
-        .field("fields",  &GetCbufferFields, &SetCbufferFields);        
+        .field("usage", &IFX::CBUFFER::usage)   
+        .field("fields",  &GetCbufferFields, &SetCbufferFields);         
 
-    em::value_object<IFX::SHADER_ATTR>("ShaderAttr") 
+    em::value_object<IFX::SHADER_ATTR>("ShaderAttr")   
         .field("size", &IFX::SHADER_ATTR::size)
         .field("offset", &IFX::SHADER_ATTR::offset)
-        .field("name", &IFX::SHADER_ATTR::name);  
+        .field("name", &IFX::SHADER_ATTR::name);    
 
     em::class_<IFX::EMITTER_PASS>("EmitterPass")   
          .function("getData", &IFX::EMITTER_PASS::GetData)   

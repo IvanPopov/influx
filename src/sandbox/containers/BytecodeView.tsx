@@ -151,6 +151,9 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     }
 
                     bundle.getExterns().filter(({ name }) => name === 'trace').forEach(({ id }) => bundle.setExtern(id, trace));
+                    // force bind shadow constant buffer 
+                    bundle.setConstant("@", new Uint8Array()); // temp hack for CPP VM setup
+
                     
                     const result = VM.asNativeViaCDL(bundle.play(), cdl);
                     alert(JSON.stringify(result, null, '   '));
