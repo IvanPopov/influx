@@ -123,7 +123,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
         return (
             // fixed
             <div>
-                <Table size='small' unstackable basic compact style={ { fontFamily: 'consolas', whiteSpace: 'pre' } }>
+                <Table size='small' unstackable basic compact style={ { fontFamily: 'consolas, monospace', whiteSpace: 'pre' } }>
                     <Table.Body style={ {
                         maxHeight: 'calc(100vh - 432px)',
                         overflowY: 'auto',
@@ -134,7 +134,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     { props.options.disableOptimizations &&
                         <Table.Footer>
                             <Table.Row >
-                                <Table.Cell colSpan={ 5 } inverted warning textAlign='center'
+                                <Table.Cell colSpan={ 5 } inverted={ true } warning textAlign='center'
                                     style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
                                 >
                                     optimizations are disabled

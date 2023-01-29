@@ -23,7 +23,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
             return null;
         }
         return (
-            <Table unstackable fixed style={ { fontFamily: 'consolas', border: '0' } }>
+            <Table unstackable fixed style={ { fontFamily: 'consolas, monospace', border: '0' } }>
                 <Table.Body>
                     { this.renderContent() }
                 </Table.Body>
@@ -94,19 +94,19 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                         style={ style }>
                         {/* {['f32', 'i32'].indexOf(constant.type) !== -1 &&
                             <Popup inverted
-                                content={ <div style={ { fontFamily: 'consolas' } }>f32: {f32view[n4]}<br/>i32: {i32view[n4]}</div> }
+                                content={ <div style={ { fontFamily: 'consolas, monospace' } }>f32: {f32view[n4]}<br/>i32: {i32view[n4]}</div> }
                                 trigger={ <span>{content}</span> } />
                         } */}
                         {/* {['uniform'].indexOf(constant.type) !== -1 &&
                             <Popup inverted
-                                content={ <div style={ { fontFamily: 'consolas' } }>{constant.value}</div> }
+                                content={ <div style={ { fontFamily: 'consolas, monospace' } }>{constant.value}</div> }
                                 trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
                         } */}
                         {/* {['unknown'].indexOf(constant.type) !== -1 &&
                             content
                         } */}
                         <Popup inverted
-                                content={ <div style={ { fontFamily: 'consolas' } }>{constant.name}</div> }
+                                content={ <div style={ { fontFamily: 'consolas, monospace' } }>{constant.name}</div> }
                                 trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
                     </Table.Cell>
                 );

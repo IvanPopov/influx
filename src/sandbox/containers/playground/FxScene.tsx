@@ -72,7 +72,7 @@ const statsStyleFix: React.CSSProperties = {
     position: 'absolute',
     color: 'white',
     padding: '2px 5px',
-    fontFamily: 'consolas',
+    fontFamily: 'consolas, monospace',
     fontSize: '10px',
     right: '0',
     lineHeight: '11px',

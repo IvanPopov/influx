@@ -14,7 +14,7 @@ const style: React.CSSProperties = {
 };
 
 const monofont: React.CSSProperties = {
-    fontFamily: 'consolas',
+    fontFamily: 'consolas, monospace',
     width: '100%'
 };
 

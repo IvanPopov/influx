@@ -90,6 +90,16 @@ function scan(dir: string, node: IDepotFolder, filters?: string[], excludes?: st
 
 const depotNode = (): IDepotFolder => ({ path: null, files: [], folders: [], totalFiles: 0 });
 
+function currentPath() {
+    // mac locations looks like:
+    //  '/influx/dist/electron/sandbox-electron.html'
+    if (window.navigator.platform.includes('Mac')) {
+        return window.location.pathname;
+    }
+    // windows locations looks like:
+    //  '/C:/Influx/dist/electron/sandbox-electron.html'
+    return window.location.pathname.substr(1);
+}
 
 const depotUpdateRequestLogic = createLogic<IStoreState>({
     type: evt.DEPOT_UPDATE_REQUEST,
@@ -98,7 +108,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
     async process({ getState, action }, dispatch, done) {
         const { s3d: { env } } = getState();
         const root = depotNode();
-        const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        const sandboxPath = path.dirname(currentPath());
 
         if (!ipc.isElectron()) {
             feedFakeDepot(root);

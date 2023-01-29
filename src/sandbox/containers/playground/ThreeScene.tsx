@@ -65,7 +65,7 @@ export function GetAssetsTextures() {
             'checker2x2.png'
         ];
     } else {
-        const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        const sandboxPath = path.dirname(currentPath());
         const texturePath = path.join(sandboxPath, GetAssetsTexturesPath());
         return fs.readdirSync(texturePath);
     }
@@ -157,6 +157,12 @@ function createPlaceholderTexture(width = 512, height = 512) {
 }
 
 
+function currentPath() {
+    if (window.navigator.platform.includes('Mac')) {
+        return window.location.pathname;
+    }
+    return window.location.pathname.substr(1);
+}
 
 export function GetAssetsModels() {
     if (!ipc.isElectron()) {
@@ -165,7 +171,8 @@ export function GetAssetsModels() {
             'probe.obj'
         ];
     } else {
-        const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        // const sandboxPath = path.dirname(window.location.pathname.substr(1));
+        const sandboxPath = path.dirname(window.location.pathname);
         const texturePath = path.join(sandboxPath, GetAssetsModelsPath());
         return fs.readdirSync(texturePath).filter(fname => path.extname(fname) === '.obj');
     }
