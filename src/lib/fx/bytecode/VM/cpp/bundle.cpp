@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <tuple>
 
 #include "bundle.h"
 
@@ -35,34 +36,118 @@ void DecodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>
     } 
 }
 
-void DecodeLayoutChunk(uint8_t* layoutChunk, std::vector<BUNDLE_CONSTANT>& layout) {
-    uint32_t count = *((uint32_t*)layoutChunk);
-    layoutChunk += 4;
+void DecodeLayoutChunk(uint8_t* chunk, std::vector<BUNDLE_CONSTANT>& layout) 
+{
+    uint32_t count = *((uint32_t*)chunk);
+    chunk += 4;
 
-    for (uint32_t i = 0; i < count; ++i) {
-        uint32_t nameLength = *((uint32_t*)layoutChunk);
-        layoutChunk += 4;
-        std::string name((const char*)layoutChunk, nameLength);
-        layoutChunk += nameLength;
+    for (uint32_t i = 0; i < count; ++i) 
+    {
+        uint32_t nameLength = *((uint32_t*)chunk);
+        chunk += 4;
+        std::string name((const char*)chunk, nameLength);
+        chunk += nameLength;
 
-        uint32_t typeLength = *((uint32_t*)layoutChunk);
-        layoutChunk += 4;
-        std::string type((const char*)layoutChunk, typeLength);
-        layoutChunk += typeLength;
+        uint32_t typeLength = *((uint32_t*)chunk);
+        chunk += 4;
+        std::string type((const char*)chunk, typeLength);
+        chunk += typeLength;
 
-        uint32_t semanticLength = *((uint32_t*)layoutChunk);
-        layoutChunk += 4;
-        std::string semantic((const char*)layoutChunk, semanticLength);
-        layoutChunk += semanticLength;
+        uint32_t semanticLength = *((uint32_t*)chunk);
+        chunk += 4;
+        std::string semantic((const char*)chunk, semanticLength);
+        chunk += semanticLength;
 
-        uint32_t offset = *((uint32_t*)layoutChunk);
-        layoutChunk += 4;
-        uint32_t size = *((uint32_t*)layoutChunk);
-        layoutChunk += 4;
+        uint32_t offset = *((uint32_t*)chunk);
+        chunk += 4;
+        uint32_t size = *((uint32_t*)chunk);
+        chunk += 4;
         
         layout.push_back({ name, size, offset, semantic, type }); 
     }
 } 
+
+
+
+uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout);
+
+uint8_t* DecodeTypeField(uint8_t* chunk, Fx::TypeFieldT& field)
+{
+    field.padding = *((uint32_t*)chunk);
+    chunk += 4;
+    field.size = *((uint32_t*)chunk);
+    chunk += 4;
+
+    uint32_t semanticLength = *((uint32_t*)chunk);
+    chunk += 4;
+    field.semantic = std::string((const char*)chunk, semanticLength);
+    chunk += semanticLength;
+
+    uint32_t nameLength = *((uint32_t*)chunk);
+    chunk += 4;
+    field.name = std::string((const char*)chunk, nameLength);
+    chunk += nameLength;
+
+    chunk = DecodeTypeLayout(chunk, *field.type);
+    return chunk;
+}
+
+
+
+uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout)
+{
+    layout.size = *((uint32_t*)chunk);
+    chunk += 4;
+    layout.length = *((uint32_t*)chunk);
+    chunk += 4;
+
+    uint32_t nameLength = *((uint32_t*)chunk);
+    chunk += 4;
+    layout.name = std::string((const char*)chunk, nameLength);
+    chunk += nameLength;
+
+    uint32_t count = *((uint32_t*)chunk);
+    chunk += 4;
+
+    for (uint32_t i = 0; i < count; ++ i) 
+    {
+        auto& field = *layout.fields.emplace_back();
+        chunk = DecodeTypeField(chunk, field);
+    }
+
+    return chunk;
+}
+
+
+void DecodeExternsChunk(uint8_t* chunk, std::vector<BUNDLE_EXTERN>& externs) 
+{
+    uint32_t count = *((uint32_t*)chunk);
+    chunk += 4;
+
+    for (uint32_t i = 0; i < count; ++i) 
+    {
+        auto& external = externs.emplace_back();
+
+        external.id = *((uint32_t*)chunk);
+        chunk += 4;
+
+        uint32_t nameLength = *((uint32_t*)chunk);
+        chunk += 4;
+        external.name = std::string((const char*)chunk, nameLength);
+        chunk += nameLength;
+
+        chunk = DecodeTypeLayout(chunk, external.ret);
+
+        uint32_t paramCount = *((uint32_t*)chunk);
+        chunk += 4;
+
+        for (uint32_t j = 0; j < paramCount; ++j) 
+        {
+            auto& param = external.params.emplace_back();
+            chunk = DecodeTypeLayout(chunk, param);
+        }
+    }
+}
 
 
 BUNDLE::BUNDLE(std::string debugName, memory_view data): m_debugName(debugName)
@@ -91,6 +176,7 @@ struct INSTRUCTION
     PREDICATE(I32StoreInputPointer)\
     PREDICATE(I32SetConst)\
     PREDICATE(I32TextureLoad)\
+    PREDICATE(I32ExternCall)\
     PREDICATE(I32Add)\
     PREDICATE(I32Sub)\
     PREDICATE(I32Mul)\
@@ -161,6 +247,7 @@ struct INSTRUCTION
 #define I32LoadInputPointer()       i32LoadInputPointer(regs, iinput, a, b, c, d);
 #define I32StoreInputPointer()      iinput[a][iregs[b] + d] = iregs[c];
 #define I32TextureLoad()            i32TextureLoad(regs, iinput, a, b, c, d);
+#define I32ExternCall()             i32ExternalCall(regs, iinput, a, b, c, d);
 //
 // Arithmetic operations
 //
@@ -252,6 +339,93 @@ inline void i32TextureLoad(uint32_t* regs, memory_view* iinput, uint32_t a, uint
     value[3] = float(iA) / 255.f;
 }
 
+void BUNDLE::AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout) const
+{
+    if (layout.name == "string") {
+        uint32_t byteOffset = *((uint32_t*)u8);
+        // std::cout << "byte offset: " << byteOffset << std::endl;
+        auto* i32a = m_inputs[CBUFFER0_REGISTER].As<uint32_t>();
+        
+        // auto* u8a = m_inputs[CBUFFER0_REGISTER].As<uint8_t>();
+        // uint32_t size = m_inputs[CBUFFER0_REGISTER].size << 2;
+        // std::cout << "constants size: " << size << std::endl;
+        // for (int i = 0; i < size; ++ i) {
+        //     std::cout << (int)u8a[i] << " ";
+        // }
+        // std::cout << std::endl;
+
+        uint32_t len = i32a[byteOffset >> 2];
+        std::string val(((char*)i32a) + byteOffset + 4, len);
+        std::cout << val << std::endl;
+        return;
+    }
+
+    if (layout.name == "bool") 
+    {
+        bool val = *((bool*)u8);
+        std::cout << (val ? "true" : "false") << std::endl;
+    }
+
+    if (layout.name == "int") 
+    {
+        int val = *((int*)u8);
+        std::cout << val << std::endl;
+    }
+
+    if (layout.name == "uint") 
+    {
+        uint32_t val = *((uint32_t*)u8);
+        std::cout << val  << std::endl;
+    }
+
+    if (layout.name == "float") 
+    {
+        float val = *((float*)u8);
+        std::cout << val  << std::endl;
+    }
+}
+
+void trace(int addr, int i, float f) 
+{
+    std::cout << "trace(): " << addr << ", " << i << ", " << f << std::endl;
+}
+
+template <typename> struct FnArgs;
+template <typename R, typename ...Args>
+struct FnArgs<R(Args...)>
+{
+	using type = std::tuple<Args...>;
+};
+
+
+void BUNDLE::i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const
+{
+    uint8_t* uregs = reinterpret_cast<uint8_t*>(regs);
+    
+    uint32_t id = a;
+    auto& ex = m_externs[id];
+    auto& name = ex.name;
+    auto& params = ex.params;
+    auto& ret = ex.ret;
+
+    uint32_t retOffset = (b << 2);
+    // todo: support out arguments
+    uint32_t paramOffset = retOffset + ret.size;
+    uint8_t* args = uregs + paramOffset;
+
+	using FT = FnArgs<decltype(trace)>::type;
+	// using P0 = std::tuple_element_t<0, FT>;
+	// P0 x;
+    FT* targs = (FT*)args;
+    std::apply(trace, *targs);
+
+    for (uint32_t i = 0; i < params.size(); ++ i) 
+    {
+        auto& p = params[i];
+        AsNative(args, p);
+        args += p.size;
+    }
+}
 
 inline void i32LoadInput(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
@@ -395,11 +569,12 @@ void BUNDLE::Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads)
 }
     
 
-void BUNDLE::SetInput(int slot, memory_view input) {
+void BUNDLE::SetInput(int slot, memory_view input) 
+{
     m_inputs[slot] = input;
 }
 
-memory_view BUNDLE::GetInput(int slot) 
+memory_view BUNDLE::GetInput(int slot) const
 {
     return m_inputs[slot];
 }
@@ -438,12 +613,20 @@ bool BUNDLE::SetConstant(std::string name, memory_view value) {
     return true;
 }
 
+void BUNDLE::SetExtern(uint32_t id, std::function<void()> callback)
+{
+
+}
+
 const std::vector<BUNDLE_CONSTANT>& BUNDLE::GetLayout() const
 {
     return m_layout;
 }
 
-
+const std::vector<BUNDLE_EXTERN>& BUNDLE::GetExterns() const
+{
+    return m_externs;
+}
  
 BUNDLE_UAV BUNDLE::CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {
@@ -486,11 +669,29 @@ void BUNDLE::Load(memory_view data)
     memory_view codeChunk = chunks[CHUNK_TYPES::CODE];
     memory_view constChunk = chunks[CHUNK_TYPES::CONSTANTS];
     memory_view layoutChunk = chunks[CHUNK_TYPES::LAYOUT];
+    memory_view externsChunk = chunks[CHUNK_TYPES::EXTERNS];
     
     DecodeLayoutChunk(layoutChunk.As<uint8_t>(), m_layout);
+    DecodeExternsChunk(externsChunk.As<uint8_t>(), m_externs);
 
     m_instructions.assign(codeChunk.Begin<uint32_t>(), codeChunk.End<uint32_t>());
     m_constants.assign(constChunk.Begin<uint32_t>(), constChunk.End<uint32_t>());
+
+    auto undefFn = [&]() -> void {
+        std::cout << "undefFn()" << std::endl;
+    };
+
+    auto traceFn = [&]() -> void {
+        std::cout << "traceFn()" << std::endl;
+    };
+
+    for (auto& external : m_externs) {
+        if (external.name == "trace") {
+            m_ncalls.push_back(traceFn);
+        } else {
+            m_ncalls.push_back(undefFn);
+        }
+    }
 }
 
 }

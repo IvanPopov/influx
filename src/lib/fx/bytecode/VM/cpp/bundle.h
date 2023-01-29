@@ -5,6 +5,7 @@
 
 #include "memory_view.h"
 #include "bundle_uav.h"
+#include "../../../../idl/bundles/FxBundle_generated.h"
 
 namespace VM
 {
@@ -13,6 +14,7 @@ enum CHUNK_TYPES {
     CONSTANTS,
     LAYOUT,
     CODE,
+    EXTERNS
 };
 
 
@@ -41,6 +43,15 @@ struct BUNDLE_CONSTANT
 };
 
 
+struct BUNDLE_EXTERN
+{
+    int id;
+    std::string name;
+    Fx::TypeLayoutT ret;
+    std::vector<Fx::TypeLayoutT> params;
+};
+
+
 struct RESOURCE_VIEW
 {
     std::string name;
@@ -52,9 +63,11 @@ struct RESOURCE_VIEW
 class BUNDLE
 {
 private:
-    std::vector<BUNDLE_CONSTANT> m_layout {};
     std::vector<uint32_t> m_instructions {};
+    std::vector<BUNDLE_CONSTANT> m_layout {};
+    std::vector<BUNDLE_EXTERN> m_externs {};
     std::vector<uint32_t> m_constants {};
+    std::vector<std::function<void()>> m_ncalls{};
     memory_view m_inputs[64] {};
     
     std::string m_debugName = "[noname]";
@@ -65,9 +78,11 @@ public:
     int Play();
     void Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
     void SetInput(int slot, memory_view input);
-    memory_view GetInput(int slot);
+    memory_view GetInput(int slot) const;
     bool SetConstant(std::string name, memory_view value);
+    void SetExtern(uint32_t id, std::function<void()> callback);
     const std::vector<BUNDLE_CONSTANT>& GetLayout() const;
+    const std::vector<BUNDLE_EXTERN>& GetExterns() const;
 
     static BUNDLE_UAV CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
     static void DestroyUAV(BUNDLE_UAV uav);
@@ -78,6 +93,12 @@ public:
     // static 
 
     void Load(memory_view data);
+
+    ////
+    void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout) const;
+
+    /////
+    void i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const;
 }; 
 
 }

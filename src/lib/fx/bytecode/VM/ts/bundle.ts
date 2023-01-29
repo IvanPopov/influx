@@ -221,7 +221,6 @@ export class TSBundle implements Bundle.IBundle
                             paramOffset += p.size;
                             assert(p.size % 4 === 0);
                         }
-                        // const args = params.map(p => asNativeRaw(regs.subarray(paramOffset, paramOffset + p.size), p));
                         const res = this.ncalls[a].apply(null, args);
                         if (ret.size) {
                             regs.set(fromNativeRaw(res, ret), retOffset);
