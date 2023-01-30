@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "memory_view.h"
 #include "bundle_uav.h"
@@ -67,7 +68,7 @@ private:
     std::vector<BUNDLE_CONSTANT> m_layout {};
     std::vector<BUNDLE_EXTERN> m_externs {};
     std::vector<uint32_t> m_constants {};
-    std::vector<std::function<void()>> m_ncalls{};
+    std::vector<std::function<void(const BUNDLE_EXTERN&, uint8_t*)>> m_ncalls{};
     memory_view m_inputs[64] {};
     
     std::string m_debugName = "[noname]";
@@ -95,7 +96,7 @@ public:
     void Load(memory_view data);
 
     ////
-    void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout) const;
+    void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest) const;
 
     /////
     void i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const;

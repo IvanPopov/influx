@@ -14,7 +14,7 @@ const gitRevisionPlugin = new GitRevisionPlugin()
 
 const [, , command, value] = process.argv;
 
-const locate = (filename) => process.env.PATH.split(';').find(dir => fs.existsSync(path.join(dir, filename))); 
+const locate = (filename) => process.env.PATH.split(/[:;]/).find(dir => fs.existsSync(path.join(dir, filename))); 
 
 const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 const srcPath = `${__dirname}/src`;
@@ -25,7 +25,8 @@ const commithash = gitRevisionPlugin.commithash();
 const branch = gitRevisionPlugin.branch();
 const mode = process.env.NODE_ENV || 'development';
 const timestamp = String(new Date());
-const emcc = locate('em++.bat'); // path to emcc compiler
+const compilerBin = process.platform == 'win32' ? 'em++.bat' : 'em++';
+const emcc = locate(compilerBin); // path to emcc compiler
 
 const DEVELOPMENT = mode == 'development';
 const PRODUCTION = mode == 'production';

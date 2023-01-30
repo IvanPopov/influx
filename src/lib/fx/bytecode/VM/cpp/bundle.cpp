@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
 #include <map>
 #include <tuple>
 
@@ -339,55 +340,67 @@ inline void i32TextureLoad(uint32_t* regs, memory_view* iinput, uint32_t a, uint
     value[3] = float(iA) / 255.f;
 }
 
-void BUNDLE::AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout) const
+// ----------------------------
+// External Calls
+// ----------------------------
+
+template<typename ELEMENT_T>
+void AsNativeBase(uint8_t* u8, std::stringstream& dest)
 {
-    if (layout.name == "string") {
-        uint32_t byteOffset = *((uint32_t*)u8);
-        // std::cout << "byte offset: " << byteOffset << std::endl;
-        auto* i32a = m_inputs[CBUFFER0_REGISTER].As<uint32_t>();
-        
-        // auto* u8a = m_inputs[CBUFFER0_REGISTER].As<uint8_t>();
-        // uint32_t size = m_inputs[CBUFFER0_REGISTER].size << 2;
-        // std::cout << "constants size: " << size << std::endl;
-        // for (int i = 0; i < size; ++ i) {
-        //     std::cout << (int)u8a[i] << " ";
-        // }
-        // std::cout << std::endl;
-
-        uint32_t len = i32a[byteOffset >> 2];
-        std::string val(((char*)i32a) + byteOffset + 4, len);
-        std::cout << val << std::endl;
-        return;
-    }
-
-    if (layout.name == "bool") 
+    if constexpr (std::is_same<ELEMENT_T, bool>::value)
     {
         bool val = *((bool*)u8);
-        std::cout << (val ? "true" : "false") << std::endl;
-    }
-
-    if (layout.name == "int") 
-    {
-        int val = *((int*)u8);
-        std::cout << val << std::endl;
-    }
-
-    if (layout.name == "uint") 
-    {
-        uint32_t val = *((uint32_t*)u8);
-        std::cout << val  << std::endl;
-    }
-
-    if (layout.name == "float") 
-    {
-        float val = *((float*)u8);
-        std::cout << val  << std::endl;
+        dest << (val ? "true" : "false");
+    } 
+    else 
+    { 
+        ELEMENT_T val = *((ELEMENT_T*)u8);
+        dest << val;
     }
 }
 
-void trace(int addr, int i, float f) 
+template<typename ELEMENT_T>
+void AsNativeVector(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest)
 {
-    std::cout << "trace(): " << addr << ", " << i << ", " << f << std::endl;
+    dest << "[ ";
+    for (int i = 0, n = layout.size / sizeof(ELEMENT_T); i < n; ++ i) 
+    {
+        AsNativeBase<ELEMENT_T>(u8, dest);
+        if (i != n - 1) dest << ", ";
+        u8 += sizeof(ELEMENT_T);
+    }
+    dest << " ]";
+}
+
+inline std::string ReadString(uint8_t* data, memory_view constants);
+
+void BUNDLE::AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest) const
+{
+    if (layout.name == "string") {
+        dest << ReadString(u8, m_inputs[CBUFFER0_REGISTER]);
+    }
+    else if (layout.name == "bool") AsNativeBase<bool>(u8, dest);
+    else if (layout.name == "int") AsNativeBase<int32_t>(u8, dest);
+    else if (layout.name == "uint") AsNativeBase<uint32_t>(u8, dest);
+    else if (layout.name == "float") AsNativeBase<float>(u8, dest);
+    else if (layout.name == "uint2") AsNativeVector<uint32_t>(u8, layout, dest);
+    else if (layout.name == "uint3") AsNativeVector<uint32_t>(u8, layout, dest);
+    else if (layout.name == "uint4") AsNativeVector<uint32_t>(u8, layout, dest);
+    else if (layout.name == "int2") AsNativeVector<int32_t>(u8, layout, dest);
+    else if (layout.name == "int3") AsNativeVector<int32_t>(u8, layout, dest);
+    else if (layout.name == "int4") AsNativeVector<int32_t>(u8, layout, dest);
+    else if (layout.name == "float2") AsNativeVector<float>(u8, layout, dest);
+    else if (layout.name == "float3") AsNativeVector<float>(u8, layout, dest);
+    else if (layout.name == "float4") AsNativeVector<float>(u8, layout, dest);
+    else 
+    {
+        dest << "*";
+    }
+}
+
+void trace(std::string str, int i, float f) 
+{
+    std::cout << "trace(): " << str << ", " << i << ", " << f << std::endl;
 }
 
 template <typename> struct FnArgs;
@@ -397,6 +410,41 @@ struct FnArgs<R(Args...)>
 	using type = std::tuple<Args...>;
 };
 
+inline std::string ReadString(uint8_t* data, memory_view constants)
+{
+    uint32_t* i32a = constants.As<uint32_t>();
+    uint32_t byteOffset = *((uint32_t*)data);
+    uint32_t len = i32a[byteOffset >> 2];
+    return std::string(((char*)i32a) + byteOffset + 4, len);
+}
+
+template <typename TUPLE_T, int i>
+void FillElem(TUPLE_T& tp, uint8_t*& data, memory_view constants) {
+    using ELEMENT_T = std::tuple_element_t<i, TUPLE_T>;
+    if constexpr (std::is_same<ELEMENT_T, std::string>::value) 
+    {
+        std::get<i>(tp) = std::move(ReadString(data, constants));
+        data += sizeof(uint32_t); // pointer to string
+    } 
+    else 
+    {
+        std::get<i>(tp) = *(ELEMENT_T*)data;
+        data += sizeof(ELEMENT_T);
+    }
+};
+
+template <typename TUPLE_T, std::size_t... Is>
+void FillTupleManual(TUPLE_T& tp, uint8_t* data, memory_view constants, std::index_sequence<Is...>) {
+    (FillElem<TUPLE_T, Is>(tp, data, constants), ...);
+}
+
+template <typename TUPLE_T, std::size_t TupSize = std::tuple_size_v<TUPLE_T>>
+void FillTuple(TUPLE_T& tp, uint8_t* data, memory_view constants) {
+    FillTupleManual(tp, data, constants, std::make_index_sequence<TupSize>{});
+}
+
+// using P0 = std::tuple_element_t<0, FT>;
+// P0 x;
 
 void BUNDLE::i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const
 {
@@ -404,28 +452,18 @@ void BUNDLE::i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, ui
     
     uint32_t id = a;
     auto& ex = m_externs[id];
-    auto& name = ex.name;
-    auto& params = ex.params;
     auto& ret = ex.ret;
 
     uint32_t retOffset = (b << 2);
     // todo: support out arguments
     uint32_t paramOffset = retOffset + ret.size;
-    uint8_t* args = uregs + paramOffset;
+    uint8_t* rawArguments = uregs + paramOffset;
 
-	using FT = FnArgs<decltype(trace)>::type;
-	// using P0 = std::tuple_element_t<0, FT>;
-	// P0 x;
-    FT* targs = (FT*)args;
-    std::apply(trace, *targs);
-
-    for (uint32_t i = 0; i < params.size(); ++ i) 
-    {
-        auto& p = params[i];
-        AsNative(args, p);
-        args += p.size;
-    }
+    m_ncalls[id](ex, rawArguments);
 }
+
+// ----------------------------
+// ----------------------------
 
 inline void i32LoadInput(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
@@ -438,7 +476,6 @@ inline void i32LoadInput(uint32_t* regs, memory_view* iinput, uint32_t a, uint32
 inline void i32LoadInputPointer(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
     int32_t* iregs = reinterpret_cast<int32_t*>(regs);
-    // std::cout << "a=" << a << ", iinput[a].size=" << iinput[a].size << ", c=" << c << ", iregs[c]=" << iregs[c] << ", d=" << d << std::endl;
     assert(iinput[a].size > iregs[c] + d);
     iregs[b] = iinput[a][iregs[c] + d];
 }
@@ -456,7 +493,8 @@ int BUNDLE::Play()
     memory_view* iinput = m_inputs;
     int pc = 0;
 
-    #define READ_INSTRUCTION() const auto& [ op, a, b, c, d ] = ilist[pc]
+    #define READ_INSTRUCTION() const auto& [ op, a, b, c, d ] = ilist[pc];
+
     #define PC_INC() pc++
     #define HALT() return iregs[0]
 
@@ -677,12 +715,25 @@ void BUNDLE::Load(memory_view data)
     m_instructions.assign(codeChunk.Begin<uint32_t>(), codeChunk.End<uint32_t>());
     m_constants.assign(constChunk.Begin<uint32_t>(), constChunk.End<uint32_t>());
 
-    auto undefFn = [&]() -> void {
+    auto undefFn = [&](const BUNDLE_EXTERN& ex, uint8_t* rawArgs) -> void {
         std::cout << "undefFn()" << std::endl;
     };
 
-    auto traceFn = [&]() -> void {
-        std::cout << "traceFn()" << std::endl;
+    auto traceFn = [&](const BUNDLE_EXTERN& ex, uint8_t* rawArgs) -> void {
+        // using TUPLE_T = FnArgs<decltype(trace)>::type;
+        // TUPLE_T tupleArguments;
+        // FillTuple(tupleArguments, rawArgs, m_inputs[CBUFFER0_REGISTER]);
+
+        // std::apply(trace, tupleArguments);
+        std::stringstream ss;
+        for (uint32_t i = 0, n = ex.params.size(); i < n; ++ i) 
+        {
+            auto& p = ex.params[i];
+            AsNative(rawArgs, p, ss);
+            if (i != n - 1) ss << ", ";
+            rawArgs += p.size;
+        }
+        std::cout << ss.str() << std::endl;
     };
 
     for (auto& external : m_externs) {

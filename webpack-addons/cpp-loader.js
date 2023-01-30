@@ -14,7 +14,7 @@ const unlink = (fileName) => {
 const writeFile = _bluebird.promisify(fs.writeFile);
 const readFile = _bluebird.promisify(fs.readFile);
 const execFile = _bluebird.promisify(cp.execFile);
-const locateFile = (filename) => process.env.PATH.split(';').find(dir => fs.existsSync(path.join(dir, filename))); 
+const locateFile = (filename) => process.env.PATH.split(/[:;]/).find(dir => fs.existsSync(path.join(dir, filename))); 
 
 function basename(resource)
 {
@@ -39,7 +39,11 @@ module.exports = async function (source) {
     const wasmMapFile = wasmBuildName.replace('.wasm', '.wasm.map');
 	const indexFile = wasmBuildName.replace('.wasm', '.js');
     
-    if (!locateFile('em++.bat'))
+    const isWin = process.platform == 'win32';
+    const isMac = process.platform == 'darwin';
+    const compilerBin = isWin ? 'em++.bat' : 'em++';
+
+    if (!locateFile(compilerBin))
     {
         console.error(`Emscriptent compiler is not found, cpp module '${this.resourcePath}' will be omitted.`);
         callback(null, "module.exports = () => Promise.resolve();");
@@ -59,6 +63,8 @@ module.exports = async function (source) {
         "-s", "WASM=1", 
         "-s", "TOTAL_MEMORY=128MB", 
         "-s", "ALLOW_MEMORY_GROWTH=1",
+        "-s", "TOTAL_STACK=2MB",
+        "-s", "EXPORTED_FUNCTIONS=['_malloc', '_free']",
         
         // "-fsanitize=undefined",
         // "-s", "SAFE_HEAP=1",
@@ -71,9 +77,9 @@ module.exports = async function (source) {
     console.log(wasmFlags.concat(['-o', indexFile]).join(' '));
     console.log('EMCC_CFLAGS:', Object.keys(defines).map(key => `-D ${key}=${defines[key]}`).join(' '));
     try{
-        await execFile('em++.bat', wasmFlags.concat(['-o', indexFile]), 
+        await execFile(compilerBin, wasmFlags.concat(['-o', indexFile]), 
         { cwd: this.context, env: { ...process.env, 
-            EMCC_CFLAGS: Object.keys(defines).map(key => `-D ${key}=${defines[key]}`).join(' ') } 
+            EMCC_CFLAGS: [ ...Object.keys(defines).map(key => `-D ${key}=${defines[key]}`) ].join(' ') } 
         });
         const mapFileName = basename(wasmMapFile);
     
