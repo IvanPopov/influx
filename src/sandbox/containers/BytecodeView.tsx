@@ -134,7 +134,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     { props.options.disableOptimizations &&
                         <Table.Footer>
                             <Table.Row >
-                                <Table.Cell colSpan={ 5 } inverted={ true } warning textAlign='center'
+                                <Table.Cell colSpan={ 5 } inverted={1 as any} warning textAlign='center'
                                     style={ { padding: '2px', fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' } }
                                 >
                                     optimizations are disabled
@@ -146,14 +146,13 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 <Button animated onClick={ async () => {
                     const bundle = VM.make("[evaluate]", code);
 
-                    function trace() {
-                        console.log(arguments);
+                    if (!bundle) {
+                        alert(`[ERROR] Could not evaluate bundle.`);
+                        return;
                     }
 
-                    bundle.getExterns().filter(({ name }) => name === 'trace').forEach(({ id }) => bundle.setExtern(id, trace));
                     // force bind shadow constant buffer 
                     bundle.setConstant("@", new Uint8Array()); // temp hack for CPP VM setup
-
                     
                     const result = VM.asNativeViaCDL(bundle.play(), cdl);
                     alert(JSON.stringify(result, null, '   '));

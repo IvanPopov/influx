@@ -88,8 +88,8 @@ export class TSBundle implements Bundle.IBundle
             console.error(`[native call <${extern.name}> was not provided]`, [a, b, c, d, e, f].filter(x => isDef(x))); 
         };
 
-        const traceFn = (a, b, c, d, e, f) => { 
-            console.log.apply(null, [a, b, c, d, e, f].filter(x => isDef(x))); 
+        const traceFn = (a, b, c, d, e, f, g, h, i, j, k) => { 
+            console.log(...[a, b, c, d, e, f, g, h, i, j, k].filter(x => isDef(x))); 
         };
 
         this.ncalls = Array<Function>(this.externs.length).fill(null).map(

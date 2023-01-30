@@ -3,6 +3,10 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <type_traits>
+#include <tuple>
+#include <algorithm>
+#include <cassert>
 
 #include "memory_view.h"
 #include "bundle_uav.h"
@@ -10,6 +14,12 @@
 
 namespace VM
 {
+
+// must be synced with Bytecode.ts (!)
+const int CBUFFER0_REGISTER = 0;
+const int INPUT0_REGISTER = 1;
+const int UAV0_REGISTER = 17;
+const int SRV0_REGISTER = 33;
 
 enum CHUNK_TYPES {
     CONSTANTS,
@@ -63,12 +73,19 @@ struct RESOURCE_VIEW
 
 class BUNDLE
 {
+public:
+    using NCALL_T = void(const BUNDLE_EXTERN&, memory_view*, uint8_t*, uint8_t*);
+    using NCALL_VECTOR_T = std::vector<std::function<BUNDLE::NCALL_T>>;
+    using EXTERN_VECTOR_T = std::vector<BUNDLE_EXTERN>;
+    using CONSTANT_VECTOR_T = std::vector<BUNDLE_CONSTANT>;
 private:
     std::vector<uint32_t> m_instructions {};
-    std::vector<BUNDLE_CONSTANT> m_layout {};
-    std::vector<BUNDLE_EXTERN> m_externs {};
     std::vector<uint32_t> m_constants {};
-    std::vector<std::function<void(const BUNDLE_EXTERN&, uint8_t*)>> m_ncalls{};
+
+    CONSTANT_VECTOR_T m_layout {};
+    EXTERN_VECTOR_T m_externs {};
+    NCALL_VECTOR_T m_ncalls{};
+
     memory_view m_inputs[64] {};
     
     std::string m_debugName = "[noname]";
@@ -78,12 +95,12 @@ public:
 
     int Play();
     void Dispatch(BUNDLE_NUMGROUPS numgroups, BUNDLE_NUMTHREADS numthreads);
+    
     void SetInput(int slot, memory_view input);
     memory_view GetInput(int slot) const;
+
     bool SetConstant(std::string name, memory_view value);
-    void SetExtern(uint32_t id, std::function<void()> callback);
-    const std::vector<BUNDLE_CONSTANT>& GetLayout() const;
-    const std::vector<BUNDLE_EXTERN>& GetExterns() const;
+    const CONSTANT_VECTOR_T& GetLayout() const;
 
     static BUNDLE_UAV CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg);
     static void DestroyUAV(BUNDLE_UAV uav);
@@ -91,15 +108,16 @@ public:
     static RESOURCE_VIEW CreateBufferView(std::string name, uint32_t reg);
     static RESOURCE_VIEW CreateTextureView(std::string name, uint32_t reg);
 
-    // static 
+    const EXTERN_VECTOR_T& GetExterns() const;
+    // const BUNDLE_EXTERN* GetExtern(std::string name) const;
 
-    void Load(memory_view data);
+    template<typename FN_T>
+    void SetExtern(uint32_t id, FN_T Fn);
+    void SetExtern(uint32_t id, NCALL_T Fn);
 
-    ////
-    void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest) const;
-
-    /////
-    void i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const;
+    void Load(memory_view data); 
 }; 
+
+#include "bundle.hpp"
 
 }

@@ -133,7 +133,7 @@ EMSCRIPTEN_BINDINGS(pipeline)
          .function("prerender", em::optional_override([](IFX::EMITTER_PASS& self, em::val val) {
             return self.EMITTER_PASS::Prerender(UniformsFromJSObject(val));
           }))  
-         .function("dump", &IFX::EMITTER_PASS::Dump); 
+         .function("dump", &IFX::EMITTER_PASS::Dump);      
    
     em::class_<IFX::EMITTER>("Emitter")          
          .function("getName", &IFX::EMITTER::GetName) 

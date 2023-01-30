@@ -73,6 +73,7 @@ async function main() {
             files: [
                 'bundle.cpp',
                 'bundle.h',
+                'bundle.hpp',
                 'bundle_uav.cpp',
                 'bundle_uav.h',
                 'memory_view.h'

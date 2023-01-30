@@ -11,10 +11,14 @@ const unlink = (fileName) => {
 	});
 }
 
+const IS_MAC = process.platform == 'darwin';
+const IS_WIN = process.platform == 'win32';
+const COMPILER_BIN = IS_WIN ? 'em++.bat' : 'em++';
+
 const writeFile = _bluebird.promisify(fs.writeFile);
 const readFile = _bluebird.promisify(fs.readFile);
 const execFile = _bluebird.promisify(cp.execFile);
-const locateFile = (filename) => process.env.PATH.split(/[:;]/).find(dir => fs.existsSync(path.join(dir, filename))); 
+const locateFile = (filename) => process.env.PATH.split(IS_MAC ? ':' : ';').find(dir => fs.existsSync(path.join(dir, filename)));
 
 function basename(resource)
 {
@@ -38,12 +42,8 @@ module.exports = async function (source) {
     const wasmFile = wasmBuildName;
     const wasmMapFile = wasmBuildName.replace('.wasm', '.wasm.map');
 	const indexFile = wasmBuildName.replace('.wasm', '.js');
-    
-    const isWin = process.platform == 'win32';
-    const isMac = process.platform == 'darwin';
-    const compilerBin = isWin ? 'em++.bat' : 'em++';
 
-    if (!locateFile(compilerBin))
+    if (!locateFile(COMPILER_BIN))
     {
         console.error(`Emscriptent compiler is not found, cpp module '${this.resourcePath}' will be omitted.`);
         callback(null, "module.exports = () => Promise.resolve();");
@@ -65,11 +65,14 @@ module.exports = async function (source) {
         "-s", "ALLOW_MEMORY_GROWTH=1",
         "-s", "TOTAL_STACK=2MB",
         "-s", "EXPORTED_FUNCTIONS=['_malloc', '_free']",
+
+        // sanitizing
+        // "-g4", 
+        // "-s", "ASSERTIONS=2", 
+        // "-s", "SAFE_HEAP=1", 
+        // "-s", "STACK_OVERFLOW_CHECK=1",
         
         // "-fsanitize=undefined",
-        // "-s", "SAFE_HEAP=1",
-        // "-s", "ASSERTIONS=1",
-        // "-s", "STACK_OVERFLOW_CHECK=1",
         
         "--bind", 
     ];
@@ -77,7 +80,7 @@ module.exports = async function (source) {
     console.log(wasmFlags.concat(['-o', indexFile]).join(' '));
     console.log('EMCC_CFLAGS:', Object.keys(defines).map(key => `-D ${key}=${defines[key]}`).join(' '));
     try{
-        await execFile(compilerBin, wasmFlags.concat(['-o', indexFile]), 
+        await execFile(COMPILER_BIN, wasmFlags.concat(['-o', indexFile]), 
         { cwd: this.context, env: { ...process.env, 
             EMCC_CFLAGS: [ ...Object.keys(defines).map(key => `-D ${key}=${defines[key]}`) ].join(' ') } 
         });

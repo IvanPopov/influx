@@ -31,6 +31,8 @@ export function make(name: string, code: Uint8Array): IBundle {
     let mem = transferU8ToHeap(BundleModule, code);
     try {
         bundleWasm = new BundleModule.Bundle(name, mem);
+    } catch(e) {
+        // console.error(e);
     } finally {
         BundleModule._free(mem.heap);
     }

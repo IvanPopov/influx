@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <iostream>
-#include <algorithm>
 #include <cmath>
-#include <type_traits>
 #include <map>
-#include <tuple>
 
 #include "bundle.h"
 
@@ -16,12 +13,6 @@
 
 namespace VM
 {
-
-// must be synced with Bytecode.ts (!)
-const int CBUFFER0_REGISTER = 0;
-const int INPUT0_REGISTER = 1;
-const int UAV0_REGISTER = 17;
-const int SRV0_REGISTER = 33;
 
 void DecodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>& chunks) 
 {
@@ -37,7 +28,7 @@ void DecodeChunks(uint8_t* data, uint32_t byteLength, std::map<int, memory_view>
     } 
 }
 
-void DecodeLayoutChunk(uint8_t* chunk, std::vector<BUNDLE_CONSTANT>& layout) 
+void DecodeLayoutChunk(uint8_t* chunk, BUNDLE::CONSTANT_VECTOR_T& layout) 
 {
     uint32_t count = *((uint32_t*)chunk);
     chunk += 4;
@@ -120,7 +111,7 @@ uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout)
 }
 
 
-void DecodeExternsChunk(uint8_t* chunk, std::vector<BUNDLE_EXTERN>& externs) 
+void DecodeExternsChunk(uint8_t* chunk, BUNDLE::EXTERN_VECTOR_T& externs) 
 {
     uint32_t count = *((uint32_t*)chunk);
     chunk += 4;
@@ -248,7 +239,7 @@ struct INSTRUCTION
 #define I32LoadInputPointer()       i32LoadInputPointer(regs, iinput, a, b, c, d);
 #define I32StoreInputPointer()      iinput[a][iregs[b] + d] = iregs[c];
 #define I32TextureLoad()            i32TextureLoad(regs, iinput, a, b, c, d);
-#define I32ExternCall()             i32ExternalCall(regs, iinput, a, b, c, d);
+#define I32ExternCall()             i32ExternalCall(m_ncalls, m_externs, regs, iinput, a, b, c, d);
 //
 // Arithmetic operations
 //
@@ -372,14 +363,9 @@ void AsNativeVector(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstrea
     dest << " ]";
 }
 
-inline std::string ReadString(uint8_t* data, memory_view constants);
-
-void BUNDLE::AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest) const
+void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest)
 {
-    if (layout.name == "string") {
-        dest << ReadString(u8, m_inputs[CBUFFER0_REGISTER]);
-    }
-    else if (layout.name == "bool") AsNativeBase<bool>(u8, dest);
+    if (layout.name == "bool") AsNativeBase<bool>(u8, dest);
     else if (layout.name == "int") AsNativeBase<int32_t>(u8, dest);
     else if (layout.name == "uint") AsNativeBase<uint32_t>(u8, dest);
     else if (layout.name == "float") AsNativeBase<float>(u8, dest);
@@ -398,68 +384,55 @@ void BUNDLE::AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstr
     }
 }
 
-void trace(std::string str, int i, float f) 
-{
-    std::cout << "trace(): " << str << ", " << i << ", " << f << std::endl;
-}
 
-template <typename> struct FnArgs;
-template <typename R, typename ...Args>
-struct FnArgs<R(Args...)>
+void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, memory_view* iinput, std::stringstream& dest)
 {
-	using type = std::tuple<Args...>;
-};
-
-inline std::string ReadString(uint8_t* data, memory_view constants)
-{
-    uint32_t* i32a = constants.As<uint32_t>();
-    uint32_t byteOffset = *((uint32_t*)data);
-    uint32_t len = i32a[byteOffset >> 2];
-    return std::string(((char*)i32a) + byteOffset + 4, len);
-}
-
-template <typename TUPLE_T, int i>
-void FillElem(TUPLE_T& tp, uint8_t*& data, memory_view constants) {
-    using ELEMENT_T = std::tuple_element_t<i, TUPLE_T>;
-    if constexpr (std::is_same<ELEMENT_T, std::string>::value) 
-    {
-        std::get<i>(tp) = std::move(ReadString(data, constants));
-        data += sizeof(uint32_t); // pointer to string
-    } 
+    if (layout.name == "string") {
+        dest << ReadString(u8, iinput[CBUFFER0_REGISTER]);
+    }
     else 
     {
-        std::get<i>(tp) = *(ELEMENT_T*)data;
-        data += sizeof(ELEMENT_T);
+        AsNative(u8, layout, dest);
     }
+}
+
+// int trace2() {
+//     return 100;
+// }
+
+// known as trace() in HLSL
+void DebugTrace(const BUNDLE_EXTERN& ex, memory_view* iinput, uint8_t* args, uint8_t* ret) 
+{
+    std::stringstream ss;
+    for (uint32_t i = 0, n = ex.params.size(); i < n; ++ i) 
+    {
+        auto& p = ex.params[i];
+        // constants are required to read strings
+        AsNative(args, p, iinput, ss);
+        if (i != n - 1) ss << ", ";
+        args += p.size;
+    }
+    std::cout << ss.str() << std::endl;
 };
 
-template <typename TUPLE_T, std::size_t... Is>
-void FillTupleManual(TUPLE_T& tp, uint8_t* data, memory_view constants, std::index_sequence<Is...>) {
-    (FillElem<TUPLE_T, Is>(tp, data, constants), ...);
-}
 
-template <typename TUPLE_T, std::size_t TupSize = std::tuple_size_v<TUPLE_T>>
-void FillTuple(TUPLE_T& tp, uint8_t* data, memory_view constants) {
-    FillTupleManual(tp, data, constants, std::make_index_sequence<TupSize>{});
-}
-
-// using P0 = std::tuple_element_t<0, FT>;
-// P0 x;
-
-void BUNDLE::i32ExternalCall(uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d) const
+inline void i32ExternalCall(
+    const BUNDLE::NCALL_VECTOR_T& ncalls, const BUNDLE::EXTERN_VECTOR_T& externs,
+    uint32_t* regs, memory_view* iinput, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
     uint8_t* uregs = reinterpret_cast<uint8_t*>(regs);
     
     uint32_t id = a;
-    auto& ex = m_externs[id];
-    auto& ret = ex.ret;
+    auto& ex = externs[id];
+    auto& retT = ex.ret;
 
     uint32_t retOffset = (b << 2);
     // todo: support out arguments
-    uint32_t paramOffset = retOffset + ret.size;
-    uint8_t* rawArguments = uregs + paramOffset;
+    uint32_t paramOffset = retOffset;
+    uint8_t* ret = uregs + retOffset;
+    uint8_t* args = ret + retT.size;
 
-    m_ncalls[id](ex, rawArguments);
+    ncalls[id](ex, iinput, args, ret);
 }
 
 // ----------------------------
@@ -651,20 +624,27 @@ bool BUNDLE::SetConstant(std::string name, memory_view value) {
     return true;
 }
 
-void BUNDLE::SetExtern(uint32_t id, std::function<void()> callback)
-{
 
-}
 
-const std::vector<BUNDLE_CONSTANT>& BUNDLE::GetLayout() const
+const BUNDLE::CONSTANT_VECTOR_T& BUNDLE::GetLayout() const
 {
     return m_layout;
 }
 
-const std::vector<BUNDLE_EXTERN>& BUNDLE::GetExterns() const
+const BUNDLE::EXTERN_VECTOR_T& BUNDLE::GetExterns() const
 {
     return m_externs;
 }
+
+// const BUNDLE_EXTERN* BUNDLE::GetExtern(std::string name) const
+// {
+//     auto iter = std::find_if(m_externs.begin(), m_externs.end(), 
+//         [&name](const BUNDLE_EXTERN& ex) { return ex.name == name;});
+//     if (iter == m_externs.end()) {
+//         return nullptr;
+//     }
+//     return &(*iter);
+// }
  
 BUNDLE_UAV BUNDLE::CreateUAV(std::string name, uint32_t elementSize, uint32_t length, uint32_t reg)
 {
@@ -698,6 +678,7 @@ RESOURCE_VIEW BUNDLE::CreateTextureView(std::string name, uint32_t reg)
     return {name, reg, reg + SRV0_REGISTER};
 }
 
+
 void BUNDLE::Load(memory_view data)
 {
     std::map<int, memory_view> chunks;
@@ -715,33 +696,18 @@ void BUNDLE::Load(memory_view data)
     m_instructions.assign(codeChunk.Begin<uint32_t>(), codeChunk.End<uint32_t>());
     m_constants.assign(constChunk.Begin<uint32_t>(), constChunk.End<uint32_t>());
 
-    auto undefFn = [&](const BUNDLE_EXTERN& ex, uint8_t* rawArgs) -> void {
-        std::cout << "undefFn()" << std::endl;
+    auto undefFn = [&](const BUNDLE_EXTERN& ex, memory_view* iinput, uint8_t* args, uint8_t* ret) -> void {
+        std::cout << "[ERROR] external call <" << ex.name << "()> is not defined" << std::endl;
     };
 
-    auto traceFn = [&](const BUNDLE_EXTERN& ex, uint8_t* rawArgs) -> void {
-        // using TUPLE_T = FnArgs<decltype(trace)>::type;
-        // TUPLE_T tupleArguments;
-        // FillTuple(tupleArguments, rawArgs, m_inputs[CBUFFER0_REGISTER]);
+    m_ncalls.resize(m_externs.size(), undefFn);
 
-        // std::apply(trace, tupleArguments);
-        std::stringstream ss;
-        for (uint32_t i = 0, n = ex.params.size(); i < n; ++ i) 
-        {
-            auto& p = ex.params[i];
-            AsNative(rawArgs, p, ss);
-            if (i != n - 1) ss << ", ";
-            rawArgs += p.size;
-        }
-        std::cout << ss.str() << std::endl;
-    };
-
-    for (auto& external : m_externs) {
-        if (external.name == "trace") {
-            m_ncalls.push_back(traceFn);
-        } else {
-            m_ncalls.push_back(undefFn);
-        }
+    for (auto& ex : m_externs) 
+    {
+        if (ex.name == "trace") 
+            SetExtern(ex.id, DebugTrace);
+        // if (ex.name == "trace2") 
+        //     SetExtern(ex.id, trace2);
     }
 }
 

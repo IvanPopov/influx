@@ -35,7 +35,12 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
     renderContent(): JSX.Element[] {
         const { props } = this;
         const bundle = VM.make(`[memory-view]`, props.bcDocumnet.program.code);
-        
+
+        if (!bundle) {
+            console.error(`could not create bundle`);
+            return null;
+        }
+
         // temp hack to fix problem with unset CBUFFER0_REGISTER input if wasm bundle is used
         // without it bundle.getInput(CBUFFER0_REGISTER) return no input
         bundle.setConstant("[dummy]", new Uint8Array());
@@ -105,7 +110,7 @@ class MemoryView extends React.Component<IMemoryViewProps, {}> {
                         {/* {['unknown'].indexOf(constant.type) !== -1 &&
                             content
                         } */}
-                        <Popup inverted
+                        <Popup inverted={ true }
                                 content={ <div style={ { fontFamily: 'consolas, monospace' } }>{constant.name}</div> }
                                 trigger={ <span style={ { opacity: 0.5 } }>{content}</span> } />
                     </Table.Cell>
