@@ -171,8 +171,7 @@ export function GetAssetsModels() {
             'probe.obj'
         ];
     } else {
-        // const sandboxPath = path.dirname(window.location.pathname.substr(1));
-        const sandboxPath = path.dirname(window.location.pathname);
+        const sandboxPath = path.dirname(currentPath());
         const texturePath = path.join(sandboxPath, GetAssetsModelsPath());
         return fs.readdirSync(texturePath).filter(fname => path.extname(fname) === '.obj');
     }
