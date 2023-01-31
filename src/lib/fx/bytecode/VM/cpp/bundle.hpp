@@ -90,3 +90,8 @@ void BUNDLE::SetExtern(uint32_t id, NCALL_T Fn)
     m_ncalls[id] = Fn;
 }
 
+void BUNDLE::SetExtern(uint32_t id, std::function<NCALL_T> Fn)
+{
+    m_ncalls[id] = Fn;
+}
+

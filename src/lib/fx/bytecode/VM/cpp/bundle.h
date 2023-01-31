@@ -10,7 +10,6 @@
 
 #include "memory_view.h"
 #include "bundle_uav.h"
-#include "../../../../idl/bundles/FxBundle_generated.h"
 
 namespace VM
 {
@@ -53,13 +52,36 @@ struct BUNDLE_CONSTANT
     std::string type;
 };
 
+struct BUNDLE_TYPE_T;
+
+struct BUNDLE_FIELD_T
+{
+    std::shared_ptr<BUNDLE_TYPE_T> type;
+    std::string name;
+    std::string semantic;
+    uint32_t size;
+    uint32_t padding;
+
+    BUNDLE_FIELD_T()
+    {
+        type = std::make_shared<BUNDLE_TYPE_T>();
+    }
+};
+
+struct BUNDLE_TYPE_T
+{
+    std::vector<BUNDLE_FIELD_T> fields{};
+    int32_t length;
+    std::string name;
+    uint32_t size;
+};
 
 struct BUNDLE_EXTERN
 {
     int id;
     std::string name;
-    Fx::TypeLayoutT ret;
-    std::vector<Fx::TypeLayoutT> params;
+    BUNDLE_TYPE_T ret;
+    std::vector<BUNDLE_TYPE_T> params;
 };
 
 
@@ -114,6 +136,7 @@ public:
     template<typename FN_T>
     void SetExtern(uint32_t id, FN_T Fn);
     void SetExtern(uint32_t id, NCALL_T Fn);
+    void SetExtern(uint32_t id, std::function<NCALL_T> Fn);
 
     void Load(memory_view data); 
 }; 

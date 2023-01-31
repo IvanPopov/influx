@@ -61,9 +61,9 @@ void DecodeLayoutChunk(uint8_t* chunk, BUNDLE::CONSTANT_VECTOR_T& layout)
 
 
 
-uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout);
+uint8_t* DecodeTypeLayout(uint8_t* chunk, BUNDLE_TYPE_T& type);
 
-uint8_t* DecodeTypeField(uint8_t* chunk, Fx::TypeFieldT& field)
+uint8_t* DecodeTypeField(uint8_t* chunk, BUNDLE_FIELD_T& field)
 {
     field.padding = *((uint32_t*)chunk);
     chunk += 4;
@@ -79,23 +79,23 @@ uint8_t* DecodeTypeField(uint8_t* chunk, Fx::TypeFieldT& field)
     chunk += 4;
     field.name = std::string((const char*)chunk, nameLength);
     chunk += nameLength;
-
+    
     chunk = DecodeTypeLayout(chunk, *field.type);
     return chunk;
 }
 
 
 
-uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout)
+uint8_t* DecodeTypeLayout(uint8_t* chunk, BUNDLE_TYPE_T& type)
 {
-    layout.size = *((uint32_t*)chunk);
+    type.size = *((uint32_t*)chunk);
     chunk += 4;
-    layout.length = *((uint32_t*)chunk);
+    type.length = *((uint32_t*)chunk);
     chunk += 4;
 
     uint32_t nameLength = *((uint32_t*)chunk);
     chunk += 4;
-    layout.name = std::string((const char*)chunk, nameLength);
+    type.name = std::string((const char*)chunk, nameLength);
     chunk += nameLength;
 
     uint32_t count = *((uint32_t*)chunk);
@@ -103,7 +103,7 @@ uint8_t* DecodeTypeLayout(uint8_t* chunk, Fx::TypeLayoutT& layout)
 
     for (uint32_t i = 0; i < count; ++ i) 
     {
-        auto& field = *layout.fields.emplace_back();
+        auto& field = type.fields.emplace_back();
         chunk = DecodeTypeField(chunk, field);
     }
 
@@ -351,10 +351,10 @@ void AsNativeBase(uint8_t* u8, std::stringstream& dest)
 }
 
 template<typename ELEMENT_T>
-void AsNativeVector(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest)
+void AsNativeVector(uint8_t* u8, const BUNDLE_TYPE_T& type, std::stringstream& dest)
 {
     dest << "[ ";
-    for (int i = 0, n = layout.size / sizeof(ELEMENT_T); i < n; ++ i) 
+    for (int i = 0, n = type.size / sizeof(ELEMENT_T); i < n; ++ i) 
     {
         AsNativeBase<ELEMENT_T>(u8, dest);
         if (i != n - 1) dest << ", ";
@@ -363,21 +363,21 @@ void AsNativeVector(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstrea
     dest << " ]";
 }
 
-void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& dest)
+void AsNative(uint8_t* u8, const BUNDLE_TYPE_T& type, std::stringstream& dest)
 {
-    if (layout.name == "bool") AsNativeBase<bool>(u8, dest);
-    else if (layout.name == "int") AsNativeBase<int32_t>(u8, dest);
-    else if (layout.name == "uint") AsNativeBase<uint32_t>(u8, dest);
-    else if (layout.name == "float") AsNativeBase<float>(u8, dest);
-    else if (layout.name == "uint2") AsNativeVector<uint32_t>(u8, layout, dest);
-    else if (layout.name == "uint3") AsNativeVector<uint32_t>(u8, layout, dest);
-    else if (layout.name == "uint4") AsNativeVector<uint32_t>(u8, layout, dest);
-    else if (layout.name == "int2") AsNativeVector<int32_t>(u8, layout, dest);
-    else if (layout.name == "int3") AsNativeVector<int32_t>(u8, layout, dest);
-    else if (layout.name == "int4") AsNativeVector<int32_t>(u8, layout, dest);
-    else if (layout.name == "float2") AsNativeVector<float>(u8, layout, dest);
-    else if (layout.name == "float3") AsNativeVector<float>(u8, layout, dest);
-    else if (layout.name == "float4") AsNativeVector<float>(u8, layout, dest);
+    if (type.name == "bool") AsNativeBase<bool>(u8, dest);
+    else if (type.name == "int") AsNativeBase<int32_t>(u8, dest);
+    else if (type.name == "uint") AsNativeBase<uint32_t>(u8, dest);
+    else if (type.name == "float") AsNativeBase<float>(u8, dest);
+    else if (type.name == "uint2") AsNativeVector<uint32_t>(u8, type, dest);
+    else if (type.name == "uint3") AsNativeVector<uint32_t>(u8, type, dest);
+    else if (type.name == "uint4") AsNativeVector<uint32_t>(u8, type, dest);
+    else if (type.name == "int2") AsNativeVector<int32_t>(u8, type, dest);
+    else if (type.name == "int3") AsNativeVector<int32_t>(u8, type, dest);
+    else if (type.name == "int4") AsNativeVector<int32_t>(u8, type, dest);
+    else if (type.name == "float2") AsNativeVector<float>(u8, type, dest);
+    else if (type.name == "float3") AsNativeVector<float>(u8, type, dest);
+    else if (type.name == "float4") AsNativeVector<float>(u8, type, dest);
     else 
     {
         dest << "*";
@@ -385,14 +385,14 @@ void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, std::stringstream& des
 }
 
 
-void AsNative(uint8_t* u8, const Fx::TypeLayoutT& layout, memory_view* iinput, std::stringstream& dest)
+void AsNative(uint8_t* u8, const BUNDLE_TYPE_T& type, memory_view* iinput, std::stringstream& dest)
 {
-    if (layout.name == "string") {
+    if (type.name == "string") {
         dest << ReadString(u8, iinput[CBUFFER0_REGISTER]);
     }
     else 
     {
-        AsNative(u8, layout, dest);
+        AsNative(u8, type, dest);
     }
 }
 
@@ -709,6 +709,8 @@ void BUNDLE::Load(memory_view data)
         // if (ex.name == "trace2") 
         //     SetExtern(ex.id, trace2);
     }
+
+    // std::cout << "======" << std::endl;
 }
 
 }
