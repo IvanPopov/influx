@@ -147,6 +147,7 @@ class InstructionList {
             case EOperation.k_I32Max:
             case EOperation.k_F32Min:
             case EOperation.k_F32Max:
+            case EOperation.k_F32Pow:
                 assert(args.length == 3);
                 args[0] >>= 2;
                 args[1] >>= 2;

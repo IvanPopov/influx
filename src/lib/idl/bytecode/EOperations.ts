@@ -66,6 +66,7 @@ export enum EOperation {
     k_F32Sqrt,
     k_F32Max,
     k_F32Min,
+    k_F32Pow,
     
     k_I32Mad,
     k_I32Min,
