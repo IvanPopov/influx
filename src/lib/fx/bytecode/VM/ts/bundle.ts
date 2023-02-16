@@ -349,6 +349,9 @@ export class TSBundle implements Bundle.IBundle
                 case EOperation.k_F32Sqrt:
                     fregs[a] = Math.sqrt(fregs[b]);
                     break;
+                case EOperation.k_F32Pow:
+                    fregs[a] = Math.pow(fregs[b], fregs[c]);
+                    break;
                 case EOperation.k_F32Min:
                     fregs[a] = Math.min(fregs[b], fregs[c]);
                     break;

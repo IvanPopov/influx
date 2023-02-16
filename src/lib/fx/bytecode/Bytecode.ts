@@ -467,6 +467,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             return dest;
         },
 
+        powf(dest: PromisedAddress, x: PromisedAddress, y: PromisedAddress): PromisedAddress {
+            iop3(EOperation.k_F32Pow, dest, x, y);
+            return dest;
+        },
+
         minf(dest: PromisedAddress, left: PromisedAddress, right: PromisedAddress): PromisedAddress {
             iop3(EOperation.k_F32Min, dest, left, right);
             return dest;
@@ -749,6 +754,8 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 return intrinsics.absf(dest, args[0]);
             case 'sqrt':
                 return intrinsics.sqrtf(dest, args[0]);
+            case 'pow':
+                return intrinsics.powf(dest, args[0], args[1]);
             case 'normalize':
                 return intrinsics.normalizef(dest, args[0]);
             case 'length':
