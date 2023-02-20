@@ -85,7 +85,10 @@ const scode = (c: EOperation) => {
     }
 };
 
-
+function JSNativeCall(a, b, c, d) {
+    console.log(`callback!`, a, b, c, d);
+    return 12;
+}
 
 class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewState>  {
 
@@ -150,6 +153,13 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                         alert(`[ERROR] Could not evaluate bundle.`);
                         return;
                     }
+
+                    const externs = bundle.getExterns();
+                    console.log(externs);
+                    const ex = externs.find(ex => ex.name === "JSNativeFunc");
+                    if (ex) {
+                        bundle.setExtern(ex.id, JSNativeCall);
+                    }            
 
                     // force bind shadow constant buffer 
                     bundle.setConstant("@", new Uint8Array()); // temp hack for CPP VM setup
@@ -283,8 +293,8 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 args.length = 2;
                 break;
 
-            case EOperation.k_F32Min:
             case EOperation.k_F32Max:
+            case EOperation.k_F32Min:
             case EOperation.k_F32Pow:
                 args.length = 3;
                 break;

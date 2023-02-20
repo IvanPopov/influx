@@ -197,9 +197,9 @@ struct INSTRUCTION
     PREDICATE(F32Cos)\
     PREDICATE(F32Abs)\
     PREDICATE(F32Sqrt)\
-    PREDICATE(F32Pow)\
     PREDICATE(F32Max)\
     PREDICATE(F32Min)\
+    PREDICATE(F32Pow)\
     PREDICATE(I32Mad)\
     PREDICATE(I32Min)\
     PREDICATE(I32Max)\
@@ -284,9 +284,9 @@ struct INSTRUCTION
 #define F32Cos()                    fregs[a] = std::cos(fregs[b]);
 #define F32Abs()                    fregs[a] = std::abs(fregs[b]);
 #define F32Sqrt()                   fregs[a] = std::sqrt(fregs[b]);
-#define F32Pow()                    fregs[a] = std::pow(fregs[b], fregs[c]);
-#define F32Min()                    fregs[a] = fregs[b] < fregs[c] ? fregs[b] : fregs[c];
 #define F32Max()                    fregs[a] = fregs[b] < fregs[c] ? fregs[c] : fregs[b];
+#define F32Min()                    fregs[a] = fregs[b] < fregs[c] ? fregs[b] : fregs[c];
+#define F32Pow()                    fregs[a] = std::pow(fregs[b], fregs[c]);
 //
 // Cast
 //

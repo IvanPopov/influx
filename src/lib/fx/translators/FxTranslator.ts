@@ -471,7 +471,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
             ctx.addTrimesh(mesh);
 
-            let value = (decl.annotation.decls.find(({ name }) => name == 'name')
+            let value = (decl.annotation.decls.find(({ name }) => (name == 'name' || name == 'ResourceName'))
                 ?.initExpr
                 ?.args[0] as StringInstruction)?.value;
             value = value?.slice(1, -1) || null;
@@ -594,7 +594,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const { name, type } = decl;
 
         if (!ctx.has(name)) {
-            let value = (decl.annotation?.decls.find(({ name }) => name == 'name')
+            let value = (decl.annotation?.decls.find(({ name }) => (name == 'name' || name == 'ResourceName'))
                 ?.initExpr
                 ?.args[0] as StringInstruction)?.value;
             value = value?.slice(1, -1) || null;

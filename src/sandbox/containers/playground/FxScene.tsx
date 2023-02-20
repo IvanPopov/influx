@@ -889,6 +889,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         }
 
         emitter.prerender(uniforms);
+        // do nothing if there is no sorting
         emitter.serialize(); // feed render buffer with instance data
 
         this.setGeometryInstanceCouts();
