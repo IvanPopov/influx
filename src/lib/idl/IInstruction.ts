@@ -44,6 +44,8 @@ export enum EInstructionTypes {
     k_ConstructorCallExpr,
     k_CompileExpr,
     k_InitExpr,
+    k_StateBlockExpr,
+    /** @deprecated */
     k_SamplerStateBlockExpr,
 
     k_Decl,
@@ -490,11 +492,17 @@ export interface IAssignmentExprInstruction extends IExprInstruction {
 export interface IInitExprInstruction extends IExprInstruction {
     readonly args: IExprInstruction[];
 
+    // Returns true if it's not a base array initialization, like "int a[2] = { 1, 1 }"
+    /** @deprecated */
     isArray(): boolean;
-    isConst(): boolean;
 
     // todo: refactor this!!
     optimizeForVariableType(type: IVariableTypeInstruction): boolean;
+}
+
+
+export interface IStateBlockInstruction extends IExprInstruction {
+    readonly props: Object; // native json?
 }
 
 

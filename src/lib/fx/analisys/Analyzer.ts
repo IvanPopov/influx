@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -54,6 +54,7 @@ import { ProxyTypeInstruction } from './instructions/ProxyTypeInstruction';
 import { RelationalExprInstruction, RelationOperator } from './instructions/RelationalExprInstruction';
 import { ReturnStmtInstruction } from './instructions/ReturnStmtInstruction';
 import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstruction';
+import { StateBlockInstruction } from './instructions/StateBlockInstruction';
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
 import { StringInstruction } from './instructions/StringInstruction';
 import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
@@ -1323,27 +1324,42 @@ export class Analyzer {
         // using generalType.source node instead of sourceNode was done for more clear degging
         type = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
 
+        /**
+         * (state block initializer)
+         * AST example:
+         *    Initializer
+         *       + StateBlock 
+         */
+        /**
+         * (list initializer)
+         * AST example:
+         *    Initializer
+         *         T_UINT = '1'
+         *         T_PUNCTUATOR_61 = '='
+         */
+        const doInitUsingList = (sourceNode: IParseNode) => 
+            sourceNode.children[sourceNode.children.length - 1]?.value == '=';
+
         for (let i = children.length - 2; i >= 0; i--) {
             if (children[i].name === 'Annotation') {
                 annotation = this.analyzeAnnotation(context, program, children[i]);
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else if (children[i].name === 'Initializer') {
-                // check if SamplerState or DepthStencilState
+                
+                if (doInitUsingList(children[i])) {
+                    init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
+                } else {
+                    init = this.analyzStateBlock(context, program, children[i].children[0], type);
+                }
+
                 switch (type.name) {
+                    case 'BlendState':
                     case 'SamplerState':
-                        // todo: implement initialization
-                        init = null;
-                        continue;
-                        break;
                     case 'DepthStencilState':
-                        // todo: implement initialization
-                        init = null;
-                        continue;
+                        // todo: validate properties
+                        console.assert(!doInitUsingList(children[i]));
                         break;
-                    default:
-                        // init as regular initializer
-                        init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
                 }
 
                 if (!init) {
@@ -3890,6 +3906,7 @@ export class Analyzer {
      *         T_PUNCTUATOR_61 = '='
      *         T_NON_TYPE_ID = 'VertexShader'
      */
+    /** @deprecated */
     protected analyzePassStateBlockForShaders(context: Context, program: ProgramScope,
         sourceNode: IParseNode): { vertex: IFunctionDeclInstruction; pixel: IFunctionDeclInstruction; } {
 
@@ -3968,6 +3985,71 @@ export class Analyzer {
 
     /**
      * AST example:
+     *    StateBlock
+     *         T_PUNCTUATOR_125 = '}'
+     *       + State 
+     *       + State 
+     *       + State 
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    protected analyzStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode, type: ITypeInstruction): IStateBlockInstruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+
+        let props: Object = {}
+        for (let i = children.length - 2; i >= 1; i--) {
+            props = { ...props, ...this.analyzeState(context, program, children[i]) };
+        }
+        return new StateBlockInstruction({ scope, sourceNode, type, props });
+    }
+
+
+    /**
+     * AST example:
+     *    State
+     *         T_PUNCTUATOR_59 = ';'
+     *       + StateExpr 
+     *         T_PUNCTUATOR_61 = '='
+     *         T_NON_TYPE_ID = 'ZWRITE'
+     */
+    protected analyzeState(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<any> {
+        const children = sourceNode.children;
+        const stateName = children[children.length - 1].value.toUpperCase();
+        const stateExprNode = children[children.length - 3];
+        const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
+
+        if (isNull(exprNode.value)) {
+            console.warn('state is incorrect.'); // TODO: move to warnings
+            return {};
+        }
+
+        let states: IMap<any> = {};
+        if (exprNode.value === '{' && stateExprNode.children.length > 3) {
+            const values: any[] = new Array(Math.ceil((stateExprNode.children.length - 2) / 2));
+            for (let i = stateExprNode.children.length - 2, j = 0; i >= 1; i -= 2, j++) {
+                values[j] = stateExprNode.children[i].value;
+            }
+
+            // todo: convert values to native types
+            states[stateName] = values;
+        }
+        else {
+            let value: string = '';
+            if (exprNode.value === '{') {
+                value = stateExprNode.children[1].value.toUpperCase();
+            }
+            else {
+                value = exprNode.value.toUpperCase();
+            }
+
+            // todo: convert value to native type
+            states[stateName] = value;
+        }
+        return states;
+    }
+
+    /**
+     * AST example:
      *    PassStateBlock
      *         T_PUNCTUATOR_125 = '}'
      *       + PassState 
@@ -3975,6 +4057,7 @@ export class Analyzer {
      *       + PassState 
      *         T_PUNCTUATOR_123 = '{'
      */
+    /** @deprecated */
     protected analyzePassStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<ERenderStateValues> {
         const children = sourceNode.children;
         let states: IMap<ERenderStateValues> = {}
