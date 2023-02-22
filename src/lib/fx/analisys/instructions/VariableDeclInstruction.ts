@@ -1,7 +1,6 @@
 import { assert, isNull } from '@lib/common';
-import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IIdInstruction, IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { types } from '../helpers';
 import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
 import { Instruction } from './Instruction';
 
@@ -10,7 +9,7 @@ import { Instruction } from './Instruction';
 export interface IVariableDeclInstructionSettings extends IDeclInstructionSettings {
     id: IIdInstruction;
     type: IVariableTypeInstruction;
-    init?: IInitExprInstruction;
+    init?: IExprInstruction;
 
     // EVariableUsageFlags
     usageFlags?: number;
@@ -34,7 +33,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
 
     protected _id: IIdInstruction;
     protected _type: IVariableTypeInstruction;
-    protected _initExpr: IInitExprInstruction;
+    protected _initExpr: IExprInstruction;
     protected _usageFlags: number;
 
  
@@ -57,7 +56,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
 
-    get initExpr(): IInitExprInstruction {
+    get initExpr(): IExprInstruction {
         return this._initExpr;
     }
 

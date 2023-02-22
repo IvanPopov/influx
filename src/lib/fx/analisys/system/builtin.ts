@@ -1,4 +1,5 @@
-import { IScope } from "@lib/idl/IInstruction";
+import { IFunctionDeclInstruction, IScope, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { instruction } from "@lib/fx/analisys/helpers/instruction";
 import AppendStructuredBufferTemplate from "./AppendStructuredBufferTemplate";
 import BufferTemplate from "./BufferTemplate";
 import RWBufferTemplate from "./RWBufferTemplate";
@@ -13,12 +14,84 @@ import TextureCubeArrayTemplate from "./TextureCubeArrayTemplate";
 import TextureCubeTemplate from "./TextureCubeTemplate";
 import TriMeshTemplate from "./TriMeshTemplate";
 import { generateSystemType, defineTypeAlias } from "./utils";
+import { SystemTypeInstruction } from "../instructions/SystemTypeInstruction";
+import { VariableTypeInstruction } from "../instructions/VariableTypeInstruction";
+import { IdInstruction } from "../instructions/IdInstruction";
+import { Scope } from "../ProgramScope";
+
+/*
+typedef enum D3D11_STENCIL_OP {
+  D3D11_STENCIL_OP_KEEP = 1,
+  D3D11_STENCIL_OP_ZERO = 2,
+  D3D11_STENCIL_OP_REPLACE = 3,
+  D3D11_STENCIL_OP_INCR_SAT = 4,
+  D3D11_STENCIL_OP_DECR_SAT = 5,
+  D3D11_STENCIL_OP_INVERT = 6,
+  D3D11_STENCIL_OP_INCR = 7,
+  D3D11_STENCIL_OP_DECR = 8
+} ;
+typedef enum D3D11_DEPTH_WRITE_MASK {
+  D3D11_DEPTH_WRITE_MASK_ZERO = 0,
+  D3D11_DEPTH_WRITE_MASK_ALL = 1
+} ;
+typedef enum D3D11_COMPARISON_FUNC {
+  D3D11_COMPARISON_NEVER = 1,
+  D3D11_COMPARISON_LESS = 2,
+  D3D11_COMPARISON_EQUAL = 3,
+  D3D11_COMPARISON_LESS_EQUAL = 4,
+  D3D11_COMPARISON_GREATER = 5,
+  D3D11_COMPARISON_NOT_EQUAL = 6,
+  D3D11_COMPARISON_GREATER_EQUAL = 7,
+  D3D11_COMPARISON_ALWAYS = 8
+} ;
+typedef struct D3D11_DEPTH_STENCILOP_DESC {
+  D3D11_STENCIL_OP      StencilFailOp;
+  D3D11_STENCIL_OP      StencilDepthFailOp;
+  D3D11_STENCIL_OP      StencilPassOp;
+  D3D11_COMPARISON_FUNC StencilFunc;
+} D3D11_DEPTH_STENCILOP_DESC;
+typedef struct D3D11_DEPTH_STENCILOP_DESC {
+  D3D11_STENCIL_OP      StencilFailOp;
+  D3D11_STENCIL_OP      StencilDepthFailOp;
+  D3D11_STENCIL_OP      StencilPassOp;
+  D3D11_COMPARISON_FUNC StencilFunc;
+} D3D11_DEPTH_STENCILOP_DESC;
+typedef struct D3D11_DEPTH_STENCIL_DESC {
+  BOOL                       DepthEnable;
+  D3D11_DEPTH_WRITE_MASK     DepthWriteMask;
+  D3D11_COMPARISON_FUNC      DepthFunc;
+  BOOL                       StencilEnable;
+  UINT8                      StencilReadMask;
+  UINT8                      StencilWriteMask;
+  D3D11_DEPTH_STENCILOP_DESC FrontFace;
+  D3D11_DEPTH_STENCILOP_DESC BackFace;
+} D3D11_DEPTH_STENCIL_DESC;
+*/
+function addDepthStencilState(scope: IScope) {
+    const name = 'DepthStencilState';
+    const size = 0;
+    const fields: IVariableDeclInstruction[] = [];
+
+    // let scope = new Scope({ parent: sysScope, type: EScopeType.k_Struct });
+
+    // let uint = scope.findType("uint");
+    // const type = new VariableTypeInstruction({ type: uint, scope });
+    // const id = new IdInstruction({ scope, name: 'DepthEnable' });
+    // const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+    // const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+    // fields.push(param0);
+
+    const type = new SystemTypeInstruction({ scope, name, fields, size });
+    scope.addType(type);
+}
 
 export function addSystemTypeBuiltin(scope: IScope) {
     generateSystemType(scope, "SamplerState");
     generateSystemType(scope, "SamplerComparisonState");
-    generateSystemType(scope, "DepthStencilState");
+    // generateSystemType(scope, "DepthStencilState");
     generateSystemType(scope, "BlendState");
+
+    addDepthStencilState(scope);
 
     defineTypeAlias(scope, "int", "VertexShader");
     defineTypeAlias(scope, "int", "PixelShader");

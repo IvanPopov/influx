@@ -304,11 +304,6 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             src.annotation.decls.forEach(decl => {
                 let propertyName = decl.name;
                 let propertyType = decl.type.name;
-
-                if (decl.initExpr.args.length !== 1) {
-                    return;
-                }
-
                 switch (propertyName) {
                     case 'UIType': propertyName = '__type'; break;
                     case 'UIName': propertyName = '__caption'; break;
@@ -317,7 +312,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     case 'UIStep': propertyName = '__step'; break;
                 }
 
-                let propertyValue = getPropertyValue(propertyType, decl.initExpr.args[0]);
+                let propertyValue = getPropertyValue(propertyType, decl.initExpr);
                 if (['__min', '__max', '__step'].indexOf(propertyName) !== -1) {
                     if (propertyType === 'float' && control.type === 'float' ||
                         propertyType === 'int' && control.type === 'int' ||
@@ -338,7 +333,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             });
         }
 
-        control.value = getControlValue(control.type, src.initExpr?.args);
+        if (src.initExpr.instructionType === EInstructionTypes.k_InitExpr) {
+            control.value = getControlValue(control.type, (<IInitExprInstruction>src.initExpr)?.args);
+        } else {
+            control.value = getControlValue(control.type, [src.initExpr]);
+        }
+        
         ctx.addControl(control);
         return true;
     }
@@ -492,8 +492,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             ctx.addTrimesh(mesh);
 
             let value = (decl.annotation.decls.find(({ name }) => (name == 'name' || name == 'ResourceName'))
-                ?.initExpr
-                ?.args[0] as StringInstruction)?.value;
+                ?.initExpr as StringInstruction)?.value;
             value = value?.slice(1, -1) || null;
             const control: IUIControl = { name, type: 'mesh', value, properties: [] };
             ctx.addControl(control);
@@ -615,8 +614,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         if (!ctx.has(name)) {
             let value = (decl.annotation?.decls.find(({ name }) => (name == 'name' || name == 'ResourceName'))
-                ?.initExpr
-                ?.args[0] as StringInstruction)?.value;
+                ?.initExpr as StringInstruction)?.value;
             value = value?.slice(1, -1) || null;
             const control = <IUIControl>{ name, type: 'texture2d', value, properties: [] };
             ctx.addControl(control);
@@ -1672,14 +1670,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 let controlType = src.type.name.toLowerCase(); // Texture2D => texture2d
                 if (src.annotation) {
                     src.annotation.decls.forEach(prop => {
-                        let propertyName = prop.name;
-                        let propertyType = prop.type.name;
-
-                        if (prop.initExpr.args.length !== 1) {
-                            return;
-                        }
-
-                        let propertyValue = getPropertyValue(propertyType, prop.initExpr.args[0]);
+                        const propertyName = prop.name;
+                        const propertyType = prop.type.name;
+                        const propertyValue = getPropertyValue(propertyType, prop.initExpr);
                         if ((propertyName === '__type' || propertyName === 'UIType') &&
                             propertyType === 'string' && propertyValue === 'color') {
                             controlType = 'color';
@@ -1696,7 +1689,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     }
 
 
-    private static fxtTranslator = new FxTranslator({ omitEmptyParams: true });
+    private static fxtTranslator = new FxTranslator({ omitEmptyParams: true }); 
 
 
     static translate(fx: ITechniqueInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {

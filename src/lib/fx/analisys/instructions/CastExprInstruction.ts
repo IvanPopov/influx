@@ -22,7 +22,7 @@ export class CastExprInstruction extends ExprInstruction implements ICastExprIns
     }
 
     toCode(): string {
-        return `(${this.type.toCode()})${this.expr.toCode()}`;
+        return `(${this.type.toCode()})(${this.expr.toCode()})`;
     }
 
     /** @deprecated */

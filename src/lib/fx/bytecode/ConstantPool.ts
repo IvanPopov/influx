@@ -1,8 +1,8 @@
 import { assert, isNull } from "@lib/common";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
-import { T_BOOL, T_FLOAT, T_FLOAT2, T_FLOAT3, T_FLOAT4, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
+import { T_BOOL, T_FLOAT, T_FLOAT2, T_FLOAT3, T_FLOAT4, T_INT, T_INT2, T_INT3, T_INT4, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { EAddrType } from "@lib/idl/bytecode";
-import { ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IInitExprInstruction, ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { CBUFFER0_REGISTER } from "./Bytecode";
 import PromisedAddress from "./PromisedAddress";
@@ -72,22 +72,29 @@ export class ConstanPool {
             if (!isNull(initExpr)) {
                 switch (initExpr.type.name) {
                     case T_FLOAT.name:
-                        defaultValue = new Float32Array([ (initExpr.args[0] as FloatInstruction).value ]);
+                        defaultValue = new Float32Array([ (initExpr as FloatInstruction).value ]);
                         break;
                     case T_UINT.name:
-                        defaultValue = new Uint32Array([ (initExpr.args[0] as IntInstruction).value ]);
+                        defaultValue = new Uint32Array([ (initExpr as IntInstruction).value ]);
                         break;
                     case T_BOOL.name:
-                        const value = (initExpr.args[0] as BoolInstruction).value;
+                        const value = (initExpr as BoolInstruction).value;
                         defaultValue = new Int32Array([ value ? 1 : 0 ]);
                         break;
                     case T_INT.name:
-                        defaultValue = new Int32Array([ (initExpr.args[0] as IntInstruction).value ]);
+                        defaultValue = new Int32Array([ (initExpr as IntInstruction).value ]);
                         break;
                     case T_FLOAT2.name:
                     case T_FLOAT3.name:
                     case T_FLOAT4.name:
-                        defaultValue = new Float32Array(initExpr.args.map(arg => ((arg as InitExprInstruction).args[0] as FloatInstruction).value));
+                        assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
+                        defaultValue = new Float32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as FloatInstruction).value));
+                        break;
+                    case T_INT2.name:
+                    case T_INT3.name:
+                    case T_INT4.name:
+                        assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
+                        defaultValue = new Int32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as IntInstruction).value));
                         break;
                     default:
                         assert(false, 'unsupported');

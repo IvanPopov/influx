@@ -1,6 +1,6 @@
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
 import { instruction, types } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IArithmeticExprInstruction, ICastExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
@@ -17,10 +17,12 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
 function evaluateValue(val: IInstruction) {
     if (!val) return 0;
     if (instruction.isLiteral(val)) return (<ILiteralInstruction<number>>val).value;
+    if (val.instructionType === EInstructionTypes.k_CastExpr) return evaluateConsExpr((<ICastExprInstruction>val).expr);
     if (val.instructionType === EInstructionTypes.k_IdExpr) {
         const idExpr = (<IIdExprInstruction>val);
         if (idExpr.decl.isGlobal()) { // and is constant?
-            return evaluateConsExpr(idExpr.decl.initExpr?.args?.[0]);
+            console.assert(idExpr.decl.initExpr.instructionType !== EInstructionTypes.k_InitExpr);
+            return evaluateConsExpr(idExpr.decl.initExpr);
         }
     }
     return -1;

@@ -754,14 +754,13 @@ export class Analyzer {
      *       + InitExpr 
      *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzeInitExprChildren(context: Context, program: ProgramScope, sourceNode: IParseNode, children: IParseNode[], expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IInitExprInstruction {
+    protected analyzeInitExprChildren(context: Context, program: ProgramScope, sourceNode: IParseNode, children: IParseNode[], expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IExprInstruction {
         const scope = program.currentScope;
 
-        let args = <IExprInstruction[]>[];
-        let type = expectedType;
 
+        // raw value like "int a = 1"
         if (children.length === 1) {
-            let initExpr = this.analyzeExpr(context, program, children[0]);
+            const initExpr = this.analyzeExpr(context, program, children[0]);
 
             if (!initExpr) {
                 return null;
@@ -776,28 +775,37 @@ export class Analyzer {
 
             const resType = Analyzer.checkTwoOperandExprTypes(context, '=', expectedType, initExpr.type,
                 sourceNode/* Use correct source node! */, initExpr.sourceNode, exprSourceNode || sourceNode, { isInitializing: true });
-            assert(resType === null || types.equals(type, expectedType));
 
             if (!resType) {
                 // omit error, all errors must be already fired above (inside checkTwoOperandExprTypes)
                 return null;
             }
 
-            // // IP: quick hack to avoid future conversions
+            ////////////////////////////////////////////////
+            // IP: quick hack to avoid future conversions
+            ////////////////////////////////////////////////
+
+            // cast uint <=> int constant if possible
             // if (initExpr.instructionType === EInstructionTypes.k_IntExpr && !types.equals(initExpr.type, expectedType)) {
             //     let { scope, sourceNode, base, exp, signed, heximal } = <IntInstruction>initExpr;
             //     signed = expectedType.name === 'int';
-            //     initExpr = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
+            //     return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
             // }
 
-            args.push(initExpr);
+            // if (!types.equals(initExpr.type, expectedType)) {
+            //     return new CastExprInstruction({scope, sourceNode, sourceExpr: initExpr, type: expectedType});
+            // }
+
+            ////////////////////////////////////////////////
+            ////////////////////////////////////////////////
+
+            return initExpr;
         }
         // It's a global user defined array or just not unit array;
         // Trying to exclude types like float1.
         else if ((expectedType.isNotBaseArray() && expectedType.scope.type <= EScopeType.k_Global) ||
             expectedType.isArray()) {
-
-
+            const args = <IExprInstruction[]>[];
             const numArgs = (children.length - 1) / 2;
 
             if (expectedType.length === instruction.UNDEFINE_LENGTH ||
@@ -832,18 +840,17 @@ export class Analyzer {
                 }
             }
 
-            // type = type.baseType;
-        }
-        else if (expectedType.isComplex()) {
-
+            assert(expectedType.instructionType === EInstructionTypes.k_VariableType);
+            return new InitExprInstruction({ scope, sourceNode, args, type: <IVariableTypeInstruction>expectedType });
+        } else if (expectedType.isComplex()) {
             const numArgs = (children.length - 1) / 2;
             const fieldNameList = expectedType.fields.map(f => f.name);
+            const args = <IExprInstruction[]>[];
 
             if (numArgs !== fieldNameList.length) {
                 // TODO: emit error (invalid number of arguments)
                 return null;
             }
-
 
             /**
              * AST example:
@@ -867,9 +874,8 @@ export class Analyzer {
                     args.push(initExpr);
                 }
             }
-
-            // type = type.baseType;
-
+            assert(expectedType.instructionType === EInstructionTypes.k_VariableType);
+            return new InitExprInstruction({ scope, sourceNode, args, type: <IVariableTypeInstruction>expectedType });
         } else {
             const numArgs = (children.length - 1) / 2;
 
@@ -886,18 +892,18 @@ export class Analyzer {
                 initExpr = this.analyzeInitExpr(context, program, exprNode, expectedType);
             else
                 initExpr = this.analyzeExpr(context, program, children[children.length - 2]);
+            
 
             // TODO: use checkTwoOperandTypes() function instead
-            if (!types.equals(type, initExpr.type)) {
+            if (!types.equals(expectedType, initExpr.type)) {
                 // TODO: emit error
                 return null;
             }
 
-            args.push(initExpr);
-
+            return initExpr;
         }
 
-        return new InitExprInstruction({ scope, sourceNode, args, type: <IVariableTypeInstruction>type });
+        return null;
     }
 
     /**
@@ -909,7 +915,7 @@ export class Analyzer {
      *       + InitExpr 
      *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction): IInitExprInstruction {
+    protected analyzeInitExpr(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction): IExprInstruction {
         return this.analyzeInitExprChildren(context, program, sourceNode, sourceNode.children, expectedType);
     }
 
@@ -1270,7 +1276,7 @@ export class Analyzer {
         const scope = program.currentScope;
 
         let annotation: IAnnotationInstruction = null;
-        let init: IInitExprInstruction = null;
+        let init: IExprInstruction = null;
         let semantic = '';
         let usageFlags = 0;
 
@@ -1453,7 +1459,7 @@ export class Analyzer {
      *         T_PUNCTUATOR_123 = '{'
      *         T_PUNCTUATOR_61 = '='
      */
-    protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IInitExprInstruction {
+    protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IExprInstruction {
         const children = sourceNode.children;
         // IP: hacky varification to be sure that it's not a 
         if (children[children.length - 1]?.value == '=') {

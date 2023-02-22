@@ -352,7 +352,7 @@ export interface ISamplerStateInstruction extends IInstruction {
 
 export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstruction {
     readonly type: IVariableTypeInstruction;
-    readonly initExpr: IInitExprInstruction;
+    readonly initExpr: IExprInstruction;
     readonly usageFlags: number;
 
     isParameter(): boolean;

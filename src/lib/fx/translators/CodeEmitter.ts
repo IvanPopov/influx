@@ -859,7 +859,10 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
         this.emitChar(')');
         this.emitNoSpace();
+        this.emitChar('(');
+        this.emitNoSpace();
         this.emitExpression(ctx, cast.expr);
+        this.emitChar(')');
     }
 
 

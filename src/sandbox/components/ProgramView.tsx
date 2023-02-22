@@ -522,7 +522,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                     { this.VariableType(instr.type) }
                 </Property>
                 <PropertyOpt name='init' opened={ true }>
-                    { this.InitExpr(instr.initExpr) }
+                    { this.Unknown(instr.initExpr) }
                 </PropertyOpt>
                 <PropertyOpt name='annotations' opened={ true }>
                     { this.Annotation(instr.annotation) }

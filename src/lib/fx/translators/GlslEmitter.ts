@@ -151,6 +151,25 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
     }
 
 
+    emitVariable(ctx: ContextT, src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
+        this.emitVariableNoInit(ctx, src, rename);
+        if (src.initExpr) {
+            this.emitKeyword('=');
+            this.emitSpace();
+            if (!types.equals(src.type, src.initExpr.type)) {
+                const { typeName } = this.resolveType(ctx, src.type);
+                this.emitKeyword(`${typeName}`);
+                this.emitChar('(');
+                this.emitNoSpace();
+                this.emitExpression(ctx, src.initExpr);
+                this.emitChar(')');
+            } else {
+                this.emitExpression(ctx, src.initExpr);
+            }
+        }
+    }
+
+
     protected emitPrologue(ctx: ContextT, def: IFunctionDefInstruction): void {
         this.begin();
         {
