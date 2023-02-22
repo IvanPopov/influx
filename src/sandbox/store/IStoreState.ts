@@ -13,7 +13,7 @@ import { ControlValueType, PropertyValueType } from '@lib/fx/bundles/utils';
 
 export interface IMarker {
     range: IRange;
-    type: 'warning' | 'error' | 'marker' | 'line' | 'unreachable-code';
+    type: 'warning' | 'error' | 'marker' | 'line' | 'unreachable-code' | 'deprecated';
     tooltip?: string;
     payload?: Object;
 }

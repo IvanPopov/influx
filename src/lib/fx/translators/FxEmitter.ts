@@ -1,6 +1,6 @@
 import { assert, isDefAndNotNull, isNull } from "@lib/common";
 import { T_INT } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ICompileExprInstruction, IInstruction, IPresetInstruction, ITechnique11Instruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 
@@ -8,15 +8,15 @@ import { CodeConvolutionContext, CodeConvolutionEmitter } from "./CodeConvolutio
 
 
 export class FxConvolutionContext extends CodeConvolutionContext {
-    protected technique?: ITechniqueInstruction = null;
+    protected technique?: ITechniqueInstruction | ITechnique11Instruction = null;
 
 
-    tech(): ITechniqueInstruction {
+    tech(): ITechniqueInstruction | ITechnique11Instruction {
         return this.technique;
     }
 
 
-    beginTechnique(tech: ITechniqueInstruction) {
+    beginTechnique(tech: ITechniqueInstruction | ITechnique11Instruction) {
         assert(isNull(this.technique));
         this.technique = tech;
     }

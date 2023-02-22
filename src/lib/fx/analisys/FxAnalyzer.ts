@@ -1,5 +1,5 @@
 import { assert, isBoolean, isNull, isNumber, PropertiesDiff } from "@lib/common";
-import { type } from "@lib/fx/analisys/helpers";
+import { types } from "@lib/fx/analisys/helpers";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { EInstructionTypes, IAnnotationInstruction, ICompileExprInstruction, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdInstruction, IInstruction, IInstructionCollector, IPassInstruction, IStmtInstruction, ITypedInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
@@ -196,7 +196,7 @@ export class FxAnalyzer extends Analyzer {
         const geometry = fxStates.geometry || null;
         const instanceCount = fxStates.instanceCount || 1;
 
-        if (sorting && prerenderRoutine && type.equals(prerenderRoutine.function.def.returnType, T_VOID))
+        if (sorting && prerenderRoutine && types.equals(prerenderRoutine.function.def.returnType, T_VOID))
         {
             context.warn(sourceNode, EWarnings.PartFx_SortingCannotBeApplied);
             context.warn(prerenderRoutine.function.def.sourceNode, EWarnings.PartFx_SortingCannotBeApplied);
@@ -445,9 +445,9 @@ export class FxAnalyzer extends Analyzer {
                             prerenderRoutine = null;
                         }
 
-                        if (!argv[0].readable || /*!argv[0].isEqual(context.particle)*/ argv[0].subType !== context.particleCore ||
+                        if (!argv[0].readable || argv[0].subType !== context.particleCore ||
                             argv[0].isNotBaseArray() ||
-                            !(argv[1].hasUsage('out') || argv[1].hasUsage('inout')) || !argv[1].writable || argv[1].isNotBaseArray()) {
+                            !(argv[1].usages.includes('out') || argv[1].usages.includes('inout')) || !argv[1].writable || argv[1].isNotBaseArray()) {
                             context.error(exprNode, EErrors.InvalidCompileFunctionNotValid,
                                 { funcName: fn.name, tooltip: `'PrerenderRoutine' arguments' type mismatch.` });
                             prerenderRoutine = null;
@@ -512,7 +512,7 @@ export class FxAnalyzer extends Analyzer {
 
                                     const params = spawnRoutine.function.def.params;
                                     if (params.length > 0) {
-                                        if (!params[0].type.hasUsage('inout')) {
+                                        if (!params[0].type.usages.includes('inout')) {
                                             context.warn(params[0].type.sourceNode, EWarnings.PartFx_EmitterPersistentDataMustBeMarkedAsInout);
                                         }
                                     }
@@ -543,7 +543,7 @@ export class FxAnalyzer extends Analyzer {
                                     /** first argument's type */
                                     let type = fn.def.params[0].type;
 
-                                    if ((!type.hasUsage('out') && !type.hasUsage('inout')) || type.isNotBaseArray()) {
+                                    if ((!type.usages.includes('out') && !type.usages.includes('inout')) || type.isNotBaseArray()) {
                                         context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                             { funcName: fn.name, tooltip: `'InitRoutine' arguments' type mismatch.` });
                                         initRoutine = null;
@@ -594,7 +594,7 @@ export class FxAnalyzer extends Analyzer {
                                     /** first argument's type */
                                     let type = paramList[0].type;
 
-                                    if (!type.hasUsage('out') && !type.hasUsage('inout') || type.isNotBaseArray()) {
+                                    if (!type.usages.includes('out') && !type.usages.includes('inout') || type.isNotBaseArray()) {
                                         context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                             { funcName: fn.name, tooltip: `'UpdateRoutine' arguments' type mismatch.` });
                                         updateRoutine = null;
@@ -610,7 +610,7 @@ export class FxAnalyzer extends Analyzer {
                                     // Check return type
                                     //
 
-                                    if (!fdef.returnType.isEqual(T_BOOL)) {
+                                    if (!types.equals(fdef.returnType, T_BOOL)) {
                                         context.error(objectExrNode, EErrors.InvalidCompileFunctionNotValid,
                                             { funcName: fn.name, tooltip: `'UpdateRoutine' return type mismatch. 'boolean' is expected.` });
                                         updateRoutine = null;
@@ -724,7 +724,7 @@ export class FxAnalyzer extends Analyzer {
             }
 
             const p0Type = ctx.params[0].type;
-            if (!p0Type.isEqual(context.particleCore) || !p0Type.readable) {
+            if (!types.equals(p0Type, context.particleCore) || !p0Type.readable) {
                 context.error(instr.sourceNode, EErrors.PartFx_DrawOpOnlyAllowedWithinUpdateRoutine,
                     { tooltip: 'Draw operator only allowed within update routine' });
             }

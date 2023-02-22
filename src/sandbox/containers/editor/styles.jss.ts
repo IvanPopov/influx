@@ -25,5 +25,9 @@ export default {
         opacity: '0.35'
     },
 
+    deprecated: {
+        textDecoration: 'line-through'
+    },
+
     ...DistinctColor.buildVariousClasses('dc')
 };

@@ -1,5 +1,5 @@
 import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
-import { instruction, type } from "@lib/fx/analisys/helpers";
+import { instruction, types } from "@lib/fx/analisys/helpers";
 import { EInstructionTypes, IArithmeticExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IInstructionSettings, Instruction } from "./Instruction";
@@ -134,7 +134,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return false;
         }
 
-        // check for hasUsage('in') ?
+        // check for usages.includes('in') ?
 
         return this.subType.writable;
     }
@@ -145,7 +145,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
             return false;
         }
 
-        if (this.hasUsage("out")) {
+        if (this.usages.includes("out")) {
             return false;
         }
 
@@ -165,7 +165,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     // TODO: move to helpers
     get size(): number {
         if (!isNull(this._arrayElementType)) {
-            const size = type.alignSize(this._arrayElementType.size, this.aligment);
+            const size = types.alignSize(this._arrayElementType.size, this.aligment);
             const length = this.length;
             if (length === instruction.UNDEFINE_LENGTH || size === instruction.UNDEFINE_SIZE) {
                 return instruction.UNDEFINE_SIZE;
@@ -220,14 +220,17 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-
-    get fieldNames(): string[] {
-        return this.subType.fieldNames;
-    }
-
-
     get usages(): IVariableUsage[] {
-        return this._usageList;
+        let usages =  [ ...this._usageList ];
+        let subType = this.subType;
+        while (subType && subType.instructionType === EInstructionTypes.k_VariableType) {
+            const vtype = <IVariableTypeInstruction>subType;
+            // todo: remove duplicates
+            usages = [ ...usages, ...vtype.usages ];
+            subType = vtype.subType;
+        }
+
+        return usages;
     }
 
 
@@ -243,7 +246,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
 
     toString(): string {
         // TODO: fix this condition
-        return this.name || this.subType.toString() || type.hash(this);
+        return this.name || this.subType.toString() || types.hash(this);
     }
 
 
@@ -259,19 +262,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         return code;
     }
 
-    /** @deprecated */
-    isEqual(value: ITypeInstruction): boolean {
-        return type.equals(this, value);
-    }
 
     /** @deprecated */
     toDeclString(): string {
         return this.subType.toDeclString();
-    }
-
-    // base type is the same as system types like: float, bool, float2x2
-    isBase(): boolean {
-        return this.subType.isBase() && isNull(this._arrayElementType);
     }
 
 
@@ -293,62 +287,23 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
 
 
-
-    /** @deprecated */
-    isContainArray(): boolean {
-        return this.subType.isContainArray();
-    }
-
-
-    /** @deprecated */
-    isContainSampler(): boolean {
-        return this.subType.isContainSampler();
-    }
-
-
-    /** @deprecated */
-    isContainComplexType(): boolean {
-        return this.subType.isContainComplexType();
-    }
-
-
     isUniform(): boolean {
-        return this.hasUsage("uniform");
+        return this.usages.includes("uniform");
     }
 
 
     isConst(): boolean {
-        return this.hasUsage("const");
+        return this.usages.includes("const");
     }
 
 
     isUnsigned(): boolean {
-        return this.hasUsage("unsigned");
+        return this.usages.includes("unsigned");
     }
 
 
     isStatic(): boolean {
-        return this.hasUsage("static");
-    }
-
-
-    isSampler(): boolean {
-        return !this.isNotBaseArray() && this.subType.isSampler();
-    }
-
-
-    isTexture(): boolean {
-        return !this.isNotBaseArray() && this.subType.isTexture();
-    }
-
-
-    isUAV(): boolean {
-        return !this.isNotBaseArray() && this.subType.isUAV();
-    }
-
-
-    isBuffer(): boolean {
-        return !this.isNotBaseArray() && this.subType.isBuffer();
+        return this.usages.includes("static");
     }
 
 
@@ -358,16 +313,10 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     }
     
 
-
     private addUsage(usage: IVariableUsage): void {
-        if (!this.hasUsage(usage)) {
+        if (!this.usages.includes(usage)) {
             this._usageList.push(usage);
         }
-    }
-
-
-    hasField(fieldName: string): boolean {
-        return this.subType.hasField(fieldName);
     }
 
 
@@ -400,19 +349,6 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     getFieldBySemantics(semantic: string): IVariableDeclInstruction {
         // TODO: propogate usages?
         return this.subType.getFieldBySemantics(semantic);
-    }
-
-
-    hasUsage(usage: IVariableUsage): boolean {
-        if (this._usageList.find(knownUsage => knownUsage === usage)) {
-            return true;
-        }
-
-        if (!isNull(this.subType) && this.subType.instructionType === EInstructionTypes.k_VariableType) {
-            return (<IVariableTypeInstruction>this.subType).hasUsage(usage);
-        }
-
-        return false;
     }
 
 

@@ -1,7 +1,7 @@
 import { DeclInstruction, IDeclInstructionSettings } from "@lib/fx/analisys/instructions/DeclInstruction";
 import { Instruction } from "@lib/fx/analisys/instructions/Instruction";
 import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
-import { fn, type } from "@lib/fx/analisys/helpers";
+import { fn, types } from "@lib/fx/analisys/helpers";
 
 export interface IFunctionDefInstructionSettings extends IDeclInstructionSettings {
     returnType: IVariableTypeInstruction;
@@ -38,10 +38,10 @@ export class FunctionDefInstruction extends DeclInstruction implements IFunction
 
 
     toString(): string {
-        let def = type.signature(this.returnType) + " " + this.name + "(";
+        let def = types.signature(this.returnType) + " " + this.name + "(";
 
         for (let i: number = 0; i < this.params.length; i++) {
-            def += type.signature(this.params[i].type) + ",";
+            def += types.signature(this.params[i].type) + ",";
         }
 
         def += ")";

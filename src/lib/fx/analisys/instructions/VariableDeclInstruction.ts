@@ -1,7 +1,7 @@
 import { assert, isNull } from '@lib/common';
 import { EInstructionTypes, IFunctionDefInstruction, IIdInstruction, IInitExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { type } from '../helpers';
+import { types } from '../helpers';
 import { DeclInstruction, IDeclInstructionSettings } from './DeclInstruction';
 import { Instruction } from './Instruction';
 
@@ -108,7 +108,7 @@ export class VariableDeclInstruction extends DeclInstruction implements IVariabl
     }
 
     isConstant(): boolean {
-        return !!(this._usageFlags % EVariableUsageFlags.k_Cbuffer) || this.type.isUniform();
+        return !!(this._usageFlags & EVariableUsageFlags.k_Cbuffer) || this.type.isUniform();
     }
     
     toCode(): string {

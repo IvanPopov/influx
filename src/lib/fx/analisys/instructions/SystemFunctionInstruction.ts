@@ -12,6 +12,8 @@ export interface ISystemFunctionInstructionSettings extends IFunctionDeclInstruc
 export class SystemFunctionInstruction extends FunctionDeclInstruction implements IFunctionDeclInstruction {
     protected _bForVertex: boolean;
     protected _bForPixel: boolean;
+    // protected _bForCompute;
+    // protected _bForGeometry;
     
      constructor({ vertex = true, pixel = true, implementation = null, ...settings }: ISystemFunctionInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemFunctionDecl, implementation: null, ...settings });

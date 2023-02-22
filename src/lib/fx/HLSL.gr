@@ -11,13 +11,12 @@ Decl : VariableDecl
 Decl : VarStructDecl
 Decl : FunctionDecl
 Decl : TechniqueDecl
+Decl : Technique11Decl
 Decl : UseDecl
 Decl : ImportDecl
 Decl : ProvideDecl
 Decl : CbufferDecl
 Decl : TbufferDecl
-# Decl : SamplerStateDecl
-# Decl : SamplerComparisonState
 Decl : ERROR
 
 #if FX_PART
@@ -115,10 +114,11 @@ ObjectType : T_KW_TEXTURECUBEARRAY
 # ObjectType : T_KW_STATEBLOCK
 ObjectType : T_KW_SAMPLER_STATE
 ObjectType : T_KW_SAMPLER_COMPARISON_STATE
-ObjectType : T_KW_PIXELSHADER
-ObjectType : T_KW_VERTEXSHADER
-ObjectType : T_KW_PIXELFRAGMENT
-ObjectType : T_KW_VERTEXFRAGMENT
+ObjectType : T_KW_DEPTH_STENCIL_STATE
+# ObjectType : T_KW_PIXELSHADER
+# ObjectType : T_KW_VERTEXSHADER
+# ObjectType : T_KW_PIXELFRAGMENT
+# ObjectType : T_KW_VERTEXFRAGMENT
 ObjectType : T_KW_RWTEXTURE1D '<' Type '>'
 ObjectType : T_KW_RWTEXTURE2D '<' Type '>'
 ObjectType : T_KW_RWTEXTURE3D '<' Type '>'
@@ -127,7 +127,6 @@ ObjectType : T_KW_RWBUFFER '<' Type '>'
 ObjectType : T_KW_RWSTRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_STRUCTUREDBUFFER '<' Type '>'
 ObjectType : T_KW_APPENDSTRUCTUREDBUFFER '<' Type '>'
-
 
 Struct : T_KW_STRUCT '{' '}' --add
 Struct : T_KW_STRUCT '{' StructDecls '}'
@@ -226,6 +225,10 @@ TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt Techniq
 TechniqueBody : '{' '}'  --add
 TechniqueBody : '{' PassDecls '}'
 
+Technique11Decl : T_KW_TECHNIQUE11 ComplexNameOpt SemanticsOpt AnnotationOpt Technique11Body --add
+Technique11Body : '{' '}'  --add
+Technique11Body : '{' Pass11Decls '}'
+
 CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
 CbufferDecl : T_KW_CBUFFER IdOpt SemanticsOpt AnnotationOpt '{' '}' ';' --add
 TbufferDecl : T_KW_TBUFFER IdOpt SemanticsOpt AnnotationOpt '{' StructDecls '}' ';' --add
@@ -246,6 +249,12 @@ PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --add
 PassDecl : PresetDecl
 #endif
 PassDecl : ';'
+
+Pass11Decls : Pass11Decl --expose
+Pass11Decls : Pass11Decls Pass11Decl
+Pass11Decl : T_KW_PASS IdOpt AnnotationOpt StmtBlock --add
+Pass11Decl : ';'
+
 
 PassStateBlock : '{' '}' --add
 PassStateBlock : '{' PassStates '}'
@@ -618,6 +627,7 @@ T_KW_TBUFFER : "tbuffer"
 # T_KW_STATEBLOCK_STATE : "stateblock_state"
 T_KW_SAMPLER_STATE : "SamplerState"
 T_KW_SAMPLER_COMPARISON_STATE : "SamplerComparisonState"
+T_KW_DEPTH_STENCIL_STATE : "DepthStencilState"
 T_KW_BUFFER : "Buffer"
 T_KW_RWTEXTURE1D : "RWTexture1D"
 T_KW_RWTEXTURE2D : "RWTexture2D"
@@ -626,15 +636,16 @@ T_KW_RWBUFFER : "RWBuffer"
 T_KW_STRUCTUREDBUFFER : "StructuredBuffer"
 T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_APPENDSTRUCTUREDBUFFER : "AppendStructuredBuffer"
-T_KW_PIXELSHADER : "pixelshader"
-T_KW_VERTEXSHADER : "vertexshader"
-T_KW_PIXELFRAGMENT : "pixelfragment"
-T_KW_VERTEXFRAGMENT : "vertexfragment"
+# T_KW_PIXELSHADER : "pixelshader"
+# T_KW_VERTEXSHADER : "vertexshader"
+# T_KW_PIXELFRAGMENT : "pixelfragment"
+# T_KW_VERTEXFRAGMENT : "vertexfragment"
 T_KW_REGISTER : "register"
 T_KW_IN : "in"
 T_KW_OUT : "out"
 T_KW_INOUT : "inout"
 T_KW_TECHNIQUE : "technique"
+T_KW_TECHNIQUE11 : "technique11"
 
 #if PRESETS_EX
     T_KW_PRESET : "preset"

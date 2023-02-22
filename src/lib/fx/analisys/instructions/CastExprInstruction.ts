@@ -1,4 +1,4 @@
-import { type } from '@lib/fx/analisys/helpers';
+import { types } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, ICastExprInstruction, IExprInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
@@ -25,9 +25,9 @@ export class CastExprInstruction extends ExprInstruction implements ICastExprIns
         return `(${this.type.toCode()})${this.expr.toCode()}`;
     }
 
-    
+    /** @deprecated */
     isUseless() {
-        return this.type.isEqual(this.expr.type);
+        return types.equals(this.type, this.expr.type);
     }
     
 

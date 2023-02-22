@@ -1,13 +1,11 @@
-import { parseUintLiteral } from "@lib/fx/analisys/SystemScope";
-import { ComplexTypeInstruction } from "@lib/fx/analisys/instructions/ComplexTypeInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { SpawnInstruction } from "@lib/fx/analisys/instructions/part/SpawnInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
-import { IExprInstruction, IStmtInstruction, ITypeInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { parseUintLiteral } from "@lib/fx/analisys/system/utils";
+import { IExprInstruction, IStmtInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { LiteGraph } from "litegraph.js";
-import { PART_TYPE } from "../common";
-import { AST, CodeEmitterNode, CodeEmitterStmt, GraphContext, ISpawner, LGraphNodeFactory } from "../GraphNode";
+import { AST, CodeEmitterStmt, GraphContext, ISpawner, LGraphNodeFactory } from "../GraphNode";
 
 function def(type: IVariableTypeInstruction, ast: ReturnType<typeof AST>): IExprInstruction
 {

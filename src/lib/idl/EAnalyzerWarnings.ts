@@ -9,6 +9,8 @@ export enum EAnalyzerWarnings {
     ImplicitTypeConversion,
     ImplicitTypeTruncation,
 
+    Deprecated,
+
     // part fx
     PartFx_SortingCannotBeApplied,
     PartFx_PresetPropertyHasNotBeenFound,

@@ -1,5 +1,5 @@
 import { assert, isDef, isNull } from "@lib/common";
-import { instruction } from "@lib/fx/analisys/helpers";
+import { instruction, variable, types } from "@lib/fx/analisys/helpers";
 import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { fn } from "@lib/fx/analisys/helpers/fn";
@@ -11,7 +11,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { isString } from "@lib/util/s3d/type";
 import { BaseEmitter } from "./BaseEmitter";
 import { BreakStmtInstruction } from "../analisys/instructions/BreakStmtInstruction";
-
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
 
 interface ITypeInfo {
     typeName: string;
@@ -142,7 +142,8 @@ export class CodeContext {
         assert(!this.has(cbuf.name));
         this.add(cbuf.name);
 
-        const { name, type: { size }, register: { index: register } } = cbuf;
+        const { name, type: { size } } = cbuf;
+        const register = SystemScope.resolveRegister(cbuf).index;
         const buf = { name, size, register };
         this.cbuffers.push(buf);
 
@@ -921,7 +922,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             if (cbuf.id) {
                 this.emitKeyword(cbuf.name);
             }
-            const reg = cbuf.register;
+            const reg = SystemScope.resolveRegister(cbuf);
             if (reg.index !== -1) {
                 this.emitChar(':');
                 this.emitKeyword('register');
@@ -970,7 +971,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 this.begin();
                 this.emitCbuffer(ctx, cbuf);
                 this.end();
-            } else if (type.isTexture()) {
+            } else if (SystemScope.isTexture(type)) {
                 this.begin();
                 this.emitTexture(ctx, decl);
                 this.end();

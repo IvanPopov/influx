@@ -1,4 +1,5 @@
 
+/** @deprecated */
 export enum ERenderStates {
 	BLENDENABLE,
 	CULLFACEENABLE,

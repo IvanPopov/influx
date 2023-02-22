@@ -1,4 +1,4 @@
-import { type as typeHelper } from '@lib/fx/analisys/helpers';
+import { types } from '@lib/fx/analisys/helpers';
 import { createFXSLDocument, extendFXSLDocument } from '@lib/fx/FXSLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { FxEmitter } from '@lib/fx/translators/FxEmitter';
@@ -357,7 +357,7 @@ const changeLayoutLogic = createLogic<IStoreState, IGraphChangeLayout['payload']
         // same name but diff type
         const toRecreateField = type.fields
             .filter(p => typeNew.fields.find(n => n.name == p.name &&
-                !typeHelper.compare(n.type, p.type)))
+                !types.compare(n.type, p.type)))
             .map(v => v.name);
 
         // name no more exists
@@ -368,7 +368,7 @@ const changeLayoutLogic = createLogic<IStoreState, IGraphChangeLayout['payload']
         // same name and type but diff input index
         const toReconnectField = type.fields
             .filter((p, pi) => typeNew.fields.find((n, ni) => pi != ni &&
-                n.name == p.name && typeHelper.compare(n.type, p.type)))
+                n.name == p.name && types.compare(n.type, p.type)))
             .map(v => v.name);
             
         // toCreate?

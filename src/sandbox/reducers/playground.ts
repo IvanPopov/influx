@@ -1,6 +1,6 @@
 import * as Techniques from '@lib/fx/techniques';
 import * as Timeline from '@lib/fx/timeline';
-import { IScope, ITechniqueInstruction } from "@lib/idl/IInstruction";
+import { IScope, ITechnique11Instruction, ITechniqueInstruction } from "@lib/idl/IInstruction";
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundActions, IPlaygroundEffectHasBeenDropped, IPlaygroundEffectHasBeenSaved, IPlaygroundSetOptionAutosave, IPlaygroundSetShaderFormat, IPlaygroundSwitchTechniqueRuntime, IPlaygroundTechniqueUpdate } from "@sandbox/actions/ActionTypes";
 import { handleActions } from '@sandbox/reducers/handleActions';
@@ -38,12 +38,22 @@ export default handleActions<IPlaygroundState, IPlaygroundActions>({
 
 
 export const getEmitterName = (playground: IPlaygroundState) => playground.technique ? playground.technique.getName() : null;
+/** @deprecated */
 export function filterTechniques(scope: IScope): ITechniqueInstruction[] {
     if (!scope) {
         return [];
     }
 
     const map = scope.techniques;
+    return Object.keys(map).map(name => map[name]);
+}
+
+export function filterTechniques11(scope: IScope): ITechnique11Instruction[] {
+    if (!scope) {
+        return [];
+    }
+
+    const map = scope.techniques11;
     return Object.keys(map).map(name => map[name]);
 }
 

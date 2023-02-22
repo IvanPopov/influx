@@ -60,9 +60,36 @@ export interface IEmitter extends ITechnique<IEmitterPass> {
 
     setTrimesh(name: string, trimesh: ITrimesh): void;
     setTexture(name: string, tex: ITexture): void;
-    
+
     /** @deprecated */
     dump(): void;
     createDebugViewer(): IParticleDebugViewer;
 }
 
+/*
+export interface IParticlesRenderQueue {
+    getGeometry(): string;
+    getTechnique(): ITechnique;
+    getInstanceData(): IMemory;
+    getNumRenderedParticles(): number;
+} 
+
+export interface IParticles {
+    getCapacity(): number;
+    getNumParticles(): number;
+    
+    reset(): void;
+    simulate(): void;
+    prerender(): void;    // alias for all pass prerender ((pass of passes) pass.prerender())
+    serialize(): void;    // alias for all pass serialization ((pass of passes) pass.serialize())
+
+    setTrimesh(name: string, trimesh: ITrimesh): void;
+    setTexture(name: string, tex: ITexture): void;
+    setUniform(name: string, value: ArrayBufferView): void;
+    
+    getRenderQueueNum(): number;
+    getRenderQueue(): IParticlesRenderQueue;
+
+    createDebugViewer(): IParticleDebugViewer;
+}
+*/

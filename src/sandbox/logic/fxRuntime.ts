@@ -12,7 +12,7 @@ import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { IPlaygroundEffectSaveRequest, IPlaygroundSelectEffect, IPlaygroundSetOptionAutosave } from '@sandbox/actions/ActionTypes';
 import * as ipc from '@sandbox/ipc';
 import * as Depot from '@sandbox/reducers/depot';
-import { filterTechniques, getPlaygroundState } from '@sandbox/reducers/playground';
+import { filterTechniques, filterTechniques11, getPlaygroundState } from '@sandbox/reducers/playground';
 import { asConvolutionPack, getFileState, getScope } from '@sandbox/reducers/sourceFile';
 import { IPlaygroundControlsState, IStoreState } from '@sandbox/store/IStoreState';
 import { createLogic } from 'redux-logic';
@@ -66,7 +66,9 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
         const translator = asFxTranslatorOprions(state);
 
         const scope = getScope(file);
+        /** @deprecated */
         const list = filterTechniques(scope);
+        const list11 = filterTechniques11(scope);
 
         let active = action.type === evt.PLAYGROUND_SELECT_EFFECT ? action.payload.name : null;
         let technique = playground.technique;
@@ -78,8 +80,18 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             }
         }
 
+        /** @deprecated */
         if (!active) {
             for (const fx of list) {
+                if (fx.isValid()) {
+                    active = fx.name;
+                    break;
+                }
+            }
+        }
+
+        if (!active) {
+            for (const fx of list11) {
                 if (fx.isValid()) {
                     active = fx.name;
                     break;
@@ -96,11 +108,31 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
             Techniques.copyTechnique(next, prev);
         }
 
+        async function create11(forceRestart = true): Promise<[ ITechnique, IPlaygroundControlsState ]> {
+            const i = list11.map(fx => fx.name).indexOf(active);
+
+            if (i == -1) {
+                return [ null, null ];
+            }
+
+            const bundle = await FxBundle.createBundle11(list11[i], { translator, omitHLSL: true });
+            const tech = Techniques.createTechnique(bundle);
+            const controls = decodeBundleControls(bundle);
+
+            if (tech) {
+                if (forceRestart) timeline.start();
+                // verbose('next technique has been created.');
+            }
+
+            return [ tech, controls ];
+        }
+
+        /** @deprecated */
         async function create(forceRestart = true): Promise<[ ITechnique, IPlaygroundControlsState ]> {
             const i = list.map(fx => fx.name).indexOf(active);
 
             if (i == -1) {
-                return [ null, null ];
+                return create11(forceRestart);
             }
 
             const bundle = await FxBundle.createBundle(list[i], { translator, omitHLSL: true });

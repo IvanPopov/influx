@@ -5,6 +5,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IRange } from "@lib/idl/parser/IParser";
 import { IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { CodeLens, Command, Position, Range, TextDocument } from "vscode-languageserver-types";
+import { types } from "@lib/fx/analisys/helpers"
 
 export class FXCodeLenses {
     doProvide(textDocument: TextDocument, slDocument: ISLDocument): CodeLens[] {
@@ -36,7 +37,7 @@ export class FXCodeLenses {
                     if (partFx.spawnRoutine) {
                         const fn = partFx.spawnRoutine.function.def;
                         const sourceNode = partFx.spawnRoutine.function.def.sourceNode;
-                        if (fn.returnType.isEqual(T_VOID)) {
+                        if (types.equals(fn.returnType, T_VOID)) {
                             if (fn.params.length > 0) {
                                 lenses.push(createCodeLens(`[extened spawn]`, sourceNode.loc));
                             } else {

@@ -1,9 +1,10 @@
 import { EInstructionTypes, ETechniqueType, IStructDeclInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ICompileExprInstruction } from "@lib/idl/IInstruction";
 import { IPartFxInstruction, IPartFxPassInstruction } from "@lib/idl/part/IPartFx";
-import { T_VOID } from "../../SystemScope";
+import { T_VOID } from "@lib/fx/analisys/SystemScope";
 
-import { ITechniqueInstructionSettings, TechniqueInstruction } from "../TechniqueInstruction";
+import { ITechniqueInstructionSettings, TechniqueInstruction } from "@lib/fx/analisys/instructions/TechniqueInstruction";
+import { types } from "@lib/fx/analisys/helpers"
 
 // prohibition of explicitly indicating the type of technique
 export interface IPartFxInstructionSettings extends Omit<ITechniqueInstructionSettings<IPartFxPassInstruction>, "techniqueType"> {
@@ -40,7 +41,7 @@ export class PartFxInstruction extends TechniqueInstruction<IPartFxPassInstructi
             return false;
         }
 
-        if (!this.spawnRoutine.function.def.returnType.isEqual(T_VOID)) {
+        if (!types.equals(this.spawnRoutine.function.def.returnType, T_VOID)) {
             if (!this.initRoutine) {
                 console.error(`init routine must be defined if regular spawner is used`);
                 return false;

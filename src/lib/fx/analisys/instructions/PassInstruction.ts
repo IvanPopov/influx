@@ -1,11 +1,8 @@
-import { isNull } from "@lib/common";
-import { isNumber } from "@lib/common";
+import { isNull, isNumber } from "@lib/common";
 import { ERenderStates } from "@lib/idl/ERenderStates";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { EInstructionTypes, IAnnotationInstruction, IFunctionDeclInstruction, IIdInstruction, IPassInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDeclInstruction, IIdInstruction, IPassInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
-import { ISamplerState } from "@lib/idl/ISamplerState";
-import { ETextureFilters, ETextureWrapModes } from "@lib/idl/ITexture";
 
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
@@ -68,13 +65,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
         return this._passStateMap;
     }
 
-    // TODO: move it to helpers
-    private static createRenderStateMap(): IMap<ERenderStateValues> {
-        let map: IMap<ERenderStateValues> = <IMap<ERenderStateValues>>{};
-        PassInstruction.clearRenderStateMap(map);
-
-        return map;
-    }
 
     // TODO: move it to helpers
     private static copyRenderStateMap(from: IMap<ERenderStateValues>, to: IMap<ERenderStateValues>): void {
@@ -99,23 +89,6 @@ export class PassInstruction extends DeclInstruction implements IPassInstruction
             .forEach(rs => { map[rs] = ERenderStateValues.UNDEF });
     }
 
-
-    /** @deprecated */
-    // TODO: move it to helpers
-    private static createSamplerState(): ISamplerState {
-        return <ISamplerState>{
-            textureName: "",
-            texture: null,
-            wrap_s: ETextureWrapModes.UNDEF,
-            wrap_t: ETextureWrapModes.UNDEF,
-            mag_filter: ETextureFilters.UNDEF,
-            min_filter: ETextureFilters.UNDEF
-            /*wrap_s: ETextureWrapModes.CLAMP_TO_EDGE,
-            wrap_t: ETextureWrapModes.CLAMP_TO_EDGE,
-            mag_filter: ETextureFilters.LINEAR,
-            min_filter: ETextureFilters.LINEAR*/
-        };
-    }
 
     isValid(): boolean {
         return true;

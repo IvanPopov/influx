@@ -6,7 +6,7 @@ import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
 import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TextureBundleT, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
-import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
@@ -381,6 +381,36 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
 }
 
 
+async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
+    const { includeResolver, defines } = convPack;
+    
+    const { textDocument, slastDocument } = convPack;
+    const ctx = new FxTranslatorContext({ ...opts.translator, textDocument, slastDocument });
+    const raw = FxTranslator.translate11(tech, ctx);
+
+    const reflection = ctx.techniques11[0];
+    const { name } = reflection;
+
+    opts.name ||= name;
+
+    const textDocument3 = await createTextDocument('file://foo.bar///mat.fx', raw);
+    const slastDocument3 = await createSLASTDocument(textDocument3, { includeResolver, defines });
+    const slDocument = await createSLDocument(slastDocument3);
+
+    if (slDocument.diagnosticReport.errors) {
+        console.error(Diagnostics.stringify(slDocument.diagnosticReport));
+        return null;
+    }
+
+    const passes = [];//reflection.passes.map(pass => createMatFxRenderPass(slDocument, pass, opts, new ConvolutionPackEx(textDocument3, slastDocument3, includeResolver, defines)));
+    const mat = new MatBundleT(passes);
+
+    const { meta } = opts;
+    const bundle = createFxBundle(opts.name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source));
+
+    return finalizeBundle(bundle, opts);
+}
+
 async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
     const { includeResolver, defines } = convPack;
     
@@ -424,4 +454,9 @@ export async function createBundle(fx: ITechniqueInstruction, options?: BundleOp
     }
     console.assert(false);
     return null;
+}
+
+
+export async function createBundle11(fx: ITechnique11Instruction, options?: BundleOptions, convPack?: ConvolutionPackEx): Promise<Uint8Array | BundleT> {
+    return createMatFx11Bundle(fx, options, convPack);
 }

@@ -5,9 +5,10 @@
 /* tslint:disable:cyclomatic-complexity */
 
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
-import { fn, instruction, type } from '@lib/fx/analisys/helpers';
+import { fn, instruction, types } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPass11Instruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
@@ -17,8 +18,7 @@ import { IFileState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
-import { Checkbox, Icon, Input, List, Message, Segment, Table } from 'semantic-ui-react';
-
+import { Checkbox, Icon, Input, List, Message, Table } from 'semantic-ui-react';
 
 const styles = {
     parentIcon: {
@@ -272,8 +272,11 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.ProvideDecl(instr);
             case EInstructionTypes.k_CbufferDecl:
                 return this.CbufferDecl(instr);
+            // @deprecated    
             case EInstructionTypes.k_TechniqueDecl:
                 return this.Technique(instr);
+            case EInstructionTypes.k_Technique11Decl:
+                return this.Technique11(instr);
             case EInstructionTypes.k_VariableDecl:
                 return this.VariableDecl(instr);
             case EInstructionTypes.k_VariableType:
@@ -397,11 +400,12 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
 
     CbufferDecl(instr: ICbufferInstruction) {
+        const reg = SystemScope.resolveRegister(instr);
         return (
             <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='name' value={ instr.name } />
                 <Property name='size' value={ instr.type.size } />
-                <Property name='register' value={ `${instr.register.type}${instr.register.index}` } />
+                <Property name='register' value={ `${reg.type}${reg.index}` } />
                 {/* annotation */}
                 <PropertyOpt { ...this.bindProps(instr) } name='fields'>
                     { instr.type.fields.map((field) => this.Unknown(field)) }
@@ -437,15 +441,13 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     typeInfo(instr: ITypeInstruction) {
         return (
-            <SystemProperty { ...this.bindProps(instr, false) } name={ type.signature(instr, true) }>
+            <SystemProperty { ...this.bindProps(instr, false) } name={ types.signature(instr, true) }>
                 <SystemProperty name='writable' value={ `${instr.writable}` } />
                 <SystemProperty name='readable' value={ `${instr.readable}` } />
                 <SystemProperty name='size' value={ `${instr.size === instruction.UNDEFINE_SIZE ? 'undef' : instr.size} bytes` } />
                 <SystemProperty name='length' value={ `${instr.length === instruction.UNDEFINE_LENGTH ? 'undef' : instr.length}` } />
-                <SystemProperty name='base' value={ `${instr.isBase()}` } />
                 <SystemProperty name='array' value={ `${instr.isArray()}` } />
                 <SystemProperty name='complex' value={ `${instr.isComplex()}` } />
-                <SystemProperty name='const' value={ `${instr.isConst()}` } />
                 <PropertyOpt name='element type'>
                     { this.Unknown(instr.arrayElementType) }
                 </PropertyOpt>
@@ -460,6 +462,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    /** @deprecated */
     Pass(instr: IPassInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
@@ -469,13 +472,39 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     }
 
 
+    Pass11(instr: IPass11Instruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name='name' value={ instr.name } />
+                <PropertyOpt name='impl'>
+                    { this.StmtBlock(instr.impl) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
+    /** @deprecated */
     Technique(instr: ITechniqueInstruction) {
         return (
             <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='name' value={ instr.name } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='passes'>
-                    { instr.passList.map((pass) => this.Pass(pass)) }
+                    { instr.passList?.map((pass) => this.Pass(pass)) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
+    Technique11(instr: ITechnique11Instruction) {
+        return (
+            <Property { ...this.bindProps(instr) } value={ instr.name } >
+                <Property name='name' value={ instr.name } />
+                <PropertyOpt name='semantic' value={ instr.semantic } />
+                <PropertyOpt name='passes'>
+                    { instr.passList?.map((pass) => this.Pass11(pass)) }
                 </PropertyOpt>
             </Property>
         );
@@ -882,6 +911,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
+                <PropertyOpt name='const' value={ `${instr.isConst()}` } />
                 <PropertyOpt name='usages' value={ (instr.usages.join(' ') || null) } />
                 <Property name='padding' value={ instr.padding === instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
                 <Property name='aligment' value={ instr.aligment } />

@@ -1,12 +1,12 @@
 import { assert, isNull } from "@lib/common";
-import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, ITypedInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
+import { isDefAndNotNull } from "@lib/util/s3d/type";
 import { instruction } from "./instruction";
 import { variable } from "./variable";
-import { T_INT, T_UINT } from "../SystemScope";
-import { isDefAndNotNull } from "@lib/util/s3d/type";
 
-export namespace type {
+export namespace types {
+
     // todo: rename it
     /** @deprecated */
     export function isInheritedFromVariableDecl(type: ITypeInstruction): boolean {
@@ -179,7 +179,7 @@ export namespace type {
     //     }
 
 
-    //     if (type.isEqual(T_INT) || type.isEqual(T_UINT)) {
+    //     if (types.equals(type, T_INT) || types.equals(type, T_UINT)) {
     //         // temp workaround in order to match int to uint and etc. 
     //         return /^int$|^uint$/g;
     //     }

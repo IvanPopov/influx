@@ -1,13 +1,13 @@
 import { assert } from "@lib/common";
-import { EInstructionTypes, IFunctionDefInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IRegister, ITypedInstruction, ICbufferInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IFunctionDefInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
-import { type } from "./type";
+import { types } from "./types";
 
 export namespace variable {
     /**
- * @param decl Variable declaraion (decl.isParameter() must be true).
- * @returns Serial number of the declaration among the function parameters or -1 otherwise.
- */
+     * @param decl Variable declaraion (decl.isParameter() must be true).
+     * @returns Serial number of the declaration among the function parameters or -1 otherwise.
+     */
     export function parameterIndex(decl: IVariableDeclInstruction): number {
         if (!decl.isParameter()) {
             console.error('invalid call.');
@@ -36,65 +36,25 @@ export namespace variable {
         return offset;
     }
 
-        /**
+    /**
      * Helper:
      *  Returns 'structName.fieldName' for structs;
      *  Returns 'varName' for variables;
      */
     export function fullName(decl: IVariableDeclInstruction) {
         if (decl.isField() &&
-            type.findParentVariableDecl(<IVariableTypeInstruction>decl.parent)) {
+            types.findParentVariableDecl(<IVariableTypeInstruction>decl.parent)) {
 
             let name = '';
             let parentType = decl.parent.instructionType;
 
             if (parentType === EInstructionTypes.k_VariableType) {
-                name = type.resolveVariableDeclFullName(<IVariableTypeInstruction>decl.parent);
+                name = types.resolveVariableDeclFullName(<IVariableTypeInstruction>decl.parent);
             }
 
             name += '.' + decl.name;
             return name;
         }
         return decl.name;
-    }
-
-
-
-    export function resolveRegister(decl: IVariableDeclInstruction | ICbufferInstruction): IRegister {
-        let type = null;
-        let index = -1;
-
-        const semantic = decl.semantic;
-        if (semantic) {
-            const match = semantic.match(/^register\(([utbs]{1})([\d]+)\)$/);
-            if (match) {
-                type = match[1];
-                index = Number(match[2]);
-            }
-        }
-
-        if (decl.type.isUAV()) {
-            assert(type === null || type === 'u');
-            type = 'u';
-        }
-
-        if (decl.type.isTexture()) {
-            assert(type === null || type === 't');
-            type = 't';
-        }
-
-        if (decl.type.isSampler()) {
-            assert(type === null || type === 's');
-            type = 's';
-        }
-
-        if (decl.instructionType === EInstructionTypes.k_CbufferDecl) {
-            assert(type === null || type === 'b');
-            type = 'b';
-        }
-
-        // TODO: buffers
-
-        return { type, index };
     }
 }

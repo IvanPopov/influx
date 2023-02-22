@@ -1,5 +1,5 @@
 import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
-import { expression, instruction, type, variable } from "@lib/fx/analisys/helpers";
+import { expression, instruction, types, variable } from "@lib/fx/analisys/helpers";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
@@ -225,7 +225,7 @@ function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProg
     // loading of all non-inpt parameters to registers
     for (let i = 0; i < fdef.params.length; ++i) {
         const param = fdef.params[i];
-        if (param.type.hasUsage('out') || param.type.hasUsage('inout')) {
+        if (param.type.usages.includes('out') || param.type.usages.includes('inout')) {
             continue;
         }
 
@@ -599,9 +599,10 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         return decl.isGlobal() && (isUniform || isCbufferField || isConstant);
     }
 
+
     function resolveAddressType(decl: IVariableDeclInstruction): EAddrType {
         if (decl.isParameter()) {
-            if (decl.type.hasUsage('out') || decl.type.hasUsage('inout')) {
+            if (decl.type.usages.includes('out') || decl.type.usages.includes('inout')) {
                 // entry point function can refer to input memory, for ex. vertex shader
                 return isEntryPoint() ? EAddrType.k_Input : EAddrType.k_Registers;
             }
@@ -613,15 +614,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 return EAddrType.k_Input;
             }
 
-            if (decl.type.isUAV()) {
+            if (SystemScope.isUAV(decl.type)) {
                 return EAddrType.k_Input;
             }
 
-            if (decl.type.isBuffer()) {
+            if (SystemScope.isBuffer(decl.type)) {
                 return EAddrType.k_Input;
             }
 
-            if (decl.type.isTexture()) {
+            if (SystemScope.isTexture(decl.type)) {
                 return EAddrType.k_Input;
             }
 
@@ -1016,15 +1017,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                     return constants.deref(decl);
                                 }
 
-                                if (decl.type.isUAV()) {
+                                if (SystemScope.isUAV(decl.type)) {
                                     return uavs.deref(decl);
                                 }
 
-                                if (decl.type.isBuffer()) {
+                                if (SystemScope.isBuffer(decl.type)) {
                                     return srvs.deref(decl);
                                 }
 
-                                if (decl.type.isTexture()) {
+                                if (SystemScope.isTexture(decl.type)) {
                                     return srvs.deref(decl);
                                 }
 
@@ -1339,32 +1340,32 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     }
 
 
-                    if (left.type.isEqual(T_INT)) {
+                    if (types.equals(left.type, T_INT)) {
                         op = opIntMap[operator];
 
                         // print warning if right type is UINT;
-                        if (!right.type.isEqual(T_INT) && !right.type.isEqual(T_UINT)) {
+                        if (!types.equals(right.type, T_INT) && !types.equals(right.type, T_UINT)) {
                             error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
-                    } else if (left.type.isEqual(T_UINT)) {
+                    } else if (types.equals(left.type, T_UINT)) {
                         op = opUintMap[operator];
 
                         // print warning if right type is INT;
-                        if (!right.type.isEqual(T_UINT) && !right.type.isEqual(T_INT)) {
+                        if (!types.equals(right.type, T_UINT) && !types.equals(right.type, T_INT)) {
                             error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
-                    } else if (left.type.isEqual(T_FLOAT)) {
+                    } else if (types.equals(left.type, T_FLOAT)) {
                         op = opFloatMap[operator];
 
-                        if (!right.type.isEqual(T_FLOAT)) {
+                        if (!types.equals(right.type, T_FLOAT)) {
                             error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
-                    } else if (left.type.isEqual(T_BOOL)) {
+                    } else if (types.equals(left.type, T_BOOL)) {
                         op = opIntMap[operator];
-                        if (!right.type.isEqual(T_BOOL)) {
+                        if (!types.equals(right.type, T_BOOL)) {
                             error(expr.sourceNode, EErrors.k_UnsupportedRelationalExpr, {});
                             return PromisedAddress.INVALID;
                         }
@@ -1411,7 +1412,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     // TODO: add support for vectors
 
-                    if (dstType.isEqual(T_BOOL)) {
+                    if (types.equals(dstType, T_BOOL)) {
                         const size = castExpr.type.size;
                         const dest = alloca(size);
                         let exprAddr = raddr(castExpr.expr);
@@ -1425,29 +1426,29 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     }
 
 
-                    if (srcType.isEqual(T_FLOAT)) {
-                        if (dstType.isEqual(T_INT)) {
+                    if (types.equals(srcType, T_FLOAT)) {
+                        if (types.equals(dstType, T_INT)) {
                             op = EOperation.k_F32ToI32;
-                        } else if (dstType.isEqual(T_UINT)) {
+                        } else if (types.equals(dstType, T_UINT)) {
                             op = EOperation.k_F32ToU32;
                         } else {
                             error(castExpr.sourceNode, EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
-                    } else if (srcType.isEqual(T_INT)) {
-                        if (dstType.isEqual(T_FLOAT)) {
+                    } else if (types.equals(srcType, T_INT)) {
+                        if (types.equals(dstType, T_FLOAT)) {
                             op = EOperation.k_I32ToF32;
-                        } else if (dstType.isEqual(T_UINT)) {
+                        } else if (types.equals(dstType, T_UINT)) {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
                             error(castExpr.sourceNode, EErrors.k_UnsupoortedTypeConversion, { info: castExpr.toCode() });
                             return PromisedAddress.INVALID;
                         }
-                    } else if (srcType.isEqual(T_UINT)) {
-                        if (dstType.isEqual(T_FLOAT)) {
+                    } else if (types.equals(srcType, T_UINT)) {
+                        if (types.equals(dstType, T_FLOAT)) {
                             op = EOperation.k_U32ToF32;
-                        } else if (dstType.isEqual(T_INT)) {
+                        } else if (types.equals(dstType, T_INT)) {
                             // useless conversion
                             return raddr(castExpr.expr);
                         } else {
@@ -1473,7 +1474,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // element[index]
                     const { element, index } = postfixIndex;
 
-                    assert(type.equals(index.type, T_INT) || type.equals(index.type, T_UINT));
+                    assert(types.equals(index.type, T_INT) || types.equals(index.type, T_UINT));
                     assert(!isNull(element.type.arrayElementType));
 
                     if (/*index.isConstExpr()*/false) {
@@ -1483,7 +1484,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         // NOTE: element can be not loaded yet
                         //       we don't want to load all the array (all 'element' object)
 
-                        if (element.type.isUAV()) {
+                        if (SystemScope.isUAV(element.type)) {
                             // some UAVs can have hidden counter at the beginning of the data
                             // in such cases we need to step forward before fetching the data
                             elementAddr = addr.sub(elementAddr, sizeof.i32());
@@ -1582,7 +1583,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         const src = paramSources[i];
 
                         // by default all parameters are interpreted as 'in'
-                        if (params[i].type.hasUsage('out') || params[i].type.hasUsage('inout')) {
+                        if (params[i].type.usages.includes('out') || params[i].type.usages.includes('inout')) {
                             ref(params[i], src);
                         } else {
                             // todo: handle expressions like "float4 v = 5.0;"
@@ -1605,7 +1606,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
             case EInstructionTypes.k_ConditionalExpr:
                 {
                     const { condition, left, right } = expr as IConditionalExprInstruction;
-                    assert(left.type.isEqual(right.type));
+                    assert(types.equals(left.type, right.type));
 
                     let size = left.type.size;
                     let dest = alloca(size);
@@ -1943,7 +1944,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                         translate(init as IVariableDeclInstruction);
                     }
 
-                    assert(cond.type.isEqual(T_BOOL));
+                    assert(types.equals(cond.type, T_BOOL));
                     // before cond:
                     let beforeCondPc = pc();
                     let condAddr = raddr(cond);

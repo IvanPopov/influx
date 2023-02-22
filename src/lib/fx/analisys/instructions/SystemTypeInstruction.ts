@@ -1,23 +1,21 @@
 import { isNull } from "@lib/common";
-import { fn, instruction, type } from '@lib/fx/analisys/helpers';
+import { fn, instruction, types } from '@lib/fx/analisys/helpers';
 import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface ISystemTypeInstructionSettings extends IInstructionSettings {
     name: string;
+    
     size: number;
     elementType?: ITypeInstruction;
     length?: number;
+    
     fields?: IVariableDeclInstruction[];
     methods?: IFunctionDeclInstruction[];
+    
     writable?: boolean;
     readable?: boolean;
-    complex?: boolean;
-    sampler?: boolean;
-    texture?: boolean;
-    buffer?: boolean;
-    uav?: boolean;
 }
 
 export class SystemTypeInstruction extends Instruction implements ITypeInstruction {
@@ -25,16 +23,12 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     protected _size: number;
     protected _elementType: ITypeInstruction;
     protected _length: number;
+    
     protected _fields: IVariableDeclInstruction[];
     protected _methods: IFunctionDeclInstruction[];
+    
     protected _bIsWritable: boolean;
     protected _bIsReadable: boolean;
-    protected _bIsComplex: boolean;
-    protected _bIsUAV: boolean;
-    protected _bIsTexture: boolean;
-    protected _bIsBuffer: boolean;
-    protected _bIsSampler: boolean;
-    
 
     constructor({
         name, 
@@ -45,11 +39,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         methods = [],
         writable = true, 
         readable = true, 
-        complex = false,
-        sampler = false,
-        texture = false,
-        buffer = false,
-        uav = false,
         ...settings
     }: ISystemTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_SystemType, ...settings });
@@ -62,12 +51,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
         this._methods = [];
         this._bIsWritable = writable;
         this._bIsReadable = readable;
-        this._bIsComplex = complex;
-        this._bIsBuffer = buffer;
-        this._bIsSampler = sampler;
-        this._bIsTexture = texture;
-        this._bIsUAV = uav;
-
         fields.forEach(field => this.addField(field));
         methods.forEach(method => this.addMethod(method));
     }
@@ -83,22 +66,7 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    set name(name: string) {
-        this._name = name;
-    }
-
-
     get name(): string {
-        return this._name;
-    }
-
-
-    get hash(): string {
-        return this._name;
-    }
-
-
-    get strongHash(): string {
         return this._name;
     }
 
@@ -144,43 +112,9 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    get fieldNames(): string[] {
-        return this._fields.map(field => field.name);
-    }
-
-
-    isSampler(): boolean {
-        return this._bIsSampler;
-    }
-
-
-    isTexture(): boolean {
-        return this._bIsTexture;
-    }
-
-
-    isUAV(): boolean {
-        return this._bIsUAV;
-    }
-
-    isBuffer(): boolean {
-        return this._bIsBuffer;
-    }
-
-    /** @deprecated */
-    isEqual(value: ITypeInstruction): boolean {
-        return type.equals(this, value);
-    }
-
-
     toDeclString(): string {
         console.warn('@pure_virtual');
         return '';
-    }
-
-
-    isBase(): boolean {
-        return true;
     }
 
 
@@ -195,21 +129,6 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
 
 
     isComplex(): boolean {
-        return this._bIsComplex;
-    }
-
-
-    isConst(): boolean {
-        return false;
-    }
-
-
-    isContainArray(): boolean {
-        return false;
-    }
-
-
-    isContainSampler(): boolean {
         return false;
     }
 
@@ -219,23 +138,13 @@ export class SystemTypeInstruction extends Instruction implements ITypeInstructi
     }
 
 
-    isContainComplexType(): boolean {
-        return false;
-    }
-
-
     toString(): string {
-        return this.name || type.hash(this);
+        return this.name || types.hash(this);
     }
 
 
     toCode(): string {
         return this._name;
-    }
-
-
-    hasField(fieldName: string): boolean {
-        return !!this.getField(fieldName);
     }
 
 

@@ -169,15 +169,24 @@ class SourceEditor extends React.Component<ISourceEditorProps> {
                             }
                         });
                         break;
-                        case 'unreachable-code':
-                            decorations.push({
-                                range: new monaco.Range(start.line + 1, 0, end.line, 0),
-                                options: {
-                                    isWholeLine: true,
-                                    inlineClassName: classes.unreachanbleCode
-                                }
-                            });
-                            break;
+                    case 'unreachable-code':
+                        decorations.push({
+                            range: new monaco.Range(start.line + 1, 0, end.line, 0),
+                            options: {
+                                isWholeLine: true,
+                                inlineClassName: classes.unreachanbleCode
+                            }
+                        });
+                        break;
+                    case 'deprecated':
+                        decorations.push({
+                            range: new monaco.Range(start.line + 1, start.column + 1, end.line + 1, end.column + 1),
+                            options: { 
+                                inlineClassName: classes.deprecated, 
+                                hoverMessage: { value: tooltip }
+                            },
+                        });
+                        break;    
                     default:
                 }
             }

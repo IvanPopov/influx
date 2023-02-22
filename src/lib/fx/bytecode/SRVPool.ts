@@ -1,7 +1,8 @@
 import { assert, isNull } from "@lib/common";
-import { variable } from "@lib/fx/analisys/helpers";
+import { variable, types } from "@lib/fx/analisys/helpers";
 import { EAddrType } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
 
 import { SRV_TOTAL, SRV0_REGISTER } from "./Bytecode";
 import PromisedAddress from "./PromisedAddress";
@@ -16,9 +17,10 @@ export class SRVPool {
     deref(decl: IVariableDeclInstruction): PromisedAddress {
         const knownSRVs = this._knownSRVs;
 
-        assert(decl.type.isBuffer() || decl.type.isTexture());
+        assert(!decl.type.isNotBaseArray());
+        assert(SystemScope.isBuffer(decl.type) || SystemScope.isTexture(decl.type));
 
-        let { index, type } = variable.resolveRegister(decl);
+        let { index, type } = SystemScope.resolveRegister(decl);
         assert(type === 't');
 
         const knownIndex = knownSRVs.indexOf(decl);

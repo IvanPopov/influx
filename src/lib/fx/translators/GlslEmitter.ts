@@ -1,7 +1,8 @@
 import { assert, isDef } from "@lib/common";
+import { types } from "@lib/fx/analisys/helpers";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
 import { EInstructionTypes, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import { CodeEmitter, CodeContext, ICodeEmitterOptions } from "./CodeEmitter";
 
 const GlslTypeNames = {
@@ -485,7 +486,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                         this.emitNewline();
 
                         const fline = (decl: IVariableDeclInstruction, ids: string[]) => {
-                            if (decl.type.isComplex() && !decl.type.isBase()) {
+                            if (decl.type.isComplex() && !SystemScope.isBase(decl.type)) {
                                 decl.type.fields.forEach(field => fline(field, [ ...ids, decl.name ]));
                                 return;
                             }
@@ -536,7 +537,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                             let cdown; // breakdown and emit complex decl
 
                             fline = (decl: IVariableDeclInstruction, ids: string[]) => {
-                                if (decl.type.isComplex() && !decl.type.isBase()) {
+                                if (decl.type.isComplex() && !SystemScope.isBase(decl.type)) {
                                     cdown(decl.type, [ ...ids, decl.name ]);
                                     return;
                                 }

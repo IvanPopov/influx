@@ -1,9 +1,9 @@
-﻿import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
-import { EScopeType, ICbufferInstruction, IFunctionDeclInstruction, IScope, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+﻿import { assert, isDefAndNotNull, isNull } from "@lib/common";
+import { EScopeType, ICbufferInstruction, IFunctionDeclInstruction, IScope, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction, ITypeTemplate, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 import { isString } from "@lib/util/s3d/type";
 
-import { fn, type } from "./helpers";
+import { fn } from "./helpers";
 
 export interface IScopeSettings {
     type?: EScopeType;
@@ -23,6 +23,7 @@ export class Scope implements IScope {
     readonly types: IMap<ITypeInstruction>;
     readonly functions: IMap<IFunctionDeclInstruction[]>;
     readonly techniques: IMap<ITechniqueInstruction>;
+    readonly techniques11: IMap<ITechnique11Instruction>;
     readonly typeTemplates: IMap<ITypeTemplate>;
     readonly cbuffers: IMap<ICbufferInstruction>;
 
@@ -42,6 +43,7 @@ export class Scope implements IScope {
             this.types = { ...scope.types };
             this.functions = { ...scope.functions };
             this.techniques = { ...scope.techniques };
+            this.techniques11 = { ...scope.techniques11 };
             this.typeTemplates = { ...scope.typeTemplates };
             this.cbuffers = { ...scope.cbuffers };
         } 
@@ -54,6 +56,7 @@ export class Scope implements IScope {
             this.types = {};
             this.functions = {};
             this.techniques = {};
+            this.techniques11 = { };
             this.typeTemplates = {};
             this.cbuffers = {};
         }
@@ -99,6 +102,11 @@ export class Scope implements IScope {
 
     findTechnique(techName: string): ITechniqueInstruction {
         return this.filter(scope => scope.techniques[techName] || null);
+    }
+
+
+    findTechnique11(techName: string): ITechnique11Instruction {
+        return this.filter(scope => scope.techniques11[techName] || null);
     }
 
 
@@ -218,6 +226,19 @@ export class Scope implements IScope {
 
         this.techniques[technique.name] = technique;
         assert(technique.scope === this);
+        return true;
+    }
+
+
+    addTechnique11(technique11: ITechnique11Instruction): boolean {
+        assert(this.type <= EScopeType.k_Global);
+
+        if (this.techniques11[technique11.name]) {
+            return false;
+        }
+
+        this.techniques11[technique11.name] = technique11;
+        assert(technique11.scope === this);
         return true;
     }
 

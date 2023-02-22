@@ -19,7 +19,7 @@ import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableD
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
 import { ProgramScope } from "@lib/fx/analisys/ProgramScope";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { parseUintLiteral } from "@lib/fx/analisys/SystemScope";
+import { parseUintLiteral } from "@lib/fx/analisys/system/utils";
 import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EInstructionTypes, EScopeType, IDeclInstruction, IExprInstruction, IFunctionDeclInstruction, IIdInstruction, IStmtInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";

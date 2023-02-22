@@ -1,5 +1,5 @@
 import { isNull } from "@lib/common";
-import { instruction, type } from "@lib/fx/analisys/helpers";
+import { instruction, types } from "@lib/fx/analisys/helpers";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { EInstructionTypes, EScopeType, IExprInstruction, IInitExprInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
@@ -105,7 +105,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                     // }
                     // else 
                     {
-                        if (!testedInstruction.type.isEqual(arrayElementType)) {
+                        if (!types.equals(testedInstruction.type, arrayElementType)) {
                             return false;
                         }
                     }
@@ -131,13 +131,13 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
                 // }
 
                 // TODO: remove this hack!!
-                if (firstInstruction.type.isEqual(SystemScope.T_INT) || firstInstruction.type.isEqual(SystemScope.T_UINT)) {
-                    if (type.isEqual(SystemScope.T_INT) || type.isEqual(SystemScope.T_UINT)) {
+                if (types.equals(firstInstruction.type, SystemScope.T_INT) || types.equals(firstInstruction.type, SystemScope.T_UINT)) {
+                    if (types.equals(type, SystemScope.T_INT) || types.equals(type, SystemScope.T_UINT)) {
                         return true;
                     }   
                 }
 
-                if (firstInstruction.type.isEqual(type)) {
+                if (types.equals(firstInstruction.type, type)) {
                     return true;
                 }
                 
@@ -148,7 +148,7 @@ export class InitExprInstruction extends ExprInstruction implements IInitExprIns
             }
 
             let args = <IInitExprInstruction[]>this.args;
-            let fieldNameList = type.fieldNames;
+            let fieldNameList = type.fields.map(f => f.name);
 
             for (let i = 0; i < args.length; i++) {
                 let fieldType = type.getField(fieldNameList[i]).type;

@@ -20,10 +20,6 @@ export class CbufferInstruction extends DeclInstruction implements ICbufferInstr
         this._type = Instruction.$withParent(type, this);
     }
 
-    get register(): IRegister {
-        return variable.resolveRegister(this);
-    }
-
     get id(): IIdInstruction {
         return this._id;
     }

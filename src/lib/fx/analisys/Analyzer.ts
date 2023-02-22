@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -12,7 +12,7 @@ import { Diagnostics } from '@lib/util/Diagnostics';
 import { isNumber } from '@lib/util/s3d/type';
 import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
 import { visitor } from '../Visitors';
-import { expression, instruction, type } from './helpers';
+import { expression, instruction, types } from './helpers';
 import { AnnotationInstruction } from './instructions/AnnotationInstruction';
 import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
 import { AssigmentOperator, AssignmentExprInstruction } from "./instructions/AssignmentExprInstruction";
@@ -42,6 +42,7 @@ import { Instruction } from './instructions/Instruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
 import { IntInstruction } from './instructions/IntInstruction';
 import { LogicalExprInstruction } from './instructions/LogicalExprInstruction';
+import { Pass11Instruction } from './instructions/Pass11Instruction';
 import { PassInstruction } from './instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
@@ -56,6 +57,7 @@ import { SemicolonStmtInstruction } from './instructions/SemicolonStmtInstructio
 import { StmtBlockInstruction } from './instructions/StmtBlockInstruction';
 import { StringInstruction } from './instructions/StringInstruction';
 import { SystemTypeInstruction } from './instructions/SystemTypeInstruction';
+import { Technique11Instruction } from './instructions/Technique11Instruction';
 import { TechniqueInstruction } from './instructions/TechniqueInstruction';
 import { TypeDeclInstruction } from './instructions/TypeDeclInstruction';
 import { TypedefInstruction } from './instructions/TypedefInstruction';
@@ -64,8 +66,9 @@ import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/Var
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
 import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
+import { parseUintLiteral } from './system/utils';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID, parseUintLiteral } from './SystemScope';
+import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
 
 
 type IErrorInfo = IMap<any>;
@@ -89,7 +92,7 @@ const asRelaxedType = (instr: ITypedInstruction | ITypeInstruction): ITypeInstru
         return null;
     }
 
-    const type = ((instr as any).hasField) ? <ITypeInstruction>instr : (<ITypedInstruction> instr).type;
+    const type = ((instr as any).getField) ? <ITypeInstruction>instr : (<ITypedInstruction> instr).type;
     //          ^^^^^^^^^^^^^^^^^^^^^^^^^^
     //          hacky way to check if "type" instruction (not "typed")
 
@@ -426,7 +429,7 @@ function checkForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
 function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolean {
     const returnType = <IVariableTypeInstruction>funcDef.returnType;
 
-    if (returnType.isEqual(T_VOID)) {
+    if (types.equals(returnType, T_VOID)) {
         return true;
     }
 
@@ -440,23 +443,14 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
             return false;
         }
 
-        // isGood = returnType._hasFieldWithSematic("POSITION");
-        // if(!isGood){
-        // 	return false;
-        // }
-
-        // samplers cant be interpolators
-        if (returnType.isContainSampler()) {
-            return false;
-        }
-
         // Forbid fileds with user-defined types
-        // or any other complex types.
-        if (returnType.isContainComplexType()) {
+        // or any other complex types?
+        // if (returnType.isContainComplexType()) 
+        {
             //return false;
         }
     } else {
-        if (!returnType.isEqual(T_FLOAT4)) {
+        if (!types.equals(returnType, T_FLOAT4)) {
             return false;
         }
 
@@ -473,16 +467,16 @@ function checkReturnTypeForVertexUsage(funcDef: IFunctionDefInstruction): boolea
 function checkReturnTypeForPixelUsage(funcDef: IFunctionDefInstruction): boolean {
     let returnType = <IVariableTypeInstruction>funcDef.returnType;
 
-    if (returnType.isEqual(T_VOID)) {
+    if (types.equals(returnType, T_VOID)) {
         return true;
     }
 
     // TODO: add MRT support
-    if (!returnType.isBase()) {
+    if (!SystemScope.isBase(returnType)) {
         return false;
     }
 
-    if (!returnType.isEqual(T_FLOAT4)) {
+    if (!types.equals(returnType, T_FLOAT4)) {
         return false;
     }
 
@@ -510,7 +504,7 @@ function checkArgumentsForVertexUsage(funcDef: IFunctionDefInstruction): boolean
 
         if (!isStartAnalyze) {
             if (isNull(param.semantic)) {
-                if (param.type.isBase() ||
+                if (SystemScope.isBase(param.type) ||
                     param.type.hasFieldWithoutSemantics() ||
                     !param.type.hasAllUniqueSemantics()) {
                     return false;
@@ -562,21 +556,16 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
 
         if (!isStartAnalyze) {
             if (param.semantic === "") {
-                if (param.type.isBase() ||
+                if (SystemScope.isBase(param.type) ||
                     param.type.hasFieldWithoutSemantics() ||
-                    !param.type.hasAllUniqueSemantics() ||
-                    param.type.isContainSampler()) {
+                    !param.type.hasAllUniqueSemantics()) {
+                    // todo: check that there are no samplers in properties
                     return false;
                 }
 
                 isVaryingsByStruct = true;
             } else if (param.semantic !== "") {
-                if (param.type.isContainSampler()
-                    //  || isSamplerType(param.type)
-                ) {
-                    return false;
-                }
-
+                // todo: check that there are no samplers in properties
                 if (param.type.isComplex() &&
                     (param.type.hasFieldWithoutSemantics() ||
                         !param.type.hasAllUniqueSemantics())) {
@@ -597,11 +586,7 @@ function checkArgumentsForPixelUsage(funcDef: IFunctionDefInstruction): boolean 
                 // return false;
             }
 
-            if (param.type.isContainSampler()
-                // || isSamplerType(param.type)
-            ) {
-                return false;
-            }
+            // todo: check that there are no samplers in properties
 
             if (param.type.isComplex() &&
                 (param.type.hasFieldWithoutSemantics() ||
@@ -791,7 +776,7 @@ export class Analyzer {
 
             const resType = Analyzer.checkTwoOperandExprTypes(context, '=', expectedType, initExpr.type,
                 sourceNode/* Use correct source node! */, initExpr.sourceNode, exprSourceNode || sourceNode, { isInitializing: true });
-            assert(resType === null || resType.isEqual(expectedType));
+            assert(resType === null || types.equals(type, expectedType));
 
             if (!resType) {
                 // omit error, all errors must be already fired above (inside checkTwoOperandExprTypes)
@@ -799,7 +784,7 @@ export class Analyzer {
             }
 
             // // IP: quick hack to avoid future conversions
-            // if (initExpr.instructionType === EInstructionTypes.k_IntExpr && !initExpr.type.isEqual(expectedType)) {
+            // if (initExpr.instructionType === EInstructionTypes.k_IntExpr && !types.equals(initExpr.type, expectedType)) {
             //     let { scope, sourceNode, base, exp, signed, heximal } = <IntInstruction>initExpr;
             //     signed = expectedType.name === 'int';
             //     initExpr = new IntInstruction({ scope, sourceNode, base, exp, signed, heximal });
@@ -852,7 +837,7 @@ export class Analyzer {
         else if (expectedType.isComplex()) {
 
             const numArgs = (children.length - 1) / 2;
-            const fieldNameList = expectedType.fieldNames;
+            const fieldNameList = expectedType.fields.map(f => f.name);
 
             if (numArgs !== fieldNameList.length) {
                 // TODO: emit error (invalid number of arguments)
@@ -903,7 +888,7 @@ export class Analyzer {
                 initExpr = this.analyzeExpr(context, program, children[children.length - 2]);
 
             // TODO: use checkTwoOperandTypes() function instead
-            if (!expectedType.isEqual(initExpr.type)) {
+            if (!types.equals(type, initExpr.type)) {
                 // TODO: emit error
                 return null;
             }
@@ -937,6 +922,7 @@ export class Analyzer {
      *         T_NON_TYPE_ID = 'MeshTextureSampler'
      *         T_KW_SAMPLER_STATE = 'SamplerState'
      */
+    /** @deprecated */
     protected analyzeSamplerStateDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IVariableDeclInstruction {
         return null;
     }
@@ -1327,6 +1313,7 @@ export class Analyzer {
             vdimNode = vdimChildren[vdimChildren.length - 1];
         } while (true);
 
+        // todo: make read only in case of SamplerState (!)
         // using generalType.source node instead of sourceNode was done for more clear degging
         type = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
 
@@ -1336,7 +1323,22 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else if (children[i].name === 'Initializer') {
-                init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
+                // check if SamplerState or DepthStencilState
+                switch (type.name) {
+                    case 'SamplerState':
+                        // todo: implement initialization
+                        init = null;
+                        continue;
+                        break;
+                    case 'DepthStencilState':
+                        // todo: implement initialization
+                        init = null;
+                        continue;
+                        break;
+                    default:
+                        // init as regular initializer
+                        init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
+                }
 
                 if (!init) {
                     // TODO: make it warning
@@ -1453,7 +1455,13 @@ export class Analyzer {
      */
     protected analyzeInitializer(context: Context, program: ProgramScope, sourceNode: IParseNode, expectedType: ITypeInstruction, exprSourceNode: IParseNode = null): IInitExprInstruction {
         const children = sourceNode.children;
-        return this.analyzeInitExprChildren(context, program, sourceNode, children.slice(0, -1), expectedType, exprSourceNode);
+        // IP: hacky varification to be sure that it's not a 
+        if (children[children.length - 1]?.value == '=') {
+            console.assert(children[children.length - 1].name === 'T_PUNCTUATOR_61');
+            return this.analyzeInitExprChildren(context, program, sourceNode, children.slice(0, -1), expectedType, exprSourceNode);
+        }
+        console.assert(false, 'not valid branch');
+        return null;
     }
 
 
@@ -1572,7 +1580,7 @@ export class Analyzer {
                 func = program.globalScope.findFunction(shaderFuncName, args);
                 if (func) {
                     // skip function if validator is not suitable
-                    if (validator.ret && !validator.ret.isEqual(func.def.returnType))
+                    if (validator.ret && !types.equals(validator.ret, func.def.returnType))
                     {
                         // skip this function
                         continue;
@@ -1592,7 +1600,7 @@ export class Analyzer {
 
         if (retType) {
             // show error if we found some variant of function but return type mismath
-            if (!func.def.returnType.isEqual(retType)) {
+            if (!types.equals(func.def.returnType, retType)) {
                 context.error(sourceNode, EErrors.InvalidCompileFunctionNotValid, {
                     funcName: shaderFuncName,
                     funcType: retType.toCode(),
@@ -1822,26 +1830,17 @@ export class Analyzer {
      *         T_PUNCTUATOR_46 = '.'
      *       + PostfixExpr 
      */
-    protected analyzeFunctionCallExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IFunctionCallInstruction {
+    protected analyzeFunctionCallExpr(context: Context, program: ProgramScope, sourceNode: IParseNode): IExprInstruction {
         const children = sourceNode.children;
         const scope = program.currentScope;
         const globalScope = program.globalScope;
 
         const firstNodeName = children[children.length - 1].name;
 
-        const args: IExprInstruction[] = [];
-        if (children.length > 3) {
-            for (let i = children.length - 3; i > 0; i--) {
-                if (children[i].value !== ',') {
-                    const arg = this.analyzeExpr(context, program, children[i]);
-                    args.push(arg);
-                }
-            }
-        }
-
         let funcName: string = null;
         let func: IFunctionDeclInstruction = null;
         let callee: IExprInstruction = null;
+        let args: IExprInstruction[] = [];
 
         switch (firstNodeName) {
             // call as function
@@ -1849,6 +1848,43 @@ export class Analyzer {
                 {
                     // TODO: validate intrinsics like 'InterlockedAdd', check that dest is UAV address
                     funcName = children[children.length - 1].value;
+
+                    // expressions like: CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, true ) )
+                    if (funcName === 'CompileShader') {
+                        // fallback to special case when it's not a function but specific operator 
+                        // for shader compilation
+                        console.assert(children.length === 6);
+                        
+                        const shaderNode = children[1];     // RenderSceneVS( 1, true, true )
+                        const versionNode = children[3];    // vs_4_0_level_9_1
+                        console.assert(versionNode.name === "T_NON_TYPE_ID");
+                        const ver = versionNode.value;
+                        const entryNode = shaderNode.children[shaderNode.children.length - 1]; // RenderSceneVS
+                        console.assert(entryNode.name === "T_NON_TYPE_ID");
+                        const entryName = entryNode.value;
+                        // note: all the uniform arguments are being ignored at the moment
+
+                        console.log(entryName, ver); 
+
+                        /*
+                            // VertexShader vs_6_2_RenderSceneVS = ...;
+                            VertexShader vs024545 = CompileShader("vs_4_0_level_9_1", "RenderSceneVS");
+                            ...
+                            SetVertexShader(vs024545);
+                        */
+
+                        // globalScope.addVariable()
+                    }
+
+                    if (children.length > 3) {
+                        for (let i = children.length - 3; i > 0; i--) {
+                            if (children[i].value !== ',') {
+                                const arg = this.analyzeExpr(context, program, children[i]);
+                                args.push(arg);
+                            }
+                        }
+                    }            
+
                     const noStrictTypeWereProvided = args.every(arg => arg?.type != asRelaxedType(arg));
                     // don't relax all types because it's useless
                     // like: (0, 0, 0) => (float|int, float|int)
@@ -1871,13 +1907,23 @@ export class Analyzer {
                 {
                     callee = this.analyzeCallee(context, program, children[children.length - 1]);
                     funcName = children[children.length - 1].children[0].value; // method name
+
+                    if (children.length > 3) {
+                        for (let i = children.length - 3; i > 0; i--) {
+                            if (children[i].value !== ',') {
+                                const arg = this.analyzeExpr(context, program, children[i]);
+                                args.push(arg);
+                            }
+                        }
+                    }
+
                     func = callee.type.getMethod(funcName, args.map(asRelaxedType));
                 }
                 break;
         }
 
         if (isNull(func)) {
-            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => type.signature(arg?.type)) });
+            context.error(sourceNode, EErrors.InvalidComplexNotFunction, { funcName, args: args.map(arg => types.signature(arg?.type)) });
             return null;
         }
 
@@ -1899,7 +1945,7 @@ export class Analyzer {
         args.forEach((x, i) => {
             const param = func.def.params[i];
             const arg = args[i];
-            if (!type.equals(param.type, arg.type)) {
+            if (!types.equals(param.type, arg.type)) {
                 context.warn(arg.sourceNode, EWarnings.ImplicitTypeConversion, { info: `${arg.type.toCode()} => ${param.type.toCode()}` });
             }
         });
@@ -1918,7 +1964,7 @@ export class Analyzer {
             if (isNull(args[i])) {
                 continue;
             }
-            if (params[i].type.hasUsage('out')) {
+            if (params[i].type.usages.includes('out')) {
                 const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
@@ -1926,7 +1972,7 @@ export class Analyzer {
                 if (!args[i].type.writable) {
                     context.error(args[i].sourceNode, EErrors.InvalidTypeForWriting);
                 }
-            } else if (params[i].type.hasUsage('inout')) {
+            } else if (params[i].type.usages.includes('inout')) {
                 const decl = expression.unwind(args[i]);
                 if (isNull(decl)) {
                     context.error(args[i].sourceNode, EErrors.InvalidExprIsNotLValue);
@@ -2081,7 +2127,7 @@ export class Analyzer {
         const indexExpr = this.analyzeExpr(context, program, children[children.length - 3]);
         const indexExprType = indexExpr.type;
 
-        if (!(indexExprType.isEqual(T_INT) || indexExprType.isEqual(T_UINT))) {
+        if (!(types.equals(indexExprType, T_INT) || types.equals(indexExprType, T_UINT))) {
             context.error(sourceNode, EErrors.InvalidPostfixNotIntIndex, { typeName: String(indexExprType) });
             return null;
         }
@@ -2096,7 +2142,7 @@ export class Analyzer {
      * @param fieldName 
      */
     static createFieldDecl(elementType: IVariableTypeInstruction, fieldName: string): IVariableDeclInstruction {
-        if (!elementType.hasField(fieldName)) {
+        if (!elementType.getField(fieldName)) {
             return null;
         }
 
@@ -2292,7 +2338,7 @@ export class Analyzer {
 
         const type = this.analyzeConstTypeDim(context, program, children[2]);
 
-        if (!type.isBase()) {
+        if (!SystemScope.isBase(type)) {
             context.error(sourceNode, EErrors.InvalidCastTypeNotBase, { typeName: String(type) });
         }
 
@@ -2350,12 +2396,12 @@ export class Analyzer {
 
         const boolType = T_BOOL;
 
-        if (!conditionType.isEqual(boolType)) {
+        if (!types.equals(conditionType, boolType)) {
             context.error(conditionExpr.sourceNode, EErrors.InvalidConditionType, { typeName: String(conditionType) });
             return null;
         }
 
-        if (!leftExprType.isEqual(rightExprType)) {
+        if (!types.equals(leftExprType, rightExprType)) {
             context.error(leftExprType.sourceNode, EErrors.InvalidConditonValueTypes, {
                 leftTypeName: String(leftExprType),
                 rightTypeName: String(rightExprType)
@@ -2449,8 +2495,8 @@ export class Analyzer {
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidRelationalOperation, {
                 operator: operator,
-                leftTypeName: leftType ? type.signature(leftType) : '[unknown]',
-                rightTypeName: rightType ? type.signature(rightType) : '[unknown]'
+                leftTypeName: leftType ? types.signature(leftType) : '[unknown]',
+                rightTypeName: rightType ? types.signature(rightType) : '[unknown]'
             });
             return null;
         }
@@ -2483,14 +2529,14 @@ export class Analyzer {
 
         const boolType = T_BOOL;
 
-        if (!leftType.isEqual(boolType)) {
+        if (!types.equals(leftType, boolType)) {
             context.error(leftType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(leftType)
             });
             return null;
         }
-        if (!rightType.isEqual(boolType)) {
+        if (!types.equals(rightType, boolType)) {
             context.error(rightType.sourceNode, EErrors.InvalidLogicOperation, {
                 operator: operator,
                 typeName: String(rightType)
@@ -2587,8 +2633,8 @@ export class Analyzer {
             if (isNull(exprType)) {
                 context.error(sourceNode, EErrors.InvalidArithmeticAssigmentOperation, {
                     operator: operator,
-                    leftTypeName: type.signature(leftType),
-                    rightTypeName: type.signature(rightType)
+                    leftTypeName: types.signature(leftType),
+                    rightTypeName: types.signature(rightType)
                 });
             }
         } else {
@@ -2600,8 +2646,8 @@ export class Analyzer {
 
         if (isNull(exprType)) {
             context.error(sourceNode, EErrors.InvalidAssigmentOperation, {
-                leftTypeName: type.signature(leftType),
-                rightTypeName: type.signature(rightType)
+                leftTypeName: types.signature(leftType),
+                rightTypeName: types.signature(rightType)
             });
         }
 
@@ -2629,6 +2675,12 @@ export class Analyzer {
         }
 
         // end-of-hack
+
+        // explicit support of built in HLSL 'NULL' define
+        if (name === 'NULL') {
+            const { base, signed, heximal, exp } = parseUintLiteral('0');
+            return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal }); 
+        }
 
         const decl = scope.findVariable(name);
 
@@ -2843,7 +2895,7 @@ export class Analyzer {
         }
 
         if (!isNull(func)) {
-            if (!func.def.returnType.isEqual(definition.returnType)) {
+            if (!types.equals(func.def.returnType, definition.returnType)) {
                 context.error(sourceNode, EErrors.InvalidFuncDefenitionReturnType, { funcName: definition.name });
                 program.pop();
                 return null;
@@ -2866,7 +2918,7 @@ export class Analyzer {
 
         program.pop();
 
-        let hasVoidType = definition.returnType.isEqual(T_VOID);
+        let hasVoidType = types.equals(definition.returnType, T_VOID);
 
         // validate unreachable code.
         if (!isNull(implementation)) {
@@ -2919,7 +2971,7 @@ export class Analyzer {
         let returnType = this.analyzeUsageType(context, program, retTypeNode);
 
         // TODO: is it really needed?
-        if (!returnType || returnType.isContainSampler()) {
+        if (!returnType) {
             context.error(retTypeNode, EErrors.InvalidFunctionReturnType, { funcName: name });
             return null;
         }
@@ -3123,11 +3175,11 @@ export class Analyzer {
             tryResolveProxyType(funcReturnType, T_VOID);
         }
 
-        if (funcReturnType.isEqual(T_VOID) && children.length === 3) {
+        if (types.equals(funcReturnType, T_VOID) && children.length === 3) {
             context.error(sourceNode, EErrors.InvalidReturnStmtVoid);
             return null;
         }
-        else if (!funcReturnType.isEqual(T_VOID) && children.length === 2) {
+        else if (!types.equals(funcReturnType, T_VOID) && children.length === 2) {
             context.error(sourceNode, EErrors.InvalidReturnStmtEmpty);
             return null;
         }
@@ -3144,7 +3196,7 @@ export class Analyzer {
             tryResolveProxyType(funcReturnType, expr.type); // auto foo() { return typedExpr; }
             tryResolveProxyType(expr.type, funcReturnType); // typedFunc foo() { return auto; }
             
-            if (!expr.type.isEqual(funcReturnType)) {
+            if (!types.equals(expr.type, funcReturnType)) {
                 context.error(sourceNode, EErrors.InvalidReturnStmtTypesNotEqual);
                 return null;
             }
@@ -3252,7 +3304,7 @@ export class Analyzer {
             cond = this.analyzeExpr(context, program, children[2]);
             conditionType = <IVariableTypeInstruction>cond.type;
 
-            if (!conditionType.isEqual(boolType)) {
+            if (!types.equals(conditionType, boolType)) {
                 context.error(sourceNode, EErrors.InvalidDoWhileCondition, { typeName: String(conditionType) });
                 return null;
             }
@@ -3264,7 +3316,7 @@ export class Analyzer {
             cond = this.analyzeExpr(context, program, children[2]);
             conditionType = <IVariableTypeInstruction>cond.type;
 
-            if (!conditionType.isEqual(boolType)) {
+            if (!types.equals(conditionType, boolType)) {
                 context.error(sourceNode, EErrors.InvalidWhileCondition, { typeName: String(conditionType) });
                 return null;
             }
@@ -3350,9 +3402,9 @@ export class Analyzer {
         const condNode = children[children.length - 3 - attributes.length];
         const cond = this.analyzeExpr(context, program, condNode);
 
-        if (!cond || !type.equals(asRelaxedType(cond.type), T_BOOL)) {
+        if (!cond || !types.equals(asRelaxedType(cond.type), T_BOOL)) {
             context.error(condNode, EErrors.InvalidIfCondition, { typeName: cond ? String(cond.type) : '[unknown]' });
-        } else if (!type.equals(cond.type, T_BOOL)) {
+        } else if (!types.equals(cond.type, T_BOOL)) {
             context.warn(condNode, EWarnings.ImplicitTypeConversion, { tooltip: `${cond.type.name} => bool` });
         }
 
@@ -3575,7 +3627,7 @@ export class Analyzer {
                 for (let i = propExprNode.children.length - 2; i >= 1; i -= 2) {
                     const expr = this.analyzeExpr(context, program, propExprNode.children[i]);
                     // todo: use more strict check same as for InitExpr analyze
-                    if (!expr.type.isEqual(type.arrayElementType)) {
+                    if (!types.equals(expr.type, type.arrayElementType)) {
                         context.warn(propExprNode.children[i], EWarnings.ImplicitTypeConversion, 
                             { tooltip: `${expr.type.name} => ${type.arrayElementType.name}` });
                     }
@@ -3603,6 +3655,7 @@ export class Analyzer {
         return props;
     }
 
+    
     /**
      * AST example:
      *    PresetDecl
@@ -3635,10 +3688,42 @@ export class Analyzer {
         return preset;
     }
 
-   
 
+
+    protected analyzeTechnique11Decl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITechnique11Instruction {
+        const children = sourceNode.children;
+        const name = this.analyzeComplexName(children[children.length - 2]);
+        // Specifies whether name should be interpreted as globalNamespace.name or just a name;
+        const isComplexName = children[children.length - 2].children.length !== 1;
+        const scope = program.currentScope;
+
+        let annotation: IAnnotationInstruction = null;
+        let semantic: string = null;
+        let passList: IPass11Instruction[] = null;
+        let presets: IPresetInstruction[] = null;
+
+        for (let i = children.length - 3; i >= 0; i--) {
+            if (children[i].name === 'Annotation') {
+                annotation = this.analyzeAnnotation(context, program, children[i]);
+            } else if (children[i].name === 'Semantic') {
+                semantic = this.analyzeSemantic(children[i]);
+            } else {
+                [ passList ] = this.analyzeTechnique11(context, program, children[i]);
+            }
+        }
+
+        const technique = new Technique11Instruction({ sourceNode, name, semantic, annotation, passList, scope, presets });
+        Analyzer.addTechnique11(context, program, technique);
+        return technique;
+    }
+
+
+    /** @deprecated */
     protected analyzeTechniqueDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): ITechniqueInstruction {
         const children = sourceNode.children;
+
+        context.warn(sourceNode, EWarnings.Deprecated);
+
         const name = this.analyzeComplexName(children[children.length - 2]);
         // Specifies whether name should be interpreted as globalNamespace.name or just a name;
         const isComplexName = children[children.length - 2].children.length !== 1;
@@ -3673,6 +3758,7 @@ export class Analyzer {
      *       + PassDecl 
      *         T_PUNCTUATOR_123 = '{'
      */
+    /** @deprecated */
     protected analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): [IPassInstruction[], IPresetInstruction[]] {
         const children = sourceNode.children;
         let passList: IPassInstruction[] = [];
@@ -3698,12 +3784,36 @@ export class Analyzer {
 
     /**
      * AST example:
+     *    Technique11Body
+     *         T_PUNCTUATOR_125 = '}'
+     *       + Pass11Decl 
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    // todo: add preset support (!)
+    // see analyzeTechnique() for example.
+    protected analyzeTechnique11(context: Context, program: ProgramScope, sourceNode: IParseNode): [IPass11Instruction[]] {
+        const children = sourceNode.children;
+        let passList: IPass11Instruction[] = [];
+
+        for (let i = children.length - 2; i >= 1; i--) {
+            let pass = this.analyzePass11Decl(context, program, children[i]);
+            assert(!isNull(pass));
+            passList.push(pass);
+        }
+
+        return [ passList ];
+    }
+
+
+    /**
+     * AST example:
      *    PassDecl
      *       + PassStateBlock 
      *       + Annotation 
      *         T_NON_TYPE_ID = 'name'
      *         T_KW_PASS = 'pass'
      */
+    /** @deprecated */
     protected analyzePassDecl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPassInstruction {
 
         const children = sourceNode.children;
@@ -3731,6 +3841,40 @@ export class Analyzer {
 
         return pass;
     }
+
+
+    /**
+     * AST example:
+     *    Pass11Decl
+     *       + StmtBlock 
+     *         T_NON_TYPE_ID = 'P0'
+     *         T_KW_PASS = 'pass'
+     */
+    protected analyzePass11Decl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPass11Instruction {
+
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+        
+        let id: IIdInstruction = null;
+        for (let i = 0; i < children.length; ++i) {
+            if (children[i].name === "T_NON_TYPE_ID") {
+                let name = children[i].value;
+                id = new IdInstruction({ scope, name });
+            }
+        }
+        
+        const impl = this.analyzeStmtBlock(context, program, children[0]);
+        const pass11 = new Pass11Instruction({
+            scope,
+            sourceNode,
+            id,
+            impl
+        });
+
+        //TODO: add annotation and id
+        return pass11;
+    }
+
 
     /**
      * AST example:
@@ -4080,6 +4224,8 @@ export class Analyzer {
         switch (sourceNode.name) {
             case 'TechniqueDecl':
                 return [this.analyzeTechniqueDecl(context, program, sourceNode)];
+            case 'Technique11Decl':
+                return [this.analyzeTechnique11Decl(context, program, sourceNode)];
             case 'UseDecl':
                 this.analyzeUseDecl(context, program, sourceNode); // << always 'use strict' by default!
                 return null;
@@ -4249,6 +4395,19 @@ export class Analyzer {
     // }
 
 
+    protected static addTechnique11(context: Context, program: ProgramScope, technique: ITechnique11Instruction): void {
+        let name: string = technique.name;
+
+        if (!isNull(program.globalScope.findTechnique11(name))) {
+            context.error(technique.sourceNode, EErrors.TechniqueNameRedefinition, { techName: name });
+            return;
+        }
+
+        program.globalScope.addTechnique11(technique);
+    }
+
+
+    /** @deprecated */
     protected static addTechnique(context: Context, program: ProgramScope, technique: ITechniqueInstruction): void {
         let name: string = technique.name;
 
@@ -4336,11 +4495,11 @@ export class Analyzer {
         }
 
         if (isComplex) {
-            if (operator === '=' && leftType.isEqual(rightType)) {
+            if (operator === '=' && types.equals(leftType, rightType)) {
                 return <IVariableTypeInstruction>leftType;
             }
             // samplers and arrays can't be compared directly
-            else if (Analyzer.isEqualityOperator(operator) && !leftType.isContainArray() && !leftType.isContainSampler()) {
+            else if (Analyzer.isEqualityOperator(operator) && !leftType.isComplex()) {
                 return constBoolType(1);
             }
 
@@ -4380,7 +4539,7 @@ export class Analyzer {
                 case '&':
                 case '|':
                 case '^':
-                    if (!leftBaseType.isEqual(rightType)) {
+                    if (!types.equals(leftBaseType, rightType)) {
                         // TODO: emit warning (bitwise between int and uint)
                     }
             }
@@ -4389,8 +4548,8 @@ export class Analyzer {
         }
 
         // hack to allow int/uint comparisson
-        if (type.equals(leftType, asRelaxedType(rightType))) {
-            if (!type.equals(leftType, rightType)) {
+        if (types.equals(leftType, asRelaxedType(rightType))) {
+            if (!types.equals(leftType, rightType)) {
                 context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, { tooltip: `${leftType.name} [${operator}] ${rightType.name}` });
             }
 
@@ -4444,7 +4603,7 @@ export class Analyzer {
 
             // op: "+=", "-=", "*=", "/=", "%="
             if (Analyzer.isAssignmentOperator(operator)) {
-                if (!leftType.isEqual(resultType)) {
+                if (!types.equals(leftType, resultType)) {
                     // TODO: add support for imlicit conversions
                     // TODO: emit error (operator cannot be used with a given lvalue)
                     context.error(exprSourceNode, EErrors.OperatorCannotBeUsedWithGivenLValue, {});
@@ -4459,7 +4618,7 @@ export class Analyzer {
                 });
             }
 
-            if (!determBaseType(leftType).isEqual(determBaseType(rightType))) {
+            if (!types.equals(determBaseType(leftType), determBaseType(rightType))) {
                 // do not emit errors for expr like: float2 * float, int2 + int etc..
                 context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
                     tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${resultType.toCode()}`
@@ -4544,7 +4703,7 @@ export class Analyzer {
             const boolType = <IVariableTypeInstruction>T_BOOL;
             // validate(boolType, EInstructionTypes.k_VariableDecl);
 
-            if (type.isEqual(boolType)) {
+            if (types.equals(type, boolType)) {
                 return boolType;
             }
             else {

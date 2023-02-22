@@ -136,9 +136,14 @@ async function processAnalyze(state: IStoreState, dispatch: IDispatch): Promise<
         });
     }
 
-    // todo: highlight warning (!)
     if (slDocument.diagnosticReport.warnings > 0) {
-        // console.warn(Diagnostics.stringify(slDocument.diagnosticReport));
+        // pass only deprecations as editor's decorators to use custom styling
+        // note: by default warnings and errors are provided by LanguageServiceProvider validation
+        emitMarkers(<IDispatch>dispatch, 
+            emitMarkersBatch(slDocument.diagnosticReport.messages
+             .filter(msg => msg.code === `A3008`) // EAnalyzerWarnings.Deprecated
+            .map(({ start, end, content }) => ({ loc: { start, end }, message: '@deprecated', payload: {} })), 
+            'deprecated', 'deprecated'));
     }
 
     // if (!diag.errors)

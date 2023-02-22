@@ -9,6 +9,7 @@ import { ISLDocument } from "@lib/idl/ISLDocument";
 import { IParseNode } from "@lib/idl/parser/IParser";
 import { INodeInputSlot, INodeOutputSlot, LLink } from "litegraph.js";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
+import { types } from "@lib/fx/analisys/helpers";
 
 
 import { CodeEmitterNode, LGraphNodeFactory, GraphContext } from "./GraphNode";
@@ -91,7 +92,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                 });
                 // avoid float(float(t)) expressions
                 if (count == 1) {
-                    if (type.isEqual(args[0].type)) {
+                    if (types.equals(type, args[0].type)) {
                         return args[0];
                     }
                 }
@@ -150,7 +151,7 @@ function producer(env: () => ISLDocument): LGraphNodeFactory {
                 const scope = program.currentScope;
                 const type = scope.findType(typeName);
                 const sourceExpr = this.getInputNode(0).exec(context, program, this.getOriginalSlot(0));
-                if (sourceExpr.type.isEqual(type)) {
+                if (types.equals(sourceExpr.type, type)) {
                     return sourceExpr;
                 }
                 return new CastExprInstruction({ scope, sourceExpr, type });

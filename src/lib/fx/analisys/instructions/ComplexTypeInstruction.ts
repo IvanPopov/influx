@@ -1,10 +1,8 @@
-import { isDef, isDefAndNotNull, isNull, assert } from "@lib/common";
-import * as SystemScope from "@lib/fx/analisys/SystemScope";
-import { EAnalyzerErrors } from '@lib/idl/EAnalyzerErrors';
-import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
+import { EInstructionTypes, IFunctionDeclInstruction, ITypeDeclInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
-import { instruction, type } from "../helpers";
+import { instruction, types } from "../helpers";
 import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IComplexTypeInstructionSettings extends IInstructionSettings {
@@ -13,15 +11,10 @@ export interface IComplexTypeInstructionSettings extends IInstructionSettings {
     aligment?: number;
 }
 
+// todo: merge with system tpye ?
 export class ComplexTypeInstruction extends Instruction implements ITypeInstruction {
     protected _name: string;
     protected _fields: IMap<IVariableDeclInstruction>;
-
-    // helpers
-    protected _isContainArray: boolean;
-    protected _isContainSampler: boolean;
-    protected _isContainComplexType: boolean;
-
     protected _aligment: number;
 
     constructor({ name = null, fields, aligment = 1 /* byte */, ...settings }: IComplexTypeInstructionSettings) {
@@ -30,10 +23,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         this._name = name;
         this._fields = {};
         this._aligment = aligment;
-
-        this._isContainArray = false;
-        this._isContainSampler = false;
-        this._isContainComplexType = false;
 
         this.addFields(fields.filter(field => !isNull(field)).map(field => Instruction.$withParent(field, this)));
     }
@@ -84,13 +73,8 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
     
-    get fieldNames(): string[] {
-        return Object.keys(this._fields);
-    }
-
-    
     get fields(): IVariableDeclInstruction[] {
-        return this.fieldNames.map( name => this._fields[name] );
+        return Object.values(this._fields);
     }
 
 
@@ -99,25 +83,10 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
     }
 
 
-    isSampler(): boolean {
-        return false;
-    }
-
-    isTexture(): boolean {
-        return false;
-    }
-
-    isUAV(): boolean {
-        return false;
-    }
-
-    isBuffer(): boolean {
-        return false;
-    }
-    
     toString(): string {
-        return this.name || type.hash(this);
+        return this.name || types.hash(this);
     }
+
 
     /** @deprecated */
     toDeclString(): string {
@@ -132,20 +101,9 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return code;
     }
 
-
-    /** @deprecated */
-    isEqual(value: ITypeInstruction): boolean {
-        return type.equals(this, value);
-    }
-
     
     toCode(): string {
         return this._name;
-    }
-
-    
-    isBase(): boolean {
-        return false;
     }
 
     
@@ -163,48 +121,9 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         return true;
     }
 
-    
-    isConst(): boolean {
-        return false;
-    }
-
-    
-    /** @deprecated */
-    isContainArray(): boolean {
-        return this._isContainArray;
-    }
-
-    
-    /** @deprecated */
-    isContainSampler(): boolean {
-        return this._isContainSampler;
-    }
-
-    /** @deprecated */
-    isContainComplexType(): boolean {
-        return this._isContainComplexType;
-    }
-
 
     private addField(variable: IVariableDeclInstruction): void {
-        var varName: string = variable.name;
-        this._fields[varName] = variable;
-
-        var type: IVariableTypeInstruction = variable.type;
-
-        if (type.isNotBaseArray() || type.isContainArray()) {
-            this._isContainArray = true;
-        }
-
-        if (
-            // SystemScope.isSamplerType(type) || 
-            type.isContainSampler()) {
-            this._isContainSampler = true;
-        }
-
-        if (type.isComplex()) {
-            this._isContainComplexType = true;
-        }
+        this._fields[variable.name] = variable;
     }
 
     private addFields(fields: IVariableDeclInstruction[]): void {
@@ -213,11 +132,6 @@ export class ComplexTypeInstruction extends Instruction implements ITypeInstruct
         }
 
         this.calculatePaddings();
-    }
-
-
-    hasField(fieldName: string): boolean {
-        return isDef(this._fields[fieldName]);
     }
 
 

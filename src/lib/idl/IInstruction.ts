@@ -19,7 +19,7 @@ export enum EInstructionTypes {
     k_Typed,        // NOTE: Abstract type
     k_VariableType,
     k_SystemType,
-    k_ComplexType,
+    k_ComplexType,  // todo: merge with system type
     k_ProxyType,
     
     k_Expr,         // NOTE: Abstract type
@@ -54,8 +54,12 @@ export enum EInstructionTypes {
     k_FunctionDecl,
     k_SystemFunctionDecl,
     k_FunctionDef,
+    /** @deprecated */
     k_PassDecl,
+    k_Pass11Decl,
+    /** @deprecated */
     k_TechniqueDecl,
+    k_Technique11Decl,
     k_CbufferDecl,
     
     k_Stmt,
@@ -142,7 +146,6 @@ export enum EScopeType {
 
 
 export interface ITypeTemplate {
-    readonly scope: IScope;
     readonly name: string;
     produceType(scope: IScope, args?: ITypeInstruction[]): ITypeInstruction;
     typeName(args?: ITypeInstruction[]): string;
@@ -160,6 +163,7 @@ export interface IScope {
     readonly functions: IMap<IFunctionDeclInstruction[]>;
     readonly typeTemplates: IMap<ITypeTemplate>;
     readonly techniques: IMap<ITechniqueInstruction>;
+    readonly techniques11: IMap<ITechnique11Instruction>;
     readonly cbuffers: IMap<ICbufferInstruction>;
 
     /** Recursive check for all parents for strict mode */
@@ -170,6 +174,7 @@ export interface IScope {
     findTypeTemplate(typeName: string): ITypeTemplate;
     findFunction(funcName: string, args: Array<ITypeInstruction | RegExp>): IFunctionDeclInstruction | null | undefined;
     findTechnique(techName: string): ITechniqueInstruction | null;
+    findTechnique11(techName: string): ITechnique11Instruction | null;
     findCbuffer(cbufName: string): ICbufferInstruction | null;
 
     /** @deprecated */
@@ -182,6 +187,7 @@ export interface IScope {
     addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
     addTechnique(technique: ITechniqueInstruction): boolean;
+    addTechnique11(technique: ITechnique11Instruction): boolean;
     addCbuffer(cbuf: ICbufferInstruction): boolean;
 }
 
@@ -235,38 +241,32 @@ export interface ITypeInstruction extends IInstruction {
     readonly writable: boolean;
     readonly readable: boolean;
 
-    readonly fieldNames: string[];
     readonly fields: IVariableDeclInstruction[];
     readonly methods: IFunctionDeclInstruction[];
 
-    /** 
-     * @deprecated
-     * Use type.equals() instead.
-     */
-    isEqual(type: ITypeInstruction): boolean;
-
-    isBase(): boolean;
+    // Returns true if it's allowed to apply [] operator.
     isArray(): boolean;
     // Returns true is type is user defined array.
     // an user defined array like: float f[4]
     // not: float4 
     isNotBaseArray(): boolean;
+    // Returns true if it's user defined structure
+    // todo: move to types.isComplex()
     isComplex(): boolean;
-    isConst(): boolean;
 
-    /** @deprecated */
-    isContainArray(): boolean;
-    /** @deprecated */
-    isContainSampler(): boolean;
-    /** @deprecated */
-    isContainComplexType(): boolean;
-
-    hasField(fieldName: string): boolean;
     hasFieldWithSematics(semantic: string);
     hasAllUniqueSemantics(): boolean;
     hasFieldWithoutSemantics(): boolean;
 
+    /** 
+     * @deprecated 
+     * todo: move to types.findFieldByName(type, name)
+     */
     getField(fieldName: string): IVariableDeclInstruction;
+    /** 
+     * @deprecated 
+     * todo: move to types.findFieldBySemantic(type, name)
+     */
     getFieldBySemantics(semantic: string): IVariableDeclInstruction;
 
     // FIXME: refuse from the regular expressions in favor of a full typecasting graph
@@ -274,12 +274,6 @@ export interface ITypeInstruction extends IInstruction {
 
     /** @deprecated */
     toDeclString(): string;
-
-
-    isUAV(): boolean;
-    isSampler(): boolean;
-    isTexture(): boolean;
-    isBuffer(): boolean;
 }
 
 
@@ -293,8 +287,7 @@ export interface IVariableTypeInstruction extends ITypeInstruction {
 
     isUniform(): boolean;
     isStatic(): boolean;
-
-    hasUsage(usageName: IVariableUsage): boolean;
+    isConst(): boolean;
 
     // for structures internal usage
     $overwritePadding(padding: number, aligment: number): void;
@@ -347,7 +340,7 @@ export interface IRegister {
 };
 
 export interface ICbufferInstruction extends IDeclInstruction, ITypedInstruction {
-    readonly register: IRegister;
+    
 }
 
 
@@ -452,6 +445,7 @@ export interface IArithmeticExprInstruction extends IExprInstruction {
 export interface ICastExprInstruction extends IExprInstruction {
     readonly expr: IExprInstruction;
 
+    /** @deprecated */
     isUseless(): boolean;
 }
 
@@ -608,7 +602,7 @@ export interface IExprStmtInstruction extends IStmtInstruction {
 }
 
 
-
+/** @deprecated */
 export interface IPassInstruction extends IDeclInstruction {
     readonly id: IIdInstruction;
 
@@ -620,6 +614,12 @@ export interface IPassInstruction extends IDeclInstruction {
 
     /** check if the pass is ready for runtime */
     isValid(): boolean;
+}
+
+
+export interface IPass11Instruction extends IDeclInstruction {
+    readonly id: IIdInstruction;
+    readonly impl: IStmtBlockInstruction;
 }
 
 
@@ -665,10 +665,19 @@ export interface ITechniqueInstruction extends IDeclInstruction {
     /** check if the technique is ready for runtime */
     isValid(): boolean;
 
-    // Preset extention
+    // todo: separate from basic dx effect functionality (?)
+    // Preset extention (non-standart)
+    // note: see PRESETS_EX define in HLSL.gr
     readonly presets: IPresetInstruction[];
 }
 
+
+export interface ITechnique11Instruction extends IDeclInstruction {
+    readonly passList: IPass11Instruction[];
+
+    /** check if the technique is ready for runtime */
+    isValid(): boolean;
+}
 
 export interface IFunctionDeclListMap {
     [functionName: string]: IFunctionDeclInstruction[];

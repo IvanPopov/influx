@@ -22,7 +22,7 @@ export class TechniqueInstruction<PassType extends IPassInstruction> extends Dec
         super({ instrType: EInstructionTypes.k_TechniqueDecl, ...settings });
         
         this._name = name;
-        this._passList = passList.map(pass => Instruction.$withParent(pass, this));
+        this._passList = passList?.map(pass => Instruction.$withParent(pass, this));
         this._techniqueType = techniqueType;
 
         this.presets = presets;

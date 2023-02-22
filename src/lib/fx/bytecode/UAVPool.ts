@@ -1,8 +1,8 @@
 import { assert, isNull } from "@lib/common";
-import { variable } from "@lib/fx/analisys/helpers";
+import { variable, types } from "@lib/fx/analisys/helpers";
 import { EAddrType } from "@lib/idl/bytecode";
 import { IVariableDeclInstruction } from "@lib/idl/IInstruction";
-
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import { UAV_TOTAL, UAV0_REGISTER } from "./Bytecode";
 import PromisedAddress from "./PromisedAddress";
 
@@ -16,9 +16,10 @@ export class UAVPool {
     deref(decl: IVariableDeclInstruction): PromisedAddress {
         const knownUAVs = this._knownUAVs;
 
-        assert(decl.type.isUAV());
+        assert(!decl.type.isNotBaseArray());
+        assert(SystemScope.isUAV(decl.type));
 
-        let { index, type } = variable.resolveRegister(decl);
+        let { index, type } = SystemScope.resolveRegister(decl);
         assert(type === 'u');
 
         const knownIndex = knownUAVs.indexOf(decl);

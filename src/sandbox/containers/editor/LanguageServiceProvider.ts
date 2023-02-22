@@ -96,7 +96,8 @@ class LanguageServiceProvider {
             msg.end = end;
         });
 
-        return slDocument.diagnosticReport.messages.map(asDiagnostic);
+        // IP: skip deprecations
+        return slDocument.diagnosticReport.messages.filter(msg => msg.code !== 'A3008').map(asDiagnostic);
     }
 
     async provideFxCodeLenses(textDocumentIdentifier: TextDocumentIdentifier): Promise<CodeLens[]> {

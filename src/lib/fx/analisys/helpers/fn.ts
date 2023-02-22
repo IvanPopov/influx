@@ -1,11 +1,11 @@
 import { IFunctionDefInstruction, IVariableDeclInstruction, ITypeInstruction, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
-import { type } from "@lib/fx/analisys/helpers";
+import { types } from "@lib/fx/analisys/helpers";
 import { isNull } from "@lib/common";
 
 export namespace fn {
 
     function signatureParam(param: IVariableDeclInstruction, strong: boolean): string {
-        return `${type.signature(param.type, strong)}${param.initExpr ? '?' : ''}`;
+        return `${types.signature(param.type, strong)}${param.initExpr ? '?' : ''}`;
     }
 
     export function signature(def: IFunctionDefInstruction, strong: boolean = false): string {
@@ -15,7 +15,7 @@ export namespace fn {
 
     export function signatureEx(def: IFunctionDefInstruction, strong: boolean = false): string {
         const { name, returnType, params } = def;
-        return `${type.signature(returnType, strong)} ${name}(${params.map(param => signatureParam(param, strong)).join(', ')})`;
+        return `${types.signature(returnType, strong)} ${name}(${params.map(param => signatureParam(param, strong)).join(', ')})`;
     }
 
 
@@ -37,7 +37,7 @@ export namespace fn {
         return args.every((arg, i) => 
             (!strong && isNull(arg)) ||
             (!strong && isNull(def.params[i].type)) ||
-            type.equals(arg, def.params[i].type, strong)
+            types.equals(arg, def.params[i].type, strong)
         );
     }
 

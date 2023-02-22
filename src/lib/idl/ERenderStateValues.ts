@@ -1,4 +1,4 @@
-
+/** @deprecated */
 export enum ERenderStateValues {
     UNDEF = 0,
 

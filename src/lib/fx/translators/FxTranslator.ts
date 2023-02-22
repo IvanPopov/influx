@@ -1,13 +1,13 @@
 import { assert, isDef } from "@lib/common";
-import { type } from "@lib/fx/analisys/helpers";
+import { types } from "@lib/fx/analisys/helpers";
 import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechnique11Instruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
-
+import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
 import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
 import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
@@ -41,6 +41,7 @@ export interface IPreset {
 
 export type IUIControlReflection = IUIControl;
 
+/** @deprecated */
 export interface IPassReflection {
     instance: string;
     VSParticleShader: string;
@@ -49,7 +50,12 @@ export interface IPassReflection {
     renderStates: { [key: number/* ERenderStates */]: ERenderStateValues };
 }
 
+export interface IPass11Reflection {
+    // todo
+}
 
+
+/** @deprecated */
 export interface ITechniqueReflection<PassT extends IPassReflection = IPassReflection> {
     name: string;
     passes: PassT[];
@@ -57,6 +63,10 @@ export interface ITechniqueReflection<PassT extends IPassReflection = IPassRefle
     presets: IPreset[];
 }
 
+
+export interface ITechnique11Reflection<PassT extends IPass11Reflection = IPass11Reflection> {
+    name: string;
+}
 
 
 export interface ITriMeshReflection {
@@ -134,9 +144,9 @@ export interface ICSShaderReflectionEx extends ICSShaderReflection {
 
 
 const isPartId = (p: IVariableDeclInstruction) => 
-    (p.semantic === 'PART_ID' || p.name == 'partId') && type.equals(/u?int/, p.type);
+    (p.semantic === 'PART_ID' || p.name == 'partId') && types.equals(/u?int/, p.type);
 const isSpawnId = (p: IVariableDeclInstruction) => 
-    (p.semantic === 'SPAWN_ID' || p.name == 'spawnId') && type.equals(/u?int/, p.type);
+    (p.semantic === 'SPAWN_ID' || p.name == 'spawnId') && types.equals(/u?int/, p.type);
 
 interface IOptParam {
     name: string;
@@ -165,6 +175,7 @@ export class FxTranslatorContext extends FxConvolutionContext {
     declare readonly CSShaders: ICSShaderReflectionEx[];
 
     readonly techniques: (ITechniqueReflection | IPartFxReflection)[] = [];
+    readonly techniques11: ITechnique11Reflection[] = [];
     readonly controls: IUIControlReflection[] = [];
     readonly trimeshes: ITriMeshReflection[] = [];
     // todo: use reflection
@@ -185,12 +196,21 @@ export class FxTranslatorContext extends FxConvolutionContext {
     }
 
 
-    addTechnique<T extends ITechniqueReflection | IPartFxReflection>(tech: T): T {
-        assert(!this.has(tech.name));
+    addTechnique<T extends ITechniqueReflection | IPartFxReflection>(refl: T): T {
+        assert(!this.has(refl.name));
         assert(!isDef(this.techniques[0]));
-        this.add(tech.name);
-        this.techniques[0] = tech;
-        return tech;
+        this.add(refl.name);
+        this.techniques[0] = refl;
+        return refl;
+    }
+
+
+    addTechnique11<T extends ITechnique11Reflection>(refl: T): T {
+        assert(!this.has(refl.name));
+        assert(!isDef(this.techniques[0]));
+        this.add(refl.name);
+        this.techniques11[0] = refl;
+        return refl;
     }
 
 
@@ -922,7 +942,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[1] = 1u;`);
                 this.emitLine(`${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[2] = 1u;`);
 
-                if (type.equals(spawnFn.def.returnType, T_VOID)) {
+                if (types.equals(spawnFn.def.returnType, T_VOID)) {
                     if (spawnFn.def.params.length == 1) {
                         const p0 = spawnFn.def.params[0];
 
@@ -940,7 +960,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         this.emitLine(`${spawnFn.name}();`);
                     }
                 } else {
-                    assert(type.equals(spawnFn.def.returnType, T_INT));
+                    assert(types.equals(spawnFn.def.returnType, T_INT));
 
                     this.emitLine(`float nPartAddFloat = asfloat(${FxTranslator.UAV_SPAWN_DISPATCH_ARGUMENTS}[3]) + (float)${spawnFn.name}() * elapsedTime;`);
                     this.emitLine(`float nPartAdd = floor(nPartAddFloat);`);
@@ -1250,7 +1270,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         args[insidIndex] = `InstanceId`;
                     }
 
-                    if (type.equals(prerenderFn.def.returnType, T_VOID)) {
+                    if (types.equals(prerenderFn.def.returnType, T_VOID)) {
                         this.emitLine(`int SortIndex = 0;`);
                         this.emitLine(`${prerenderFn.name}(${args.join(', ')});`);
                     }
@@ -1377,7 +1397,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             // check that no one uses the same register
             for (let name in ctx.tech().scope.cbuffers) {
                 let cbuf = ctx.tech().scope.cbuffers[name];
-                if (cbuf.register.index === index) {
+                if (SystemScope.resolveRegister(cbuf).index === index) {
                     console.error(`register ${index} is already used by cbuffer '${cbuf.name}'`);
                 }
             }
@@ -1431,7 +1451,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             // check that no one uses the same register
             for (let name in ctx.tech().scope.cbuffers) {
                 let cbuf = ctx.tech().scope.cbuffers[name];
-                if (cbuf.register.index === index) {
+                if (SystemScope.resolveRegister(cbuf).index === index) {
                     console.error(`register ${index} is already used by cbuffer '${cbuf.name}'`);
                 }
             }
@@ -1619,6 +1639,24 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     }
 
 
+    emitTechnique11Decl(ctx: ContextT, tech: ITechnique11Instruction): void {
+        // note: only one effect can be tranclated at a time 
+        ctx.beginTechnique(tech);
+
+        const { name } = tech;
+
+        // emit global uniforms and so on.
+        this.finalizeTechnique(ctx);
+
+        const refl = {
+            name
+        };
+
+        ctx.addTechnique11(refl);
+        ctx.endTechnique();
+    }
+
+
     static parsePresets(fx: ITechniqueInstruction): IPreset[] {
         return fx.presets.map((preset, i): IPreset => {
             const name = preset.name;
@@ -1672,6 +1710,11 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             default:
                 console.assert(false);
         }
+        return FxTranslator.fxtTranslator.toString(ctx);
+    }
+
+    static translate11(fx: ITechnique11Instruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
+        FxTranslator.fxtTranslator.emitTechnique11Decl(ctx, fx);
         return FxTranslator.fxtTranslator.toString(ctx);
     }
 
