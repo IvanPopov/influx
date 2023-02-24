@@ -64,7 +64,7 @@ export class FXCodeLenses {
                         lenses.push(createCodeLens(`[particle]`, sourceNode.loc));
                     }
 
-                    for (const pass of partFx.passList) {
+                    for (const pass of partFx.passes) {
                         if (pass.prerenderRoutine) {
                             {
                                 const sourceNode = pass.prerenderRoutine.function.def.sourceNode;

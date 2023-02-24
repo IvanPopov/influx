@@ -5,8 +5,8 @@ import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TextureBundleT, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
-import { EInstructionTypes, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, Pass11BytecodeBundleT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TextureBundleT, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
+import { EInstructionTypes, IPass11Instruction, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
@@ -137,6 +137,13 @@ function createFxRoutineBytecodeBundle(slDocument: ISLDocument, reflection: ICSS
     });
     return new RoutineBytecodeBundleT(Array.from(code), new RoutineBytecodeBundleResourcesT(uavs, buffers, textures, trimeshes), numthreads);
 }
+
+
+// function createFxPass11BytecodeBundle(pass11: IPass11Instruction): Pass11BytecodeBundleT {
+
+//     // todo: translate pass
+//     return new Pass11BytecodeBundleT();
+// }
 
 
 function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType: string, entryName: string, { name }: BundleOptions = {}): RoutineGLSLSourceBundleT {
@@ -380,29 +387,27 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
     return finalizeBundle(bundle, opts);
 }
 
-
+import * as TSVM from '@lib/fx/bytecode/VM/ts/bundle';
 async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
-    const { includeResolver, defines } = convPack;
-    
-    const { textDocument, slastDocument } = convPack;
-    const ctx = new FxTranslatorContext({ ...opts.translator, textDocument, slastDocument });
-    const raw = FxTranslator.translate11(tech, ctx);
 
-    const reflection = ctx.techniques11[0];
-    const { name } = reflection;
+    for (const pass11 of tech.passes) {
+        // const passBundle = createFxPass11BytecodeBundle(pass11);
+        // const shaders = decodeShaders(passBundle);
+        // const depthStencilStates = decodeDepthStencilStates(passBundle);
+        // const blendStates = decodeBlendStates(passBundle);
+        const { program } = Bytecode.translate(pass11);
+        const { code, cdl } = program;
+        const chunks = TSVM.decodeChunks(code);
+        console.log(chunks);
+    }
+
+    ///////////////////////////////////
+
+    const { name } = tech;
 
     opts.name ||= name;
 
-    const textDocument3 = await createTextDocument('file://foo.bar///mat.fx', raw);
-    const slastDocument3 = await createSLASTDocument(textDocument3, { includeResolver, defines });
-    const slDocument = await createSLDocument(slastDocument3);
-
-    if (slDocument.diagnosticReport.errors) {
-        console.error(Diagnostics.stringify(slDocument.diagnosticReport));
-        return null;
-    }
-
-    const passes = [];//reflection.passes.map(pass => createMatFxRenderPass(slDocument, pass, opts, new ConvolutionPackEx(textDocument3, slastDocument3, includeResolver, defines)));
+    const passes = [];
     const mat = new MatBundleT(passes);
 
     const { meta } = opts;
@@ -411,6 +416,7 @@ async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOp
     return finalizeBundle(bundle, opts);
 }
 
+/** @deprecated */
 async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
     const { includeResolver, defines } = convPack;
     

@@ -3,32 +3,30 @@ import { EInstructionTypes, IPass11Instruction, IPresetInstruction, ITechnique11
 import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from './Instruction';
 
-export interface ITechniqueInstructionSettings<PassType extends IPass11Instruction> extends IDeclInstructionSettings {
+export interface ITechniqueInstructionSettings extends IDeclInstructionSettings {
     name: string;
-    passList: PassType[];
+    passes: IPass11Instruction[];
     presets: IPresetInstruction[];
 }
 
 
-export class Technique11Instruction<PassType extends IPass11Instruction> extends DeclInstruction implements ITechnique11Instruction {
+export class Technique11Instruction extends DeclInstruction implements ITechnique11Instruction {
     protected _name: string;
-    protected _passList: PassType[];
 
-    constructor({ name, passList, presets, ...settings }: ITechniqueInstructionSettings<PassType>) {
+    readonly passes: IPass11Instruction[];
+
+    constructor({ name, passes, presets, ...settings }: ITechniqueInstructionSettings) {
         super({ instrType: EInstructionTypes.k_Technique11Decl, ...settings });
         
         this._name = name;
-        this._passList = passList?.map(pass => Instruction.$withParent(pass, this));
+        this.passes = passes?.map(pass => Instruction.$withParent(pass, this));
     }
 
-    get name(): string {
+    get name() {
         return this._name;
     }
 
-    get passList(): PassType[] {
-        return this._passList;
-    }
-
+    /** @deprecated */
     isValid(): boolean {
         return true;
     }

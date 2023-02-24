@@ -23,7 +23,7 @@ const initialState: IFileState = {
     rawDocument: null,
     defines: [],
     debugger: {
-        expression: null,
+        query: null,
         bcDocument: null,
         options: {
             colorize: true,
@@ -146,13 +146,13 @@ export default handleActions<IFileState, ISourceFileActions | IDebuggerActions |
 
     [evt.DEBUGGER_START_DEBUG]: (state, action: IDebuggerStartDebug) => {
         const options = state.debugger.options;
-        const { expression, bcDocument } = action.payload;
-        return { ...state, debugger: { expression, bcDocument, options } };
+        const { query, bcDocument } = action.payload;
+        return { ...state, debugger: { query, bcDocument, options } };
     },
 
     [evt.DEBUGGER_RESET]: (state) => {
         const { debugger: { options } } = state;
-        return { ...state, debugger: { expression: null, bcDocument: null, options, layout: 'i32' } };
+        return { ...state, debugger: { query: null, bcDocument: null, options, layout: 'i32' } };
     },
 
     [evt.DEBUGGER_OPTIONS_CHANGED]: (state: IFileState, action: IDebuggerOptionsChanged) => {

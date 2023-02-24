@@ -26,7 +26,7 @@ export interface IDebuggerState {
         wasm: boolean;
     };
 
-    expression: string;
+    query: string;
 
     // (current debugger runtime)
     // BytecodeView shows instructions

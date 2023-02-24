@@ -96,9 +96,16 @@ table RoutineBytecodeBundleResources
 
 table RoutineBytecodeBundle
 {
+    // code already includes chunks with constans, externs etc.
     code: [ ubyte ];
     resources: RoutineBytecodeBundleResources;
     numthreads: [ uint ];
+}
+
+table Pass11BytecodeBundle
+{
+    // code already includes chunks with constans, shaders, blend states etc.
+    code: [ ubyte ];
 }
 
 table RoutineGLSLSourceBundle 
@@ -203,12 +210,18 @@ table MatRenderPass
     renderStates: [ RenderState ];
 }
 
+/** @deprecated */
 table MatBundle
 {
     renderPasses: [ MatRenderPass ];
 }
 
-union BundleContent { PartBundle, MatBundle }
+table Technique11Bundle
+{
+    // todo
+}
+
+union BundleContent { PartBundle, MatBundle, Technique11Bundle }
 
 table StringValue { value: string; }
 table TextureValue { value: string; }

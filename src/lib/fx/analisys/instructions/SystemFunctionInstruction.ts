@@ -15,10 +15,10 @@ export class SystemFunctionInstruction extends FunctionDeclInstruction implement
     // protected _bForCompute;
     // protected _bForGeometry;
     
-     constructor({ vertex = true, pixel = true, implementation = null, ...settings }: ISystemFunctionInstructionSettings) {
-        super({ instrType: EInstructionTypes.k_SystemFunctionDecl, implementation: null, ...settings });
+     constructor({ vertex = true, pixel = true, impl = null, ...settings }: ISystemFunctionInstructionSettings) {
+        super({ instrType: EInstructionTypes.k_SystemFunctionDecl, impl: null, ...settings });
         
-        assert(isNull(implementation));
+        assert(isNull(impl));
 
         this._bForVertex = vertex;
         this._bForPixel = pixel;

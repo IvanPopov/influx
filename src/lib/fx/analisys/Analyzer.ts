@@ -3,7 +3,16 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, ICompileShader11Instruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import {
+    EInstructionTypes, EScopeType, ETechniqueType,
+    IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction,
+    ICompileShader11Instruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction,
+    IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction,
+    IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction,
+    IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStateBlockInstruction, IStmtBlockInstruction,
+    IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction,
+    ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage
+} from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -43,7 +52,6 @@ import { Instruction } from './instructions/Instruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
 import { IntInstruction } from './instructions/IntInstruction';
 import { LogicalExprInstruction } from './instructions/LogicalExprInstruction';
-import { Pass11Instruction } from './instructions/Pass11Instruction';
 import { PassInstruction } from './instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
@@ -71,8 +79,7 @@ import { ProgramScope, ProgramScopeEx } from './ProgramScope';
 import { parseUintLiteral } from './system/utils';
 import * as SystemScope from './SystemScope';
 import {
-    T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID,
-    T_VERTEX_SHADER, T_PIXEL_SHADER, T_COMPUTE_SHADER, T_GEOMETRY_SHADER
+    T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_COMPUTE_SHADER, T_FLOAT4, T_GEOMETRY_SHADER, T_INT, T_PIXEL_SHADER, T_UINT, T_VERTEX_SHADER, T_VOID
 } from './SystemScope';
 
 
@@ -1872,7 +1879,7 @@ export class Analyzer {
     protected createTracePseudoDeclaration(context: Context, program: ProgramScope, args: IExprInstruction[]): IFunctionDeclInstruction {
         const scope = program.globalScope; // global scope (!)
         const attributes = [new AttributeInstruction({ scope, name: "extern", args: null })];
-        const implementation = null;
+        const impl = null;
         const returnType = VariableTypeInstruction.wrap(T_VOID, scope);
         const id = new IdInstruction({ scope, name: "trace" });
         const paramList = args.map((arg, i) => {
@@ -1882,8 +1889,8 @@ export class Analyzer {
             const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
             return new VariableDeclInstruction({ scope, type, id, usageFlags });
         });
-        const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-        const traceFunc = new FunctionDeclInstruction({ scope, definition, implementation, attributes });
+        const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+        const traceFunc = new FunctionDeclInstruction({ scope, def, impl, attributes });
         scope.addFunction(traceFunc);
         return traceFunc;
     }
@@ -2907,7 +2914,7 @@ export class Analyzer {
         const lastNodeValue = children[0].value;
 
         let annotation: IAnnotationInstruction = null;
-        let implementation: IStmtBlockInstruction = null;
+        let impl: IStmtBlockInstruction = null;
 
         program.push(EScopeType.k_Default);
 
@@ -2916,9 +2923,9 @@ export class Analyzer {
             attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
         }
 
-        const definition = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
+        const def = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
 
-        if (isNull(definition)) {
+        if (isNull(def)) {
             // TODO: emit proper error
             context.error(sourceNode, EErrors.UnknownInstruction, {});
             program.pop();
@@ -2926,25 +2933,25 @@ export class Analyzer {
         }
 
         // looking for function with exact type signatures (that's why we cant use 'asRelaxedType' predicate here!)
-        let func = globalScope.findFunction(definition.name, definition.params.map(asType));
+        let func = globalScope.findFunction(def.name, def.params.map(asType));
 
         // undedined means that there are more than one instance 
         if (!isDef(func)) {
-            context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: definition.name });
+            context.error(sourceNode, EErrors.CannotChooseFunction, { funcName: def.name });
             program.pop();
             return null;
         }
 
         // todo: handle the case when definition without implementation is occured later than the found function with implementation
         if (!isNull(func) && func.impl) {
-            context.error(sourceNode, EErrors.FunctionRedefinition, { funcName: definition.name });
+            context.error(sourceNode, EErrors.FunctionRedefinition, { funcName: def.name });
             program.pop();
             return null;
         }
 
         if (!isNull(func)) {
-            if (!types.equals(func.def.returnType, definition.returnType)) {
-                context.error(sourceNode, EErrors.InvalidFuncDefenitionReturnType, { funcName: definition.name });
+            if (!types.equals(func.def.returnType, def.returnType)) {
+                context.error(sourceNode, EErrors.InvalidFuncDefenitionReturnType, { funcName: def.name });
                 program.pop();
                 return null;
             }
@@ -2953,7 +2960,7 @@ export class Analyzer {
         assert(context.funcDef === null);
 
         // TODO: rewrite context ?
-        context.funcDef = definition;
+        context.funcDef = def;
 
         if (children.length === 3) {
             annotation = this.analyzeAnnotation(context, program, children[1]);
@@ -2961,16 +2968,16 @@ export class Analyzer {
 
         if (lastNodeValue !== ';') {
             // TODO: do to increase scope depth inside stmt block!!
-            implementation = this.analyzeStmtBlock(context, program, children[0]);
+            impl = this.analyzeStmtBlock(context, program, children[0]);
         }
 
         program.pop();
 
-        let hasVoidType = types.equals(definition.returnType, T_VOID);
+        let hasVoidType = types.equals(def.returnType, T_VOID);
 
         // validate unreachable code.
-        if (!isNull(implementation)) {
-            let stmtList = implementation.stmtList;
+        if (!isNull(impl)) {
+            let stmtList = impl.stmtList;
 
             // stmtList = stmtList.slice().reverse();
             for (let i = stmtList.length - 1; i >= 0; --i) {
@@ -2984,16 +2991,16 @@ export class Analyzer {
         }
 
         assert(scope == globalScope);
-        func = new FunctionDeclInstruction({ sourceNode, scope, definition, implementation, annotation, attributes });
+        func = new FunctionDeclInstruction({ sourceNode, scope, def, impl, annotation, attributes });
 
         // NOTE: possible implicit replacement of function 
         //       without implementaion inside addFunction() call.
         if (!globalScope.addFunction(func)) {
-            context.error(sourceNode, EErrors.FunctionRedifinition, { funcName: definition.name });
+            context.error(sourceNode, EErrors.FunctionRedifinition, { funcName: def.name });
         }
 
-        if (!hasVoidType && !context.haveCurrentFunctionReturnOccur && !isNull(implementation)) {
-            context.error(sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: definition.name });
+        if (!hasVoidType && !context.haveCurrentFunctionReturnOccur && !isNull(impl)) {
+            context.error(sourceNode, EErrors.InvalidFunctionReturnStmtNotFound, { funcName: def.name });
         }
 
         return func;
@@ -3747,7 +3754,7 @@ export class Analyzer {
 
         let annotation: IAnnotationInstruction = null;
         let semantic: string = null;
-        let passList: IPass11Instruction[] = null;
+        let passes: IPass11Instruction[] = null;
         let presets: IPresetInstruction[] = null;
 
         for (let i = children.length - 3; i >= 0; i--) {
@@ -3756,11 +3763,11 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else {
-                [ passList ] = this.analyzeTechnique11(context, program, children[i]);
+                [ passes ] = this.analyzeTechnique11(context, program, children[i]);
             }
         }
 
-        const technique = new Technique11Instruction({ sourceNode, name, semantic, annotation, passList, scope, presets });
+        const technique = new Technique11Instruction({ sourceNode, name, semantic, annotation, passes, scope, presets });
         Analyzer.addTechnique11(context, program, technique);
         return technique;
     }
@@ -3779,7 +3786,7 @@ export class Analyzer {
 
         let annotation: IAnnotationInstruction = null;
         let semantic: string = null;
-        let passList: IPassInstruction[] = null;
+        let passes: IPassInstruction[] = null;
         let presets: IPresetInstruction[] = null;
         let techniqueType: ETechniqueType = ETechniqueType.k_BasicFx;
 
@@ -3789,11 +3796,11 @@ export class Analyzer {
             } else if (children[i].name === 'Semantic') {
                 semantic = this.analyzeSemantic(children[i]);
             } else {
-                [passList, presets] = this.analyzeTechnique(context, program, children[i]);
+                [passes, presets] = this.analyzeTechnique(context, program, children[i]);
             }
         }
 
-        const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantic, annotation, passList, scope, presets });
+        const technique = new TechniqueInstruction({ sourceNode, name, techniqueType, semantic, annotation, passes, scope, presets });
         Analyzer.addTechnique(context, program, technique);
         return technique;
     }
@@ -3809,24 +3816,24 @@ export class Analyzer {
     /** @deprecated */
     protected analyzeTechnique(context: Context, program: ProgramScope, sourceNode: IParseNode): [IPassInstruction[], IPresetInstruction[]] {
         const children = sourceNode.children;
-        let passList: IPassInstruction[] = [];
-        let presetList: IPresetInstruction[] = [];
+        let passes: IPassInstruction[] = [];
+        let presets: IPresetInstruction[] = [];
 
         for (let i = children.length - 2; i >= 1; i--) {
             // IP: hack to support preset extension
             if (children[i].children[0].name === 'PresetDecl') {
                 let preset = this.analyzePresetDecl(context, program, children[i].children[0]);
                 assert(!isNull(preset));
-                presetList.push(preset);
+                presets.push(preset);
                 continue;
             }
 
             let pass = this.analyzePassDecl(context, program, children[i]);
             assert(!isNull(pass));
-            passList.push(pass);
+            passes.push(pass);
         }
 
-        return [ passList, presetList ];
+        return [ passes, presets ];
     }
 
 
@@ -3841,15 +3848,15 @@ export class Analyzer {
     // see analyzeTechnique() for example.
     protected analyzeTechnique11(context: Context, program: ProgramScope, sourceNode: IParseNode): [IPass11Instruction[]] {
         const children = sourceNode.children;
-        let passList: IPass11Instruction[] = [];
-
+        let passes: IPass11Instruction[] = [];
+        let iPass = 0;
         for (let i = children.length - 2; i >= 1; i--) {
-            let pass = this.analyzePass11Decl(context, program, children[i]);
+            let pass = this.analyzePass11Decl(context, program, children[i], iPass);
             assert(!isNull(pass));
-            passList.push(pass);
+            passes.push(pass);
         }
 
-        return [ passList ];
+        return [ passes ];
     }
 
 
@@ -3898,7 +3905,7 @@ export class Analyzer {
      *         T_NON_TYPE_ID = 'P0'
      *         T_KW_PASS = 'pass'
      */
-    protected analyzePass11Decl(context: Context, program: ProgramScope, sourceNode: IParseNode): IPass11Instruction {
+    protected analyzePass11Decl(context: Context, program: ProgramScope, sourceNode: IParseNode, iPass: number = 0): IFunctionDeclInstruction {
 
         const children = sourceNode.children;
         const scope = program.currentScope;
@@ -3907,17 +3914,19 @@ export class Analyzer {
         for (let i = 0; i < children.length; ++i) {
             if (children[i].name === "T_NON_TYPE_ID") {
                 let name = children[i].value;
-                id = new IdInstruction({ scope, name });
+                id = new IdInstruction({ scope, name, sourceNode: children[i] });
             }
+        }
+
+        if (!id) {
+            // create fake pass name for better readability
+            id = new IdInstruction({ scope, name: `auto_pass_${iPass}` });
         }
         
         const impl = this.analyzeStmtBlock(context, program, children[0]);
-        const pass11 = new Pass11Instruction({
-            scope,
-            sourceNode,
-            id,
-            impl
-        });
+        const returnType = VariableTypeInstruction.wrap(T_VOID, scope);
+        const def = new FunctionDefInstruction({ scope, id, returnType });
+        const pass11 = new FunctionDeclInstruction({ scope, sourceNode, impl, def });
 
         //TODO: add annotation and id
         return pass11;

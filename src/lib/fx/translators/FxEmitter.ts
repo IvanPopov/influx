@@ -102,8 +102,8 @@ export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvol
                 fx.updateRoutine && this.emitRoutineProperty(ctx, 'UpdateRoutine', fx.updateRoutine);
 
                 this.emitNewline();
-                fx.passList.forEach((pass, i) => (this.emitPartFxPass(ctx, pass),
-                    i !== fx.passList.length - 1 && this.emitNewline()));
+                fx.passes.forEach((pass, i) => (this.emitPartFxPass(ctx, pass),
+                    i !== fx.passes.length - 1 && this.emitNewline()));
                 this.emitNewline();
                 fx.presets.forEach((preset, i) => (this.emitPresetDecl(ctx, preset),
                     i !== fx.presets.length - 1 && this.emitNewline()));
@@ -130,8 +130,8 @@ export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvol
             this.push();
             {
                 this.emitNewline();
-                fx.passList.forEach((pass, i) => (this.emitPass(ctx, pass),
-                    i !== fx.passList.length - 1 && this.emitNewline()));
+                fx.passes.forEach((pass, i) => (this.emitPass(ctx, pass),
+                    i !== fx.passes.length - 1 && this.emitNewline()));
             }
             this.pop();
             this.emitChar('}');

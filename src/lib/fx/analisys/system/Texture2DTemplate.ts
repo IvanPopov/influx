@@ -56,8 +56,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type, scope });
             let id = new IdInstruction({ scope, name: 'Sample' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
             methods.push(func);
         }
 
@@ -86,8 +86,8 @@ class Texture2DTemplate extends TypeTemplate {
             const rtName = `${type.isArray() ? type.arrayElementType.name : type.name}4`;
             let returnType = new VariableTypeInstruction({ type: scope.findType(rtName), scope });
             let id = new IdInstruction({ scope, name: 'Gather' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
             methods.push(func);
         }
 
@@ -124,8 +124,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type, scope });
             let id = new IdInstruction({ scope, name: 'SampleLevel' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
             methods.push(func);
         }
 
@@ -171,8 +171,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type, scope });
             let id = new IdInstruction({ scope, name: 'SampleGrad' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
             methods.push(func);
         }
 
@@ -208,8 +208,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
             let id = new IdInstruction({ scope, name: 'GetDimensions' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
             methods.push(func);
         }
 
@@ -227,8 +227,8 @@ class Texture2DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type: elementType, scope });
             let id = new IdInstruction({ scope, name: 'Load' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
             methods.push(func);
         }
 

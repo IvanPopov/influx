@@ -79,7 +79,9 @@ export class TranslatorDiagnostics extends Diagnostics<IDiagDesc> {
 
 
 
-export function ContextBuilder(uri: IFile) {
+export function ContextBuilder(uri: IFile = null) {
+    console.assert(uri, 'no debug info?!');
+    
     // occupied registers count 
     // same as stack pointer; 
     // counter grows forward;

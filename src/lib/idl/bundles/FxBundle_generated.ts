@@ -1,5 +1,5 @@
 import * as flatbuffers from 'flatbuffers';
-import {BufferBundle as FxBufferBundle, BufferBundleT as FxBufferBundleT, Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, ColorValue as FxColorValue, ColorValueT as FxColorValueT, ControlValue as FxControlValue, Float2Value as FxFloat2Value, Float2ValueT as FxFloat2ValueT, Float3Value as FxFloat3Value, Float3ValueT as FxFloat3ValueT, Float4Value as FxFloat4Value, Float4ValueT as FxFloat4ValueT, FloatValue as FxFloatValue, FloatValueT as FxFloatValueT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, IntValue as FxIntValue, IntValueT as FxIntValueT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, MeshValue as FxMeshValue, MeshValueT as FxMeshValueT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, PropertyValue as FxPropertyValue, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, StringValue as FxStringValue, StringValueT as FxStringValueT, TextureBundle as FxTextureBundle, TextureBundleT as FxTextureBundleT, TextureValue as FxTextureValue, TextureValueT as FxTextureValueT, TrimeshBundle as FxTrimeshBundle, TrimeshBundleT as FxTrimeshBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIControl as FxUIControl, UIControlT as FxUIControlT, UintValue as FxUintValue, UintValueT as FxUintValueT, ViewTypeProperty as FxViewTypeProperty, ViewTypePropertyT as FxViewTypePropertyT} from  './FxBundle_generated';
+import {BufferBundle as FxBufferBundle, BufferBundleT as FxBufferBundleT, Bundle as FxBundle, BundleCollection as FxBundleCollection, BundleCollectionT as FxBundleCollectionT, BundleContent as FxBundleContent, BundleMeta as FxBundleMeta, BundleMetaT as FxBundleMetaT, BundleSignature as FxBundleSignature, BundleSignatureT as FxBundleSignatureT, BundleT as FxBundleT, CBBundle as FxCBBundle, CBBundleT as FxCBBundleT, ColorValue as FxColorValue, ColorValueT as FxColorValueT, ControlValue as FxControlValue, Float2Value as FxFloat2Value, Float2ValueT as FxFloat2ValueT, Float3Value as FxFloat3Value, Float3ValueT as FxFloat3ValueT, Float4Value as FxFloat4Value, Float4ValueT as FxFloat4ValueT, FloatValue as FxFloatValue, FloatValueT as FxFloatValueT, GLSLAttribute as FxGLSLAttribute, GLSLAttributeT as FxGLSLAttributeT, IntValue as FxIntValue, IntValueT as FxIntValueT, MatBundle as FxMatBundle, MatBundleT as FxMatBundleT, MatRenderPass as FxMatRenderPass, MatRenderPassT as FxMatRenderPassT, MeshValue as FxMeshValue, MeshValueT as FxMeshValueT, PartBundle as FxPartBundle, PartBundleT as FxPartBundleT, PartRenderPass as FxPartRenderPass, PartRenderPassT as FxPartRenderPassT, Pass11BytecodeBundle as FxPass11BytecodeBundle, Pass11BytecodeBundleT as FxPass11BytecodeBundleT, Preset as FxPreset, PresetEntry as FxPresetEntry, PresetEntryT as FxPresetEntryT, PresetT as FxPresetT, PropertyValue as FxPropertyValue, RenderState as FxRenderState, RenderStateT as FxRenderStateT, RoutineBundle as FxRoutineBundle, RoutineBytecodeBundle as FxRoutineBytecodeBundle, RoutineBytecodeBundleResources as FxRoutineBytecodeBundleResources, RoutineBytecodeBundleResourcesT as FxRoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT as FxRoutineBytecodeBundleT, RoutineGLSLSourceBundle as FxRoutineGLSLSourceBundle, RoutineGLSLSourceBundleT as FxRoutineGLSLSourceBundleT, RoutineHLSLSourceBundle as FxRoutineHLSLSourceBundle, RoutineHLSLSourceBundleT as FxRoutineHLSLSourceBundleT, RoutineShaderBundle as FxRoutineShaderBundle, RoutineShaderBundleT as FxRoutineShaderBundleT, RoutineSourceBundle as FxRoutineSourceBundle, StringValue as FxStringValue, StringValueT as FxStringValueT, TextureBundle as FxTextureBundle, TextureBundleT as FxTextureBundleT, TextureValue as FxTextureValue, TextureValueT as FxTextureValueT, TrimeshBundle as FxTrimeshBundle, TrimeshBundleT as FxTrimeshBundleT, TypeField as FxTypeField, TypeFieldT as FxTypeFieldT, TypeLayout as FxTypeLayout, TypeLayoutT as FxTypeLayoutT, UAVBundle as FxUAVBundle, UAVBundleT as FxUAVBundleT, UIControl as FxUIControl, UIControlT as FxUIControlT, UintValue as FxUintValue, UintValueT as FxUintValueT, ViewTypeProperty as FxViewTypeProperty, ViewTypePropertyT as FxViewTypePropertyT} from  './FxBundle_generated';
 
 
 export enum RoutineBundle{
@@ -1728,6 +1728,96 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   FxRoutineBytecodeBundle.addNumthreads(builder, numthreads);
 
   return FxRoutineBytecodeBundle.endRoutineBytecodeBundle(builder);
+}
+}
+export class Pass11BytecodeBundle {
+  bb: flatbuffers.ByteBuffer|null = null;
+  bb_pos = 0;
+__init(i:number, bb:flatbuffers.ByteBuffer):Pass11BytecodeBundle {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+}
+
+static getRootAsPass11BytecodeBundle(bb:flatbuffers.ByteBuffer, obj?:Pass11BytecodeBundle):Pass11BytecodeBundle {
+  return (obj || new Pass11BytecodeBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+static getSizePrefixedRootAsPass11BytecodeBundle(bb:flatbuffers.ByteBuffer, obj?:Pass11BytecodeBundle):Pass11BytecodeBundle {
+  bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+  return (obj || new Pass11BytecodeBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+}
+
+code(index: number):number|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : 0;
+}
+
+codeLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+codeArray():Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
+}
+
+static startPass11BytecodeBundle(builder:flatbuffers.Builder) {
+  builder.startObject(1);
+}
+
+static addCode(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(0, codeOffset, 0);
+}
+
+static createCodeVector(builder:flatbuffers.Builder, data:number[]|Uint8Array):flatbuffers.Offset {
+  builder.startVector(1, data.length, 1);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addInt8(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startCodeVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(1, numElems, 1);
+}
+
+static endPass11BytecodeBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+  const offset = builder.endObject();
+  return offset;
+}
+
+static createPass11BytecodeBundle(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset):flatbuffers.Offset {
+  Pass11BytecodeBundle.startPass11BytecodeBundle(builder);
+  Pass11BytecodeBundle.addCode(builder, codeOffset);
+  return Pass11BytecodeBundle.endPass11BytecodeBundle(builder);
+}
+
+unpack(): Pass11BytecodeBundleT {
+  return new Pass11BytecodeBundleT(
+    this.bb!.createScalarList(this.code.bind(this), this.codeLength())
+  );
+}
+
+
+unpackTo(_o: Pass11BytecodeBundleT): void {
+  _o.code = this.bb!.createScalarList(this.code.bind(this), this.codeLength());
+}
+}
+
+export class Pass11BytecodeBundleT {
+constructor(
+  public code: (number)[] = []
+){}
+
+
+pack(builder:flatbuffers.Builder): flatbuffers.Offset {
+  const code = FxPass11BytecodeBundle.createCodeVector(builder, this.code);
+
+  return FxPass11BytecodeBundle.createPass11BytecodeBundle(builder,
+    code
+  );
 }
 }
 export class RoutineGLSLSourceBundle {

@@ -681,14 +681,14 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
     protected emitDrawStmt(ctx: ContextT, { name, args }: IDrawStmtInstruction) {
         const fx = <IPartFxInstruction>ctx.tech();//<IPartFxInstruction>pass.parent;
-        const pass = fx.passList.find(pass => pass.name == name);
+        const pass = fx.passes.find(pass => pass.name == name);
 
         if (!pass) {
             console.warn(`pass<${name}> for draw operator has not been found.`);
             return;
         }
 
-        const i = fx.passList.indexOf(pass);
+        const i = fx.passes.indexOf(pass);
 
         if (!ctx.has(name)) {
             ctx.add(name);
@@ -1509,7 +1509,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         this.emitInitShader(ctx);
 
-        const passes = fx.passList.map((pass, i): IPartFxPassReflection => {
+        const passes = fx.passes.map((pass, i): IPartFxPassReflection => {
             const { prerenderRoutine, vertexShader: vs, pixelShader: ps, drawMode } = pass;
             let { sorting, geometry, instanceCount } = pass;
             let VSParticleShader: string = null;
@@ -1582,7 +1582,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         const { name } = tech;
 
-        tech.passList.forEach((pass, i) => {
+        tech.passes.forEach((pass, i) => {
             const { vertexShader: vs, pixelShader: ps } = pass;
             if (vs) {
                 this.emitFunction(ctx, vs);
@@ -1592,7 +1592,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             }
         });
 
-        const passes = tech.passList.map((pass, i): IPassReflection => {
+        const passes = tech.passes.map((pass, i): IPassReflection => {
             const { vertexShader, pixelShader } = pass;
 
             let VSParticleShader: string = null;

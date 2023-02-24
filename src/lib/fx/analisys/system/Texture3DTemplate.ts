@@ -56,8 +56,8 @@ class Texture3DTemplate extends TypeTemplate {
 
             let returnType = new VariableTypeInstruction({ type, scope });
             let id = new IdInstruction({ scope, name: 'Sample' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: true, vertex: true });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
             methods.push(func);
         }
 

@@ -38,8 +38,8 @@ class AppendStructuredBufferTemplate extends TypeTemplate {
 
             const returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
             const id = new IdInstruction({ scope, name: 'Append' });
-            const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-            const func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            const func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
             methods.push(func);
         }
 

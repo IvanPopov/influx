@@ -76,8 +76,8 @@ export const sourceCode = {
     //
     //
 
-    compile(expression: string) {
-        return { type: evt.DEBUGGER_COMPILE, payload: { expression } };
+    compile(query: string, type: 'expression' | 'pass' = 'expression') {
+        return { type: evt.DEBUGGER_COMPILE, payload: { query, type } };
     },
 
     specifyOptions(options: MakeOptional<IDebuggerState['options']>) {

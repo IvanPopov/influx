@@ -42,7 +42,7 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
-import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Label, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 import { packGraphToJSON } from '@sandbox/logic/nodesEx';
 
 type UnknownIcon = any;
@@ -368,6 +368,7 @@ class App extends React.Component<IAppProps> {
         showFileBrowser: boolean;
         testProcessing: boolean;
         depotFilter: string;
+        bytecodeDebuggerType: 'expression' | 'pass'
     };
 
     private expressionRef = React.createRef<Input>();
@@ -378,7 +379,8 @@ class App extends React.Component<IAppProps> {
             showFileBrowser: false,
             testProcessing: false,
             confirmDialog: { open: false, title: null, message: null, onAccept: null, onReject: null },
-            depotFilter: ''
+            depotFilter: '',
+            bytecodeDebuggerType: 'expression'
         };
     }
 
@@ -470,10 +472,9 @@ class App extends React.Component<IAppProps> {
     @autobind
     compile() {
         const { state, props, expressionRef } = this;
-
         // fixme: kinda hack!
         const input: HTMLInputElement = (expressionRef.current as any).inputRef.current;
-        props.actions.compile(input.value || null);
+        props.actions.compile(input.value || null, state.bytecodeDebuggerType);
     }
 
 
@@ -769,10 +770,10 @@ class App extends React.Component<IAppProps> {
         const basepath = `/playground/${encodeURIComponent(file.uri)}`;
         for (const fx of list) {
             links.push(`${fx.name}`);
-            links.push(...fx.passList
+            links.push(...fx.passes
                 .filter(pass => !!pass.vertexShader)
                 .map((pass, i) => `${fx.name}/${pass.name || i}/VertexShader`));
-            links.push(...fx.passList
+            links.push(...fx.passes
                 .filter(pass => !!pass.pixelShader)
                 .map((pass, i) => `${fx.name}/${pass.name || i}/PixelShader`));
         }
@@ -887,9 +888,30 @@ class App extends React.Component<IAppProps> {
                                             <Input
                                                 fluid
                                                 size='small'
-                                                label='expression'
-                                                placeholder={`${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`}
+                                                placeholder={
+                                                    (
+                                                        this.state.bytecodeDebuggerType === 'expression'
+                                                            ? `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`
+                                                            : `technique11::pass`
+                                                    )
+                                                }
+                                                value={$debugger.query}
                                                 ref={this.expressionRef}
+                                                label={
+                                                    <Dropdown defaultValue='expression'
+                                                        onChange={
+                                                            (e, data) => {
+                                                                this.setState({ bytecodeDebuggerType: data.value })
+                                                            }
+                                                        }
+                                                        options={
+                                                            [
+                                                                { key: 'expression', text: 'expression', value: 'expression' },
+                                                                { key: 'pass', text: 'pass', value: 'pass' }
+                                                            ]
+                                                        }
+                                                    />
+                                                }
                                             />
                                         </Table.Cell>
                                         <Table.Cell >
@@ -1094,8 +1116,8 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={`/${props.match.params.view}/:fx/${GRAPH_KEYWORD}`}>
                                             <GraphView
                                                 graph={props.nodes.graph}
-                                                onChange={ () => this.props.actions.changed() }
-                                                onExecute={ () => this.props.actions.recompile() } />
+                                                onChange={() => this.props.actions.changed()}
+                                                onExecute={() => this.props.actions.recompile()} />
                                         </Route>
                                         <Route exact path={`/${props.match.params.view}/:fx/${CODE_KEYWORD}`}>
                                             {props.match.params.fx && props.match.params.name === CODE_KEYWORD &&
@@ -1130,8 +1152,8 @@ class App extends React.Component<IAppProps> {
                                         <Route exact path={`/${GRAPH_VIEW}/:fx`}>
                                             <GraphView
                                                 graph={props.nodes.graph}
-                                                onChange={ () => this.props.actions.changed() }
-                                                onExecute={ () => this.props.actions.recompile() } />
+                                                onChange={() => this.props.actions.changed()}
+                                                onExecute={() => this.props.actions.recompile()} />
                                         </Route>
                                     </Switch>
                                 </Grid.Column>
@@ -1172,7 +1194,7 @@ class App extends React.Component<IAppProps> {
                 ),
                 render: () => (
                     <Tab.Pane key='system-scope' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
-                        <CodeView content={ ScopeUtils.debugPrint() } />
+                        <CodeView content={ScopeUtils.debugPrint()} />
                     </Tab.Pane>
                 )
             },

@@ -2,26 +2,31 @@ import { assert, isDef, isDefAndNotNull, isNull } from "@lib/common";
 import { expression, instruction, types, variable } from "@lib/fx/analisys/helpers";
 import { DeclStmtInstruction } from "@lib/fx/analisys/instructions/DeclStmtInstruction";
 import { ReturnStmtInstruction } from "@lib/fx/analisys/instructions/ReturnStmtInstruction";
+import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { T_BOOL, T_FLOAT, T_INT, T_UINT } from "@lib/fx/analisys/SystemScope";
 import { createFXSLDocument } from "@lib/fx/FXSLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import {
+    EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction,
+    IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction,
+    IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction,
+    IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction,
+    IPostfixPointInstruction, IRelationalExprInstruction, IStmtBlockInstruction, IUnaryExprInstruction, IVariableDeclInstruction
+} from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
-import { EVariableUsageFlags } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 
+import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
+import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
+import { IFile } from "@lib/idl/parser/IParser";
 import { i32ToU8Array } from "./common";
-import { ContextBuilder, EErrors, IContext, TranslatorDiagnostics } from "./Context";
+import { ContextBuilder, EErrors, IContext } from "./Context";
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
-import { IFile } from "@lib/idl/parser/IParser";
-import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
-import { TypeFieldT, TypeLayout, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
-import { Console } from "console";
 
 // [00 - 01) cbs
 // [01 - 17) inputs
@@ -208,7 +213,6 @@ function binary(ctx: IContext): Uint8Array {
     });
     return data;
 }
-
 
 
 function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
@@ -1914,9 +1918,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                 {
                     let func = instr as IFunctionDeclInstruction;
 
-                    // resolve function's implementation
-                    func = func.scope.findFunctionInScope(func);
-
+                    if (!func.impl) {
+                        // resolve function's implementation
+                        func = func.scope.findFunctionInScope(func);
+                    }
+                    
                     let def = func.def; // todo: handle all arguments!!
                     let impl = func.impl;
                     translate(impl);
@@ -1991,18 +1997,37 @@ const hex4 = (v: number) => `0x${v.toString(16).padStart(4, '0')}`;
 // const addr = (v: number) => `%${hex4(v >>> 0)}%`;                   // global memory address;
 
 /// <reference path="./webpack.d.ts" />
-export function translate(slDocument: ISLDocument, entryName: string): IBCDocument {
-    const uri = slDocument.uri;
+export function translate(fn: IFunctionDeclInstruction): IBCDocument;
+export function translate(slDocument: ISLDocument, entryName: string): IBCDocument;
+export function translate(a, b?): IBCDocument {
+    let uri: IFile;
+    let entryFunc: IFunctionDeclInstruction;
+
+    switch(arguments.length) {
+        case 2:
+            {
+                let [ slDocument, entryName ] = arguments;
+                entryFunc = slDocument.root.scope.findFunction(entryName, null);
+                uri = slDocument.uri;
+            }
+            break;
+        case 1:
+            {
+                [ entryFunc ] = arguments;
+                assert(entryFunc);
+                uri = entryFunc.sourceNode?.loc?.start.file;
+            }
+            break;
+        default:
+            assert(false);
+    }
+
     const ctx = ContextBuilder(uri);
-
     let program: ISubProgram = null;
-
     if (!PRODUCTION) {
         console.time('[translate program]');
     }
-
     try {
-        const entryFunc = slDocument.root.scope.findFunction(entryName, null);
         if (!isDefAndNotNull(entryFunc)) {
             ctx.critical(entryFunc.sourceNode, EErrors.k_EntryPointNotFound, {});
         }
@@ -2012,16 +2037,13 @@ export function translate(slDocument: ISLDocument, entryName: string): IBCDocume
             throw e;
         }
     }
-
     if (!PRODUCTION) {
         console.timeEnd('[translate program]');
         // console.log(`${entryFunc.def.name} translated as ${res.code.byteLength} bytes`);
     }
-
     const diagnosticReport = ctx.diag.resolve();
     return { uri, diagnosticReport, program };
 }
-
 
 export async function translateExpression(expr: string, context?: ISLDocument): Promise<IBCDocument> {
     const uri = `://expression`;

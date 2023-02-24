@@ -27,7 +27,7 @@ export interface IPartFxPassInstruction extends IPassInstruction {
     readonly particle: ITypeInstruction;
     readonly capacity: number;
 
-    readonly passList: IPartFxPassInstruction[];
+    readonly passes: IPartFxPassInstruction[];
  }
 
 

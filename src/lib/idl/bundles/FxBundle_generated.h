@@ -63,6 +63,10 @@ struct RoutineBytecodeBundle;
 struct RoutineBytecodeBundleBuilder;
 struct RoutineBytecodeBundleT;
 
+struct Pass11BytecodeBundle;
+struct Pass11BytecodeBundleBuilder;
+struct Pass11BytecodeBundleT;
+
 struct RoutineGLSLSourceBundle;
 struct RoutineGLSLSourceBundleBuilder;
 struct RoutineGLSLSourceBundleT;
@@ -2441,6 +2445,68 @@ inline flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundleDir
 
 flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundle(flatbuffers::FlatBufferBuilder &_fbb, const RoutineBytecodeBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+struct Pass11BytecodeBundleT : public flatbuffers::NativeTable {
+  typedef Pass11BytecodeBundle TableType;
+  std::vector<uint8_t> code{};
+};
+
+struct Pass11BytecodeBundle FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef Pass11BytecodeBundleT NativeTableType;
+  typedef Pass11BytecodeBundleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CODE = 4
+  };
+  const flatbuffers::Vector<uint8_t> *code() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_CODE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_CODE) &&
+           verifier.VerifyVector(code()) &&
+           verifier.EndTable();
+  }
+  Pass11BytecodeBundleT *UnPack(const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(Pass11BytecodeBundleT *_o, const flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static flatbuffers::Offset<Pass11BytecodeBundle> Pack(flatbuffers::FlatBufferBuilder &_fbb, const Pass11BytecodeBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+};
+
+struct Pass11BytecodeBundleBuilder {
+  typedef Pass11BytecodeBundle Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_code(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> code) {
+    fbb_.AddOffset(Pass11BytecodeBundle::VT_CODE, code);
+  }
+  explicit Pass11BytecodeBundleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<Pass11BytecodeBundle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Pass11BytecodeBundle>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Pass11BytecodeBundle> CreatePass11BytecodeBundle(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> code = 0) {
+  Pass11BytecodeBundleBuilder builder_(_fbb);
+  builder_.add_code(code);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<Pass11BytecodeBundle> CreatePass11BytecodeBundleDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *code = nullptr) {
+  auto code__ = code ? _fbb.CreateVector<uint8_t>(*code) : 0;
+  return Fx::CreatePass11BytecodeBundle(
+      _fbb,
+      code__);
+}
+
+flatbuffers::Offset<Pass11BytecodeBundle> CreatePass11BytecodeBundle(flatbuffers::FlatBufferBuilder &_fbb, const Pass11BytecodeBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
 struct RoutineGLSLSourceBundleT : public flatbuffers::NativeTable {
   typedef RoutineGLSLSourceBundle TableType;
   std::string code{};
@@ -4761,6 +4827,32 @@ inline flatbuffers::Offset<RoutineBytecodeBundle> CreateRoutineBytecodeBundle(fl
       _code,
       _resources,
       _numthreads);
+}
+
+inline Pass11BytecodeBundleT *Pass11BytecodeBundle::UnPack(const flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<Pass11BytecodeBundleT>(new Pass11BytecodeBundleT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void Pass11BytecodeBundle::UnPackTo(Pass11BytecodeBundleT *_o, const flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = code(); if (_e) { _o->code.resize(_e->size()); std::copy(_e->begin(), _e->end(), _o->code.begin()); } }
+}
+
+inline flatbuffers::Offset<Pass11BytecodeBundle> Pass11BytecodeBundle::Pack(flatbuffers::FlatBufferBuilder &_fbb, const Pass11BytecodeBundleT* _o, const flatbuffers::rehasher_function_t *_rehasher) {
+  return CreatePass11BytecodeBundle(_fbb, _o, _rehasher);
+}
+
+inline flatbuffers::Offset<Pass11BytecodeBundle> CreatePass11BytecodeBundle(flatbuffers::FlatBufferBuilder &_fbb, const Pass11BytecodeBundleT *_o, const flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const Pass11BytecodeBundleT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _code = _o->code.size() ? _fbb.CreateVector(_o->code) : 0;
+  return Fx::CreatePass11BytecodeBundle(
+      _fbb,
+      _code);
 }
 
 inline RoutineGLSLSourceBundleT::RoutineGLSLSourceBundleT(const RoutineGLSLSourceBundleT &o)

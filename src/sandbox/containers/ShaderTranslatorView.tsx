@@ -103,7 +103,7 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         // TODO: sync translation with Bundle generation (!)
 
         if (match.params.pass) {
-            const pass = fx.passList.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
+            const pass = fx.passes.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
                 ? i === Number(match.params.pass)
                 : instr.name === match.params.pass);
 

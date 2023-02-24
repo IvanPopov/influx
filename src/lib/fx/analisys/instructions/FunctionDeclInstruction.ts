@@ -4,8 +4,8 @@ import { DeclInstruction, IDeclInstructionSettings } from "./DeclInstruction";
 import { Instruction } from "./Instruction";
 
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {
-    definition: IFunctionDefInstruction;
-    implementation?: IStmtBlockInstruction;
+    def: IFunctionDefInstruction;
+    impl?: IStmtBlockInstruction;
     attributes?: IAttributeInstruction[];
 }
 
@@ -20,11 +20,11 @@ export class FunctionDeclInstruction extends DeclInstruction implements IFunctio
     readonly attributes: IAttributeInstruction[];
     
 
-    constructor({ definition, implementation = null, attributes = null, ...settings }: IFunctionDeclInstructionSettings) {
+    constructor({ def, impl = null, attributes = null, ...settings }: IFunctionDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDecl, ...settings });
 
-        this.def = Instruction.$withParent(definition, this);
-        this.impl = Instruction.$withParent(implementation, this);
+        this.def = Instruction.$withParent(def, this);
+        this.impl = Instruction.$withParent(impl, this);
         this.attributes = (attributes || []).map(attr => Instruction.$withParent(attr, this));
     }
 

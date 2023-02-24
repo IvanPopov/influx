@@ -27,16 +27,16 @@ class RWStructuredBufferTemplate extends TypeTemplate {
         {
             let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
             let id = new IdInstruction({ scope, name: 'IncrementCounter' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            let def = new FunctionDefInstruction({ scope, returnType, id });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
             methods.push(func);
         }
 
         {
             let returnType = new VariableTypeInstruction({ type: scope.findType("uint"), scope });
             let id = new IdInstruction({ scope, name: 'DecrementCounter' });
-            let definition = new FunctionDefInstruction({ scope, returnType, id });
-            let func = new SystemFunctionInstruction({ scope, definition, pixel: false, vertex: false });
+            let def = new FunctionDefInstruction({ scope, returnType, id });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
             methods.push(func);
         }
 

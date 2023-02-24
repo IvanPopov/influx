@@ -468,7 +468,7 @@ export class FxAnalyzer extends Analyzer {
 
 
     protected analyzePartFXBody(context: FxContext, program: ProgramScope, sourceNode: IParseNode): IPartFxProperties {
-        let passList: IPartFxPassInstruction[] = [];
+        let passes: IPartFxPassInstruction[] = [];
         let spawnRoutine: ICompileExprInstruction = null;
         let initRoutine: ICompileExprInstruction = null;
         let updateRoutine: ICompileExprInstruction = null;
@@ -657,7 +657,7 @@ export class FxAnalyzer extends Analyzer {
                         }
 
                         assert(!isNull(pass));
-                        passList.push(pass);
+                        passes.push(pass);
                     }
                     break;
             }
@@ -665,7 +665,7 @@ export class FxAnalyzer extends Analyzer {
 
 
 
-        return { passList, spawnRoutine, initRoutine, updateRoutine, particle, capacity, presets };
+        return { passes, spawnRoutine, initRoutine, updateRoutine, particle, capacity, presets };
     }
 
     /**
@@ -712,7 +712,7 @@ export class FxAnalyzer extends Analyzer {
 
         for (const stmt of context.drawStmts) {
             const { instr, ctx } = stmt;
-            const pass = props.passList.find(pass => pass.id.name == instr.name);
+            const pass = props.passes.find(pass => pass.id.name == instr.name);
             if (!pass) {
                 // emit warning not an error
                 // because in some cases it may be useful to have several effects with

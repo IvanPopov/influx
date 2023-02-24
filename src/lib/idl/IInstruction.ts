@@ -60,7 +60,6 @@ export enum EInstructionTypes {
     k_FunctionDef,
     /** @deprecated */
     k_PassDecl,
-    k_Pass11Decl,
     /** @deprecated */
     k_TechniqueDecl,
     k_Technique11Decl,
@@ -177,6 +176,7 @@ export interface IScope {
     findType(typeName: string): ITypeInstruction;
     findTypeTemplate(typeName: string): ITypeTemplate;
     findFunction(funcName: string, args: Array<ITypeInstruction | RegExp>): IFunctionDeclInstruction | null | undefined;
+    /** @deprecated */
     findTechnique(techName: string): ITechniqueInstruction | null;
     findTechnique11(techName: string): ITechnique11Instruction | null;
     findCbuffer(cbufName: string): ICbufferInstruction | null;
@@ -190,6 +190,7 @@ export interface IScope {
     addTypeAlias(type: ITypeInstruction, aliasName: string): boolean;
     addTypeTemplate(template: ITypeTemplate): boolean;
     addFunction(func: IFunctionDeclInstruction): boolean;
+    /** @deprecated */
     addTechnique(technique: ITechniqueInstruction): boolean;
     addTechnique11(technique: ITechnique11Instruction): boolean;
     addCbuffer(cbuf: ICbufferInstruction): boolean;
@@ -620,6 +621,7 @@ export interface IExprStmtInstruction extends IStmtInstruction {
     expr: IExprInstruction;
 }
 
+export type IPass11Instruction = IFunctionDeclInstruction;
 
 /** @deprecated */
 export interface IPassInstruction extends IDeclInstruction {
@@ -633,12 +635,6 @@ export interface IPassInstruction extends IDeclInstruction {
 
     /** check if the pass is ready for runtime */
     isValid(): boolean;
-}
-
-
-export interface IPass11Instruction extends IDeclInstruction {
-    readonly id: IIdInstruction;
-    readonly impl: IStmtBlockInstruction;
 }
 
 
@@ -678,7 +674,7 @@ export interface IPresetPropertyInstruction extends IInstruction{
 //
 
 export interface ITechniqueInstruction extends IDeclInstruction {
-    readonly passList: IPassInstruction[];
+    readonly passes: IPassInstruction[];
     readonly type: ETechniqueType;
 
     /** check if the technique is ready for runtime */
@@ -692,7 +688,7 @@ export interface ITechniqueInstruction extends IDeclInstruction {
 
 
 export interface ITechnique11Instruction extends IDeclInstruction {
-    readonly passList: IPass11Instruction[];
+    readonly passes: IPass11Instruction[];
 
     /** check if the technique is ready for runtime */
     isValid(): boolean;

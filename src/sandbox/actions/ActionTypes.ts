@@ -54,10 +54,10 @@ export type ISourceFileActions =
 // debugger api
 //
 
-export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { expression: string }>;
+export type IDebuggerCompile = IAction<typeof evt.DEBUGGER_COMPILE, { query: string, type: 'expression' | 'pass' }>;
 export type IDebuggerReset = IAction<typeof evt.DEBUGGER_RESET, {}>;
 // tslint:disable-next-line:max-line-length
-export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { expression: string; bcDocument: IBCDocument; }>;
+export type IDebuggerStartDebug = IAction<typeof evt.DEBUGGER_START_DEBUG, { query: string; bcDocument: IBCDocument; }>;
 export type IDebuggerOptionsChanged = IAction<typeof evt.DEBUGGER_OPTIONS_CHANGED, { options: MakeOptional<IDebuggerState['options']> }>;
 
 export type IDebuggerActions = IDebuggerCompile | IDebuggerReset | IDebuggerStartDebug | IDebuggerOptionsChanged;

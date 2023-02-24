@@ -8,11 +8,20 @@ import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, types } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileShader11Instruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPass11Instruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import {
+    EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction,
+    IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileShader11Instruction,
+    IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction,
+    IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction,
+    IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction,
+    IPass11Instruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction,
+    IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction,
+    IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction,
+    IVariableDeclInstruction, IVariableTypeInstruction
+} from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
-import { isDef } from '@lib/util/s3d/type';
 import { mapProps } from '@sandbox/reducers';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
@@ -495,7 +504,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='name' value={ instr.name } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='passes'>
-                    { instr.passList?.map((pass) => this.Pass(pass)) }
+                    { instr.passes?.map((pass) => this.Pass(pass)) }
                 </PropertyOpt>
             </Property>
         );
@@ -508,7 +517,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 <Property name='name' value={ instr.name } />
                 <PropertyOpt name='semantic' value={ instr.semantic } />
                 <PropertyOpt name='passes'>
-                    { instr.passList?.map((pass) => this.Pass11(pass)) }
+                    { instr.passes?.map((pass) => this.Pass11(pass)) }
                 </PropertyOpt>
             </Property>
         );

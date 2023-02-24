@@ -1,6 +1,6 @@
 /* tslint:disable:typedef */
 
-import { isDef, isNull, verbose } from '@lib/common';
+import { isDef, isDefAndNotNull, isNull, verbose } from '@lib/common';
 import * as Bytecode from '@lib/fx/bytecode';
 import { cdlview } from '@lib/fx/bytecode/DebugLayout';
 import * as VM from '@lib/fx/bytecode/VM';
@@ -22,6 +22,8 @@ import { createLogic } from 'redux-logic';
 import { LOCAL_SESSION_ID, LOCATION_PATTERN, PATH_PARAMS_TYPE, RAW_KEYWORD } from './common';
 import * as Depot from '@sandbox/reducers/depot';
 import { Diagnostics } from '@lib/util/Diagnostics';
+import { IFunctionDeclInstruction } from '@lib/idl/IInstruction';
+import { IBCDocument } from '@lib/fx/bytecode/Bytecode';
 
 // IP: proposal for future switching to async parsing
 
@@ -244,7 +246,7 @@ const parsingCompleteLogic = createLogic<IStoreState>({
 
 
 function buildDebuggerSourceColorization(debuggerState: IDebuggerState, fileState: IFileState) {
-    // const fn = fileState.slDocument.root.scope.findFunction(debuggerState.expression, null);
+    // const fn = fileState.slDocument.root.scope.findFunction(debuggerState.query, null);
     const locList = [];
 
     if (debuggerState.bcDocument?.program) {
@@ -276,29 +278,44 @@ const debuggerCompileLogic = createLogic<IStoreState, IDebuggerCompile['payload'
     async process({ getState, action }, dispatch, done) {
         const file = getFileState(getState());
         const debuggerState = getDebugger(getState());
-        const expression = (action.payload && action.payload.expression) || debuggerState.expression || `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`;
+        const type = action?.payload?.type || 'expression';
 
+        let query = action?.payload?.query || debuggerState.query;
 
         if (!isNull(file.slDocument)) {
-            const func = file.slDocument.root.scope.findFunction(expression, null);
-            // workaround for debug purposes (interpretations of the expressions string as function name)
-            if (func) {
-                const bcDocument = Bytecode.translate(file.slDocument, func.name);
-                if (bcDocument.diagnosticReport.errors == 0) {
-                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, bcDocument } });
-                } else {
-                    console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
-                    alert('could not evaluate expression, see console log for details');
-                }
-            } else {
-                const bcDocument = await Bytecode.translateExpression(expression, file.slDocument);
-                if (bcDocument.diagnosticReport.errors == 0) {
-                    dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { expression, bcDocument } });
-                } else {
-                    console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
-                    alert('could not evaluate expression, see console log for details');
-                }
+            const scope = file.slDocument.root.scope;
+
+            let func: IFunctionDeclInstruction = null;
+            if (type === 'expression') {
+                query ||= `${Bytecode.DEFAULT_ENTRY_POINT_NAME}()`;
+                func = scope.findFunction(query, null);
             }
+
+            if (type === 'pass') {
+                if (!query) {
+                    const tech = Object.values(scope.techniques11).find(tech => tech.passes.length > 0);
+                    const pass = tech?.passes[0];
+                    query = `${tech?.name}::${pass?.name}`
+                }
+
+                const [ , techName, passName, ] = query.match(/([\w\.]+)::([\w]+)/);
+                func = scope.findTechnique11(techName).passes.find(p => p.name === passName);
+            }
+
+            // workaround for debug purposes (interpretations of the expressions string as function name)
+            let bcDocument: IBCDocument = null;
+            if (func) {
+                bcDocument = Bytecode.translate(func);
+            } else {
+                bcDocument = await Bytecode.translateExpression(query, file.slDocument);
+            }
+
+            if (bcDocument.diagnosticReport.errors > 0) {
+                console.error(Diagnostics.stringify(bcDocument.diagnosticReport));
+                alert(`could not evaluate query '${query}', see console log for details`);
+            } 
+            
+            dispatch({ type: evt.DEBUGGER_START_DEBUG, payload: { query, bcDocument } });
         } else {
             console.error('invalid compile request!');
         }

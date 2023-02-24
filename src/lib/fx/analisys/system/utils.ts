@@ -185,8 +185,8 @@ function generateSystemFunctionInstance(scope: IScope, retType: ITypeDesc, name:
     const pixel = !!(usage & USAGE_PS);
     const vertex = !!(usage & USAGE_VS);
     const id = new IdInstruction({ scope, name });
-    const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-    const func = new SystemFunctionInstruction({ scope, definition, pixel, vertex });
+    const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+    const func = new SystemFunctionInstruction({ scope, def, pixel, vertex });
 
     scope.addFunction(func);
 }

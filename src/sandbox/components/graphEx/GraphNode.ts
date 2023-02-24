@@ -167,8 +167,8 @@ export const AST = <T extends Context>(context: T, program: ProgramScope) => ({
 
         const returnType = VariableTypeInstruction.wrap(scope.findType(typeName), SystemScope.SCOPE);
         const id = ast.id(funcName)
-        const definition = new FunctionDefInstruction({ scope, returnType, id, paramList });
-        context.funcDef = definition;
+        const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+        context.funcDef = def;
 
         const stmtList = [...content()];
 
@@ -191,11 +191,11 @@ export const AST = <T extends Context>(context: T, program: ProgramScope) => ({
             stmtList.push(ast.return(returnExpr));
         }
 
-        const implementation = new StmtBlockInstruction({ scope, stmtList });
+        const impl = new StmtBlockInstruction({ scope, stmtList });
 
         program.pop();
 
-        let func = new FunctionDeclInstruction({ scope, definition, implementation });
+        let func = new FunctionDeclInstruction({ scope, def, impl });
         globalScope.addFunction(func);
 
         return func;
