@@ -112,6 +112,8 @@ export const language = <ILanguage>{
         'SamplerState',
         'SamplerComparisonState',
         'DepthStencilState',
+        'BlendState',
+        'RasterizerState',
         'static',
         'string',
         'struct',

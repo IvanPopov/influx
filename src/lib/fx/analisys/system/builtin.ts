@@ -67,6 +67,7 @@ typedef struct D3D11_DEPTH_STENCIL_DESC {
   D3D11_DEPTH_STENCILOP_DESC BackFace;
 } D3D11_DEPTH_STENCIL_DESC;
 */
+/*
 function addDepthStencilState(scope: IScope) {
     const name = 'DepthStencilState';
     const size = 0;
@@ -84,14 +85,15 @@ function addDepthStencilState(scope: IScope) {
     const type = new SystemTypeInstruction({ scope, name, fields, size });
     scope.addType(type);
 }
-
+*/
 export function addSystemTypeBuiltin(scope: IScope) {
     generateSystemType(scope, "SamplerState");
     generateSystemType(scope, "SamplerComparisonState");
-    // generateSystemType(scope, "DepthStencilState");
+    generateSystemType(scope, "DepthStencilState");
     generateSystemType(scope, "BlendState");
+    generateSystemType(scope, "RasterizerState");
 
-    addDepthStencilState(scope);
+    // addDepthStencilState(scope);
 
     defineTypeAlias(scope, "int", "VertexShader");
     defineTypeAlias(scope, "int", "PixelShader");

@@ -1,7 +1,6 @@
 import { EInstructionTypes, ICompileExprInstruction, IExprInstruction, IFunctionDeclInstruction } from "@lib/idl/IInstruction";
 
 import { ExprInstruction, IExprInstructionSettings } from "./ExprInstruction";
-import { Instruction } from "./Instruction";
 
 export interface ICompileExprInstructionSettings extends IExprInstructionSettings {
     operand: IFunctionDeclInstruction;
@@ -9,9 +8,10 @@ export interface ICompileExprInstructionSettings extends IExprInstructionSetting
 }
 
 /**
-  * Represetn compile vs_func(...args)
-  * compile IdExprInstruction ExprInstruction ... ExprInstruction
-  */
+ * Represents compile vs_func(...args)
+ * compile IdExprInstruction ExprInstruction ... ExprInstruction
+ */
+/** @deprecated */
 export class CompileExprInstruction extends ExprInstruction implements ICompileExprInstruction {
     protected _operand: IFunctionDeclInstruction;
     protected _args: IExprInstruction[];

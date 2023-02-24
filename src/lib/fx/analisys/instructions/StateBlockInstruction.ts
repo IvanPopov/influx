@@ -10,15 +10,18 @@ import { Instruction } from "./Instruction";
  */
 
 export interface IInitExprInstructionSettings extends IExprInstructionSettings {
-    props: Object;
+    props?: Object;
+    blocks?: IStateBlockInstruction[];
 }
 
 export class StateBlockInstruction extends ExprInstruction implements IStateBlockInstruction {
     readonly props: Object;
+    readonly blocks: IStateBlockInstruction[];
 
-    constructor({ type, props = {}, ...settings }: IInitExprInstructionSettings) {
+    constructor({ type, blocks = null, props = null, ...settings }: IInitExprInstructionSettings) {
         super({ instrType: EInstructionTypes.k_StateBlockExpr, type, ...settings });
         this.props = props;
+        this.blocks = blocks;
     }
 
     toCode(): string {

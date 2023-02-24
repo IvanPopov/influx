@@ -14,7 +14,7 @@ import { PartFxPassInstruction } from "./instructions/part/PartFxPassInstruction
 import { SpawnInstruction } from "./instructions/part/SpawnInstruction";
 import { ProgramScope } from "./ProgramScope";
 import * as SystemScope from './SystemScope';
-import { T_BOOL, T_INT, T_UINT, T_VOID } from "./SystemScope";
+import { T_BOOL, T_INT, T_VOID } from "./SystemScope";
 
 type IPartFxPassProperties = PropertiesDiff<IPartFxPassInstruction, IPassInstruction>;
 // type is internal property which is always ETechniqueType.k_PartFx for particle fx's,

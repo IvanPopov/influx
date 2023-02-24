@@ -10,23 +10,25 @@ Decl : TypeDecl
 Decl : VariableDecl
 Decl : VarStructDecl
 Decl : FunctionDecl
-Decl : TechniqueDecl
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    Decl : TechniqueDecl
+#endif
 Decl : Technique11Decl
 Decl : UseDecl
-Decl : ImportDecl
-Decl : ProvideDecl
+#if FX_PART
+    Decl : ImportDecl
+    Decl : ProvideDecl
+#endif
 Decl : CbufferDecl
 Decl : TbufferDecl
 Decl : ERROR
 
 #if FX_PART
-Decl : PartFxDecl
-#endif 
-
-ImportDecl : T_KW_IMPORT String ';'
-
-ProvideDecl : T_KW_PROVIDE ComplexNameOpt ';'
+    Decl : PartFxDecl
+    ImportDecl : T_KW_IMPORT String ';'
+    ProvideDecl : T_KW_PROVIDE ComplexNameOpt ';'
 # ProvideDecl : T_KW_PROVIDE ComplexNameOpt T_KW_AS ComplexNameOpt ';'
+#endif 
 
 UseDecl : T_KW_USE Mode
 Mode : T_KW_STRICT
@@ -99,26 +101,30 @@ ObjectType : T_KW_TEXTURE1D
 ObjectType : T_KW_TEXTURE2D
 ObjectType : T_KW_TEXTURE2D '<' Type '>'
 #if FX_PART
-ObjectType : T_KW_TRIMESH '<' Type '>'
+    ObjectType : T_KW_TRIMESH '<' Type '>'
 #endif
 ObjectType : T_KW_TEXTURE2DARRAY
 ObjectType : T_KW_TEXTURE3D
 ObjectType : T_KW_TEXTURE3D '<' Type '>'
 ObjectType : T_KW_TEXTURECUBE
 ObjectType : T_KW_TEXTURECUBEARRAY
-# ObjectType : T_KW_SAMPLER
-# ObjectType : T_KW_SAMPLER1D
-# ObjectType : T_KW_SAMPLER2D
-# ObjectType : T_KW_SAMPLER3D
-# ObjectType : T_KW_SAMPLERCUBE
-# ObjectType : T_KW_STATEBLOCK
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    # ObjectType : T_KW_SAMPLER
+    # ObjectType : T_KW_SAMPLER1D
+    # ObjectType : T_KW_SAMPLER2D
+    # ObjectType : T_KW_SAMPLER3D
+    # ObjectType : T_KW_SAMPLERCUBE
+    # ObjectType : T_KW_STATEBLOCK
+#endif
 ObjectType : T_KW_SAMPLER_STATE
 ObjectType : T_KW_SAMPLER_COMPARISON_STATE
 ObjectType : T_KW_DEPTH_STENCIL_STATE
-# ObjectType : T_KW_PIXELSHADER
-# ObjectType : T_KW_VERTEXSHADER
-# ObjectType : T_KW_PIXELFRAGMENT
-# ObjectType : T_KW_VERTEXFRAGMENT
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    # ObjectType : T_KW_PIXELSHADER
+    # ObjectType : T_KW_VERTEXSHADER
+    # ObjectType : T_KW_PIXELFRAGMENT
+    # ObjectType : T_KW_VERTEXFRAGMENT
+#endif
 ObjectType : T_KW_RWTEXTURE1D '<' Type '>'
 ObjectType : T_KW_RWTEXTURE2D '<' Type '>'
 ObjectType : T_KW_RWTEXTURE3D '<' Type '>'
@@ -221,9 +227,11 @@ ParamUsage : T_KW_INOUT
 ParamUsage : T_KW_UNIFORM
 ParamUsage : ConstUsage
 
-TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --add
-TechniqueBody : '{' '}'  --add
-TechniqueBody : '{' PassDecls '}'
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    TechniqueDecl : T_KW_TECHNIQUE ComplexNameOpt SemanticsOpt AnnotationOpt TechniqueBody --add
+    TechniqueBody : '{' '}'  --add
+    TechniqueBody : '{' PassDecls '}'
+#endif 
 
 Technique11Decl : T_KW_TECHNIQUE11 ComplexNameOpt SemanticsOpt AnnotationOpt Technique11Body --add
 Technique11Body : '{' '}'  --add
@@ -239,53 +247,54 @@ ComplexName : Id --expose
 ComplexName : ComplexName '.' Id
 
 #if PRESETS_EX
-PresetDecl : T_KW_PRESET Id AnnotationOpt PassStateBlock --add
+    PresetDecl : T_KW_PRESET Id AnnotationOpt PassStateBlock --add
 #endif
 
-PassDecls : PassDecl --expose
-PassDecls : PassDecls PassDecl
-PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --add
-#if PRESETS_EX
-PassDecl : PresetDecl
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    PassDecls : PassDecl --expose
+    PassDecls : PassDecls PassDecl
+    PassDecl : T_KW_PASS IdOpt AnnotationOpt PassStateBlock --add
+    #if PRESETS_EX
+    PassDecl : PresetDecl
+    #endif
+    PassDecl : ';'
 #endif
-PassDecl : ';'
 
 Pass11Decls : Pass11Decl --expose
 Pass11Decls : Pass11Decls Pass11Decl
 Pass11Decl : T_KW_PASS IdOpt AnnotationOpt StmtBlock --add
 Pass11Decl : ';'
 
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    PassStateBlock : '{' '}' --add
+    PassStateBlock : '{' PassStates '}'
+    PassStates : PassState --expose
+    PassStates : PassStates PassState
 
-PassStateBlock : '{' '}' --add
-PassStateBlock : '{' PassStates '}'
-PassStates : PassState --expose
-PassStates : PassStates PassState
-
-PassState : Id StateIndex '=' PassStateExpr ';' --add
+    PassState : Id StateIndex '=' PassStateExpr ';' --add
+#endif
 
 # todo: move all particles declarations to separate grammar!
 #if FX_PART
+    PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --add
 
-PartFxDecl : T_KW_FXPART ComplexNameOpt SemanticsOpt AnnotationOpt PartFxBody --add
+    PartFxBody : '{' '}' 
+    PartFxBody : '{' PartFxProperties '}'
 
-PartFxBody : '{' '}' 
-PartFxBody : '{' PartFxProperties '}'
-
-PartFxProperties : PartFxProperty --expose
-PartFxProperties : PartFxProperties PartFxProperty
-
-PartFxProperty : PassState
-PartFxProperty : PassDecl
-
+    PartFxProperties : PartFxProperty --expose
+    PartFxProperties : PartFxProperties PartFxProperty
+    PartFxProperty : PassState
+    PartFxProperty : PassDecl
 #endif // FX_PART
 
 StateBlock : '{' '}' --add
 StateBlock : '{' States '}'
-
-
+StateBlock : '{' StateBlockItems '}'
+StateBlockItems : StateBlock  --expose
+StateBlockItems : StateBlock ',' StateBlockItems
+State : Id StateIndex '=' StateExpr ';' --add
 States : State --expose
 States : States State
-State : Id StateIndex '=' StateExpr ';' --add
 
 StateIndex :
 StateIndex : '[' Uint ']'
@@ -317,8 +326,8 @@ SimpleStmt : T_KW_CONTINUE ';'
 SimpleStmt : T_KW_CONTINUE ERROR
 
 #if FX_PART
-SimpleStmt : T_KW_SPAWN '(' Expr ')' NonTypeId '(' ArgumentsOpt ')' ';'
-SimpleStmt : T_KW_DRAW NonTypeId '(' ArgumentsOpt ')' ';'
+    SimpleStmt : T_KW_SPAWN '(' Expr ')' NonTypeId '(' ArgumentsOpt ')' ';'
+    SimpleStmt : T_KW_DRAW NonTypeId '(' ArgumentsOpt ')' ';'
 #endif
 
 
@@ -366,10 +375,12 @@ DwordExpr : Dword '|' DwordExpr
 DwordExprSeq : DwordExpr --expose
 DwordExprSeq : DwordExpr ',' DwordExprSeq
 
-PassStateExpr : DwordExpr --add
-PassStateExpr : ComplexExpr
-PassStateExpr : String
-PassStateExpr : '{' DwordExprSeq '}'
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    PassStateExpr : DwordExpr --add
+    PassStateExpr : ComplexExpr
+    PassStateExpr : String
+    PassStateExpr : '{' DwordExprSeq '}'
+#endif
 
 StateExpr : DwordExpr --add
 StateExpr : ComplexExpr
@@ -391,11 +402,17 @@ ComplexExpr : NonTypeId '(' ArgumentsOpt ')'
 ComplexExpr : PostfixPointExpr '(' ArgumentsOpt ')'
 ComplexExpr : ObjectExpr
 
-ObjectExpr : T_KW_COMPILE NonTypeId '(' ArgumentsOpt ')'
-ObjectExpr : T_KW_COMPILE_FRAGMENT Target NonTypeId '(' ArgumentsOpt ')'
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    ObjectExpr : T_KW_COMPILE NonTypeId '(' ArgumentsOpt ')'
+    ObjectExpr : T_KW_COMPILE_FRAGMENT Target NonTypeId '(' ArgumentsOpt ')'
+#endif
 
-# ObjectExpr : T_KW_SAMPLER_STATE StateBlock
-# ObjectExpr : T_KW_STATEBLOCK_STATE StateBlocStateBlockk
+ObjectExpr : T_KW_COMPILE_SHADER '(' ArgumentsOpt ')'
+
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    # ObjectExpr : T_KW_SAMPLER_STATE StateBlock
+    # ObjectExpr : T_KW_STATEBLOCK_STATE StateBlocStateBlockk
+#endif
 
 PrimaryExpr : ComplexExpr
 PrimaryExpr : SimpleExpr
@@ -618,16 +635,20 @@ T_KW_TEXTURECUBE : "TextureCube"
 T_KW_TEXTURECUBEARRAY : "TextureCubeArray"
 T_KW_CBUFFER : "cbuffer"
 T_KW_TBUFFER : "tbuffer"
-# T_KW_SAMPLER : "sampler"
-# T_KW_SAMPLER1D : "sampler1D"
-# T_KW_SAMPLER2D : "sampler2D"
-# T_KW_SAMPLER3D : "sampler3D"
-# T_KW_SAMPLERCUBE : "samplerCUBE"
-# T_KW_STATEBLOCK : "stateblock"
-# T_KW_STATEBLOCK_STATE : "stateblock_state"
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    # T_KW_SAMPLER : "sampler"
+    # T_KW_SAMPLER1D : "sampler1D"
+    # T_KW_SAMPLER2D : "sampler2D"
+    # T_KW_SAMPLER3D : "sampler3D"
+    # T_KW_SAMPLERCUBE : "samplerCUBE"
+    # T_KW_STATEBLOCK : "stateblock"
+    # T_KW_STATEBLOCK_STATE : "stateblock_state"
+#endif
 T_KW_SAMPLER_STATE : "SamplerState"
 T_KW_SAMPLER_COMPARISON_STATE : "SamplerComparisonState"
 T_KW_DEPTH_STENCIL_STATE : "DepthStencilState"
+T_KW_BLEND_STATE : "BlendState"
+T_KW_RASTERIZER_STATE : "RasterizerState"
 T_KW_BUFFER : "Buffer"
 T_KW_RWTEXTURE1D : "RWTexture1D"
 T_KW_RWTEXTURE2D : "RWTexture2D"
@@ -636,26 +657,25 @@ T_KW_RWBUFFER : "RWBuffer"
 T_KW_STRUCTUREDBUFFER : "StructuredBuffer"
 T_KW_RWSTRUCTUREDBUFFER : "RWStructuredBuffer"
 T_KW_APPENDSTRUCTUREDBUFFER : "AppendStructuredBuffer"
-# T_KW_PIXELSHADER : "pixelshader"
-# T_KW_VERTEXSHADER : "vertexshader"
-# T_KW_PIXELFRAGMENT : "pixelfragment"
-# T_KW_VERTEXFRAGMENT : "vertexfragment"
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    # T_KW_PIXELSHADER : "pixelshader"
+    # T_KW_VERTEXSHADER : "vertexshader"
+    # T_KW_PIXELFRAGMENT : "pixelfragment"
+    # T_KW_VERTEXFRAGMENT : "vertexfragment"
+#endif
 T_KW_REGISTER : "register"
 T_KW_IN : "in"
 T_KW_OUT : "out"
 T_KW_INOUT : "inout"
 T_KW_TECHNIQUE : "technique"
 T_KW_TECHNIQUE11 : "technique11"
-
 #if PRESETS_EX
     T_KW_PRESET : "preset"
 #endif
-
 #if FX_PART
     T_KW_FXPART : "partFx"
     T_KW_TRIMESH : "TriMesh"
 #endif
-
 T_KW_PASS : "pass"
 T_KW_RETURN : "return"
 T_KW_DO : "do"
@@ -666,25 +686,28 @@ T_KW_ELSE : "else"
 T_KW_FOR : "for"
 T_KW_TRUE : "true"
 T_KW_FALSE : "false"
-T_KW_COMPILE : "compile"
+#if TECHNIQUE9_DEPRECATED_SUPPORT
+    T_KW_COMPILE : "compile"
+    T_KW_COMPILE_SHADER : "CompileShader"
+#endif
 T_KW_COMPILE_FRAGMENT : "compile_fragment"
 T_KW_DECL : "decl"
 T_KW_ASM : "asm"
 T_KW_ASM_FRAGMENT : "asm_fragment"
 T_KW_USE : "use"
 T_KW_STRICT : "strict"
-T_KW_IMPORT : "import"
-T_KW_PROVIDE : "provide"
+#id FX_PART
+    T_KW_IMPORT : "import"
+    T_KW_PROVIDE : "provide"
+#endif
 T_KW_SWITCH : "switch"
 T_KW_CASE : "case"
 T_KW_DEFAULT : "default"
 T_KW_BREAK : "break"
-
 #if FX_PART
     T_KW_SPAWN : "spawn"
     T_KW_DRAW : "draw"
 #endif
-
 T_KW_CONTINUE : "continue"
 # T_KW_AS : "as"
 T_OP_INC : "++"

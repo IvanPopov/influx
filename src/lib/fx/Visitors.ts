@@ -70,6 +70,9 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             (owner as ICompileExprInstruction).args.forEach(arg => visit(arg));
             // visit((owner as ICompileExprInstruction).function);
             break;
+        case EInstructionTypes.k_CompileShader11Expr:
+            console.assert(false, 'not implemented');
+            break;
         case EInstructionTypes.k_ComplexExpr:
             visit((owner as IComplexExprInstruction).expr);
             break;
@@ -91,6 +94,9 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             break;
         case EInstructionTypes.k_InitExpr:
             (owner as IInitExprInstruction).args.forEach(arg => visit(arg));
+            break;
+        case EInstructionTypes.k_StateBlockExpr:
+            console.assert(false, 'not implemented');
             break;
         case EInstructionTypes.k_IntExpr:
         case EInstructionTypes.k_FloatExpr:

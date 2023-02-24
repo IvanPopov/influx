@@ -42,7 +42,9 @@ export enum EInstructionTypes {
     k_ComplexExpr,
     k_FunctionCallExpr,
     k_ConstructorCallExpr,
+    /** @deprecated */
     k_CompileExpr,
+    k_CompileShader11Expr,
     k_InitExpr,
     k_StateBlockExpr,
     /** @deprecated */
@@ -462,7 +464,7 @@ export interface IPostfixArithmeticInstruction extends IExprInstruction {
     readonly operator: string;
 }
 
-
+/** @deprecated */
 export interface ISamplerStateBlockInstruction extends IExprInstruction {
     readonly texture: IVariableDeclInstruction;
     readonly params: ISamplerStateInstruction[];
@@ -470,11 +472,17 @@ export interface ISamplerStateBlockInstruction extends IExprInstruction {
 }
 
 
+/** @deprecated */
 export interface ICompileExprInstruction extends IExprInstruction {
     readonly function: IFunctionDeclInstruction;
     readonly args: IExprInstruction[];
 }
 
+export interface ICompileShader11Instruction extends IExprInstruction {
+    readonly ver: string;
+    readonly func: IFunctionDeclInstruction;
+    readonly args: IExprInstruction[];
+}
 
 export interface IRelationalExprInstruction extends IExprInstruction {
     readonly left: IExprInstruction;
@@ -503,6 +511,7 @@ export interface IInitExprInstruction extends IExprInstruction {
 
 export interface IStateBlockInstruction extends IExprInstruction {
     readonly props: Object; // native json?
+    readonly blocks: IStateBlockInstruction[];
 }
 
 
@@ -535,12 +544,14 @@ export type IExprDerived =
     | IAssignmentExprInstruction
     | ICastExprInstruction
     | ICompileExprInstruction
+    | ICompileShader11Instruction
     | IComplexExprInstruction
     | IConditionalExprInstruction
     | IConstructorCallInstruction
     | IFunctionCallInstruction
     | IIdExprInstruction
     | IInitExprInstruction
+    | IStateBlockInstruction
     | ILiteralInstruction<number>
     | ILiteralInstruction<boolean>
     | ILiteralInstruction<string>

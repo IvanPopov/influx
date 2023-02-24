@@ -86,6 +86,11 @@ export const T_INT4X4 = scope.findType("int4x4");
 // export const T_SAMPLER_2D = scope.findType("sampler2D");
 // export const T_SAMPLER_CUBE = scope.findType("samplerCUBE");
 
+export const T_VERTEX_SHADER = scope.findType("VertexShader");
+export const T_PIXEL_SHADER = scope.findType("PixelShader");
+export const T_COMPUTE_SHADER = scope.findType("ComputeShader");
+export const T_GEOMETRY_SHADER = scope.findType("GeometryShader");
+
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////

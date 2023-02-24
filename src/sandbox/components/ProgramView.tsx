@@ -8,10 +8,11 @@ import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, types } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPass11Instruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileShader11Instruction, IComplexExprInstruction, IConstructorCallInstruction, IDeclInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, IPass11Instruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IProvideInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IDrawStmtInstruction } from '@lib/idl/part/IPartFx';
+import { isDef } from '@lib/util/s3d/type';
 import { mapProps } from '@sandbox/reducers';
 import { getFileState } from '@sandbox/reducers/sourceFile';
 import { IFileState } from '@sandbox/store/IStoreState';
@@ -73,7 +74,6 @@ interface IPropertyProps extends React.PropsWithChildren, Partial<WithStylesProp
 
 
 type PropertyComponent = React.FunctionComponent<IPropertyProps>;
-
 
 
 const Property: PropertyComponent =
@@ -216,7 +216,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     render() {
         const { slDocument: analysis } = this.props;
-
+        
         if (isNull(analysis)) {
             return null;
         }
@@ -294,6 +294,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 return this.InitExpr(instr);
             case EInstructionTypes.k_StateBlockExpr:
                 return this.StateBlockExpr(instr);
+            case EInstructionTypes.k_CompileShader11Expr:
+                return this.CompileShader11Expr(instr);
             case EInstructionTypes.k_IdExpr:
                 return this.IdExpr(instr);
             case EInstructionTypes.k_PostfixPointExpr:
@@ -455,8 +457,8 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                 </PropertyOpt>
                 <PropertyOpt name='methods' >
                     { instr.methods.map(method => fn.signatureEx(method.def, true))
-                        .map(signature =>
-                            <SystemProperty name={ <span>&nbsp;&nbsp;</span> } value={ signature } />
+                        .map((signature, i) =>
+                            <SystemProperty key={`pv-uk-sp-${instr.instructionID}-${i}`} name={ <span>&nbsp;&nbsp;</span> } value={ signature } />
                         ) }
                 </PropertyOpt>
             </SystemProperty>
@@ -949,8 +951,26 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
         return (
             <Property { ...this.bindProps(instr) }>
-                <Property name='props'>
-                    { Object.keys(instr.props).map(key => <Property name={key} value={ String(instr.props[key]) } />) }
+                <PropertyOpt name='props'>
+                    { instr.props && Object.keys(instr.props).map((key, i) => <Property key={`pv-uk-sb-${instr.instructionID}-${i}`} name={key} value={ String(instr.props[key]) } />) }
+                </PropertyOpt>
+                <PropertyOpt name='blocks'>
+                    { instr.blocks && instr.blocks.map((block, i) => this.StateBlockExpr(block)) }
+                </PropertyOpt>
+            </Property>
+        );
+    }
+
+
+    CompileShader11Expr(instr: ICompileShader11Instruction) {
+        return (
+            <Property { ...this.bindProps(instr) }>
+                <Property name='ver' value={ instr.ver } />
+                <Property name='func' >
+                    { this.FunctionDecl(instr.func) }
+                </Property>
+                <Property name='args'>
+                    { instr.args.map((arg, i) => this.Unknown(arg)) }
                 </Property>
             </Property>
         );
@@ -981,7 +1001,6 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
                         </Message.Content>
                     </Message>
                 }
-                key={ instr.instructionID }
             />
         );
     }

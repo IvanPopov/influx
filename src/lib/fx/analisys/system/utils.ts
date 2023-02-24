@@ -382,6 +382,7 @@ export const SAMPLER_TYPES = [
 
 export const BLEND_STATE = 'BlendState';
 export const DEPTH_STENCIL_STATE = 'DepthStencilState';
+export const RASTERIZER_STATE = 'RasterizerState';
 
 const skipTemplate = (name: string) => name.match(/([\w][\w\d]+)(<[\w][\w\d]+>)?/)[1];
 export const isUAV = (type: ITypeInstruction) => UAV_TYPES.includes(skipTemplate(type.name));

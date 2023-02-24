@@ -208,4 +208,6 @@ export function addSystemFunctions(scope: IScope): void {
     generateSystemFunction(scope, "SetPixelShader", "void", [TEMPLATE_TYPE], ["PixelShader"], USAGE_CONTROL_FLOW);
     generateSystemFunction(scope, "SetGeometryShader", "void", [TEMPLATE_TYPE], ["GeometryShader"], USAGE_CONTROL_FLOW);
     generateSystemFunction(scope, "SetDepthStencilState", "void", [TEMPLATE_TYPE, "int"], ["DepthStencilState"], USAGE_CONTROL_FLOW);
+    generateSystemFunction(scope, "SetBlendState", "void", [TEMPLATE_TYPE], ["BlendState"], USAGE_CONTROL_FLOW);                        // todo: use correct arguments
+    generateSystemFunction(scope, "SetRasterizerState", "void", [TEMPLATE_TYPE], ["RasterizerState"], USAGE_CONTROL_FLOW);              // todo: use correct arguments
 }

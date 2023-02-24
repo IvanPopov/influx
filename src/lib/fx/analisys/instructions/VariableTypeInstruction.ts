@@ -71,7 +71,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
     constructor({ type, usages = [], arrayIndex = null, writable = true, readable = true, padding = instruction.UNDEFINE_PADDING, ...settings }: IVariableTypeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_VariableType, ...settings });
 
-        type = type.$withNoParent();
+        type = Instruction.$withNoParent(type);
         this._usageList = [];
 
         let instrType = type.instructionType;

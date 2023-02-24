@@ -3,7 +3,7 @@ import { EAnalyzerErrors as EErrors } from '@lib/idl/EAnalyzerErrors';
 import { EAnalyzerWarnings as EWarnings } from '@lib/idl/EAnalyzerWarnings';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
-import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { EInstructionTypes, EScopeType, ETechniqueType, IAnnotationInstruction, IArithmeticOperator, IAttributeInstruction, IBitwiseOperator, ICbufferInstruction, ICompileShader11Instruction, IConstructorCallInstruction, IDeclInstruction, IDoWhileOperator, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIdInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalOperator, IPass11Instruction, IPassInstruction, IPresetInstruction, IPresetPropertyInstruction, IProvideInstruction, IScope, IStateBlockInstruction, IStmtBlockInstruction, IStmtInstruction, ITechnique11Instruction, ITechniqueInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryOperator, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 import { IMap } from '@lib/idl/IMap';
 import { ISLASTDocument } from '@lib/idl/ISLASTDocument';
 import { ISLDocument } from '@lib/idl/ISLDocument';
@@ -23,6 +23,7 @@ import { BreakOperator, BreakStmtInstruction } from './instructions/BreakStmtIns
 import { CastExprInstruction } from './instructions/CastExprInstruction';
 import { CbufferInstruction } from './instructions/CbufferInstruction';
 import { CompileExprInstruction } from './instructions/CompileExprInstruction';
+import { CompileShader11Instruction } from './instructions/CompileShader11Instruction';
 import { ComplexExprInstruction } from './instructions/ComplexExprInstruction';
 import { ComplexTypeInstruction } from './instructions/ComplexTypeInstruction';
 import { ConditionalExprInstruction } from './instructions/ConditionalExprInstruction';
@@ -66,10 +67,13 @@ import { UnaryExprInstruction } from './instructions/UnaryExprInstruction';
 import { EVariableUsageFlags, VariableDeclInstruction } from './instructions/VariableDeclInstruction';
 import { VariableTypeInstruction } from './instructions/VariableTypeInstruction';
 import { WhileStmtInstruction } from './instructions/WhileStmtInstruction';
-import { ProgramScope, ProgramScopeEx, Scope } from './ProgramScope';
+import { ProgramScope, ProgramScopeEx } from './ProgramScope';
 import { parseUintLiteral } from './system/utils';
 import * as SystemScope from './SystemScope';
-import { determBaseType, determMostPreciseBaseType, determTypePrecision, isBoolBasedType, isFloatType, isIntegerType, isMatrixType, isScalarType, isVectorType, isIntBasedType, isUintBasedType, isFloatBasedType, isHalfBasedType, T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID } from './SystemScope';
+import {
+    T_BOOL, T_BOOL2, T_BOOL3, T_BOOL4, T_FLOAT4, T_INT, T_UINT, T_VOID,
+    T_VERTEX_SHADER, T_PIXEL_SHADER, T_COMPUTE_SHADER, T_GEOMETRY_SHADER
+} from './SystemScope';
 
 
 type IErrorInfo = IMap<any>;
@@ -1320,10 +1324,8 @@ export class Analyzer {
             vdimNode = vdimChildren[vdimChildren.length - 1];
         } while (true);
 
-        // todo: make read only in case of SamplerState (!)
-        // using generalType.source node instead of sourceNode was done for more clear degging
+        // using generalType.source node instead of sourceNode was done for more clear debugging
         type = new VariableTypeInstruction({ scope, sourceNode: generalType.sourceNode, type: generalType, arrayIndex });
-
         /**
          * (state block initializer)
          * AST example:
@@ -1350,16 +1352,21 @@ export class Analyzer {
                 if (doInitUsingList(children[i])) {
                     init = this.analyzeInitializer(context, program, children[i], type, sourceNode);
                 } else {
-                    init = this.analyzStateBlock(context, program, children[i].children[0], type);
+                    init = this.analyzeStateBlock(context, program, children[i].children[0], type);
                 }
 
                 switch (type.name) {
                     case 'BlendState':
                     case 'SamplerState':
+                    case 'SamplerComparisonState':
                     case 'DepthStencilState':
+                    case 'RasterizerState':
                         // todo: validate properties
                         console.assert(!doInitUsingList(children[i]));
+                        console.assert(!type.isNotBaseArray() || type.length == (<IStateBlockInstruction>init).blocks.length);
                         break;
+                    default:
+                        console.assert(doInitUsingList(children[i]));
                 }
 
                 if (!init) {
@@ -1537,6 +1544,7 @@ export class Analyzer {
     }
 
 
+
     /**
      * AST example:
      *    ObjectExpr
@@ -1552,13 +1560,58 @@ export class Analyzer {
         let name = sourceNode.children[sourceNode.children.length - 1].name;
 
         switch (name) {
+            /** @deprecated */
             case 'T_KW_COMPILE':
                 return this.analyzeCompileExpr(context, program, sourceNode);
+            case 'T_KW_COMPILE_SHADER':
+                return this.analyzeCompileShader11(context, program, sourceNode);
+                return null;
             default:
         }
         return null;
     }
 
+
+    /**
+     * AST example:
+     *    ObjectExpr
+     *         T_PUNCTUATOR_41 = ')'
+     *       + ComplexExpr 
+     *         T_PUNCTUATOR_44 = ','
+     *         T_NON_TYPE_ID = 'vs_4_0_level_9_1'
+     *         T_PUNCTUATOR_40 = '('
+     *         T_KW_COMPILE_SHADER = 'CompileShader'
+     */
+    protected analyzeCompileShader11(context: Context, program: ProgramScope, sourceNode: IParseNode): ICompileShader11Instruction {
+        const children = sourceNode.children;
+        const scope = program.currentScope;
+        // CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, true ) )
+        const shaderNode = children[1];     // RenderSceneVS( 1, true, true )
+        const versionNode = children[3];    // vs_4_0_level_9_1
+        const ver = versionNode.value;
+        const entryNode = shaderNode.children[shaderNode.children.length - 1]; // RenderSceneVS
+        const funcName = entryNode.value;
+        const args = [];
+        for (let i = shaderNode.children.length - 3; i > 0; i--) {
+            if (shaderNode.children[i].value !== ',') {
+                args.push(this.analyzeExpr(context, program, shaderNode.children[i]));
+            }
+        }
+    
+        //findFunction(funcName, args);
+        const func = program.globalScope.functions[funcName][0]; // todo: get suitable?
+        const shaderType = ver.substring(0, 2);
+        const sh = {
+            'vs': T_VERTEX_SHADER,
+            'ps': T_PIXEL_SHADER,
+            'gs': T_GEOMETRY_SHADER,
+            'cs': T_COMPUTE_SHADER
+        };
+
+        const type: ITypeInstruction = sh[shaderType];
+        assert(isDef(type), `unknown shader type '${shaderType} (${ver})' has been used`);
+        return new CompileShader11Instruction({ scope, sourceNode, ver, args, func, type });
+    }
 
 
     /**
@@ -1870,33 +1923,6 @@ export class Analyzer {
                 {
                     // TODO: validate intrinsics like 'InterlockedAdd', check that dest is UAV address
                     funcName = children[children.length - 1].value;
-
-                    // expressions like: CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, true ) )
-                    if (funcName === 'CompileShader') {
-                        // fallback to special case when it's not a function but specific operator 
-                        // for shader compilation
-                        console.assert(children.length === 6);
-                        
-                        const shaderNode = children[1];     // RenderSceneVS( 1, true, true )
-                        const versionNode = children[3];    // vs_4_0_level_9_1
-                        console.assert(versionNode.name === "T_NON_TYPE_ID");
-                        const ver = versionNode.value;
-                        const entryNode = shaderNode.children[shaderNode.children.length - 1]; // RenderSceneVS
-                        console.assert(entryNode.name === "T_NON_TYPE_ID");
-                        const entryName = entryNode.value;
-                        // note: all the uniform arguments are being ignored at the moment
-
-                        console.log(entryName, ver); 
-
-                        /*
-                            // VertexShader vs_6_2_RenderSceneVS = ...;
-                            VertexShader vs024545 = CompileShader("vs_4_0_level_9_1", "RenderSceneVS");
-                            ...
-                            SetVertexShader(vs024545);
-                        */
-
-                        // globalScope.addVariable()
-                    }
 
                     if (children.length > 3) {
                         for (let i = children.length - 3; i > 0; i--) {
@@ -3992,15 +4018,33 @@ export class Analyzer {
      *       + State 
      *         T_PUNCTUATOR_123 = '{'
      */
-    protected analyzStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode, type: ITypeInstruction): IStateBlockInstruction {
+    /**
+     * AST example:
+     *    StateBlock
+     *         T_PUNCTUATOR_125 = '}'
+     *       + StateBlock 
+     *         T_PUNCTUATOR_44 = ','
+     *       + StateBlock 
+     *         T_PUNCTUATOR_123 = '{'
+     */
+    protected analyzeStateBlock(context: Context, program: ProgramScope, sourceNode: IParseNode, type: ITypeInstruction): IStateBlockInstruction {
         const children = sourceNode.children;
         const scope = program.currentScope;
 
-        let props: Object = {}
-        for (let i = children.length - 2; i >= 1; i--) {
-            props = { ...props, ...this.analyzeState(context, program, children[i]) };
+        if (!type.isNotBaseArray()) {
+            let props: Object = {}
+            for (let i = children.length - 2; i >= 1; i--) {
+                props = { ...props, ...this.analyzeState(context, program, children[i]) };
+            }
+            return new StateBlockInstruction({ scope, sourceNode, type, props });
+        } else {
+            let blocks = [];
+            for (let i = children.length - 2; i >= 1; i--) {
+                if (children[i].value === ',') continue;
+                blocks = [ ...blocks, this.analyzeStateBlock(context, program, children[i], (<IVariableTypeInstruction>type).subType) ];
+            }
+            return new StateBlockInstruction({ scope, sourceNode, type, blocks });
         }
-        return new StateBlockInstruction({ scope, sourceNode, type, props });
     }
 
 
@@ -4643,7 +4687,7 @@ export class Analyzer {
             }
 
             if (Analyzer.isArithmeticalOperator(operator)) {
-                if (!isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
+                if (!SystemScope.isMatrixType(leftType) || (operator !== '/' && operator !== '/=')) {
                     return leftBaseType;
                 }
 
@@ -4651,7 +4695,7 @@ export class Analyzer {
                 return null;
             }
             else if (Analyzer.isRelationalOperator(operator)) {
-                if (isScalarType(leftType) || isVectorType(leftType)) {
+                if (SystemScope.isScalarType(leftType) || SystemScope.isVectorType(leftType)) {
                     return constBoolType(leftType.length);
                 }
 
@@ -4677,11 +4721,13 @@ export class Analyzer {
             // op: "+", "-", "*", "/", "%"
 
             const length =
-                isScalarType(leftType) ? rightType.length :
-                    isScalarType(rightType) ? leftType.length :
-                        Math.min(leftType.length, rightType.length);
+                SystemScope.isScalarType(leftType) 
+                    ? rightType.length 
+                    : SystemScope.isScalarType(rightType) 
+                        ? leftType.length 
+                        : Math.min(leftType.length, rightType.length);
 
-            const baseType = determMostPreciseBaseType(leftType, rightType);
+            const baseType = SystemScope.determMostPreciseBaseType(leftType, rightType);
             const resultType = SystemScope.findType(`${baseType.name}${length === 1 ? '' : length}`);
 
             if (!resultType) {
@@ -4707,7 +4753,7 @@ export class Analyzer {
                 });
             }
 
-            if (!types.equals(determBaseType(leftType), determBaseType(rightType))) {
+            if (!types.equals(SystemScope.determBaseType(leftType), SystemScope.determBaseType(rightType))) {
                 // do not emit errors for expr like: float2 * float, int2 + int etc..
                 context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
                     tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${resultType.toCode()}`
@@ -4718,13 +4764,13 @@ export class Analyzer {
              * Special case for matrices
              */
             if (operator === '*' || operator === '*=') {
-                if (isMatrixType(leftType) && isVectorType(rightType)) {
+                if (SystemScope.isMatrixType(leftType) && SystemScope.isVectorType(rightType)) {
                     if (leftType.length === rightType.length) {
                         return rightBaseType;
                     }
                     return null;
                 }
-                else if (isMatrixType(rightType) && isVectorType(leftType)) {
+                else if (SystemScope.isMatrixType(rightType) && SystemScope.isVectorType(leftType)) {
                     if (leftType.length === rightType.length) {
                         return leftBaseType;
                     }
@@ -4736,15 +4782,15 @@ export class Analyzer {
         }
 
         if (operator === '=') {
-            if (isScalarType(rightType)) {
-                if (determTypePrecision(leftType) > determTypePrecision(rightType)) {
+            if (SystemScope.isScalarType(rightType)) {
+                if (SystemScope.determTypePrecision(leftType) > SystemScope.determTypePrecision(rightType)) {
                     context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
                         tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${leftType.toCode()}`
                     });
                     return leftType;
                 }
 
-                if (isIntegerType(leftType) && isIntegerType(rightType)) {
+                if (SystemScope.isIntegerType(leftType) && SystemScope.isIntegerType(rightType)) {
                     context.warn(exprSourceNode, EWarnings.ImplicitTypeConversion, {
                         tooltip: `${leftType.toCode()} ${operator} ${rightType.toCode()} => ${leftType.toCode()}`
                     });
@@ -4800,7 +4846,7 @@ export class Analyzer {
             }
         }
         else {
-            if (isBoolBasedType(type)) {
+            if (SystemScope.isBoolBasedType(type)) {
                 return null;
             }
             else {

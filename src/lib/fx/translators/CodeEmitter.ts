@@ -487,6 +487,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
 
 
+    /** @deprecated */
     emitCompile(ctx: ContextT, compile: ICompileExprInstruction) {
         this.emitFunction(ctx, compile.function);
 
@@ -1262,6 +1263,8 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
         return CodeEmitter.translate(document.root, ctx);
     }
-
 }
 
+// export function emit(instr: IInstruction): string {
+//     return CodeEmitter.translate(instr);
+// }
